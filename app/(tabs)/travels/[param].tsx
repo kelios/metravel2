@@ -18,7 +18,11 @@ import {
     Pressable,
     DeviceEventEmitter,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+// ❗️ Ленивая загрузка иконок (не тащим @expo/vector-icons в главный бандл)
+const LazyMaterialIcons = lazy(() =>
+    import('@expo/vector-icons/MaterialIcons').then(m => ({ default: (m as any).MaterialIcons || (m as any).default }))
+);
+
 import { useLocalSearchParams } from 'expo-router';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,7 +34,7 @@ import { fetchTravel, fetchTravelBySlug, fetchNearTravels } from '@/src/api/trav
 import type { Travel } from '@/src/types/types';
 import Slider from '@/components/travel/Slider';
 import InstantSEO from '@/components/seo/InstantSEO';
-import {useIsFocused} from "@react-navigation/native/src";
+import { useIsFocused } from '@react-navigation/native';
 
 // ---- lazy helper with inline error fallback ----
 const createLazyComponent = <T,>(factory: () => Promise<{ default: T }>) =>
@@ -50,7 +54,7 @@ const CompactSideBarTravel  = createLazyComponent(() => import('@/components/tra
 
 const WebViewComponent = Platform.OS === 'web'
     ? (() => null)
-    : createLazyComponent(() => import('react-native-webview').then(m => ({ default: m.default ?? m.WebView })));
+    : createLazyComponent(() => import('react-native-webview').then(m => ({ default: m.default ?? (m as any).WebView })));
 
 const BelkrajWidgetComponent = Platform.OS === 'web'
     ? createLazyComponent(() => import('@/components/belkraj/BelkrajWidget'))
@@ -65,6 +69,13 @@ const Fallback = () => (
     <View style={styles.fallback}>
         <ActivityIndicator size="small" />
     </View>
+);
+
+const Icon: React.FC<{ name: string; size?: number; color?: string }> = ({ name, size = 22, color }) => (
+    <Suspense fallback={<View style={{ width: size, height: size }} />}>
+        {/* @ts-ignore */}
+        <LazyMaterialIcons name={name} size={size} color={color} />
+    </Suspense>
 );
 
 const MENU_WIDTH = 280;
@@ -97,7 +108,7 @@ const CollapsibleSection: React.FC<{
     initiallyOpen?: boolean;
     forceOpen?: boolean;
     children: React.ReactNode;
-}> = ({ title, initiallyOpen = false, forceOpen = false, children }) => {
+}> = React.memo(({ title, initiallyOpen = false, forceOpen = false, children }) => {
     const [open, setOpen] = useState(initiallyOpen);
     useEffect(() => { if (forceOpen) setOpen(true); }, [forceOpen]);
 
@@ -110,12 +121,12 @@ const CollapsibleSection: React.FC<{
                 hitSlop={10}
             >
                 <Text style={styles.sectionHeaderText}>{title}</Text>
-                <MaterialIcons name={open ? 'expand-less' : 'expand-more'} size={22} />
+                <Icon name={open ? 'expand-less' : 'expand-more'} size={22} />
             </TouchableOpacity>
             {open ? <View style={{ marginTop: 12 }}>{children}</View> : null}
         </View>
     );
-};
+});
 
 /** Lazy YouTube */
 const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
@@ -133,7 +144,7 @@ const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
                     cachePolicy="memory-disk"
                 />
                 <View style={styles.playOverlay}>
-                    <MaterialIcons name="play-circle-fill" size={64} color="#ffffff" />
+                    <Icon name="play-circle-fill" size={64} color="#ffffff" />
                 </View>
             </Pressable>
         );
@@ -275,13 +286,16 @@ export default function TravelDetails() {
     // Preload LCP image on web
     const preloadImages = useCallback((images: any[]) => {
         if (Platform.OS === 'web' && images?.[0]?.url) {
-            const link = document.createElement('link');
-            link.rel = 'preload';
-            link.as = 'image';
-            link.href = `${images[0].url}?v=${Date.parse(images[0].updated_at ?? `${images[0].id}`)}`;
-            // @ts-ignore
-            link.fetchPriority = 'high';
-            document.head.appendChild(link);
+            const href = `${images[0].url}?v=${Date.parse(images[0].updated_at ?? `${images[0].id}`)}`;
+            if (!document.querySelector(`link[rel="preload"][as="image"][href="${href}"]`)) {
+                const link = document.createElement('link');
+                link.rel = 'preload';
+                link.as = 'image';
+                link.href = href;
+                // @ts-ignore
+                link.fetchPriority = 'high';
+                document.head.appendChild(link);
+            }
         }
     }, []);
     useEffect(() => { if (travel?.gallery) preloadImages(travel.gallery); }, [travel?.gallery, preloadImages]);
@@ -289,11 +303,22 @@ export default function TravelDetails() {
     // ленивые секции
     const [nearVisible, setNearVisible] = useState(Platform.OS !== 'web');
     const [popularVisible, setPopularVisible] = useState(Platform.OS !== 'web');
+    const [excursionsVisible, setExcursionsVisible] = useState(Platform.OS !== 'web');
+    const [mapVisible, setMapVisible] = useState(Platform.OS !== 'web');
+
     const [refNear, inNear] = useInView({ rootMargin: '200px', triggerOnce: true });
-    const [refPop, inPop]   = useInView({ rootMargin: '200px', triggerOnce: true });
+    const [refPop,  inPop ] = useInView({ rootMargin: '200px', triggerOnce: true });
+    const [refExc,  inExc ] = useInView({ rootMargin: '300px', triggerOnce: true });
+    const [refMap,  inMap ] = useInView({ rootMargin: '300px', triggerOnce: true });
+
     useEffect(() => {
-        if (Platform.OS === 'web') { if (inNear) setNearVisible(true); if (inPop) setPopularVisible(true); }
-    }, [inNear, inPop]);
+        if (Platform.OS === 'web') {
+            if (inNear) setNearVisible(true);
+            if (inPop)  setPopularVisible(true);
+            if (inExc)  setExcursionsVisible(true);
+            if (inMap)  setMapVisible(true);
+        }
+    }, [inNear, inPop, inExc, inMap]);
 
     const [canRenderHeavy, setCanRenderHeavy] = useState(Platform.OS === 'web');
     useEffect(() => {
@@ -333,14 +358,14 @@ export default function TravelDetails() {
         return (
             <>
                 {isFocused && (
-                <InstantSEO
-                    headKey={headKey}
-                    title={loadingTitle}
-                    description={loadingDesc}
-                    canonical={canonicalUrl}
-                    image={`${SITE}/og-preview.jpg`}
-                    ogType="article"
-                />
+                    <InstantSEO
+                        headKey={headKey}
+                        title={loadingTitle}
+                        description={loadingDesc}
+                        canonical={canonicalUrl}
+                        image={`${SITE}/og-preview.jpg`}
+                        ogType="article"
+                    />
                 )}
                 <View style={styles.center}><ActivityIndicator size="large" /></View>
             </>
@@ -352,14 +377,14 @@ export default function TravelDetails() {
         return (
             <>
                 {isFocused && (
-                <InstantSEO
-                    headKey={headKey}
-                    title={errorTitle}
-                    description={errorDesc}
-                    canonical={canonicalUrl}
-                    image={`${SITE}/og-preview.jpg`}
-                    ogType="article"
-                />
+                    <InstantSEO
+                        headKey={headKey}
+                        title={errorTitle}
+                        description={errorDesc}
+                        canonical={canonicalUrl}
+                        image={`${SITE}/og-preview.jpg`}
+                        ogType="article"
+                    />
                 )}
                 <View style={styles.center}><Text>Ошибка загрузки</Text></View>
             </>
@@ -370,14 +395,14 @@ export default function TravelDetails() {
     return (
         <>
             {isFocused && (
-            <InstantSEO
-                headKey={headKey}
-                title={readyTitle}
-                description={readyDesc}
-                canonical={canonicalUrl}
-                image={readyImage}
-                ogType="article"
-            />
+                <InstantSEO
+                    headKey={headKey}
+                    title={readyTitle}
+                    description={readyDesc}
+                    canonical={canonicalUrl}
+                    image={readyImage}
+                    ogType="article"
+                />
             )}
             <View style={styles.wrapper}>
                 <SafeAreaView style={styles.safeArea}>
@@ -410,7 +435,7 @@ export default function TravelDetails() {
                                 accessibilityRole="button"
                                 accessibilityLabel="Открыть меню разделов"
                             >
-                                <MaterialIcons name={menuOpen ? 'close' : 'menu'} size={24} color="#fff" />
+                                <Icon name={menuOpen ? 'close' : 'menu'} size={24} color="#fff" />
                             </TouchableOpacity>
                         )}
 
@@ -466,7 +491,9 @@ export default function TravelDetails() {
                                             </View>
                                         )}
 
-                                        {Platform.OS === 'web' && travel.travelAddress?.length > 0 && (
+                                        {/* Экскурсии — лениво на web при появлении */}
+                                        <div ref={Platform.OS === 'web' ? (refExc as unknown as React.RefObject<HTMLDivElement>) : undefined} />
+                                        {Platform.OS === 'web' && excursionsVisible && travel.travelAddress?.length > 0 && (
                                             <Suspense fallback={<Fallback />}>
                                                 <View ref={anchor.excursions} style={styles.sectionContainer}>
                                                     <Text style={styles.sectionHeaderText}>Экскурсии</Text>
@@ -482,10 +509,12 @@ export default function TravelDetails() {
                                             </Suspense>
                                         )}
 
+                                        {/* Карта — тоже лениво при появлении */}
+                                        <div ref={Platform.OS === 'web' ? (refMap as unknown as React.RefObject<HTMLDivElement>) : undefined} />
                                         <View ref={anchor.map} style={styles.sectionContainer}>
                                             <Text style={styles.sectionHeaderText}></Text>
                                             <View style={{ marginTop: 12 }}>
-                                                {canRenderHeavy && travel.coordsMeTravel?.length > 0 && (
+                                                {canRenderHeavy && mapVisible && travel.coordsMeTravel?.length > 0 && (
                                                     <Suspense fallback={<Fallback />}>
                                                         <ToggleableMap>
                                                             <MapClientSide travel={{ data: travel.travelAddress }} />
