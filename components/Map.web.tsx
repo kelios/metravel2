@@ -102,7 +102,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   const meTravelIcon = useMemo(() => {
     if (!L) return null;
     return new L.Icon({
-      iconUrl: '/icons/marker.ico', // помести файл в public/icons/marker.ico
+      iconUrl: require('@/assets/icons/marker.ico'), // помести файл в public/icons/marker.ico
       iconSize: [27, 30],
       iconAnchor: [13, 30],
       popupAnchor: [0, -30],

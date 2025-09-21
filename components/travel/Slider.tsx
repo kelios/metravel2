@@ -16,14 +16,19 @@ import {
     LayoutChangeEvent,
     Platform,
     useWindowDimensions,
-    PanResponder,
     Text,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
-import Carousel from "react-native-reanimated-carousel";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// ❗️Ленивая загрузка AntDesign, чтобы не тянуть весь @expo/vector-icons в главный бандл
+// ленивый импорт нативной карусели — только для iOS/Android
+const NativeCarousel = React.lazy(() =>
+    import("react-native-reanimated-carousel").then((m: any) => ({
+        default: m.default,
+    }))
+);
+
+// ленивые иконки
 const LazyAnt = React.lazy(() =>
     import("@expo/vector-icons/AntDesign").then((m: any) => ({
         default: m.AntDesign || m.default,
@@ -43,19 +48,18 @@ interface SliderProps {
     showArrows?: boolean;
     showDots?: boolean;
     hideArrowsOnMobile?: boolean;
-    aspectRatio?: number; // fallback если у изображений нет размеров
-    autoPlay?: boolean;
-    autoPlayInterval?: number;
+    aspectRatio?: number;
+    autoPlay?: boolean;              // native
+    autoPlayInterval?: number;       // native
     onIndexChanged?: (index: number) => void;
     imageProps?: Partial<React.ComponentProps<typeof ExpoImage>>;
-    preloadCount?: number; // сколько слайдов вокруг активного держать в памяти
-    blurBackground?: boolean; // ⚡️ по умолчанию выключен (экономит CPU)
+    preloadCount?: number;
+    blurBackground?: boolean;        // ← блюр включён по умолчанию
 }
 
 const DEFAULT_ASPECT_RATIO = 16 / 9;
 const NAV_BTN_OFFSET = 10;
 const MOBILE_BREAKPOINT = 768;
-const SWIPE_THRESHOLD = 50;
 
 const buildUri = (img: SliderImage) => {
     const ts = img.updated_at ? Date.parse(img.updated_at) : Number(img.id);
@@ -104,80 +108,138 @@ const NavButton = memo(
     )
 );
 
-const Slide = memo(
-    ({
-         uri,
-         isVisible,
-         imageProps,
-         isPriorityImage,
-         dimensions,
-         blurBackground,
-     }: {
-        uri: string;
-        isVisible: boolean;
-        imageProps?: Partial<React.ComponentProps<typeof ExpoImage>>;
-        isPriorityImage?: boolean;
-        dimensions?: { width?: number; height?: number };
-        blurBackground?: boolean;
-    }) => {
-        // итоговый стиль основного изображения
-        const mainStyle =
-            dimensions?.width && dimensions?.height
-                ? [styles.img, { aspectRatio: dimensions.width / dimensions.height }]
-                : styles.img;
+/* --------------------------- WEB-реализация слайдера --------------------------- */
 
-        return (
-            <View style={styles.slide} collapsable={false}>
-                {isVisible && (
-                    <>
-                        {/* фон с блюром — выключен по умолчанию, потому что дорогой */}
+function WebCarousel({
+                         images,
+                         width,
+                         height,
+                         currentIndex,
+                         onIndexChanged,
+                         imageProps,
+                         blurBackground,
+                     }: {
+    images: SliderImage[];
+    width: number;
+    height: number;
+    currentIndex: number;
+    onIndexChanged: (i: number) => void;
+    imageProps?: Partial<React.ComponentProps<typeof ExpoImage>>;
+    blurBackground: boolean;
+}) {
+    const scrollerRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const node = scrollerRef.current;
+        if (!node) return;
+        let raf = 0;
+        const onScroll = () => {
+            cancelAnimationFrame(raf);
+            raf = requestAnimationFrame(() => {
+                const idx = Math.round(node.scrollLeft / node.clientWidth);
+                if (idx !== currentIndex) onIndexChanged(Math.max(0, Math.min(images.length - 1, idx)));
+            });
+        };
+        node.addEventListener("scroll", onScroll, { passive: true });
+        return () => {
+            node.removeEventListener("scroll", onScroll);
+            cancelAnimationFrame(raf);
+        };
+    }, [currentIndex, images.length, onIndexChanged]);
+
+    const scrollToIndex = useCallback(
+        (i: number) => {
+            const node = scrollerRef.current;
+            if (!node) return;
+            const clamped = Math.max(0, Math.min(images.length - 1, i));
+            node.scrollTo({ left: clamped * node.clientWidth, behavior: "smooth" });
+        },
+        [images.length]
+    );
+
+    (WebCarousel as any)._scrollTo = scrollToIndex;
+
+    return (
+        <div
+            ref={scrollerRef}
+            style={{
+                width,
+                height,
+                display: "grid",
+                gridAutoFlow: "column",
+                gridAutoColumns: "100%",
+                overflowX: "auto",
+                overflowY: "hidden",
+                scrollSnapType: "x mandatory",
+                scrollbarWidth: "none",
+                WebkitOverflowScrolling: "touch",
+            }}
+        >
+            {images.map((img, index) => {
+                const uri = buildUri(img);
+                const isFirst = index === 0;
+                const ar = img.width && img.height ? img.width / img.height : undefined;
+
+                return (
+                    <div
+                        key={img.id}
+                        style={{
+                            position: "relative",
+                            width: "100%",
+                            height: "100%",
+                            scrollSnapAlign: "center",
+                            padding: 0,
+                        }}
+                    >
+                        {/* Фоновый слой с блюром: занимает весь слайд, не влияет на layout */}
                         {blurBackground && (
                             <ExpoImage
                                 source={{ uri }}
+                                style={stylesWeb.bgBlur as any}
                                 contentFit="cover"
                                 cachePolicy="disk"
-                                priority={isPriorityImage ? "high" : "low"}
-                                recyclingKey={`bg-${uri}`}
-                                {...Platform.select({
-                                    web: {
-                                        style: [styles.bg, { filter: "blur(6px)", willChange: "filter" }],
-                                    },
-                                    default: {
-                                        style: styles.bg,
-                                        blurRadius: 20,
-                                    },
-                                })}
+                                priority={isFirst ? "high" : "low"}
+                                // web-атрибуты
+                                {...(isFirst ? ({ fetchpriority: "high" } as any) : {})}
                             />
                         )}
-                        {/* основное изображение */}
+
+                        {/* Основное изображение поверх — «чистое» */}
                         <ExpoImage
                             source={{ uri }}
+                            style={{
+                                width: "100%",
+                                height: "100%",
+                                ...(ar ? ({ aspectRatio: ar } as any) : {}),
+                            } as any}
                             contentFit="contain"
                             cachePolicy="disk"
-                            priority={isPriorityImage ? "high" : "low"}
                             transition={120}
-                            recyclingKey={`img-${uri}`}
-                            contentPosition="center"
-                            accessibilityIgnoresInvertColors
-                            {...(Platform.OS === "web" && isPriorityImage
-                                ? { fetchpriority: "high" as any }
-                                : {})}
-                            style={mainStyle as any}
-                            {...imageProps}
+                            priority={isFirst ? "high" : "low"}
+                            {...(isFirst ? ({ fetchpriority: "high" } as any) : {})}
+                            {...(imageProps || {})}
                         />
-                    </>
-                )}
-            </View>
-        );
-    },
-    (p, n) =>
-        p.uri === n.uri &&
-        p.isVisible === n.isVisible &&
-        p.isPriorityImage === n.isPriorityImage &&
-        p.blurBackground === n.blurBackground
-);
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
 
-const Slider = forwardRef<Carousel<SliderImage>, SliderProps>(
+const stylesWeb = {
+    bgBlur: {
+        position: "absolute" as const,
+        inset: 0,
+        transform: "scale(1.05)",            // подрезаем края блюра
+        filter: "blur(6px)",
+        willChange: "transform, filter",
+        zIndex: 0,
+    },
+};
+
+/* ------------------------------- Общий компонент ------------------------------- */
+
+const Slider = forwardRef<any, SliderProps>(
     (
         {
             images,
@@ -185,14 +247,14 @@ const Slider = forwardRef<Carousel<SliderImage>, SliderProps>(
             showDots = true,
             hideArrowsOnMobile = false,
             aspectRatio = DEFAULT_ASPECT_RATIO,
-            autoPlay = true,
+            autoPlay = true, // только native
             autoPlayInterval = 8000,
             onIndexChanged,
             imageProps,
-            preloadCount = 1,          // ⚡️ чуть меньше памяти/CPU
-            blurBackground = true,    // ⚡️ по умолчанию OFF
+            preloadCount = 1,
+            blurBackground = true,       // ← по умолчанию ВКЛ
         },
-        externalRef
+        _externalRef
     ) => {
         const { width: windowWidth, height: windowHeight } = useWindowDimensions();
         const insets = useSafeAreaInsets();
@@ -203,26 +265,13 @@ const Slider = forwardRef<Carousel<SliderImage>, SliderProps>(
         const [loadedIndices, setLoadedIndices] = useState<Set<number>>(
             () => new Set([...Array(Math.min(preloadCount + 1, images.length)).keys()])
         );
-        const [isAutoPlayPaused, setIsAutoPlayPaused] = useState(false);
 
-        const carouselRef = useRef<Carousel<SliderImage>>(null);
-        const isScrolling = useRef(false);
-
-        React.useImperativeHandle(externalRef, () => carouselRef.current as any, []);
-
-        // если у первого изображения есть размеры – используем их для высоты,
-        // чтобы уменьшить CLS
         const firstAR = useMemo(() => {
             const first = images[0];
             return first?.width && first?.height
                 ? first.width / first.height
                 : aspectRatio;
         }, [images, aspectRatio]);
-
-        const carouselKey = useMemo(
-            () => images.map((i) => `${i.id}_${i.updated_at ?? ""}`).join("-"),
-            [images]
-        );
 
         const isMobile = containerWidth <= MOBILE_BREAKPOINT;
         const uriMap = useMemo(() => images.map(buildUri), [images]);
@@ -231,15 +280,13 @@ const Slider = forwardRef<Carousel<SliderImage>, SliderProps>(
             const safeHeight = isMobile
                 ? (windowHeight - insets.top - insets.bottom) * 0.75
                 : containerWidth / firstAR;
-            setContainerHeight(Math.max(160, safeHeight)); // минимальная высота для стабильности
+            setContainerHeight(Math.max(160, safeHeight));
         }, [isMobile, containerWidth, firstAR, windowHeight, insets]);
 
-        // при смене набора изображений сбрасываем индекс и окно предзагрузки
         useEffect(() => {
             setCurrentIndex(0);
-            carouselRef.current?.scrollTo?.({ index: 0, animated: false });
             setLoadedIndices(new Set([...Array(Math.min(preloadCount + 1, images.length)).keys()]));
-        }, [carouselKey, preloadCount, images.length]);
+        }, [images, preloadCount]);
 
         const handleIndexChanged = useCallback(
             (idx: number) => {
@@ -257,53 +304,10 @@ const Slider = forwardRef<Carousel<SliderImage>, SliderProps>(
             [images.length, onIndexChanged, preloadCount]
         );
 
-        const renderItem = useCallback(
-            ({ item, index }: { item: SliderImage; index: number }) => (
-                <Slide
-                    key={`slide-${item.id}`}
-                    uri={uriMap[index]}
-                    isVisible={loadedIndices.has(index)}
-                    imageProps={imageProps}
-                    isPriorityImage={index === 0}
-                    dimensions={{ width: item.width, height: item.height }}
-                    blurBackground={blurBackground}
-                />
-            ),
-            [uriMap, loadedIndices, imageProps, blurBackground]
-        );
-
-        const navPrev = useCallback(() => carouselRef.current?.prev?.(), []);
-        const navNext = useCallback(() => carouselRef.current?.next?.(), []);
-
-        const panResponder = useMemo(
-            () =>
-                PanResponder.create({
-                    onStartShouldSetPanResponder: () => true,
-                    onMoveShouldSetPanResponder: (_, gesture) => {
-                        const { dx, dy } = gesture;
-                        if (Math.abs(dy) > Math.abs(dx)) {
-                            isScrolling.current = true;
-                            return false;
-                        }
-                        isScrolling.current = false;
-                        return true;
-                    },
-                    onPanResponderMove: (_, gesture) => {
-                        if (isScrolling.current) return;
-                        const { dx } = gesture;
-                        if (Math.abs(dx) > SWIPE_THRESHOLD) {
-                            dx > 0 ? navPrev() : navNext();
-                            isScrolling.current = true;
-                        }
-                    },
-                    onPanResponderRelease: () => {
-                        isScrolling.current = false;
-                    },
-                }),
-            [navPrev, navNext]
-        );
-
         if (!images.length) return null;
+
+        const navPrev = () => handleIndexChanged(Math.max(0, currentIndex - 1));
+        const navNext = () => handleIndexChanged(Math.min(images.length - 1, currentIndex + 1));
 
         return (
             <View
@@ -311,38 +315,98 @@ const Slider = forwardRef<Carousel<SliderImage>, SliderProps>(
                 onLayout={(e: LayoutChangeEvent) => setContainerWidth(e.nativeEvent.layout.width)}
                 accessibilityRole="group"
                 accessibilityLabel="Image slider"
-                {...(Platform.OS === "web" && isMobile ? panResponder.panHandlers : {})}
             >
                 {containerWidth > 0 && containerHeight > 0 && (
                     <>
-                        <Carousel
-                            key={carouselKey}
-                            ref={carouselRef}
-                            data={images}
-                            width={containerWidth}
-                            height={containerHeight}
-                            loop
-                            autoPlay={!isAutoPlayPaused && autoPlay}
-                            autoPlayInterval={autoPlayInterval}
-                            onSnapToItem={handleIndexChanged}
-                            renderItem={renderItem}
-                            panGestureHandlerProps={Platform.select({
-                                default: {
-                                    activeOffsetX: [-10, 10],
-                                    activeOffsetY: [-999, 999],
-                                },
-                                web: isMobile ? undefined : { activeOffsetX: [-10, 10] },
-                            })}
-                            onTouchStart={() => setIsAutoPlayPaused(true)}
-                            onTouchEnd={() => setIsAutoPlayPaused(false)}
-                            onTouchCancel={() => setIsAutoPlayPaused(false)}
-                            enabled={Platform.OS !== "web" || !isMobile}
-                        />
+                        {Platform.OS === "web" ? (
+                            <WebCarousel
+                                images={images}
+                                width={containerWidth}
+                                height={containerHeight}
+                                currentIndex={currentIndex}
+                                onIndexChanged={handleIndexChanged}
+                                imageProps={imageProps}
+                                blurBackground={blurBackground}
+                            />
+                        ) : (
+                            <Suspense fallback={null}>
+                                <NativeCarousel
+                                    key={images.map((i) => `${i.id}_${i.updated_at ?? ""}`).join("-")}
+                                    data={images}
+                                    width={containerWidth}
+                                    height={containerHeight}
+                                    loop
+                                    autoPlay={autoPlay}
+                                    autoPlayInterval={autoPlayInterval}
+                                    onSnapToItem={handleIndexChanged}
+                                    renderItem={({ item, index }: { item: SliderImage; index: number }) => {
+                                        const dims = { width: item.width, height: item.height };
+                                        const uri = uriMap[index];
+                                        const isVisible = loadedIndices.has(index);
+                                        const isPriority = index === 0;
+
+                                        return (
+                                            <View style={styles.slide} collapsable={false}>
+                                                {isVisible && (
+                                                    <>
+                                                        {blurBackground && (
+                                                            <ExpoImage
+                                                                source={{ uri }}
+                                                                contentFit="cover"
+                                                                cachePolicy="disk"
+                                                                priority={isPriority ? "high" : "low"}
+                                                                style={styles.bg}
+                                                                blurRadius={20}
+                                                            />
+                                                        )}
+                                                        <ExpoImage
+                                                            source={{ uri }}
+                                                            contentFit="contain"
+                                                            cachePolicy="disk"
+                                                            priority={isPriority ? "high" : "low"}
+                                                            transition={120}
+                                                            contentPosition="center"
+                                                            accessibilityIgnoresInvertColors
+                                                            style={
+                                                                dims.width && dims.height
+                                                                    ? [styles.img, { aspectRatio: dims.width / dims.height }]
+                                                                    : styles.img
+                                                            }
+                                                            {...imageProps}
+                                                        />
+                                                    </>
+                                                )}
+                                            </View>
+                                        );
+                                    }}
+                                />
+                            </Suspense>
+                        )}
 
                         {showArrows && !(isMobile && hideArrowsOnMobile) && (
                             <>
-                                <NavButton direction="left" offset={NAV_BTN_OFFSET} onPress={navPrev} />
-                                <NavButton direction="right" offset={NAV_BTN_OFFSET} onPress={navNext} />
+                                <NavButton
+                                    direction="left"
+                                    offset={NAV_BTN_OFFSET}
+                                    onPress={() => {
+                                        if (Platform.OS === "web") {
+                                            // @ts-ignore
+                                            (WebCarousel as any)._scrollTo?.(currentIndex - 1);
+                                        }
+                                        navPrev();
+                                    }}
+                                />
+                                <NavButton
+                                    direction="right"
+                                    offset={NAV_BTN_OFFSET}
+                                    onPress={() => {
+                                        if (Platform.OS === "web") {
+                                            // @ts-ignore
+                                            (WebCarousel as any)._scrollTo?.(currentIndex + 1);
+                                        }
+                                        navNext();
+                                    }}
+                                />
                             </>
                         )}
 
@@ -354,9 +418,13 @@ const Slider = forwardRef<Carousel<SliderImage>, SliderProps>(
                                         <TouchableOpacity
                                             key={`dot-${i}`}
                                             style={styles.dotWrapper}
-                                            onPress={() =>
-                                                carouselRef.current?.scrollTo?.({ index: i, animated: true })
-                                            }
+                                            onPress={() => {
+                                                if (Platform.OS === "web") {
+                                                    // @ts-ignore
+                                                    (WebCarousel as any)._scrollTo?.(i);
+                                                }
+                                                handleIndexChanged(i);
+                                            }}
                                             hitSlop={12}
                                         >
                                             <View style={[styles.dot, active && styles.active]} />
@@ -374,6 +442,8 @@ const Slider = forwardRef<Carousel<SliderImage>, SliderProps>(
 
 export default memo(Slider);
 
+/* ---------------------------------- styles ---------------------------------- */
+
 const styles = StyleSheet.create({
     wrapper: {
         width: "100%",
@@ -382,10 +452,7 @@ const styles = StyleSheet.create({
         overflow: "hidden",
         borderRadius: 12,
         ...Platform.select({
-            web: {
-                touchAction: "pan-y",
-                userSelect: "none",
-            },
+            web: { userSelect: "none" as any },
         }),
     },
     slide: {
@@ -396,6 +463,7 @@ const styles = StyleSheet.create({
     },
     bg: {
         ...StyleSheet.absoluteFillObject,
+        transform: [{ scale: 1.05 }],
     },
     img: {
         width: "100%",
