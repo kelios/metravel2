@@ -1,13 +1,14 @@
-import React, { memo } from "react";
+import React, { memo, useEffect, useMemo, useState } from "react";
 import {
-    Image,
     ScrollView,
     StyleSheet,
     Text,
     useWindowDimensions,
     View,
     Platform,
+    InteractionManager,
 } from "react-native";
+import { Image as ExpoImage } from "expo-image";
 import StableContent from "@/components/travel/StableContent";
 
 interface TravelDescriptionProps {
@@ -21,6 +22,7 @@ interface TravelDescriptionProps {
  * - Корректно работает без title.
  * - contentWidth никогда не уходит в отрицательные значения.
  * - Плашка-штамп не перехватывает клики и не ломает скролл.
+ * - Парсинг HTML откладывается до idle, чтобы не жечь main thread.
  */
 const TravelDescription: React.FC<TravelDescriptionProps> = ({
                                                                  htmlContent,
@@ -29,33 +31,75 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                                                              }) => {
     const { width, height } = useWindowDimensions();
 
-    // Высота для варианта с боксом
-    const pageHeight = Math.round(height * 0.7);
+    // ---- размеры контейнера ----
+    const pageHeight = useMemo(() => Math.round(height * 0.7), [height]);
+    const contentWidth = useMemo(() => {
+        const maxContent = Math.min(width, 900);
+        return Math.max(maxContent - 60, 220);
+    }, [width]);
 
-    // Контентная ширина для StableContent (учитываем внутренние отступы и не допускаем < 220)
-    const maxContent = Math.min(width, 900);
-    const contentWidth = Math.max(maxContent - 60, 220);
+    // ---- состояние содержимого ----
+    const isEmptyHtml = useMemo(() => {
+        if (!htmlContent) return true;
+        const txt = String(htmlContent).trim().replace(/<[^>]+>/g, "");
+        return txt.length === 0;
+    }, [htmlContent]);
 
-    const showTitle = Boolean(title && String(title).trim().length > 0);
-    const isEmptyHtml =
-        !htmlContent || String(htmlContent).trim().replace(/<[^>]+>/g, "").length === 0;
+    // ---- отложенный рендер тяжёлого HTML ----
+    const [canParseHtml, setCanParseHtml] = useState(Platform.OS !== "web" ? false : false);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        if (Platform.OS === "web") {
+            const arm = () => !cancelled && setCanParseHtml(true);
+            if ("requestIdleCallback" in window) {
+                // @ts-ignore
+                const id = (window as any).requestIdleCallback(arm, { timeout: 1200 });
+                return () => {
+                    cancelled = true;
+                    // @ts-ignore
+                    if ((window as any).cancelIdleCallback) (window as any).cancelIdleCallback(id);
+                };
+            } else {
+                const t = setTimeout(arm, 800);
+                return () => {
+                    cancelled = true;
+                    clearTimeout(t);
+                };
+            }
+        } else {
+            const task = InteractionManager.runAfterInteractions(() => {
+                if (!cancelled) setCanParseHtml(true);
+            });
+            return () => {
+                cancelled = true;
+                task.cancel();
+            };
+        }
+    }, [htmlContent]);
 
     const inner = (
         <View style={styles.inner} pointerEvents="box-none">
-            {/* Полупрозрачный штамп в углу */}
-            <Image
+            {/* Полупрозрачный штамп в углу — загружаем с низким приоритетом */}
+            <ExpoImage
                 source={require("@/assets/travel-stamp.webp")}
                 style={styles.stamp}
                 accessibilityIgnoresInvertColors
                 accessible={false}
                 pointerEvents="none"
+                cachePolicy="memory-disk"
+                priority="low"
             />
 
-            {/* Плейсхолдер, когда описания нет */}
+            {/* Контент */}
             {isEmptyHtml ? (
                 <Text style={styles.placeholder}>Описание скоро появится 🙂</Text>
-            ) : (
+            ) : canParseHtml ? (
                 <StableContent html={htmlContent} contentWidth={contentWidth} />
+            ) : (
+                // лёгкий плейсхолдер на время idle — дешевле, чем сразу парсить HTML
+                <Text style={styles.placeholder}>Загружаем описание…</Text>
             )}
         </View>
     );
@@ -69,6 +113,8 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                     scrollEventThrottle={16}
                     showsVerticalScrollIndicator
                     keyboardShouldPersistTaps="handled"
+                    // немного экономим на web
+                    {...(Platform.OS === "web" ? { overScrollMode: "never" as any } : {})}
                 >
                     {inner}
                 </ScrollView>
@@ -80,6 +126,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                         scrollEventThrottle={16}
                         showsVerticalScrollIndicator
                         keyboardShouldPersistTaps="handled"
+                        {...(Platform.OS === "web" ? { overScrollMode: "never" as any } : {})}
                     >
                         {inner}
                     </ScrollView>
@@ -105,14 +152,6 @@ const styles = StyleSheet.create({
     inner: {
         position: "relative",
         paddingTop: 6,
-    },
-
-    title: {
-        fontSize: 22,
-        fontWeight: "bold",
-        color: "#3B2C24",
-        marginBottom: 12,
-        textAlign: "center",
     },
 
     placeholder: {

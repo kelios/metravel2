@@ -7,6 +7,7 @@ import React, {
     useRef,
     useState,
     forwardRef,
+    Suspense,
 } from "react";
 import {
     StyleSheet,
@@ -16,11 +17,18 @@ import {
     Platform,
     useWindowDimensions,
     PanResponder,
+    Text,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Carousel from "react-native-reanimated-carousel";
-import { AntDesign } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// ❗️Ленивая загрузка AntDesign, чтобы не тянуть весь @expo/vector-icons в главный бандл
+const LazyAnt = React.lazy(() =>
+    import("@expo/vector-icons/AntDesign").then((m: any) => ({
+        default: m.AntDesign || m.default,
+    }))
+);
 
 interface SliderImage {
     url: string;
@@ -41,6 +49,7 @@ interface SliderProps {
     onIndexChanged?: (index: number) => void;
     imageProps?: Partial<React.ComponentProps<typeof ExpoImage>>;
     preloadCount?: number; // сколько слайдов вокруг активного держать в памяти
+    blurBackground?: boolean; // ⚡️ по умолчанию выключен (экономит CPU)
 }
 
 const DEFAULT_ASPECT_RATIO = 16 / 9;
@@ -52,6 +61,23 @@ const buildUri = (img: SliderImage) => {
     const ts = img.updated_at ? Date.parse(img.updated_at) : Number(img.id);
     return ts && Number.isFinite(ts) ? `${img.url}?v=${ts}` : img.url;
 };
+
+const IconBtn = memo(function IconBtn({
+                                          name,
+                                          size = 20,
+                                          color = "#fff",
+                                      }: {
+    name: "left" | "right";
+    size?: number;
+    color?: string;
+}) {
+    return (
+        <Suspense fallback={<Text style={{ color, fontSize: size }}>{name === "left" ? "‹" : "›"}</Text>}>
+            {/* @ts-ignore */}
+            <LazyAnt name={name} size={size} color={color} />
+        </Suspense>
+    );
+});
 
 const NavButton = memo(
     ({
@@ -73,11 +99,7 @@ const NavButton = memo(
             accessibilityLabel={direction === "left" ? "Previous slide" : "Next slide"}
             hitSlop={10}
         >
-            <AntDesign
-                name={direction === "left" ? "left" : "right"}
-                size={20}
-                color="#fff"
-            />
+            <IconBtn name={direction === "left" ? "left" : "right"} />
         </TouchableOpacity>
     )
 );
@@ -89,12 +111,14 @@ const Slide = memo(
          imageProps,
          isPriorityImage,
          dimensions,
+         blurBackground,
      }: {
         uri: string;
         isVisible: boolean;
         imageProps?: Partial<React.ComponentProps<typeof ExpoImage>>;
         isPriorityImage?: boolean;
         dimensions?: { width?: number; height?: number };
+        blurBackground?: boolean;
     }) => {
         // итоговый стиль основного изображения
         const mainStyle =
@@ -106,34 +130,35 @@ const Slide = memo(
             <View style={styles.slide} collapsable={false}>
                 {isVisible && (
                     <>
-                        {/* фон с блюром (не влияет на layout) */}
-                        <ExpoImage
-                            source={{ uri }}
-                            contentFit="cover"
-                            cachePolicy="disk"
-                            priority={isPriorityImage ? "high" : "low"}
-                            recyclingKey={`bg-${uri}`}
-                            {...Platform.select({
-                                web: {
-                                    style: [styles.bg, { filter: "blur(6px)", willChange: "filter" }],
-                                },
-                                default: {
-                                    style: styles.bg,
-                                    blurRadius: 20,
-                                },
-                            })}
-                        />
+                        {/* фон с блюром — выключен по умолчанию, потому что дорогой */}
+                        {blurBackground && (
+                            <ExpoImage
+                                source={{ uri }}
+                                contentFit="cover"
+                                cachePolicy="disk"
+                                priority={isPriorityImage ? "high" : "low"}
+                                recyclingKey={`bg-${uri}`}
+                                {...Platform.select({
+                                    web: {
+                                        style: [styles.bg, { filter: "blur(6px)", willChange: "filter" }],
+                                    },
+                                    default: {
+                                        style: styles.bg,
+                                        blurRadius: 20,
+                                    },
+                                })}
+                            />
+                        )}
                         {/* основное изображение */}
                         <ExpoImage
                             source={{ uri }}
                             contentFit="contain"
                             cachePolicy="disk"
-                            priority="high"
-                            transition={150}
+                            priority={isPriorityImage ? "high" : "low"}
+                            transition={120}
                             recyclingKey={`img-${uri}`}
                             contentPosition="center"
                             accessibilityIgnoresInvertColors
-                            // RN Web поддерживает нативный fetchpriority – прокидываем как prop
                             {...(Platform.OS === "web" && isPriorityImage
                                 ? { fetchpriority: "high" as any }
                                 : {})}
@@ -148,7 +173,8 @@ const Slide = memo(
     (p, n) =>
         p.uri === n.uri &&
         p.isVisible === n.isVisible &&
-        p.isPriorityImage === n.isPriorityImage
+        p.isPriorityImage === n.isPriorityImage &&
+        p.blurBackground === n.blurBackground
 );
 
 const Slider = forwardRef<Carousel<SliderImage>, SliderProps>(
@@ -163,7 +189,8 @@ const Slider = forwardRef<Carousel<SliderImage>, SliderProps>(
             autoPlayInterval = 8000,
             onIndexChanged,
             imageProps,
-            preloadCount = 2,
+            preloadCount = 1,          // ⚡️ чуть меньше памяти/CPU
+            blurBackground = true,    // ⚡️ по умолчанию OFF
         },
         externalRef
     ) => {
@@ -211,9 +238,7 @@ const Slider = forwardRef<Carousel<SliderImage>, SliderProps>(
         useEffect(() => {
             setCurrentIndex(0);
             carouselRef.current?.scrollTo?.({ index: 0, animated: false });
-            setLoadedIndices(
-                new Set([...Array(Math.min(preloadCount + 1, images.length)).keys()])
-            );
+            setLoadedIndices(new Set([...Array(Math.min(preloadCount + 1, images.length)).keys()]));
         }, [carouselKey, preloadCount, images.length]);
 
         const handleIndexChanged = useCallback(
@@ -241,9 +266,10 @@ const Slider = forwardRef<Carousel<SliderImage>, SliderProps>(
                     imageProps={imageProps}
                     isPriorityImage={index === 0}
                     dimensions={{ width: item.width, height: item.height }}
+                    blurBackground={blurBackground}
                 />
             ),
-            [uriMap, loadedIndices, imageProps]
+            [uriMap, loadedIndices, imageProps, blurBackground]
         );
 
         const navPrev = useCallback(() => carouselRef.current?.prev?.(), []);
@@ -282,9 +308,7 @@ const Slider = forwardRef<Carousel<SliderImage>, SliderProps>(
         return (
             <View
                 style={[styles.wrapper, { height: containerHeight }]}
-                onLayout={(e: LayoutChangeEvent) =>
-                    setContainerWidth(e.nativeEvent.layout.width)
-                }
+                onLayout={(e: LayoutChangeEvent) => setContainerWidth(e.nativeEvent.layout.width)}
                 accessibilityRole="group"
                 accessibilityLabel="Image slider"
                 {...(Platform.OS === "web" && isMobile ? panResponder.panHandlers : {})}
