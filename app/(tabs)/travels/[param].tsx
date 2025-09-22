@@ -1,6 +1,6 @@
 // app/travels/[param].tsx
 import React, {
-    lazy, Suspense, useCallback, useEffect, useRef, useState, useMemo,
+    lazy, Suspense, useCallback, useEffect, useRef, useState, useMemo, memo,
 } from 'react';
 import {
     ActivityIndicator,
@@ -18,9 +18,10 @@ import {
     Pressable,
     DeviceEventEmitter,
 } from 'react-native';
+
 // ❗️ Ленивая загрузка иконок (не тащим @expo/vector-icons в главный бандл)
 const LazyMaterialIcons = lazy(() =>
-    import('@expo/vector-icons/MaterialIcons').then(m => ({ default: (m as any).MaterialIcons || (m as any).default }))
+  import('@expo/vector-icons/MaterialIcons').then(m => ({ default: (m as any).MaterialIcons || (m as any).default }))
 );
 
 import { useLocalSearchParams } from 'expo-router';
@@ -36,13 +37,13 @@ import Slider from '@/components/travel/Slider';
 import InstantSEO from '@/components/seo/InstantSEO';
 import { useIsFocused } from '@react-navigation/native';
 
-// ---- lazy helper with inline error fallback ----
+/* ---------------- lazy helpers ---------------- */
 const createLazyComponent = <T,>(factory: () => Promise<{ default: T }>) =>
-    lazy(() =>
-        factory().catch(() => ({
-            default: (() => <Text>Component failed to load</Text>) as unknown as T,
-        })),
-    );
+  lazy(() =>
+    factory().catch(() => ({
+        default: (() => <Text>Component failed to load</Text>) as unknown as T,
+    })),
+  );
 
 const TravelDescription     = createLazyComponent(() => import('@/components/travel/TravelDescription'));
 const PointList             = createLazyComponent(() => import('@/components/travel/PointList'));
@@ -53,29 +54,30 @@ const MapClientSide         = createLazyComponent(() => import('@/components/Map
 const CompactSideBarTravel  = createLazyComponent(() => import('@/components/travel/CompactSideBarTravel'));
 
 const WebViewComponent = Platform.OS === 'web'
-    ? (() => null)
-    : createLazyComponent(() => import('react-native-webview').then(m => ({ default: m.default ?? (m as any).WebView })));
+  ? (() => null)
+  : createLazyComponent(() => import('react-native-webview').then(m => ({ default: m.default ?? (m as any).WebView })));
 
 const BelkrajWidgetComponent = Platform.OS === 'web'
-    ? createLazyComponent(() => import('@/components/belkraj/BelkrajWidget'))
-    : (() => null);
+  ? createLazyComponent(() => import('@/components/belkraj/BelkrajWidget'))
+  : (() => null);
 
+/* ---------------- SuspenseList shim ---------------- */
 const SList: React.FC<any> = (props) => {
     const Experimental = (React as any).unstable_SuspenseList || (React as any).SuspenseList;
     return Experimental ? <Experimental {...props} /> : <>{props.children}</>;
 };
 
 const Fallback = () => (
-    <View style={styles.fallback}>
-        <ActivityIndicator size="small" />
-    </View>
+  <View style={styles.fallback}>
+      <ActivityIndicator size="small" />
+  </View>
 );
 
 const Icon: React.FC<{ name: string; size?: number; color?: string }> = ({ name, size = 22, color }) => (
-    <Suspense fallback={<View style={{ width: size, height: size }} />}>
-        {/* @ts-ignore */}
-        <LazyMaterialIcons name={name} size={size} color={color} />
-    </Suspense>
+  <Suspense fallback={<View style={{ width: size, height: size }} />}>
+      {/* @ts-ignore */}
+      <LazyMaterialIcons name={name} size={size} color={color} />
+  </Suspense>
 );
 
 const MENU_WIDTH = 280;
@@ -83,52 +85,52 @@ const HEADER_OFFSET_DESKTOP = 72;
 const HEADER_OFFSET_MOBILE  = 56;
 const MAX_CONTENT_WIDTH     = 1200;
 
-/** Utils */
+/* ---------------- Utils ---------------- */
 const getYoutubeId = (url?: string | null) => {
     if (!url) return null;
     const m =
-        url.match(/(?:youtu\.be\/|shorts\/|embed\/|watch\?v=|watch\?.*?v%3D)([^?&/#]+)/) ||
-        url.match(/youtube\.com\/.*?[?&]v=([^?&#]+)/);
+      url.match(/(?:youtu\.be\/|shorts\/|embed\/|watch\?v=|watch\?.*?v%3D)([^?&/#]+)/) ||
+      url.match(/youtube\.com\/.*?[?&]v=([^?&#]+)/);
     return m?.[1] ?? null;
 };
 
 const stripToDescription = (html?: string) => {
     const plain = (html || '')
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/<[^>]+>/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
     return (plain || 'Найди место для путешествия и поделись своим опытом.').slice(0, 160);
 };
 
-/** Collapsible section */
+/* ---------------- Collapsible section ---------------- */
 const CollapsibleSection: React.FC<{
     title: string;
     initiallyOpen?: boolean;
     forceOpen?: boolean;
     children: React.ReactNode;
-}> = React.memo(({ title, initiallyOpen = false, forceOpen = false, children }) => {
+}> = memo(({ title, initiallyOpen = false, forceOpen = false, children }) => {
     const [open, setOpen] = useState(initiallyOpen);
     useEffect(() => { if (forceOpen) setOpen(true); }, [forceOpen]);
 
     return (
-        <View style={styles.sectionContainer}>
-            <TouchableOpacity
-                accessibilityRole="button"
-                onPress={() => setOpen(o => !o)}
-                style={styles.sectionHeaderBtn}
-                hitSlop={10}
-            >
-                <Text style={styles.sectionHeaderText}>{title}</Text>
-                <Icon name={open ? 'expand-less' : 'expand-more'} size={22} />
-            </TouchableOpacity>
-            {open ? <View style={{ marginTop: 12 }}>{children}</View> : null}
-        </View>
+      <View style={styles.sectionContainer}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => setOpen(o => !o)}
+            style={styles.sectionHeaderBtn}
+            hitSlop={10}
+          >
+              <Text style={styles.sectionHeaderText}>{title}</Text>
+              <Icon name={open ? 'expand-less' : 'expand-more'} size={22} />
+          </TouchableOpacity>
+          {open ? <View style={{ marginTop: 12 }}>{children}</View> : null}
+      </View>
     );
 });
 
-/** Lazy YouTube */
+/* ---------------- Lazy YouTube ---------------- */
 const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
     const id = useMemo(() => getYoutubeId(url), [url]);
     const [mounted, setMounted] = useState(false);
@@ -136,38 +138,45 @@ const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
 
     if (!mounted) {
         return (
-            <Pressable onPress={() => setMounted(true)} style={styles.videoContainer} accessibilityRole="button">
-                <ExpoImage
-                    source={{ uri: `https://img.youtube.com/vi/${id}/hqdefault.jpg` }}
-                    style={StyleSheet.absoluteFill}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                />
-                <View style={styles.playOverlay}>
-                    <Icon name="play-circle-fill" size={64} color="#ffffff" />
-                </View>
-            </Pressable>
+          <Pressable onPress={() => setMounted(true)} style={styles.videoContainer} accessibilityRole="button">
+              <ExpoImage
+                source={{ uri: `https://img.youtube.com/vi/${id}/hqdefault.jpg` }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+              />
+              <View style={styles.playOverlay}>
+                  <Icon name="play-circle-fill" size={64} color="#ffffff" />
+              </View>
+          </Pressable>
         );
     }
 
     return Platform.OS === 'web' ? (
-        <div style={{ width: '100%', height: '100%' }}>
-            <iframe
-                src={`https://www.youtube.com/embed/${id}`}
-                width="100%"
-                height="100%"
-                style={{ border: 'none' }}
-                loading="lazy"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-            />
-        </div>
+      <div style={{ width: '100%', height: '100%' }}>
+          <iframe
+            src={`https://www.youtube.com/embed/${id}`}
+            width="100%"
+            height="100%"
+            style={{ border: 'none' }}
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+      </div>
     ) : (
-        <WebViewComponent source={{ uri: `https://www.youtube.com/embed/${id}` }} style={{ flex: 1 }} />
+      <WebViewComponent source={{ uri: `https://www.youtube.com/embed/${id}` }} style={{ flex: 1 }} />
     );
 };
 
-// Anchors
+/* ---------------- Responsive ---------------- */
+const useResponsive = () => {
+    const { width } = useWindowDimensions();
+    const isMobile = width <= 768;
+    return { isMobile, headerOffset: isMobile ? HEADER_OFFSET_MOBILE : HEADER_OFFSET_DESKTOP, width };
+};
+
+/* ---------------- Anchors ---------------- */
 interface SectionAnchors {
     gallery: React.RefObject<View>;
     video: React.RefObject<View>;
@@ -182,26 +191,86 @@ interface SectionAnchors {
     excursions: React.RefObject<View>;
 }
 
-const useResponsive = () => {
-    const { width } = useWindowDimensions();
-    const isMobile = width <= 768;
-    return { isMobile, headerOffset: isMobile ? HEADER_OFFSET_MOBILE : HEADER_OFFSET_DESKTOP, width };
+const useSectionAnchors = (): SectionAnchors =>
+  useMemo(() => ({
+      gallery: React.createRef<View>(),
+      video: React.createRef<View>(),
+      description: React.createRef<View>(),
+      recommendation: React.createRef<View>(),
+      plus: React.createRef<View>(),
+      minus: React.createRef<View>(),
+      map: React.createRef<View>(),
+      points: React.createRef<View>(),
+      near: React.createRef<View>(),
+      popular: React.createRef<View>(),
+      excursions: React.createRef<View>(),
+  }), []);
+
+/* ---------------- NEW: LCP Hero (web) ---------------- */
+type ImgLike = { url: string; width?: number; height?: number; updated_at?: string | null; id?: number };
+
+const useIdle = () => {
+    const [idle, setIdle] = useState(false);
+    useEffect(() => {
+        if (typeof (window as any).requestIdleCallback === 'function') {
+            (window as any).requestIdleCallback(() => setIdle(true), { timeout: 3000 });
+        } else {
+            const t = setTimeout(() => setIdle(true), 1500);
+            return () => clearTimeout(t);
+        }
+    }, []);
+    return idle;
 };
 
-const useSectionAnchors = (): SectionAnchors =>
-    useMemo(() => ({
-        gallery: React.createRef<View>(),
-        video: React.createRef<View>(),
-        description: React.createRef<View>(),
-        recommendation: React.createRef<View>(),
-        plus: React.createRef<View>(),
-        minus: React.createRef<View>(),
-        map: React.createRef<View>(),
-        points: React.createRef<View>(),
-        near: React.createRef<View>(),
-        popular: React.createRef<View>(),
-        excursions: React.createRef<View>(),
-    }), []);
+const LCPHeroImage: React.FC<{ img: ImgLike; alt?: string }> = ({ img, alt }) => {
+    // нормализуем URL, убираем http -> https (чтобы не было mixed content на проде)
+    const base = (img.url || '').replace(/^http:\/\//i, 'https://');
+    const ver = img.updated_at ? Date.parse(img.updated_at) : (img.id ? Number(img.id) : 0);
+    const src = ver && Number.isFinite(ver) ? `${base}?v=${ver}` : base;
+
+    const ratio = img.width && img.height ? img.width / img.height : 16 / 9;
+
+    if (Platform.OS !== 'web') {
+        // на native пусть сразу ExpoImage (не влияет на PSI)
+        return (
+          <View style={styles.sliderContainer}>
+              <ExpoImage
+                source={{ uri: src }}
+                style={{ width: '100%', aspectRatio: ratio, borderRadius: 12, overflow: 'hidden' }}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+              />
+          </View>
+        );
+    }
+
+    return (
+      <div style={{ width: '100%' }}>
+          {/* фиксируем размеры для нулевого CLS */}
+          <img
+            src={src}
+            alt={alt ?? ''}
+            width={img.width || 1280}
+            height={img.height || Math.round((img.width || 1280) / ratio)}
+            style={{
+                width: '100%',
+                height: 'auto',
+                borderRadius: 12,
+                display: 'block',
+                background: '#e9e7df',
+            }}
+            loading="eager"
+            decoding="async"
+            // @ts-ignore — TS не знает про нативный атрибут
+            fetchpriority="high"
+            // @ts-ignore — полезно для внешних доменов
+            referrerpolicy="no-referrer"
+          />
+      </div>
+    );
+};
+
+/* ====================================================== */
 
 export default function TravelDetails() {
     const { isMobile, headerOffset } = useResponsive();
@@ -217,8 +286,8 @@ export default function TravelDetails() {
 
     useEffect(() => {
         const handler = Platform.OS === 'web'
-            ? (e: any) => handleSectionOpen(e?.detail?.key ?? '')
-            : (key: string) => handleSectionOpen(key);
+          ? (e: any) => handleSectionOpen(e?.detail?.key ?? '')
+          : (key: string) => handleSectionOpen(key);
 
         if (Platform.OS === 'web') {
             window.addEventListener('open-section', handler as EventListener);
@@ -241,8 +310,8 @@ export default function TravelDetails() {
     useEffect(() => {
         let mounted = true;
         AsyncStorage.multiGet(['isSuperuser', 'userId'])
-            .then(([[, su], [, uid]]) => { if (mounted) { setIsSuperuser(su === 'true'); setUserId(uid); }})
-            .catch((e) => console.error('Failed to load user data:', e));
+          .then(([[, su], [, uid]]) => { if (mounted) { setIsSuperuser(su === 'true'); setUserId(uid); }})
+          .catch((e) => console.error('Failed to load user data:', e));
         return () => { mounted = false; };
     }, []);
 
@@ -257,10 +326,10 @@ export default function TravelDetails() {
         requestAnimationFrame(() => {
             // @ts-ignore
             node.measureLayout(scrollRef.current!.getInnerViewNode(),
-                (_x, y) => {
-                    scrollRef.current!.scrollTo({ y: Math.max(0, y - headerOffset), animated: true });
-                },
-                () => {});
+              (_x, y) => {
+                  scrollRef.current!.scrollTo({ y: Math.max(0, y - headerOffset), animated: true });
+              },
+              () => {});
         });
         if (isMobile) closeMenu();
     }, [anchor, headerOffset, isMobile]);
@@ -283,22 +352,26 @@ export default function TravelDetails() {
         else          { setMenuOpen(false); animateMenu(false); }
     }, [isMobile, animateMenu]);
 
-    // Preload LCP image on web
+    // ---- Preload LCP image on web (исправлено)
     const preloadImages = useCallback((images: any[]) => {
         if (Platform.OS === 'web' && images?.[0]?.url) {
-            const href = `${images[0].url}?v=${Date.parse(images[0].updated_at ?? `${images[0].id}`)}`;
+            const first = images[0];
+            const base = String(first.url).replace(/^http:\/\//i, 'https://');
+            const ver  = first?.updated_at ? Date.parse(first.updated_at) : (first?.id ? Number(first.id) : 0);
+            const href = ver && Number.isFinite(ver) ? `${base}?v=${ver}` : base;
+
             if (!document.querySelector(`link[rel="preload"][as="image"][href="${href}"]`)) {
                 const link = document.createElement('link');
                 link.rel = 'preload';
                 link.as = 'image';
                 link.href = href;
-                // @ts-ignore
-                link.fetchPriority = 'high';
+                link.setAttribute('fetchpriority', 'high');      // ← именно атрибут
+                link.setAttribute('referrerpolicy', 'no-referrer');
                 document.head.appendChild(link);
             }
         }
     }, []);
-    useEffect(() => { if (travel?.gallery) preloadImages(travel.gallery); }, [travel?.gallery, preloadImages]);
+    useEffect(() => { if (travel?.gallery?.length) preloadImages(travel.gallery as any[]); }, [travel?.gallery, preloadImages]);
 
     // ленивые секции
     const [nearVisible, setNearVisible] = useState(Platform.OS !== 'web');
@@ -347,225 +420,240 @@ export default function TravelDetails() {
     const readyTitle = travel?.name ? `${travel.name} — MeTravel` : loadingTitle;
     const readyDesc  = stripToDescription(travel?.description);
     const readyImage = travel?.gallery?.[0]?.url
-        ? `${travel.gallery[0].url}?v=${Date.parse(travel.gallery[0].updated_at ?? `${travel.gallery[0].id}`)}`
-        : `${SITE}/og-preview.jpg`;
+      ? `${travel.gallery[0].url}?v=${Date.parse(travel.gallery[0].updated_at ?? `${travel.gallery[0].id}`)}`
+      : `${SITE}/og-preview.jpg`;
 
     const headKey = `travel-${slug}`;
     // -----------------------------------------
 
+    // --- LCP slider swap ---
+    const idle = useIdle();
+    const [showSlider, setShowSlider] = useState(Platform.OS !== 'web'); // на native сразу слайдер
+    useEffect(() => {
+        if (Platform.OS === 'web' && idle) setShowSlider(true);
+    }, [idle]);
+
     // LOADING
     if (isLoading) {
         return (
-            <>
-                {isFocused && (
-                    <InstantSEO
-                        headKey={headKey}
-                        title={loadingTitle}
-                        description={loadingDesc}
-                        canonical={canonicalUrl}
-                        image={`${SITE}/og-preview.jpg`}
-                        ogType="article"
-                    />
-                )}
-                <View style={styles.center}><ActivityIndicator size="large" /></View>
-            </>
+          <>
+              {isFocused && (
+                <InstantSEO
+                  headKey={headKey}
+                  title={loadingTitle}
+                  description={loadingDesc}
+                  canonical={canonicalUrl}
+                  image={`${SITE}/og-preview.jpg`}
+                  ogType="article"
+                />
+              )}
+              <View style={styles.center}><ActivityIndicator size="large" /></View>
+          </>
         );
     }
 
     // ERROR
     if (isError || !travel) {
         return (
-            <>
-                {isFocused && (
-                    <InstantSEO
-                        headKey={headKey}
-                        title={errorTitle}
-                        description={errorDesc}
-                        canonical={canonicalUrl}
-                        image={`${SITE}/og-preview.jpg`}
-                        ogType="article"
-                    />
-                )}
-                <View style={styles.center}><Text>Ошибка загрузки</Text></View>
-            </>
+          <>
+              {isFocused && (
+                <InstantSEO
+                  headKey={headKey}
+                  title={errorTitle}
+                  description={errorDesc}
+                  canonical={canonicalUrl}
+                  image={`${SITE}/og-preview.jpg`}
+                  ogType="article"
+                />
+              )}
+              <View style={styles.center}><Text>Ошибка загрузки</Text></View>
+          </>
         );
     }
 
     // READY
+    const firstImg = (travel.gallery?.[0] ?? null) as unknown as ImgLike | null;
+
     return (
-        <>
-            {isFocused && (
-                <InstantSEO
-                    headKey={headKey}
-                    title={readyTitle}
-                    description={readyDesc}
-                    canonical={canonicalUrl}
-                    image={readyImage}
-                    ogType="article"
-                />
-            )}
-            <View style={styles.wrapper}>
-                <SafeAreaView style={styles.safeArea}>
-                    <View style={styles.mainContainer}>
-                        {isMobile && menuOpen && (
-                            <TouchableOpacity style={styles.backdrop} onPress={closeMenu} activeOpacity={1} />
-                        )}
+      <>
+          {isFocused && (
+            <InstantSEO
+              headKey={headKey}
+              title={readyTitle}
+              description={readyDesc}
+              canonical={canonicalUrl}
+              image={readyImage}
+              ogType="article"
+            />
+          )}
+          <View style={styles.wrapper}>
+              <SafeAreaView style={styles.safeArea}>
+                  <View style={styles.mainContainer}>
+                      {isMobile && menuOpen && (
+                        <TouchableOpacity style={styles.backdrop} onPress={closeMenu} activeOpacity={1} />
+                      )}
 
-                        <Animated.View
-                            style={[styles.sideMenu, { transform: [{ translateX: animatedX }], width: MENU_WIDTH, zIndex: 1000 }]}
+                      <Animated.View
+                        style={[styles.sideMenu, { transform: [{ translateX: animatedX }], width: MENU_WIDTH, zIndex: 1000 }]}
+                      >
+                          <Suspense fallback={<Fallback />}>
+                              <CompactSideBarTravel
+                                travel={travel}
+                                isSuperuser={isSuperuser}
+                                storedUserId={userId}
+                                isMobile={isMobile}
+                                refs={anchor}
+                                closeMenu={closeMenu}
+                                onNavigate={scrollTo}
+                              />
+                          </Suspense>
+                      </Animated.View>
+
+                      {isMobile && (
+                        <TouchableOpacity
+                          onPress={toggleMenu}
+                          style={[styles.fab, { top: insets.top + 10 }]}
+                          hitSlop={12}
+                          accessibilityRole="button"
+                          accessibilityLabel="Открыть меню разделов"
                         >
-                            <Suspense fallback={<Fallback />}>
-                                <CompactSideBarTravel
-                                    travel={travel}
-                                    isSuperuser={isSuperuser}
-                                    storedUserId={userId}
-                                    isMobile={isMobile}
-                                    refs={anchor}
-                                    closeMenu={closeMenu}
-                                    onNavigate={scrollTo}
-                                />
-                            </Suspense>
-                        </Animated.View>
+                            <Icon name={menuOpen ? 'close' : 'menu'} size={24} color="#fff" />
+                        </TouchableOpacity>
+                      )}
 
-                        {isMobile && (
-                            <TouchableOpacity
-                                onPress={toggleMenu}
-                                style={[styles.fab, { top: insets.top + 10 }]}
-                                hitSlop={12}
-                                accessibilityRole="button"
-                                accessibilityLabel="Открыть меню разделов"
-                            >
-                                <Icon name={menuOpen ? 'close' : 'menu'} size={24} color="#fff" />
-                            </TouchableOpacity>
-                        )}
+                      <ScrollView
+                        ref={scrollRef}
+                        contentContainerStyle={styles.scrollContent}
+                        keyboardShouldPersistTaps="handled"
+                        style={[styles.scrollView, { marginLeft: isMobile ? 0 : MENU_WIDTH }]}
+                      >
+                          <View style={styles.contentOuter}>
+                              <View style={styles.contentWrapper}>
+                                  <SList revealOrder="forwards" tail="collapsed">
+                                      <View ref={anchor.gallery} />
 
-                        <ScrollView
-                            ref={scrollRef}
-                            contentContainerStyle={styles.scrollContent}
-                            keyboardShouldPersistTaps="handled"
-                            style={[styles.scrollView, { marginLeft: isMobile ? 0 : MENU_WIDTH }]}
-                        >
-                            <View style={styles.contentOuter}>
-                                <View style={styles.contentWrapper}>
-                                    <SList revealOrder="forwards" tail="collapsed">
-                                        <View ref={anchor.gallery} />
-                                        {!!travel.gallery?.length && (
-                                            <Suspense fallback={<Fallback />}>
-                                                <View style={styles.sectionContainer}>
-                                                    <View style={styles.sliderContainer}>
-                                                        <Slider images={travel.gallery} showArrows={!isMobile} showDots={isMobile} />
-                                                    </View>
-                                                </View>
-                                            </Suspense>
-                                        )}
+                                      {/* LCP HERO -> потом слайдер на idle */}
+                                      {!!firstImg && (
+                                        <View style={styles.sectionContainer}>
+                                            {Platform.OS === 'web' && !showSlider ? (
+                                              <LCPHeroImage img={firstImg} alt={travel.name} />
+                                            ) : (
+                                              <Suspense fallback={<Fallback />}>
+                                                  <View style={styles.sliderContainer}>
+                                                      <Slider images={travel.gallery} showArrows={!isMobile} showDots={isMobile} />
+                                                  </View>
+                                              </Suspense>
+                                            )}
+                                        </View>
+                                      )}
 
-                                        {[
-                                            { key: 'description',    ref: anchor.description,    html: travel.description,    title: travel.name },
-                                            { key: 'recommendation', ref: anchor.recommendation, html: travel.recommendation, title: 'Рекомендации' },
-                                            { key: 'plus',           ref: anchor.plus,           html: travel.plus,           title: 'Плюсы' },
-                                            { key: 'minus',          ref: anchor.minus,          html: travel.minus,          title: 'Минусы' },
-                                        ].map(({ key, ref, html, title }) =>
-                                            html ? (
-                                                <Suspense key={key} fallback={<Fallback />}>
-                                                    <View ref={ref}>
-                                                        <CollapsibleSection
-                                                            title={title}
-                                                            initiallyOpen={!isMobile}
-                                                            forceOpen={forceOpenKey === key}
-                                                        >
-                                                            <View style={styles.descriptionContainer}>
-                                                                <TravelDescription title={title} htmlContent={html} noBox />
-                                                            </View>
-                                                        </CollapsibleSection>
-                                                    </View>
-                                                </Suspense>
-                                            ) : null,
-                                        )}
+                                      {[
+                                          { key: 'description',    ref: anchor.description,    html: travel.description,    title: travel.name },
+                                          { key: 'recommendation', ref: anchor.recommendation, html: travel.recommendation, title: 'Рекомендации' },
+                                          { key: 'plus',           ref: anchor.plus,           html: travel.plus,           title: 'Плюсы' },
+                                          { key: 'minus',          ref: anchor.minus,          html: travel.minus,          title: 'Минусы' },
+                                      ].map(({ key, ref, html, title }) =>
+                                        html ? (
+                                          <Suspense key={key} fallback={<Fallback />}>
+                                              <View ref={ref}>
+                                                  <CollapsibleSection
+                                                    title={title}
+                                                    initiallyOpen={!isMobile}
+                                                    forceOpen={forceOpenKey === key}
+                                                  >
+                                                      <View style={styles.descriptionContainer}>
+                                                          <TravelDescription title={title} htmlContent={html} noBox />
+                                                      </View>
+                                                  </CollapsibleSection>
+                                              </View>
+                                          </Suspense>
+                                        ) : null,
+                                      )}
 
-                                        {travel.youtube_link && (
-                                            <View ref={anchor.video} style={styles.sectionContainer}>
-                                                <Text style={styles.sectionHeaderText}>Видео</Text>
+                                      {travel.youtube_link && (
+                                        <View ref={anchor.video} style={styles.sectionContainer}>
+                                            <Text style={styles.sectionHeaderText}>Видео</Text>
+                                            <View style={{ marginTop: 12 }}>
+                                                <LazyYouTube url={travel.youtube_link} />
+                                            </View>
+                                        </View>
+                                      )}
+
+                                      {/* Экскурсии — лениво на web при появлении */}
+                                      <div ref={Platform.OS === 'web' ? (refExc as unknown as React.RefObject<HTMLDivElement>) : undefined} />
+                                      {Platform.OS === 'web' && excursionsVisible && travel.travelAddress?.length > 0 && (
+                                        <Suspense fallback={<Fallback />}>
+                                            <View ref={anchor.excursions} style={styles.sectionContainer}>
+                                                <Text style={styles.sectionHeaderText}>Экскурсии</Text>
                                                 <View style={{ marginTop: 12 }}>
-                                                    <LazyYouTube url={travel.youtube_link} />
+                                                    <BelkrajWidgetComponent
+                                                      countryCode={travel.countryCode}
+                                                      points={travel.travelAddress}
+                                                      collapsedHeight={600}
+                                                      expandedHeight={1000}
+                                                    />
                                                 </View>
                                             </View>
-                                        )}
+                                        </Suspense>
+                                      )}
 
-                                        {/* Экскурсии — лениво на web при появлении */}
-                                        <div ref={Platform.OS === 'web' ? (refExc as unknown as React.RefObject<HTMLDivElement>) : undefined} />
-                                        {Platform.OS === 'web' && excursionsVisible && travel.travelAddress?.length > 0 && (
-                                            <Suspense fallback={<Fallback />}>
-                                                <View ref={anchor.excursions} style={styles.sectionContainer}>
-                                                    <Text style={styles.sectionHeaderText}>Экскурсии</Text>
-                                                    <View style={{ marginTop: 12 }}>
-                                                        <BelkrajWidgetComponent
-                                                            countryCode={travel.countryCode}
-                                                            points={travel.travelAddress}
-                                                            collapsedHeight={600}
-                                                            expandedHeight={1000}
-                                                        />
-                                                    </View>
-                                                </View>
-                                            </Suspense>
-                                        )}
+                                      {/* Карта — тоже лениво при появлении */}
+                                      <div ref={Platform.OS === 'web' ? (refMap as unknown as React.RefObject<HTMLDivElement>) : undefined} />
+                                      <View ref={anchor.map} style={styles.sectionContainer}>
+                                          <Text style={styles.sectionHeaderText}></Text>
+                                          <View style={{ marginTop: 12 }}>
+                                              {canRenderHeavy && mapVisible && travel.coordsMeTravel?.length > 0 && (
+                                                <Suspense fallback={<Fallback />}>
+                                                    <ToggleableMap>
+                                                        <MapClientSide travel={{ data: travel.travelAddress }} />
+                                                    </ToggleableMap>
+                                                </Suspense>
+                                              )}
+                                          </View>
+                                      </View>
 
-                                        {/* Карта — тоже лениво при появлении */}
-                                        <div ref={Platform.OS === 'web' ? (refMap as unknown as React.RefObject<HTMLDivElement>) : undefined} />
-                                        <View ref={anchor.map} style={styles.sectionContainer}>
-                                            <Text style={styles.sectionHeaderText}></Text>
-                                            <View style={{ marginTop: 12 }}>
-                                                {canRenderHeavy && mapVisible && travel.coordsMeTravel?.length > 0 && (
-                                                    <Suspense fallback={<Fallback />}>
-                                                        <ToggleableMap>
-                                                            <MapClientSide travel={{ data: travel.travelAddress }} />
-                                                        </ToggleableMap>
-                                                    </Suspense>
-                                                )}
-                                            </View>
-                                        </View>
+                                      <View ref={anchor.points} style={styles.sectionContainer}>
+                                          <Text style={styles.sectionHeaderText}></Text>
+                                          <View style={{ marginTop: 12 }}>
+                                              {travel.travelAddress && (
+                                                <Suspense fallback={<Fallback />}>
+                                                    <PointList points={travel.travelAddress} />
+                                                </Suspense>
+                                              )}
+                                          </View>
+                                      </View>
 
-                                        <View ref={anchor.points} style={styles.sectionContainer}>
-                                            <Text style={styles.sectionHeaderText}></Text>
-                                            <View style={{ marginTop: 12 }}>
-                                                {travel.travelAddress && (
-                                                    <Suspense fallback={<Fallback />}>
-                                                        <PointList points={travel.travelAddress} />
-                                                    </Suspense>
-                                                )}
-                                            </View>
-                                        </View>
+                                      <View ref={refNear} style={{ height: 1 }} />
+                                      <View ref={anchor.near} style={styles.sectionContainer}>
+                                          <Text style={styles.sectionHeaderText}></Text>
+                                          <View style={{ marginTop: 12 }}>
+                                              {nearVisible && travel.travelAddress && (
+                                                <Suspense fallback={<Fallback />}>
+                                                    <NearTravelList travel={travel} />
+                                                </Suspense>
+                                              )}
+                                          </View>
+                                      </View>
 
-                                        <View ref={refNear} style={{ height: 1 }} />
-                                        <View ref={anchor.near} style={styles.sectionContainer}>
-                                            <Text style={styles.sectionHeaderText}></Text>
-                                            <View style={{ marginTop: 12 }}>
-                                                {nearVisible && travel.travelAddress && (
-                                                    <Suspense fallback={<Fallback />}>
-                                                        <NearTravelList travel={travel} />
-                                                    </Suspense>
-                                                )}
-                                            </View>
-                                        </View>
-
-                                        <View ref={refPop} style={{ height: 1 }} />
-                                        <View ref={anchor.popular} style={styles.sectionContainer}>
-                                            <Text style={styles.sectionHeaderText}></Text>
-                                            <View style={{ marginTop: 12 }}>
-                                                {popularVisible && (
-                                                    <Suspense fallback={<Fallback />}>
-                                                        <PopularTravelList />
-                                                    </Suspense>
-                                                )}
-                                            </View>
-                                        </View>
-                                    </SList>
-                                </View>
-                            </View>
-                        </ScrollView>
-                    </View>
-                </SafeAreaView>
-            </View>
-        </>
+                                      <View ref={refPop} style={{ height: 1 }} />
+                                      <View ref={anchor.popular} style={styles.sectionContainer}>
+                                          <Text style={styles.sectionHeaderText}></Text>
+                                          <View style={{ marginTop: 12 }}>
+                                              {popularVisible && (
+                                                <Suspense fallback={<Fallback />}>
+                                                    <PopularTravelList />
+                                                </Suspense>
+                                              )}
+                                          </View>
+                                      </View>
+                                  </SList>
+                              </View>
+                          </View>
+                      </ScrollView>
+                  </View>
+              </SafeAreaView>
+          </View>
+      </>
     );
 }
 

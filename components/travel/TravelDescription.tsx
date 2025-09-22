@@ -13,16 +13,15 @@ import StableContent from "@/components/travel/StableContent";
 
 interface TravelDescriptionProps {
     htmlContent: string;
-    title?: string;          // ← заголовок может отсутствовать
+    title?: string;
     noBox?: boolean;
 }
 
 /**
- * Описание путешествия с адаптивной высотой и безопасной разметкой.
- * - Корректно работает без title.
- * - contentWidth никогда не уходит в отрицательные значения.
- * - Плашка-штамп не перехватывает клики и не ломает скролл.
- * - Парсинг HTML откладывается до idle, чтобы не жечь main thread.
+ * Описание путешествия:
+ * - На web сразу монтируем HTML (иначе могут «пропасть» картинки, если idle не наступает).
+ * - На native парсинг откладывается до конца взаимодействий (экономим кадры).
+ * - Есть форсажный таймер — через 2s в любом случае монтируем.
  */
 const TravelDescription: React.FC<TravelDescriptionProps> = ({
                                                                  htmlContent,
@@ -45,94 +44,92 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
         return txt.length === 0;
     }, [htmlContent]);
 
-    // ---- отложенный рендер тяжёлого HTML ----
-    const [canParseHtml, setCanParseHtml] = useState(Platform.OS !== "web" ? false : false);
+    // На web — сразу true, на native — откладываем
+    const [canParseHtml, setCanParseHtml] = useState(Platform.OS === "web");
 
     useEffect(() => {
         let cancelled = false;
+        let timeoutId: any = null;
 
-        if (Platform.OS === "web") {
-            const arm = () => !cancelled && setCanParseHtml(true);
-            if ("requestIdleCallback" in window) {
-                // @ts-ignore
-                const id = (window as any).requestIdleCallback(arm, { timeout: 1200 });
-                return () => {
-                    cancelled = true;
-                    // @ts-ignore
-                    if ((window as any).cancelIdleCallback) (window as any).cancelIdleCallback(id);
-                };
-            } else {
-                const t = setTimeout(arm, 800);
-                return () => {
-                    cancelled = true;
-                    clearTimeout(t);
-                };
-            }
-        } else {
+        if (Platform.OS !== "web") {
             const task = InteractionManager.runAfterInteractions(() => {
                 if (!cancelled) setCanParseHtml(true);
             });
+
+            // Форсаж: если что-то пойдёт не так — смонтировать через 2s
+            timeoutId = setTimeout(() => {
+                if (!cancelled) setCanParseHtml(true);
+            }, 2000);
+
             return () => {
                 cancelled = true;
                 task.cancel();
+                if (timeoutId) clearTimeout(timeoutId);
+            };
+        } else {
+            // На web всё уже true; но оставим форсаж на всякий
+            timeoutId = setTimeout(() => {
+                if (!cancelled) setCanParseHtml(true);
+            }, 2000);
+            return () => {
+                cancelled = true;
+                if (timeoutId) clearTimeout(timeoutId);
             };
         }
     }, [htmlContent]);
 
     const inner = (
-        <View style={styles.inner} pointerEvents="box-none">
-            {/* Полупрозрачный штамп в углу — загружаем с низким приоритетом */}
-            <ExpoImage
-                source={require("@/assets/travel-stamp.webp")}
-                style={styles.stamp}
-                accessibilityIgnoresInvertColors
-                accessible={false}
-                pointerEvents="none"
-                cachePolicy="memory-disk"
-                priority="low"
-            />
+      <View style={styles.inner} pointerEvents="box-none">
+          {/* Полупрозрачный штамп в углу — низкий приоритет, не перехватывает клики */}
+          <ExpoImage
+            source={require("@/assets/travel-stamp.webp")}
+            style={styles.stamp}
+            accessibilityIgnoresInvertColors
+            accessible={false}
+            pointerEvents="none"
+            cachePolicy="memory-disk"
+            priority="low"
+          />
 
-            {/* Контент */}
-            {isEmptyHtml ? (
-                <Text style={styles.placeholder}>Описание скоро появится 🙂</Text>
-            ) : canParseHtml ? (
-                <StableContent html={htmlContent} contentWidth={contentWidth} />
-            ) : (
-                // лёгкий плейсхолдер на время idle — дешевле, чем сразу парсить HTML
-                <Text style={styles.placeholder}>Загружаем описание…</Text>
-            )}
-        </View>
+          {/* Контент */}
+          {isEmptyHtml ? (
+            <Text style={styles.placeholder}>Описание скоро появится 🙂</Text>
+          ) : canParseHtml ? (
+            <StableContent html={htmlContent} contentWidth={contentWidth} />
+          ) : (
+            <Text style={styles.placeholder}>Загружаем описание…</Text>
+          )}
+      </View>
     );
 
     return (
-        <View style={styles.wrapper} testID="travel-description">
-            {noBox ? (
+      <View style={styles.wrapper} testID="travel-description">
+          {noBox ? (
+            <ScrollView
+              style={styles.scrollArea}
+              contentContainerStyle={styles.scrollContent}
+              scrollEventThrottle={16}
+              showsVerticalScrollIndicator
+              keyboardShouldPersistTaps="handled"
+              {...(Platform.OS === "web" ? ({ overScrollMode: "never" } as any) : {})}
+            >
+                {inner}
+            </ScrollView>
+          ) : (
+            <View style={[styles.fixedHeightBlock, { height: pageHeight }]}>
                 <ScrollView
-                    style={styles.scrollArea}
-                    contentContainerStyle={styles.scrollContent}
-                    scrollEventThrottle={16}
-                    showsVerticalScrollIndicator
-                    keyboardShouldPersistTaps="handled"
-                    // немного экономим на web
-                    {...(Platform.OS === "web" ? { overScrollMode: "never" as any } : {})}
+                  style={styles.scrollArea}
+                  contentContainerStyle={styles.scrollContent}
+                  scrollEventThrottle={16}
+                  showsVerticalScrollIndicator
+                  keyboardShouldPersistTaps="handled"
+                  {...(Platform.OS === "web" ? ({ overScrollMode: "never" } as any) : {})}
                 >
                     {inner}
                 </ScrollView>
-            ) : (
-                <View style={[styles.fixedHeightBlock, { height: pageHeight }]}>
-                    <ScrollView
-                        style={styles.scrollArea}
-                        contentContainerStyle={styles.scrollContent}
-                        scrollEventThrottle={16}
-                        showsVerticalScrollIndicator
-                        keyboardShouldPersistTaps="handled"
-                        {...(Platform.OS === "web" ? { overScrollMode: "never" as any } : {})}
-                    >
-                        {inner}
-                    </ScrollView>
-                </View>
-            )}
-        </View>
+            </View>
+          )}
+      </View>
     );
 };
 
