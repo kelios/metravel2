@@ -13,6 +13,7 @@ interface Travel {
 
 interface PopupContentWebProps {
   travel: Travel;
+  onClose?: () => void; // Добавляем проп для закрытия
 }
 
 const parseLatLng = (coord: string): { lat: number; lng: number } | null => {
@@ -24,7 +25,7 @@ const parseLatLng = (coord: string): { lat: number; lng: number } | null => {
   return { lat, lng };
 };
 
-const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel }) => {
+const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose }) => {
   const { address, coord, travelImageThumbUrl, categoryName, description, articleUrl, urlTravel } = travel;
   const [copied, setCopied] = useState(false);
   const mounted = useRef(false);
@@ -65,15 +66,21 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel }) => {
     fn();
   }, []);
 
+  const handleClose = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onClose?.();
+  }, [onClose]);
+
   const onKey = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPrimary(); }
-  }, [openPrimary]);
+    if (e.key === 'Escape') { e.preventDefault(); onClose?.(); }
+  }, [openPrimary, onClose]);
 
   const cats = (categoryName || '').split(',').map(c => c.trim()).filter(Boolean);
 
   return (
     <div
-      className="popup-card"
+      className="popup-container"
       onClick={openPrimary}
       onKeyDown={onKey}
       tabIndex={0}
@@ -81,55 +88,69 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel }) => {
       aria-label={`Открыть: ${address}`}
       title="Открыть"
     >
-      <div
-        className="popup-image"
-        style={{
-          backgroundImage: travelImageThumbUrl ? `url(${travelImageThumbUrl})` : 'none',
-          backgroundColor: travelImageThumbUrl ? undefined : '#e0e0e0'
-        }}
-      >
-        <div className="popup-icons-top" aria-label="Действия с точкой">
-          <div className="popup-icons-group">
-            <button className="popup-icon-btn" onClick={(e) => handleAction(e, copyCoord)} title="Скопировать координаты" aria-label="Скопировать координаты">
-              <CopyIcon />
-            </button>
-            <button className="popup-icon-btn" onClick={(e) => handleAction(e, shareTelegram)} title="Поделиться в Telegram" aria-label="Поделиться в Telegram">
-              <SendIcon />
-            </button>
-            <button className="popup-icon-btn" onClick={(e) => handleAction(e, openMap)} title="Открыть на карте" aria-label="Открыть на карте">
-              <MapPinIcon />
-            </button>
-            {(urlTravel || articleUrl) && (
-              <button className="popup-icon-btn" onClick={(e) => handleAction(e, openPrimary)} title={urlTravel ? 'Открыть квест' : 'Открыть статью'} aria-label={urlTravel ? 'Открыть квест' : 'Открыть статью'}>
-                <LinkIcon />
+      <div className="popup-card">
+        {/* Крестик закрытия */}
+        <button
+          className="popup-close-btn"
+          onClick={handleClose}
+          aria-label="Закрыть попап"
+          title="Закрыть"
+        >
+          {/* Иконка крестика */}
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="#fff">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+          </svg>
+        </button>
+
+        <div
+          className="popup-image"
+          style={{
+            backgroundImage: travelImageThumbUrl ? `url(${travelImageThumbUrl})` : 'none',
+            backgroundColor: travelImageThumbUrl ? undefined : '#e0e0e0'
+          }}
+        >
+          <div className="popup-icons-top" aria-label="Действия с точкой">
+            <div className="popup-icons-group">
+              <button className="popup-icon-btn" onClick={(e) => handleAction(e, copyCoord)} title="Скопировать координаты" aria-label="Скопировать координаты">
+                <CopyIcon />
               </button>
-            )}
+              <button className="popup-icon-btn" onClick={(e) => handleAction(e, shareTelegram)} title="Поделиться в Telegram" aria-label="Поделиться в Telegram">
+                <SendIcon />
+              </button>
+              <button className="popup-icon-btn" onClick={(e) => handleAction(e, openMap)} title="Открыть на карте" aria-label="Открыть на карте">
+                <MapPinIcon />
+              </button>
+              {(urlTravel || articleUrl) && (
+                <button className="popup-icon-btn" onClick={(e) => handleAction(e, openPrimary)} title={urlTravel ? 'Открыть квест' : 'Открыть статью'} aria-label={urlTravel ? 'Открыть квест' : 'Открыть статью'}>
+                  <LinkIcon />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="popup-overlay">
-          <div className="popup-text">
-            <p className="popup-title one-line" title={address}>{address}</p>
+          <div className="popup-overlay">
+            <div className="popup-text">
+              <p className="popup-title one-line" title={address}>{address}</p>
 
-            {coord && (
-              <div className="popup-coord">
-                {/* делаем выделяемым текстом без клика, чтобы легко копировать мышью */}
-                <span className="popup-coord-text" aria-label="Координаты" title="Выделите и скопируйте">
-                  {coord}
-                </span>
-                {copied && <em className="popup-copied" aria-live="polite">скопировано</em>}
-              </div>
-            )}
+              {coord && (
+                <div className="popup-coord">
+                  <span className="popup-coord-text" aria-label="Координаты" title="Выделите и скопируйте">
+                    {coord}
+                  </span>
+                  {copied && <em className="popup-copied" aria-live="polite">скопировано</em>}
+                </div>
+              )}
 
-            {description ? <p className="popup-description">{description}</p> : null}
+              {description ? <p className="popup-description">{description}</p> : null}
 
-            {cats.length > 0 ? (
-              <div className="popup-category-container">
-                {cats.map((cat, i) => (
-                  <span key={`${cat}-${i}`} className="popup-category">{cat}</span>
-                ))}
-              </div>
-            ) : null}
+              {cats.length > 0 ? (
+                <div className="popup-category-container">
+                  {cats.map((cat, i) => (
+                    <span key={`${cat}-${i}`} className="popup-category">{cat}</span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
@@ -153,84 +174,294 @@ const SendIcon = () => (
 const MapPinIcon = () => (
   <IconBase><path d="M12 2C8.7 2 6 4.7 6 8c0 4.2 5.3 10.4 5.6 10.8.2.3.6.3.8 0 .3-.4 5.6-6.6 5.6-10.8 0-3.3-2.7-6-6-6zm0 8.5c-1.4 0-2.5-1.1-2.5-2.5S10.6 5.5 12 5.5s2.5 1.1 2.5 2.5S13.4 10.5 12 10.5z"/></IconBase>
 );
+const CloseIcon = () => (
+  <IconBase><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></IconBase>
+);
 
-/** Компактные стили + белые координаты + выделение текста */
+/** Исправленные стили */
 const styles = `
+/* Контейнер для попапа */
+.popup-container {
+  position: relative;
+  margin: 0;
+  padding: 0;
+}
+
 .popup-card {
+  position: relative;
   width: 100%;
   max-width: 420px;
+  min-width: 300px;
   border-radius: 16px;
   overflow: hidden;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
   cursor: pointer;
   background: #fff;
-  box-shadow: 0 6px 28px rgba(0,0,0,0.16);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
   outline: none;
-  display: inline-block;
+  margin: 0;
+  transform: translateY(0);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.popup-card:focus { box-shadow: 0 0 0 2px #0ea5e9, 0 6px 28px rgba(0,0,0,0.16); }
+
+.popup-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+}
+
+.popup-card:focus { 
+  box-shadow: 0 0 0 3px #0ea5e9, 0 10px 40px rgba(0,0,0,0.2); 
+}
+
+/* Крестик закрытия */
+.popup-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  background: rgba(0,0,0,0.5);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.popup-close-btn:hover {
+  background: rgba(0,0,0,0.7);
+  transform: scale(1.1);
+}
+
+.popup-close-btn .popup-svg {
+  width: 18px;
+  height: 18px;
+  fill: #fff;
+}
 
 .popup-image {
   position: relative;
-  min-height: 260px;
+  min-height: 220px;
+  height: 100%;
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
 }
 
-.popup-icons-top { position: absolute; top: 8px; right: 8px; z-index: 2; }
+.popup-icons-top { 
+  position: absolute; 
+  top: 12px; 
+  left: 12px; 
+  z-index: 2; 
+}
+
 .popup-icons-group {
-  display: flex; gap: 4px;
+  display: flex; 
+  gap: 4px;
   background: rgba(0,0,0,0.3);
-  border-radius: 10px; padding: 4px;
+  border-radius: 10px; 
+  padding: 6px;
+  backdrop-filter: blur(4px);
 }
-.popup-icon-btn { background: transparent; border: none; padding: 4px; border-radius: 6px; cursor: pointer; }
-.popup-icon-btn:hover { background: rgba(255,255,255,0.08); }
 
-.popup-overlay { width: 100%;
- background: rgba(0,0,0,0.6); 
- padding: 5px;
- box-sizing: border-box; }
+.popup-icon-btn { 
+  background: transparent; 
+  border: none; 
+  padding: 6px; 
+  border-radius: 6px; 
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
 
-.popup-text { color: #fff; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+.popup-icon-btn:hover { 
+  background: rgba(255,255,255,0.15); 
+}
 
-.popup-title { font-weight: 700; margin: 0 0 4px 0; font-size: 16px; }
-.one-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.popup-overlay { 
+  width: 100%;
+  background: linear-gradient(transparent 0%, rgba(0,0,0,0.85) 100%);
+  padding: 20px 16px 16px;
+  box-sizing: border-box;
+}
 
-.popup-coord { margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.popup-text { 
+  color: #fff; 
+  font-size: 14px; 
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  width: 100%;
+}
+
+.popup-title { 
+  font-weight: 700; 
+  margin: 0 0 10px 0; 
+  font-size: 18px; 
+  line-height: 1.2;
+}
+
+.one-line { 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  display: block;
+}
+
+.popup-coord { 
+  margin-bottom: 10px; 
+  display: flex; 
+  align-items: center; 
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .popup-coord-text {
-  color: #ffffff;              /* белые координаты */
-  user-select: text;           /* можно выделять */
+  color: #ffffff;
+  user-select: text;
   -webkit-user-select: text;
+  -moz-user-select: text;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 14px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  background: rgba(255,255,255,0.15);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.2);
 }
-.popup-copied { opacity: .95; font-style: italic; font-size: 12px; }
 
-.popup-description { color: #fff; font-size: 13px; line-height: 1.35; margin: 0 0 6px 0; }
+.popup-copied { 
+  opacity: 0.95; 
+  font-style: italic; 
+  font-size: 12px; 
+  color: #10b981;
+  font-weight: 500;
+}
 
-.popup-category-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.popup-description { 
+  color: rgba(255,255,255,0.95); 
+  font-size: 14px; 
+  line-height: 1.5; 
+  margin: 0 0 12px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.popup-category-container { 
+  display: flex; 
+  flex-wrap: wrap; 
+  gap: 8px; 
+  margin-top: 12px;
+}
+
 .popup-category {
-  background: rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.25);
   border-radius: 999px;
-  padding: 3px 8px;            /* компактнее */
-  font-size: 12px; font-weight: 600; color: #fff;
+  padding: 6px 12px;
+  font-size: 12px; 
+  font-weight: 600; 
+  color: #fff;
+  line-height: 1;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
 }
 
-.popup-svg { width: 20px; height: 20px; fill: #fff; }
-@media (min-width: 600px) { .popup-image { min-height: 280px; } .popup-title { font-size: 16px; } }
-@media (min-width: 1024px) { .popup-image { min-height: 300px; } .popup-title { font-size: 17px; } }
+.popup-svg { 
+  width: 20px; 
+  height: 20px; 
+  fill: #fff; 
+  display: block;
+}
+
+/* Восстанавливаем стандартные стили Leaflet */
+.leaflet-popup-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: auto !important;
+}
+
+.leaflet-popup-tip-container {
+  display: block !important;
+}
+
+.leaflet-popup-tip {
+  background: #fff !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+}
+
+/* Адаптивность */
+@media (max-width: 480px) {
+  .popup-card {
+    max-width: 320px;
+    min-width: 280px;
+  }
+  
+  .popup-image {
+    min-height: 200px;
+  }
+  
+  .popup-overlay {
+    padding: 16px 12px 12px;
+  }
+  
+  .popup-title {
+    font-size: 16px;
+  }
+  
+  .popup-close-btn {
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (min-width: 768px) {
+  .popup-image {
+    min-height: 240px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .popup-image {
+    min-height: 260px;
+  }
+  
+  .popup-card {
+    max-width: 440px;
+  }
+}
 `;
 
+// Безопасное добавление стилей
 if (typeof document !== 'undefined') {
   const id = 'popup-content-web-style';
-  if (!document.getElementById(id)) {
-    const styleTag = document.createElement('style');
+  let styleTag = document.getElementById(id) as HTMLStyleElement;
+
+  if (!styleTag) {
+    styleTag = document.createElement('style');
     styleTag.id = id;
-    styleTag.innerHTML = styles;
     document.head.appendChild(styleTag);
+  }
+
+  if (styleTag.innerHTML !== styles) {
+    styleTag.innerHTML = styles;
   }
 }
 

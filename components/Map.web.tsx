@@ -1,5 +1,5 @@
 // app/Map.tsx (бывш. MapClientSideComponent) — ультралёгкая web-карта
-import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 
 export type Point = {
@@ -130,33 +130,75 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     return null;
   };
 
+  // Компонент для центрирования карты при открытии попапа
+  const MapCenterOnPopup: React.FC<{ point: Point }> = ({ point }) => {
+    const map = useMap();
+
+    const handlePopupOpen = useCallback(() => {
+      const coords = getLatLng(point.coord);
+      if (coords) {
+        // Центрируем карту с небольшим сдвигом вверх чтобы попап был виден полностью
+        const [lat, lng] = coords;
+        map.setView([lat - 0.005, lng], map.getZoom(), {
+          animate: true,
+          duration: 0.5
+        });
+      }
+    }, [map, point.coord]);
+
+    useEffect(() => {
+      // Слушаем событие открытия попапа
+      map.on('popupopen', handlePopupOpen);
+
+      return () => {
+        map.off('popupopen', handlePopupOpen);
+      };
+    }, [map, handlePopupOpen]);
+
+    return null;
+  };
+
+  // Компонент для управления закрытием попапа
+  const PopupWithClose: React.FC<{ point: Point }> = ({ point }) => {
+    const map = useMap();
+
+    const handleClose = useCallback(() => {
+      map.closePopup();
+    }, [map]);
+
+    return (
+      <Popup>
+        <Suspense fallback={<Text>Загрузка…</Text>}>
+          <PopupContent travel={point} onClose={handleClose} />
+        </Suspense>
+      </Popup>
+    );
+  };
+
   return (
-      <View style={styles.mapContainer}>
-        <MapContainer
-            center={initialCenter}
-            zoom={7}
-            style={{ height: '100%', width: '100%' }}
-            scrollWheelZoom
-            // чутка экономим на анимациях
-            preferCanvas
-        >
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <FitBoundsOnData data={travelData} />
-          {travelData.map((point) => {
-            const latLng = getLatLng(point.coord);
-            if (!latLng) return null;
-            return (
-                <Marker key={`${point.id}`} position={latLng} icon={meTravelIcon}>
-                  <Popup>
-                    <Suspense fallback={<Text>Загрузка…</Text>}>
-                      <PopupContent travel={point} />
-                    </Suspense>
-                  </Popup>
-                </Marker>
-            );
-          })}
-        </MapContainer>
-      </View>
+    <View style={styles.mapContainer}>
+      <MapContainer
+        center={initialCenter}
+        zoom={7}
+        style={{ height: '100%', width: '100%' }}
+        scrollWheelZoom
+        // чутка экономим на анимациях
+        preferCanvas
+      >
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <FitBoundsOnData data={travelData} />
+        {travelData.map((point) => {
+          const latLng = getLatLng(point.coord);
+          if (!latLng) return null;
+          return (
+            <Marker key={`${point.id}`} position={latLng} icon={meTravelIcon}>
+              <MapCenterOnPopup point={point} />
+              <PopupWithClose point={point} />
+            </Marker>
+          );
+        })}
+      </MapContainer>
+    </View>
   );
 };
 
