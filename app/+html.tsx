@@ -196,7 +196,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
         // Превращаем буфер в реальную ym и прокидываем накопленное
         var realYm = window.ym;
         if (realYm === ymBuffer) {
-          // Если блокировщик не заменил ym, создадим по стандарту:
           (function(m,e,t,r,i,k,a){
             m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
             m[i].l=1*new Date();
@@ -211,7 +210,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
           defer: true,
           webvisor: true
         });
-        // Прокатываем буферизированные вызовы (если были)
         if (ymQueue.length) {
           ymQueue.forEach(function(args){ try { realYm.apply(null, args); } catch(_){} });
           ymQueue.length = 0;
@@ -239,7 +237,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
   else window.addEventListener('load', run, { once: true });
 
   // ==== OPTIONAL: интеграция с CMP (Termly/иное) ====
-  // Если подключишь баннер и получишь событие согласия — подними уровень GA:
   // window.addEventListener('cmp_consent_granted', function(){
   //   gtag('consent', 'update', {
   //     'ad_storage': 'granted',
