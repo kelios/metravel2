@@ -19,11 +19,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <meta property="og:image" content="https://metravel.by/og-preview.jpg" />
       <meta name="twitter:card" content="summary_large_image" />
 
-      {/* DNS Prefetch для критических внешних ресурсов */}
+      {/* DNS Prefetch */}
       <link rel="dns-prefetch" href="//www.googletagmanager.com" />
       <link rel="dns-prefetch" href="//mc.yandex.ru" />
 
-      {/* Preconnect для ключевых доменов */}
+      {/* Preconnect */}
       <link rel="preconnect" href="https://metravel.by" />
       <link rel="preconnect" href="https://www.googletagmanager.com" />
       <link rel="preconnect" href="https://mc.yandex.ru" />
@@ -74,23 +74,15 @@ export default function Root({ children }: { children: React.ReactNode }) {
   function optimizeLCP() {
     const lcpImg = document.querySelector('[data-lcp]');
     if (!lcpImg) return;
-    
-    // Устанавливаем высокий приоритет загрузки
     lcpImg.fetchpriority = 'high';
-    
-    // Предзагрузка decode для изображений
     if (lcpImg.decode && lcpImg.complete) {
       lcpImg.decode().catch(() => {});
     }
   }
-  
-  if (document.readyState !== 'loading') {
-    optimizeLCP();
-  } else {
-    document.addEventListener('DOMContentLoaded', optimizeLCP);
-  }
+  if (document.readyState !== 'loading') optimizeLCP();
+  else document.addEventListener('DOMContentLoaded', optimizeLCP);
 })();
-`,
+            `,
       }}
     />
 
@@ -101,163 +93,164 @@ export default function Root({ children }: { children: React.ReactNode }) {
           __html: `
 (function() {
   'use strict';
-  
-  // Проверка что мы на проде (дополнительная страховка)
-  const isProduction = ${IS_PRODUCTION};
-  const isLocalhost = window.location.hostname === 'localhost' || 
-                      window.location.hostname === '127.0.0.1' ||
-                      window.location.hostname.startsWith('192.168.') ||
-                      window.location.hostname.startsWith('10.0.');
-  
-  if (!isProduction || isLocalhost) {
-    // Логируем только в development для отладки
-    if (!isProduction) {
-      console.log('Analytics disabled: development mode');
-    }
-    return;
+
+  var __DEV__ = ${!IS_PRODUCTION};
+
+  // Promise-based script loader (устойчив к дубликатам и query-парам)
+  function loadScript(src, attrs) {
+    if (!src) return Promise.resolve(null);
+    var exists = Array.from(document.scripts).some(function(s){
+      try {
+        var u1 = new URL(s.src || '', location.origin);
+        var u2 = new URL(src, location.origin);
+        return u1.origin === u2.origin && u1.pathname === u2.pathname;
+      } catch(_) { return false; }
+    });
+    if (exists) return Promise.resolve(null);
+
+    return new Promise(function(resolve, reject){
+      var s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      if (attrs) {
+        if (attrs.defer) s.defer = true;
+        if (attrs.crossOrigin) s.crossOrigin = attrs.crossOrigin;
+      }
+      s.onload = function(){ resolve(s); };
+      s.onerror = function(){ reject(new Error('Failed to load ' + src)); };
+      (document.head || document.body).appendChild(s);
+    });
   }
-  
-  // Performance-aware utility functions
-  const utils = {
-    isIdle: () => 'requestIdleCallback' in window,
-    runOnIdle: (fn, timeout = 2000) => {
-      if (utils.isIdle()) {
-        requestIdleCallback(fn, { timeout });
-      } else {
-        setTimeout(fn, 500);
-      }
-    },
-    
-    hasConsent: () => {
-      try {
-        const ls = localStorage.getItem('cookie_consent');
-        const ck = document.cookie;
-        return !!ls || /consent=opt/i.test(ck);
-      } catch {
-        return false;
-      }
-    },
-    
-    shouldBlock: () => {
-      try {
-        return navigator.globalPrivacyControl || 
-               navigator.doNotTrack === '1' ||
-               window.doNotTrack === '1';
-      } catch {
-        return false;
-      }
-    },
-    
-    loadScript: (src, options = {}) => {
-      if (!src || document.querySelector('script[src*="' + src.split('/')[2] + '"]')) {
-        return null;
-      }
-      
-      const script = document.createElement('script');
-      script.src = src;
-      script.async = options.async || true;
-      script.defer = options.defer || false;
-      if (options.crossOrigin) script.crossOrigin = options.crossOrigin;
-      
-      (document.head || document.body).appendChild(script);
-      return script;
-    }
-  };
 
-  // Google Analytics Configuration
+  // GA: dataLayer/gtag bootstrap + consent defaults (denied -> later granted)
   window.dataLayer = window.dataLayer || [];
-  window.gtag = function() { dataLayer.push(arguments); };
-  gtag('js', new Date());
+  window.gtag = function(){ dataLayer.push(arguments); };
 
-  // Yandex Metrika Configuration
-  window.ym = window.ym || function() { (ym.a = ym.a || []).push(arguments); };
-  ym.l = +new Date();
+  // Start with denied (GDPR-friendly). Если есть CMP — он может перевести в granted.
+  gtag('consent', 'default', {
+    'ad_storage': 'denied',
+    'analytics_storage': 'denied',
+    'ad_user_data': 'denied',
+    'ad_personalization': 'denied',
+    'functionality_storage': 'granted',
+    'security_storage': 'granted'
+  });
 
-  // SPA Navigation Tracking
-  const trackPageView = () => {
+  // Yandex Metrika bootstrap через onload (без ранней инициализации)
+  // Создадим лёгкий буфер, чтобы hit/события не терялись до загрузки:
+  var ymQueue = [];
+  function ymBuffer(){ ymQueue.push([].slice.call(arguments)); }
+  window.ym = window.ym || ymBuffer;
+
+  // SPA pageview
+  function trackPageView() {
     try {
-      ym(${METRIKA_ID}, 'hit', window.location.href, {
+      // Metrika
+      window.ym(${METRIKA_ID}, 'hit', window.location.href, {
         title: document.title,
         referer: document.referrer
       });
-      gtag('config', '${GA_ID}', {
+      // GA
+      gtag('event', 'page_view', {
         page_title: document.title,
-        page_location: window.location.href,
-        transport_type: 'beacon'
+        page_location: window.location.href
       });
-    } catch (e) {
-      // Silent fail in production
-    }
-  };
-
-  // History patching for SPA
-  const originalPushState = history.pushState;
-  const originalReplaceState = history.replaceState;
-  
-  history.pushState = function(...args) {
-    const result = originalPushState.apply(this, args);
-    setTimeout(trackPageView, 10);
-    return result;
-  };
-  
-  history.replaceState = function(...args) {
-    const result = originalReplaceState.apply(this, args);
-    setTimeout(trackPageView, 10);
-    return result;
-  };
-  
-  window.addEventListener('popstate', trackPageView);
-
-  // Load analytics after page is interactive
-  const loadAnalytics = () => {
-    if (utils.shouldBlock()) {
-      return; // Respect privacy controls
-    }
-
-    if (!utils.hasConsent()) {
-      // Load cookie consent manager
-      utils.loadScript('https://app.termly.io/resource-blocker/031ae6f7-458d-4853-98e5-098ad6cee542?autoBlock=on', {
-        defer: true
-      });
-      return;
-    }
-
-    // Load Google Analytics
-    utils.loadScript('https://www.googletagmanager.com/gtag/js?id=${GA_ID}', {
-      async: true,
-      crossOrigin: 'anonymous'
-    });
-
-    // Load Yandex Metrika
-    utils.loadScript('https://mc.yandex.ru/metrika/tag.js', {
-      async: true,
-      defer: true
-    });
-
-    // Initialize Metrika
-    ym(${METRIKA_ID}, 'init', {
-      clickmap: false,
-      trackLinks: true,
-      accurateTrackBounce: true,
-      ecommerce: 'dataLayer',
-      defer: true,
-      webvisor: true
-    });
-
-    // Initial page view
-    trackPageView();
-  };
-
-  // Start loading analytics on idle
-  if (document.readyState === 'complete') {
-    utils.runOnIdle(loadAnalytics);
-  } else {
-    window.addEventListener('load', () => {
-      utils.runOnIdle(loadAnalytics);
-    }, { once: true });
+    } catch(e) { /* no-op */ }
   }
+
+  // Патчим History для SPA
+  (function(){
+    var push = history.pushState;
+    var replace = history.replaceState;
+    history.pushState = function() {
+      var r = push.apply(this, arguments);
+      setTimeout(trackPageView, 10);
+      return r;
+    };
+    history.replaceState = function() {
+      var r = replace.apply(this, arguments);
+      setTimeout(trackPageView, 10);
+      return r;
+    };
+    window.addEventListener('popstate', trackPageView);
+  })();
+
+  function initAnalytics() {
+    // Загружаем GA
+    var gaPromise = loadScript('https://www.googletagmanager.com/gtag/js?id=${GA_ID}', { crossOrigin: 'anonymous' })
+      .then(function(){
+        gtag('js', new Date());
+        gtag('config', '${GA_ID}', {
+          page_title: document.title,
+          page_location: window.location.href,
+          transport_type: 'beacon'
+        });
+      })
+      .catch(function(err){
+        if (__DEV__) console.warn('[GA]', err && err.message);
+      });
+
+    // Загружаем Metrika и инициализируем ПОСЛЕ загрузки tag.js
+    var ymPromise = loadScript('https://mc.yandex.ru/metrika/tag.js', { defer: true })
+      .then(function(){
+        // Превращаем буфер в реальную ym и прокидываем накопленное
+        var realYm = window.ym;
+        if (realYm === ymBuffer) {
+          // Если блокировщик не заменил ym, создадим по стандарту:
+          (function(m,e,t,r,i,k,a){
+            m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+            m[i].l=1*new Date();
+          })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+          realYm = window.ym;
+        }
+        realYm(${METRIKA_ID}, 'init', {
+          clickmap: false,
+          trackLinks: true,
+          accurateTrackBounce: true,
+          ecommerce: 'dataLayer',
+          defer: true,
+          webvisor: true
+        });
+        // Прокатываем буферизированные вызовы (если были)
+        if (ymQueue.length) {
+          ymQueue.forEach(function(args){ try { realYm.apply(null, args); } catch(_){} });
+          ymQueue.length = 0;
+        }
+      })
+      .catch(function(err){
+        if (__DEV__) console.warn('[Metrika]', err && err.message);
+      });
+
+    // Первый pageview после обеих инициализаций (или через таймаут как fallback)
+    Promise.allSettled([gaPromise, ymPromise]).then(function(){ trackPageView(); });
+    setTimeout(trackPageView, 2000);
+  }
+
+  // Загружаем аналитики по onload/idle, без блокировки согласием.
+  function run() {
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(initAnalytics, { timeout: 2000 });
+    } else {
+      setTimeout(initAnalytics, 500);
+    }
+  }
+
+  if (document.readyState === 'complete') run();
+  else window.addEventListener('load', run, { once: true });
+
+  // ==== OPTIONAL: интеграция с CMP (Termly/иное) ====
+  // Если подключишь баннер и получишь событие согласия — подними уровень GA:
+  // window.addEventListener('cmp_consent_granted', function(){
+  //   gtag('consent', 'update', {
+  //     'ad_storage': 'granted',
+  //     'analytics_storage': 'granted',
+  //     'ad_user_data': 'granted',
+  //     'ad_personalization': 'granted'
+  //   });
+  // });
+
 })();
-`,
+              `,
         }}
       />
     )}
@@ -268,7 +261,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <div>
           {/* Yandex Metrika noscript */}
           <img src={`https://mc.yandex.ru/watch/${METRIKA_ID}`} style={{position:'absolute',left:'-9999px'}} alt="" />
-
           {/* Google Analytics noscript */}
           <iframe src={`https://www.googletagmanager.com/ns.html?id=${GA_ID}`} height="0" width="0" style={{display:'none',visibility:'hidden'}} />
         </div>
