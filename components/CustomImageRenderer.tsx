@@ -3,9 +3,9 @@ import {
   View,
   Platform,
   useWindowDimensions,
-  ActivityIndicator,
   StyleSheet,
   Image as RNImage,
+  Text,
 } from "react-native";
 import { CustomRendererProps } from "react-native-render-html";
 import { Image as ExpoImage } from "expo-image";
@@ -18,7 +18,7 @@ const MAX_WIDTH = 800;
 const MAX_IMAGE_HEIGHT = 480;
 const H_PADDING = 16;
 
-/* ───────── helpers ───────── */
+/* ─ helpers ─ */
 const pickSrc = (tnode: any) => {
   const a = tnode?.attributes || {};
   const raw = a.src || a["data-src"] || "";
@@ -29,44 +29,29 @@ const pickSrc = (tnode: any) => {
   return raw;
 };
 
-const isPrivateHost = (host: string) => {
-  return (
-    host === "localhost" ||
-    host.endsWith(".local") ||
-    /^127\.0\.0\.1$/.test(host) ||
-    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) ||
-    /^192\.168\.\d{1,3}\.\d{1,3}$/.test(host) ||
-    /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(host)
-  );
-};
+const isPrivateHost = (host: string) =>
+  host === "localhost" ||
+  host.endsWith(".local") ||
+  /^127\.|^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
 
 const normalizeUrl = (url: string) => {
   let u = (url || "").trim();
   if (!u) return u;
-
   if (u.startsWith("//")) {
-    const pageProto = typeof window !== "undefined" ? window.location.protocol : "https:";
-    u = `${pageProto}${u}`;
+    const proto = typeof window !== "undefined" ? window.location.protocol : "https:";
+    u = `${proto}${u}`;
   }
-
   try {
     const parsed = new URL(u, typeof window !== "undefined" ? window.location.href : "http://localhost");
-    const host = parsed.hostname;
-
-    if (!isPrivateHost(host)) {
-      if (parsed.protocol === "http:") {
-        parsed.protocol = "https:";
-        u = parsed.toString();
-      }
-    } else {
-      u = parsed.toString();
+    if (!isPrivateHost(parsed.hostname) && parsed.protocol === "http:") {
+      parsed.protocol = "https:";
+      return parsed.toString();
     }
-  } catch {}
-
-  return u;
+    return parsed.toString();
+  } catch { return u; }
 };
 
-/* ───────── component ───────── */
+/* ─ component ─ */
 const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) => {
   const raw = pickSrc(tnode);
   if (!raw) return null;
@@ -75,6 +60,12 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
 
   const attW = tnode.attributes?.width ? Number(tnode.attributes.width) : undefined;
   const attH = tnode.attributes?.height ? Number(tnode.attributes.height) : undefined;
+
+  // 🔎 если это мелкая иконка — игнорируем (даёт «белые квадраты» и ломает тексты)
+  if ((attW && attW <= 32) || (attH && attH <= 32)) {
+    return null;
+  }
+
   const attrAR = attW && attH && attH > 0 ? attW / attH : null;
 
   const { width: winW } = useWindowDimensions();
@@ -84,44 +75,28 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
   );
 
   const [ar, setAr] = useState<number | null>(attrAR ?? null);
-  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
-    setImageLoaded(false);
-    setErr(false);
 
-    if (attrAR) {
-      setAr(attrAR);
-      setLoading(false);
-      return () => { mounted = false; };
-    }
+    if (attrAR) { setAr(attrAR); return () => { mounted = false; }; }
 
     if (Platform.OS === "web") {
       const img = new (window as any).Image();
-      img.decoding = "async";
+      (img as any).decoding = "async";
       (img as any).loading = "lazy";
-      img.onload = () => {
-        if (!mounted) return;
-        if (img.naturalWidth && img.naturalHeight) setAr(img.naturalWidth / img.naturalHeight);
-        setLoading(false);
-      };
-      img.onerror = () => {
-        if (!mounted) return;
-        setAr(null);
-        setLoading(false);
-      };
+      img.onload = () => { if (mounted && img.naturalWidth && img.naturalHeight) setAr(img.naturalWidth / img.naturalHeight); };
+      img.onerror = () => { if (mounted) setAr(null); };
       img.src = src;
       return () => { mounted = false; };
     }
 
     RNImage.getSize(
       src,
-      (w, h) => { if (mounted) { if (h > 0) setAr(w / h); setLoading(false); } },
-      () => { if (mounted) { setAr(null); setLoading(false); } }
+      (w, h) => { if (mounted && h > 0) setAr(w / h); },
+      () => { if (mounted) setAr(null); }
     );
 
     return () => { mounted = false; };
@@ -149,11 +124,11 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
       : {};
 
   return (
-    <View style={styles.container}>
-      <View style={{ width: boxWidth, height: boxHeight }}>
-        {!imageLoaded && (
+    <View style={[styles.container, { width: boxWidth }]}>
+      <View style={{ width: boxWidth, height: boxHeight, position: 'relative' }}>
+        {!imageLoaded && !err && (
           <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.skeleton]}>
-            <ActivityIndicator size="small" />
+            <View style={[styles.placeholder, { width: boxWidth, height: boxHeight }]} />
           </View>
         )}
 
@@ -163,10 +138,10 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
           contentFit="contain"
           transition={200}
           cachePolicy="disk-memory"
-          priority="low"
+          priority={Platform.OS === 'web' ? 'low' : 'normal'}
           recyclingKey={src}
-          onLoad={() => setImageLoaded(true)}
-          onError={() => setErr(true)}
+          onLoad={() => { setImageLoaded(true); }}
+          onError={() => { setErr(true); }}
           {...webAttrs}
         />
 
@@ -181,25 +156,31 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
   );
 };
 
-export default CustomImageRenderer;
+export default React.memo(CustomImageRenderer);
 
-/* ───────── styles ───────── */
+/* ─ styles ─ */
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 24,
+    marginVertical: 16,
     alignItems: "center",
     paddingHorizontal: H_PADDING,
+    contain: 'layout style paint',
   },
   image: {
-    borderRadius: 12,
+    borderRadius: 8,
     ...(Platform.OS === "web"
-      ? ({ transition: "opacity 0.2s ease-in-out" } as any)
+      ? ({ transition: "opacity 0.3s ease-in-out" } as any)
       : null),
   },
   skeleton: {
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "transparent",
+    backgroundColor: "#f5f5f5",
+    borderRadius: 8,
+  },
+  placeholder: {
+    backgroundColor: '#e5e5e5',
+    borderRadius: 8,
   },
   errorContainer: {
     justifyContent: "center",
