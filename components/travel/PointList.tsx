@@ -4,50 +4,56 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  ImageBackground,
   Linking,
   Platform,
   useWindowDimensions,
-  ScrollView,
   Pressable,
-  Alert,
   Text,
+  FlatList,
+  ListRenderItemInfo,
 } from 'react-native';
-import { IconButton } from 'react-native-paper';
 import * as Clipboard from 'expo-clipboard';
-import { MapPinned, ChevronUp, ChevronDown } from 'lucide-react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { Image as ExpoImage } from 'expo-image';
+import {
+  MapPinned,
+  ChevronUp,
+  ChevronDown,
+  Copy,
+  Send,
+  Map,
+  Link as LinkIcon,
+} from 'lucide-react-native';
 
 type Point = {
   id: string;
   travelImageThumbUrl?: string;
   updated_at?: string;
   address: string;
-  coord: string; // "lat,lon"
-  categoryName?: string; // "cat1, cat2"
+  coord: string;
+  categoryName?: string;
   description?: string;
 };
 
-type PointListProps = {
-  points: Point[];
-};
+type PointListProps = { points: Point[] };
 
 type Responsive = {
-  image: { minHeight: number; flex: number };
-  title: { fontSize: number };
-  coord: { fontSize: number };
+  imageMinHeight: number;
+  titleSize: number;
+  coordSize: number;
 };
 
-const getImageWithVersion = (url?: string, updatedAt?: string) => {
+/* ---------------- helpers ---------------- */
+
+const getOptimizedImageUrl = (url?: string, updatedAt?: string) => {
   if (!url) return undefined;
-  if (!updatedAt) return url;
-  const ts = Date.parse(updatedAt);
-  return Number.isFinite(ts) ? `${url}?v=${ts}` : url;
+  const ts = updatedAt ? Date.parse(updatedAt) : undefined;
+  const hasQ = url.includes('?');
+  const params = `auto=format&fit=crop&w=960&h=640&q=82${ts && Number.isFinite(ts) ? `&v=${ts}` : ''}`;
+  return `${url}${hasQ ? '&' : '?'}${params}`;
 };
 
 const parseCoord = (coordStr: string): { lat: number; lon: number } | null => {
   if (!coordStr) return null;
-  // поддержим варианты: "lat,lon", "lat ; lon", "lat lon"
   const cleaned = coordStr.replace(/;/g, ',').replace(/\s+/g, '');
   const [latStr, lonStr] = cleaned.split(',').map((s) => s.trim());
   const lat = Number(latStr);
@@ -56,319 +62,342 @@ const parseCoord = (coordStr: string): { lat: number; lon: number } | null => {
   return { lat, lon };
 };
 
+const buildMapUrl = (coordStr: string) => {
+  const p = parseCoord(coordStr);
+  if (!p) return '';
+  const { lat, lon } = p;
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+};
+
 const openExternal = async (url: string) => {
   try {
     const can = await Linking.canOpenURL(url);
     if (can) await Linking.openURL(url);
-    else throw new Error('cannot open');
-  } catch {
-    Alert.alert('Ошибка', 'Не удалось открыть ссылку');
-  }
+  } catch {}
 };
 
-const PointCardContent = ({
-                            point,
-                            expanded,
-                            handleCopyCoords,
-                            handleSendToTelegram,
-                            handleOpenMap,
-                            responsive,
-                          }: {
+/* квадратная тёмная плашка-иконка */
+const DarkSquareBtn = React.memo(function DarkSquareBtn({
+                                                          Icon,
+                                                          onPress,
+                                                          label,
+                                                        }: {
+  Icon: React.ComponentType<{ size?: number; color?: string }>;
+  onPress: () => void;
+  label: string;
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.darkSquare}
+      onPress={onPress}
+      accessibilityLabel={label}
+      activeOpacity={0.85}
+    >
+      <Icon size={20} color="#fff" />
+    </TouchableOpacity>
+  );
+});
+
+/* ---------------- card ---------------- */
+
+const PointCard = React.memo(function PointCard({
+                                                  point,
+                                                  isMobile,
+                                                  responsive,
+                                                  onCopy,
+                                                  onShare,
+                                                  onOpenMap,
+                                                }: {
   point: Point;
-  expanded: boolean;
-  handleCopyCoords: (coordStr: string) => void;
-  handleSendToTelegram: (coordStr: string) => void;
-  handleOpenMap: (coordStr: string) => void;
+  isMobile: boolean;
   responsive: Responsive;
-}) => (
-    <>
-      <View style={styles.iconButtons}>
-        <View style={styles.iconButton}>
-          <IconButton
-              icon="content-copy"
-              size={18}
-              onPress={() => handleCopyCoords(point.coord)}
-              iconColor="#fff"
-              accessibilityLabel="Скопировать координаты"
-          />
-        </View>
-        <View style={styles.iconButton}>
-          <IconButton
-              icon="send"
-              size={18}
-              onPress={() => handleSendToTelegram(point.coord)}
-              iconColor="#fff"
-              accessibilityLabel="Отправить координаты в Telegram"
-          />
-        </View>
-        <View style={styles.iconButton}>
-          <IconButton
-              icon="map-marker"
-              size={18}
-              onPress={() => handleOpenMap(point.coord)}
-              iconColor="#fff"
-              accessibilityLabel="Открыть на карте"
-          />
-        </View>
-      </View>
+  onCopy: (coordStr: string) => void;
+  onShare: (coordStr: string) => void;
+  onOpenMap: (coordStr: string) => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const imgUri = getOptimizedImageUrl(point.travelImageThumbUrl, point.updated_at);
 
-      <View style={styles.overlay} pointerEvents="box-none">
-        <Text style={[styles.title, responsive.title]} numberOfLines={2}>
-          {point.address}
-        </Text>
+  const openMapFromLink = useCallback(() => onOpenMap(point.coord), [onOpenMap, point.coord]);
+  const showBottomBar = isMobile || hovered;
 
-        <TouchableOpacity onPress={() => handleOpenMap(point.coord)} activeOpacity={0.7}>
-          <Text style={[styles.coord, responsive.coord]} selectable accessibilityHint="Открыть место на карте">
-            {point.coord}
-          </Text>
-        </TouchableOpacity>
-
-        {point.description && expanded ? (
-            <Text style={styles.description}>{point.description}</Text>
-        ) : null}
-
-        {point.categoryName ? (
-            <View style={styles.categoryContainer}>
-              {point.categoryName.split(',').map((cat, index) => (
-                  <View key={`${point.id}-cat-${index}`} style={styles.category}>
-                    <Text style={styles.categoryText}>{cat.trim()}</Text>
-                  </View>
-              ))}
+  return (
+    <View
+      style={styles.card}
+      onMouseEnter={() => !isMobile && setHovered(true)}
+      onMouseLeave={() => !isMobile && setHovered(false)}
+    >
+      <Pressable onPress={openMapFromLink} style={styles.cardPressable}>
+        <View style={[styles.imageWrap, { minHeight: responsive.imageMinHeight }]}>
+          {imgUri ? (
+            <ExpoImage
+              source={{ uri: imgUri }}
+              style={styles.image}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={120}
+              priority="low"
+            />
+          ) : (
+            <View style={[styles.noImage, { minHeight: responsive.imageMinHeight }]}>
+              <Map size={44} color="#1f2937" />
+              <Text style={styles.noImageText} numberOfLines={2}>
+                {point.address}
+              </Text>
             </View>
-        ) : null}
-      </View>
-    </>
-);
+          )}
+
+          {/* верхние кнопки */}
+          <View pointerEvents="box-none" style={styles.topRightWrap}>
+            <View style={styles.topRightStack}>
+              <DarkSquareBtn Icon={LinkIcon} onPress={openMapFromLink} label="Открыть в картах" />
+              <DarkSquareBtn Icon={Copy} onPress={() => onCopy(point.coord)} label="Скопировать координаты" />
+              <DarkSquareBtn Icon={Send} onPress={() => onShare(point.coord)} label="Поделиться в Telegram" />
+            </View>
+          </View>
+
+          {/* нижняя плашка (мобайл всегда, десктоп — по hover) */}
+          {showBottomBar && (
+            <View style={styles.bottomBar}>
+              <Text style={[styles.titleText, { fontSize: responsive.titleSize }]} numberOfLines={1}>
+                {point.address}
+              </Text>
+
+              <Text
+                style={[styles.coordLink, { fontSize: responsive.coordSize }]}
+                onPress={openMapFromLink}
+                numberOfLines={1}
+              >
+                {point.coord}
+              </Text>
+
+              {!!point.categoryName && (
+                <View style={styles.tagChip}>
+                  <Text style={styles.tagChipText}>{point.categoryName.split(',')[0]?.trim()}</Text>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+      </Pressable>
+    </View>
+  );
+});
+
+/* ---------------- list ---------------- */
 
 const PointList: React.FC<PointListProps> = ({ points }) => {
-  const safePoints = Array.isArray(points) ? points : [];
+  const safePoints = useMemo(() => (Array.isArray(points) ? points : []), [points]);
   const { width } = useWindowDimensions();
   const isMobile = width <= 480;
 
-  const [showCoords, setShowCoords] = useState(false);
-  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [showList, setShowList] = useState(false);
 
-  const handleCopyCoords = useCallback(async (coordStr: string) => {
+  const responsive: Responsive = useMemo(
+    () => ({
+      imageMinHeight: width >= 1200 ? 520 : width >= 768 ? 420 : 320,
+      titleSize: isMobile ? 16 : 18,
+      coordSize: isMobile ? 14 : 15,
+    }),
+    [isMobile, width]
+  );
+
+  const onCopy = useCallback(async (coordStr: string) => {
     try {
-      if (Platform.OS === 'web' && 'clipboard' in navigator) {
+      if (Platform.OS === 'web' && (navigator as any)?.clipboard) {
         await (navigator as any).clipboard.writeText(coordStr);
       } else {
         await Clipboard.setStringAsync(coordStr);
       }
-      Alert.alert('Скопировано', 'Координаты скопированы в буфер обмена');
-    } catch {
-      Alert.alert('Ошибка', 'Не удалось скопировать координаты');
+    } catch {}
+  }, []);
+
+  // ✅ исправленный Telegram share
+  const onShare = useCallback(async (coordStr: string) => {
+    const mapUrl = buildMapUrl(coordStr);
+    const text = `📍 Координаты: ${coordStr}`;
+
+    // 1) пытаемся открыть приложение Telegram
+    const tgDeepLinks = [
+      `tg://msg_url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`,
+      `tg://share?text=${encodeURIComponent(`${text}\n${mapUrl}`)}`,
+    ];
+
+    for (const deeplink of tgDeepLinks) {
+      try {
+        const can = await Linking.canOpenURL(deeplink);
+        if (can) {
+          await Linking.openURL(deeplink);
+          return;
+        }
+      } catch {}
     }
+
+    // 2) веб-фолбэк
+    const webShare = `https://t.me/share/url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`;
+    openExternal(webShare);
   }, []);
 
-  const handleSendToTelegram = useCallback((coordStr: string) => {
-    const url = `https://t.me/share/url?url=${encodeURIComponent(coordStr)}&text=${encodeURIComponent(
-        `Координаты: ${coordStr}`
-    )}`;
-    openExternal(url);
+  const onOpenMap = useCallback((coordStr: string) => {
+    const url = buildMapUrl(coordStr);
+    if (url) openExternal(url);
   }, []);
 
-  const handleOpenMap = useCallback((coordStr: string) => {
-    const parsed = parseCoord(coordStr);
-    if (!parsed) {
-      Alert.alert('Ошибка', 'Некорректные координаты');
-      return;
-    }
-    const { lat, lon } = parsed;
-    const url = Platform.select({
-      ios: `maps://?q=${lat},${lon}`,
-      android: `geo:${lat},${lon}?q=${lat},${lon}`,
-      default: `https://maps.google.com/?q=${lat},${lon}`,
-    }) as string;
-    openExternal(url);
-  }, []);
+  const numColumns = width >= 1200 ? 3 : width >= 768 ? 2 : 1;
 
-  const toggleCardExpand = useCallback((id: string) => {
-    setExpandedCard((prev) => (prev === id ? null : id));
-  }, []);
-
-  const cardLayoutStyle = useMemo(() => {
-    if (width >= 1024) return { flexBasis: '31%', maxWidth: '31%' } as const;
-    if (width >= 600) return { flexBasis: '48%', maxWidth: '48%' } as const;
-    return { flexBasis: '100%', maxWidth: '100%' } as const;
-  }, [width]);
-
-  const responsive: Responsive = useMemo(() => {
-    let minHeight = 260;
-    let titleSize = 15;
-    let coordSize = 13;
-    if (width >= 1024) {
-      minHeight = 300;
-      titleSize = 17;
-      coordSize = 14;
-    } else if (width >= 600) {
-      minHeight = 280;
-      titleSize = 16;
-      coordSize = 13.5 as any;
-    }
-    return {
-      image: { minHeight, flex: 1 },
-      title: { fontSize: titleSize },
-      coord: { fontSize: coordSize },
-    };
-  }, [width]);
+  const keyExtractor = useCallback((item: Point) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<Point>) => (
+      <View
+        style={[
+          styles.col,
+          numColumns === 3 ? styles.col3 : numColumns === 2 ? styles.col2 : styles.col1,
+        ]}
+      >
+        <PointCard
+          point={item}
+          isMobile={isMobile}
+          responsive={responsive}
+          onCopy={onCopy}
+          onShare={onShare}
+          onOpenMap={onOpenMap}
+        />
+      </View>
+    ),
+    [isMobile, numColumns, onCopy, onOpenMap, onShare, responsive]
+  );
 
   return (
-      <View style={styles.wrapper}>
-        <Pressable
-            onPress={() => setShowCoords((prev) => !prev)}
-            style={({ pressed }) => [styles.toggleButton, pressed && styles.toggleButtonPressed, Platform.OS === 'web' && styles.cursorPointer]}
-            accessibilityRole="button"
-            accessibilityLabel={showCoords ? 'Скрыть координаты мест' : 'Показать координаты мест'}
-        >
-          <MapPinned size={18} color="#3B2C24" style={{ marginRight: 6 }} />
-          <Text style={[styles.toggleText, isMobile && styles.toggleTextMobile]}>
-            {showCoords ? 'Скрыть координаты мест' : 'Показать координаты мест'}
+    <View style={styles.wrapper}>
+      <Pressable
+        onPress={() => setShowList((p) => !p)}
+        style={({ pressed }) => [styles.toggle, pressed && styles.togglePressed]}
+      >
+        <View style={styles.toggleRow}>
+          <MapPinned size={22} color="#334155" />
+          <Text style={[styles.toggleText, isMobile && styles.toggleTextSm]}>
+            {showList ? 'Скрыть координаты мест' : 'Показать координаты мест'}
           </Text>
-          {showCoords ? <ChevronUp size={18} color="#3B2C24" /> : <ChevronDown size={18} color="#3B2C24" />}
-        </Pressable>
+          {showList ? <ChevronUp size={18} color="#334155" /> : <ChevronDown size={18} color="#334155" />}
+        </View>
+      </Pressable>
 
-        {showCoords && (
-            <ScrollView
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={styles.cardsContainer}
-                showsVerticalScrollIndicator={false}
-            >
-              {safePoints.map((point, index) => {
-                const imgUri = getImageWithVersion(point.travelImageThumbUrl, point.updated_at);
-                const expanded = expandedCard === point.id;
-
-                return (
-                    <Animated.View
-                        key={point.id}
-                        entering={FadeIn.delay(index * 30)}
-                        style={[styles.card, cardLayoutStyle]}
-                    >
-                      <Pressable
-                          onPress={() => toggleCardExpand(point.id)}
-                          onLongPress={() => handleOpenMap(point.coord)}
-                          delayLongPress={500}
-                          style={{ flex: 1 }}
-                          android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Точка: ${point.address}`}
-                      >
-                        {imgUri ? (
-                            <ImageBackground
-                                source={{ uri: imgUri }}
-                                style={[styles.image, responsive.image]}
-                                imageStyle={{ borderRadius: 12 }}
-                                resizeMode="cover"
-                            >
-                              <PointCardContent
-                                  point={point}
-                                  expanded={expanded}
-                                  handleCopyCoords={handleCopyCoords}
-                                  handleSendToTelegram={handleSendToTelegram}
-                                  handleOpenMap={handleOpenMap}
-                                  responsive={responsive}
-                              />
-                            </ImageBackground>
-                        ) : (
-                            <View style={[styles.image, styles.noImage, responsive.image]}>
-                              <PointCardContent
-                                  point={point}
-                                  expanded={expanded}
-                                  handleCopyCoords={handleCopyCoords}
-                                  handleSendToTelegram={handleSendToTelegram}
-                                  handleOpenMap={handleOpenMap}
-                                  responsive={responsive}
-                              />
-                            </View>
-                        )}
-                      </Pressable>
-                    </Animated.View>
-                );
-              })}
-            </ScrollView>
-        )}
-      </View>
+      {showList && (
+        <FlatList
+          key={`cols-${numColumns}`}            // ← фикс "Changing numColumns..."
+          data={safePoints}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          numColumns={numColumns}
+          removeClippedSubviews
+          windowSize={7}
+          initialNumToRender={numColumns * 3}
+          maxToRenderPerBatch={numColumns * 3}
+          updateCellsBatchingPeriod={16}
+          contentContainerStyle={styles.listContent}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrap : undefined}
+        />
+      )}
+    </View>
   );
 };
 
-export default PointList;
+export default React.memo(PointList);
+
+/* ============================= styles ============================= */
 
 const styles = StyleSheet.create({
-  wrapper: { width: '100%', marginTop: 8 },
-  toggleButton: {
+  wrapper: { width: '100%', marginTop: 16 },
+
+  toggle: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 12,
+  },
+  togglePressed: { backgroundColor: '#f8fafc' },
+  toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    elevation: 2,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
-  toggleButtonPressed: { backgroundColor: '#f5f5f5' },
-  toggleText: { fontSize: 16, fontWeight: '600', color: '#3B2C24' },
-  toggleTextMobile: { fontSize: 14 },
-  cardsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingBottom: 40,
-    gap: 12 as any, // RN Web поддерживает gap; на native игнорируется
-    paddingHorizontal: 4,
-  },
+  toggleText: { fontSize: 17, fontWeight: '600', color: '#1f2937' },
+  toggleTextSm: { fontSize: 16 },
+
+  listContent: { paddingBottom: 20 },
+  columnWrap: { justifyContent: 'space-between' },
+
+  col: { marginBottom: 14 },
+  col3: { width: '32%' },
+  col2: { width: '48%' },
+  col1: { width: '100%' },
+
   card: {
-    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: '#f3f3f3',
-    elevation: 3,
-    flexGrow: 1,
-    flexShrink: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    display: 'flex',
   },
-  image: { justifyContent: 'flex-end', flex: 1 },
-  noImage: { backgroundColor: '#e0e0e0' },
+  cardPressable: { flex: 1 },
 
-  iconButtons: {
+  imageWrap: { position: 'relative', width: '100%' },
+  image: { width: '100%', height: '100%', minHeight: 320, display: 'block' },
+
+  noImage: {
+    width: '100%',
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    paddingVertical: 24,
+  },
+  noImageText: {
+    marginTop: 10,
+    maxWidth: '85%',
+    textAlign: 'center',
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+
+  topRightWrap: { position: 'absolute', top: 10, right: 10 },
+  topRightStack: { flexDirection: 'column', gap: 10, alignItems: 'flex-end' },
+  darkSquare: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.66)',
+  },
+
+  bottomBar: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    flexDirection: 'row',
-    zIndex: 2,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 8,
-    padding: 4,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 12,
+    backgroundColor: 'rgba(0,0,0,0.55)',
   },
-  iconButton: { marginHorizontal: 2 },
-
-  overlay: {
-    padding: 12,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+  titleText: { color: '#fff', fontWeight: '800', marginBottom: 6 },
+  coordLink: {
+    color: '#fff',
+    textDecorationLine: 'underline',
+    textDecorationColor: '#fff' as any, // RN Web
+    fontWeight: '700',
+    marginBottom: 8,
   },
-  title: { color: '#fff', fontWeight: '600', marginBottom: 6 },
-  coord: { color: '#cceeff', textDecorationLine: 'underline', marginBottom: 8 },
-  description: { color: '#fff', fontSize: 13, marginBottom: 8, lineHeight: 18 },
-  categoryContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
-  category: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  tagChip: {
     alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
-  categoryText: { color: '#fff', fontSize: 12, fontWeight: '500' },
-
-  // web-only nicety
-  cursorPointer: Platform.select({ web: { cursor: 'pointer' }, default: {} }) as any,
+  tagChipText: { color: '#fff', fontWeight: '700', fontSize: 12 },
 });

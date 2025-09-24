@@ -109,7 +109,7 @@ const NavButton = memo(
   )
 );
 
-/* --------------------------- Оптимизированная WEB-карусель с блуром --------------------------- */
+/* --------------------------- WEB-карусель --------------------------- */
 
 interface OptimizedWebCarouselProps {
   images: SliderImage[];
@@ -138,42 +138,50 @@ function OptimizedWebCarousel({
 
   const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
 
-  // Обработчик загрузки изображений
-  const handleImageLoad = useCallback((index: number) => {
-    setLoadedImages(prev => {
-      const next = new Set(prev);
-      next.add(index);
-      return next;
-    });
+  const imagesKey = useMemo(
+    () => images.map((i) => `${i.id}_${i.updated_at ?? ""}`).join("|"),
+    [images]
+  );
 
-    // Для первого изображения вызываем колбэк LCP
-    if (index === 0 && !loadedImages.has(0)) {
-      onFirstImageLoad?.();
+  // сброс позиции при смене статьи/набора картинок — чтобы не "улетало" в обратную сторону
+  useEffect(() => {
+    const node = scrollerRef.current;
+    if (node) node.scrollTo({ left: 0, behavior: "auto" });
+  }, [imagesKey]);
 
-      if (window.__LCP_LOADED) return;
-      window.__LCP_LOADED = true;
-
-      if (window.gtag) {
-        window.gtag('event', 'LCP_loaded', {
-          event_category: 'Performance',
-          event_label: 'Slider LCP'
-        });
+  const handleImageLoad = useCallback(
+    (index: number) => {
+      setLoadedImages((prev) => {
+        if (prev.has(index)) return prev;
+        const next = new Set(prev);
+        next.add(index);
+        return next;
+      });
+      if (index === 0) {
+        onFirstImageLoad?.();
+        (window as any).__LCP_LOADED ||= true;
+        if ((window as any).gtag) {
+          (window as any).gtag("event", "LCP_loaded", {
+            event_category: "Performance",
+            event_label: "Slider LCP",
+          });
+        }
       }
-    }
-  }, [loadedImages, onFirstImageLoad]);
+    },
+    [onFirstImageLoad]
+  );
 
-  // Оптимизация: предзагрузка следующих изображений
+  // предзагрузка следующего
   useEffect(() => {
     if (images.length > 1) {
       const nextIndex = (currentIndex + 1) % images.length;
       const nextImg = images[nextIndex];
       if (nextImg) {
-        const link = document.createElement('link');
-        link.rel = 'preload';
-        link.as = 'image';
+        const link = document.createElement("link");
+        link.rel = "preload";
+        link.as = "image";
         link.href = buildUri(nextImg);
         document.head.appendChild(link);
-
         setTimeout(() => link.remove(), 5000);
       }
     }
@@ -182,7 +190,6 @@ function OptimizedWebCarousel({
   useEffect(() => {
     const node = scrollerRef.current;
     if (!node) return;
-
     let raf = 0;
     const onScroll = () => {
       cancelAnimationFrame(raf);
@@ -192,7 +199,6 @@ function OptimizedWebCarousel({
           onIndexChanged(Math.max(0, Math.min(images.length - 1, idx)));
       });
     };
-
     node.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       node.removeEventListener("scroll", onScroll);
@@ -200,13 +206,16 @@ function OptimizedWebCarousel({
     };
   }, [currentIndex, images.length, onIndexChanged]);
 
+  // ЦИКЛИЧЕСКИЙ scrollTo (wrap-around)
   const scrollToIndex = useCallback(
     (i: number) => {
       const node = scrollerRef.current;
       if (!node) return;
-      const clamped = Math.max(0, Math.min(images.length - 1, i));
+      const len = images.length;
+      if (len === 0) return;
+      const wrapped = ((i % len) + len) % len; // модуль по длине
       node.scrollTo({
-        left: clamped * node.clientWidth,
+        left: wrapped * node.clientWidth,
         behavior: reducesMotion ? "auto" : "smooth",
       });
     },
@@ -215,67 +224,60 @@ function OptimizedWebCarousel({
 
   (OptimizedWebCarousel as any)._scrollTo = scrollToIndex;
 
-  // Правильная логика определения необходимости блюра
   const needBlur = (w?: number, h?: number) => {
     if (!w || !h) return true;
-
     const scale = Math.min(cw / w, ch / h, 1);
     const dw = Math.round(w * scale);
     const dh = Math.round(h * scale);
-
-    // Блюр нужен если изображение не заполняет контейнер
     return dw < cw || dh < ch;
   };
 
-  // Фиксированные размеры для предотвращения CLS
-  const containerStyle = useMemo(() => ({
-    width: cw,
-    height: ch,
-    display: "grid" as const,
-    gridAutoFlow: "column" as const,
-    gridAutoColumns: "100%",
-    overflowX: "auto" as const,
-    overflowY: "hidden" as const,
-    scrollSnapType: "x mandatory" as const,
-    scrollbarWidth: "none" as const,
-    WebkitOverflowScrolling: "touch" as const,
-    contain: "layout paint style" as const,
-  }), [cw, ch]);
+  const containerStyle = useMemo(
+    () => ({
+      width: cw,
+      height: ch,
+      display: "grid" as const,
+      gridAutoFlow: "column" as const,
+      gridAutoColumns: "100%",
+      overflowX: "auto" as const,
+      overflowY: "hidden" as const,
+      scrollSnapType: "x mandatory" as const,
+      scrollbarWidth: "none" as const,
+      WebkitOverflowScrolling: "touch" as const,
+      contain: "layout paint style" as const,
+    }),
+    [cw, ch]
+  );
 
-  const slideStyle = useMemo(() => ({
-    position: "relative" as const,
-    width: "100%",
-    height: "100%",
-    scrollSnapAlign: "center" as const,
-    contentVisibility: "auto" as const,
-    contain: "paint layout size style" as const,
-    display: "flex" as const,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    background: "#e9e7df",
-  }), []);
+  const slideStyle = useMemo(
+    () => ({
+      position: "relative" as const,
+      width: "100%",
+      height: "100%",
+      scrollSnapAlign: "center" as const,
+      contentVisibility: "auto" as const,
+      contain: "paint layout size style" as const,
+      display: "flex" as const,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      background: "#e9e7df",
+    }),
+    []
+  );
 
   return (
-    <div
-      ref={scrollerRef}
-      style={containerStyle}
-    >
+    <div ref={scrollerRef} style={containerStyle}>
       {images.map((img, index) => {
         const uri = buildUri(img);
         const isFirst = index === 0;
         const w = img.width || 1200;
         const h = img.height || Math.round(1200 / DEFAULT_ASPECT_RATIO);
-        const isLoaded = loadedImages.has(index);
 
-        // Блюр всегда показываем если включен и изображение не заполняет контейнер
         const showBlur = blurBackground && needBlur(img.width, img.height);
 
         return (
-          <div
-            key={img.id}
-            style={slideStyle}
-          >
-            {/* Фоновая подложка с блюром — работает для всех изображений */}
+          <div key={img.id} style={slideStyle}>
+            {/* Фоновая подложка с блюром — всегда под фото */}
             {showBlur && (
               <img
                 src={uri}
@@ -292,8 +294,6 @@ function OptimizedWebCarousel({
                   willChange: "transform, filter",
                   pointerEvents: "none",
                   zIndex: 1,
-                  opacity: isLoaded ? 0.7 : 1, // Немного уменьшаем opacity после загрузки, но не убираем полностью
-                  transition: 'opacity 0.3s ease-in-out'
                 }}
                 loading={isFirst ? "eager" : "lazy"}
                 decoding="async"
@@ -318,14 +318,17 @@ function OptimizedWebCarousel({
                 height: "auto",
                 objectFit: "contain",
                 backfaceVisibility: "hidden",
-                opacity: isLoaded ? 1 : 0, // Плавное появление
-                transition: 'opacity 0.3s ease-in-out'
+                opacity: 0,
+                transition: "opacity 0.25s ease-in-out",
               }}
               loading={isFirst ? "eager" : "lazy"}
               decoding="async"
               // @ts-ignore
               fetchpriority={isFirst ? "high" : "auto"}
-              onLoad={() => handleImageLoad(index)}
+              onLoad={(e) => {
+                (e.currentTarget as HTMLImageElement).style.opacity = "1";
+                handleImageLoad(index);
+              }}
             />
           </div>
         );
@@ -334,7 +337,7 @@ function OptimizedWebCarousel({
   );
 }
 
-/* ------------------------------- Оптимизированный основной компонент ------------------------------- */
+/* ------------------------------- Основной компонент ------------------------------- */
 
 const Slider = forwardRef<any, SliderProps>(
   (
@@ -364,24 +367,22 @@ const Slider = forwardRef<any, SliderProps>(
       () => new Set([0])
     );
 
-    // Для нативных платформ: состояние загрузки изображений
+    // натив: какие картинки уже загрузились
     const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set([0]));
 
-    // Обработчик загрузки изображений для нативных платформ
-    const handleImageLoad = useCallback((index: number) => {
-      setLoadedImages(prev => {
-        const next = new Set(prev);
-        next.add(index);
-        return next;
-      });
+    const handleImageLoad = useCallback(
+      (index: number) => {
+        setLoadedImages((prev) => {
+          if (prev.has(index)) return prev;
+          const next = new Set(prev);
+          next.add(index);
+          return next;
+        });
+        if (index === 0) onFirstImageLoad?.();
+      },
+      [onFirstImageLoad]
+    );
 
-      // Для первого изображения вызываем колбэк LCP
-      if (index === 0 && !loadedImages.has(0)) {
-        onFirstImageLoad?.();
-      }
-    }, [loadedImages, onFirstImageLoad]);
-
-    // Оптимизация: мемоизация вычислений
     const firstAR = useMemo(() => {
       const first = images[0];
       return first?.width && first?.height
@@ -392,29 +393,31 @@ const Slider = forwardRef<any, SliderProps>(
     const isMobile = containerWidth <= MOBILE_BREAKPOINT;
     const uriMap = useMemo(() => images.map(buildUri), [images]);
 
-    // Оптимизация: фиксированная высота для предотвращения CLS
+    // фиксированная высота, чтобы не было CLS
     useEffect(() => {
       const calculateHeight = () => {
         if (isMobile) {
-          return Math.max(160, (windowHeight - insets.top - insets.bottom) * 0.75);
+          return Math.max(
+            160,
+            (windowHeight - insets.top - insets.bottom) * 0.75
+          );
         } else {
           const calculatedHeight = containerWidth / firstAR;
           return Math.max(300, Math.min(600, calculatedHeight));
         }
       };
-
       setContainerHeight(calculateHeight());
     }, [isMobile, containerWidth, firstAR, windowHeight, insets]);
 
-    // Оптимизация: сброс состояния только при реальном изменении images
-    const imagesKey = useMemo(() =>
-        images.map(i => `${i.id}_${i.updated_at}`).join('|'),
-      [images]);
+    const imagesKey = useMemo(
+      () => images.map((i) => `${i.id}_${i.updated_at ?? ""}`).join("|"),
+      [images]
+    );
 
     useEffect(() => {
       setCurrentIndex(0);
       setLoadedIndices(new Set([0]));
-      setLoadedImages(new Set([0])); // Сбрасываем состояние загрузки
+      setLoadedImages(new Set([0]));
     }, [imagesKey]);
 
     const handleIndexChanged = useCallback(
@@ -422,12 +425,11 @@ const Slider = forwardRef<any, SliderProps>(
         setCurrentIndex(idx);
         onIndexChanged?.(idx);
 
-        // Оптимизация: ленивая загрузка соседних изображений
         setLoadedIndices((prev) => {
           const nxt = new Set(prev);
           for (let i = -preloadCount; i <= preloadCount; i++) {
-            const target = idx + i;
-            if (target >= 0 && target < images.length) nxt.add(target);
+            const t = idx + i;
+            if (t >= 0 && t < images.length) nxt.add(t);
           }
           return nxt;
         });
@@ -435,33 +437,41 @@ const Slider = forwardRef<any, SliderProps>(
       [images.length, onIndexChanged, preloadCount]
     );
 
-    // Ранний возврат для предотвращения лишних рендеров
     if (!images.length) return null;
 
-    const navPrev = () => handleIndexChanged(Math.max(0, currentIndex - 1));
-    const navNext = () => handleIndexChanged(Math.min(images.length - 1, currentIndex + 1));
+    // wrap helpers
+    const wrapIndex = (i: number) => {
+      const len = images.length;
+      return ((i % len) + len) % len;
+    };
 
-    // Оптимизация: мемоизация обработчиков
+    const navPrev = () => handleIndexChanged(wrapIndex(currentIndex - 1));
+    const navNext = () => handleIndexChanged(wrapIndex(currentIndex + 1));
+
     const handlePrev = useCallback(() => {
       if (Platform.OS === "web") {
-        (OptimizedWebCarousel as any)._scrollTo?.(currentIndex - 1);
+        (OptimizedWebCarousel as any)._scrollTo?.(currentIndex - 1); // внутри уже wrap
       }
       navPrev();
     }, [currentIndex]);
 
     const handleNext = useCallback(() => {
       if (Platform.OS === "web") {
-        (OptimizedWebCarousel as any)._scrollTo?.(currentIndex + 1);
+        (OptimizedWebCarousel as any)._scrollTo?.(currentIndex + 1); // внутри уже wrap
       }
       navNext();
     }, [currentIndex]);
 
-    const handleDotPress = useCallback((i: number) => {
-      if (Platform.OS === "web") {
-        (OptimizedWebCarousel as any)._scrollTo?.(i);
-      }
-      handleIndexChanged(i);
-    }, [handleIndexChanged]);
+    const handleDotPress = useCallback(
+      (i: number) => {
+        const wrapped = wrapIndex(i);
+        if (Platform.OS === "web") {
+          (OptimizedWebCarousel as any)._scrollTo?.(wrapped);
+        }
+        handleIndexChanged(wrapped);
+      },
+      [handleIndexChanged]
+    );
 
     return (
       <View
@@ -488,23 +498,27 @@ const Slider = forwardRef<any, SliderProps>(
                 onFirstImageLoad={onFirstImageLoad}
               />
             ) : (
-              <Suspense fallback={
-                <View style={[styles.slide, { width: containerWidth, height: containerHeight }]}>
-                  <ExpoImage
-                    source={{ uri: uriMap[0] }}
-                    style={styles.img}
-                    contentFit="contain"
-                    priority="high"
-                    onLoad={() => handleImageLoad(0)}
-                  />
-                </View>
-              }>
+              <Suspense
+                fallback={
+                  <View
+                    style={[styles.slide, { width: containerWidth, height: containerHeight }]}
+                  >
+                    <ExpoImage
+                      source={{ uri: uriMap[0] }}
+                      style={styles.img}
+                      contentFit="contain"
+                      priority="high"
+                      onLoad={() => handleImageLoad(0)}
+                    />
+                  </View>
+                }
+              >
                 <NativeCarousel
                   key={imagesKey}
                   data={images}
                   width={containerWidth}
                   height={containerHeight}
-                  loop
+                  loop // native уже бесконечный
                   autoPlay={autoPlay}
                   autoPlayInterval={autoPlayInterval}
                   onSnapToItem={handleIndexChanged}
@@ -516,24 +530,19 @@ const Slider = forwardRef<any, SliderProps>(
                     const isLoaded = loadedImages.has(index);
 
                     if (!isVisible) {
-                      return (
-                        <View style={[styles.slide, { backgroundColor: '#e9e7df' }]} />
-                      );
+                      return <View style={[styles.slide, { backgroundColor: "#e9e7df" }]} />;
                     }
 
                     return (
                       <View style={styles.slide} collapsable={false}>
-                        {/* Блюр для всех изображений на нативных платформах */}
+                        {/* Фон с блюром — всегда под фото */}
                         {blurBackground && (
                           <ExpoImage
                             source={{ uri }}
                             contentFit="cover"
                             cachePolicy="disk"
                             priority={isPriority ? "high" : "low"}
-                            style={[
-                              styles.bg,
-                              { opacity: isLoaded ? 0.7 : 1 } // Уменьшаем opacity после загрузки
-                            ]}
+                            style={styles.bg}
                             blurRadius={20}
                           />
                         )}
@@ -548,7 +557,7 @@ const Slider = forwardRef<any, SliderProps>(
                           style={[
                             styles.img,
                             dims.width && dims.height ? { aspectRatio: dims.width / dims.height } : {},
-                            { opacity: isLoaded ? 1 : 0 } // Плавное появление
+                            { opacity: isLoaded ? 1 : 0 },
                           ]}
                           onLoad={() => handleImageLoad(index)}
                           {...imageProps}
@@ -562,16 +571,8 @@ const Slider = forwardRef<any, SliderProps>(
 
             {showArrows && !(isMobile && hideArrowsOnMobile) && images.length > 1 && (
               <>
-                <NavButton
-                  direction="left"
-                  offset={NAV_BTN_OFFSET}
-                  onPress={handlePrev}
-                />
-                <NavButton
-                  direction="right"
-                  offset={NAV_BTN_OFFSET}
-                  onPress={handleNext}
-                />
+                <NavButton direction="left" offset={NAV_BTN_OFFSET} onPress={handlePrev} />
+                <NavButton direction="right" offset={NAV_BTN_OFFSET} onPress={handleNext} />
               </>
             )}
 
@@ -601,7 +602,7 @@ const Slider = forwardRef<any, SliderProps>(
 
 export default memo(Slider);
 
-/* ---------------------------------- Стили (без изменений) ---------------------------------- */
+/* ---------------------------------- Стили ---------------------------------- */
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -610,9 +611,7 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
     borderRadius: 12,
-    ...Platform.select({
-      web: { userSelect: "none" as any },
-    }),
+    ...Platform.select({ web: { userSelect: "none" as any } }),
   },
   slide: {
     flex: 1,
@@ -644,19 +643,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignSelf: "center",
   },
-  dotWrapper: {
-    marginHorizontal: 6,
-    padding: 6,
-  },
+  dotWrapper: { marginHorizontal: 6, padding: 6 },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: "rgba(0,0,0,0.2)",
   },
-  active: {
-    width: 10,
-    height: 10,
-    backgroundColor: "#000",
-  },
+  active: { width: 10, height: 10, backgroundColor: "#000" },
 });
