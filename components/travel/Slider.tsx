@@ -78,7 +78,6 @@ const IconBtn = memo(function IconBtn({
 }) {
   return (
     <Suspense fallback={<Text style={{ color, fontSize: size }}>{name === "left" ? "‹" : "›"}</Text>}>
-      {/* @ts-ignore */}
       <LazyAnt name={name} size={size} color={color} />
     </Suspense>
   );
@@ -626,6 +625,7 @@ const styles = StyleSheet.create({
   img: {
     width: "100%",
     height: "100%",
+    zIndex: 2, // Важно: основное изображение должно быть выше блюра
   },
   navBtn: {
     position: "absolute",
@@ -642,6 +642,7 @@ const styles = StyleSheet.create({
     bottom: 12,
     flexDirection: "row",
     alignSelf: "center",
+    zIndex: 3, // Точки должны быть выше всего
   },
   dotWrapper: { marginHorizontal: 6, padding: 6 },
   dot: {

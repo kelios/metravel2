@@ -19,8 +19,11 @@ import {
     InteractionManager,
 } from 'react-native';
 
+// Исправленные lazy импорты
 const LazyMaterialIcons = lazy(() =>
-  import('@expo/vector-icons/MaterialIcons').then(m => ({ default: (m as any).MaterialIcons || (m as any).default }))
+  import('@expo/vector-icons/MaterialIcons').then(m => ({
+      default: (m as any).MaterialIcons || m.default || m
+  }))
 );
 
 import { useLocalSearchParams } from 'expo-router';
@@ -35,7 +38,7 @@ import InstantSEO from '@/components/seo/InstantSEO';
 import { useIsFocused } from '@react-navigation/native';
 
 /* ---------------- lazy helpers ---------------- */
-const createLazyComponent = <T,>(factory: () => Promise<{ default: T }>) =>
+const createLazyComponent = <T extends React.ComponentType<any>>(factory: () => Promise<{ default: T }>) =>
   lazy(() =>
     factory().catch(() => ({
         default: (() => <Text>Component failed to load</Text>) as unknown as T,
@@ -52,15 +55,17 @@ const MapClientSide         = createLazyComponent(() => import('@/components/Map
 const CompactSideBarTravel  = createLazyComponent(() => import('@/components/travel/CompactSideBarTravel'));
 
 const WebViewComponent = Platform.OS === 'web'
-  ? (() => null)
-  : createLazyComponent(() => import('react-native-webview').then(m => ({ default: m.default ?? (m as any).WebView })));
+  ? (() => null) as React.ComponentType<any>
+  : createLazyComponent(() => import('react-native-webview').then(m => ({
+      default: m.default ?? (m as any).WebView
+  })));
 
 const BelkrajWidgetComponent = Platform.OS === 'web'
   ? createLazyComponent(() => import('@/components/belkraj/BelkrajWidget'))
-  : (() => null);
+  : (() => null) as React.ComponentType<any>;
 
 /* ---------------- SuspenseList shim ---------------- */
-const SList: React.FC<any> = (props) => {
+const SList: React.FC<{children: React.ReactNode; revealOrder?: string; tail?: string}> = (props) => {
     const Experimental = (React as any).unstable_SuspenseList || (React as any).SuspenseList;
     return Experimental ? <Experimental {...props} /> : <>{props.children}</>;
 };
@@ -73,7 +78,6 @@ const Fallback = () => (
 
 const Icon: React.FC<{ name: string; size?: number; color?: string }> = ({ name, size = 22, color }) => (
   <Suspense fallback={<View style={{ width: size, height: size }} />}>
-      {/* @ts-ignore */}
       <LazyMaterialIcons name={name} size={size} color={color} />
   </Suspense>
 );
@@ -271,7 +275,9 @@ const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
           />
       </div>
     ) : (
-      <WebViewComponent source={{ uri: `https://www.youtube.com/embed/${id}` }} style={{ flex: 1 }} />
+      <Suspense fallback={<Fallback />}>
+          <WebViewComponent source={{ uri: `https://www.youtube.com/embed/${id}` }} style={{ flex: 1 }} />
+      </Suspense>
     );
 };
 

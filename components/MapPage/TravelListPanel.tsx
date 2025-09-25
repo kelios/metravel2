@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import AddressListItem from '@/components/MapPage/AddressListItem';
 import PaginationComponent from '@/components/PaginationComponent';
+import { TravelCoords } from '@/src/types/types';
 
 export interface Travel {
   id: number | string;
@@ -19,13 +20,13 @@ export interface Travel {
 }
 
 interface Props {
-  travelsData: Travel[] | null;
+  travelsData: TravelCoords[] | null; // Исправлен тип
   currentPage: number;
   itemsPerPage: number;
   itemsPerPageOptions: number[];
   onPageChange: (p: number) => void;
   onItemsPerPageChange: (n: number) => void;
-  buildRouteTo: (t: Travel) => void;
+  buildRouteTo: (t: TravelCoords) => void; // Исправлен тип
 }
 
 const SEPARATOR_HEIGHT = 12;
@@ -43,20 +44,20 @@ const TravelListPanel: React.FC<Props> = ({
   const isMobile = width <= 768;
 
   // высота строки синхронизирована с AddressListItem (фото больше)
-  const ROW_HEIGHT = useMemo(() => (isMobile ? 320 : 380), [isMobile]);
+  const ROW_HEIGHT = useMemo(() => (isMobile ? 320 : 420), [isMobile]); // Увеличена высота для десктопа
 
   const styles = useMemo(() => getStyles(isMobile, ROW_HEIGHT), [isMobile, ROW_HEIGHT]);
 
   const isLoading = travelsData === null;
   const totalItems = travelsData?.length ?? 0;
 
-  const paginatedData: Travel[] = useMemo(() => {
+  const paginatedData: TravelCoords[] = useMemo(() => {
     if (!travelsData) return [];
-    const start = currentPage * itemsPerPage;
+    const start = (currentPage - 1) * itemsPerPage; // Исправлено: страницы обычно с 1
     return travelsData.slice(start, start + itemsPerPage);
   }, [travelsData, currentPage, itemsPerPage]);
 
-  const listRef = useRef<FlatList<Travel>>(null);
+  const listRef = useRef<FlatList>(null);
 
   // Скроллим список вверх при смене страницы
   useEffect(() => {
@@ -65,8 +66,13 @@ const TravelListPanel: React.FC<Props> = ({
 
   // Скелетон c shimmer — запускаем только когда идёт загрузка
   const shimmerValue = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    if (!isLoading) return;
+    if (!isLoading) {
+      shimmerValue.setValue(0); // Сбрасываем анимацию при завершении загрузки
+      return;
+    }
+
     const anim = Animated.loop(
       Animated.timing(shimmerValue, {
         toValue: 1,
@@ -84,30 +90,49 @@ const TravelListPanel: React.FC<Props> = ({
       inputRange: [0, 1],
       outputRange: [-150, 150],
     });
+
     return (
       <View style={styles.skeletonItem} accessibilityRole="progressbar">
-        <Animated.View style={[styles.skeletonShimmer, { transform: [{ translateX }] }]} />
+        <Animated.View
+          style={[
+            styles.skeletonShimmer,
+            { transform: [{ translateX }] }
+          ]}
+        />
       </View>
     );
-  }, [styles.skeletonItem, styles.skeletonShimmer, shimmerValue]);
+  }, [shimmerValue, styles.skeletonItem, styles.skeletonShimmer]);
 
   const renderItem = useCallback(
-    ({ item }: { item: Travel }) => (
-      <AddressListItem travel={item as any} isMobile={isMobile} onPress={() => buildRouteTo(item)} />
+    ({ item, index }: { item: TravelCoords; index: number }) => (
+      <AddressListItem
+        key={item.id || index} // Добавлен ключ для стабильности
+        travel={item}
+        isMobile={isMobile}
+        onPress={() => buildRouteTo(item)}
+      />
     ),
     [buildRouteTo, isMobile]
   );
 
   const keyExtractor = useCallback(
-    (item: Travel, idx: number) => (item?.id != null ? String(item.id) : `row-${idx}`),
+    (item: TravelCoords, index: number) => {
+      if (item?.id != null) return String(item.id);
+      if (item?.travelId != null) return String(item.travelId);
+      return `travel-${index}`;
+    },
     []
   );
 
   // фиксированный layout с учётом разделителя → плавный скролл без «прыжков»
   const getItemLayout = useCallback(
-    (_: Travel[] | null | undefined, index: number) => {
+    (_: TravelCoords[] | null | undefined, index: number) => {
       const length = ROW_HEIGHT + SEPARATOR_HEIGHT;
-      return { length, offset: length * index, index };
+      return {
+        length,
+        offset: length * index,
+        index
+      };
     },
     [ROW_HEIGHT]
   );
@@ -117,31 +142,52 @@ const TravelListPanel: React.FC<Props> = ({
     [styles.separator]
   );
 
+  const ListEmptyComponent = useMemo(() => {
+    if (isLoading) return null;
+
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>
+          {travelsData?.length === 0
+            ? "Ничего не найдено. Попробуйте изменить фильтры."
+            : "Нет данных для отображения."
+          }
+        </Text>
+      </View>
+    );
+  }, [isLoading, travelsData?.length, styles.emptyContainer, styles.emptyText]);
+
   return (
     <View style={styles.container} accessibilityLabel="Список мест по фильтрам">
-      <Text style={styles.resultsCount}>Найдено {totalItems} объектов</Text>
+      <Text style={styles.resultsCount}>
+        {isLoading ? "Загрузка..." : `Найдено ${totalItems} объектов`}
+      </Text>
 
       <FlatList
         ref={listRef}
         data={isLoading ? Array.from({ length: itemsPerPage }) : paginatedData}
         renderItem={isLoading ? renderSkeleton : renderItem}
-        keyExtractor={keyExtractor}
-        ItemSeparatorComponent={Separator}
-        ListEmptyComponent={
-          !isLoading ? (
-            <Text style={styles.emptyText}>Ничего не найдено. Попробуйте изменить фильтры.</Text>
-          ) : null
-        }
-        contentContainerStyle={[styles.flatListContent, { paddingBottom: isMobile ? 140 : 16 }]}
+        keyExtractor={isLoading ? (_item, index) => `skeleton-${index}` : keyExtractor}
+        ItemSeparatorComponent={isLoading ? null : Separator} // Убираем разделители для скелетона
+        ListEmptyComponent={ListEmptyComponent}
+        contentContainerStyle={[
+          styles.flatListContent,
+          {
+            paddingBottom: isMobile ? 140 : 16,
+            flexGrow: paginatedData.length === 0 ? 1 : 0, // Растягиваем при пустом списке
+          }
+        ]}
         getItemLayout={getItemLayout}
-        removeClippedSubviews={Platform.OS === 'android'}
-        initialNumToRender={6}
-        maxToRenderPerBatch={8}
-        windowSize={9}
+        removeClippedSubviews={Platform.OS === 'android' && !isLoading} // Отключаем для скелетона
+        initialNumToRender={isMobile ? 3 : 6}
+        maxToRenderPerBatch={isMobile ? 4 : 8}
+        windowSize={isMobile ? 5 : 9}
         accessibilityRole="list"
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       />
 
-      {totalItems > 0 && (
+      {!isLoading && totalItems > 0 && (
         <PaginationComponent
           currentPage={currentPage}
           itemsPerPage={itemsPerPage}
@@ -159,41 +205,49 @@ const getStyles = (isMobile: boolean, ROW_HEIGHT: number) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      paddingHorizontal: isMobile ? 4 : 0,
+      paddingHorizontal: isMobile ? 8 : 12,
     },
     resultsCount: {
-      fontSize: 16,
-      fontWeight: '500',
+      fontSize: isMobile ? 14 : 16,
+      fontWeight: '600',
       color: '#333',
-      marginBottom: 10,
+      marginBottom: 12,
       paddingHorizontal: 4,
+      textAlign: 'center',
     },
     flatListContent: {
       flexGrow: 1,
     },
     separator: {
       height: SEPARATOR_HEIGHT,
+      backgroundColor: 'transparent',
     },
     skeletonItem: {
       height: ROW_HEIGHT,
-      borderRadius: 16,
+      borderRadius: 12,
       overflow: 'hidden',
-      backgroundColor: '#e5e7eb',
+      backgroundColor: '#f0f0f0',
+      marginVertical: 4,
     },
     skeletonShimmer: {
       position: 'absolute',
       top: 0,
       left: 0,
       height: '100%',
-      width: 150,
-      backgroundColor: '#f3f4f6',
-      opacity: 0.55,
+      width: '60%',
+      backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: 40,
     },
     emptyText: {
-      fontSize: 16,
-      color: '#888',
+      fontSize: isMobile ? 14 : 16,
+      color: '#666',
       textAlign: 'center',
-      marginTop: 40,
+      lineHeight: 22,
     },
   });
 

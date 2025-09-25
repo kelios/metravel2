@@ -32,10 +32,12 @@ const parseCoord = (coord?: string) => {
     const lat = Number(latStr), lon = Number(lonStr);
     return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
 };
+
 const buildMapUrl = (coord?: string) => {
     const p = parseCoord(coord);
     return p ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}` : '';
 };
+
 const openExternal = async (url?: string) => {
     if (!url) return;
     try {
@@ -72,7 +74,7 @@ const AddressListItem: React.FC<Props> = ({
     const showOverlays = isMobile || hovered;
 
     const categories = useMemo(
-      () => categoryName?.split(',').map((c) => c.trim()) ?? [],
+      () => categoryName?.split(',').map((c) => c.trim()).filter(Boolean) ?? [],
       [categoryName]
     );
 
@@ -83,8 +85,8 @@ const AddressListItem: React.FC<Props> = ({
     const copyCoords = useCallback(async () => {
         if (!coord) return;
         try {
-            if (Platform.OS === 'web' && (navigator as any)?.clipboard) {
-                await (navigator as any).clipboard.writeText(coord);
+            if (Platform.OS === 'web' && navigator.clipboard) {
+                await navigator.clipboard.writeText(coord);
             } else {
                 await Clipboard.setStringAsync(coord);
             }
@@ -104,24 +106,51 @@ const AddressListItem: React.FC<Props> = ({
             `tg://msg_url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`,
             `tg://share?text=${encodeURIComponent(`${text}\n${mapUrl}`)}`,
         ];
+
         for (const dl of deeplinks) {
             try {
                 const can = await Linking.canOpenURL(dl);
-                if (can) { await Linking.openURL(dl); return; }
-            } catch {}
+                if (can) {
+                    await Linking.openURL(dl);
+                    return;
+                }
+            } catch {
+                // Продолжаем пробовать следующую ссылку
+                continue;
+            }
         }
+
         // 2) веб-шеринг
         await openExternal(`https://t.me/share/url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`);
     }, [coord]);
 
-    const openMap = useCallback(() => openExternal(buildMapUrl(coord)), [coord]);
+    const openMap = useCallback((e: any) => {
+        e?.stopPropagation(); // Предотвращаем всплытие события
+        openExternal(buildMapUrl(coord));
+    }, [coord]);
 
-    const handlePress = useCallback(() => {
-        if (onPress) onPress();
-        else openExternal(articleUrl || urlTravel);
-    }, [onPress, articleUrl, urlTravel]);
+    const openArticle = useCallback((e?: any) => {
+        e?.stopPropagation(); // Предотвращаем всплытие события
+        openExternal(articleUrl || urlTravel);
+    }, [articleUrl, urlTravel]);
 
-    const height = isMobile ? 200 : 400;
+    const handleMainPress = useCallback(() => {
+        if (onPress) {
+            onPress();
+        } else {
+            openArticle();
+        }
+    }, [onPress, openArticle]);
+
+    const handleIconPress = useCallback((handler: () => void) => {
+        return (e: any) => {
+            e?.stopPropagation(); // Важно: предотвращаем всплытие до основного Pressable
+            handler();
+        };
+    }, []);
+
+    // Увеличиваем высоту на мобильных устройствах
+    const height = isMobile ? 280 : 400; // Было 200, стало 280
 
     return (
       <View
@@ -129,85 +158,102 @@ const AddressListItem: React.FC<Props> = ({
         onMouseEnter={() => !isMobile && setHovered(true)}
         onMouseLeave={() => !isMobile && setHovered(false)}
       >
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={handlePress}
-            accessibilityRole="button"
-            accessibilityLabel="Открыть маршрут"
-            android_ripple={{ color: '#0002' }}
-            onLongPress={copyCoords}
+          <ImageBackground
+            source={
+                travelImageThumbUrl
+                  ? { uri: addVersion(travelImageThumbUrl, updated_at) }
+                  : require('@/assets/no-data.webp')
+            }
+            style={styles.image}
+            imageStyle={{ borderRadius: 12 }}
+            onLoadEnd={() => setImgLoaded(true)}
+            resizeMode="cover"
           >
-              <ImageBackground
-                source={
-                    travelImageThumbUrl
-                      ? { uri: addVersion(travelImageThumbUrl, updated_at) }
-                      : require('@/assets/no-data.webp')
-                }
-                style={styles.image}
-                imageStyle={{ borderRadius: 12 }}
-                onLoadEnd={() => setImgLoaded(true)}
+              {!imgLoaded && (
+                <View style={styles.loader}>
+                    <ActivityIndicator size="small" color="#fff" />
+                </View>
+              )}
+
+              {/* Основной Pressable для всей карточки */}
+              <Pressable
+                style={styles.mainPressable}
+                onPress={handleMainPress}
+                accessibilityRole="button"
+                accessibilityLabel={`Открыть статью: ${address || 'Место'}`}
+                android_ripple={{ color: '#00000020' }}
+                onLongPress={copyCoords}
               >
-                  {!imgLoaded && (
-                    <View style={styles.loader}>
-                        <ActivityIndicator size="small" color="#fff" />
-                    </View>
-                  )}
+                  <View style={styles.mainPressArea} />
+              </Pressable>
 
-                  {/* верхние иконки — по hover на web, всегда на мобиле */}
-                  {showOverlays && (
-                    <View style={styles.iconCol}>
-                        <IconButton
-                          icon="link"
-                          size={20}
-                          onPress={() => openExternal(articleUrl || urlTravel)}
-                          iconColor="#fff"
-                          style={styles.iconBtn}
-                        />
-                        <IconButton
-                          icon="content-copy"
-                          size={20}
-                          onPress={copyCoords}
-                          iconColor="#fff"
-                          style={styles.iconBtn}
-                        />
-                        <IconButton
-                          icon="send"
-                          size={20}
-                          onPress={openTelegram}
-                          iconColor="#fff"
-                          style={styles.iconBtn}
-                        />
-                    </View>
-                  )}
+              {/* верхние иконки — по hover на web, всегда на мобиле */}
+              {showOverlays && (
+                <View style={styles.iconCol}>
+                    <IconButton
+                      icon="link"
+                      size={20}
+                      onPress={handleIconPress(openArticle)}
+                      iconColor="#fff"
+                      style={styles.iconBtn}
+                      accessibilityLabel="Открыть статью"
+                    />
+                    <IconButton
+                      icon="content-copy"
+                      size={20}
+                      onPress={handleIconPress(copyCoords)}
+                      iconColor="#fff"
+                      style={styles.iconBtn}
+                      accessibilityLabel="Скопировать координаты"
+                    />
+                    <IconButton
+                      icon="send"
+                      size={20}
+                      onPress={handleIconPress(openTelegram)}
+                      iconColor="#fff"
+                      style={styles.iconBtn}
+                      accessibilityLabel="Поделиться в Telegram"
+                    />
+                </View>
+              )}
 
-                  {/* нижняя плашка — по hover на web, всегда на мобиле */}
-                  {showOverlays && (
-                    <View style={styles.overlay}>
-                        {!!address && (
-                          <Text style={styles.title} numberOfLines={1}>
-                              {address}
-                          </Text>
-                        )}
+              {/* нижняя плашка — по hover на web, всегда на мобиле */}
+              {showOverlays && (
+                <View style={styles.overlay}>
+                    {!!address && (
+                      <Text style={styles.title} numberOfLines={2}>
+                          {address}
+                      </Text>
+                    )}
 
-                        {!!coord && (
-                          <Pressable onPress={openMap}>
-                              <Text style={styles.coord}>{coord}</Text>
-                          </Pressable>
-                        )}
+                    {!!coord && (
+                      <Pressable
+                        onPress={openMap}
+                        style={styles.coordPressable}
+                        accessibilityRole="button"
+                        accessibilityLabel="Открыть карту"
+                      >
+                          <Text style={styles.coord}>{coord}</Text>
+                      </Pressable>
+                    )}
 
-                        {!!categories.length && (
-                          <View style={styles.catWrap}>
-                              {categories.map((cat, i) => (
-                                <View key={i.toString()} style={styles.catChip}>
-                                    <Text style={styles.catText}>{cat}</Text>
-                                </View>
-                              ))}
-                          </View>
-                        )}
-                    </View>
-                  )}
-              </ImageBackground>
-          </Pressable>
+                    {!!categories.length && (
+                      <View style={styles.catWrap}>
+                          {categories.slice(0, 3).map((cat, i) => ( // Ограничиваем количество категорий
+                            <View key={`${cat}-${i}`} style={styles.catChip}>
+                                <Text style={styles.catText}>{cat}</Text>
+                            </View>
+                          ))}
+                          {categories.length > 3 && (
+                            <View style={styles.catChip}>
+                                <Text style={styles.catText}>+{categories.length - 3}</Text>
+                            </View>
+                          )}
+                      </View>
+                    )}
+                </View>
+              )}
+          </ImageBackground>
       </View>
     );
 };
@@ -219,57 +265,91 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         backgroundColor: '#f3f3f3',
         elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
         overflow: 'hidden',
+        position: 'relative',
     },
-    image: { flex: 1, justifyContent: 'flex-end' },
+    image: {
+        flex: 1,
+        justifyContent: 'flex-end',
+    },
     loader: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: '#0003',
+        backgroundColor: '#00000030',
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 12,
+    },
+    mainPressable: {
+        ...StyleSheet.absoluteFillObject,
+        zIndex: 1,
+    },
+    mainPressArea: {
+        flex: 1,
     },
 
     // иконки — столбиком, квадратные тёмные кнопки
     iconCol: {
         position: 'absolute',
-        top: 10,
-        right: 10,
-        zIndex: 2,
+        top: 12,
+        right: 12,
+        zIndex: 3,
         gap: 8,
     },
     iconBtn: {
-        backgroundColor: 'rgba(0,0,0,0.6)',
+        backgroundColor: 'rgba(0,0,0,0.7)',
         margin: 0,
-        marginBottom: 8,
         borderRadius: 12,
         width: 44,
         height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 
     overlay: {
-        padding: 12,
-        backgroundColor: 'rgba(0,0,0,0.6)',
+        padding: 16,
+        backgroundColor: 'rgba(0,0,0,0.7)',
         borderBottomLeftRadius: 12,
         borderBottomRightRadius: 12,
+        zIndex: 2,
+        position: 'relative',
     },
-    title: { color: '#fff', fontWeight: '800', fontSize: 16, marginBottom: 6 },
+    title: {
+        color: '#fff',
+        fontWeight: '800',
+        fontSize: 16,
+        marginBottom: 8,
+        lineHeight: 20,
+    },
+    coordPressable: {
+        alignSelf: 'flex-start',
+        marginBottom: 8,
+    },
     coord: {
         color: '#fff',
         textDecorationLine: 'underline',
-        textDecorationColor: '#fff' as any,
-        fontSize: 13,
-        fontWeight: '700',
-        marginBottom: 8,
+        fontSize: 14,
+        fontWeight: '600',
     },
-    catWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    catWrap: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+    },
     catChip: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 10,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
+        backgroundColor: 'rgba(255,255,255,0.25)',
+        borderRadius: 12,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
     },
-    catText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+    catText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600',
+    },
 });
 
 export default React.memo(AddressListItem);

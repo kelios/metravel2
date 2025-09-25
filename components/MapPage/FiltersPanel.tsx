@@ -1,436 +1,627 @@
 // FiltersPanel.tsx
 import React, {
-    useMemo,
-    useState,
-    useRef,
-    useCallback,
-    useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  useEffect,
 } from 'react';
 import {
-    View,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    StyleSheet,
-    ScrollView,
-    LayoutAnimation,
-    Platform,
-    UIManager,
-    Pressable,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  LayoutAnimation,
+  Platform,
+  UIManager,
+  Pressable,
+  Dimensions,
 } from 'react-native';
 import MultiSelectField from '../MultiSelectField';
-// ⛔️ Убрано: import { Button } from 'react-native-elements';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import RadiusSelect from '@/components/MapPage/RadiusSelect';
 
 const DEBOUNCE_MS = 300;
 
+const COLORS = {
+  bg: '#ffffff',
+  card: '#f7f9fb',
+  text: '#1b1f23',
+  textMuted: '#667085',
+  primary: '#2f7a7a',
+  primarySoft: '#e6f2f2',
+  border: '#e6e9ee',
+  danger: '#ef5350',
+  shadow: '#000',
+};
+
 const SEARCH_MODES = [
-    { key: 'radius' as const, icon: 'my-location', label: 'По радиусу' },
-    { key: 'route' as const, icon: 'alt-route', label: 'По маршруту' },
+  { key: 'radius' as const, icon: 'my-location', label: 'Радиус' },
+  { key: 'route' as const, icon: 'alt-route', label: 'Маршрут' },
 ];
 
 const TRANSPORT_MODES = [
-    { key: 'car' as const, icon: 'directions-car', label: 'Авто' },
-    { key: 'foot' as const, icon: 'directions-walk', label: 'Пешком' },
-    { key: 'bike' as const, icon: 'directions-bike', label: 'Вело' },
+  { key: 'car' as const, icon: 'directions-car', label: '🚗' },
+  { key: 'foot' as const, icon: 'directions-walk', label: '🚶' },
+  { key: 'bike' as const, icon: 'directions-bike', label: '🚴' },
 ];
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
+  UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 interface FiltersPanelProps {
-    filters: {
-        categories: { id: number; name: string }[];
-        radius: { id: string; label: string }[];
-        address: string;
-    };
-    filterValue: {
-        categories: string[];
-        radius: string;
-        address: string;
-    };
-    onFilterChange: (field: string, value: any) => void;
-    onTextFilterChange: (value: string) => void;
-    resetFilters: () => void;
-    travelsData: { categoryName?: string }[];
-    isMobile: boolean;
-    closeMenu: () => void;
-    mode: 'radius' | 'route';
-    setMode: (m: 'radius' | 'route') => void;
-    transportMode: 'car' | 'bike' | 'foot';
-    setTransportMode: (m: 'car' | 'bike' | 'foot') => void;
-    startAddress: string;
-    endAddress: string;
-    routeDistance: number | null;
+  filters: {
+    categories: { id: number; name: string }[];
+    radius: { id: string; label: string }[];
+    address: string;
+  };
+  filterValue: {
+    categories: string[];
+    radius: string;
+    address: string;
+  };
+  onFilterChange: (field: string, value: any) => void;
+  onTextFilterChange: (value: string) => void;
+  resetFilters: () => void;
+  travelsData: { categoryName?: string }[];
+  isMobile: boolean;
+  closeMenu: () => void;
+  mode: 'radius' | 'route';
+  setMode: (m: 'radius' | 'route') => void;
+  transportMode: 'car' | 'bike' | 'foot';
+  setTransportMode: (m: 'car' | 'bike' | 'foot') => void;
+  startAddress: string;
+  endAddress: string;
+  routeDistance: number | null;
 }
 
-/** Лёгкие кнопки без <button> на web */
-const ResetButton = ({ onPress, styles }: { onPress: () => void; styles: ReturnType<typeof getStyles> }) => (
-    <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        style={({ pressed }) => [styles.smallResetButton, pressed && { opacity: 0.9 }]}
-    >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Icon name="refresh" size={16} color="#fff" />
-            <Text style={styles.smallResetButtonText}>Сбросить</Text>
-        </View>
-    </Pressable>
-);
-
-const PrimaryButton = ({
-                           title,
-                           onPress,
-                           styles,
-                           icon,
-                       }: {
-    title: string;
-    onPress: () => void;
-    styles: ReturnType<typeof getStyles>;
-    icon?: React.ReactNode;
-}) => (
-    <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.92 }]}
-    >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
-            {icon}
-            <Text style={styles.closeButtonText}>{title}</Text>
-        </View>
-    </Pressable>
-);
-
 const FiltersPanel: React.FC<FiltersPanelProps> = ({
-                                                       filters,
-                                                       filterValue,
-                                                       onFilterChange,
-                                                       onTextFilterChange,
-                                                       resetFilters,
-                                                       travelsData,
-                                                       isMobile,
-                                                       closeMenu,
-                                                       mode,
-                                                       setMode,
-                                                       transportMode,
-                                                       setTransportMode,
-                                                       startAddress,
-                                                       endAddress,
-                                                       routeDistance,
+                                                     filters,
+                                                     filterValue,
+                                                     onFilterChange,
+                                                     onTextFilterChange,
+                                                     resetFilters,
+                                                     travelsData,
+                                                     isMobile,
+                                                     closeMenu,
+                                                     mode,
+                                                     setMode,
+                                                     transportMode,
+                                                     setTransportMode,
+                                                     startAddress,
+                                                     endAddress,
+                                                     routeDistance,
                                                    }) => {
-    const styles = useMemo(() => getStyles(isMobile), [isMobile]);
+  const styles = useMemo(() => getStyles(isMobile), [isMobile]);
+  const [addressInput, setAddressInput] = React.useState(filterValue.address);
 
-    const travelCategoriesCount = useMemo(() => {
-        const count: Record<string, number> = {};
-        travelsData.forEach((t) =>
-            t.categoryName
-                ?.split(',')
-                .map((s) => s.trim())
-                .forEach((cat) => {
-                    count[cat] = (count[cat] || 0) + 1;
-                }),
-        );
-        return count;
-    }, [travelsData]);
+  // Компактная кнопка теперь внутри компонента — видит styles
+  const CompactButton = React.useMemo(() => {
+    return React.memo(({
+                         onPress,
+                         icon,
+                         title,
+                         color = COLORS.primary,
+                         compact = false,
+                         accessibilityLabel,
+                       }: {
+      onPress: () => void;
+      icon: string;
+      title?: string;
+      color?: string;
+      compact?: boolean;
+      accessibilityLabel?: string;
+    }) => (
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel || title || icon}
+        style={({ pressed }) => [
+          styles.compactButton,
+          { backgroundColor: color },
+          pressed && { opacity: 0.9 },
+          compact && styles.compactButtonSmall,
+        ]}
+        hitSlop={8}
+      >
+        <Icon name={icon} size={compact ? 16 : 18} color="#fff" />
+        {title ? <Text style={styles.compactButtonText}>{title}</Text> : null}
+      </Pressable>
+    ));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [styles]); // зависимость — локальные styles
 
-    const categoriesWithCount = useMemo(
-        () =>
-            filters.categories
-                .map((c) => {
-                    const name = c.name.trim();
-                    if (!travelCategoriesCount[name]) return null;
-                    return {
-                        ...c,
-                        label: `${name} (${travelCategoriesCount[name]})`,
-                        value: name,
-                    };
-                })
-                .filter(Boolean) as { id: number; label: string; value: string }[],
-        [filters.categories, travelCategoriesCount],
-    );
+  // ——— Aggregations
+  const travelCategoriesCount = useMemo(() => {
+    const count: Record<string, number> = {};
+    for (const t of travelsData) {
+      if (!t.categoryName) continue;
+      t.categoryName
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .forEach((cat) => {
+          count[cat] = (count[cat] || 0) + 1;
+        });
+    }
+    return count;
+  }, [travelsData]);
 
-    const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const categoriesWithCount = useMemo(
+    () =>
+      filters.categories
+        .map((c) => {
+          const name = c.name.trim();
+          const qty = travelCategoriesCount[name];
+          if (!qty) return null;
+          return {
+            ...c,
+            label: `${name} (${qty})`,
+            value: name,
+          };
+        })
+        .filter(Boolean) as { id: number; label: string; value: string }[],
+    [filters.categories, travelCategoriesCount]
+  );
 
-    const handleAddressChange = useCallback(
-        (val: string) => {
-            if (debounceTimer.current) clearTimeout(debounceTimer.current);
-            debounceTimer.current = setTimeout(() => onTextFilterChange(val), DEBOUNCE_MS);
-        },
-        [onTextFilterChange],
-    );
+  // ——— Debounce
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    useEffect(
-        () => () => {
-            if (debounceTimer.current) clearTimeout(debounceTimer.current);
-        },
-        [],
-    );
+  useEffect(() => {
+    setAddressInput(filterValue.address);
+  }, [filterValue.address]);
 
-    const handleSetMode = useCallback(
-        (m: 'radius' | 'route') => {
-            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-            setMode(m);
-        },
-        [setMode],
-    );
+  const handleAddressChange = useCallback(
+    (val: string) => {
+      setAddressInput(val);
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      debounceTimer.current = setTimeout(() => onTextFilterChange(val), DEBOUNCE_MS);
+    },
+    [onTextFilterChange]
+  );
 
-    return (
-        <View style={styles.card}>
-            <View style={styles.tabsWithReset}>
-                <View style={styles.tabsContainer}>
-                    {SEARCH_MODES.map(({ key, icon, label }) => (
-                        <TouchableOpacity
-                            key={key}
-                            style={[styles.tabButton, mode === key && styles.tabButtonActive]}
-                            onPress={() => handleSetMode(key)}
-                            activeOpacity={0.7}
-                        >
-                            <Icon name={icon} size={20} color={mode === key ? '#fff' : '#555'} style={styles.tabIcon} />
-                            <Text adjustsFontSizeToFit style={[styles.tabText, mode === key && styles.tabTextActive]}>
-                                {label}
-                            </Text>
-                        </TouchableOpacity>
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, []);
+
+  // ——— Handlers
+  const handleSetMode = useCallback((m: 'radius' | 'route') => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setMode(m);
+  }, [setMode]);
+
+  const handleCategoryRemove = useCallback(
+    (cat: string) => {
+      onFilterChange('categories', filterValue.categories.filter((c) => c !== cat));
+    },
+    [filterValue.categories, onFilterChange]
+  );
+
+  const hasActiveFilters = useMemo(
+    () => filterValue.categories.length > 0 || filterValue.radius !== '' || filterValue.address !== '',
+    [filterValue.categories.length, filterValue.radius, filterValue.address]
+  );
+
+  return (
+    <View style={styles.card}>
+      {/* Заголовок */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Фильтры</Text>
+        <View style={styles.headerActions}>
+          {hasActiveFilters && (
+            <CompactButton
+              onPress={resetFilters}
+              icon="refresh"
+              compact
+              color={COLORS.danger}
+              accessibilityLabel="Сбросить фильтры"
+            />
+          )}
+          {isMobile && (
+            <CompactButton
+              onPress={closeMenu}
+              icon="close"
+              compact
+              accessibilityLabel="Закрыть панель"
+            />
+          )}
+        </View>
+      </View>
+
+      {/* Переключение режимов */}
+      <View style={styles.modeTabs} accessibilityRole="tablist">
+        {SEARCH_MODES.map(({ key, icon, label }) => {
+          const active = mode === key;
+          return (
+            <TouchableOpacity
+              key={key}
+              style={[styles.modeTab, active && styles.modeTabActive]}
+              onPress={() => handleSetMode(key)}
+              activeOpacity={0.8}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+            >
+              <Icon name={icon} size={18} color={active ? '#fff' : COLORS.textMuted} />
+              <Text style={[styles.modeTabText, active && styles.modeTabTextActive]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Контент */}
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
+      >
+        {mode === 'radius' ? (
+          <>
+            {/* Категории */}
+            {categoriesWithCount.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>Категории</Text>
+                <MultiSelectField
+                  items={categoriesWithCount}
+                  value={filterValue.categories}
+                  onChange={(v) => onFilterChange('categories', v)}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Выберите..."
+                  compact
+                  hideSelected
+                />
+                {filterValue.categories.length > 0 && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.chipsContainer}
+                    contentContainerStyle={styles.chipsContent}
+                  >
+                    {filterValue.categories.slice(0, 5).map((cat) => (
+                      <View key={cat} style={styles.categoryChip}>
+                        <Text style={styles.categoryChipText} numberOfLines={1}>
+                          {cat.split(' ')[0]}
+                        </Text>
+                        <Pressable onPress={() => handleCategoryRemove(cat)} hitSlop={8}>
+                          <Icon name="close" size={14} color={COLORS.primary} />
+                        </Pressable>
+                      </View>
                     ))}
-                </View>
+                    {filterValue.categories.length > 5 && (
+                      <View style={styles.moreChip}>
+                        <Text style={styles.moreChipText}>
+                          +{filterValue.categories.length - 5}
+                        </Text>
+                      </View>
+                    )}
+                  </ScrollView>
+                )}
+              </View>
+            )}
 
-                <ResetButton onPress={resetFilters} styles={styles} />
+            {/* Радиус */}
+            {filters.radius.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>Радиус поиска</Text>
+                <RadiusSelect
+                  value={filterValue.radius}
+                  options={filters.radius}
+                  onChange={(v) => onFilterChange('radius', v)}
+                  compact
+                />
+              </View>
+            )}
+
+            {/* Адрес */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Адрес</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Введите адрес..."
+                placeholderTextColor={COLORS.textMuted}
+                value={addressInput}
+                onChangeText={handleAddressChange}
+                clearButtonMode="while-editing"
+                returnKeyType="search"
+                accessibilityLabel="Поле ввода адреса"
+              />
+            </View>
+          </>
+        ) : (
+          <>
+            {/* Транспорт */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Транспорт</Text>
+              <View style={styles.transportTabs}>
+                {TRANSPORT_MODES.map(({ key, label }) => {
+                  const active = transportMode === key;
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[styles.transportTab, active && styles.transportTabActive]}
+                      onPress={() => setTransportMode(key)}
+                      activeOpacity={0.8}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                    >
+                      <Text
+                        style={[styles.transportTabText, active && styles.transportTabTextActive]}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
 
-            {mode === 'radius' ? (
-                <View style={styles.filtersRow}>
-                    {!!categoriesWithCount.length ? (
-                        <View style={styles.filterField}>
-                            <MultiSelectField
-                                label="Категории"
-                                items={categoriesWithCount}
-                                value={filterValue.categories}
-                                onChange={(v) => onFilterChange('categories', v)}
-                                labelField="label"
-                                valueField="value"
-                                placeholder="Выберите категории"
-                                compact
-                                renderSelectedItem={() => <View />}
-                            />
-                            {!!filterValue.categories.length && (
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsContainer}>
-                                    {filterValue.categories.map((cat) => (
-                                        <View key={cat} style={styles.categoryChip}>
-                                            <Text style={styles.categoryChipText}>{cat}</Text>
-                                            <TouchableOpacity
-                                                onPress={() =>
-                                                    onFilterChange(
-                                                        'categories',
-                                                        filterValue.categories.filter((c) => c !== cat),
-                                                    )
-                                                }
-                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                            >
-                                                <Icon name="close" size={16} color="#4a8c8c" />
-                                            </TouchableOpacity>
-                                        </View>
-                                    ))}
-                                </ScrollView>
-                            )}
-                        </View>
-                    ) : (
-                        <Text style={styles.emptyState}>Нет категорий для отображения</Text>
-                    )}
-
-                    {!!filters.radius.length && (
-                        <View style={styles.filterField}>
-                            <Text style={styles.label}>Радиус</Text>
-                            <RadiusSelect value={filterValue.radius} options={filters.radius} onChange={(v) => onFilterChange('radius', v)} />
-                        </View>
-                    )}
-
-                    <View style={styles.filterField}>
-                        <Text style={styles.label}>Адрес</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Введите адрес"
-                            placeholderTextColor="#aaa"
-                            defaultValue={filterValue.address}
-                            onChangeText={handleAddressChange}
-                        />
-                    </View>
+            {/* Информация о маршруте */}
+            <View style={styles.routeInfo}>
+              <View style={styles.routeItem}>
+                <Text style={styles.routeLabel}>Старт:</Text>
+                <Text style={styles.routeValue} numberOfLines={1}>
+                  {startAddress || 'Не выбран'}
+                </Text>
+              </View>
+              <View style={styles.routeItem}>
+                <Text style={styles.routeLabel}>Финиш:</Text>
+                <Text style={styles.routeValue} numberOfLines={1}>
+                  {endAddress || 'Не выбран'}
+                </Text>
+              </View>
+              {routeDistance != null && (
+                <View style={styles.routeItem}>
+                  <Text style={styles.routeLabel}>Дистанция:</Text>
+                  <Text style={styles.routeDistance}>
+                    {(routeDistance / 1000).toFixed(1)} км
+                  </Text>
                 </View>
-            ) : (
-                <View style={styles.filtersRow}>
-                    <View style={styles.filterField}>
-                        <Text style={styles.label}>Транспорт</Text>
-                        <View style={styles.transportTabs}>
-                            {TRANSPORT_MODES.map(({ key, icon, label }) => (
-                                <TouchableOpacity
-                                    key={key}
-                                    style={[styles.transportButton, transportMode === key && styles.transportButtonActive]}
-                                    onPress={() => setTransportMode(key)}
-                                    activeOpacity={0.7}
-                                >
-                                    <Icon name={icon} size={18} color={transportMode === key ? '#fff' : '#555'} style={styles.tabIcon} />
-                                    <Text
-                                        numberOfLines={1}
-                                        style={[styles.transportButtonText, transportMode === key && styles.transportButtonTextActive]}
-                                    >
-                                        {label}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </View>
+              )}
+            </View>
+          </>
+        )}
+      </ScrollView>
 
-                    <View style={styles.filterField}>
-                        <Text style={styles.label}>Точка старта</Text>
-                        <Text style={startAddress ? styles.infoText : styles.infoPlaceholder}>{startAddress || 'Не выбрано'}</Text>
-                    </View>
-                    <View style={styles.filterField}>
-                        <Text style={styles.label}>Точка финиша</Text>
-                        <Text style={endAddress ? styles.infoText : styles.infoPlaceholder}>{endAddress || 'Не выбрано'}</Text>
-                    </View>
-                    <View style={styles.filterField}>
-                        <Text style={styles.label}>Дистанция</Text>
-                        <Text style={routeDistance != null ? styles.infoText : styles.infoPlaceholder}>
-                            {routeDistance != null ? `${(routeDistance / 1000).toFixed(1)} км` : '—'}
-                        </Text>
-                    </View>
-                </View>
-            )}
-
-            {isMobile && (
-                <View style={styles.actions}>
-                    <PrimaryButton
-                        title="Закрыть"
-                        onPress={closeMenu}
-                        styles={styles}
-                        icon={<Icon name="close" size={18} color="#fff" />}
-                    />
-                </View>
-            )}
+      {/* Быстрые действия (десктоп) */}
+      {!isMobile && hasActiveFilters && (
+        <View style={styles.footer}>
+          <CompactButton
+            onPress={resetFilters}
+            icon="refresh"
+            title="Сбросить"
+            color={COLORS.danger}
+          />
         </View>
-    );
+      )}
+    </View>
+  );
 };
 
-const getStyles = (isMobile: boolean) =>
-    StyleSheet.create({
-        card: {
-            backgroundColor: '#ffffff',
-            borderRadius: 20,
-            padding: 16,
-            marginBottom: 20,
-            marginHorizontal: isMobile ? 12 : 0,
-            width: '100%',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.06,
-            shadowRadius: 8,
-            elevation: 4,
-        },
-        tabsWithReset: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 24,
-        },
-        tabsContainer: {
-            flexDirection: 'row',
-            backgroundColor: '#f5f7fa',
-            borderRadius: 12,
-            overflow: 'hidden',
-            flex: 1,
-        },
-        tabButton: {
-            flex: 1,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingVertical: 12,
-        },
-        tabButtonActive: { backgroundColor: '#4a8c8c' },
-        tabText: { fontSize: 15, color: '#555', fontWeight: '600' },
-        tabTextActive: { color: '#fff' },
-        tabIcon: { marginRight: 6 },
+// ——— Styles
+const getStyles = (isMobile: boolean) => {
+  const { width, height } = Dimensions.get('window');
+  const panelWidth = isMobile ? Math.min(width - 24, 480) : 340;
+  const panelMaxHeight = isMobile ? Math.round(height * 0.8) : 520;
 
-        /* бывшая кнопка reset */
-        smallResetButton: {
-            backgroundColor: '#ef5350',
-            borderRadius: 12,
-            height: 42,
-            paddingHorizontal: 12,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginLeft: 12,
-            minWidth: 110,
-        },
-        smallResetButtonText: { fontSize: 14, fontWeight: '600', color: '#fff' },
-
-        filtersRow: {
-            flexDirection: isMobile ? 'column' : 'row',
-            flexWrap: 'wrap',
-            gap: isMobile ? 16 : 24,
-        },
-        filterField: { flex: 1, minWidth: isMobile ? '100%' : 220 },
-        label: { fontSize: 14, fontWeight: '700', marginBottom: 6, color: '#333' },
-        input: {
-            height: 46,
-            borderWidth: 1,
-            borderColor: '#ddd',
-            borderRadius: 12,
-            paddingHorizontal: 14,
-            fontSize: 15,
-            backgroundColor: '#fff',
-            color: '#333',
-        },
-        infoText: { fontSize: 15, fontWeight: '600', color: '#333', marginTop: 6 },
-        infoPlaceholder: { fontSize: 15, color: '#bbb', marginTop: 6 },
-
-        chipsContainer: {
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 8,
-            marginTop: 10,
-            maxHeight: 120,
-        },
-        categoryChip: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: '#e0f7f7',
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderRadius: 20,
-        },
-        categoryChipText: { color: '#4a8c8c', marginRight: 6, fontSize: 13, fontWeight: '600' },
-
-        transportTabs: {
-            flexDirection: 'row',
-            borderRadius: 12,
-            backgroundColor: '#f0f0f0',
-            overflow: 'hidden',
-        },
-        transportButton: {
-            flex: 1,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: 46,
-        },
-        transportButtonActive: { backgroundColor: '#4a8c8c' },
-        transportButtonText: { fontSize: 14, color: '#555', fontWeight: '600' },
-        transportButtonTextActive: { color: '#fff' },
-
-        emptyState: { fontSize: 15, color: '#999', marginVertical: 20, textAlign: 'center' },
-
-        actions: { marginTop: 24 },
-
-        /* бывшая "Закрыть" */
-        closeButton: {
-            backgroundColor: '#4a8c8c',
-            borderRadius: 12,
-            height: 50,
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        closeButtonText: { fontSize: 15, fontWeight: '700', color: '#fff' },
-    });
+  return StyleSheet.create({
+    card: {
+      backgroundColor: COLORS.bg,
+      borderRadius: 14,
+      padding: 12,
+      width: panelWidth,
+      maxWidth: '100%',
+      maxHeight: panelMaxHeight,
+      shadowColor: COLORS.shadow,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.07,
+      shadowRadius: 12,
+      elevation: 6,
+      alignSelf: isMobile ? 'center' : 'flex-start',
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    title: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: COLORS.text,
+    },
+    headerActions: {
+      flexDirection: 'row',
+    },
+    modeTabs: {
+      flexDirection: 'row',
+      backgroundColor: '#f2f4f7',
+      borderRadius: 10,
+      padding: 4,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    modeTab: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      marginHorizontal: 2,
+    },
+    modeTabActive: {
+      backgroundColor: COLORS.primary,
+    },
+    modeTabText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: COLORS.textMuted,
+      marginLeft: 6,
+    },
+    modeTabTextActive: {
+      color: '#fff',
+    },
+    content: {
+      flex: 1,
+    },
+    contentContainer: {
+      paddingBottom: 8,
+    },
+    section: {
+      marginBottom: 12,
+    },
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: COLORS.text,
+      marginBottom: 6,
+    },
+    input: {
+      height: 40,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      fontSize: 14,
+      backgroundColor: '#fbfcfe',
+    },
+    chipsContainer: {
+      marginTop: 8,
+    },
+    chipsContent: {
+      alignItems: 'center',
+      paddingRight: 2,
+    },
+    categoryChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: COLORS.primarySoft,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 14,
+      maxWidth: 112,
+      marginRight: 6,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    categoryChipText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: COLORS.primary,
+      flexShrink: 1,
+      marginRight: 4,
+    },
+    moreChip: {
+      backgroundColor: COLORS.primarySoft,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    moreChipText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: COLORS.primary,
+    },
+    transportTabs: {
+      flexDirection: 'row',
+      backgroundColor: '#f2f4f7',
+      borderRadius: 10,
+      padding: 2,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    transportTab: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      borderRadius: 8,
+      marginHorizontal: 2,
+    },
+    transportTabActive: {
+      backgroundColor: COLORS.primary,
+    },
+    transportTabText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: COLORS.textMuted,
+    },
+    transportTabTextActive: {
+      color: '#fff',
+    },
+    routeInfo: {
+      backgroundColor: COLORS.card,
+      borderRadius: 10,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    routeItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 4,
+    },
+    routeLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: COLORS.textMuted,
+      flex: 1,
+    },
+    routeValue: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: COLORS.text,
+      flex: 2,
+      textAlign: 'right',
+      marginLeft: 8,
+    },
+    routeDistance: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: COLORS.primary,
+    },
+    compactButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 10,
+      minHeight: 36,
+      marginLeft: 8,
+    },
+    compactButtonSmall: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      minHeight: 32,
+    },
+    compactButtonText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#fff',
+      marginLeft: 6,
+    },
+    footer: {
+      marginTop: 8,
+      paddingTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: COLORS.border,
+    },
+  });
+};
 
 export default React.memo(FiltersPanel);
