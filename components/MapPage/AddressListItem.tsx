@@ -19,6 +19,8 @@ type Props = {
     travel: TravelCoords;
     isMobile?: boolean;
     onPress?: () => void;
+    /** новое — скрыть объект из списка/карты */
+    onHidePress?: () => void;
 };
 
 const addVersion = (url?: string, updated?: string) =>
@@ -53,6 +55,7 @@ const AddressListItem: React.FC<Props> = ({
                                               travel,
                                               isMobile: isMobileProp,
                                               onPress,
+                                              onHidePress,
                                           }) => {
     const {
         address,
@@ -85,8 +88,8 @@ const AddressListItem: React.FC<Props> = ({
     const copyCoords = useCallback(async () => {
         if (!coord) return;
         try {
-            if (Platform.OS === 'web' && navigator.clipboard) {
-                await navigator.clipboard.writeText(coord);
+            if (Platform.OS === 'web' && (navigator as any)?.clipboard) {
+                await (navigator as any).clipboard.writeText(coord);
             } else {
                 await Clipboard.setStringAsync(coord);
             }
@@ -101,7 +104,6 @@ const AddressListItem: React.FC<Props> = ({
         const mapUrl = buildMapUrl(coord);
         const text = `📍 Координаты: ${coord}`;
 
-        // 1) пробуем открыть приложение Telegram
         const deeplinks = [
             `tg://msg_url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`,
             `tg://share?text=${encodeURIComponent(`${text}\n${mapUrl}`)}`,
@@ -115,42 +117,37 @@ const AddressListItem: React.FC<Props> = ({
                     return;
                 }
             } catch {
-                // Продолжаем пробовать следующую ссылку
                 continue;
             }
         }
 
-        // 2) веб-шеринг
         await openExternal(`https://t.me/share/url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`);
     }, [coord]);
 
     const openMap = useCallback((e: any) => {
-        e?.stopPropagation(); // Предотвращаем всплытие события
+        e?.stopPropagation();
         openExternal(buildMapUrl(coord));
     }, [coord]);
 
     const openArticle = useCallback((e?: any) => {
-        e?.stopPropagation(); // Предотвращаем всплытие события
+        e?.stopPropagation();
         openExternal(articleUrl || urlTravel);
     }, [articleUrl, urlTravel]);
 
     const handleMainPress = useCallback(() => {
-        if (onPress) {
-            onPress();
-        } else {
-            openArticle();
-        }
+        if (onPress) onPress();
+        else openArticle();
     }, [onPress, openArticle]);
 
     const handleIconPress = useCallback((handler: () => void) => {
         return (e: any) => {
-            e?.stopPropagation(); // Важно: предотвращаем всплытие до основного Pressable
+            e?.stopPropagation();
             handler();
         };
     }, []);
 
-    // Увеличиваем высоту на мобильных устройствах
-    const height = isMobile ? 280 : 400; // Было 200, стало 280
+    // синхронизировано с TravelListPanel: 320/420
+    const height = isMobile ? 320 : 420;
 
     return (
       <View
@@ -180,7 +177,7 @@ const AddressListItem: React.FC<Props> = ({
                 style={styles.mainPressable}
                 onPress={handleMainPress}
                 accessibilityRole="button"
-                accessibilityLabel={`Открыть статью: ${address || 'Место'}`}
+                accessibilityLabel={`Открыть: ${address || 'Место'}`}
                 android_ripple={{ color: '#00000020' }}
                 onLongPress={copyCoords}
               >
@@ -190,6 +187,14 @@ const AddressListItem: React.FC<Props> = ({
               {/* верхние иконки — по hover на web, всегда на мобиле */}
               {showOverlays && (
                 <View style={styles.iconCol}>
+                    <IconButton
+                      icon="eye-off"
+                      size={20}
+                      onPress={onHidePress ? handleIconPress(onHidePress) : undefined}
+                      iconColor="#fff"
+                      style={styles.iconBtnDanger}
+                      accessibilityLabel="Скрыть объект"
+                    />
                     <IconButton
                       icon="link"
                       size={20}
@@ -231,7 +236,7 @@ const AddressListItem: React.FC<Props> = ({
                         onPress={openMap}
                         style={styles.coordPressable}
                         accessibilityRole="button"
-                        accessibilityLabel="Открыть карту"
+                        accessibilityLabel="Открыть в карте"
                       >
                           <Text style={styles.coord}>{coord}</Text>
                       </Pressable>
@@ -239,7 +244,7 @@ const AddressListItem: React.FC<Props> = ({
 
                     {!!categories.length && (
                       <View style={styles.catWrap}>
-                          {categories.slice(0, 3).map((cat, i) => ( // Ограничиваем количество категорий
+                          {categories.slice(0, 3).map((cat, i) => (
                             <View key={`${cat}-${i}`} style={styles.catChip}>
                                 <Text style={styles.catText}>{cat}</Text>
                             </View>
@@ -291,7 +296,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
-    // иконки — столбиком, квадратные тёмные кнопки
+    // иконки
     iconCol: {
         position: 'absolute',
         top: 12,
@@ -301,6 +306,15 @@ const styles = StyleSheet.create({
     },
     iconBtn: {
         backgroundColor: 'rgba(0,0,0,0.7)',
+        margin: 0,
+        borderRadius: 12,
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    iconBtnDanger: {
+        backgroundColor: 'rgba(255,0,0,0.65)',
         margin: 0,
         borderRadius: 12,
         width: 44,
