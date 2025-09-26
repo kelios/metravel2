@@ -146,8 +146,8 @@ const AddressListItem: React.FC<Props> = ({
         };
     }, []);
 
-    // синхронизировано с TravelListPanel: 320/420
-    const height = isMobile ? 320 : 420;
+    // Новая высота под компактный список
+    const height = isMobile ? 220 : 320;
 
     return (
       <View
@@ -265,17 +265,19 @@ const AddressListItem: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
     card: {
-        marginVertical: 8,
+        marginVertical: 6,
         marginHorizontal: 4,
         borderRadius: 12,
-        backgroundColor: '#f3f3f3',
+        backgroundColor: '#f7f7f8',
         elevation: 2,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOpacity: 0.08,
+        shadowRadius: 5,
         overflow: 'hidden',
         position: 'relative',
+        borderWidth: 1,
+        borderColor: '#eeeeee',
     },
     image: {
         flex: 1,
@@ -299,8 +301,8 @@ const styles = StyleSheet.create({
     // иконки
     iconCol: {
         position: 'absolute',
-        top: 12,
-        right: 12,
+        top: 10,
+        right: 10,
         zIndex: 3,
         gap: 8,
     },
@@ -308,8 +310,8 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.7)',
         margin: 0,
         borderRadius: 12,
-        width: 44,
-        height: 44,
+        width: 40,
+        height: 40,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -317,14 +319,14 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,0,0,0.65)',
         margin: 0,
         borderRadius: 12,
-        width: 44,
-        height: 44,
+        width: 40,
+        height: 40,
         justifyContent: 'center',
         alignItems: 'center',
     },
 
     overlay: {
-        padding: 16,
+        padding: 12,
         backgroundColor: 'rgba(0,0,0,0.7)',
         borderBottomLeftRadius: 12,
         borderBottomRightRadius: 12,
@@ -334,9 +336,9 @@ const styles = StyleSheet.create({
     title: {
         color: '#fff',
         fontWeight: '800',
-        fontSize: 16,
-        marginBottom: 8,
-        lineHeight: 20,
+        fontSize: 15,
+        marginBottom: 6,
+        lineHeight: 19,
     },
     coordPressable: {
         alignSelf: 'flex-start',
@@ -345,7 +347,7 @@ const styles = StyleSheet.create({
     coord: {
         color: '#fff',
         textDecorationLine: 'underline',
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '600',
     },
     catWrap: {
@@ -354,10 +356,12 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     catChip: {
-        backgroundColor: 'rgba(255,255,255,0.25)',
+        backgroundColor: 'rgba(255,255,255,0.22)',
         borderRadius: 12,
         paddingHorizontal: 10,
         paddingVertical: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.28)',
     },
     catText: {
         color: '#fff',

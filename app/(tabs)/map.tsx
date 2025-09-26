@@ -36,11 +36,11 @@ const DEFAULT_COORDINATES = { latitude: 53.9006, longitude: 27.5590 };
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const INFO_PANEL_MIN_HEIGHT = 100;
-const INFO_PANEL_MAX_HEIGHT = SCREEN_HEIGHT * 0.7;
 const FILTERS_PANEL_HEIGHT = 300;
 
-// Высота нижней «чёрной» плашки + запас
-const BOTTOM_BAR_HEIGHT = 64;
+// Высота верхней панели навигации (ранее нижней)
+const TOP_BAR_HEIGHT = 64;
+const LIST_TOP_GAP = 54;
 
 export default function MapScreen() {
     const pathname = usePathname();
@@ -50,6 +50,12 @@ export default function MapScreen() {
 
     const { width, height } = useWindowDimensions();
     const isMobile = width <= 768;
+
+    // Динамический максимум высоты панели списка: «до фильтров»
+    const maxListHeight = useMemo(
+      () => SCREEN_HEIGHT - (isMobile ? TOP_BAR_HEIGHT + LIST_TOP_GAP : 40),
+      [isMobile]
+    );
 
     // Анимации
     const infoPanelTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT - INFO_PANEL_MIN_HEIGHT)).current;
@@ -91,12 +97,12 @@ export default function MapScreen() {
           onPanResponderMove: (_, g) => {
               const newHeight = Math.max(
                 INFO_PANEL_MIN_HEIGHT,
-                Math.min(INFO_PANEL_MAX_HEIGHT, INFO_PANEL_MAX_HEIGHT - g.dy)
+                Math.min(maxListHeight, maxListHeight - g.dy)
               );
               infoPanelTranslateY.setValue(SCREEN_HEIGHT - newHeight);
           },
           onPanResponderRelease: (_, g) => {
-              const threshold = INFO_PANEL_MAX_HEIGHT * 0.25;
+              const threshold = maxListHeight * 0.25;
               const shouldExpand = g.dy < -threshold;
               const shouldCollapse = g.dy > threshold;
 
@@ -126,11 +132,11 @@ export default function MapScreen() {
     const expandListPanel = useCallback(() => {
         setActiveView('list');
         Animated.timing(infoPanelTranslateY, {
-            toValue: SCREEN_HEIGHT - INFO_PANEL_MAX_HEIGHT,
+            toValue: SCREEN_HEIGHT - maxListHeight,
             duration: 300,
             useNativeDriver: true,
         }).start();
-    }, [infoPanelTranslateY]);
+    }, [infoPanelTranslateY, maxListHeight]);
 
     const collapseListPanel = useCallback(() => {
         Animated.timing(infoPanelTranslateY, {
@@ -418,7 +424,7 @@ export default function MapScreen() {
 
     const currentData = mode === 'route' ? placesAlongRoute : travelsData;
     const hasActiveRoute = routePoints.length >= 2;
-    const styles = getStyles(isMobile, width, height);
+    const styles = getStyles(isMobile, width, height, maxListHeight);
 
     if (!coordinates) {
         return (
@@ -521,10 +527,10 @@ export default function MapScreen() {
                     </Animated.View>
                   )}
 
-                  {/* Мобильная навигация */}
+                  {/* Мобильная навигация — теперь сверху */}
                   {isMobile && (
                     <>
-                        <View style={styles.bottomNav}>
+                        <View style={styles.topNav}>
                             <Pressable style={({ pressed }) => [styles.navButton, pressed && styles.navButtonPressed]} onPress={showFiltersPanel}>
                                 <Icon name="filter-list" type="material" color="#4a8c8c" size={24} />
                                 <Text style={styles.navButtonText}>Фильтры</Text>
@@ -544,7 +550,7 @@ export default function MapScreen() {
                             </Pressable>
                         </View>
 
-                        {/* Панель фильтров */}
+                        {/* Панель фильтров (под топ-баром) */}
                         <Animated.View style={[styles.filtersPanel, { transform: [{ translateY: filtersPanelTranslateY }] }]}>
                             <View style={styles.panelHeader}>
                                 <Text style={styles.panelTitle}>Фильтры</Text>
@@ -661,7 +667,7 @@ export default function MapScreen() {
     );
 }
 
-const getStyles = (isMobile: boolean, width: number, height: number) => StyleSheet.create({
+const getStyles = (isMobile: boolean, width: number, height: number, maxListHeight: number) => StyleSheet.create({
     safeContainer: {
         flex: 1,
         backgroundColor: '#f8f9fa',
@@ -677,7 +683,7 @@ const getStyles = (isMobile: boolean, width: number, height: number) => StyleShe
     // Панель информации о маршруте
     routeInfoPanel: {
         position: 'absolute',
-        top: 20,
+        top: isMobile ? TOP_BAR_HEIGHT + 8 : 20,
         left: 20,
         right: 20,
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -719,23 +725,23 @@ const getStyles = (isMobile: boolean, width: number, height: number) => StyleShe
     statItem: { flexDirection: 'row', alignItems: 'center' },
     statText: { fontSize: 12, color: '#4a8c8c', fontWeight: '600', marginLeft: 6 },
 
-    // Мобильная навигация
-    bottomNav: {
+    // Мобильная навигация (TOP)
+    topNav: {
         position: 'absolute',
-        bottom: 0, left: 0, right: 0,
+        top: 0, left: 0, right: 0,
         flexDirection: 'row',
         backgroundColor: 'white',
         paddingHorizontal: 8,
         paddingVertical: 5,
-        borderTopWidth: 0,
+        borderBottomWidth: 0,
         justifyContent: 'space-around',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 5,
         elevation: 5,
-        zIndex: 1000,
-        minHeight: BOTTOM_BAR_HEIGHT,
+        zIndex: 2003,
+        minHeight: TOP_BAR_HEIGHT,
     },
     navButton: { alignItems: 'center', padding: 8, minWidth: 70 },
     navButtonPressed: { opacity: 0.7, transform: [{ scale: 0.95 }] },
@@ -744,7 +750,8 @@ const getStyles = (isMobile: boolean, width: number, height: number) => StyleShe
     // Мобильные панели
     filtersPanel: {
         position: 'absolute',
-        top: 0, left: 0, right: 0,
+        top: TOP_BAR_HEIGHT, // открываем под верхним баром
+        left: 0, right: 0,
         height: FILTERS_PANEL_HEIGHT,
         backgroundColor: '#fff',
         borderBottomLeftRadius: 20,
@@ -761,21 +768,23 @@ const getStyles = (isMobile: boolean, width: number, height: number) => StyleShe
     infoPanel: {
         position: 'absolute',
         left: 0, right: 0,
-        height: INFO_PANEL_MAX_HEIGHT,
+        height: maxListHeight,        // динамически «до фильтров»
         backgroundColor: '#fff',
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         padding: 16,
-        paddingBottom: BOTTOM_BAR_HEIGHT + 24,
+        paddingTop: 8,                // маленький отступ вместо большого TOP_BAR_HEIGHT
+        paddingBottom: 12,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -4 },
         shadowOpacity: 0.25,
         shadowRadius: 12,
         elevation: 14,
         zIndex: 2001,
+        bottom: 0,
     },
     panelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-    panelTitle: { fontSize: 20, fontWeight: '700', color: 'white' },
+    panelTitle: { fontSize: 20, fontWeight: '700', color: '#2c3e50' },
     dragHandle: { alignItems: 'center', paddingVertical: 12, marginBottom: 8 },
     dragHandleBar: { width: 48, height: 5, backgroundColor: '#ddd', borderRadius: 3 },
 

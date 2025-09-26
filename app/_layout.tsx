@@ -112,7 +112,7 @@ function RootLayoutNav() {
     const [dockHeight, setDockHeight] = useState(0);
 
     const BottomGutter = () =>
-      showFooter && isMobile && dockHeight > 0 ? <View style={{ height: dockHeight }} /> : null;
+      showFooter && isMobile && dockHeight > 0 ? <View style={{ height: dockHeight}} /> : null;
 
     return (
       <PaperProvider theme={theme}>

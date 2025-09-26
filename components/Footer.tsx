@@ -107,14 +107,18 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
     }
   };
 
-  /** ======= Mobile: компактный «док» ======= */
+  /** ======= Mobile: суперкомпактный «док» ======= */
   if (isMobile) {
     return (
       <Container style={[styles.base, mobileStyles.container]}>
         <View style={mobileStyles.dockWrapper}>
           {/* измеряем ровно эту область */}
           <View onLayout={handleDockLayout}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={mobileStyles.dock}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={mobileStyles.dock}
+            >
               {[...primary, ...social].map((item) =>
                 item.externalUrl ? (
                   <Item key={item.key} onPress={() => openURL(item.externalUrl!)} label={item.label}>
@@ -127,12 +131,6 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
                 )
               )}
             </ScrollView>
-          </View>
-
-          {/* эта строка с копирайтом не влияет на gutter */}
-          <View style={mobileStyles.brandRow}>
-            <Image source={require("../assets/icons/logo_yellow_60x60.png")} style={styles.logo} />
-            <Text style={styles.copy}>© MeTravel 2020–{new Date().getFullYear()}</Text>
           </View>
         </View>
       </Container>
@@ -177,18 +175,22 @@ const styles = StyleSheet.create({
   item: {
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    minWidth: 70,
-    minHeight: 48,
+    paddingHorizontal: 8, // Уменьшили отступы
+    paddingVertical: 4,   // Уменьшили отступы
+    minWidth: 60,         // Уменьшили минимальную ширину
+    minHeight: 44,        // Слегка уменьшили высоту
   },
   pressed: { opacity: 0.7 },
-  itemInner: { alignItems: "center", justifyContent: "center" },
+  itemInner: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,               // Уменьшили расстояние между иконкой и текстом
+  },
   itemText: {
     color: "#ffa861",
-    fontSize: 11,
-    lineHeight: 13,
-    marginTop: 3,
+    fontSize: 10,         // Уменьшили размер шрифта
+    lineHeight: 12,
+    marginTop: 2,         // Уменьшили отступ сверху
     textAlign: "center",
   },
   logo: { width: 18, height: 18, marginRight: 8 },
@@ -204,28 +206,23 @@ const mobileStyles = StyleSheet.create({
     zIndex: 50,
   },
   dockWrapper: {
-    paddingTop: 6,
-    paddingBottom: 6,
-    paddingHorizontal: 10,
+    paddingTop: 4,        // Уменьшили отступы
+    paddingBottom: 4,     // Уменьшили отступы
+    paddingHorizontal: 8, // Уменьшили отступы
     backgroundColor: "rgba(24,24,24,0.94)",
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
+    borderTopLeftRadius: 12, // Слегка уменьшили радиус
+    borderTopRightRadius: 12,
     shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
+    shadowOpacity: 0.3,   // Увеличили тень для лучшего отделения
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: -2 },
-    elevation: 14,
+    elevation: 10,
   },
-  dock: { alignItems: "center" },
-  brandRow: {
-    flexDirection: "row",
+  dock: {
     alignItems: "center",
-    justifyContent: "center",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#2c2c2c",
-    marginTop: 6,
-    paddingTop: 6,
+    gap: 2,               // Уменьшили расстояние между иконками
   },
+  // Убрали brandRow полностью
 });
 
 /** ========= Desktop ========= */

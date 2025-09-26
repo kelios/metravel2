@@ -136,6 +136,7 @@ function OptimizedWebCarousel({
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
+  const [imageDimensions, setImageDimensions] = useState<Map<number, {width: number, height: number}>>(new Map());
 
   const imagesKey = useMemo(
     () => images.map((i) => `${i.id}_${i.updated_at ?? ""}`).join("|"),
@@ -149,13 +150,22 @@ function OptimizedWebCarousel({
   }, [imagesKey]);
 
   const handleImageLoad = useCallback(
-    (index: number) => {
+    (index: number, naturalWidth?: number, naturalHeight?: number) => {
       setLoadedImages((prev) => {
         if (prev.has(index)) return prev;
         const next = new Set(prev);
         next.add(index);
         return next;
       });
+
+      if (naturalWidth && naturalHeight) {
+        setImageDimensions(prev => {
+          const next = new Map(prev);
+          next.set(index, { width: naturalWidth, height: naturalHeight });
+          return next;
+        });
+      }
+
       if (index === 0) {
         onFirstImageLoad?.();
         (window as any).__LCP_LOADED ||= true;
@@ -223,13 +233,35 @@ function OptimizedWebCarousel({
 
   (OptimizedWebCarousel as any)._scrollTo = scrollToIndex;
 
-  const needBlur = (w?: number, h?: number) => {
-    if (!w || !h) return true;
-    const scale = Math.min(cw / w, ch / h, 1);
-    const dw = Math.round(w * scale);
-    const dh = Math.round(h * scale);
-    return dw < cw || dh < ch;
-  };
+  // ИСПРАВЛЕННАЯ логика определения необходимости блюра
+  const needBlur = useCallback((index: number) => {
+    if (!blurBackground) return false;
+
+    const dimensions = imageDimensions.get(index);
+    const img = images[index];
+
+    // Если нет данных о размерах, используем дефолтную логику
+    if (!dimensions || !img.width || !img.height) return true;
+
+    const naturalWidth = dimensions.width || img.width;
+    const naturalHeight = dimensions.height || img.height;
+
+    if (!naturalWidth || !naturalHeight) return true;
+
+    // Рассчитываем, как изображение будет масштабироваться
+    const containerRatio = cw / ch;
+    const imageRatio = naturalWidth / naturalHeight;
+
+    if (imageRatio > containerRatio) {
+      // Изображение шире контейнера - масштабируем по ширине
+      const scaledHeight = cw / imageRatio;
+      return scaledHeight < ch - 5; // Небольшой запас для погрешности
+    } else {
+      // Изображение выше контейнера - масштабируем по высоте
+      const scaledWidth = ch * imageRatio;
+      return scaledWidth < cw - 5; // Небольшой запас для погрешности
+    }
+  }, [blurBackground, imageDimensions, images, cw, ch]);
 
   const containerStyle = useMemo(
     () => ({
@@ -271,12 +303,11 @@ function OptimizedWebCarousel({
         const isFirst = index === 0;
         const w = img.width || 1200;
         const h = img.height || Math.round(1200 / DEFAULT_ASPECT_RATIO);
-
-        const showBlur = blurBackground && needBlur(img.width, img.height);
+        const showBlur = needBlur(index);
 
         return (
           <div key={img.id} style={slideStyle}>
-            {/* Фоновая подложка с блюром — всегда под фото */}
+            {/* Фоновая подложка с блюром — только если нужно */}
             {showBlur && (
               <img
                 src={uri}
@@ -325,8 +356,9 @@ function OptimizedWebCarousel({
               // @ts-ignore
               fetchpriority={isFirst ? "high" : "auto"}
               onLoad={(e) => {
-                (e.currentTarget as HTMLImageElement).style.opacity = "1";
-                handleImageLoad(index);
+                const target = e.currentTarget as HTMLImageElement;
+                target.style.opacity = "1";
+                handleImageLoad(index, target.naturalWidth, target.naturalHeight);
               }}
             />
           </div>
@@ -368,15 +400,25 @@ const Slider = forwardRef<any, SliderProps>(
 
     // натив: какие картинки уже загрузились
     const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set([0]));
+    const [imageDimensions, setImageDimensions] = useState<Map<number, {width: number, height: number}>>(new Map());
 
     const handleImageLoad = useCallback(
-      (index: number) => {
+      (index: number, naturalWidth?: number, naturalHeight?: number) => {
         setLoadedImages((prev) => {
           if (prev.has(index)) return prev;
           const next = new Set(prev);
           next.add(index);
           return next;
         });
+
+        if (naturalWidth && naturalHeight) {
+          setImageDimensions(prev => {
+            const next = new Map(prev);
+            next.set(index, { width: naturalWidth, height: naturalHeight });
+            return next;
+          });
+        }
+
         if (index === 0) onFirstImageLoad?.();
       },
       [onFirstImageLoad]
@@ -392,13 +434,14 @@ const Slider = forwardRef<any, SliderProps>(
     const isMobile = containerWidth <= MOBILE_BREAKPOINT;
     const uriMap = useMemo(() => images.map(buildUri), [images]);
 
-    // фиксированная высота, чтобы не было CLS
+    // ИСПРАВЛЕННАЯ логика расчета высоты для мобильных
     useEffect(() => {
       const calculateHeight = () => {
         if (isMobile) {
-          return Math.max(
-            160,
-            (windowHeight - insets.top - insets.bottom) * 0.75
+          // Для мобильных используем более компактную высоту
+          return Math.min(
+            containerWidth / Math.min(firstAR, 1.5), // Ограничиваем максимальное соотношение
+            windowHeight * 0.6 // Максимум 60% высоты экрана
           );
         } else {
           const calculatedHeight = containerWidth / firstAR;
@@ -406,7 +449,7 @@ const Slider = forwardRef<any, SliderProps>(
         }
       };
       setContainerHeight(calculateHeight());
-    }, [isMobile, containerWidth, firstAR, windowHeight, insets]);
+    }, [isMobile, containerWidth, firstAR, windowHeight]);
 
     const imagesKey = useMemo(
       () => images.map((i) => `${i.id}_${i.updated_at ?? ""}`).join("|"),
@@ -417,6 +460,7 @@ const Slider = forwardRef<any, SliderProps>(
       setCurrentIndex(0);
       setLoadedIndices(new Set([0]));
       setLoadedImages(new Set([0]));
+      setImageDimensions(new Map());
     }, [imagesKey]);
 
     const handleIndexChanged = useCallback(
@@ -436,6 +480,36 @@ const Slider = forwardRef<any, SliderProps>(
       [images.length, onIndexChanged, preloadCount]
     );
 
+    // ИСПРАВЛЕННАЯ логика определения необходимости блюра для нативной версии
+    const needBlurForImage = useCallback((index: number) => {
+      if (!blurBackground) return false;
+
+      const dimensions = imageDimensions.get(index);
+      const img = images[index];
+
+      // Если нет данных о размерах, используем блюр для безопасности
+      if (!dimensions || !img.width || !img.height) return true;
+
+      const naturalWidth = dimensions.width || img.width;
+      const naturalHeight = dimensions.height || img.height;
+
+      if (!naturalWidth || !naturalHeight) return true;
+
+      // Рассчитываем, как изображение будет масштабироваться
+      const containerRatio = containerWidth / containerHeight;
+      const imageRatio = naturalWidth / naturalHeight;
+
+      if (imageRatio > containerRatio) {
+        // Изображение шире контейнера - масштабируем по ширине
+        const scaledHeight = containerWidth / imageRatio;
+        return scaledHeight < containerHeight - 5;
+      } else {
+        // Изображение выше контейнера - масштабируем по высоте
+        const scaledWidth = containerHeight * imageRatio;
+        return scaledWidth < containerWidth - 5;
+      }
+    }, [blurBackground, imageDimensions, images, containerWidth, containerHeight]);
+
     if (!images.length) return null;
 
     // wrap helpers
@@ -449,14 +523,14 @@ const Slider = forwardRef<any, SliderProps>(
 
     const handlePrev = useCallback(() => {
       if (Platform.OS === "web") {
-        (OptimizedWebCarousel as any)._scrollTo?.(currentIndex - 1); // внутри уже wrap
+        (OptimizedWebCarousel as any)._scrollTo?.(currentIndex - 1);
       }
       navPrev();
     }, [currentIndex]);
 
     const handleNext = useCallback(() => {
       if (Platform.OS === "web") {
-        (OptimizedWebCarousel as any)._scrollTo?.(currentIndex + 1); // внутри уже wrap
+        (OptimizedWebCarousel as any)._scrollTo?.(currentIndex + 1);
       }
       navNext();
     }, [currentIndex]);
@@ -517,7 +591,7 @@ const Slider = forwardRef<any, SliderProps>(
                   data={images}
                   width={containerWidth}
                   height={containerHeight}
-                  loop // native уже бесконечный
+                  loop
                   autoPlay={autoPlay}
                   autoPlayInterval={autoPlayInterval}
                   onSnapToItem={handleIndexChanged}
@@ -527,6 +601,7 @@ const Slider = forwardRef<any, SliderProps>(
                     const isVisible = loadedIndices.has(index);
                     const isPriority = index === 0;
                     const isLoaded = loadedImages.has(index);
+                    const showBlur = needBlurForImage(index);
 
                     if (!isVisible) {
                       return <View style={[styles.slide, { backgroundColor: "#e9e7df" }]} />;
@@ -534,8 +609,8 @@ const Slider = forwardRef<any, SliderProps>(
 
                     return (
                       <View style={styles.slide} collapsable={false}>
-                        {/* Фон с блюром — всегда под фото */}
-                        {blurBackground && (
+                        {/* Фон с блюром — только если нужно */}
+                        {showBlur && (
                           <ExpoImage
                             source={{ uri }}
                             contentFit="cover"
@@ -558,7 +633,10 @@ const Slider = forwardRef<any, SliderProps>(
                             dims.width && dims.height ? { aspectRatio: dims.width / dims.height } : {},
                             { opacity: isLoaded ? 1 : 0 },
                           ]}
-                          onLoad={() => handleImageLoad(index)}
+                          onLoad={(e) => {
+                            const { naturalWidth, naturalHeight } = e.source;
+                            handleImageLoad(index, naturalWidth, naturalHeight);
+                          }}
                           {...imageProps}
                         />
                       </View>
@@ -625,7 +703,7 @@ const styles = StyleSheet.create({
   img: {
     width: "100%",
     height: "100%",
-    zIndex: 2, // Важно: основное изображение должно быть выше блюра
+    zIndex: 2,
   },
   navBtn: {
     position: "absolute",
@@ -642,7 +720,7 @@ const styles = StyleSheet.create({
     bottom: 12,
     flexDirection: "row",
     alignSelf: "center",
-    zIndex: 3, // Точки должны быть выше всего
+    zIndex: 3,
   },
   dotWrapper: { marginHorizontal: 6, padding: 6 },
   dot: {

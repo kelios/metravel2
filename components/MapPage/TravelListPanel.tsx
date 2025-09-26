@@ -39,7 +39,7 @@ interface Props {
   onClosePanel?: () => void;
 }
 
-const SEPARATOR_HEIGHT = 12;
+const SEPARATOR_HEIGHT = 10;
 
 const TravelListPanel: React.FC<Props> = ({
                                             travelsData,
@@ -57,8 +57,8 @@ const TravelListPanel: React.FC<Props> = ({
   const { width } = useWindowDimensions();
   const isMobile = width <= 768;
 
-  // высота строки синхронизирована с AddressListItem (фото больше)
-  const ROW_HEIGHT = useMemo(() => (isMobile ? 320 : 420), [isMobile]);
+  // Новые, более компактные высоты
+  const ROW_HEIGHT = useMemo(() => (isMobile ? 220 : 320), [isMobile]);
 
   const styles = useMemo(() => getStyles(isMobile, ROW_HEIGHT), [isMobile, ROW_HEIGHT]);
 
@@ -181,7 +181,7 @@ const TravelListPanel: React.FC<Props> = ({
           {hiddenCount > 0 && (
             <Pressable
               onPress={onResetHidden}
-              style={({ pressed }) => [styles.resetHiddenBtn, pressed && { opacity: 0.8 }]}
+              style={({ pressed }) => [styles.resetHiddenBtn, pressed && { opacity: 0.85 }]}
               hitSlop={8}
             >
               <Text style={styles.resetHiddenText}>Скрытые: {hiddenCount} • Сбросить</Text>
@@ -211,15 +211,16 @@ const TravelListPanel: React.FC<Props> = ({
         contentContainerStyle={[
           styles.flatListContent,
           {
-            paddingBottom: isMobile ? 140 : 16,
+            // Навигация теперь сверху — большой нижний паддинг не нужен
+            paddingBottom: isMobile ? 24 : 16,
             flexGrow: !isLoading && paginatedData.length === 0 ? 1 : 0,
           },
         ]}
         getItemLayout={!isLoading ? getItemLayout : undefined}
         removeClippedSubviews={Platform.OS === 'android' && !isLoading}
-        initialNumToRender={isMobile ? 3 : 6}
-        maxToRenderPerBatch={isMobile ? 4 : 8}
-        windowSize={isMobile ? 5 : 9}
+        initialNumToRender={isMobile ? 4 : 6}
+        maxToRenderPerBatch={isMobile ? 6 : 10}
+        windowSize={isMobile ? 7 : 9}
         accessibilityRole="list"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -264,19 +265,21 @@ const getStyles = (isMobile: boolean, ROW_HEIGHT: number) =>
     },
     resultsCount: {
       fontSize: isMobile ? 14 : 16,
-      fontWeight: '600',
-      color: '#333',
+      fontWeight: '700',
+      color: '#222',
       textAlign: 'left',
     },
     resetHiddenBtn: {
       paddingVertical: 6,
-      paddingHorizontal: 8,
-      borderRadius: 8,
-      backgroundColor: '#f2f2f2',
+      paddingHorizontal: 10,
+      borderRadius: 10,
+      backgroundColor: '#efefef',
+      borderWidth: 1,
+      borderColor: '#e5e5e5',
     },
     resetHiddenText: {
       fontSize: isMobile ? 12 : 13,
-      color: '#666',
+      color: '#444',
       fontWeight: '600',
     },
     flatListContent: {
