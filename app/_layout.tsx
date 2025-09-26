@@ -1,6 +1,6 @@
 import "@expo/metro-runtime";
 import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 import { MD3LightTheme as DefaultTheme, PaperProvider } from "react-native-paper";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
@@ -13,9 +13,7 @@ const Footer = lazy(() => import("@/components/Footer"));
 /** ===== Helpers ===== */
 const isWeb = Platform.OS === "web";
 
-/**
- * Тема: аккуратные контрасты + системные шрифты (без кастомной загрузки).
- */
+/** Тема */
 const theme = {
     ...DefaultTheme,
     colors: {
@@ -29,9 +27,7 @@ const theme = {
         onPrimary: "#1b1b1b",
         onSecondary: "#1b1b1b",
     },
-    fonts: {
-        ...DefaultTheme.fonts, // оставляем системные шрифты для стабильности
-    },
+    fonts: { ...DefaultTheme.fonts },
 } as const;
 
 const queryClient = new QueryClient({
@@ -45,16 +41,12 @@ const queryClient = new QueryClient({
     },
 });
 
-/**
- * На native показываем Splash, на web — нет.
- */
+/** Splash на native */
 if (!isWeb) {
     SplashScreen.preventAutoHideAsync().catch(() => {});
 }
 
-/**
- * Хук «готовности по бездействию»: работает только на Web.
- */
+/** Хук готовности по бездействию (web) */
 function useIdleFlag(timeout = 2000) {
     const [ready, setReady] = useState(!isWeb ? true : false);
 
@@ -93,18 +85,17 @@ function useIdleFlag(timeout = 2000) {
 }
 
 export default function RootLayout() {
-    // На native просто скрываем Splash в первом кадре — мы не грузим кастомные шрифты.
     useEffect(() => {
-        if (!isWeb) {
-            SplashScreen.hideAsync().catch(() => {});
-        }
+        if (!isWeb) SplashScreen.hideAsync().catch(() => {});
     }, []);
-
     return <RootLayoutNav />;
 }
 
 function RootLayoutNav() {
     const pathname = usePathname();
+    const { width } = useWindowDimensions();
+    const isMobile = width <= 900 || Platform.OS !== "web";
+
     const SITE = process.env.EXPO_PUBLIC_SITE_URL || "https://metravel.by";
     const canonical = `${SITE}${pathname || "/"}`;
 
@@ -116,6 +107,12 @@ function RootLayoutNav() {
     const idleReady = useIdleFlag(1200);
     const defaultTitle = "MeTravel — путешествия и маршруты";
     const defaultDescription = "Маршруты, места и впечатления от путешественников.";
+
+    /** === динамическая высота ДОКА футера (только иконки) === */
+    const [dockHeight, setDockHeight] = useState(0);
+
+    const BottomGutter = () =>
+      showFooter && isMobile && dockHeight > 0 ? <View style={{ height: dockHeight }} /> : null;
 
     return (
       <PaperProvider theme={theme}>
@@ -137,6 +134,9 @@ function RootLayoutNav() {
                               <Stack screenOptions={{ headerShown: false }}>
                                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                               </Stack>
+
+                              {/* Прокладка: только высота док-строки футера */}
+                              <BottomGutter />
                           </View>
 
                           {showFooter && (
@@ -147,7 +147,12 @@ function RootLayoutNav() {
                                   </View>
                               }
                             >
-                                {idleReady ? <Footer /> : null}
+                                {idleReady ? (
+                                  <Footer
+                                    /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
+                                    onDockHeight={(h) => setDockHeight(h)}
+                                  />
+                                ) : null}
                             </Suspense>
                           )}
                       </View>
@@ -159,13 +164,8 @@ function RootLayoutNav() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#f6f7fb",
-    },
-    content: {
-        flex: 1,
-    },
+    container: { flex: 1, backgroundColor: "#f6f7fb" },
+    content: { flex: 1 },
     footerFallback: {
         padding: 12,
         alignItems: "center",

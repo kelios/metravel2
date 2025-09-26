@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -10,9 +10,16 @@ import {
   Platform,
   SafeAreaView,
   ScrollView,
+  LayoutChangeEvent,
 } from "react-native";
 import { Link, type Href } from "expo-router";
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
+
+/** ========= Prop для передачи высоты дока ========= */
+type FooterProps = {
+  /** Высота горизонтального «дока» с иконками на мобайле. На десктопе = 0. */
+  onDockHeight?: (h: number) => void;
+};
 
 /** ========= Types ========= */
 type NavItem = {
@@ -48,12 +55,7 @@ const Item = ({
 
   if (href) {
     return (
-      <Link
-        href={href}
-        accessibilityRole="link"
-        accessibilityLabel={label}
-        style={styles.item}
-      >
+      <Link href={href} accessibilityRole="link" accessibilityLabel={label} style={styles.item}>
         {content}
       </Link>
     );
@@ -73,7 +75,7 @@ const Item = ({
 };
 
 /** ========= Component ========= */
-const Footer: React.FC = () => {
+const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
   const { width } = useWindowDimensions();
   const isMobile = width <= 900 || Platform.OS !== "web";
   const s = useMemo(() => (isMobile ? mobileStyles : desktopStyles), [isMobile]);
@@ -95,29 +97,39 @@ const Footer: React.FC = () => {
 
   const Container = (Platform.OS === "ios" || Platform.OS === "android") ? SafeAreaView : View;
 
+  /** ======= измеряем только ДОК (иконки) ======= */
+  const lastDockH = useRef(0);
+  const handleDockLayout = (e: LayoutChangeEvent) => {
+    const h = Math.round(e.nativeEvent.layout.height);
+    if (h > 0 && h !== lastDockH.current) {
+      lastDockH.current = h;
+      onDockHeight?.(h);
+    }
+  };
+
   /** ======= Mobile: компактный «док» ======= */
   if (isMobile) {
     return (
       <Container style={[styles.base, mobileStyles.container]}>
         <View style={mobileStyles.dockWrapper}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={mobileStyles.dock}
-          >
-            {[...primary, ...social].map((item) =>
-              item.externalUrl ? (
-                <Item key={item.key} onPress={() => openURL(item.externalUrl!)} label={item.label}>
-                  {item.icon}
-                </Item>
-              ) : (
-                <Item key={item.key} href={item.route} label={item.label}>
-                  {item.icon}
-                </Item>
-              )
-            )}
-          </ScrollView>
+          {/* измеряем ровно эту область */}
+          <View onLayout={handleDockLayout}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={mobileStyles.dock}>
+              {[...primary, ...social].map((item) =>
+                item.externalUrl ? (
+                  <Item key={item.key} onPress={() => openURL(item.externalUrl!)} label={item.label}>
+                    {item.icon}
+                  </Item>
+                ) : (
+                  <Item key={item.key} href={item.route} label={item.label}>
+                    {item.icon}
+                  </Item>
+                )
+              )}
+            </ScrollView>
+          </View>
 
+          {/* эта строка с копирайтом не влияет на gutter */}
           <View style={mobileStyles.brandRow}>
             <Image source={require("../assets/icons/logo_yellow_60x60.png")} style={styles.logo} />
             <Text style={styles.copy}>© MeTravel 2020–{new Date().getFullYear()}</Text>
@@ -128,23 +140,26 @@ const Footer: React.FC = () => {
   }
 
   /** ======= Desktop: иконка + подпись ======= */
+  // Для десктопа высота дока не нужна
+  if (onDockHeight) onDockHeight(0);
+
   return (
     <Container style={[styles.base, desktopStyles.container]}>
       <View style={desktopStyles.bar}>
         <View style={desktopStyles.group}>
-          {primary.map((item) =>
+          {primary.map((item) => (
             <Item key={item.key} href={item.route} label={item.label}>
               {item.icon}
             </Item>
-          )}
+          ))}
         </View>
 
         <View style={desktopStyles.group}>
-          {social.map((s) =>
+          {social.map((s) => (
             <Item key={s.key} onPress={() => openURL(s.externalUrl!)} label={s.label}>
               {s.icon}
             </Item>
-          )}
+          ))}
           <Text style={styles.copy}>© MeTravel 2020–{new Date().getFullYear()}</Text>
         </View>
       </View>
@@ -168,10 +183,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   pressed: { opacity: 0.7 },
-  itemInner: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  itemInner: { alignItems: "center", justifyContent: "center" },
   itemText: {
     color: "#ffa861",
     fontSize: 11,
