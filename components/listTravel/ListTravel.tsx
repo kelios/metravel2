@@ -21,7 +21,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useRoute } from "@react-navigation/native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import FiltersComponent from "./FiltersComponent";
 import RenderTravelItem from "./RenderTravelItem";
@@ -123,9 +123,7 @@ function ExportBar({
     );
 }
 
-/* ===== Main screen ===== */
 const MemoizedFilters = memo(FiltersComponent);
-const MemoizedSearchBar = memo(SearchAndFilterBar);
 const MemoizedTravelItem = memo(RenderTravelItem);
 
 function ListTravel() {
@@ -133,7 +131,9 @@ function ListTravel() {
     const isMobile = width < 768;
     const isTablet = width >= 768 && width < 1024;
     const columns = isMobile ? 1 : isTablet ? 2 : 3;
-    const listKey = useMemo(() => `grid-${columns}-${width}`, [columns, width]);
+
+    // фиксированный ключ только по числу колонок — чтобы не было «ремонта» при изменении ширины
+    const listKey = useMemo(() => `grid-${columns}`, [columns]);
 
     const route = useRoute();
     const router = useRouter();
@@ -141,6 +141,8 @@ function ListTravel() {
     const isMeTravel = (route as any).name === "metravel";
     const isTravelBy = (route as any).name === "travelsby";
     const isExport = (route as any).name === "export";
+
+    const queryClient = useQueryClient();
 
     /* Auth flags */
     const [userId, setUserId] = useState<string | null>(null);
@@ -164,6 +166,7 @@ function ListTravel() {
     // mobile infinite scroll
     const [mobilePage, setMobilePage] = useState(0);
     const [mobileData, setMobileData] = useState<any[]>([]);
+    const isLoadingMoreRef = useRef(false);
 
     /* UI / dialogs */
     const [deleteId, setDelete] = useState<number | null>(null);
@@ -208,9 +211,10 @@ function ListTravel() {
     const effectivePage = isMobile ? mobilePage : page;
     const effectivePerPage = isMobile ? MOBILE_PER_PAGE : perPage;
 
-    const { data, status, refetch, isFetching } = useQuery({
+    const { data, status, refetch, isFetching, isPreviousData } = useQuery({
         queryKey: ["travels", effectivePage, effectivePerPage, debSearch, queryParams],
-        queryFn: () => fetchTravels(effectivePage, effectivePerPage, debSearch, queryParams),
+        queryFn: () =>
+          fetchTravels(effectivePage, effectivePerPage, debSearch, queryParams),
         enabled: !(isMeTravel || isExport) || !!userId,
         keepPreviousData: true,
         staleTime: 60 * 1000,
@@ -223,21 +227,37 @@ function ListTravel() {
       [totalItems, perPage]
     );
 
-    /* ===== Mobile infinite accumulate ===== */
+    const hasMoreMobile =
+      isMobile && (mobilePage + 1) * MOBILE_PER_PAGE < (data?.total ?? 0);
+
+    /* ===== Mobile accumulate ===== */
     useEffect(() => {
         if (!isMobile) return;
         if (status !== "success") return;
         const chunk = data?.data ?? [];
         setMobileData((prev) => (mobilePage === 0 ? chunk : [...prev, ...chunk]));
+        isLoadingMoreRef.current = false;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isMobile, status, data, mobilePage]);
 
-    // reset mobile list on search/filter change
+    // reset on search/filter change (мобила): не чистим данные, только страничку
     useEffect(() => {
         if (!isMobile) return;
         setMobilePage(0);
-        setMobileData([]);
     }, [isMobile, debSearch, queryParams]);
+
+    // prefetch следующей страницы
+    useEffect(() => {
+        if (!isMobile) return;
+        if (!hasMoreMobile) return;
+        const nextPage = mobilePage + 1;
+        queryClient.prefetchQuery({
+            queryKey: ["travels", nextPage, MOBILE_PER_PAGE, debSearch, queryParams],
+            queryFn: () =>
+              fetchTravels(nextPage, MOBILE_PER_PAGE, debSearch, queryParams),
+            staleTime: 60 * 1000,
+        });
+    }, [isMobile, hasMoreMobile, mobilePage, debSearch, queryParams, queryClient]);
 
     /* ===== Desktop page correction ===== */
     useEffect(() => {
@@ -266,7 +286,6 @@ function ListTravel() {
         setFilter(INITIAL_FILTER);
         if (isMobile) {
             setMobilePage(0);
-            setMobileData([]);
         } else {
             setPageAndScroll(0);
         }
@@ -277,7 +296,6 @@ function ListTravel() {
           setFilter((p) => ({ ...p, [field]: v }));
           if (isMobile) {
               setMobilePage(0);
-              setMobileData([]);
           } else {
               setPageAndScroll(0);
           }
@@ -290,7 +308,6 @@ function ListTravel() {
           setFilter(v);
           if (isMobile) {
               setMobilePage(0);
-              setMobileData([]);
           } else {
               setPageAndScroll(0);
           }
@@ -422,32 +439,24 @@ function ListTravel() {
         }
     }, [selected]);
 
-    /* Stable header (чтобы FlatList не «пересоздавал» его) */
-    const HeaderComp = useCallback(
-      () => (
-        <MemoizedSearchBar
-          search={search}
-          setSearch={setSearch}
-          isMobile={isMobile}
-          onToggleFilters={() => setShowFilters((v) => !v)}
-        />
-      ),
-      [search, setSearch, isMobile]
-    );
-
-    /* Infinite scroll flags */
     const canLoadMoreMobile =
-      isMobile && !isFetching && mobileData.length < (data?.total ?? 0);
+      isMobile && !isFetching && hasMoreMobile && !isPreviousData;
 
     const handleEndReached = useCallback(() => {
         if (!isMobile) return;
         if (!canLoadMoreMobile) return;
+        if (isLoadingMoreRef.current) return;
+        isLoadingMoreRef.current = true;
         setMobilePage((p) => p + 1);
     }, [isMobile, canLoadMoreMobile]);
+
+    const hasAnyItems =
+      (isMobile ? mobileData.length : data?.data?.length ?? 0) > 0;
 
     return (
       <SafeAreaView style={styles.root}>
           <View style={[styles.container, { flexDirection: isMobile ? "column" : "row" }]}>
+              {/* Сайдбар фильтров (десктоп/планшет) */}
               {!isMobile && (
                 <View style={styles.sidebar} aria-label="Фильтры">
                     <MemoizedFilters
@@ -464,80 +473,65 @@ function ListTravel() {
               )}
 
               <View style={styles.main}>
-                  {status === "pending" && (
+                  {/* 🔹 Панель поиска/кнопка фильтров — ВСЕГДА видна */}
+                  <SearchAndFilterBar
+                    search={search}
+                    setSearch={setSearch}
+                    onToggleFilters={isMobile ? () => setShowFilters(true) : undefined}
+                  />
+
+                  {/* Состояния загрузки/ошибки/пусто */}
+                  {(status === "pending" || (isMobile && isFetching && !hasAnyItems)) && (
                     <View style={styles.loader} accessibilityRole="alert" aria-live="polite">
                         <ActivityIndicator size="large" color="#4a7c59" />
                     </View>
                   )}
 
-                  {status !== "pending" && (
-                    <>
-                        {status === "error" && <Text style={styles.status}>Ошибка загрузки</Text>}
+                  {status !== "pending" && status === "error" && (
+                    <Text style={styles.status}>Ошибка загрузки</Text>
+                  )}
 
-                        {status === "success" &&
-                          !(isMobile ? mobileData.length : data?.data?.length) && (
-                            <Text style={styles.status}>Нет данных</Text>
-                          )}
+                  {status === "success" && !isFetching && !hasAnyItems && (
+                    <Text style={styles.status}>Нет данных</Text>
+                  )}
 
-                        {status === "success" &&
-                          (isMobile ? mobileData.length : data?.data?.length) > 0 && (
-                            <FlatList
-                              ref={listRef}
-                              key={listKey}
-                              data={isMobile ? mobileData : data!.data}
-                              keyExtractor={keyExtractor}
-                              renderItem={renderItem}
-                              numColumns={columns}
-                              columnWrapperStyle={
-                                  columns > 1 ? styles.columnWrapper : undefined
-                              }
-                              contentContainerStyle={[
-                                  styles.list,
-                                  {
-                                      // избегаем лишних «прыжков» — без minHeight на мобиле
-                                      paddingBottom: isExport ? 76 : 32,
-                                  },
-                              ]}
-                              ListHeaderComponent={HeaderComp}
-                              // sticky: native — индексы, web — CSS sticky (иначе бывают телепорты)
-                              stickyHeaderIndices={Platform.OS === "web" ? undefined : [0]}
-                              ListHeaderComponentStyle={
-                                  Platform.OS === "web"
-                                    ? {
-                                        position: "sticky" as any,
-                                        top: 0,
-                                        zIndex: 2,
-                                        backgroundColor: "#fff",
-                                    }
-                                    : undefined
-                              }
-                              showsVerticalScrollIndicator={false}
-                              removeClippedSubviews={Platform.OS === "android"}
-                              initialNumToRender={isMobile ? 6 : 12}
-                              maxToRenderPerBatch={isMobile ? 6 : 12}
-                              windowSize={isMobile ? 9 : 11}
-                              updateCellsBatchingPeriod={isMobile ? 60 : 0}
-                              onEndReachedThreshold={0.5}
-                              onEndReached={handleEndReached}
-                              // getItemLayout — УДАЛЁН, чтобы не было «телепортов»
-                              // Минимальное extraData — только размер выделения
-                              extraData={{ sel: selected.length }}
-                              accessibilityRole="list"
-                            />
-                          )}
+                  {/* Список */}
+                  {status === "success" && hasAnyItems && (
+                    <FlatList
+                      ref={listRef}
+                      key={listKey}
+                      data={isMobile ? mobileData : data!.data}
+                      keyExtractor={keyExtractor}
+                      renderItem={renderItem}
+                      numColumns={columns}
+                      columnWrapperStyle={columns > 1 ? styles.columnWrapper : undefined}
+                      contentContainerStyle={[
+                          styles.list,
+                          { paddingBottom: isExport ? 76 : 32 },
+                      ]}
+                      showsVerticalScrollIndicator={false}
+                      removeClippedSubviews={false}
+                      initialNumToRender={isMobile ? 8 : 12}
+                      maxToRenderPerBatch={isMobile ? 8 : 12}
+                      windowSize={isMobile ? 11 : 11}
+                      updateCellsBatchingPeriod={isMobile ? 60 : 0}
+                      onEndReachedThreshold={0.5}
+                      onEndReached={handleEndReached}
+                      extraData={{ sel: selected.length }}
+                      accessibilityRole="list"
+                    />
+                  )}
 
-                        {/* Нижний пагинатор — только планшет/десктоп */}
-                        {!isMobile && (data?.total ?? 0) > perPage && (
-                          <PaginationComponent
-                            currentPage={page}
-                            itemsPerPage={perPage}
-                            onPageChange={setPageAndScroll}
-                            onItemsPerPageChange={handlePerPageChange}
-                            itemsPerPageOptions={PER_PAGE_OPTS}
-                            totalItems={data?.total ?? 0}
-                          />
-                        )}
-                    </>
+                  {/* Нижний пагинатор — только планшет/десктоп */}
+                  {!isMobile && (data?.total ?? 0) > perPage && (
+                    <PaginationComponent
+                      currentPage={page}
+                      itemsPerPage={perPage}
+                      onPageChange={setPageAndScroll}
+                      onItemsPerPageChange={handlePerPageChange}
+                      itemsPerPageOptions={PER_PAGE_OPTS}
+                      totalItems={data?.total ?? 0}
+                    />
                   )}
               </View>
           </View>
@@ -605,7 +599,6 @@ const styles = StyleSheet.create({
         }),
     },
     loader: {
-        flex: 1,
         justifyContent: "center",
         alignItems: "center",
         paddingVertical: 40,
