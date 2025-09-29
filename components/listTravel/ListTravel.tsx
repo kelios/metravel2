@@ -1,4 +1,3 @@
-// src/components/listTravel/ListTravel.tsx
 import React, {
     memo,
     useCallback,
@@ -17,6 +16,7 @@ import {
     useWindowDimensions,
     Platform,
     Pressable,
+    Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -25,7 +25,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import FiltersComponent from "./FiltersComponent";
 import RenderTravelItem from "./RenderTravelItem";
-import PaginationComponent from "../PaginationComponent";
 import SearchAndFilterBar from "./SearchAndFilterBar";
 import ConfirmDialog from "../ConfirmDialog";
 import {
@@ -40,8 +39,7 @@ import TravelPdfTemplate from "@/components/export/TravelPdfTemplate";
 /* ===== Constants ===== */
 const INITIAL_FILTER = { year: "", showModerationPending: false };
 const BELARUS_ID = 3;
-const PER_PAGE_OPTS = [9, 18, 30, 60];
-const MOBILE_PER_PAGE = 12;
+const PER_PAGE = 12; // Унифицированное значение для всех устройств
 
 /* ===== Utils ===== */
 function useDebounce<T>(val: T, delay = 400) {
@@ -101,24 +99,26 @@ function ExportBar({
               <Text style={styles.btnTxt}>{isMobile ? "PDF" : "Сохранить PDF"}</Text>
           </Pressable>
 
-          {/* RN Web: скрытый контейнер для генерации PDF */}
-          <div
-            ref={printRef}
-            style={{
-                position: "fixed",
-                left: 0,
-                top: 0,
-                width: "794px",
-                background: "#fff",
-                pointerEvents: "none",
-                opacity: 0,
-                zIndex: 0,
-            }}
-          >
-              {selected.map((t) => (
-                <TravelPdfTemplate key={t.id} travelId={t.id} />
-              ))}
-          </div>
+          {/* RN Web: скрытый контейнер для генерации PDF. На native не рендерим во избежание падений */}
+          {Platform.OS === "web" && (
+            <div
+              ref={printRef}
+              style={{
+                  position: "fixed",
+                  left: 0,
+                  top: 0,
+                  width: "794px",
+                  background: "#fff",
+                  pointerEvents: "none",
+                  opacity: 0,
+                  zIndex: 0,
+              }}
+            >
+                {selected.map((t) => (
+                  <TravelPdfTemplate key={t.id} travelId={t.id} />
+                ))}
+            </div>
+          )}
       </View>
     );
 }
@@ -132,12 +132,18 @@ function ListTravel() {
     const isTablet = width >= 768 && width < 1024;
     const columns = isMobile ? 1 : isTablet ? 2 : 3;
 
-    // фиксированный ключ только по числу колонок — чтобы не было «ремонта» при изменении ширины
+    // фиксированный ключ по числу колонок
     const listKey = useMemo(() => `grid-${columns}`, [columns]);
 
     const route = useRoute();
     const router = useRouter();
-    const { user_id } = useLocalSearchParams();
+
+    // читаем query из URL
+    const params = useLocalSearchParams<{
+        user_id?: string;
+    }>();
+    const user_id = params.user_id;
+
     const isMeTravel = (route as any).name === "metravel";
     const isTravelBy = (route as any).name === "travelsby";
     const isExport = (route as any).name === "export";
@@ -147,6 +153,7 @@ function ListTravel() {
     /* Auth flags */
     const [userId, setUserId] = useState<string | null>(null);
     const [isSuper, setSuper] = useState(false);
+
     useEffect(() => {
         AsyncStorage.multiGet(["userId", "isSuperuser"]).then(([[, id], [, su]]) => {
             setUserId(id);
@@ -159,13 +166,9 @@ function ListTravel() {
     const debSearch = useDebounce(search);
     const [filter, setFilter] = useState(INITIAL_FILTER);
 
-    // desktop/tablet pagination
-    const [page, setPage] = useState(0);
-    const [perPage, setPerPage] = useState(30);
-
-    // mobile infinite scroll
-    const [mobilePage, setMobilePage] = useState(0);
-    const [mobileData, setMobileData] = useState<any[]>([]);
+    // infinite scroll state
+    const [currentPage, setCurrentPage] = useState(0);
+    const [accumulatedData, setAccumulatedData] = useState<any[]>([]);
     const isLoadingMoreRef = useRef(false);
 
     /* UI / dialogs */
@@ -193,135 +196,98 @@ function ListTravel() {
             if (Array.isArray(v) ? v.length : v) p[k] = v;
         });
 
-        if (!isMeTravel || !isExport) {
+        // важно: применять publish/moderation только если НЕ metravel И НЕ export
+        if (!(isMeTravel || isExport)) {
             p.publish = filter.showModerationPending ? undefined : 1;
             p.moderation = filter.showModerationPending ? 0 : 1;
         }
+
         if (isMeTravel || isExport) p.user_id = userId;
         else if (user_id) p.user_id = user_id;
+
         if (isTravelBy) p.countries = [BELARUS_ID];
         if (isMeTravel) {
             p.publish = undefined;
             p.moderation = undefined;
         }
+
         return p;
     }, [filter, isMeTravel, isExport, isTravelBy, userId, user_id]);
 
     /* Data query */
-    const effectivePage = isMobile ? mobilePage : page;
-    const effectivePerPage = isMobile ? MOBILE_PER_PAGE : perPage;
-
-    const { data, status, refetch, isFetching, isPreviousData } = useQuery({
-        queryKey: ["travels", effectivePage, effectivePerPage, debSearch, queryParams],
+    const { data, status, isFetching, isPreviousData } = useQuery({
+        queryKey: [
+            "travels",
+            currentPage,
+            PER_PAGE,
+            debSearch,
+            JSON.stringify(queryParams), // стабильный ключ
+        ],
         queryFn: () =>
-          fetchTravels(effectivePage, effectivePerPage, debSearch, queryParams),
+          fetchTravels(currentPage, PER_PAGE, debSearch, queryParams),
         enabled: !(isMeTravel || isExport) || !!userId,
         keepPreviousData: true,
         staleTime: 60 * 1000,
         cacheTime: 5 * 60 * 1000,
     });
 
-    const totalItems = data?.total ?? 0;
-    const totalPages = useMemo(
-      () => Math.max(1, Math.ceil((totalItems || 0) / (perPage || 1))),
-      [totalItems, perPage]
-    );
+    const total = data?.total ?? 0;
+    const hasMore = (currentPage + 1) * PER_PAGE < total;
 
-    const hasMoreMobile =
-      isMobile && (mobilePage + 1) * MOBILE_PER_PAGE < (data?.total ?? 0);
-
-    /* ===== Mobile accumulate ===== */
+    /* ===== Accumulate data ===== */
     useEffect(() => {
-        if (!isMobile) return;
         if (status !== "success") return;
         const chunk = data?.data ?? [];
-        setMobileData((prev) => (mobilePage === 0 ? chunk : [...prev, ...chunk]));
+        setAccumulatedData((prev) => (currentPage === 0 ? chunk : [...prev, ...chunk]));
         isLoadingMoreRef.current = false;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isMobile, status, data, mobilePage]);
+    }, [status, data, currentPage]);
 
-    // reset on search/filter change (мобила): не чистим данные, только страничку
+    // reset on search/filter change
     useEffect(() => {
-        if (!isMobile) return;
-        setMobilePage(0);
-    }, [isMobile, debSearch, queryParams]);
+        setCurrentPage(0);
+    }, [debSearch, JSON.stringify(queryParams)]);
 
-    // prefetch следующей страницы
+    // prefetch следующей страницы (исправлен off-by-one)
     useEffect(() => {
-        if (!isMobile) return;
-        if (!hasMoreMobile) return;
-        const nextPage = mobilePage + 1;
+        if (!hasMore) return;
+        const nextPage = currentPage + 1;
         queryClient.prefetchQuery({
-            queryKey: ["travels", nextPage, MOBILE_PER_PAGE, debSearch, queryParams],
+            queryKey: [
+                "travels",
+                nextPage,
+                PER_PAGE,
+                debSearch,
+                JSON.stringify(queryParams),
+            ],
             queryFn: () =>
-              fetchTravels(nextPage, MOBILE_PER_PAGE, debSearch, queryParams),
+              fetchTravels(nextPage, PER_PAGE, debSearch, queryParams),
             staleTime: 60 * 1000,
         });
-    }, [isMobile, hasMoreMobile, mobilePage, debSearch, queryParams, queryClient]);
-
-    /* ===== Desktop page correction ===== */
-    useEffect(() => {
-        if (isMobile) return;
-        if (page > 0 && page >= totalPages) {
-            setPage(Math.max(0, totalPages - 1));
-        }
-    }, [isMobile, totalPages, page]);
-
-    /* Autoscroll (desktop only) */
-    const listRef = useRef<FlatList<any>>(null);
-    const setPageAndScroll = useCallback((next: number) => {
-        setPage(next);
-        listRef.current?.scrollToOffset({ offset: 0, animated: true });
-    }, []);
-    const handlePerPageChange = useCallback(
-      (n: number) => {
-          setPerPage(n);
-          setPageAndScroll(0);
-      },
-      [setPageAndScroll]
-    );
+    }, [hasMore, currentPage, debSearch, queryParams, queryClient]);
 
     /* Filters helpers */
     const resetFilters = useCallback(() => {
         setFilter(INITIAL_FILTER);
-        if (isMobile) {
-            setMobilePage(0);
-        } else {
-            setPageAndScroll(0);
-        }
-    }, [isMobile, setPageAndScroll]);
+        setCurrentPage(0);
+    }, []);
 
-    const onSelect = useCallback(
-      (field: string, v: any) => {
-          setFilter((p) => ({ ...p, [field]: v }));
-          if (isMobile) {
-              setMobilePage(0);
-          } else {
-              setPageAndScroll(0);
-          }
-      },
-      [isMobile, setPageAndScroll]
-    );
+    const onSelect = useCallback((field: string, v: any) => {
+        setFilter((p) => ({ ...p, [field]: v }));
+        setCurrentPage(0);
+    }, []);
 
-    const applyFilter = useCallback(
-      (v: any) => {
-          setFilter(v);
-          if (isMobile) {
-              setMobilePage(0);
-          } else {
-              setPageAndScroll(0);
-          }
-      },
-      [isMobile, setPageAndScroll]
-    );
+    const applyFilter = useCallback((v: any) => {
+        setFilter(v);
+        setCurrentPage(0);
+    }, []);
 
     /* Delete */
     const handleDelete = useCallback(async () => {
         if (!deleteId) return;
         await deleteTravel(deleteId);
         setDelete(null);
-        refetch();
-    }, [deleteId, refetch]);
+        queryClient.invalidateQueries({ queryKey: ["travels"] });
+    }, [deleteId, queryClient]);
 
     /* Selection for export */
     const [selected, setSelected] = useState<any[]>([]);
@@ -329,15 +295,15 @@ function ListTravel() {
 
     const toggleSelect = useCallback((t: any) => {
         setSelected((prev) =>
-          prev.find((x) => x.id === t.id)
-            ? prev.filter((x) => x.id !== t.id)
-            : [...prev, t]
+          prev.find((x) => x.id === t.id) ? prev.filter((x) => x.id !== t.id) : [...prev, t]
         );
     }, []);
+
     const toggleSelectAll = useCallback(() => {
-        if (!data?.data) return;
-        setSelected((prev) => (prev.length === data.data.length ? [] : data.data));
-    }, [data]);
+        const items = accumulatedData ?? [];
+        if (!items.length) return;
+        setSelected((prev) => (prev.length === items.length ? [] : items));
+    }, [accumulatedData]);
 
     /* Render item */
     const renderItem = useCallback(
@@ -356,14 +322,21 @@ function ListTravel() {
           onToggle={() => toggleSelect(item)}
         />
       ),
-      [isMobile, isSuper, isMeTravel, isExport, (router as any).push, selected, toggleSelect]
+      [isMobile, isSuper, isMeTravel, isExport, router, selected, toggleSelect]
     );
 
     const keyExtractor = useCallback((item: any) => String(item.id), []);
 
     /* PDF preview/save */
     const makePreview = useCallback(async () => {
-        if (!printRef.current || !selected.length) return;
+        if (!selected.length) return;
+
+        if (Platform.OS !== "web") {
+            Alert.alert("Недоступно", "Превью PDF доступно только в веб-версии.");
+            return;
+        }
+
+        if (!printRef.current) return;
 
         let statusEl: HTMLDivElement | null = document.createElement("div");
         let iframe: HTMLIFrameElement | null = null;
@@ -416,10 +389,18 @@ function ListTravel() {
     }, [selected]);
 
     const savePdf = useCallback(async () => {
-        if (!printRef.current || !selected.length) {
-            alert("Пожалуйста, выберите хотя бы одно путешествие");
+        if (!selected.length) {
+            Alert.alert("Внимание", "Пожалуйста, выберите хотя бы одно путешествие");
             return;
         }
+
+        if (Platform.OS !== "web") {
+            Alert.alert("Недоступно", "Сохранение PDF доступно только в веб-версии.");
+            return;
+        }
+
+        if (!printRef.current) return;
+
         let bar: HTMLDivElement | null = document.createElement("div");
         bar.style.cssText =
           "position:fixed;top:0;left:0;right:0;padding:20px;background:#4a7c59;color:#fff;text-align:center;z-index:9999;";
@@ -432,30 +413,34 @@ function ListTravel() {
             });
         } catch (e) {
             console.error("PDF generation error:", e);
-            alert("Ошибка при создании PDF");
+            Alert.alert("Ошибка", "Ошибка при создании PDF");
         } finally {
             if (bar && bar.parentNode) document.body.removeChild(bar);
             bar = null;
         }
     }, [selected]);
 
-    const canLoadMoreMobile =
-      isMobile && !isFetching && hasMoreMobile && !isPreviousData;
+    /* Loading helpers to избежать прыжков списка */
+    const hasAnyItems = accumulatedData.length > 0;
+    const isInitialLoading = status === "pending" && !hasAnyItems;
+    const isNextPageLoading = isFetching && hasAnyItems;
+    const isEmpty = status === "success" && !isFetching && !hasAnyItems;
+
+    const canLoadMore = !isNextPageLoading && hasMore && !isPreviousData;
 
     const handleEndReached = useCallback(() => {
-        if (!isMobile) return;
-        if (!canLoadMoreMobile) return;
-        if (isLoadingMoreRef.current) return;
+        if (!canLoadMore || isLoadingMoreRef.current) return;
         isLoadingMoreRef.current = true;
-        setMobilePage((p) => p + 1);
-    }, [isMobile, canLoadMoreMobile]);
+        setCurrentPage((p) => p + 1);
+    }, [canLoadMore]);
 
-    const hasAnyItems =
-      (isMobile ? mobileData.length : data?.data?.length ?? 0) > 0;
+    const displayData = accumulatedData;
 
     return (
       <SafeAreaView style={styles.root}>
-          <View style={[styles.container, { flexDirection: isMobile ? "column" : "row" }]}>
+          <View
+            style={[styles.container, { flexDirection: isMobile ? "column" : "row" }]}
+          >
               {/* Сайдбар фильтров (десктоп/планшет) */}
               {!isMobile && (
                 <View style={styles.sidebar} aria-label="Фильтры">
@@ -473,34 +458,29 @@ function ListTravel() {
               )}
 
               <View style={styles.main}>
-                  {/* 🔹 Панель поиска/кнопка фильтров — ВСЕГДА видна */}
+                  {/* Всегда видимая верхняя панель */}
                   <SearchAndFilterBar
                     search={search}
                     setSearch={setSearch}
                     onToggleFilters={isMobile ? () => setShowFilters(true) : undefined}
                   />
 
-                  {/* Состояния загрузки/ошибки/пусто */}
-                  {(status === "pending" || (isMobile && isFetching && !hasAnyItems)) && (
+                  {/* Большой лоадер — только при самом первом запросе */}
+                  {isInitialLoading && (
                     <View style={styles.loader} accessibilityRole="alert" aria-live="polite">
-                        <ActivityIndicator size="large" color="#4a7c59" />
+                        <ActivityIndicator size="large" />
                     </View>
                   )}
 
-                  {status !== "pending" && status === "error" && (
-                    <Text style={styles.status}>Ошибка загрузки</Text>
-                  )}
+                  {status === "error" && <Text style={styles.status}>Ошибка загрузки</Text>}
 
-                  {status === "success" && !isFetching && !hasAnyItems && (
-                    <Text style={styles.status}>Нет данных</Text>
-                  )}
+                  {isEmpty && <Text style={styles.status}>Нет данных</Text>}
 
-                  {/* Список */}
-                  {status === "success" && hasAnyItems && (
+                  {/* Список путешествий — НЕ скрываем при дозагрузке страниц */}
+                  {hasAnyItems && (
                     <FlatList
-                      ref={listRef}
                       key={listKey}
-                      data={isMobile ? mobileData : data!.data}
+                      data={displayData}
                       keyExtractor={keyExtractor}
                       renderItem={renderItem}
                       numColumns={columns}
@@ -511,26 +491,21 @@ function ListTravel() {
                       ]}
                       showsVerticalScrollIndicator={false}
                       removeClippedSubviews={false}
-                      initialNumToRender={isMobile ? 8 : 12}
-                      maxToRenderPerBatch={isMobile ? 8 : 12}
-                      windowSize={isMobile ? 11 : 11}
-                      updateCellsBatchingPeriod={isMobile ? 60 : 0}
+                      initialNumToRender={PER_PAGE}
+                      maxToRenderPerBatch={PER_PAGE}
+                      windowSize={11}
+                      updateCellsBatchingPeriod={60}
                       onEndReachedThreshold={0.5}
                       onEndReached={handleEndReached}
                       extraData={{ sel: selected.length }}
                       accessibilityRole="list"
-                    />
-                  )}
-
-                  {/* Нижний пагинатор — только планшет/десктоп */}
-                  {!isMobile && (data?.total ?? 0) > perPage && (
-                    <PaginationComponent
-                      currentPage={page}
-                      itemsPerPage={perPage}
-                      onPageChange={setPageAndScroll}
-                      onItemsPerPageChange={handlePerPageChange}
-                      itemsPerPageOptions={PER_PAGE_OPTS}
-                      totalItems={data?.total ?? 0}
+                      ListFooterComponent={
+                          isNextPageLoading ? (
+                            <View style={styles.footerLoader}>
+                                <ActivityIndicator size="small" />
+                            </View>
+                          ) : null
+                      }
                     />
                   )}
               </View>
@@ -560,12 +535,12 @@ function ListTravel() {
             message="Удалить это путешествие?"
           />
 
-          {/* Экспорт — только на /export */}
+          {/* Панель экспорта */}
           {isExport && (
             <ExportBar
               isMobile={isMobile}
               selectedCount={selected.length}
-              allCount={data?.data?.length ?? 0}
+              allCount={displayData.length}
               onToggleSelectAll={toggleSelectAll}
               onPreview={makePreview}
               onSave={savePdf}
@@ -603,11 +578,14 @@ const styles = StyleSheet.create({
         alignItems: "center",
         paddingVertical: 40,
     },
+    footerLoader: {
+        justifyContent: "center",
+        alignItems: "center",
+        paddingVertical: 20,
+    },
     status: { marginTop: 40, textAlign: "center", fontSize: 16, color: "#888" },
     list: { gap: 16 },
     columnWrapper: { gap: 16, justifyContent: "space-between" },
-
-    /* Export */
     exportBar: {
         flexDirection: "row",
         gap: 8,
@@ -618,13 +596,17 @@ const styles = StyleSheet.create({
     },
     btn: {
         flex: 1,
-        backgroundColor: "#4a7c59",
+        // цвет по умолчанию системы, чтобы не дергать стили на iOS/Android
         paddingVertical: 10,
         paddingHorizontal: 12,
         borderRadius: 6,
         alignItems: "center",
+        ...(Platform.OS === "web" ? { backgroundColor: "#4a7c59" } : {}),
     },
-    btnDisabled: { backgroundColor: "#aaa" },
+    btnDisabled: {
+        ...(Platform.OS === "web" ? { backgroundColor: "#aaa" } : {}),
+        opacity: Platform.OS === "web" ? 1 : 0.5,
+    },
     btnTxt: { color: "#fff", fontWeight: "600", fontSize: 14 },
 });
 

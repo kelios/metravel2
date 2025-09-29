@@ -38,9 +38,19 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const INFO_PANEL_MIN_HEIGHT = 100;
 const FILTERS_PANEL_HEIGHT = 300;
 
-// Высота верхней панели навигации (ранее нижней)
+// Верхняя панель на мобиле
 const TOP_BAR_HEIGHT = 64;
 const LIST_TOP_GAP = 54;
+const APP_HEADER_HEIGHT = 56;
+const MOBILE_ROUTE_TOP = TOP_BAR_HEIGHT + APP_HEADER_HEIGHT + 8;
+
+// Десктопные постоянные размеры боковых панелей
+const DESKTOP_MARGIN = 20;
+const DESKTOP_FILTERS_WIDTH = 320;
+const DESKTOP_INFO_WIDTH = 380;
+
+// Высота закреплённой шапки списка (мобила)
+const MOBILE_LIST_HEADER_H = 44;
 
 export default function MapScreen() {
     const pathname = usePathname();
@@ -51,13 +61,21 @@ export default function MapScreen() {
     const { width, height } = useWindowDimensions();
     const isMobile = width <= 768;
 
-    // Динамический максимум высоты панели списка: «до фильтров»
     const maxListHeight = useMemo(
       () => SCREEN_HEIGHT - (isMobile ? TOP_BAR_HEIGHT + LIST_TOP_GAP : 40),
       [isMobile]
     );
 
-    // Анимации
+    // === Новое: адаптивный максимум высоты панели маршрута для мобилы ===
+    // Берём минимальное из (процент экрана) и безопасного остатка пространства под верхними шапками.
+    const routeInfoMaxHeight = useMemo(() => {
+        if (!isMobile) return 260; // десктоп
+        const free = height - (MOBILE_ROUTE_TOP + 20); // не упираемся в край
+        const pct = Math.round(height * 0.36);        // ~36% экрана
+        return Math.max(140, Math.min(260, Math.min(free, pct)));
+    }, [isMobile, height]);
+
+    // Anim
     const infoPanelTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT - INFO_PANEL_MIN_HEIGHT)).current;
     const filtersPanelTranslateY = useRef(new Animated.Value(-FILTERS_PANEL_HEIGHT)).current;
     const overlayOpacity = useRef(new Animated.Value(0)).current;
@@ -65,13 +83,17 @@ export default function MapScreen() {
 
     const [activeView, setActiveView] = useState<'map' | 'filters' | 'list'>('map');
 
-    // Основные состояния
+    // State
     const [mode, setMode] = useState<'radius' | 'route'>('radius');
     const [filters, setFilters] = useState<Filters>({ categories: [], radius: [], address: '' });
+
     const [filterValue, setFilterValue] = useState<FilterValues>({ categories: [], radius: '', address: '' });
-    const [rawTravelsData, setRawTravelsData] = useState<any[]>([]);
-    const [travelsData, setTravelsData] = useState<any[]>([]);
+
+    // ЕДИНЫЕ данные списка (для radius на всех платформах)
+    const [accumData, setAccumData] = useState<any[]>([]);
+    const [lastPageCount, setLastPageCount] = useState(0);
     const [placesAlongRoute, setPlacesAlongRoute] = useState<any[]>([]);
+
     const [fullRouteCoords, setFullRouteCoords] = useState<[number, number][]>([]);
     const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
     const [routePoints, setRoutePoints] = useState<[number, number][]>([]);
@@ -79,16 +101,24 @@ export default function MapScreen() {
     const [startAddress, setStartAddress] = useState('');
     const [endAddress, setEndAddress] = useState('');
     const [transportMode, setTransportMode] = useState<'car' | 'bike' | 'foot'>('car');
+
+    // пагинация API (1-based)
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(isMobile ? 10 : 20);
+
+    const hasMore = useMemo(
+      () => mode === 'radius' && lastPageCount === itemsPerPage,
+      [mode, lastPageCount, itemsPerPage]
+    );
 
     // скрытие объектов
     const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
     const dataCache = useRef<Record<string, any[]>>({});
     const isLoading = useRef(false);
+    const [loadingFlag, setLoadingFlag] = useState(false);
 
-    // Панель перетаскивания — только «ручка»
+    // Drag handle
     const dragPanResponder = useRef(
       PanResponder.create({
           onStartShouldSetPanResponder: () => activeView === 'list',
@@ -103,17 +133,14 @@ export default function MapScreen() {
           },
           onPanResponderRelease: (_, g) => {
               const threshold = maxListHeight * 0.25;
-              const shouldExpand = g.dy < -threshold;
-              const shouldCollapse = g.dy > threshold;
-
-              if (shouldExpand) expandListPanel();
-              else if (shouldCollapse) collapseListPanel();
+              if (g.dy < -threshold) expandListPanel();
+              else if (g.dy > threshold) collapseListPanel();
               else resetListPanel();
           },
       })
     ).current;
 
-    // Анимации
+    // Anim helpers
     const showFiltersPanel = useCallback(() => {
         setActiveView('filters');
         Animated.parallel([
@@ -174,15 +201,14 @@ export default function MapScreen() {
                 } else {
                     if (isMounted) setCoordinates(DEFAULT_COORDINATES);
                 }
-            } catch (e) {
-                console.warn('Геолокация недоступна:', e);
+            } catch {
                 if (isMounted) setCoordinates(DEFAULT_COORDINATES);
             }
         })();
         return () => { isMounted = false; };
     }, []);
 
-    // Загрузка фильтров
+    // Фильтры (справочники)
     useEffect(() => {
         let isMounted = true;
         (async () => {
@@ -198,20 +224,18 @@ export default function MapScreen() {
                         setFilterValue(prev => ({ ...prev, radius: newData.radius[0].id }));
                     }
                 }
-            } catch (e) {
-                console.error('Ошибка загрузки фильтров:', e);
-            }
+            } catch {}
         })();
         return () => { isMounted = false; };
     }, []);
 
-    // Показ/скрытие информации о маршруте
+    // Показ/скрытие инфо по маршруту
     useEffect(() => {
         if (routePoints.length >= 2) showRouteInfo();
         else hideRouteInfo();
     }, [routePoints.length, showRouteInfo, hideRouteInfo]);
 
-    // Ключ кэша
+    // ключ кэша
     const getCacheKey = useCallback(() => {
         if (!coordinates) return '';
         return mode === 'route'
@@ -219,7 +243,7 @@ export default function MapScreen() {
           : `radius:${filterValue.radius}:${coordinates.latitude}:${coordinates.longitude}:p${currentPage}:n${itemsPerPage}`;
     }, [mode, fullRouteCoords, filterValue.radius, coordinates, transportMode, currentPage, itemsPerPage]);
 
-    // Загрузка данных
+    // Загрузка
     useEffect(() => {
         if (!coordinates || (mode === 'radius' && !filterValue.radius)) return;
         if (mode === 'route' && fullRouteCoords.length < 2) return;
@@ -228,15 +252,20 @@ export default function MapScreen() {
         const key = getCacheKey();
         if (isLoading.current) return;
         isLoading.current = true;
+        setLoadingFlag(true);
 
         (async () => {
             try {
+                // из кэша
                 if (dataCache.current[key]) {
-                    if (isMounted) {
-                        if (mode === 'route') setPlacesAlongRoute(dataCache.current[key]);
-                        else setRawTravelsData(dataCache.current[key]);
+                    const data = dataCache.current[key];
+                    if (!isMounted) return;
+                    if (mode === 'route') {
+                        setPlacesAlongRoute(data);
+                    } else {
+                        setLastPageCount(data.length);
+                        setAccumData(prev => currentPage === 1 ? data : mergeUnique(prev, data));
                     }
-                    isLoading.current = false;
                     return;
                 }
 
@@ -251,34 +280,47 @@ export default function MapScreen() {
                     });
                 }
 
-                if (isMounted) {
-                    if (mode === 'route') setPlacesAlongRoute(data);
-                    else setRawTravelsData(data);
-                    dataCache.current[key] = data;
+                if (!isMounted) return;
+
+                if (mode === 'route') {
+                    setPlacesAlongRoute(data);
+                } else {
+                    setLastPageCount(data.length);
+                    setAccumData(prev => currentPage === 1 ? data : mergeUnique(prev, data));
                 }
+
+                dataCache.current[key] = data;
             } catch (e) {
-                console.error('Ошибка загрузки данных:', e);
-                if (isMounted) {
-                    if (mode === 'route') setPlacesAlongRoute([]);
-                    else setRawTravelsData([]);
-                }
+                if (!isMounted) return;
+                if (mode === 'route') setPlacesAlongRoute([]);
+                else if (currentPage === 1) setAccumData([]);
             } finally {
                 isLoading.current = false;
+                setLoadingFlag(false);
             }
         })();
 
         return () => { isMounted = false; };
-    }, [filterValue.radius, currentPage, itemsPerPage, fullRouteCoords, coordinates, mode, getCacheKey, transportMode]);
+    }, [
+        filterValue.radius,
+        currentPage,
+        itemsPerPage,
+        fullRouteCoords,
+        coordinates,
+        mode,
+        getCacheKey,
+        transportMode,
+    ]);
 
-    // Фильтрация данных (категории/адрес)
-    useEffect(() => {
+    // Фильтрация локальная (категории/адрес/скрытые)
+    const travelsData = useMemo(() => {
         const normalize = (s: string) => s.trim().toLowerCase();
         const selectedCategories = filterValue.categories.map(normalize);
-        const source = mode === 'route' ? placesAlongRoute : rawTravelsData;
+        const source = mode === 'route' ? placesAlongRoute : accumData;
 
-        const filtered = source.filter((item: any) => {
-            const id = item.id || item._id || item.slug || String(item.uid || '');
-            if (id && hiddenIds.has(String(id))) return false;
+        return source.filter((item: any) => {
+            const id = String(item.id || item._id || item.slug || item.uid || '');
+            if (id && hiddenIds.has(id)) return false;
 
             const itemCategories = (item.categoryName || '')
               .split(',')
@@ -295,18 +337,23 @@ export default function MapScreen() {
 
             return categoryMatch && addressMatch;
         });
+    }, [filterValue.categories, filterValue.address, placesAlongRoute, accumData, mode, hiddenIds]);
 
-        setTravelsData(filtered);
-    }, [filterValue.categories, filterValue.address, rawTravelsData, placesAlongRoute, mode, hiddenIds]);
-
+    // смена фильтров/текста
     const onFilterChange = useCallback((field: keyof FilterValues, value: any) => {
+        dataCache.current = {};
         setFilterValue(prev => ({ ...prev, [field]: value }));
-        if (field !== 'categories') setCurrentPage(1);
+        setCurrentPage(1);
+        setAccumData([]);
+        setLastPageCount(0);
     }, []);
 
     const onTextFilterChange = useCallback((value: string) => {
+        dataCache.current = {};
         setFilterValue(prev => ({ ...prev, address: value }));
         setCurrentPage(1);
+        setAccumData([]);
+        setLastPageCount(0);
     }, []);
 
     const resetFilters = useCallback(() => {
@@ -322,11 +369,13 @@ export default function MapScreen() {
         setPlacesAlongRoute([]);
         setRouteDistance(null);
         setFullRouteCoords([]);
-        setTravelsData([]);
+        setAccumData([]);
         setHiddenIds(new Set());
         setCurrentPage(1);
+        setLastPageCount(0);
     }, [filters.radius]);
 
+    // адреса/маршрут
     const decodeEntities = (s: string) =>
       s.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 
@@ -343,8 +392,7 @@ export default function MapScreen() {
             );
             const data = await response.json();
             return data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        } catch (error) {
-            console.warn('Ошибка получения адреса:', error);
+        } catch {
             return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
         }
     }, [SITE]);
@@ -404,6 +452,9 @@ export default function MapScreen() {
         setRouteDistance(null);
         setFullRouteCoords([]);
         setCurrentPage(1);
+        setAccumData([]);
+        setLastPageCount(0);
+        dataCache.current = {};
     }, []);
 
     const hideTravel = useCallback((id: string | number) => {
@@ -414,7 +465,6 @@ export default function MapScreen() {
             return next;
         });
     }, []);
-
     const resetHidden = useCallback(() => setHiddenIds(new Set()), []);
 
     const truncateAddress = useCallback((address: string, maxLength: number = 40): string => {
@@ -422,9 +472,14 @@ export default function MapScreen() {
         return address.length <= maxLength ? address : address.substring(0, maxLength - 3) + '...';
     }, []);
 
-    const currentData = mode === 'route' ? placesAlongRoute : travelsData;
     const hasActiveRoute = routePoints.length >= 2;
-    const styles = getStyles(isMobile, width, height, maxListHeight);
+    const styles = getStyles(isMobile, width, height, maxListHeight, routeInfoMaxHeight);
+
+    // бесконечная подгрузка
+    const loadMore = useCallback(() => {
+        if (!hasMore || loadingFlag || mode !== 'radius') return;
+        setCurrentPage(p => p + 1);
+    }, [hasMore, loadingFlag, mode]);
 
     if (!coordinates) {
         return (
@@ -467,7 +522,7 @@ export default function MapScreen() {
                   {/* Карта */}
                   <View style={styles.mapContainer}>
                       <MapPanel
-                        travelsData={currentData}
+                        travelsData={travelsData}
                         coordinates={coordinates}
                         routePoints={routePoints}
                         placesAlongRoute={placesAlongRoute}
@@ -480,9 +535,12 @@ export default function MapScreen() {
                       />
                   </View>
 
-                  {/* Панель информации о маршруте */}
+                  {/* Инфо по маршруту — центр на десктопе */}
                   {hasActiveRoute && (
-                    <Animated.View style={[styles.routeInfoPanel, { opacity: routeInfoOpacity }]}>
+                    <Animated.View
+                      style={[styles.routeInfoPanel, { opacity: routeInfoOpacity }]}
+                      pointerEvents="auto"
+                    >
                         <View style={styles.routeInfoHeader}>
                             <Text style={styles.routeInfoTitle}>Маршрут</Text>
                             <Pressable onPress={clearRoute} style={styles.closeRouteButton} hitSlop={8}>
@@ -490,44 +548,51 @@ export default function MapScreen() {
                             </Pressable>
                         </View>
 
-                        <View style={styles.routeDetails}>
-                            <View style={styles.routePoint}>
-                                <View style={styles.pointIndicator}><Text style={styles.pointNumber}>A</Text></View>
-                                <View style={styles.pointInfo}>
-                                    <Text style={styles.pointLabel}>Старт:</Text>
-                                    <Text style={styles.pointAddress} numberOfLines={2}>
-                                        {truncateAddress(formatAddress(startAddress))}
-                                    </Text>
+                        {/* Новое: скролл только для содержимого, шапка фиксированная */}
+                        <ScrollView
+                          style={styles.routeInfoScroll}
+                          contentContainerStyle={styles.routeInfoScrollContent}
+                          keyboardShouldPersistTaps="handled"
+                        >
+                            <View style={styles.routeDetails}>
+                                <View style={styles.routePoint}>
+                                    <View style={styles.pointIndicator}><Text style={styles.pointNumber}>A</Text></View>
+                                    <View style={styles.pointInfo}>
+                                        <Text style={styles.pointLabel}>Старт:</Text>
+                                        <Text style={styles.pointAddress} numberOfLines={2}>
+                                            {truncateAddress(formatAddress(startAddress))}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.routeDivider} />
+
+                                <View style={styles.routePoint}>
+                                    <View style={styles.pointIndicator}><Text style={styles.pointNumber}>B</Text></View>
+                                    <View style={styles.pointInfo}>
+                                        <Text style={styles.pointLabel}>Финиш:</Text>
+                                        <Text style={styles.pointAddress} numberOfLines={2}>
+                                            {truncateAddress(formatAddress(endAddress))}
+                                        </Text>
+                                    </View>
                                 </View>
                             </View>
 
-                            <View style={styles.routeDivider} />
-
-                            <View style={styles.routePoint}>
-                                <View style={styles.pointIndicator}><Text style={styles.pointNumber}>B</Text></View>
-                                <View style={styles.pointInfo}>
-                                    <Text style={styles.pointLabel}>Финиш:</Text>
-                                    <Text style={styles.pointAddress} numberOfLines={2}>
-                                        {truncateAddress(formatAddress(endAddress))}
-                                    </Text>
+                            <View style={styles.routeStats}>
+                                <View style={styles.statItem}>
+                                    <Icon name="straighten" type="material" color="#4a8c8c" size={16} />
+                                    <Text style={styles.statText}>Дистанция: {routeDistance ? `${routeDistance.toFixed(1)} км` : '...'}</Text>
+                                </View>
+                                <View style={styles.statItem}>
+                                    <Icon name="place" type="material" color="#4a8c8c" size={16} />
+                                    <Text style={styles.statText}>Найдено {travelsData.length} объектов</Text>
                                 </View>
                             </View>
-                        </View>
-
-                        <View style={styles.routeStats}>
-                            <View style={styles.statItem}>
-                                <Icon name="straighten" type="material" color="#4a8c8c" size={16} />
-                                <Text style={styles.statText}>Дистанция: {routeDistance ? `${routeDistance.toFixed(1)} км` : '...'}</Text>
-                            </View>
-                            <View style={styles.statItem}>
-                                <Icon name="place" type="material" color="#4a8c8c" size={16} />
-                                <Text style={styles.statText}>Найдено {currentData.length} объектов</Text>
-                            </View>
-                        </View>
+                        </ScrollView>
                     </Animated.View>
                   )}
 
-                  {/* Мобильная навигация — теперь сверху */}
+                  {/* Мобильная шапка */}
                   {isMobile && (
                     <>
                         <View style={styles.topNav}>
@@ -550,7 +615,7 @@ export default function MapScreen() {
                             </Pressable>
                         </View>
 
-                        {/* Панель фильтров (под топ-баром) */}
+                        {/* Панель фильтров */}
                         <Animated.View style={[styles.filtersPanel, { transform: [{ translateY: filtersPanelTranslateY }] }]}>
                             <View style={styles.panelHeader}>
                                 <Text style={styles.panelTitle}>Фильтры</Text>
@@ -558,14 +623,14 @@ export default function MapScreen() {
                                     <Icon name="close" type="material" color="#666" size={24} />
                                 </Pressable>
                             </View>
-                            <ScrollView style={styles.filtersContent}>
+                            <ScrollView style={styles.filtersContent} keyboardShouldPersistTaps="handled">
                                 <FiltersPanel
                                   filters={filters}
                                   filterValue={filterValue}
                                   onFilterChange={onFilterChange}
                                   onTextFilterChange={onTextFilterChange}
                                   resetFilters={resetFilters}
-                                  travelsData={currentData}
+                                  travelsData={travelsData}
                                   isMobile={true}
                                   closeMenu={hideFiltersPanel}
                                   startAddress={startAddress}
@@ -579,29 +644,41 @@ export default function MapScreen() {
                             </ScrollView>
                         </Animated.View>
 
-                        {/* Панель списка */}
-                        <Animated.View
-                          style={[styles.infoPanel, { transform: [{ translateY: infoPanelTranslateY }] }]}
-                        >
+                        {/* Панель списка (мобила) */}
+                        <Animated.View style={[styles.infoPanel, { transform: [{ translateY: infoPanelTranslateY }] }]}>
+                            {/* Закреплённая шапка списка — крестик ВСЕГДА виден */}
+                            <View style={styles.mobileListHeader}>
+                                <Text style={styles.mobileListTitle}>Список</Text>
+                                <Pressable
+                                  onPress={collapseListPanel}
+                                  style={styles.mobileListCloseBtn}
+                                  hitSlop={10}
+                                  accessibilityLabel="Закрыть список"
+                                >
+                                    <Icon name="close" type="material" color="#2c3e50" size={22} />
+                                </Pressable>
+                            </View>
+
+                            {/* Ползунок-ручка ниже шапки */}
                             <View style={styles.dragHandle} {...dragPanResponder.panHandlers}>
                                 <View style={styles.dragHandleBar} />
                             </View>
 
-                            <TravelListPanel
-                              travelsData={currentData}
-                              currentPage={currentPage}
-                              itemsPerPage={itemsPerPage}
-                              itemsPerPageOptions={[5, 10, 15]}
-                              onPageChange={setCurrentPage}
-                              onItemsPerPageChange={setItemsPerPage}
-                              buildRouteTo={buildRouteTo}
-                              // новое: скрыть объект
-                              onHideTravel={(id: string | number) => hideTravel(id)}
-                              hiddenIds={[...hiddenIds]}
-                              onResetHidden={resetHidden}
-                              // НОВОЕ: кнопка «свернуть/закрыть список»
-                              onClosePanel={collapseListPanel}
-                            />
+                            {/* Контент со сдвигом вниз, чтобы не залезать под шапку */}
+                            <View style={styles.mobileListBody}>
+                                <TravelListPanel
+                                  travelsData={travelsData}
+                                  isLoading={loadingFlag}
+                                  hasMore={mode === 'radius' ? hasMore : false}
+                                  onLoadMore={loadMore}
+                                  buildRouteTo={buildRouteTo}
+                                  onHideTravel={(id: string | number) => hideTravel(id)}
+                                  hiddenIds={[...hiddenIds]}
+                                  onResetHidden={resetHidden}
+                                  isMobile
+                                  onClosePanel={collapseListPanel}
+                                />
+                            </View>
                         </Animated.View>
 
                         {/* Overlay */}
@@ -614,7 +691,7 @@ export default function MapScreen() {
                     </>
                   )}
 
-                  {/* Десктоп версия */}
+                  {/* Десктоп */}
                   {!isMobile && (
                     <>
                         <View style={styles.desktopFiltersPanel}>
@@ -624,7 +701,7 @@ export default function MapScreen() {
                               onFilterChange={onFilterChange}
                               onTextFilterChange={onTextFilterChange}
                               resetFilters={resetFilters}
-                              travelsData={currentData}
+                              travelsData={travelsData}
                               isMobile={false}
                               closeMenu={() => {}}
                               startAddress={startAddress}
@@ -639,12 +716,10 @@ export default function MapScreen() {
 
                         <View style={styles.desktopInfoPanel}>
                             <TravelListPanel
-                              travelsData={currentData}
-                              currentPage={currentPage}
-                              itemsPerPage={itemsPerPage}
-                              itemsPerPageOptions={[10, 20, 30, 50]}
-                              onPageChange={setCurrentPage}
-                              onItemsPerPageChange={setItemsPerPage}
+                              travelsData={travelsData}
+                              isLoading={loadingFlag}
+                              hasMore={mode === 'radius' ? hasMore : false}
+                              onLoadMore={loadMore}
                               buildRouteTo={buildRouteTo}
                               onHideTravel={(id: string | number) => hideTravel(id)}
                               hiddenIds={[...hiddenIds]}
@@ -667,179 +742,213 @@ export default function MapScreen() {
     );
 }
 
-const getStyles = (isMobile: boolean, width: number, height: number, maxListHeight: number) => StyleSheet.create({
-    safeContainer: {
-        flex: 1,
-        backgroundColor: '#f8f9fa',
-    },
-    container: {
-        flex: 1,
-        position: 'relative',
-    },
-    mapContainer: {
-        flex: 1,
-    },
+function mergeUnique(prev: any[], next: any[]) {
+    const ids = new Set(prev.map(x => String(x.id ?? x._id ?? x.slug ?? x.uid)));
+    const fresh = next.filter(x => !ids.has(String(x.id ?? x._id ?? x.slug ?? x.uid)));
+    return prev.concat(fresh);
+}
 
-    // Панель информации о маршруте
-    routeInfoPanel: {
-        position: 'absolute',
-        top: isMobile ? TOP_BAR_HEIGHT + 8 : 20,
-        left: 20,
-        right: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: 16,
-        padding: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 12,
-        zIndex: 2001,
-        borderWidth: 1,
-        borderColor: 'rgba(74, 140, 140, 0.1)',
-    },
-    routeInfoHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    routeInfoTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#2c3e50',
-    },
-    closeRouteButton: { padding: 4 },
-    routeDetails: { marginBottom: 12 },
-    routePoint: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
-    pointIndicator: {
-        width: 24, height: 24, borderRadius: 12, backgroundColor: '#4a8c8c',
-        justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2,
-    },
-    pointNumber: { color: '#fff', fontWeight: '700', fontSize: 12 },
-    pointInfo: { flex: 1 },
-    pointLabel: { fontSize: 12, color: '#666', marginBottom: 2, fontWeight: '600' },
-    pointAddress: { fontSize: 14, color: '#2c3e50', fontWeight: '500', lineHeight: 18 },
-    routeDivider: { height: 1, backgroundColor: '#e0e0e0', marginVertical: 8, marginLeft: 36 },
-    routeStats: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    statItem: { flexDirection: 'row', alignItems: 'center' },
-    statText: { fontSize: 12, color: '#4a8c8c', fontWeight: '600', marginLeft: 6 },
+const getStyles = (
+  isMobile: boolean,
+  width: number,
+  height: number,
+  maxListHeight: number,
+  routeInfoMaxHeight: number
+) => {
+    // Центральный коридор для панельки маршрута на десктопе:
+    // [левый отступ 20] [фильтры 320] [отступ 20] [КОРИДОР] [отступ 20] [список 380] [отступ 20]
+    const leftSafe = isMobile ? 20 : DESKTOP_MARGIN + DESKTOP_FILTERS_WIDTH + DESKTOP_MARGIN;
+    const rightSafe = isMobile ? 20 : DESKTOP_MARGIN + DESKTOP_INFO_WIDTH + DESKTOP_MARGIN;
 
-    // Мобильная навигация (TOP)
-    topNav: {
-        position: 'absolute',
-        top: 0, left: 0, right: 0,
-        flexDirection: 'row',
-        backgroundColor: 'white',
-        paddingHorizontal: 8,
-        paddingVertical: 5,
-        borderBottomWidth: 0,
-        justifyContent: 'space-around',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
-        elevation: 5,
-        zIndex: 2003,
-        minHeight: TOP_BAR_HEIGHT,
-    },
-    navButton: { alignItems: 'center', padding: 8, minWidth: 70 },
-    navButtonPressed: { opacity: 0.7, transform: [{ scale: 0.95 }] },
-    navButtonText: { fontSize: 12, color: 'black', marginTop: 4, textAlign: 'center', fontWeight: '600' },
+    return StyleSheet.create({
+        safeContainer: { flex: 1, backgroundColor: '#f8f9fa' },
+        container: { flex: 1, position: 'relative' },
+        mapContainer: { flex: 1 },
 
-    // Мобильные панели
-    filtersPanel: {
-        position: 'absolute',
-        top: TOP_BAR_HEIGHT, // открываем под верхним баром
-        left: 0, right: 0,
-        height: FILTERS_PANEL_HEIGHT,
-        backgroundColor: '#fff',
-        borderBottomLeftRadius: 20,
-        borderBottomRightRadius: 20,
-        padding: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 12,
-        zIndex: 2002,
-    },
-    filtersContent: { flex: 1 },
-    infoPanel: {
-        position: 'absolute',
-        left: 0, right: 0,
-        height: maxListHeight,        // динамически «до фильтров»
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        padding: 16,
-        paddingTop: 8,                // маленький отступ вместо большого TOP_BAR_HEIGHT
-        paddingBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 14,
-        zIndex: 2001,
-        bottom: 0,
-    },
-    panelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-    panelTitle: { fontSize: 20, fontWeight: '700', color: '#2c3e50' },
-    dragHandle: { alignItems: 'center', paddingVertical: 12, marginBottom: 8 },
-    dragHandleBar: { width: 48, height: 5, backgroundColor: '#ddd', borderRadius: 3 },
+        routeInfoPanel: {
+            position: 'absolute',
+            top: isMobile ? MOBILE_ROUTE_TOP : 20,
+            left: leftSafe,
+            right: rightSafe,
+            backgroundColor: 'rgba(255,255,255,0.95)',
+            borderRadius: 16,
+            padding: 12,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 12,
+            elevation: 12,
+            zIndex: 1200,
+            borderWidth: 1,
+            borderColor: 'rgba(74,140,140,0.1)',
+            // было фиксировано 140 — теперь адаптивно:
+            maxHeight: routeInfoMaxHeight,
+        },
+        routeInfoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+        routeInfoTitle: { fontSize: 18, fontWeight: '700', color: '#2c3e50' },
+        closeRouteButton: { padding: 4 },
 
-    // Десктоп панели
-    desktopFiltersPanel: {
-        position: 'absolute',
-        top: 20, left: 20,
-        width: 320,
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 8,
-        zIndex: 1000,
-        maxHeight: height - 40,
-    },
-    desktopInfoPanel: {
-        position: 'absolute',
-        top: 20, right: 20, bottom: 20,
-        width: 380,
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 8,
-        zIndex: 1000,
-    },
+        // прокручиваемая часть панели
+        routeInfoScroll: { maxHeight: routeInfoMaxHeight - 38 /* минус шапка */ },
+        routeInfoScrollContent: { paddingBottom: 4 },
 
-    // Кнопки
-    clearRouteButton: {
-        backgroundColor: '#ff6b6b',
-        borderRadius: 12,
-        padding: 14,
-        alignItems: 'center',
-        marginTop: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 4,
-    },
-    clearRouteButtonPressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
-    clearRouteText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+        routeDetails: { marginBottom: 8 },
+        routePoint: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
+        pointIndicator: {
+            width: 24, height: 24, borderRadius: 12, backgroundColor: '#4a8c8c',
+            justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2,
+        },
+        pointNumber: { color: '#fff', fontWeight: '700', fontSize: 12 },
+        pointInfo: { flex: 1 },
+        pointLabel: { fontSize: 12, color: '#666', marginBottom: 2, fontWeight: '600' },
+        pointAddress: { fontSize: 14, color: '#2c3e50', fontWeight: '500', lineHeight: 18 },
+        routeDivider: { height: 1, backgroundColor: '#e0e0e0', marginVertical: 6, marginLeft: 36 },
+        routeStats: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+        statItem: { flexDirection: 'row', alignItems: 'center' },
+        statText: { fontSize: 12, color: '#4a8c8c', fontWeight: '600', marginLeft: 6 },
 
-    // Overlay
-    overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000', zIndex: 999 },
-    overlayPressable: { flex: 1 },
+        topNav: {
+            position: 'absolute',
+            top: 0, left: 0, right: 0,
+            flexDirection: 'row',
+            backgroundColor: 'white',
+            paddingHorizontal: 8,
+            paddingVertical: 5,
+            justifyContent: 'space-around',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 5,
+            elevation: 5,
+            zIndex: 2003,
+            minHeight: TOP_BAR_HEIGHT,
+        },
+        navButton: { alignItems: 'center', padding: 8, minWidth: 70 },
+        navButtonPressed: { opacity: 0.7, transform: [{ scale: 0.95 }] },
+        navButtonText: { fontSize: 12, color: 'black', marginTop: 4, textAlign: 'center', fontWeight: '600' },
 
-    // Загрузка
-    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f9fa' },
-    loadingText: { marginTop: 16, fontSize: 16, color: '#666', textAlign: 'center' },
-});
+        filtersPanel: {
+            position: 'absolute',
+            top: TOP_BAR_HEIGHT,
+            left: 0, right: 0,
+            height: FILTERS_PANEL_HEIGHT,
+            backgroundColor: '#fff',
+            borderBottomLeftRadius: 20,
+            borderBottomRightRadius: 20,
+            padding: 16,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.25,
+            shadowRadius: 12,
+            elevation: 12,
+            zIndex: 2002,
+        },
+        panelHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+        panelTitle: { fontSize: 16, fontWeight: '700', color: '#2c3e50' },
+        filtersContent: { flex: 1 },
+
+        // Мобильная выезжающая панель списка
+        infoPanel: {
+            position: 'absolute',
+            left: 0, right: 0,
+            height: maxListHeight,
+            backgroundColor: '#fff',
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            paddingBottom: 12,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: 0.25,
+            shadowRadius: 12,
+            elevation: 14,
+            zIndex: 2001,
+            bottom: 0,
+        },
+
+        // Закреплённая шапка внутри панели списка
+        mobileListHeader: {
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            height: MOBILE_LIST_HEADER_H,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            paddingHorizontal: 16,
+            backgroundColor: '#fff',
+            zIndex: 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottomWidth: 1,
+            borderColor: '#eee',
+        },
+        mobileListTitle: { fontSize: 16, fontWeight: '700', color: '#2c3e50' },
+        mobileListCloseBtn: {
+            padding: 6,
+            borderRadius: 12,
+            backgroundColor: 'transparent',
+        },
+
+        // Ручка — под шапкой
+        dragHandle: { alignItems: 'center', paddingVertical: 12, marginTop: MOBILE_LIST_HEADER_H, marginBottom: 8 },
+        dragHandleBar: { width: 48, height: 5, backgroundColor: '#ddd', borderRadius: 3 },
+
+        // Контейнер для контента со сдвигом вниз под шапку и ручку
+        mobileListBody: {
+            flex: 1,
+            paddingHorizontal: 16,
+        },
+
+        desktopFiltersPanel: {
+            position: 'absolute',
+            top: 20, left: 20,
+            width: DESKTOP_FILTERS_WIDTH,
+            backgroundColor: '#fff',
+            borderRadius: 16,
+            padding: 16,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 12,
+            elevation: 8,
+            zIndex: 1000,
+            maxHeight: height - 40,
+        },
+        desktopInfoPanel: {
+            position: 'absolute',
+            top: 20, right: 20, bottom: 20,
+            width: DESKTOP_INFO_WIDTH,
+            backgroundColor: '#fff',
+            borderRadius: 16,
+            padding: 16,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 12,
+            elevation: 8,
+            zIndex: 1000,
+        },
+
+        clearRouteButton: {
+            backgroundColor: '#ff6b6b',
+            borderRadius: 12,
+            padding: 14,
+            alignItems: 'center',
+            marginTop: 16,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+            elevation: 4,
+        },
+        clearRouteButtonPressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
+        clearRouteText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+
+        overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000', zIndex: 999 },
+        overlayPressable: { flex: 1 },
+
+        loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f9fa' },
+        loadingText: { marginTop: 16, fontSize: 16, color: '#666', textAlign: 'center' },
+    });
+};
