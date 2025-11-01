@@ -1,3 +1,4 @@
+// ListTravel.tsx
 import React, {
     memo,
     useCallback,
@@ -17,6 +18,8 @@ import {
     Platform,
     Pressable,
     Alert,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -39,7 +42,7 @@ import TravelPdfTemplate from "@/components/export/TravelPdfTemplate";
 /* ===== Constants ===== */
 const INITIAL_FILTER = { year: "", showModerationPending: false };
 const BELARUS_ID = 3;
-const PER_PAGE = 12; // Унифицированное значение для всех устройств
+const PER_PAGE = 12;
 
 /* ===== Utils ===== */
 function useDebounce<T>(val: T, delay = 400) {
@@ -99,7 +102,6 @@ function ExportBar({
               <Text style={styles.btnTxt}>{isMobile ? "PDF" : "Сохранить PDF"}</Text>
           </Pressable>
 
-          {/* RN Web: скрытый контейнер для генерации PDF. На native не рендерим во избежание падений */}
           {Platform.OS === "web" && (
             <div
               ref={printRef}
@@ -132,16 +134,12 @@ function ListTravel() {
     const isTablet = width >= 768 && width < 1024;
     const columns = isMobile ? 1 : isTablet ? 2 : 3;
 
-    // фиксированный ключ по числу колонок
     const listKey = useMemo(() => `grid-${columns}`, [columns]);
 
     const route = useRoute();
     const router = useRouter();
 
-    // читаем query из URL
-    const params = useLocalSearchParams<{
-        user_id?: string;
-    }>();
+    const params = useLocalSearchParams<{ user_id?: string }>();
     const user_id = params.user_id;
 
     const isMeTravel = (route as any).name === "metravel";
@@ -156,7 +154,7 @@ function ListTravel() {
 
     useEffect(() => {
         AsyncStorage.multiGet(["userId", "isSuperuser"]).then(([[, id], [, su]]) => {
-            setUserId(id);
+            setUserId(id || null);
             setSuper(su === "true");
         });
     }, []);
@@ -166,10 +164,11 @@ function ListTravel() {
     const debSearch = useDebounce(search);
     const [filter, setFilter] = useState(INITIAL_FILTER);
 
-    // infinite scroll state
+    // infinite scroll
     const [currentPage, setCurrentPage] = useState(0);
     const [accumulatedData, setAccumulatedData] = useState<any[]>([]);
     const isLoadingMoreRef = useRef(false);
+    const onMomentumRef = useRef(false);
 
     /* UI / dialogs */
     const [deleteId, setDelete] = useState<number | null>(null);
@@ -188,7 +187,7 @@ function ListTravel() {
         staleTime: 10 * 60 * 1000,
     });
 
-    /* Query params */
+    /* Query params (stable object) */
     const queryParams = useMemo(() => {
         const p: Record<string, any> = {};
         Object.entries(filter).forEach(([k, v]) => {
@@ -196,10 +195,14 @@ function ListTravel() {
             if (Array.isArray(v) ? v.length : v) p[k] = v;
         });
 
-        // важно: применять publish/moderation только если НЕ metravel И НЕ export
         if (!(isMeTravel || isExport)) {
-            p.publish = filter.showModerationPending ? undefined : 1;
-            p.moderation = filter.showModerationPending ? 0 : 1;
+            if (!filter.showModerationPending) {
+                p.publish = 1;
+                p.moderation = 1;
+            } else {
+                // явное отсутствие фильтров модерации
+                // не кладём undefined в запросы
+            }
         }
 
         if (isMeTravel || isExport) p.user_id = userId;
@@ -207,25 +210,36 @@ function ListTravel() {
 
         if (isTravelBy) p.countries = [BELARUS_ID];
         if (isMeTravel) {
-            p.publish = undefined;
-            p.moderation = undefined;
+            delete p.publish;
+            delete p.moderation;
         }
 
         return p;
     }, [filter, isMeTravel, isExport, isTravelBy, userId, user_id]);
 
-    /* Data query */
-    const { data, status, isFetching, isPreviousData } = useQuery({
+    const isQueryEnabled = useMemo(
+      () => (isMeTravel || isExport ? !!userId : true),
+      [isMeTravel, isExport, userId]
+    );
+
+    /* Data query (stable key, no stringify) */
+    const {
+        data,
+        status,
+        isFetching,
+        isPreviousData,
+        isLoading,
+        refetch,
+    } = useQuery({
         queryKey: [
             "travels",
-            currentPage,
-            PER_PAGE,
-            debSearch,
-            JSON.stringify(queryParams), // стабильный ключ
+            { page: currentPage, perPage: PER_PAGE, search: debSearch, params: queryParams },
         ],
-        queryFn: () =>
-          fetchTravels(currentPage, PER_PAGE, debSearch, queryParams),
-        enabled: !(isMeTravel || isExport) || !!userId,
+        queryFn: ({ queryKey, signal }) => {
+            const [, { page, perPage, search, params }] = queryKey as any;
+            return fetchTravels(page, perPage, search, params, { signal });
+        },
+        enabled: isQueryEnabled,
         keepPreviousData: true,
         staleTime: 60 * 1000,
         cacheTime: 5 * 60 * 1000,
@@ -234,51 +248,59 @@ function ListTravel() {
     const total = data?.total ?? 0;
     const hasMore = (currentPage + 1) * PER_PAGE < total;
 
-    /* ===== Accumulate data ===== */
+    /* Accumulate */
     useEffect(() => {
+        if (!isQueryEnabled) return;
         if (status !== "success") return;
+
         const chunk = data?.data ?? [];
         setAccumulatedData((prev) => (currentPage === 0 ? chunk : [...prev, ...chunk]));
+        // сбрасываем флаг только когда реально пришла новая партия
         isLoadingMoreRef.current = false;
-    }, [status, data, currentPage]);
+    }, [isQueryEnabled, status, data, currentPage]);
 
-    // reset on search/filter change
+    // reset on search/filter change — очищаем сразу
     useEffect(() => {
         setCurrentPage(0);
-    }, [debSearch, JSON.stringify(queryParams)]);
+        setAccumulatedData([]);
+        isLoadingMoreRef.current = false;
+    }, [debSearch, queryParams]);
 
-    // prefetch следующей страницы (исправлен off-by-one)
+    // prefetch next page — только когда ничего не грузим сейчас
     useEffect(() => {
+        if (!isQueryEnabled) return;
         if (!hasMore) return;
+        if (isFetching) return;
+
         const nextPage = currentPage + 1;
         queryClient.prefetchQuery({
             queryKey: [
                 "travels",
-                nextPage,
-                PER_PAGE,
-                debSearch,
-                JSON.stringify(queryParams),
+                { page: nextPage, perPage: PER_PAGE, search: debSearch, params: queryParams },
             ],
-            queryFn: () =>
-              fetchTravels(nextPage, PER_PAGE, debSearch, queryParams),
+            queryFn: ({ signal }) =>
+              fetchTravels(nextPage, PER_PAGE, debSearch, queryParams, { signal }),
             staleTime: 60 * 1000,
         });
-    }, [hasMore, currentPage, debSearch, queryParams, queryClient]);
+    }, [isQueryEnabled, hasMore, isFetching, currentPage, debSearch, queryParams, queryClient]);
 
     /* Filters helpers */
     const resetFilters = useCallback(() => {
         setFilter(INITIAL_FILTER);
         setCurrentPage(0);
+        setAccumulatedData([]);
     }, []);
 
     const onSelect = useCallback((field: string, v: any) => {
         setFilter((p) => ({ ...p, [field]: v }));
         setCurrentPage(0);
+        setAccumulatedData([]);
     }, []);
 
     const applyFilter = useCallback((v: any) => {
         setFilter(v);
         setCurrentPage(0);
+        setAccumulatedData([]);
     }, []);
 
     /* Delete */
@@ -313,7 +335,6 @@ function ListTravel() {
           isMobile={isMobile}
           isSuperuser={isSuper}
           isMetravel={isMeTravel}
-          isExport={isExport}
           onDeletePress={setDelete}
           onEditPress={router.push}
           isFirst={index === 0}
@@ -327,15 +348,13 @@ function ListTravel() {
 
     const keyExtractor = useCallback((item: any) => String(item.id), []);
 
-    /* PDF preview/save */
+    /* PDF preview/save (без изменений) */
     const makePreview = useCallback(async () => {
         if (!selected.length) return;
-
         if (Platform.OS !== "web") {
             Alert.alert("Недоступно", "Превью PDF доступно только в веб-версии.");
             return;
         }
-
         if (!printRef.current) return;
 
         let statusEl: HTMLDivElement | null = document.createElement("div");
@@ -371,7 +390,7 @@ function ListTravel() {
 
                 document.body.appendChild(iframe);
                 document.body.appendChild(closeBtn);
-                if (statusEl && document.body.contains(statusEl)) document.body.removeChild(statusEl);
+                if (statusEl && statusEl.parentNode) document.body.removeChild(statusEl);
                 statusEl = null;
             }
         } catch (e) {
@@ -393,12 +412,10 @@ function ListTravel() {
             Alert.alert("Внимание", "Пожалуйста, выберите хотя бы одно путешествие");
             return;
         }
-
         if (Platform.OS !== "web") {
             Alert.alert("Недоступно", "Сохранение PDF доступно только в веб-версии.");
             return;
         }
-
         if (!printRef.current) return;
 
         let bar: HTMLDivElement | null = document.createElement("div");
@@ -420,28 +437,37 @@ function ListTravel() {
         }
     }, [selected]);
 
-    /* Loading helpers to избежать прыжков списка */
+    /* Loading helpers */
     const hasAnyItems = accumulatedData.length > 0;
-    const isInitialLoading = status === "pending" && !hasAnyItems;
+    const isInitialLoading =
+      isQueryEnabled && isLoading && !hasAnyItems; // не показываем лоадер, если disabled
     const isNextPageLoading = isFetching && hasAnyItems;
-    const isEmpty = status === "success" && !isFetching && !hasAnyItems;
+    const isEmpty = isQueryEnabled && status === "success" && !isFetching && !hasAnyItems;
 
     const canLoadMore = !isNextPageLoading && hasMore && !isPreviousData;
 
     const handleEndReached = useCallback(() => {
-        if (!canLoadMore || isLoadingMoreRef.current) return;
+        if (!canLoadMore || isLoadingMoreRef.current || onMomentumRef.current) return;
         isLoadingMoreRef.current = true;
         setCurrentPage((p) => p + 1);
     }, [canLoadMore]);
+
+    const onMomentumBegin = useCallback(() => {
+        onMomentumRef.current = false;
+    }, []);
+    const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+        // если контента мало, RN web может сразу дёрнуть onEndReached — защитимся
+        const { contentSize, layoutMeasurement } = e.nativeEvent;
+        if (contentSize.height <= layoutMeasurement.height * 1.05) {
+            onMomentumRef.current = true;
+        }
+    }, []);
 
     const displayData = accumulatedData;
 
     return (
       <SafeAreaView style={styles.root}>
-          <View
-            style={[styles.container, { flexDirection: isMobile ? "column" : "row" }]}
-          >
-              {/* Сайдбар фильтров (десктоп/планшет) */}
+          <View style={[styles.container, { flexDirection: isMobile ? "column" : "row" }]}>
               {!isMobile && (
                 <View style={styles.sidebar} aria-label="Фильтры">
                     <MemoizedFilters
@@ -458,14 +484,12 @@ function ListTravel() {
               )}
 
               <View style={styles.main}>
-                  {/* Всегда видимая верхняя панель */}
                   <SearchAndFilterBar
                     search={search}
                     setSearch={setSearch}
                     onToggleFilters={isMobile ? () => setShowFilters(true) : undefined}
                   />
 
-                  {/* Большой лоадер — только при самом первом запросе */}
                   {isInitialLoading && (
                     <View style={styles.loader} accessibilityRole="alert" aria-live="polite">
                         <ActivityIndicator size="large" />
@@ -473,10 +497,8 @@ function ListTravel() {
                   )}
 
                   {status === "error" && <Text style={styles.status}>Ошибка загрузки</Text>}
-
                   {isEmpty && <Text style={styles.status}>Нет данных</Text>}
 
-                  {/* Список путешествий — НЕ скрываем при дозагрузке страниц */}
                   {hasAnyItems && (
                     <FlatList
                       key={listKey}
@@ -497,6 +519,8 @@ function ListTravel() {
                       updateCellsBatchingPeriod={60}
                       onEndReachedThreshold={0.5}
                       onEndReached={handleEndReached}
+                      onMomentumScrollBegin={onMomentumBegin}
+                      onScroll={onScroll}
                       extraData={{ sel: selected.length }}
                       accessibilityRole="list"
                       ListFooterComponent={
@@ -511,7 +535,6 @@ function ListTravel() {
               </View>
           </View>
 
-          {/* Модалка фильтров для мобилы */}
           {isMobile && showFilters && (
             <MemoizedFilters
               modal
@@ -526,7 +549,6 @@ function ListTravel() {
             />
           )}
 
-          {/* Диалог удаления */}
           <ConfirmDialog
             visible={!!deleteId}
             onClose={() => setDelete(null)}
@@ -535,7 +557,6 @@ function ListTravel() {
             message="Удалить это путешествие?"
           />
 
-          {/* Панель экспорта */}
           {isExport && (
             <ExportBar
               isMobile={isMobile}
@@ -596,7 +617,6 @@ const styles = StyleSheet.create({
     },
     btn: {
         flex: 1,
-        // цвет по умолчанию системы, чтобы не дергать стили на iOS/Android
         paddingVertical: 10,
         paddingHorizontal: 12,
         borderRadius: 6,
