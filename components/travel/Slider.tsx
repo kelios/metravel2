@@ -20,11 +20,9 @@ import {
   AccessibilityInfo,
   useWindowDimensions,
   Platform,
-  Dimensions,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -49,7 +47,7 @@ export interface SliderProps {
   images: SliderImage[];
   showArrows?: boolean;
   showDots?: boolean;
-  hideArrowsOnMobile?: boolean; // совместимость, в RN одинаково везде
+  hideArrowsOnMobile?: boolean;
   aspectRatio?: number;
   autoPlay?: boolean;
   autoPlayInterval?: number;
@@ -58,7 +56,7 @@ export interface SliderProps {
   preloadCount?: number;
   blurBackground?: boolean;
   onFirstImageLoad?: () => void;
-  mobileHeightPercent?: number; // Новый параметр для высоты на мобильных
+  mobileHeightPercent?: number;
 }
 
 export interface SliderRef {
@@ -73,7 +71,7 @@ const DEFAULT_AR = 16 / 9;
 const DOT_SIZE = 8;
 const DOT_ACTIVE_SIZE = 12;
 const NAV_BTN_OFFSET = 10;
-const MOBILE_HEIGHT_PERCENT = 0.7; // 70% по умолчанию
+const MOBILE_HEIGHT_PERCENT = 0.7;
 
 const buildUri = (img: SliderImage) => {
   const ts = img.updated_at ? Date.parse(img.updated_at) : Number(img.id);
@@ -128,7 +126,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     preloadCount = 1,
     blurBackground = true,
     onFirstImageLoad,
-    mobileHeightPercent = MOBILE_HEIGHT_PERCENT, // Используем переданное значение или 70% по умолчанию
+    mobileHeightPercent = MOBILE_HEIGHT_PERCENT,
   } = props;
 
   const insets = useSafeAreaInsets();
@@ -136,7 +134,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   const isMobile = winW < 768;
 
   const [containerW, setContainerW] = useState(winW);
-  const [containerH, setContainerH] = useState(0);
+  const [containerH, setContainerH] = useState<number | null>(null);
   const listRef = useRef<FlatList<SliderImage>>(null);
 
   const indexRef = useRef(0);
@@ -149,26 +147,32 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     return f?.width && f?.height ? f.width / f.height : aspectRatio;
   }, [images, aspectRatio]);
 
-  // высота с учетом мобильного режима
-  useEffect(() => {
-    const calc = () => {
+  // мгновенный fallback высоты, чтобы не было высоты 0 при первом рендере
+  const computeHeight = useCallback(
+    (w: number) => {
       if (!images.length) return 0;
-
       if (isMobile) {
-        // На мобильных - 70% высоты экрана
         const mobileHeight = winH * mobileHeightPercent;
-        // Но ограничиваем минимальной и максимальной высотой для удобства
         return clamp(mobileHeight, 200, winH * 0.8);
       } else {
-        // На десктопе - обычная логика
-        const isPhone = winW < 768;
-        if (isPhone) return Math.min(containerW / Math.min(firstAR, 1.6), winH * 0.62);
-        const h = containerW / firstAR;
+        const h = w / firstAR;
         return clamp(h, 320, 640);
       }
-    };
-    setContainerH(calc());
-  }, [containerW, firstAR, images.length, winH, winW, isMobile, mobileHeightPercent]);
+    },
+    [firstAR, images.length, isMobile, winH, mobileHeightPercent]
+  );
+
+  // начальная высота по AR, потом обновляется при layout
+  useEffect(() => {
+    if (containerH == null) {
+      setContainerH(computeHeight(containerW));
+    }
+  }, [containerH, computeHeight, containerW]);
+
+  // пересчёт при изменении зависимостей
+  useEffect(() => {
+    setContainerH(computeHeight(containerW));
+  }, [containerW, computeHeight]);
 
   // reduce motion из ОС
   useEffect(() => {
@@ -203,7 +207,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   const appState = useRef(AppState.currentState);
   const pausedByAppState = useRef(false);
   const pausedByTouch = useRef(false);
-  const autoplayTimer = useRef<NodeJS.Timeout | null>(null);
+  const autoplayTimer = useRef<number | null>(null);
 
   const canAutoplay = useCallback(() => {
     return (
@@ -216,20 +220,31 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   }, [autoPlay, images.length, reduceMotion]);
 
   const clearAutoplay = useCallback(() => {
-    if (autoplayTimer.current) {
+    if (autoplayTimer.current != null) {
       clearInterval(autoplayTimer.current);
       autoplayTimer.current = null;
     }
   }, []);
+
+  const next = useCallback(() => {
+    if (!images.length) return;
+    const target = (indexRef.current + 1) % images.length;
+    // программный скролл
+    listRef.current?.scrollToOffset({
+      offset: target * containerW,
+      animated: !reduceMotion,
+    });
+  }, [images.length, containerW, reduceMotion]);
 
   const scheduleAutoplay = useCallback(() => {
     clearAutoplay();
     if (!canAutoplay()) return;
     autoplayTimer.current = setInterval(() => {
       runOnJS(next)();
-    }, Math.max(2500, autoPlayInterval));
-  }, [autoPlayInterval, canAutoplay, clearAutoplay]);
+    }, Math.max(2500, autoPlayInterval)) as unknown as number;
+  }, [autoPlayInterval, canAutoplay, clearAutoplay, next]);
 
+  // жизненный цикл приложения
   useEffect(() => {
     const sub = AppState.addEventListener("change", (s) => {
       const wasBg = appState.current.match(/inactive|background/);
@@ -259,14 +274,6 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     onScroll: (e) => {
       x.value = e.contentOffset.x;
     },
-    onMomentumEnd: (e) => {
-      const idx = Math.round((e.contentOffset.x || 0) / (containerW || 1));
-      if (indexRef.current !== idx) {
-        indexRef.current = idx;
-        runOnJS(onIndexChanged?.bind(null))(idx);
-        runOnJS(warmNeighbors)(idx);
-      }
-    },
   });
 
   // imperative API
@@ -284,12 +291,6 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     [containerW, images.length, onIndexChanged, reduceMotion, warmNeighbors]
   );
 
-  const next = useCallback(() => {
-    if (!images.length) return;
-    const target = (indexRef.current + 1) % images.length;
-    scrollTo(target);
-  }, [images.length, scrollTo]);
-
   const prev = useCallback(() => {
     if (!images.length) return;
     const target = (indexRef.current - 1 + images.length) % Math.max(1, images.length);
@@ -305,17 +306,6 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     }),
     [scrollTo, next, prev]
   );
-
-  // жест для паузы автоплея во время свайпа
-  const pan = Gesture.Pan()
-    .onBegin(() => {
-      pausedByTouch.current = true;
-      runOnJS(clearAutoplay)();
-    })
-    .onFinalize(() => {
-      pausedByTouch.current = false;
-      runOnJS(scheduleAutoplay)();
-    });
 
   const onLayout = useCallback(
     (e: LayoutChangeEvent) => {
@@ -342,11 +332,31 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     [containerW]
   );
 
+  // надёжный апдейт текущего индекса
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
+      const first = viewableItems.find((v) => v.index != null);
+      if (first && typeof first.index === "number") {
+        const idx = first.index;
+        if (indexRef.current !== idx) {
+          indexRef.current = idx;
+          onIndexChanged?.(idx);
+          warmNeighbors(idx);
+        }
+      }
+    }
+  ).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 60,
+    minimumViewTime: 50,
+  }).current;
+
   const renderItem = useCallback(
     ({ item, index }: { item: SliderImage; index: number }) => {
       const uri = uriMap[index];
       return (
-        <View style={{ width: containerW, height: containerH }}>
+        <View style={{ width: containerW, height: containerH ?? computeHeight(containerW) }}>
           {blurBackground && (
             <ExpoImage
               source={{ uri }}
@@ -374,7 +384,16 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
         </View>
       );
     },
-    [uriMap, blurBackground, containerW, containerH, onFirstImageLoad, imageProps, reduceMotion]
+    [
+      uriMap,
+      blurBackground,
+      containerW,
+      containerH,
+      computeHeight,
+      onFirstImageLoad,
+      imageProps,
+      reduceMotion,
+    ]
   );
 
   const Arrow = ({
@@ -384,7 +403,6 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     dir: "left" | "right";
     onPress: () => void;
   }) => {
-    // На мобильных скрываем стрелки если нужно
     if (isMobile && hideArrowsOnMobile) return null;
 
     return (
@@ -409,74 +427,89 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   };
 
   return (
-    <GestureDetector gesture={pan}>
-      <View
-        onLayout={onLayout}
-        style={[
-          styles.wrapper,
-          { height: containerH },
-          isMobile && styles.wrapperMobile // Добавляем стили для мобильных
-        ]}
-        accessibilityRole="group"
-        accessibilityLabel="Image slider"
-      >
-        <Animated.FlatList
-          ref={listRef}
-          data={images}
-          keyExtractor={keyExtractor}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-          renderItem={renderItem}
-          initialNumToRender={Math.min(images.length, 2)}
-          windowSize={3 + preloadCount * 2}
-          maxToRenderPerBatch={2 + preloadCount}
-          removeClippedSubviews
-          getItemLayout={getItemLayout}
-          bounces={false}
-          decelerationRate={Platform.select({ ios: "fast", default: 0.98 })}
-          snapToInterval={containerW || undefined}
-          snapToAlignment="start"
-          disableIntervalMomentum
-        />
+    <View
+      onLayout={onLayout}
+      style={[
+        styles.wrapper,
+        { height: containerH ?? computeHeight(containerW) },
+        isMobile && styles.wrapperMobile,
+      ]}
+      accessibilityRole="group"
+      accessibilityLabel="Image slider"
+    >
+      <Animated.FlatList
+        ref={listRef}
+        data={images}
+        keyExtractor={keyExtractor}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        renderItem={renderItem}
+        initialNumToRender={Math.min(images.length, 2)}
+        windowSize={3 + preloadCount * 2}
+        maxToRenderPerBatch={2 + preloadCount}
+        // removeClippedSubviews — отключено, чтобы избежать пустых слайдов на Android
+        getItemLayout={getItemLayout}
+        bounces={false}
+        decelerationRate={Platform.select({ ios: "fast", default: 0.98 })}
+        // убрано: snapToInterval/Alignment/disableIntervalMomentum — конфликтовало с pagingEnabled
+        onScrollBeginDrag={() => {
+          pausedByTouch.current = true;
+          clearAutoplay();
+        }}
+        onScrollEndDrag={() => {
+          pausedByTouch.current = false;
+          scheduleAutoplay();
+        }}
+        onMomentumScrollEnd={() => {
+          // синхронизация индекса на случай программного скролла
+          const idx = Math.round((x.value || 0) / (containerW || 1));
+          if (Number.isFinite(idx)) {
+            indexRef.current = clamp(idx, 0, images.length - 1);
+          }
+        }}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        extraData={containerW}
+      />
 
-        {showArrows && images.length > 1 && (
-          <>
-            <Arrow dir="left" onPress={prev} />
-            <Arrow dir="right" onPress={next} />
-          </>
-        )}
+      {showArrows && images.length > 1 && (
+        <>
+          <Arrow dir="left" onPress={prev} />
+          <Arrow dir="right" onPress={next} />
+        </>
+      )}
 
-        {showDots && images.length > 1 && (
-          <View style={[
-            styles.dots,
-            isMobile && styles.dotsMobile // Стили точек для мобильных
-          ]} pointerEvents="box-none" accessibilityRole="tablist">
-            {images.map((_, i) => (
-              <TouchableOpacity
-                key={`dot-${i}`}
-                style={styles.dotWrap}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: indexRef.current === i }}
-                accessibilityLabel={`Go to slide ${i + 1}`}
-                onPress={() => scrollTo(i)}
-                hitSlop={12}
-              >
-                <Dot
-                  i={i}
-                  x={x}
-                  containerW={containerW}
-                  total={images.length}
-                  reduceMotion={reduceMotion}
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </View>
-    </GestureDetector>
+      {showDots && images.length > 1 && (
+        <View
+          style={[styles.dots, isMobile && styles.dotsMobile]}
+          pointerEvents="box-none"
+          accessibilityRole="tablist"
+        >
+          {images.map((_, i) => (
+            <TouchableOpacity
+              key={`dot-${i}`}
+              style={styles.dotWrap}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: indexRef.current === i }}
+              accessibilityLabel={`Go to slide ${i + 1}`}
+              onPress={() => scrollTo(i)}
+              hitSlop={12}
+            >
+              <Dot
+                i={i}
+                x={x}
+                containerW={containerW}
+                total={images.length}
+                reduceMotion={reduceMotion}
+              />
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
   );
 });
 
@@ -494,7 +527,7 @@ const styles = StyleSheet.create({
   },
   wrapperMobile: {
     borderRadius: 8,
-    marginVertical: 8, // Отступы для мобильных
+    marginVertical: 8,
   },
   img: {
     width: "100%",
@@ -519,7 +552,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: "rgba(0,0,0,0.6)", // Более контрастные на мобильных
+    backgroundColor: "rgba(0,0,0,0.6)",
   },
   navIcon: {
     color: "#fff",
@@ -541,7 +574,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   dotsMobile: {
-    bottom: 8, // Ближе к низу на мобильных
+    bottom: 8,
   },
   dotWrap: {
     padding: 6,

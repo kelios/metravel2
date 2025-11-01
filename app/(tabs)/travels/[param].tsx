@@ -28,31 +28,34 @@ import {
 } from "react-native";
 
 import { useLocalSearchParams } from "expo-router";
-import {
-  useQuery,
-  keepPreviousData,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQuery, keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import { useIsFocused } from "@react-navigation/native";
 
-import {
-  fetchTravel,
-  fetchTravelBySlug,
-  fetchNearTravels,
-} from "@/src/api/travels";
+import { fetchTravel, fetchTravelBySlug, fetchNearTravels } from "@/src/api/travels";
 import type { Travel } from "@/src/types/types";
 import InstantSEO from "@/components/seo/InstantSEO";
 
-/* -------------------- lazy imports (устойчивые) -------------------- */
-const withLazy = <T extends React.ComponentType<any>>(
-  f: () => Promise<{ default: T }>
-) =>
+/* ---------- LCP-компонент грузим СИНХРОННО ---------- */
+import Slider from "@/components/travel/Slider";
+
+/* -------------------- helpers -------------------- */
+const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 900): Promise<T> => {
+  try {
+    return await fn();
+  } catch (e) {
+    if (tries <= 0) throw e;
+    await new Promise((r) => setTimeout(r, delay));
+    return retry(fn, tries - 1, delay);
+  }
+};
+
+const withLazy = <T extends React.ComponentType<any>>(f: () => Promise<{ default: T }>) =>
   lazy(async () => {
     try {
-      return await f();
+      return await retry(f, 2, 900);
     } catch {
       return {
         default: ((props: any) => (
@@ -64,24 +67,14 @@ const withLazy = <T extends React.ComponentType<any>>(
     }
   });
 
-const Slider = withLazy(() => import("@/components/travel/Slider"));
-const TravelDescription = withLazy(
-  () => import("@/components/travel/TravelDescription")
-);
+/* -------------------- lazy imports (второстепенные) -------------------- */
+const TravelDescription = withLazy(() => import("@/components/travel/TravelDescription"));
 const PointList = withLazy(() => import("@/components/travel/PointList"));
-const NearTravelList = withLazy(
-  () => import("@/components/travel/NearTravelList")
-);
-const PopularTravelList = withLazy(
-  () => import("@/components/travel/PopularTravelList")
-);
-const ToggleableMap = withLazy(
-  () => import("@/components/travel/ToggleableMapSection")
-);
+const NearTravelList = withLazy(() => import("@/components/travel/NearTravelList"));
+const PopularTravelList = withLazy(() => import("@/components/travel/PopularTravelList"));
+const ToggleableMap = withLazy(() => import("@/components/travel/ToggleableMapSection"));
 const MapClientSide = withLazy(() => import("@/components/Map"));
-const CompactSideBarTravel = withLazy(
-  () => import("@/components/travel/CompactSideBarTravel")
-);
+const CompactSideBarTravel = withLazy(() => import("@/components/travel/CompactSideBarTravel"));
 
 const LazyMaterialIcons = withLazy(() =>
   import("@expo/vector-icons/MaterialIcons").then((m: any) => ({
@@ -109,8 +102,7 @@ const SList: React.FC<{
   revealOrder?: "forwards" | "backwards" | "together";
   tail?: "collapsed" | "hidden";
 }> = (props) => {
-  const Experimental =
-    (React as any).unstable_SuspenseList || (React as any).SuspenseList;
+  const Experimental = (React as any).unstable_SuspenseList || (React as any).SuspenseList;
   return Experimental ? <Experimental {...props} /> : <>{props.children}</>;
 };
 
@@ -140,9 +132,8 @@ const MAX_CONTENT_WIDTH = 1200;
 const getYoutubeId = (url?: string | null) => {
   if (!url) return null;
   const m =
-    url.match(
-      /(?:youtu\.be\/|shorts\/|embed\/|watch\?v=|watch\?.*?v%3D)([^?&/#]+)/
-    ) || url.match(/youtube\.com\/.*?[?&]v=([^?&#]+)/);
+    url.match(/(?:youtu\.be\/|shorts\/|embed\/|watch\?v=|watch\?.*?v%3D)([^?&/#]+)/) ||
+    url.match(/youtube\.com\/.*?[?&]v=([^?&#]+)/);
   return m?.[1] ?? null;
 };
 
@@ -153,9 +144,7 @@ const stripToDescription = (html?: string) => {
     .replace(/<[^>]+>/g, "")
     .replace(/\s+/g, " ")
     .trim();
-  return (
-    plain || "Найди место для путешествия и поделись своим опытом."
-  ).slice(0, 160);
+  return (plain || "Найди место для путешествия и поделись своим опытом.").slice(0, 160);
 };
 
 const getOrigin = (url?: string) => {
@@ -200,11 +189,7 @@ const useLCPPreload = (travel?: Travel) => {
     if (!first?.url) return;
 
     const href = buildVersioned(first.url, first.updated_at, first.id);
-    if (
-      !document.querySelector(
-        `link[rel="preload"][as="image"][href="${href}"]`
-      )
-    ) {
+    if (!document.querySelector(`link[rel="preload"][as="image"][href="${href}"]`)) {
       const link = document.createElement("link");
       link.rel = "preload";
       link.as = "image";
@@ -242,11 +227,11 @@ type ImgLike = {
   id?: number | string;
 };
 
-const OptimizedLCPHero: React.FC<{
-  img: ImgLike;
-  alt?: string;
-  onLoad?: () => void;
-}> = ({ img, alt, onLoad }) => {
+const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => void }> = ({
+                                                                                           img,
+                                                                                           alt,
+                                                                                           onLoad,
+                                                                                         }) => {
   const src = buildVersioned(img.url, img.updated_at ?? null, img.id);
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9;
 
@@ -304,7 +289,7 @@ const CollapsibleSection: React.FC<{
   }, [forceOpen]);
 
   return (
-    <View style={[styles.sectionContainer, styles.contentStable]}>
+    <View style={[styles.sectionContainer, styles.contentStable]} collapsable={false}>
       <TouchableOpacity
         accessibilityRole="button"
         onPress={() => setOpen((o) => !o)}
@@ -320,13 +305,12 @@ const CollapsibleSection: React.FC<{
   );
 });
 
-/* -------------------- Lazy YouTube (fixed sizing) -------------------- */
+/* -------------------- Lazy YouTube -------------------- */
 const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
   const id = useMemo(() => getYoutubeId(url), [url]);
   const [mounted, setMounted] = useState(false);
   if (!id) return null;
 
-  // Превью (кадр YouTube) — уже имеет корректный aspectRatio 16:9
   if (!mounted) {
     return (
       <Pressable
@@ -348,8 +332,6 @@ const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
     );
   }
 
-  // Встроенный плеер: на вебе — тот же aspectRatio и скругления,
-  // на native — WebView внутри flex-контейнера.
   return Platform.OS === "web" ? (
     <div
       style={{
@@ -375,20 +357,14 @@ const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
   ) : (
     <Suspense fallback={<Fallback />}>
       <View style={styles.videoContainer}>
-        <WebViewComponent
-          source={{ uri: `https://www.youtube.com/embed/${id}` }}
-          style={{ flex: 1 }}
-        />
+        <WebViewComponent source={{ uri: `https://www.youtube.com/embed/${id}` }} style={{ flex: 1 }} />
       </View>
     </Suspense>
   );
 };
 
 /* -------------------- Defer wrapper -------------------- */
-const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({
-                                                                         when,
-                                                                         children,
-                                                                       }) => {
+const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, children }) => {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     if (!when) return;
@@ -421,11 +397,7 @@ export default function TravelDetails() {
 
   const queryClient = useQueryClient();
 
-  const {
-    data: travel,
-    isLoading,
-    isError,
-  } = useQuery<Travel>({
+  const { data: travel, isLoading, isError } = useQuery<Travel>({
     queryKey: ["travel", slug],
     queryFn: () => (isId ? fetchTravel(idNum) : fetchTravelBySlug(slug)),
     staleTime: 600_000,
@@ -433,6 +405,22 @@ export default function TravelDetails() {
   });
 
   useLCPPreload(travel);
+
+  /* ---- warm up heavy lazy chunks on web (без Slider) ---- */
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    rIC(() => {
+      Promise.allSettled([
+        import("@/components/travel/TravelDescription"),
+        import("@/components/travel/PointList"),
+        import("@/components/travel/NearTravelList"),
+        import("@/components/travel/PopularTravelList"),
+        import("@/components/travel/ToggleableMapSection"),
+        import("@/components/Map"),
+        import("@expo/vector-icons/MaterialIcons"),
+      ]);
+    }, 800);
+  }, []);
 
   /* ---- user flags ---- */
   const [isSuperuser, setIsSuperuser] = useState(false);
@@ -464,11 +452,8 @@ export default function TravelDetails() {
         : (key: string) => handleSectionOpen(key);
 
     if (Platform.OS === "web") {
-      window.addEventListener("open-section", handler as EventListener, {
-        passive: true,
-      } as any);
-      return () =>
-        window.removeEventListener("open-section", handler as EventListener);
+      window.addEventListener("open-section", handler as EventListener, { passive: true } as any);
+      return () => window.removeEventListener("open-section", handler as EventListener);
     } else {
       const sub = DeviceEventEmitter.addListener("open-section", handler);
       return () => sub.remove();
@@ -506,10 +491,7 @@ export default function TravelDetails() {
       node.measureLayout(
         scrollRef.current!.getInnerViewNode(),
         (_x: number, y: number) => {
-          scrollRef.current!.scrollTo({
-            y: Math.max(0, y - headerOffset),
-            animated: true,
-          });
+          scrollRef.current!.scrollTo({ y: Math.max(0, y - headerOffset), animated: true });
         },
         () => {}
       );
@@ -587,6 +569,8 @@ export default function TravelDetails() {
     : `${SITE}/og-preview.jpg`;
   const firstImgOrigin = getOrigin(firstImg?.url);
   const headKey = `travel-${slug}`;
+  const firstRatio =
+    (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9;
 
   const jsonLd =
     travel &&
@@ -597,9 +581,7 @@ export default function TravelDetails() {
       image: [readyImage],
       dateModified: travel.updated_at ?? undefined,
       datePublished: travel.created_at ?? undefined,
-      author: travel.author?.name
-        ? [{ "@type": "Person", name: travel.author.name }]
-        : undefined,
+      author: travel.author?.name ? [{ "@type": "Person", name: travel.author.name }] : undefined,
       mainEntityOfPage: canonicalUrl,
       description: readyDesc,
     } as const);
@@ -663,19 +645,8 @@ export default function TravelDetails() {
             <>
               {firstImg?.url && (
                 <>
-                  <link
-                    rel="preload"
-                    as="image"
-                    href={readyImage}
-                    fetchpriority="high"
-                  />
-                  {firstImgOrigin && (
-                    <link
-                      rel="preconnect"
-                      href={firstImgOrigin}
-                      crossOrigin="anonymous"
-                    />
-                  )}
+                  <link rel="preload" as="image" href={readyImage} fetchpriority="high" />
+                  {firstImgOrigin && <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />}
                 </>
               )}
               <meta name="theme-color" content="#f9f8f2" />
@@ -744,33 +715,34 @@ export default function TravelDetails() {
               contentContainerStyle={styles.scrollContent}
               keyboardShouldPersistTaps="handled"
               style={styles.scrollView}
+              nestedScrollEnabled
+              scrollEventThrottle={16}
             >
-              <View style={styles.contentOuter}>
-                <View style={styles.contentWrapper}>
+              <View style={styles.contentOuter} collapsable={false}>
+                <View style={styles.contentWrapper} collapsable={false}>
                   <SList revealOrder="forwards" tail="collapsed">
-                    <View ref={anchors.gallery} />
+                    <View ref={anchors.gallery} collapsable={false} />
 
                     {!!firstImg && (
-                      <View style={[styles.sectionContainer, styles.contentStable]}>
-                        <View style={styles.sliderContainer}>
-                          <Suspense
-                            fallback={
-                              <OptimizedLCPHero
-                                img={firstImg}
-                                alt={travel.name}
-                                onLoad={() => setLcpLoaded(true)}
-                              />
+                      <View style={[styles.sectionContainer, styles.contentStable]} collapsable={false}>
+                        <View style={styles.sliderContainer} collapsable={false}>
+                          {/* LCP: синхронный Slider */}
+                          <Slider
+                            key={isMobile ? "mobile" : "desktop"}
+                            images={travel.gallery}
+                            showArrows={!isMobile}
+                            hideArrowsOnMobile
+                            showDots={isMobile}
+                            preloadCount={isMobile ? 1 : 2}
+                            blurBackground
+                            aspectRatio={
+                              (firstImg?.width && firstImg?.height
+                                ? firstImg.width / firstImg.height
+                                : 16 / 9) as number
                             }
-                          >
-                            <Slider
-                              images={travel.gallery}
-                              showArrows={!isMobile}
-                              showDots={isMobile}
-                              preloadCount={isMobile ? 1 : 2}
-                              blurBackground
-                              onFirstImageLoad={() => setLcpLoaded(true)}
-                            />
-                          </Suspense>
+                            mobileHeightPercent={0.7}
+                            onFirstImageLoad={() => setLcpLoaded(true)}
+                          />
                         </View>
                       </View>
                     )}
@@ -818,9 +790,7 @@ const DeferredContent: React.FC<{
 
   useEffect(() => {
     if (Platform.OS !== "web") {
-      const task = InteractionManager.runAfterInteractions(() =>
-        setCanRenderHeavy(true)
-      );
+      const task = InteractionManager.runAfterInteractions(() => setCanRenderHeavy(true));
       return () => task.cancel();
     }
   }, []);
@@ -839,34 +809,15 @@ const DeferredContent: React.FC<{
   return (
     <>
       {[
-        {
-          key: "description",
-          ref: anchors.description,
-          html: travel.description,
-          title: travel.name,
-        },
-        {
-          key: "recommendation",
-          ref: anchors.recommendation,
-          html: travel.recommendation,
-          title: "Рекомендации",
-        },
+        { key: "description", ref: anchors.description, html: travel.description, title: travel.name },
+        { key: "recommendation", ref: anchors.recommendation, html: travel.recommendation, title: "Рекомендации" },
         { key: "plus", ref: anchors.plus, html: travel.plus, title: "Плюсы" },
-        {
-          key: "minus",
-          ref: anchors.minus,
-          html: travel.minus,
-          title: "Минусы",
-        },
+        { key: "minus", ref: anchors.minus, html: travel.minus, title: "Минусы" },
       ].map(({ key, ref, html, title }) =>
         html ? (
           <Suspense key={key} fallback={<Fallback />}>
-            <View ref={ref}>
-              <CollapsibleSection
-                title={title}
-                initiallyOpen={!isMobile}
-                forceOpen={forceOpenKey === key}
-              >
+            <View ref={ref} collapsable={false}>
+              <CollapsibleSection title={title} initiallyOpen={!isMobile} forceOpen={forceOpenKey === key}>
                 <View style={styles.descriptionContainer}>
                   <TravelDescription title={title} htmlContent={html} noBox />
                 </View>
@@ -877,7 +828,7 @@ const DeferredContent: React.FC<{
       )}
 
       {travel.youtube_link && (
-        <View style={[styles.sectionContainer, styles.contentStable]} ref={anchors.video}>
+        <View style={[styles.sectionContainer, styles.contentStable]} ref={anchors.video} collapsable={false}>
           <Text style={styles.sectionHeaderText}>Видео</Text>
           <View style={{ marginTop: 12 }}>
             <LazyYouTube url={travel.youtube_link} />
@@ -889,10 +840,7 @@ const DeferredContent: React.FC<{
         visible.excursions &&
         (travel.travelAddress?.length ?? 0) > 0 && (
           <Suspense fallback={<Fallback />}>
-            <View
-              ref={anchors.excursions}
-              style={[styles.sectionContainer, styles.contentStable]}
-            >
+            <View ref={anchors.excursions} style={[styles.sectionContainer, styles.contentStable]} collapsable={false}>
               <Text style={styles.sectionHeaderText}>Экскурсии</Text>
               <View style={{ marginTop: 12 }}>
                 <BelkrajWidgetComponent
@@ -906,7 +854,7 @@ const DeferredContent: React.FC<{
           </Suspense>
         )}
 
-      <View ref={anchors.map} style={[styles.sectionContainer, styles.contentStable]}>
+      <View ref={anchors.map} style={[styles.sectionContainer, styles.contentStable]} collapsable={false}>
         <Text style={styles.sectionHeaderText}></Text>
         <View style={{ marginTop: 12 }}>
           {canRenderHeavy && visible.map && (travel.coordsMeTravel?.length ?? 0) > 0 && (
@@ -919,7 +867,7 @@ const DeferredContent: React.FC<{
         </View>
       </View>
 
-      <View ref={anchors.points} style={[styles.sectionContainer, styles.contentStable]}>
+      <View ref={anchors.points} style={[styles.sectionContainer, styles.contentStable]} collapsable={false}>
         <Text style={styles.sectionHeaderText}></Text>
         <View style={{ marginTop: 12 }}>
           {travel.travelAddress && (
@@ -930,7 +878,7 @@ const DeferredContent: React.FC<{
         </View>
       </View>
 
-      <View ref={anchors.near} style={[styles.sectionContainer, styles.contentStable]}>
+      <View ref={anchors.near} style={[styles.sectionContainer, styles.contentStable]} collapsable={false}>
         <Text style={styles.sectionHeaderText}></Text>
         <View style={{ marginTop: 12 }}>
           {visible.near && travel.travelAddress && (
@@ -941,7 +889,7 @@ const DeferredContent: React.FC<{
         </View>
       </View>
 
-      <View ref={anchors.popular} style={[styles.sectionContainer, styles.contentStable]}>
+      <View ref={anchors.popular} style={[styles.sectionContainer, styles.contentStable]} collapsable={false}>
         <Text style={styles.sectionHeaderText}></Text>
         <View style={{ marginTop: 12 }}>
           {visible.popular && (
@@ -1034,7 +982,6 @@ const styles = StyleSheet.create({
 
   sliderContainer: { width: "100%" },
 
-  // Унифицированный контейнер видео 16:9 c закруглениями
   videoContainer: {
     width: "100%",
     aspectRatio: 16 / 9,
@@ -1062,10 +1009,5 @@ const styles = StyleSheet.create({
   },
 
   fallback: { paddingVertical: 24, alignItems: "center" },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f9f8f2",
-  },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f9f8f2" },
 });
