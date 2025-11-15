@@ -17,10 +17,11 @@
     "reset": "EXPO_RESET_CACHE=true expo start --clear",
     "prod:web": "NODE_ENV=production expo export --web"
   },
-  "jest": { "preset": "jest-expo" },
+  "jest": {
+    "preset": "jest-expo"
+  },
   "dependencies": {
-    "expo": "^52.0.35",
-    "expo-router": "^4.0.17",
+    "@babel/runtime": "^7.25.0",
     "@expo/metro-runtime": "~4.0.1",
     "@expo/vector-icons": "^14.0.4",
     "@native-html/iframe-plugin": "^2.6.1",
@@ -35,12 +36,12 @@
     "@react-pdf/renderer": "^3",
     "@tanstack/react-query": "^5.76.2",
     "@teovilla/react-native-web-maps": "^0.9.5",
-    "@babel/runtime": "^7.25.0",
     "canvas-confetti": "^1.9.3",
     "date-fns": "^4.1.0",
     "deprecated-react-native-prop-types": "^5.0.0",
     "escape-string-regexp": "^5.0.0",
     "eslint-config-prettier": "^10.1.8",
+    "expo": "^52.0.35",
     "expo-av": "~15.0.2",
     "expo-blur": "~14.0.3",
     "expo-clipboard": "^7.0.1",
@@ -57,6 +58,7 @@
     "expo-maps": "^0.11.0",
     "expo-media-library": "^17.1.7",
     "expo-print": "~14.0.3",
+    "expo-router": "^4.0.17",
     "expo-screen-orientation": "~8.0.4",
     "expo-sharing": "~13.0.1",
     "expo-splash-screen": "~0.29.21",
@@ -93,8 +95,8 @@
     "react-native-image-picker": "^8.1.0",
     "react-native-maps": "1.18.0",
     "react-native-multiple-select": "^0.5.12",
-    "react-native-paper": "^5.13.1",
     "react-native-pager-view": "^6.3.0",
+    "react-native-paper": "^5.13.1",
     "react-native-reanimated": "^3.17.5",
     "react-native-reanimated-carousel": "^4.0.2",
     "react-native-render-html": "^6.3.4",
@@ -114,32 +116,48 @@
     "@babel/preset-env": "^7.24.1",
     "@babel/preset-typescript": "^7.24.1",
     "@tanstack/react-query-devtools": "^5.76.2",
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^13.3.3",
     "@types/react": "^18.3.12",
     "@types/react-native-vector-icons": "^6.4.14",
     "babel-plugin-module-resolver": "^5.0.2",
     "babel-plugin-react-native-web": "^0.19.12",
     "babel-plugin-transform-remove-console": "^6.9.4",
+    "eslint": "^9.11.1",
     "jest": "^29.2.1",
     "jest-expo": "~52.0.3",
     "prettier": "^3.0.1",
     "react-test-renderer": "18.3.1",
-    "typescript": "^5.7.3",
-    "eslint": "^9.11.1"
+    "typescript": "^5.7.3"
   },
   "resolutions": {
     "@types/react": "18.3.18",
     "@types/react-native": "0.73.0"
   },
-  "prettier": { "jsxBracketSameLine": true, "semi": false, "singleQuote": true },
+  "prettier": {
+    "jsxBracketSameLine": true,
+    "semi": false,
+    "singleQuote": true
+  },
   "expo": {
     "doctor": {
       "reactNativeDirectoryCheck": {
-        "exclude": ["react-native-vector-icons", "react-native-reanimated", "react-native-gesture-handler"]
+        "exclude": [
+          "react-native-vector-icons",
+          "react-native-reanimated",
+          "react-native-gesture-handler"
+        ]
       }
     }
   },
   "browserslist": {
-    "production": ["defaults and not ie <= 11 and not op_mini all"],
-    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+    "production": [
+      "defaults and not ie <= 11 and not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }
