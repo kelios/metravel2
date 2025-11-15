@@ -18,7 +18,12 @@
     "prod:web": "NODE_ENV=production expo export --web"
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "setupFilesAfterEnv": ["<rootDir>/__tests__/setup.ts"],
+    "testMatch": ["**/__tests__/**/*.test.tsx", "**/__tests__/**/*.test.ts"],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1"
+    }
   },
   "dependencies": {
     "@babel/runtime": "^7.25.0",

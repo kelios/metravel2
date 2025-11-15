@@ -142,7 +142,7 @@ const FiltersComponent = ({
       { label: "Спутники", field: "companions", items: filters.companions ?? [], valKey: "id", labelKey: "name" },
       { label: "Сложность", field: "complexity", items: filters.complexity ?? [], valKey: "id", labelKey: "name" },
       { label: "Месяц", field: "month", items: filters.month ?? [], valKey: "id", labelKey: "name" },
-      { label: "Ночлег", field: "over_nights_stay", items: filters.over_nights_stay ?? [], valKey: "id", labelKey: "name" },
+      { label: "Ночлег", field: "overNightStay", items: filters.over_nights_stay ?? [], valKey: "id", labelKey: "name" },
     ],
     [filters, isTravelsByPage]
   );
@@ -159,10 +159,17 @@ const FiltersComponent = ({
     );
 
     setApplying(true);
-    handleApplyFilters({
+    // Преобразуем over_nights_stay обратно в overNightStay для контекста
+    const normalizedFilters: any = {
       ...cleanedFilterValue,
       year: year || undefined,
-    });
+    };
+    // Если есть over_nights_stay, переименовываем в overNightStay
+    if ('over_nights_stay' in normalizedFilters) {
+      normalizedFilters.overNightStay = normalizedFilters.over_nights_stay;
+      delete normalizedFilters.over_nights_stay;
+    }
+    handleApplyFilters(normalizedFilters);
 
     // 🔧 МЯГКОЕ ЗАКРЫТИЕ НА МОБИЛЕ
     // даём одному-двум кадрам отрисоваться (чтобы список не мигал «Нет данных»),

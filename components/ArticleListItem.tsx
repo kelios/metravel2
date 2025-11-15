@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, Dimensions, StyleSheet } from 'react-native';
+import { View, Pressable, Dimensions, StyleSheet, Platform } from 'react-native';
 import { Article } from '@/src/types/types';
 import { Card, Title, Paragraph, Text } from 'react-native-paper';
 import { widthPercentageToDP as wp } from 'react-native-responsive-screen';
@@ -25,6 +25,12 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
               <Card.Cover
                   source={{ uri: article_image_thumb_url || DEFAULT_IMAGE }}
                   style={styles.image}
+                  // Оптимизация: lazy loading для изображений в списке
+                  {...(Platform.OS === 'web' ? {
+                    loading: 'lazy' as any,
+                    decoding: 'async' as any,
+                    fetchPriority: 'low' as any,
+                  } : {})}
               />
             </View>
             <Card.Content>

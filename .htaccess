@@ -1,0 +1,90 @@
+# Оптимизация кеширования и сжатия для улучшения Core Web Vitals
+
+# Включить сжатие
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# Кеширование статических ресурсов
+<IfModule mod_expires.c>
+  ExpiresActive On
+  
+  # Изображения - длительное кеширование
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/jpg "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/gif "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/avif "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/x-icon "access plus 1 year"
+  
+  # Шрифты
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType font/ttf "access plus 1 year"
+  ExpiresByType font/otf "access plus 1 year"
+  
+  # CSS и JavaScript
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType text/javascript "access plus 1 month"
+  
+  # HTML - короткое кеширование
+  ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+# Cache-Control заголовки
+<IfModule mod_headers.c>
+  # Статические ресурсы - длительное кеширование
+  <FilesMatch "\.(jpg|jpeg|png|gif|webp|avif|svg|ico|woff2|woff|ttf|otf)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  
+  # CSS и JS - среднее кеширование
+  <FilesMatch "\.(css|js)$">
+    Header set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+  
+  # HTML - без кеширования
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+  
+  # Preload hints для критичных ресурсов
+  <FilesMatch "index\.html$">
+    Header add Link "</fonts/roboto-var.woff2>; rel=preload; as=font; type=font/woff2; crossorigin"
+  </FilesMatch>
+</IfModule>
+
+# Оптимизация для WebP/AVIF
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  
+  # Проверка поддержки AVIF
+  RewriteCond %{HTTP_ACCEPT} image/avif
+  RewriteCond %{REQUEST_FILENAME} \.(jpg|jpeg|png)$
+  RewriteCond %{REQUEST_FILENAME}\.avif -f
+  RewriteRule ^(.*)\.(jpg|jpeg|png)$ $1.avif [T=image/avif,L]
+  
+  # Проверка поддержки WebP
+  RewriteCond %{HTTP_ACCEPT} image/webp
+  RewriteCond %{REQUEST_FILENAME} \.(jpg|jpeg|png)$
+  RewriteCond %{REQUEST_FILENAME}\.webp -f
+  RewriteRule ^(.*)\.(jpg|jpeg|png)$ $1.webp [T=image/webp,L]
+</IfModule>
+
+# Безопасность и производительность
+<IfModule mod_headers.c>
+  # X-Content-Type-Options
+  Header set X-Content-Type-Options "nosniff"
+  
+  # X-Frame-Options
+  Header set X-Frame-Options "SAMEORIGIN"
+  
+  # Referrer Policy
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+

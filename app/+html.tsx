@@ -18,18 +18,20 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <meta property="og:image" content="https://metravel.by/og-preview.jpg" />
       <meta name="twitter:card" content="summary_large_image" />
 
-      {/* Perf hints */}
+      {/* Perf hints - DNS prefetch и preconnect для внешних ресурсов */}
       <link rel="dns-prefetch" href="//www.googletagmanager.com" />
       <link rel="dns-prefetch" href="//mc.yandex.ru" />
-      <link rel="preconnect" href="https://www.googletagmanager.com" />
-      <link rel="preconnect" href="https://mc.yandex.ru" />
+      <link rel="dns-prefetch" href="//metravelprod.s3.eu-north-1.amazonaws.com" />
+      <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
+      <link rel="preconnect" href="https://mc.yandex.ru" crossOrigin="anonymous" />
+      <link rel="preconnect" href="https://metravelprod.s3.eu-north-1.amazonaws.com" crossOrigin="anonymous" />
 
       {/* Icons */}
       <link rel="icon" href="/favicon.ico" sizes="any" />
       <link rel="icon" href="/icon.svg" type="image/svg+xml" />
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-      {/* Fonts */}
+      {/* Fonts - preload критичных шрифтов */}
       <link
         rel="preload"
         href="/fonts/roboto-var.woff2"
@@ -38,14 +40,17 @@ export default function Root({ children }: { children: React.ReactNode }) {
         crossOrigin="anonymous"
       />
 
-      {/* LCP image */}
+      {/* LCP image - предзагрузка главного изображения */}
       <link
         rel="preload"
         href="/images/hero.avif"
         as="image"
         type="image/avif"
-        fetchpriority="high"
+        fetchPriority="high"
       />
+      
+      {/* Preload критичных ресурсов */}
+      <link rel="modulepreload" href="/_expo/static/js/web/index.js" />
 
       {/* Critical CSS */}
       <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />
@@ -79,7 +84,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
       }}
     />
 
-    {/* ===== Analytics (включаем только на metravel.by) ===== */}
+    {/* ===== Analytics (отложенная загрузка, только на metravel.by) ===== */}
     <script
       dangerouslySetInnerHTML={{
         __html: `
@@ -87,6 +92,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
   var host = window.location.hostname;
   var isProdHost = host === 'metravel.by' || host === 'www.metravel.by';
   if (!isProdHost) return;
+  
+  // Отложенная загрузка аналитики после idle
+  function loadAnalytics() {
 
   // ---------- Yandex Metrika (официальный сниппет) ----------
   (function(m,e,t,r,i,k,a){
@@ -139,8 +147,17 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
   var ga = document.createElement('script');
   ga.async = true;
+  ga.defer = true;
   ga.src = 'https://www.googletagmanager.com/gtag/js?id=${GA_ID}';
   document.head.appendChild(ga);
+  }
+  
+  // Загружаем аналитику после idle или через 2 секунды
+  if (window.requestIdleCallback) {
+    window.requestIdleCallback(loadAnalytics, { timeout: 2000 });
+  } else {
+    setTimeout(loadAnalytics, 2000);
+  }
 })();
 `,
       }}
@@ -172,16 +189,29 @@ const criticalCSS = `
 html{scroll-behavior:smooth}
 body{margin:0;min-height:100vh;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeSpeed}
 img,picture,video,canvas,svg{display:block;max-width:100%}
-img{height:auto}
+img{height:auto;width:100%}
 input,button,textarea,select{font:inherit}
 button{cursor:pointer}
 [hidden]{display:none !important}
 @font-face{font-family:'Roboto';src:url('/fonts/roboto-var.woff2') format('woff2-variations');font-weight:100 900;font-display:swap;font-style:normal}
 img[data-lcp]{content-visibility:auto;contain:layout style paint}
+/* Предотвращение CLS - фиксированные размеры для изображений */
+img[width][height]{aspect-ratio:attr(width)/attr(height)}
+/* Оптимизация для LCP */
+img[fetchpriority="high"]{content-visibility:auto;will-change:auto}
+/* Предотвращение CLS для контейнеров с фиксированной высотой */
+[style*="minHeight"]{contain:layout style paint}
+/* Оптимизация загрузки */
+[loading="lazy"]{content-visibility:auto}
+/* Критический CSS для страницы travels - предотвращение layout shift */
 @media (prefers-reduced-motion: reduce){
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important}
 }
 @media (prefers-color-scheme: dark){body{background:#000;color:#fff}}
 :focus-visible{outline:2px solid #007bff;outline-offset:2px}
+/* Оптимизация для предотвращения CLS на мобильных */
+@media (max-width:768px){
+  img[data-lcp]{min-height:200px;background:#e9e7df}
+}
 `;

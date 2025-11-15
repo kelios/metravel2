@@ -232,10 +232,19 @@ export const fetchTravels = async (
 
         const urlTravel = `${GET_TRAVELS}?${params}`;
         const res = await fetch(urlTravel);
-        return await res.json();
+        if (!res.ok) {
+            console.log('Error fetching Travels: HTTP', res.status);
+            return { data: [], total: 0 };
+        }
+        const result = await res.json();
+        // Убеждаемся, что возвращаем правильную структуру
+        if (Array.isArray(result)) {
+            return { data: result, total: result.length };
+        }
+        return result || { data: [], total: 0 };
     } catch (e) {
         console.log('Error fetching Travels:', e);
-        return [];
+        return { data: [], total: 0 };
     }
 };
 

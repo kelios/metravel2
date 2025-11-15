@@ -188,7 +188,19 @@ const useLCPPreload = (travel?: Travel) => {
     const first = travel?.gallery?.[0];
     if (!first?.url) return;
 
-    const href = buildVersioned(first.url, first.updated_at, first.id);
+    const baseUrl = first.url.split("?")[0];
+    const version = first.updated_at ? Date.parse(first.updated_at) : (first.id ? Number(first.id) : 0);
+    const verParam = version && Number.isFinite(version) ? `&v=${version}` : "";
+    
+    // Preload оптимального размера для LCP (mobile-first: 640px, desktop: 1024px)
+    const isMobile = window.innerWidth <= 768;
+    const optimalWidth = isMobile ? 640 : 1024;
+    const optimalHeight = first.width && first.height 
+      ? Math.round(optimalWidth * (first.height / first.width))
+      : Math.round(optimalWidth / (first.width && first.height ? first.width / first.height : 16 / 9));
+    
+    const href = `${baseUrl}?w=${optimalWidth}&h=${optimalHeight}&fit=crop&auto=format&q=85${verParam}`;
+    
     if (!document.querySelector(`link[rel="preload"][as="image"][href="${href}"]`)) {
       const link = document.createElement("link");
       link.rel = "preload";
@@ -234,6 +246,26 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
                                                                                          }) => {
   const src = buildVersioned(img.url, img.updated_at ?? null, img.id);
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9;
+  const baseWidth = img.width || 1200;
+  const baseHeight = img.height || Math.round(1200 / ratio);
+
+  // Генерируем srcset для responsive изображений (улучшает LCP на мобильных)
+  const srcset = useMemo(() => {
+    if (Platform.OS !== "web" || !img.url) return undefined;
+    const baseUrl = img.url.split("?")[0]; // убираем существующие параметры
+    const version = img.updated_at ? Date.parse(img.updated_at) : (img.id ? Number(img.id) : 0);
+    const verParam = version && Number.isFinite(version) ? `&v=${version}` : "";
+    
+    // Генерируем размеры для srcset (mobile-first подход)
+    const sizes = [400, 640, 768, 1024, 1280, 1920];
+    return sizes
+      .filter(w => w <= baseWidth * 1.5) // не генерируем размеры больше оригинала
+      .map(w => {
+        const h = Math.round(w / ratio);
+        return `${baseUrl}?w=${w}&h=${h}&fit=crop&auto=format&q=85${verParam} ${w}w`;
+      })
+      .join(", ");
+  }, [img.url, img.updated_at, img.id, ratio, baseWidth]);
 
   if (Platform.OS !== "web") {
     return (
@@ -254,9 +286,11 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
     <div style={{ width: "100%", contain: "layout style paint" as any }}>
       <img
         src={src}
+        srcSet={srcset}
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 1200px, 1920px"
         alt={alt || ""}
-        width={img.width || 1200}
-        height={img.height || Math.round(1200 / ratio)}
+        width={baseWidth}
+        height={baseHeight}
         style={{
           width: "100%",
           height: "auto",
@@ -271,6 +305,7 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
         fetchpriority="high"
         referrerPolicy="no-referrer"
         onLoad={onLoad as any}
+        data-lcp="true"
       />
     </div>
   );
@@ -406,35 +441,46 @@ export default function TravelDetails() {
 
   useLCPPreload(travel);
 
-  /* ---- warm up heavy lazy chunks on web (без Slider) ---- */
+  /* ---- warm up heavy lazy chunks on web (отложено для улучшения INP) ---- */
   useEffect(() => {
     if (Platform.OS !== "web") return;
+    // Увеличиваем задержку, чтобы не блокировать первый рендер
     rIC(() => {
       Promise.allSettled([
         import("@/components/travel/TravelDescription"),
         import("@/components/travel/PointList"),
         import("@/components/travel/NearTravelList"),
         import("@/components/travel/PopularTravelList"),
-        import("@/components/travel/ToggleableMapSection"),
-        import("@/components/Map"),
         import("@expo/vector-icons/MaterialIcons"),
       ]);
-    }, 800);
+    }, 1500);
+    // Карту загружаем еще позже (самый тяжелый компонент)
+    rIC(() => {
+      Promise.allSettled([
+        import("@/components/travel/ToggleableMapSection"),
+        import("@/components/Map"),
+      ]);
+    }, 3000);
   }, []);
 
-  /* ---- user flags ---- */
+  /* ---- user flags (отложенная загрузка для улучшения INP) ---- */
   const [isSuperuser, setIsSuperuser] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   useEffect(() => {
+    if (Platform.OS !== "web") return; // на native можно оставить синхронно
     let mounted = true;
-    AsyncStorage.multiGet(["isSuperuser", "userId"])
-      .then(([[, su], [, uid]]) => {
-        if (mounted) {
-          setIsSuperuser(su === "true");
-          setUserId(uid);
-        }
-      })
-      .catch(() => {});
+    // Откладываем чтение AsyncStorage до idle, чтобы не блокировать первый рендер
+    rIC(() => {
+      if (!mounted) return;
+      AsyncStorage.multiGet(["isSuperuser", "userId"])
+        .then(([[, su], [, uid]]) => {
+          if (mounted) {
+            setIsSuperuser(su === "true");
+            setUserId(uid);
+          }
+        })
+        .catch(() => {});
+    }, 1000);
     return () => {
       mounted = false;
     };
@@ -645,8 +691,24 @@ export default function TravelDetails() {
             <>
               {firstImg?.url && (
                 <>
-                  <link rel="preload" as="image" href={readyImage} fetchpriority="high" />
-                  {firstImgOrigin && <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />}
+                  {/* Preload оптимизированного размера для LCP */}
+                  {(() => {
+                    const baseUrl = firstImg.url.split("?")[0];
+                    const version = firstImg.updated_at ? Date.parse(firstImg.updated_at) : (firstImg.id ? Number(firstImg.id) : 0);
+                    const verParam = version && Number.isFinite(version) ? `&v=${version}` : "";
+                    const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
+                    const optimalWidth = isMobile ? 640 : 1024;
+                    const optimalHeight = firstImg.width && firstImg.height 
+                      ? Math.round(optimalWidth * (firstImg.height / firstImg.width))
+                      : Math.round(optimalWidth / (firstImg.width && firstImg.height ? firstImg.width / firstImg.height : 16 / 9));
+                    const optimizedUrl = `${baseUrl}?w=${optimalWidth}&h=${optimalHeight}&fit=crop&auto=format&q=85${verParam}`;
+                    return (
+                      <>
+                        <link rel="preload" as="image" href={optimizedUrl} fetchPriority="high" />
+                        {firstImgOrigin && <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />}
+                      </>
+                    );
+                  })()}
                 </>
               )}
               <meta name="theme-color" content="#f9f8f2" />
@@ -796,14 +858,21 @@ const DeferredContent: React.FC<{
   }, []);
 
   const [visible, setVisible] = useState({
-    map: Platform.OS !== "web",
+    map: false, // Откладываем загрузку карты (тяжелый компонент)
     near: true,
     popular: true,
-    excursions: true,
+    excursions: false, // Откладываем загрузку виджета экскурсий
   });
 
   useEffect(() => {
-    setVisible((v) => ({ ...v, map: v.map || Platform.OS === "web" }));
+    // Загружаем карту и экскурсии только после idle (улучшает INP)
+    if (Platform.OS === "web") {
+      rIC(() => {
+        setVisible((v) => ({ ...v, map: true, excursions: true }));
+      }, 2000);
+    } else {
+      setVisible((v) => ({ ...v, map: true }));
+    }
   }, []);
 
   return (
@@ -840,9 +909,13 @@ const DeferredContent: React.FC<{
         visible.excursions &&
         (travel.travelAddress?.length ?? 0) > 0 && (
           <Suspense fallback={<Fallback />}>
-            <View ref={anchors.excursions} style={[styles.sectionContainer, styles.contentStable]} collapsable={false}>
+            <View 
+              ref={anchors.excursions} 
+              style={[styles.sectionContainer, styles.contentStable]} 
+              collapsable={false}
+            >
               <Text style={styles.sectionHeaderText}>Экскурсии</Text>
-              <View style={{ marginTop: 12 }}>
+              <View style={{ marginTop: 12, minHeight: 600 }} collapsable={false}>
                 <BelkrajWidgetComponent
                   countryCode={travel.countryCode}
                   points={travel.travelAddress}
@@ -856,7 +929,7 @@ const DeferredContent: React.FC<{
 
       <View ref={anchors.map} style={[styles.sectionContainer, styles.contentStable]} collapsable={false}>
         <Text style={styles.sectionHeaderText}></Text>
-        <View style={{ marginTop: 12 }}>
+        <View style={{ marginTop: 12, minHeight: 400 }} collapsable={false}>
           {canRenderHeavy && visible.map && (travel.coordsMeTravel?.length ?? 0) > 0 && (
             <Suspense fallback={<Fallback />}>
               <ToggleableMap>

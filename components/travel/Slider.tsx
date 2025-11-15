@@ -28,7 +28,10 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSpring,
   runOnJS,
+  interpolate,
+  Extrapolate,
 } from "react-native-reanimated";
 
 /* -------------------------------------------------------------------------- */
@@ -68,10 +71,11 @@ export interface SliderRef {
 /* -------------------------------------------------------------------------- */
 
 const DEFAULT_AR = 16 / 9;
-const DOT_SIZE = 8;
-const DOT_ACTIVE_SIZE = 12;
-const NAV_BTN_OFFSET = 10;
+const DOT_SIZE = 6;
+const DOT_ACTIVE_SIZE = 24; // Увеличиваем для современного вида (широкая активная точка)
+const NAV_BTN_OFFSET = 16;
 const MOBILE_HEIGHT_PERCENT = 0.7;
+const ARROW_ANIMATION_DURATION = 200;
 
 const buildUri = (img: SliderImage) => {
   const ts = img.updated_at ? Date.parse(img.updated_at) : Number(img.id);
@@ -96,16 +100,34 @@ const Dot = memo(function Dot({
   reduceMotion: boolean;
 }) {
   const style = useAnimatedStyle(() => {
-    const idx = clamp(Math.round(x.value / (containerW || 1)), 0, total - 1);
-    const active = idx === i;
-    const size = withTiming(active ? DOT_ACTIVE_SIZE : DOT_SIZE, {
-      duration: reduceMotion ? 0 : 160,
-    });
-    const opacity = withTiming(active ? 1 : 0.45, {
-      duration: reduceMotion ? 0 : 160,
-    });
-    return { width: size, height: size, opacity };
-  }, [containerW, total, reduceMotion]);
+    const scrollPosition = x.value;
+    const currentIndex = scrollPosition / (containerW || 1);
+    
+    // Плавная интерполяция для активной точки
+    const inputRange = [i - 1, i, i + 1];
+    const outputRange = [DOT_SIZE, DOT_ACTIVE_SIZE, DOT_SIZE];
+    
+    const width = interpolate(
+      currentIndex,
+      inputRange,
+      outputRange,
+      Extrapolate.CLAMP
+    );
+    
+    const opacity = interpolate(
+      currentIndex,
+      inputRange,
+      [0.3, 1, 0.3],
+      Extrapolate.CLAMP
+    );
+    
+    return {
+      width: reduceMotion ? (Math.abs(currentIndex - i) < 0.5 ? DOT_ACTIVE_SIZE : DOT_SIZE) : width,
+      height: DOT_SIZE,
+      opacity: reduceMotion ? (Math.abs(currentIndex - i) < 0.5 ? 1 : 0.3) : opacity,
+      borderRadius: DOT_SIZE / 2,
+    };
+  }, [containerW, total, reduceMotion, i]);
 
   return <Animated.View style={[styles.dot, style]} />;
 });
@@ -315,9 +337,18 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     [containerW]
   );
 
-  // прогреть стартовые
+  // прогреть стартовые (отложено для улучшения LCP)
   useEffect(() => {
-    if (images.length) warmNeighbors(0);
+    if (!images.length) return;
+    // Первое изображение уже загружается с high priority, остальные откладываем
+    if (Platform.OS === "web") {
+      // На web откладываем prefetch соседних изображений
+      const timer = setTimeout(() => warmNeighbors(0), 100);
+      return () => clearTimeout(timer);
+    } else {
+      // На native можно prefetch сразу
+      warmNeighbors(0);
+    }
   }, [images.length, warmNeighbors]);
 
   if (!images.length) return null;
@@ -370,10 +401,10 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
           <ExpoImage
             source={{ uri }}
             style={styles.img}
-            contentFit="contain"
+            contentFit="cover"
             cachePolicy="disk"
             priority={index === 0 ? "high" : "low"}
-            transition={reduceMotion ? 0 : 150}
+            transition={reduceMotion ? 0 : 200}
             contentPosition="center"
             accessibilityIgnoresInvertColors
             onLoad={() => {
@@ -405,23 +436,65 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   }) => {
     if (isMobile && hideArrowsOnMobile) return null;
 
+    const arrowOpacity = useSharedValue(1);
+    const arrowScale = useSharedValue(1);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+      opacity: arrowOpacity.value,
+      transform: [{ scale: arrowScale.value }],
+    }));
+
+    const handlePressIn = () => {
+      arrowOpacity.value = withSpring(0.7, { damping: 15 });
+      arrowScale.value = withSpring(0.95, { damping: 15 });
+    };
+
+    const handlePressOut = () => {
+      arrowOpacity.value = withSpring(1, { damping: 15 });
+      arrowScale.value = withSpring(1, { damping: 15 });
+    };
+
+    const [isHovered, setIsHovered] = useState(false);
+
+    const handleHover = useCallback((hover: boolean) => {
+      if (Platform.OS === "web" && !isMobile) {
+        setIsHovered(hover);
+        if (hover) {
+          arrowOpacity.value = withSpring(1, { damping: 15 });
+          arrowScale.value = withSpring(1.1, { damping: 15 });
+        } else {
+          arrowOpacity.value = withSpring(1, { damping: 15 });
+          arrowScale.value = withSpring(1, { damping: 15 });
+        }
+      }
+    }, [isMobile, arrowOpacity, arrowScale]);
+
     return (
       <TouchableOpacity
         onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        // @ts-ignore - web-only props
+        onMouseEnter={() => handleHover(true)}
+        onMouseLeave={() => handleHover(false)}
         accessibilityRole="button"
         accessibilityLabel={dir === "left" ? "Previous slide" : "Next slide"}
-        hitSlop={10}
+        hitSlop={12}
+        activeOpacity={0.8}
         style={[
           styles.navBtn,
           isMobile ? styles.navBtnMobile : styles.navBtnDesktop,
           dir === "left"
-            ? { left: NAV_BTN_OFFSET + (isMobile ? 5 : insets.left) }
-            : { right: NAV_BTN_OFFSET + (isMobile ? 5 : insets.right) },
+            ? { left: NAV_BTN_OFFSET + (isMobile ? 8 : insets.left) }
+            : { right: NAV_BTN_OFFSET + (isMobile ? 8 : insets.right) },
+          Platform.OS === "web" && isHovered && styles.navBtnHover,
         ]}
       >
-        <Text style={[styles.navIcon, isMobile && styles.navIconMobile]}>
-          {dir === "left" ? "‹" : "›"}
-        </Text>
+        <Animated.View style={animatedStyle}>
+          <View style={styles.arrowIconContainer}>
+            <View style={[styles.arrowIcon, dir === "left" ? styles.arrowLeft : styles.arrowRight]} />
+          </View>
+        </Animated.View>
       </TouchableOpacity>
     );
   };
@@ -447,9 +520,11 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
         onScroll={onScroll}
         scrollEventThrottle={16}
         renderItem={renderItem}
-        initialNumToRender={Math.min(images.length, 2)}
-        windowSize={3 + preloadCount * 2}
-        maxToRenderPerBatch={2 + preloadCount}
+        initialNumToRender={1} // Уменьшаем до 1 для улучшения LCP (рендерим только первый слайд сразу)
+        windowSize={2 + preloadCount} // Уменьшаем windowSize для меньшего initial render
+        maxToRenderPerBatch={1 + preloadCount} // Уменьшаем batch size
+        maintainVisibleContentPosition={Platform.OS === "ios" ? undefined : { minIndexForVisible: 0 }}
+        disableIntervalMomentum={true}
         // removeClippedSubviews — отключено, чтобы избежать пустых слайдов на Android
         getItemLayout={getItemLayout}
         bounces={false}
@@ -488,25 +563,28 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
           pointerEvents="box-none"
           accessibilityRole="tablist"
         >
-          {images.map((_, i) => (
-            <TouchableOpacity
-              key={`dot-${i}`}
-              style={styles.dotWrap}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: indexRef.current === i }}
-              accessibilityLabel={`Go to slide ${i + 1}`}
-              onPress={() => scrollTo(i)}
-              hitSlop={12}
-            >
-              <Dot
-                i={i}
-                x={x}
-                containerW={containerW}
-                total={images.length}
-                reduceMotion={reduceMotion}
-              />
-            </TouchableOpacity>
-          ))}
+          <View style={styles.dotsContainer}>
+            {images.map((_, i) => (
+              <TouchableOpacity
+                key={`dot-${i}`}
+                style={styles.dotWrap}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: indexRef.current === i }}
+                accessibilityLabel={`Go to slide ${i + 1}`}
+                onPress={() => scrollTo(i)}
+                hitSlop={8}
+                activeOpacity={0.7}
+              >
+                <Dot
+                  i={i}
+                  x={x}
+                  containerW={containerW}
+                  total={images.length}
+                  reduceMotion={reduceMotion}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       )}
     </View>
@@ -524,6 +602,20 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
     borderRadius: 12,
+    ...Platform.select({
+      web: {
+        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+      },
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   wrapperMobile: {
     borderRadius: 8,
@@ -536,51 +628,106 @@ const styles = StyleSheet.create({
   navBtn: {
     position: "absolute",
     top: "50%",
-    marginTop: -20,
-    backgroundColor: "rgba(0,0,0,0.42)",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 22,
+    marginTop: -24,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     zIndex: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    ...Platform.select({
+      web: {
+        cursor: "pointer",
+        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+      },
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   navBtnDesktop: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
   },
   navBtnMobile: {
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(255,255,255,0.9)",
   },
-  navIcon: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "600",
-    lineHeight: 22,
+  navBtnHover: {
+    backgroundColor: "rgba(255,255,255,1)",
+    ...Platform.select({
+      web: {
+        boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+      },
+    }),
   },
-  navIconMobile: {
-    fontSize: 18,
-    lineHeight: 18,
+  arrowIconContainer: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  arrowIcon: {
+    width: 12,
+    height: 12,
+    borderTopWidth: 2,
+    borderRightWidth: 2,
+    borderColor: "#2f332e",
+  },
+  arrowLeft: {
+    transform: [{ rotate: "-135deg" }],
+    marginLeft: 2,
+  },
+  arrowRight: {
+    transform: [{ rotate: "45deg" }],
+    marginRight: 2,
   },
   dots: {
     position: "absolute",
-    bottom: 12,
+    bottom: 16,
     left: 0,
     right: 0,
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 10,
+    alignItems: "center",
+    zIndex: 10,
   },
   dotsMobile: {
-    bottom: 8,
+    bottom: 12,
+  },
+  dotsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    ...Platform.select({
+      web: {
+        backdropFilter: "blur(8px)",
+      },
+    }),
   },
   dotWrap: {
-    padding: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
   },
   dot: {
-    backgroundColor: "#000",
-    borderRadius: 999,
+    backgroundColor: "#ffffff",
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2,
+    ...Platform.select({
+      web: {
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      },
+    }),
   },
 });

@@ -8,6 +8,7 @@ import { FiltersProvider } from "@/providers/FiltersProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+// Lazy loading для Footer - отложенная загрузка некритичных компонентов
 const Footer = lazy(() => import("@/components/Footer"));
 
 /** ===== Helpers ===== */

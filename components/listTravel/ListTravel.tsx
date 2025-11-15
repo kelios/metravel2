@@ -38,6 +38,7 @@ import {
 } from "@/src/api/travels";
 import { renderPreviewToBlobURL, saveContainerAsPDF } from "@/src/utils/pdfWeb";
 import TravelPdfTemplate from "@/components/export/TravelPdfTemplate";
+import { useFilters } from "@/providers/FiltersProvider";
 
 /* ===== Constants ===== */
 const INITIAL_FILTER = { year: "", showModerationPending: false };
@@ -162,7 +163,39 @@ function ListTravel() {
     /* Top-bar state */
     const [search, setSearch] = useState("");
     const debSearch = useDebounce(search);
-    const [filter, setFilter] = useState(INITIAL_FILTER);
+    
+    /* Filters from context */
+    const { filters: contextFilters, updateFilters } = useFilters();
+    
+    /* Local filter state (includes showModerationPending which is not in context) */
+    const [filter, setFilter] = useState(() => ({
+        ...INITIAL_FILTER,
+        ...contextFilters,
+    }));
+    
+    /* Sync context filters with local state (only when context actually changes) */
+    const prevContextFiltersRef = useRef(contextFilters);
+    useEffect(() => {
+        // Проверяем, действительно ли изменились фильтры
+        const prev = prevContextFiltersRef.current;
+        const hasChanges = Object.keys(contextFilters).some(key => {
+            const contextValue = contextFilters[key as keyof typeof contextFilters];
+            const prevValue = prev[key as keyof typeof prev];
+            if (Array.isArray(contextValue) && Array.isArray(prevValue)) {
+                return contextValue.length !== prevValue.length || 
+                       contextValue.some((v, i) => v !== prevValue[i]);
+            }
+            return contextValue !== prevValue;
+        });
+        
+        if (hasChanges) {
+            setFilter((prev) => ({
+                ...prev,
+                ...contextFilters,
+            }));
+            prevContextFiltersRef.current = contextFilters;
+        }
+    }, [contextFilters]);
 
     // infinite scroll
     const [currentPage, setCurrentPage] = useState(0);
@@ -190,18 +223,27 @@ function ListTravel() {
     /* Query params (stable object) */
     const queryParams = useMemo(() => {
         const p: Record<string, any> = {};
+        
+        // Сначала добавляем все фильтры (кроме showModerationPending)
         Object.entries(filter).forEach(([k, v]) => {
             if (k === "showModerationPending") return;
-            if (Array.isArray(v) ? v.length : v) p[k] = v;
+            // Преобразуем overNightStay в over_nights_stay для API
+            const apiKey = k === "overNightStay" ? "over_nights_stay" : k;
+            if (Array.isArray(v) ? v.length : v) p[apiKey] = v;
         });
 
+        // Применяем фильтры модерации только для обычных страниц (не для isMeTravel и isExport)
         if (!(isMeTravel || isExport)) {
-            if (!filter.showModerationPending) {
+            // По умолчанию показываем только опубликованные и прошедшие модерацию
+            // Это применяется только если showModerationPending явно не установлен в true
+            if (filter.showModerationPending === true) {
+                // Показываем статьи на модерации (moderation: 0)
+                p.moderation = 0;
+                // Не добавляем publish, чтобы видеть все статьи на модерации
+            } else {
+                // Показываем только опубликованные и прошедшие модерацию
                 p.publish = 1;
                 p.moderation = 1;
-            } else {
-                // явное отсутствие фильтров модерации
-                // не кладём undefined в запросы
             }
         }
 
@@ -240,30 +282,73 @@ function ListTravel() {
             return fetchTravels(page, perPage, search, params, { signal });
         },
         enabled: isQueryEnabled,
-        keepPreviousData: true,
-        staleTime: 60 * 1000,
+        keepPreviousData: true, // Сохраняем предыдущие данные во время загрузки новых
+        staleTime: 0, // Данные считаются устаревшими сразу, чтобы всегда загружались свежие
         cacheTime: 5 * 60 * 1000,
     });
 
-    const total = data?.total ?? 0;
+    // Обрабатываем ответ от API - может быть массив или объект с data и total
+    const responseData = Array.isArray(data) ? data : (data?.data ?? []);
+    const total = Array.isArray(data) ? data.length : (data?.total ?? 0);
     const hasMore = (currentPage + 1) * PER_PAGE < total;
 
     /* Accumulate */
     useEffect(() => {
         if (!isQueryEnabled) return;
         if (status !== "success") return;
+        // Если данных нет, но запрос успешен - это нормально (пустой результат)
+        if (data === null || data === undefined) {
+            if (currentPage === 0) {
+                setAccumulatedData([]);
+            }
+            return;
+        }
 
-        const chunk = data?.data ?? [];
-        setAccumulatedData((prev) => (currentPage === 0 ? chunk : [...prev, ...chunk]));
+        // Обрабатываем ответ - может быть массив или объект с data
+        let chunk: any[] = [];
+        if (Array.isArray(data)) {
+            chunk = data;
+        } else if (data && typeof data === 'object' && 'data' in data) {
+            chunk = Array.isArray(data.data) ? data.data : [];
+        }
+        
+        // Проверяем, что chunk действительно массив
+        if (!Array.isArray(chunk)) {
+            console.warn('[ListTravel] chunk is not an array:', chunk, 'data:', data);
+            return;
+        }
+        
+        // При смене страницы на 0 полностью заменяем данные, иначе добавляем
+        if (currentPage === 0) {
+            setAccumulatedData(chunk);
+        } else {
+            setAccumulatedData((prev) => {
+                // Предотвращаем дубликаты
+                const existingIds = new Set(prev.map((item: any) => item?.id ?? item?.slug ?? String(item)));
+                const newItems = chunk.filter((item: any) => {
+                    const id = item?.id ?? item?.slug ?? String(item);
+                    return id && !existingIds.has(id);
+                });
+                return [...prev, ...newItems];
+            });
+        }
         // сбрасываем флаг только когда реально пришла новая партия
         isLoadingMoreRef.current = false;
     }, [isQueryEnabled, status, data, currentPage]);
 
-    // reset on search/filter change — очищаем сразу
+    // reset on search/filter change — сбрасываем страницу, но НЕ очищаем данные сразу
+    // Данные очистятся автоматически когда придут новые (currentPage === 0)
+    const prevQueryParamsRef = useRef<string>('');
     useEffect(() => {
-        setCurrentPage(0);
-        setAccumulatedData([]);
-        isLoadingMoreRef.current = false;
+        const currentParamsStr = JSON.stringify(queryParams) + debSearch;
+        // Проверяем, действительно ли изменились параметры запроса
+        if (prevQueryParamsRef.current !== currentParamsStr) {
+            setCurrentPage(0);
+            isLoadingMoreRef.current = false;
+            prevQueryParamsRef.current = currentParamsStr;
+            // НЕ очищаем accumulatedData здесь - это сделает useEffect для накопления данных
+            // когда придут новые данные с currentPage === 0
+        }
     }, [debSearch, queryParams]);
 
     // prefetch next page — только когда ничего не грузим сейчас
@@ -286,22 +371,55 @@ function ListTravel() {
 
     /* Filters helpers */
     const resetFilters = useCallback(() => {
-        setFilter(INITIAL_FILTER);
+        const resetValues = INITIAL_FILTER;
+        setFilter(resetValues);
+        // Обновляем контекст (исключая showModerationPending)
+        const { showModerationPending, ...filtersToContext } = resetValues;
+        updateFilters({
+            countries: [],
+            categories: [],
+            categoryTravelAddress: [],
+            companions: [],
+            complexity: [],
+            month: [],
+            overNightStay: [],
+            transports: [],
+            year: '',
+        });
         setCurrentPage(0);
         setAccumulatedData([]);
-    }, []);
+    }, [updateFilters]);
 
     const onSelect = useCallback((field: string, v: any) => {
-        setFilter((p) => ({ ...p, [field]: v }));
+        // Сбрасываем страницу ПЕРЕД обновлением фильтра
         setCurrentPage(0);
-        setAccumulatedData([]);
-    }, []);
+        isLoadingMoreRef.current = false;
+        
+        setFilter((p) => {
+            const newFilter = { ...p, [field]: v };
+            // Обновляем контекст для полей, которые там есть
+            if (field !== 'showModerationPending') {
+                updateFilters({ [field]: v });
+            }
+            return newFilter;
+        });
+        
+        // Инвалидируем кеш запросов при изменении фильтра модерации
+        if (field === 'showModerationPending') {
+            queryClient.invalidateQueries({ queryKey: ["travels"] });
+        }
+        // НЕ очищаем accumulatedData здесь - данные очистятся автоматически
+        // когда придут новые данные с currentPage === 0 в useEffect для накопления
+    }, [updateFilters, queryClient]);
 
     const applyFilter = useCallback((v: any) => {
         setFilter(v);
+        // Обновляем контекст (исключая showModerationPending)
+        const { showModerationPending, ...filtersToContext } = v;
+        updateFilters(filtersToContext);
         setCurrentPage(0);
         setAccumulatedData([]);
-    }, []);
+    }, [updateFilters]);
 
     /* Delete */
     const handleDelete = useCallback(async () => {
@@ -440,9 +558,17 @@ function ListTravel() {
     /* Loading helpers */
     const hasAnyItems = accumulatedData.length > 0;
     const isInitialLoading =
-      isQueryEnabled && isLoading && !hasAnyItems; // не показываем лоадер, если disabled
+      isQueryEnabled && (isLoading || (isFetching && !hasAnyItems && currentPage === 0)); // показываем лоадер при первой загрузке
     const isNextPageLoading = isFetching && hasAnyItems;
-    const isEmpty = isQueryEnabled && status === "success" && !isFetching && !hasAnyItems;
+    // Пусто только если запрос успешен, не загружается, нет данных, и мы на первой странице
+    // Также проверяем, что данные действительно пустые (не просто еще не загрузились)
+    const isEmpty = isQueryEnabled && 
+                     status === "success" && 
+                     !isFetching && 
+                     !isLoading &&
+                     !hasAnyItems && 
+                     currentPage === 0 &&
+                     (data === null || data === undefined || (Array.isArray(data) ? data.length === 0 : (data?.data?.length ?? 0) === 0));
 
     const canLoadMore = !isNextPageLoading && hasMore && !isPreviousData;
 
