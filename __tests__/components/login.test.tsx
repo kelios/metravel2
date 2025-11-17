@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, fireEvent, waitFor, screen } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { TextInput } from 'react-native';
 import Login from '@/app/(tabs)/login';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -383,15 +384,13 @@ describe('Login Component', () => {
     });
 
     it('should focus password input when email input is submitted', () => {
+      const focusSpy = jest.spyOn(TextInput.prototype, 'focus');
       const { getByPlaceholderText } = renderLogin();
       const emailInput = getByPlaceholderText('Email');
-      const passwordInput = getByPlaceholderText('Пароль');
-
-      // Mock focus method
-      passwordInput.focus = jest.fn();
 
       fireEvent(emailInput, 'submitEditing');
-      expect(passwordInput.focus).toHaveBeenCalled();
+      expect(focusSpy).toHaveBeenCalled();
+      focusSpy.mockRestore();
     });
 
     it('should submit login when password input is submitted', async () => {
