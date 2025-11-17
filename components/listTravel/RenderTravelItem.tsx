@@ -1,0 +1,113 @@
+// src/components/listTravel/RenderTravelItem.tsx
+import React, { memo, useMemo } from "react";
+import { Platform, View, useWindowDimensions } from "react-native";
+import TravelListItem from "./TravelListItem";
+import AnimatedCard from "../AnimatedCard";
+import type { Travel } from "@/src/types/types";
+
+type RenderTravelItemProps = {
+    item: Travel;
+    index?: number;
+    isMobile?: boolean;
+    isSuperuser?: boolean;
+    isMetravel?: boolean;
+    onDeletePress?: (id: number) => void;
+    onEditPress?: (args: any) => void;
+    isFirst?: boolean;
+    isSingle?: boolean;
+    selectable?: boolean;
+    isSelected?: boolean;
+    onToggle?: () => void;
+};
+
+function RenderTravelItem({
+                              item,
+                              index = 0,
+                              isMobile = false,
+                              isSuperuser,
+                              isMetravel,
+                              onDeletePress,
+                              onEditPress,
+                              isFirst,
+                              isSingle = false,
+                              selectable = false,
+                              isSelected = false,
+                              onToggle,
+                          }: RenderTravelItemProps) {
+    if (!item) return null;
+
+    const { width } = useWindowDimensions();
+    const isTablet = width >= 768 && width < 1024;
+
+    const containerStyle = useMemo(() => {
+        const base = {
+            borderRadius: 12,
+            overflow:
+                Platform.OS === "android"
+                    ? ("visible" as const)
+                    : ("hidden" as const),
+            marginBottom: isMobile ? 12 : 16,
+        };
+
+        if (isSingle) {
+            return {
+                ...base,
+                width: "100%",
+                maxWidth: 600,
+                alignSelf: "center" as const,
+                paddingHorizontal: isMobile ? 8 : 16,
+            };
+        }
+
+        if (isMobile) {
+            return {
+                ...base,
+                width: "100%",
+            };
+        }
+
+        return {
+            ...base,
+            flex: 1,
+            flexBasis: isTablet ? "48%" : "31%",
+            maxWidth: isTablet ? "48%" : "31%",
+        };
+    }, [isMobile, isTablet, isSingle]);
+
+    return (
+        <AnimatedCard index={index || 0} style={containerStyle}>
+            <TravelListItem
+                travel={item}
+                isMobile={isMobile}
+                isSuperuser={isSuperuser}
+                isMetravel={isMetravel}
+                onDeletePress={onDeletePress}
+                onEditPress={onEditPress}
+                isFirst={!!isFirst}
+                isSingle={!!isSingle}
+                selectable={!!selectable}
+                isSelected={!!isSelected}
+                onToggle={onToggle}
+            />
+        </AnimatedCard>
+    );
+}
+
+function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
+    // Важно: сравниваем ссылку на объект, чтобы компонент обновлялся,
+    // когда react-query приносит новый объект с тем же id.
+    const sameItemRef = prev.item === next.item;
+
+    const sameFlags =
+        prev.isSuperuser === next.isSuperuser &&
+        prev.isMetravel === next.isMetravel &&
+        prev.isFirst === next.isFirst &&
+        prev.isSingle === next.isSingle &&
+        prev.selectable === next.selectable &&
+        prev.isSelected === next.isSelected &&
+        prev.isMobile === next.isMobile;
+
+    return sameItemRef && sameFlags;
+}
+
+export default memo(RenderTravelItem, areEqual);

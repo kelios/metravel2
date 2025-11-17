@@ -1,0 +1,239 @@
+import '@testing-library/jest-native/extend-expect'
+
+// Basic DOM polyfills for react-native-web components used in tests
+if (typeof window === 'undefined') {
+  ;(global as any).window = {
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    matchMedia: jest.fn(() => ({
+      matches: false,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+    })),
+    requestAnimationFrame: (cb: any) => setTimeout(cb, 0),
+    cancelAnimationFrame: (id: number) => clearTimeout(id),
+    requestIdleCallback: jest.fn((cb: any) => setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 16 }), 0)),
+    cancelIdleCallback: jest.fn((id: number) => clearTimeout(id)),
+    matchMedia: jest.fn(() => ({
+      matches: false,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  }
+}
+
+if (!('matchMedia' in window)) {
+  ;(window as any).matchMedia = jest.fn(() => ({
+    matches: false,
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  }));
+}
+
+if (typeof document === 'undefined') {
+  const createElement = (tag: string) => ({
+    tagName: tag.toUpperCase(),
+    style: {},
+    setAttribute: jest.fn(),
+    appendChild: jest.fn(),
+    removeChild: jest.fn(),
+    querySelector: jest.fn(),
+    querySelectorAll: jest.fn(() => []),
+    getContext: jest.fn(),
+  })
+
+  ;(global as any).document = {
+    createElement,
+    body: {
+      appendChild: jest.fn(),
+      removeChild: jest.fn(),
+    },
+    head: {
+      appendChild: jest.fn(),
+      removeChild: jest.fn(),
+      querySelectorAll: jest.fn(() => []),
+    },
+    querySelector: jest.fn(() => null),
+  }
+}
+
+if (typeof navigator === 'undefined') {
+  ;(global as any).navigator = { userAgent: 'node.js' }
+}
+
+if (typeof (window as any).Image === 'undefined') {
+  ;(window as any).Image = class {
+    onload?: () => void
+    onerror?: () => void
+    set src(_value: string) {
+      setTimeout(() => {
+        if (this.onload) {
+          this.onload()
+        }
+      }, 0)
+    }
+  }
+}
+
+// Mock expo-router
+jest.mock('expo-router', () => {
+  const React = require('react')
+  const RN = require('react-native')
+  return {
+    router: {
+      push: jest.fn(),
+      replace: jest.fn(),
+      back: jest.fn(),
+    },
+    Link: ({ children, href, ...props }: any) => {
+      const content = React.Children.map(children, (child: any) =>
+        typeof child === 'string'
+          ? React.createElement(RN.Text, null, child)
+          : child
+      )
+      return React.createElement(RN.TouchableOpacity, props, content)
+    },
+    useRouter: () => ({
+      push: jest.fn(),
+      replace: jest.fn(),
+      back: jest.fn(),
+    }),
+    usePathname: () => '/',
+    useSegments: () => [],
+    Href: {} as any,
+  }
+})
+
+// Mock AsyncStorage
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+)
+
+// Mock react-native-vector-icons
+jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+  return ({ name, size, color, ...props }: any) =>
+    React.createElement(View, { testID: `icon-${name}`, ...props })
+})
+
+jest.mock('react-native-vector-icons/MaterialIcons', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+  return ({ name, ...props }: any) =>
+    React.createElement(View, { testID: `material-${name}`, ...props })
+})
+
+// Mock expo-vector-icons
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+  return {
+    Feather: ({ name, size, color, ...props }: any) =>
+      React.createElement(View, { testID: `feather-${name}`, ...props }),
+    FontAwesome5: ({ name, size, color, ...props }: any) =>
+      React.createElement(View, { testID: `fa5-${name}`, ...props }),
+    MaterialIcons: ({ name, size, color, ...props }: any) =>
+      React.createElement(View, { testID: `material-${name}`, ...props }),
+  }
+})
+
+// Mock react-native-paper Portal
+jest.mock('react-native-paper', () => {
+  const RN = require('react-native')
+  const Paper = jest.requireActual('react-native-paper')
+  return {
+    ...Paper,
+    Portal: ({ children }: any) => children,
+  }
+})
+
+// Mock Linking
+jest.mock('react-native/Libraries/Linking/Linking', () => ({
+  openURL: jest.fn(() => Promise.resolve()),
+  canOpenURL: jest.fn(() => Promise.resolve(true)),
+}))
+
+// Mock safe area context to avoid native dependency
+jest.mock('react-native-safe-area-context', () => {
+  const React = require('react')
+  const insetValue = { top: 0, right: 0, bottom: 0, left: 0 }
+  return {
+    SafeAreaProvider: ({ children }: any) => children,
+    SafeAreaView: ({ children }: any) => children,
+    SafeAreaInsetsContext: React.createContext(insetValue),
+    useSafeAreaInsets: () => insetValue,
+  }
+})
+
+// Mock expo web browser dependency
+jest.mock('expo-web-browser', () => ({
+  openBrowserAsync: jest.fn(() => Promise.resolve({ type: 'dismiss' })),
+  dismissBrowser: jest.fn(),
+}))
+
+// Mock expo font loader used by vector icons
+jest.mock('expo-font', () => ({
+  loadAsync: jest.fn(() => Promise.resolve()),
+}))
+
+// Mock expo-image to avoid native dependencies
+jest.mock('expo-image', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+  const MockImage = ({ children, ...props }: any) =>
+    React.createElement(View, props, children)
+  return {
+    __esModule: true,
+    Image: MockImage,
+    default: MockImage,
+  }
+})
+
+jest.mock('react-native-toast-message', () => ({
+  __esModule: true,
+  default: {
+    show: jest.fn(),
+    hide: jest.fn(),
+  },
+}))
+
+// Mock native modules before mocking react-native
+jest.mock('react-native/Libraries/Settings/NativeSettingsManager', () => ({
+  __esModule: true,
+  default: {
+    getConstants: jest.fn(() => ({})),
+    setValues: jest.fn(),
+    deleteValues: jest.fn(),
+  },
+}))
+
+// Mock window dimensions and native modules
+jest.mock('react-native', () => {
+  const RN = jest.requireActual('react-native')
+  return {
+    ...RN,
+    useWindowDimensions: () => ({ width: 375, height: 667 }),
+    Settings: {
+      get: jest.fn(),
+      set: jest.fn(),
+      watchKeys: jest.fn(),
+      clearWatch: jest.fn(),
+    },
+  }
+})
+
+jest.mock('react-native-reanimated', () => {
+  const Reanimated = require('react-native-reanimated/mock');
+  Reanimated.default.call = () => {};
+  return Reanimated;
+});
+
+global.__reanimatedWorkletInit = global.__reanimatedWorkletInit || jest.fn();
+

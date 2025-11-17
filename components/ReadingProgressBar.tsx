@@ -1,0 +1,82 @@
+// Прогресс-бар чтения для детальной страницы
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated, Platform } from 'react-native';
+
+interface ReadingProgressBarProps {
+  scrollY: Animated.Value;
+  contentHeight: number;
+  viewportHeight: number;
+}
+
+export default function ReadingProgressBar({
+  scrollY,
+  contentHeight,
+  viewportHeight,
+}: ReadingProgressBarProps) {
+  const progressAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const listener = scrollY.addListener(({ value }) => {
+      const scrollableHeight = contentHeight - viewportHeight;
+      if (scrollableHeight <= 0) {
+        progressAnim.setValue(0);
+        return;
+      }
+      
+      const progress = Math.min(Math.max(value / scrollableHeight, 0), 1);
+      Animated.timing(progressAnim, {
+        toValue: progress,
+        duration: 100,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    return () => {
+      scrollY.removeListener(listener);
+    };
+  }, [scrollY, contentHeight, viewportHeight, progressAnim]);
+
+  return (
+    <View style={styles.container}>
+      <Animated.View
+        style={[
+          styles.progressBar,
+          {
+            width: progressAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['0%', '100%'],
+            }),
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4, // ✅ УВЕЛИЧЕНО: с 3 до 4 для лучшей видимости
+    backgroundColor: 'rgba(0,0,0,0.08)', // ✅ Более прозрачный фон
+    zIndex: 1000,
+    ...Platform.select({
+      web: {
+        position: 'fixed',
+      },
+    }),
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#ff9f5a', // ✅ ИЗМЕНЕН ЦВЕТ: оранжевый из навигации для лучшей видимости
+    ...Platform.select({
+      web: {
+        transition: 'width 0.15s ease-out', // ✅ Более плавная анимация
+        boxShadow: '0 2px 4px rgba(255, 159, 90, 0.3)', // ✅ Добавлена тень для глубины
+      },
+    }),
+  },
+});
+
