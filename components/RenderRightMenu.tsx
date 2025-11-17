@@ -1,0 +1,168 @@
+import React, { useState, useCallback } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    useWindowDimensions,
+} from 'react-native';
+import { Menu, Divider } from 'react-native-paper';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useFilters } from '@/providers/FiltersProvider';
+import { useAuth } from '@/context/AuthContext';
+import { useFavorites } from '@/context/FavoritesContext';
+import { router } from 'expo-router';
+
+function RenderRightMenu() {
+    const { isAuthenticated, username, logout, user } = useAuth();
+    const { favorites } = useFavorites();
+    const { updateFilters } = useFilters();
+    const [visible, setVisible] = useState(false);
+    const { width } = useWindowDimensions();
+    const isMobile = width <= 768;
+
+    const openMenu = useCallback(() => setVisible(true), []);
+    const closeMenu = useCallback(() => setVisible(false), []);
+
+    const handleNavigate = useCallback(
+        (path: string, extraAction?: () => void) => {
+            requestAnimationFrame(() => {
+                extraAction?.();
+                router.push(path);
+                closeMenu();
+            });
+        },
+        [closeMenu]
+    );
+
+    const handleLogout = useCallback(async () => {
+        await logout();
+        closeMenu();
+        router.push('/');
+    }, [logout, closeMenu]);
+
+    return (
+        <View style={styles.container}>
+            {username && !isMobile && (
+                <View style={styles.userContainer}>
+                    <Icon name="account-circle" size={24} color="#333" />
+                    <Text style={styles.username} numberOfLines={1}>
+                        {username}
+                    </Text>
+                </View>
+            )}
+
+            <Menu
+                visible={visible}
+                onDismiss={closeMenu}
+                contentStyle={styles.menuContent}
+                anchor={
+                    <TouchableOpacity onPress={openMenu} style={styles.menuButton}>
+                        <Icon name="menu" size={24} color="#333" />
+                    </TouchableOpacity>
+                }
+            >
+                {!isAuthenticated ? (
+                    <>
+                        <Menu.Item
+                            onPress={() => handleNavigate('/login')}
+                            title="Войти"
+                            leadingIcon="login"
+                        />
+                        <Menu.Item
+                            onPress={() => handleNavigate('/registration')}
+                            title="Зарегистрироваться"
+                            leadingIcon="account-plus"
+                        />
+                    </>
+                ) : (
+                    <>
+                        <Menu.Item
+                            onPress={() => handleNavigate('/profile')}
+                            title={`Личный кабинет${favorites.length > 0 ? ` (${favorites.length})` : ''}`}
+                            leadingIcon={({ size }) => (
+                                <Icon name="account-circle" size={size} color="#6b8e7f" />
+                            )}
+                        />
+                        <Divider />
+                        <Menu.Item
+                            onPress={() =>
+                                handleNavigate('/metravel', () =>
+                                    updateFilters({ user_id: user?.id })
+                                )
+                            }
+                            title="Мои путешествия"
+                            leadingIcon={({ size }) => (
+                                <Icon name="earth" size={size} color="#6aaaaa" />
+                            )}
+                        />
+                        <Divider />
+                        <Menu.Item
+                            onPress={() => handleNavigate('/travel/new')}
+                            title="Добавить путешествие"
+                            leadingIcon={({ size }) => (
+                                <Icon name="map-plus" size={size} color="#6aaaaa" />
+                            )}
+                        />
+                        <Divider />
+                        <Menu.Item
+                            onPress={() => handleNavigate('/export')}
+                            title="Экспорт в PDF"
+                            leadingIcon={({ size }) => (
+                                <Icon name="file-pdf-box" size={size} color="#b83a3a" />
+                            )}
+                        />
+                        <Divider />
+                        <Menu.Item
+                            onPress={handleLogout}
+                            title="Выход"
+                            leadingIcon={({ size }) => (
+                                <Icon name="logout" size={size} color="#6aaaaa" />
+                            )}
+                        />
+                    </>
+                )}
+            </Menu>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: { 
+        flexDirection: 'row', 
+        alignItems: 'center',
+        gap: 8,
+    },
+    userContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f5f5f5',
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 20,
+        maxWidth: 180,
+    },
+    username: { fontSize: 16, color: '#333', marginLeft: 6 },
+    menuButton: {
+        backgroundColor: '#f0f0f0',
+        borderRadius: 24,
+        padding: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    menuContent: {
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        paddingVertical: 4,
+        elevation: 5,
+        minWidth: 200,
+        borderColor: '#e0e0e0',
+        borderWidth: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+    },
+});
+
+export default React.memo(RenderRightMenu);
