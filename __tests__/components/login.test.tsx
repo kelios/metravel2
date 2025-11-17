@@ -20,6 +20,7 @@ jest.mock('@react-navigation/native', () => {
   const actualNav = jest.requireActual('@react-navigation/native');
   return {
     ...actualNav,
+    NavigationContainer: ({ children }: any) => <>{children}</>,
     useNavigation: () => ({
       reset: jest.fn(),
       navigate: jest.fn(),
@@ -48,17 +49,19 @@ jest.mock('react-native', () => {
 
 jest.mock('react-native-paper', () => {
   const RN = require('react-native');
-  return {
-    Card: ({ children, ...props }: any) => <RN.View {...props}>{children}</RN.View>,
-    Button: ({ onPress, children, disabled, ...props }: any) => {
-      const { TouchableOpacity } = RN;
-      return (
-        <TouchableOpacity onPress={onPress} disabled={disabled} {...props}>
-          {typeof children === 'string' ? <RN.Text>{children}</RN.Text> : children}
-        </TouchableOpacity>
-      );
-    },
+  const Card = ({ children, ...props }: any) => <RN.View {...props}>{children}</RN.View>;
+  Card.Content = ({ children, ...props }: any) => <RN.View {...props}>{children}</RN.View>;
+
+  const Button = ({ onPress, children, disabled, ...props }: any) => {
+    const { TouchableOpacity } = RN;
+    return (
+      <TouchableOpacity onPress={onPress} disabled={disabled} {...props}>
+        {typeof children === 'string' ? <RN.Text>{children}</RN.Text> : children}
+      </TouchableOpacity>
+    );
   };
+
+  return { Card, Button };
 });
 
 jest.mock('@/components/seo/InstantSEO', () => {
