@@ -42,7 +42,8 @@ const RadiusSelect: React.FC<RadiusSelectProps> = ({
         [options, value]
     );
 
-    const selectedLabel = selectedOption ? `${selectedOption.name} км` : placeholder;
+    const selectedLabel = selectedOption ? selectedOption.name : placeholder;
+    const hasSelection = Boolean(selectedOption);
 
     const handleChange = useCallback(
         (newValue: number | string | null) => {
@@ -93,15 +94,20 @@ const RadiusSelect: React.FC<RadiusSelectProps> = ({
                 {loading ? (
                     <ActivityIndicator size="small" color="#666" style={styles.loader} />
                 ) : (
-                    <Text
-                        style={[
-                            styles.selectorText,
-                            !value && styles.placeholderText,
-                            disabled && styles.textDisabled,
-                        ]}
-                    >
-                        {selectedLabel}
-                    </Text>
+                    <View style={styles.selectorLabel}>
+                        <Text
+                            style={[
+                                styles.selectorText,
+                                !value && styles.placeholderText,
+                                disabled && styles.textDisabled,
+                            ]}
+                        >
+                            {selectedLabel}
+                        </Text>
+                        {hasSelection && (
+                            <Text style={styles.selectorSuffix}> км</Text>
+                        )}
+                    </View>
                 )}
 
                 {!!value && !disabled && !loading && (
@@ -144,7 +150,10 @@ const RadiusSelect: React.FC<RadiusSelectProps> = ({
                                         ]}
                                         android_ripple={{ color: '#f0f0f0' }}
                                     >
-                                        <Text style={styles.optionText}>{item.name} км</Text>
+                                        <View style={styles.optionLabel}>
+                                            <Text style={styles.optionNumber}>{item.name}</Text>
+                                            <Text style={styles.optionSuffix}> км</Text>
+                                        </View>
                                         {isSelected && <Text style={styles.checkmark}>✓</Text>}
                                     </Pressable>
                                 );
@@ -193,8 +202,18 @@ const styles = StyleSheet.create({
     selectorText: {
         fontSize: 15,
         color: '#333',
-        flex: 1,
+        flexShrink: 1,
         paddingVertical: 2,
+    },
+    selectorLabel: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        flex: 1,
+    },
+    selectorSuffix: {
+        fontSize: 13,
+        marginLeft: 4,
+        color: '#666',
     },
     placeholderText: {
         color: '#999',
@@ -261,9 +280,18 @@ const styles = StyleSheet.create({
         borderLeftWidth: 4,
         borderLeftColor: '#007aff',
     },
-    optionText: {
+    optionLabel: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        gap: 4,
+    },
+    optionNumber: {
         fontSize: 15,
         color: '#333',
+    },
+    optionSuffix: {
+        fontSize: 13,
+        color: '#666',
     },
     checkmark: {
         color: '#007aff',

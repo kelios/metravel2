@@ -1,161 +1,130 @@
-/**
- * Кастомный хук для управления экспортом в PDF
- * Вынесена логика экспорта для переиспользования и тестирования
- */
-
-import React, { useState, useRef, useCallback } from 'react';
-import { Platform, Alert } from 'react-native';
-import { saveContainerAsPDF, renderPreviewToBlobURL } from '@/src/utils/pdfWeb';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import type { Travel } from '@/src/types/types';
+import type { BookSettings } from '@/components/export/BookSettingsModal';
+import { usePdfExport } from '@/src/hooks/usePdfExport';
+import type { ExportConfig } from '@/src/types/pdf-export';
+
+interface UseListTravelExportOptions {
+  ownerName?: string | null;
+  pdfConfig?: ExportConfig;
+}
 
 export interface UseListTravelExportReturn {
   selected: Travel[];
-  printRef: React.RefObject<HTMLDivElement>;
   toggleSelect: (travel: Travel) => void;
-  toggleSelectAll: (travels: Travel[]) => void;
+  toggleSelectAll: () => void;
   clearSelection: () => void;
   isSelected: (id: number | string) => boolean;
-  makePreview: () => Promise<void>;
-  savePdf: () => Promise<void>;
+  hasSelection: boolean;
+  selectionCount: number;
+  pdfExport: ReturnType<typeof usePdfExport>;
+  baseSettings: BookSettings;
+  lastSettings: BookSettings;
+  setLastSettings: Dispatch<SetStateAction<BookSettings>>;
+  settingsSummary: string;
+  handleSaveWithSettings: (settings: BookSettings) => Promise<void>;
+  handlePreviewWithSettings: (settings: BookSettings) => Promise<void>;
 }
 
-/**
- * ✅ АРХИТЕКТУРА: Хук для управления экспортом в PDF
- * 
- * Логика:
- * - Управление выбранными элементами
- * - Генерация PDF preview
- * - Сохранение PDF
- */
-export function useListTravelExport(): UseListTravelExportReturn {
+export function useListTravelExport(
+  travels: Travel[] = [],
+  { ownerName, pdfConfig }: UseListTravelExportOptions = {}
+): UseListTravelExportReturn {
   const [selected, setSelected] = useState<Travel[]>([]);
-  const printRef = useRef<HTMLDivElement>(null);
+  const pdfExport = usePdfExport(selected, pdfConfig);
 
-  // ✅ АРХИТЕКТУРА: Переключение выбора элемента
+  useEffect(() => {
+    if (!selected.length) return;
+    setSelected((prev) => prev.filter((travel) => travels.some((item) => item.id === travel.id)));
+  }, [travels, selected.length]);
+
   const toggleSelect = useCallback((travel: Travel) => {
     setSelected((prev) =>
-      prev.find((x) => x.id === travel.id) 
-        ? prev.filter((x) => x.id !== travel.id) 
-        : [...prev, travel]
+      prev.find((item) => item.id === travel.id) ? prev.filter((item) => item.id !== travel.id) : [...prev, travel]
     );
   }, []);
 
-  // ✅ АРХИТЕКТУРА: Выбор всех элементов
-  const toggleSelectAll = useCallback((travels: Travel[]) => {
+  const toggleSelectAll = useCallback(() => {
     if (!travels.length) return;
     setSelected((prev) => (prev.length === travels.length ? [] : travels));
-  }, []);
+  }, [travels]);
 
-  // ✅ АРХИТЕКТУРА: Очистка выбора
-  const clearSelection = useCallback(() => {
-    setSelected([]);
-  }, []);
+  const clearSelection = useCallback(() => setSelected([]), []);
 
-  // ✅ АРХИТЕКТУРА: Проверка выбора элемента
-  const isSelected = useCallback((id: number | string) => {
-    return selected.some((s) => s.id === id);
-  }, [selected]);
+  const selectedIds = useMemo(() => new Set((selected || []).map((item) => item.id ?? item.slug)), [selected]);
 
-  // ✅ АРХИТЕКТУРА: Генерация PDF preview
-  const makePreview = useCallback(async () => {
-    if (!selected.length) return;
-    if (Platform.OS !== "web") {
-      Alert.alert("Недоступно", "Превью PDF доступно только в веб-версии.");
-      return;
-    }
-    if (!printRef.current) return;
+  const isSelected = useCallback(
+    (id: number | string) => {
+      return selectedIds.has(id);
+    },
+    [selectedIds]
+  );
 
-    let statusEl: HTMLDivElement | null = document.createElement("div");
-    let iframe: HTMLIFrameElement | null = null;
-    let closeBtn: HTMLButtonElement | null = null;
+  const selectionCount = selected.length;
 
-    try {
-      statusEl.style.cssText =
-        "position:fixed;top:0;left:0;right:0;padding:20px;background:#6b8e7f;color:#fff;text-align:center;z-index:9999;";
-      statusEl.textContent = "Генерируем PDF, подождите...";
-      document.body.appendChild(statusEl);
+  const baseSettings = useMemo<BookSettings>(
+    () => ({
+      title: ownerName ? `Путешествия ${ownerName}` : 'Мои путешествия',
+      subtitle: '',
+      coverType: 'auto',
+      template: 'classic',
+      format: 'A4',
+      orientation: 'portrait',
+      margins: 'standard',
+      imageQuality: 'high',
+      sortOrder: 'date-desc',
+      includeToc: true,
+      includeGallery: true,
+      includeMap: true,
+    }),
+    [ownerName]
+  );
 
-      const url = await renderPreviewToBlobURL(printRef.current, {
-        filename: "metravel.pdf",
-      });
+  const [lastSettings, setLastSettings] = useState<BookSettings>(baseSettings);
 
-      if (url) {
-        iframe = document.createElement("iframe");
-        iframe.style.cssText =
-          "position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:9998;";
-        iframe.src = url;
+  useEffect(() => {
+    setLastSettings(baseSettings);
+  }, [baseSettings]);
 
-        closeBtn = document.createElement("button");
-        closeBtn.style.cssText =
-          "position:fixed;top:20px;right:20px;z-index:9999;padding:10px 20px;background:#fff;color:#6b8e7f;border:none;border-radius:4px;cursor:pointer;";
-        closeBtn.textContent = "Закрыть";
-        closeBtn.onclick = () => {
-          if (iframe && document.body.contains(iframe)) document.body.removeChild(iframe);
-          if (closeBtn && document.body.contains(closeBtn)) document.body.removeChild(closeBtn);
-          if (statusEl && document.body.contains(statusEl)) document.body.removeChild(statusEl);
-          URL.revokeObjectURL(url);
-        };
+  const settingsSummary = useMemo(() => {
+    const orientation = lastSettings.orientation === 'landscape' ? 'Альбомная' : 'Книжная';
+    const format = lastSettings.format?.toUpperCase?.() || 'A4';
+    const template = lastSettings.template || 'classic';
+    return `${format} • ${orientation} • ${template}`;
+  }, [lastSettings]);
 
-        document.body.appendChild(iframe);
-        document.body.appendChild(closeBtn);
-        if (statusEl && statusEl.parentNode) document.body.removeChild(statusEl);
-        statusEl = null;
-      }
-    } catch (e) {
-      console.error("[PDFExport] preview error:", e);
-      if (statusEl) {
-        statusEl.textContent = "Ошибка при создании превью";
-        statusEl.style.background = "#a00";
-        setTimeout(() => {
-          if (statusEl && statusEl.parentNode) document.body.removeChild(statusEl);
-        }, 3000);
-      }
-      if (iframe && document.body.contains(iframe)) document.body.removeChild(iframe);
-      if (closeBtn && document.body.contains(closeBtn)) document.body.removeChild(closeBtn);
-    }
-  }, [selected]);
+  const handleSaveWithSettings = useCallback(
+    async (settings: BookSettings) => {
+      setLastSettings(settings);
+      await pdfExport.exportPdf(settings);
+    },
+    [pdfExport]
+  );
 
-  // ✅ АРХИТЕКТУРА: Сохранение PDF
-  const savePdf = useCallback(async () => {
-    if (!selected.length) {
-      Alert.alert("Внимание", "Пожалуйста, выберите хотя бы одно путешествие");
-      return;
-    }
-    if (Platform.OS !== "web") {
-      Alert.alert("Недоступно", "Сохранение PDF доступно только в веб-версии.");
-      return;
-    }
-    if (!printRef.current) return;
-
-    let bar: HTMLDivElement | null = document.createElement("div");
-    bar.style.cssText =
-      "position:fixed;top:0;left:0;right:0;padding:20px;background:#6b8e7f;color:#fff;text-align:center;z-index:9999;";
-    bar.textContent = "Создание PDF...";
-    document.body.appendChild(bar);
-    
-    try {
-      await saveContainerAsPDF(printRef.current, "my-travels.pdf", {
-        margin: [10, 10],
-        image: { type: "jpeg", quality: 0.95 },
-      });
-    } catch (e) {
-      console.error("PDF generation error:", e);
-      Alert.alert("Ошибка", "Ошибка при создании PDF");
-    } finally {
-      if (bar && bar.parentNode) document.body.removeChild(bar);
-      bar = null;
-    }
-  }, [selected]);
+  const handlePreviewWithSettings = useCallback(
+    async (settings: BookSettings) => {
+      setLastSettings(settings);
+      await pdfExport.previewPdf(settings);
+    },
+    [pdfExport]
+  );
 
   return {
     selected,
-    printRef,
     toggleSelect,
     toggleSelectAll,
     clearSelection,
     isSelected,
-    makePreview,
-    savePdf,
+    hasSelection: selectionCount > 0,
+    selectionCount,
+    pdfExport,
+    baseSettings,
+    lastSettings,
+    setLastSettings,
+    settingsSummary,
+    handleSaveWithSettings,
+    handlePreviewWithSettings,
   };
 }
 

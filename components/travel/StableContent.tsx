@@ -77,9 +77,76 @@ const replaceYouTubeIframes = (html: string): string =>
 </div>`;
   });
 
+const appendClass = (attrs: string, className: string) => {
+  if (!attrs) return ` class="${className}"`;
+  if (/\bclass="/i.test(attrs)) {
+    return attrs.replace(/class="([^"]*)"/i, (_, current) => `class="${`${current} ${className}`.trim()}"`);
+  }
+  return `${attrs} class="${className}"`;
+};
+
+const stripTags = (value: string) => value.replace(/<[^>]+>/g, "");
+
+const decodeEntities = (value: string) =>
+  value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&#x27;/gi, "'");
+
+const encodeEntities = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const sliceText = (text: string, limit: number) => {
+  const chars = Array.from(text);
+  if (chars.length <= limit) {
+    return { text, truncated: false };
+  }
+  return {
+    text: chars.slice(0, limit).join("").trimEnd(),
+    truncated: true,
+  };
+};
+
+const truncateInstagramCaptions = (html: string) => {
+  return html.replace(/<p([^>]*)>([\s\S]*?)<\/p>/gi, (match, attrs = "", inner = "") => {
+    const plain = decodeEntities(stripTags(inner)).trim();
+    if (!plain.startsWith("@") || plain.length <= 100) return match;
+
+    const handleMatch = inner.match(/^(\s*@\s*(?:<a[\s\S]+?<\/a>|[\w.@]+))(.*)$/i);
+    let nextInner = inner;
+    if (handleMatch) {
+      const handleHtml = handleMatch[1];
+      const restHtml = handleMatch[2] || "";
+      const handlePlain = decodeEntities(stripTags(handleHtml)).trim();
+      const restPlain = decodeEntities(stripTags(restHtml)).trim();
+      const remaining = Math.max(0, 100 - handlePlain.length - 1);
+      const { text, truncated } = sliceText(restPlain, remaining);
+      const spacer = text ? "&nbsp;" : "";
+      nextInner = `${handleHtml}${spacer}<span class="instagram-caption-text">${encodeEntities(
+        text
+      )}${truncated ? "…" : ""}</span>`;
+    } else {
+      const { text, truncated } = sliceText(plain, 100);
+      nextInner = `${encodeEntities(text)}${truncated ? "…" : ""}`;
+    }
+
+    return `<p${appendClass(attrs, "instagram-caption")}>${nextInner}</p>`;
+  });
+};
+
 const prepareHtml = (html: string) => {
   const safe = sanitizeRichText(html);
-  return replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)));
+  const normalized = replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)));
+  return truncateInstagramCaptions(normalized);
 };
 
 const WEB_RICH_TEXT_CLASS = "travel-rich-text";
@@ -118,11 +185,12 @@ const WEB_RICH_TEXT_STYLES = `
 .${WEB_RICH_TEXT_CLASS} li { margin-bottom: 0.4em; }
 .${WEB_RICH_TEXT_CLASS} img {
   display: block;
-  width: min(640px, 100%);
+  width: 100%;
+  max-width: 100%;
   max-height: 70vh;
   object-fit: cover;
   border-radius: 22px;
-  margin: 24px auto;
+  margin: 20px 0 24px;
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
   border: 8px solid rgba(255, 255, 255, 0.12);
   background: #fafafa;
@@ -169,15 +237,36 @@ const WEB_RICH_TEXT_STYLES = `
   display: block;
   clear: both;
 }
+.${WEB_RICH_TEXT_CLASS} .instagram-media {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin: 20px 0 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+.${WEB_RICH_TEXT_CLASS} .instagram-media iframe,
+.${WEB_RICH_TEXT_CLASS} .instagram-media > * {
+  max-width: 100% !important;
+}
+.${WEB_RICH_TEXT_CLASS} .instagram-caption {
+  font-size: 15px;
+  color: #374151;
+  line-height: 1.5;
+  margin-top: 6px;
+  margin-bottom: 18px;
+}
+.${WEB_RICH_TEXT_CLASS} .instagram-caption-text {
+  display: inline;
+}
 @media (max-width: 900px) {
   .${WEB_RICH_TEXT_CLASS} {
     text-align: left;
     hyphens: unset;
   }
   .${WEB_RICH_TEXT_CLASS} img {
-    width: min(520px, 100%);
     border-width: 6px;
-    margin: 20px auto;
+    margin: 18px 0 22px;
   }
 }
 `;
@@ -268,7 +357,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         if (isInstagram(src)) {
           const url = src.replace("/embed/captioned/", "/").split("?")[0];
           return (
-            <View style={{ marginVertical: 14, alignItems: "center" }}>
+            <View style={styles.instagramEmbedWrapper}>
               <Suspense fallback={<Text>Instagram…</Text>}>
                 <LazyInstagram url={url} />
               </Suspense>
@@ -374,11 +463,12 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
 
       img: {
         maxWidth: "100%",
+        width: "100%",
         height: "auto",
         borderRadius: 12,
         marginVertical: 12,
         display: "block",
-        alignSelf: "center",
+        alignSelf: "stretch",
         boxShadow: Platform.OS === "web" ? "0 2px 8px rgba(0,0,0,0.05)" : undefined,
       },
 
@@ -465,5 +555,12 @@ const styles = StyleSheet.create({
   ytStubText: {
     color: "#111",
     fontSize: 14,
+  },
+  instagramEmbedWrapper: {
+    marginVertical: 14,
+    width: "100%",
+    maxWidth: "100%",
+    alignSelf: "stretch",
+    overflow: "hidden",
   },
 });

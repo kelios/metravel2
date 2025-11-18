@@ -18,7 +18,6 @@ export interface TravelFilterContext {
   belarusId?: number
   userId?: string | null
   routeUserId?: string
-  showModerationPending?: boolean
 }
 
 const isEmptyValue = (value: any) => {
@@ -83,18 +82,24 @@ export const buildTravelQueryParams = (
     belarusId = DEFAULT_BELARUS_ID,
     userId,
     routeUserId,
-    showModerationPending,
   } = context
 
   const normalized = sanitizeFilterObject(filter)
   const params: Record<string, any> = { ...normalized }
 
+  // ✅ ИСПРАВЛЕНИЕ: Используем moderation напрямую из filter, не перезаписываем если он уже есть
   if (!(isMeTravel || isExport)) {
-    if (showModerationPending) {
-      params.moderation = 0
-    } else {
+    // Устанавливаем moderation и publish только если их нет в filter
+    if (!('moderation' in normalized) && !('moderation' in filter)) {
+      // По умолчанию: опубликованные и прошедшие модерацию
       params.publish = 1
       params.moderation = 1
+    } else if (!('publish' in normalized) && !('publish' in filter)) {
+      // Если moderation есть, но publish нет, устанавливаем publish по умолчанию
+      const moderationValue = normalized.moderation !== undefined ? normalized.moderation : filter.moderation
+      if (moderationValue === 1) {
+        params.publish = 1
+      }
     }
   }
 

@@ -208,5 +208,27 @@ describe('ListTravel - Filter Management', () => {
             });
         });
     });
+
+    describe('UI states', () => {
+        it('renders empty state when no travels are returned', async () => {
+            (fetchTravels as jest.Mock).mockResolvedValue({ total: 0, data: [] });
+
+            const { getByText } = renderComponent();
+
+            await waitFor(() => {
+                expect(getByText('Ничего не найдено')).toBeTruthy();
+            });
+        });
+
+        it('renders error state when request fails', async () => {
+            (fetchTravels as jest.Mock).mockRejectedValue(new Error('network'));
+
+            const { getByText } = renderComponent();
+
+            await waitFor(() => {
+                expect(getByText('Ошибка загрузки')).toBeTruthy();
+            });
+        });
+    });
 });
 

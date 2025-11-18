@@ -25,7 +25,8 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
 
   // Инициализируем сервис один раз
   useEffect(() => {
-    if (Platform.OS === 'web' && !serviceRef.current) {
+    const canUseDom = typeof document !== 'undefined';
+    if ((Platform.OS === 'web' || canUseDom) && !serviceRef.current) {
       const renderer = new Html2PdfRenderer();
       serviceRef.current = new PdfExportService(renderer, config);
     }

@@ -11,27 +11,23 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { MaterialIcons } from '@expo/vector-icons';
-// ✅ ДИЗАЙН: Импорт максимально легкой и воздушной палитры
-import { AIRY_COLORS, AIRY_BOX_SHADOWS } from "@/constants/airyColors";
+import IconButton from '@/components/ui/IconButton';
+import { DESIGN_TOKENS } from "@/constants/designSystem";
 
 interface Props {
     search: string;
     setSearch: (value: string) => void;
     onToggleFilters?: () => void;
-    onTogglePersonalization?: () => void;
-    onToggleWeeklyHighlights?: () => void;
-    isPersonalizationVisible?: boolean;
-    isWeeklyHighlightsVisible?: boolean;
+    onToggleRecommendations?: () => void;
+    isRecommendationsVisible?: boolean;
 }
 
 function SearchAndFilterBar({ 
     search, 
     setSearch, 
     onToggleFilters,
-    onTogglePersonalization,
-    onToggleWeeklyHighlights,
-    isPersonalizationVisible = false,
-    isWeeklyHighlightsVisible = false,
+    onToggleRecommendations,
+    isRecommendationsVisible = false,
 }: Props) {
     const { width } = useWindowDimensions();
     const isMobile = width <= 768;
@@ -77,15 +73,21 @@ function SearchAndFilterBar({
         return () => clearTimeout(id);
     }, [text, isMobile, applySearch]);
 
+    const palette = DESIGN_TOKENS.colors;
+
     const Icons = useMemo(
         () => ({
-            search: <Feather name="search" size={20} color={AIRY_COLORS.primary} aria-hidden="true" />, // ✅ ДИЗАЙН: Пастельный персик, увеличен размер
-            clear: <Feather name="x" size={18} color="#666" aria-hidden="true" />,
-            filter: <Feather name="filter" size={22} color={AIRY_COLORS.primary} aria-hidden="true" />, // ✅ ДИЗАЙН: Пастельный персик
-            personalization: <MaterialIcons name="star" size={20} color={isPersonalizationVisible ? AIRY_COLORS.primary : "#999"} />, // ✅ ДИЗАЙН: Пастельный персик при активном
-            weeklyHighlights: <MaterialIcons name="auto-awesome" size={20} color={isWeeklyHighlightsVisible ? AIRY_COLORS.primary : "#999"} />, // ✅ ДИЗАЙН: Пастельный персик при активном
+            search: <Feather name="search" size={20} color={palette.primary} aria-hidden="true" />,
+            clear: <Feather name="x" size={18} color={palette.textMuted} aria-hidden="true" />,
+            recommendations: (
+                <MaterialIcons
+                    name="stars"
+                    size={20}
+                    color={isRecommendationsVisible ? palette.accent : palette.textSubtle}
+                />
+            ),
         }),
-        [isPersonalizationVisible, isWeeklyHighlightsVisible, AIRY_COLORS.primary]
+        [isRecommendationsVisible, palette.accent, palette.primary, palette.textMuted, palette.textSubtle]
     );
 
     const onSubmit = useCallback(() => {
@@ -96,15 +98,12 @@ function SearchAndFilterBar({
     return (
         <View style={[styles.wrap, isMobile && styles.wrapMobile]}>
             {isMobile && onToggleFilters && (
-                <Pressable
+                <IconButton
+                    label="Открыть фильтры"
+                    icon={<Feather name="filter" size={18} color={palette.primary} />}
                     onPress={onToggleFilters}
-                    accessibilityRole="button"
-                    accessibilityLabel="Открыть фильтры"
-                    style={styles.filterBtn}
-                    hitSlop={10}
-                >
-                    {Icons.filter}
-                </Pressable>
+                    testID="toggle-filters"
+                />
             )}
 
             <View style={[styles.searchBox, isMobile && styles.searchBoxMobile]}>
@@ -140,27 +139,14 @@ function SearchAndFilterBar({
             </View>
 
             <View style={[styles.actionIcons, isMobile && styles.actionIconsMobile]}>
-                {onTogglePersonalization && (
-                    <Pressable
-                        onPress={onTogglePersonalization}
-                        accessibilityRole="button"
-                        accessibilityLabel={isPersonalizationVisible ? "Скрыть персонализацию" : "Показать персонализацию"}
-                        style={[styles.iconBtn, isPersonalizationVisible && styles.iconBtnActive]}
-                        hitSlop={8}
-                    >
-                        {Icons.personalization}
-                    </Pressable>
-                )}
-                {onToggleWeeklyHighlights && (
-                    <Pressable
-                        onPress={onToggleWeeklyHighlights}
-                        accessibilityRole="button"
-                        accessibilityLabel={isWeeklyHighlightsVisible ? "Скрыть подборку недели" : "Показать подборку недели"}
-                        style={[styles.iconBtn, isWeeklyHighlightsVisible && styles.iconBtnActive]}
-                        hitSlop={8}
-                    >
-                        {Icons.weeklyHighlights}
-                    </Pressable>
+                {onToggleRecommendations && (
+                    <IconButton
+                        label={isRecommendationsVisible ? "Скрыть рекомендации" : "Показать рекомендации"}
+                        active={isRecommendationsVisible}
+                        onPress={onToggleRecommendations}
+                        icon={Icons.recommendations}
+                        testID="toggle-recommendations"
+                    />
                 )}
             </View>
         </View>
@@ -173,63 +159,50 @@ export default memo(
         prev.search === next.search &&
         // Изменение наличия кнопки фильтров влияет на разметку
         (!!prev.onToggleFilters === !!next.onToggleFilters) &&
-        prev.isPersonalizationVisible === next.isPersonalizationVisible &&
-        prev.isWeeklyHighlightsVisible === next.isWeeklyHighlightsVisible
+        prev.isRecommendationsVisible === next.isRecommendationsVisible
 );
 
 const styles = StyleSheet.create({
     wrap: {
         flexDirection: "row",
         alignItems: "center",
-        marginBottom: 12,
-        gap: 8,
-        paddingHorizontal: 16,
+        marginBottom: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        gap: Platform.select({ default: 8, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше gap на мобильных
+        paddingHorizontal: Platform.select({ default: 12, web: 16 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
     },
-    wrapMobile: { paddingHorizontal: 6, paddingBottom: 4, paddingTop: 0, marginBottom: 4, marginTop: 0, gap: 6 },
-    filterBtn: {
-        padding: 8,
-        borderRadius: 12,
-        backgroundColor: "#f5f5f5",
-        ...Platform.select({ 
-            web: { 
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-            } 
-        }),
+    wrapMobile: { 
+        paddingHorizontal: Platform.select({ default: 10, web: 6 }), // ✅ АДАПТИВНОСТЬ: Больше на мобильных для лучшей читаемости
+        paddingBottom: Platform.select({ default: 6, web: 4 }), 
+        paddingTop: 0, 
+        marginBottom: Platform.select({ default: 8, web: 4 }), 
+        marginTop: 0, 
+        gap: Platform.select({ default: 8, web: 6 }) 
     },
     searchBox: {
         flex: 1,
         flexDirection: "row",
         alignItems: "center",
-        gap: 12, // ✅ ДИЗАЙН: Увеличен gap
-        backgroundColor: "#fff",
-        borderRadius: 12,
-        borderWidth: Platform.OS === "web" ? 2 : 1, // ✅ ДИЗАЙН: Утолщена граница
-        borderColor: AIRY_COLORS.primary, // ✅ ДИЗАЙН: Пастельная персиковая граница как акцент
-        paddingHorizontal: 16, // ✅ ДИЗАЙН: Увеличены отступы
+        gap: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше gap на мобильных
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderRadius: Platform.select({ default: 10, web: DESIGN_TOKENS.radii.md }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
+        borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
+        borderColor: 'rgba(0, 0, 0, 0.06)', // ✅ ДИЗАЙН: Более светлая граница
+        paddingHorizontal: Platform.select({ default: 12, web: 16 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
         height: Platform.select({
-            default: 52,
+            default: 48, // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
             web: 56,
         }),
         ...Platform.select({
             ios: {
-                shadowColor: AIRY_COLORS.primary,
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.02, // ✅ ДИЗАЙН: Более легкая тень
+                shadowRadius: 2,
             },
             android: {
-                elevation: 2,
+                elevation: 1, // ✅ ДИЗАЙН: Меньше elevation
             },
             web: {
-                boxShadow: AIRY_BOX_SHADOWS.light, // ✅ ДИЗАЙН: Легкая воздушная тень
-                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                // @ts-ignore
-                ":focus-within": {
-                    borderColor: AIRY_COLORS.primaryDark, // ✅ ДИЗАЙН: Более темный пастельный персик при focus
-                    boxShadow: AIRY_BOX_SHADOWS.hover, // ✅ ДИЗАЙН: Легкая воздушная тень при hover
-                    transform: "scale(1.01)",
-                },
             },
         }),
     },
@@ -241,8 +214,8 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        fontSize: 14,
-        color: "#333",
+        fontSize: Platform.select({ default: 13, web: 14 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        color: DESIGN_TOKENS.colors.text,
         paddingVertical: 0,
         ...Platform.select({
             web: {
@@ -262,40 +235,11 @@ const styles = StyleSheet.create({
     actionIcons: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 8, // ✅ ДИЗАЙН: Увеличен gap
-        marginLeft: 8, // ✅ ДИЗАЙН: Увеличен marginLeft
+        gap: 8,
+        marginLeft: 8,
     },
     actionIconsMobile: {
         gap: 6,
         marginLeft: 4,
-    },
-    iconBtn: {
-        padding: 10, // ✅ ДИЗАЙН: Увеличен padding
-        borderRadius: 12,
-        backgroundColor: AIRY_COLORS.primaryLight, // ✅ ДИЗАЙН: Светлый пастельный персиковый фон
-        borderWidth: 1,
-        borderColor: "rgba(255, 159, 90, 0.2)",
-        ...Platform.select({ 
-            web: { 
-                cursor: "pointer",
-                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                // @ts-ignore
-                ":hover": {
-                    backgroundColor: AIRY_COLORS.primaryLight, // ✅ ДИЗАЙН: Воздушный легкий персиковый фон при hover
-                    borderColor: AIRY_COLORS.primary,
-                    transform: "scale(1.05)",
-                },
-            } 
-        }),
-    },
-    iconBtnActive: {
-        backgroundColor: AIRY_COLORS.primary, // ✅ ДИЗАЙН: Пастельный персиковый фон при активном
-        borderColor: AIRY_COLORS.primary,
-        ...Platform.select({
-            web: {
-                boxShadow: AIRY_BOX_SHADOWS.medium, // ✅ ДИЗАЙН: Легкая воздушная тень
-                transform: "scale(1.05)",
-            },
-        }),
     },
 });

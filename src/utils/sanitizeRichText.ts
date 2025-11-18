@@ -1,7 +1,14 @@
 import sanitizeHtml from 'sanitize-html'
 
-const ALLOWED_IFRAME_HOSTS = ['youtube.com', 'youtu.be', 'player.vimeo.com', 'www.google.com']
+const ALLOWED_IFRAME_HOSTS = [
+  'youtube.com',
+  'youtu.be',
+  'player.vimeo.com',
+  'www.google.com',
+  'instagram.com',
+]
 const ALLOWED_SCHEMES = ['http', 'https', 'mailto']
+const DIMENSION_RE = /^\d+(\.\d+)?(px|%)?$/i
 
 const allowedTags = Array.from(
   new Set([
@@ -76,6 +83,13 @@ function normalizeUrl(value?: string) {
   }
 }
 
+function normalizeDimension(value?: string) {
+  if (!value) return undefined
+  const trimmed = value.trim()
+  if (!DIMENSION_RE.test(trimmed)) return undefined
+  return trimmed
+}
+
 export function sanitizeRichText(html?: string | null): string {
   if (!html) return ''
 
@@ -117,6 +131,8 @@ export function sanitizeRichText(html?: string | null): string {
         if (!src || !isAllowedIframe(src)) {
           return { tagName: 'div', text: '' }
         }
+        const height = normalizeDimension(attribs.height)
+        const width = normalizeDimension(attribs.width)
         return {
           tagName: 'iframe',
           attribs: {
@@ -127,6 +143,8 @@ export function sanitizeRichText(html?: string | null): string {
               'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
             allowfullscreen: 'true',
             frameborder: '0',
+            ...(width ? { width } : {}),
+            ...(height ? { height } : {}),
           },
         }
       },

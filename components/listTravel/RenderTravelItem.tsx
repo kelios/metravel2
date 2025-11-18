@@ -41,21 +41,24 @@ function RenderTravelItem({
 
     const containerStyle = useMemo(() => {
         const base = {
-            borderRadius: 12,
+            borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
             overflow:
                 Platform.OS === "android"
                     ? ("visible" as const)
                     : ("hidden" as const),
-            marginBottom: isMobile ? 12 : 16,
+            marginBottom: Platform.select({ 
+                default: isMobile ? 10 : 12, // Мобильные и планшеты
+                web: 16 
+            }),
         };
 
         if (isSingle) {
             return {
                 ...base,
                 width: "100%",
-                maxWidth: 600,
+                maxWidth: Platform.select({ default: '100%', web: 600 }), // ✅ АДАПТИВНОСТЬ: Полная ширина на мобильных
                 alignSelf: "center" as const,
-                paddingHorizontal: isMobile ? 8 : 16,
+                paddingHorizontal: Platform.select({ default: 12, web: 16 }), // ✅ АДАПТИВНОСТЬ: Больше на мобильных для лучшей читаемости
             };
         }
 

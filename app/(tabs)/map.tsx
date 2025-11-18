@@ -1,5 +1,13 @@
 // app/map/index.tsx
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, {
+    useEffect,
+    useState,
+    useRef,
+    useCallback,
+    useMemo,
+    Suspense,
+    lazy,
+} from 'react';
 import {
     SafeAreaView,
     StyleSheet,
@@ -12,6 +20,7 @@ import {
     PanResponder,
     Dimensions,
     ScrollView,
+    Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import IconMaterial from 'react-native-vector-icons/MaterialIcons';
@@ -21,7 +30,6 @@ import { useIsFocused } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
-import MapPanel from '@/components/MapPage/MapPanel';
 import TravelListPanel from '@/components/MapPage/TravelListPanel';
 import RouteStats from '@/components/MapPage/RouteStats';
 import RouteHint from '@/components/MapPage/RouteHint';
@@ -43,6 +51,8 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const INFO_PANEL_MIN_HEIGHT = 100;
 const FILTERS_PANEL_HEIGHT = 300;
+
+const LazyMapPanel = lazy(() => import('@/components/MapPage/MapPanel'));
 
 export default function MapScreen() {
     const pathname = usePathname();
@@ -72,6 +82,12 @@ export default function MapScreen() {
     const [rightPanelTab, setRightPanelTab] = useState<'filters' | 'travels'>('filters');
     const [rightPanelVisible, setRightPanelVisible] = useState(true);
     const [routeHintDismissed, setRouteHintDismissed] = useState(false);
+    const [mapReady, setMapReady] = useState(false);
+    useEffect(() => {
+        if (mapReady) return;
+        const frame = requestAnimationFrame(() => setMapReady(true));
+        return () => cancelAnimationFrame(frame);
+    }, [mapReady]);
 
     // ✅ ОПТИМИЗАЦИЯ: Debounce для фильтров и координат
     const debouncedCoordinates = useDebouncedValue(coordinates, 500);
@@ -334,10 +350,16 @@ export default function MapScreen() {
     const canonical = useMemo(() => `${SITE}${pathname || '/map'}`, [SITE, pathname]);
     
     const styles = useMemo(() => getStyles(isMobile, insets.top), [isMobile, insets.top]);
+    const mapPanelPlaceholder = (
+        <View style={styles.mapPlaceholder}>
+            <ActivityIndicator size="large" color="#4a8c8c" />
+            <Text style={styles.mapPlaceholderText}>Загружаем карту…</Text>
+        </View>
+    );
 
     return (
         <>
-            {isFocused && (
+            {isFocused && Platform.OS === 'web' && (
                 <InstantSEO
                     headKey="map"
                     title="Карта путешествий | MeTravel"
@@ -347,18 +369,24 @@ export default function MapScreen() {
             )}
             <SafeAreaView style={styles.container}>
                 <View style={styles.content}>
-                    <MapPanel
-                        travelsData={travelsData}
-                        coordinates={coordinates}
-                        routePoints={routePoints}
-                        mode={mode}
-                        setRoutePoints={setRoutePoints}
-                        onMapClick={handleMapClick}
-                        transportMode={transportMode}
-                        setRouteDistance={setRouteDistance}
-                        setFullRouteCoords={setFullRouteCoords}
-                        radius={filterValues.radius}
-                    />
+                    {mapReady ? (
+                        <Suspense fallback={mapPanelPlaceholder}>
+                            <LazyMapPanel
+                                travelsData={travelsData}
+                                coordinates={coordinates}
+                                routePoints={routePoints}
+                                mode={mode}
+                                setRoutePoints={setRoutePoints}
+                                onMapClick={handleMapClick}
+                                transportMode={transportMode}
+                                setRouteDistance={setRouteDistance}
+                                setFullRouteCoords={setFullRouteCoords}
+                                radius={filterValues.radius}
+                            />
+                        </Suspense>
+                    ) : (
+                        mapPanelPlaceholder
+                    )}
 
                     {/* ✅ ИСПРАВЛЕНИЕ: RouteHint и RouteStats перенесены в боковую панель */}
 
@@ -698,5 +726,22 @@ const getStyles = (isMobile: boolean, insetTop: number) => StyleSheet.create({
         color: '#4a8c8c',
         fontSize: 12,
         fontWeight: '500',
+    },
+    mapPlaceholder: {
+        flex: 1,
+        minHeight: 260,
+        borderRadius: 20,
+        backgroundColor: '#fff',
+        marginLeft: 16,
+        marginRight: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: '#e2e8f0',
+    },
+    mapPlaceholderText: {
+        marginTop: 8,
+        fontSize: 14,
+        color: '#8c99a6',
     },
 });

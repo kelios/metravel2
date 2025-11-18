@@ -53,8 +53,8 @@ describe('WeeklyHighlights', () => {
       data: {},
     })
 
-    const { container } = render(<WeeklyHighlights />)
-    expect(container.children.length).toBe(0)
+    const { toJSON } = render(<WeeklyHighlights />)
+    expect(toJSON()).toBeNull()
   })
 
   it('renders highlights when data is available', () => {

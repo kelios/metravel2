@@ -1,48 +1,21 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Button, { type ButtonProps } from '@/components/ui/Button';
 
-interface ButtonComponentProps {
-    label: string;
-    onPress: () => void;
-    disabled?: boolean;
-}
+interface ButtonComponentProps extends Pick<ButtonProps, 'label' | 'onPress' | 'disabled'> {}
 
-const ButtonComponent: React.FC<ButtonComponentProps> = ({ label, onPress, disabled = false }) => {
-    return (
-        <View style={styles.container}>
-            <TouchableOpacity
-                style={[styles.button, disabled && styles.buttonDisabled]}
-                onPress={onPress}
-                disabled={disabled}
-                activeOpacity={0.8}
-            >
-                <Text style={styles.buttonText}>{label}</Text>
-            </TouchableOpacity>
-        </View>
-    );
-};
+const ButtonComponent: React.FC<ButtonComponentProps> = ({ label, onPress, disabled }) => (
+  <View style={styles.container}>
+    <Button label={label} onPress={onPress} disabled={disabled} fullWidth />
+  </View>
+);
 
 const styles = StyleSheet.create({
-    container: {
-        marginVertical: 10,
-        alignItems: 'center',
-    },
-    button: {
-        backgroundColor: '#4b7c6f',
-        paddingVertical: Platform.OS === 'ios' ? 12 : 10,
-        paddingHorizontal: 20,
-        borderRadius: 5,
-        minWidth: 120,
-    },
-    buttonDisabled: {
-        backgroundColor: '#9bb5ad',
-    },
-    buttonText: {
-        color: '#fff',
-        fontSize: 16,
-        textAlign: 'center',
-        fontWeight: '500',
-    },
+  container: {
+    marginVertical: 10,
+    alignItems: 'stretch',
+    width: '100%',
+  },
 });
 
 export default ButtonComponent;

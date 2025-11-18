@@ -1,5 +1,13 @@
 // components/quests/QuestWizard.tsx
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+    memo,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    lazy,
+    Suspense,
+} from 'react';
 import {
     View, Text, StyleSheet, TextInput, Pressable,
     ScrollView, Platform, Linking,
@@ -10,8 +18,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Video, ResizeMode } from 'expo-av';
 import * as Clipboard from 'expo-clipboard';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
-import QuestFullMap from "@/components/quests/QuestFullMap";
 import BelkrajWidget from "@/components/belkraj/BelkrajWidget";
+
+const QuestFullMap = lazy(() => import("@/components/quests/QuestFullMap"));
 
 // ===================== ТИПЫ =====================
 export type QuestStep = {
@@ -542,7 +551,13 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 {!!steps.length && (
                                     <View style={styles.fullMapSection}>
                                         <Text style={styles.sectionTitle}>Полный маршрут квеста</Text>
-                                        <QuestFullMap steps={steps} height={300} title={`Карта квеста: ${title}`} />
+                                        <Suspense fallback={<QuestMapSkeleton />}>
+                                            <QuestFullMap
+                                                steps={steps}
+                                                height={300}
+                                                title={`Карта квеста: ${title}`}
+                                            />
+                                        </Suspense>
                                     </View>
                                 )}
 
@@ -774,5 +789,11 @@ const styles = StyleSheet.create({
     },
     flipText: { color: '#FFF', fontWeight: '800', fontSize: 16 },
 });
+
+const QuestMapSkeleton = () => (
+    <View style={{ height: 300, borderRadius: 16, backgroundColor: '#e2e8f0', overflow: 'hidden' }}>
+        <View style={{ flex: 1, opacity: 0.6, backgroundColor: '#cbd5f5' }} />
+    </View>
+);
 
 export default QuestWizard;

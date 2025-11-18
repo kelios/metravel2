@@ -8,14 +8,6 @@ import { usePdfExport } from '@/src/hooks/usePdfExport';
 import type { Travel } from '@/src/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 
-// Mock Platform
-jest.mock('react-native', () => ({
-  Platform: { OS: 'web' },
-  Alert: {
-    alert: jest.fn(),
-  },
-}));
-
 // Mock PdfExportService
 const mockExport = jest.fn();
 const mockPreview = jest.fn();
@@ -35,31 +27,48 @@ jest.mock('@/src/renderers/pdf/Html2PdfRenderer', () => ({
   })),
 }));
 
-// Mock document methods
-global.document = {
+global.URL = {
+  createObjectURL: jest.fn(() => 'blob:mock-url'),
+  revokeObjectURL: jest.fn(),
+} as any;
+
+const mockDocument = {
   createElement: jest.fn((tag: string) => {
-    const element = {
+    const element: any = {
       tagName: tag.toUpperCase(),
-      style: {} as any,
-      innerHTML: '',
-      textContent: '',
-      children: [],
-      parentNode: null,
+      style: { cssText: '' },
       appendChild: jest.fn(),
+      removeChild: jest.fn(),
+      textContent: '',
+      innerHTML: '',
+      href: '',
+      src: '',
+      download: '',
       click: jest.fn(),
-    } as any;
+      parentNode: {
+        removeChild: jest.fn(),
+      },
+    };
     return element;
   }),
   body: {
     appendChild: jest.fn(),
     removeChild: jest.fn(),
-  } as any,
-} as any;
+  },
+  querySelectorAll: jest.fn(() => []),
+};
 
-global.URL = {
-  createObjectURL: jest.fn(() => 'blob:mock-url'),
-  revokeObjectURL: jest.fn(),
-} as any;
+global.document = mockDocument as any;
+
+const originalPlatformOS = Platform.OS;
+const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+
+beforeAll(() => {
+  Object.defineProperty(Platform, 'OS', {
+    configurable: true,
+    value: 'web',
+  });
+});
 
 describe('usePdfExport', () => {
   const mockTravels: Travel[] = [
@@ -237,8 +246,10 @@ describe('usePdfExport', () => {
     });
 
     it('должен создать iframe и кнопку закрытия для превью', async () => {
-      const createElementSpy = jest.spyOn(global.document, 'createElement');
-      const appendChildSpy = jest.spyOn(global.document.body, 'appendChild');
+      const createElementSpy = mockDocument.createElement;
+      const appendChildSpy = mockDocument.body.appendChild;
+      createElementSpy.mockClear();
+      appendChildSpy.mockClear();
 
       const { result } = renderHook(() => usePdfExport(mockTravels));
 
@@ -282,5 +293,13 @@ describe('usePdfExport', () => {
       expect(true).toBe(true); // Placeholder - реальная проверка требует доступа к внутренностям
     });
   });
+});
+
+afterAll(() => {
+  Object.defineProperty(Platform, 'OS', {
+    configurable: true,
+    value: originalPlatformOS,
+  });
+  alertSpy.mockRestore();
 });
 
