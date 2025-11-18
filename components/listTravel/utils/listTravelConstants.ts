@@ -6,7 +6,6 @@
 // ✅ АРХИТЕКТУРА: Начальное состояние фильтров
 export const INITIAL_FILTER = { 
   year: "", 
-  showModerationPending: false 
 } as const;
 
 // ✅ АРХИТЕКТУРА: ID Беларуси для специальной страницы

@@ -1,11 +1,9 @@
 const expoPreset = require('jest-expo/jest-preset');
 
-const {
-  setupFiles = [],
-  setupFilesAfterEnv = [],
-  moduleNameMapper = {},
-  transformIgnorePatterns = [],
-} = expoPreset;
+const { setupFiles = [], setupFilesAfterEnv = [], moduleNameMapper = {} } = expoPreset;
+
+const allowListedModules =
+  '((jest-)?react-native|@react-native(-community)?|@react-navigation/.*|react-navigation|expo(nent)?|expo-.*|@expo(nent)?/.*|@expo-google-fonts/.*|expo-modules-core|expo-router|unimodules|@unimodules/.*|sentry-expo|native-base|@sentry/.*|@gorhom/.*|escape-string-regexp|react-native-toast-message|react-native-responsive-screen|react-native-reanimated)';
 
 /** @type {import('jest').Config} */
 module.exports = {
@@ -20,8 +18,8 @@ module.exports = {
     '\\.(svg|png|jpe?g|gif|webp)$': '<rootDir>/__mocks__/fileMock.js',
   },
   transformIgnorePatterns: [
-    ...transformIgnorePatterns,
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@react-navigation/.*|react-navigation|expo(nent)?|expo-.*|@expo(nent)?/.*|expo-modules-core|expo-router|unimodules|@unimodules/.*|sentry-expo|native-base|@sentry/.*|@gorhom/.*|escape-string-regexp|react-native-toast-message|react-native-responsive-screen|react-native-reanimated)/)',
+    `node_modules/(?!${allowListedModules})`,
+    '/node_modules/react-native-reanimated/plugin/',
   ],
 };
 

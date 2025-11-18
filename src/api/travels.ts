@@ -316,7 +316,14 @@ export const fetchArticles = async (
     urlParams: Record<string, any>,
 ) => {
     try {
-        const whereObject = { publish: 1, moderation: 1, ...urlParams };
+        // ✅ ИСПРАВЛЕНИЕ: Используем moderation и publish из urlParams, если они есть
+        const whereObject = {
+            // Устанавливаем по умолчанию только если их нет в urlParams
+            ...(urlParams?.moderation === undefined && urlParams?.publish === undefined ? { publish: 1, moderation: 1 } : {}),
+            ...(urlParams?.publish !== undefined ? { publish: urlParams.publish } : {}),
+            ...(urlParams?.moderation !== undefined ? { moderation: urlParams.moderation } : {}),
+            ...urlParams,
+        };
         const params = new URLSearchParams({
             page: (page + 1).toString(),
             perPage: itemsPerPage.toString(),
@@ -339,11 +346,15 @@ export const fetchTravelsby = async (
     urlParams: Record<string, any>,
 ) => {
     try {
+        // ✅ ИСПРАВЛЕНИЕ: Используем moderation и publish из urlParams, если они есть
         const whereObject = {
-            publish: 1,
-            moderation: 1,
             countries: [3],
+            // Устанавливаем по умолчанию только если их нет в urlParams
+            ...(urlParams?.moderation === undefined && urlParams?.publish === undefined ? { publish: 1, moderation: 1 } : {}),
             ...urlParams,
+            // Явно устанавливаем moderation и publish из urlParams, если они есть (после spread, чтобы перезаписать дефолты)
+            ...(urlParams?.publish !== undefined ? { publish: urlParams.publish } : {}),
+            ...(urlParams?.moderation !== undefined ? { moderation: urlParams.moderation } : {}),
         };
         const params = new URLSearchParams({
             page: (page + 1).toString(),
@@ -433,23 +444,28 @@ export const fetchFiltersTravel = async (
     filter: Record<string, any>,
 ) => {
     try {
+        // ✅ ИСПРАВЛЕНИЕ: Используем moderation и publish из filter, если они есть
+        const whereObject: Record<string, any> = {
+            // Устанавливаем по умолчанию только если их нет в filter
+            ...(filter?.moderation === undefined && filter?.publish === undefined ? { publish: 1, moderation: 1 } : {}),
+            ...(filter?.publish !== undefined ? { publish: filter.publish } : {}),
+            ...(filter?.moderation !== undefined ? { moderation: filter.moderation } : {}),
+            countries: filter?.countries,
+            categories: filter?.categories,
+            categoryTravelAddress: filter?.categoryTravelAddress,
+            companions: filter?.companions,
+            complexity: filter?.complexity,
+            month: filter?.month,
+            over_nights_stay: filter?.over_nights_stay,
+            transports: filter?.transports,
+            year: filter?.year,
+        };
+        
         const paramsObj = {
             page: (page + 1).toString(),
             perPage: itemsPerPage.toString(),
             query: search,
-            where: JSON.stringify({
-                publish: 1,
-                moderation: 1,
-                countries: filter?.countries,
-                categories: filter?.categories,
-                categoryTravelAddress: filter?.categoryTravelAddress,
-                companions: filter?.companions,
-                complexity: filter?.complexity,
-                month: filter?.month,
-                over_nights_stay: filter?.over_nights_stay,
-                transports: filter?.transports,
-                year: filter?.year,
-            }),
+            where: JSON.stringify(whereObject),
         };
         const params = new URLSearchParams(paramsObj).toString();
 
@@ -502,9 +518,12 @@ export const fetchTravelsForMap = async (
         const lat = filter?.lat ?? '53.9006';
         const lng = filter?.lng ?? '27.5590';
 
+        // ✅ ИСПРАВЛЕНИЕ: Используем moderation и publish из filter, если они есть
         const whereObject: Record<string, any> = {
-            publish: 1,
-            moderation: 1,
+            // Устанавливаем по умолчанию только если их нет в filter
+            ...(filter?.moderation === undefined && filter?.publish === undefined ? { publish: 1, moderation: 1 } : {}),
+            ...(filter?.publish !== undefined ? { publish: filter.publish } : {}),
+            ...(filter?.moderation !== undefined ? { moderation: filter.moderation } : {}),
             lat,
             lng,
             radius,

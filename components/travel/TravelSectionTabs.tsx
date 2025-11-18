@@ -54,8 +54,11 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
             >
               <MaterialIcons
                 name={icon as any}
-                size={18}
-                color={isActive ? "#ff9f5a" : "#2f332e"}
+                size={Platform.select({
+                  default: 16, // Мобильные
+                  web: 18, // Десктоп
+                })}
+                color={isActive ? "#1f2937" : "#2f332e"}
               />
               <Text
                 style={[styles.tabLabel, isActive && styles.tabLabelActive]}
@@ -76,45 +79,60 @@ export default TravelSectionTabs
 const styles = StyleSheet.create({
   wrapper: {
     width: "100%",
-    paddingVertical: 8,
+    paddingVertical: Platform.select({
+      default: 6, // Мобильные
+      web: 8, // Десктоп
+    }),
   },
   tabsContent: {
-    paddingHorizontal: 8,
+    paddingHorizontal: Platform.select({
+      default: 6, // Мобильные
+      web: 8, // Десктоп
+    }),
     paddingBottom: 4,
   },
   tab: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: Platform.select({
+      default: 12, // Мобильные
+      web: 14, // Десктоп
+    }),
+    paddingVertical: Platform.select({
+      default: 8, // Мобильные
+      web: 10, // Десктоп
+    }),
     borderRadius: 18,
     backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.08)",
+    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 1
+    borderColor: "rgba(0, 0, 0, 0.06)",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02, // ✅ УЛУЧШЕНИЕ: Упрощенная тень
+    shadowRadius: 4,
+    elevation: 1, // ✅ УЛУЧШЕНИЕ: Уменьшено с 2
     marginRight: 8,
   },
   tabActive: {
-    borderColor: "#ff9f5a",
-    backgroundColor: "#fff5eb",
-    shadowColor: "#ff9f5a",
-    shadowOpacity: 0.3,
+    borderColor: "#1f2937", // ✅ УЛУЧШЕНИЕ: Нейтральный темно-серый
+    backgroundColor: "rgba(0, 0, 0, 0.04)", // ✅ УЛУЧШЕНИЕ: Нейтральный фон
+    shadowColor: "#000",
+    shadowOpacity: 0.03, // ✅ УЛУЧШЕНИЕ: Упрощенная тень
   },
   tabPressed: {
     transform: [{ scale: 0.97 }],
     opacity: 0.9,
   },
   tabLabel: {
-    fontSize: 13,
+    fontSize: Platform.select({
+      default: 12, // Мобильные
+      web: 13, // Десктоп
+    }),
     fontWeight: "600",
     color: "#2f332e",
   },
   tabLabelActive: {
-    color: "#ff9f5a",
+    color: "#1f2937", // ✅ УЛУЧШЕНИЕ: Нейтральный темно-серый
   },
 })
 

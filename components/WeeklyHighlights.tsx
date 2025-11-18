@@ -1,5 +1,5 @@
 import React, { useMemo, memo, useCallback, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, useWindowDimensions, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Platform, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
@@ -7,6 +7,7 @@ import { fetchTravelsPopular } from '@/src/api/travels';
 import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AIRY_COLORS } from '@/constants/airyColors'; // ✅ ИСПРАВЛЕНИЕ: Добавлен импорт AIRY_COLORS
+import { Image as ExpoImage } from 'expo-image';
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
 
@@ -26,17 +27,32 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
 
     // Проверяем состояние сворачивания при монтировании
     useEffect(() => {
+        let isMounted = true;
+
         const checkCollapsed = async () => {
-            if (Platform.OS === 'web') {
-                const collapsed = sessionStorage.getItem(COLLAPSED_KEY) === 'true';
-                setIsCollapsed(collapsed);
-            } else {
-                const collapsed = await AsyncStorage.getItem(COLLAPSED_KEY);
-                setIsCollapsed(collapsed === 'true');
+            try {
+                if (Platform.OS === 'web' && typeof sessionStorage !== 'undefined') {
+                    const collapsed = sessionStorage.getItem(COLLAPSED_KEY) === 'true';
+                    if (isMounted) {
+                        setIsCollapsed(collapsed);
+                    }
+                } else if (typeof AsyncStorage?.getItem === 'function') {
+                    const collapsed = (await AsyncStorage.getItem(COLLAPSED_KEY)) === 'true';
+                    if (isMounted) {
+                        setIsCollapsed(collapsed);
+                    }
+                }
+            } catch (error) {
+                console.warn('[WeeklyHighlights] Failed to read collapsed state', error);
             }
-            setIsInitialized(true);
         };
+
         checkCollapsed();
+        setIsInitialized(true);
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     const handleCollapse = useCallback(() => {
@@ -104,7 +120,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
     }, [router]);
 
     // Условный возврат после всех хуков
-    if (!isInitialized || highlights.length === 0) return null;
+    if (highlights.length === 0) return null;
     
     // Если forceVisible установлен, используем его напрямую
     if (forceVisible !== undefined) {
@@ -114,7 +130,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
         // forceVisible === true - показываем компонент
     } else {
         // Если forceVisible не установлен, используем локальное состояние isCollapsed
-        if (isCollapsed) {
+        if (isInitialized && isCollapsed) {
             return (
                 <View style={styles.collapsedContainer}>
                     <Pressable 
@@ -150,7 +166,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
                     <MaterialIcons name="expand-less" size={20} color="#6b7280" />
                 </Pressable>
             </View>
-            <Text style={styles.subtitle}>Лучшие путешествия этой недели по версии редакции</Text>
+            <Text style={styles.subtitle}>Популярные маршруты, которые вы еще не видели</Text>
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -166,7 +182,13 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
                         activeOpacity={0.8}
                     >
                         {item.imageUrl ? (
-                            <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
+                            <ExpoImage
+                                source={{ uri: item.imageUrl }}
+                                style={styles.itemImage}
+                                contentFit="cover"
+                                transition={120}
+                                cachePolicy="memory-disk"
+                            />
                         ) : (
                             <View style={[styles.itemImage, styles.itemImagePlaceholder]}>
                                 <MaterialIcons name="route" size={24} color="#9ca3af" />
@@ -195,18 +217,16 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
 
 const styles = StyleSheet.create({
     container: {
-        marginVertical: 8,
-        marginHorizontal: 4,
-        paddingVertical: 12,
-        paddingHorizontal: 4,
-        backgroundColor: '#f0f9f9',
-        borderRadius: 12,
+        marginVertical: 16,
+        padding: 16,
+        backgroundColor: '#fff',
+        borderRadius: 18,
         borderWidth: 1,
-        borderColor: '#d1e7e7',
-        shadowColor: '#6b8e7f',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
+        borderColor: 'rgba(15, 23, 42, 0.08)',
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: Platform.OS === 'web' ? 0 : 0.05,
+        shadowRadius: 10,
         elevation: 2,
     },
     header: {
@@ -260,14 +280,11 @@ const styles = StyleSheet.create({
         letterSpacing: 0.2,
     },
     subtitle: {
-        fontSize: 14, // ✅ БИЗНЕС: Увеличен размер
+        fontSize: 13,
         color: '#4a5568',
-        paddingHorizontal: 12,
-        marginLeft: 36, // Отступ для выравнивания
-        marginTop: -2,
-        marginBottom: 8,
-        fontWeight: '500',
-        fontStyle: 'italic', // ✅ БИЗНЕС: Курсив для объяснения
+        paddingHorizontal: 0,
+        marginLeft: 0,
+        marginBottom: 10,
     },
     collapseButton: {
         padding: 4,
@@ -306,11 +323,11 @@ const styles = StyleSheet.create({
         marginLeft: 6,
     },
     scrollContent: {
-        paddingHorizontal: 12,
-        paddingVertical: 2,
+        paddingHorizontal: 4,
+        paddingVertical: 4,
     },
     item: {
-        width: 160,
+        width: 150,
         backgroundColor: '#ffffff',
         borderRadius: 12,
         overflow: 'hidden',
@@ -326,11 +343,11 @@ const styles = StyleSheet.create({
         transform: [{ scale: 1 }],
     },
     itemMobile: {
-        width: 140,
+        width: 136,
     },
     itemImage: {
         width: '100%',
-        height: 90,
+        height: 88,
         backgroundColor: '#f3f4f6',
     },
     itemImagePlaceholder: {

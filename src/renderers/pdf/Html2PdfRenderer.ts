@@ -136,7 +136,7 @@ export class Html2PdfRenderer implements IPdfRenderer {
    * Загружает html2pdf.js библиотеку
    */
   private async ensureBundleLoaded(): Promise<void> {
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
       throw new Error('Window is not available');
     }
 
@@ -145,17 +145,81 @@ export class Html2PdfRenderer implements IPdfRenderer {
     }
 
     if (!this.loadingPromise) {
-      this.loadingPromise = new Promise<void>((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = CDN_SRC;
-        script.defer = true;
-        script.onload = () => resolve();
-        script.onerror = (e) => reject(new Error('html2pdf bundle load failed'));
-        document.head.appendChild(script);
-      });
+      this.loadingPromise = this.loadBundleWithFallback();
     }
 
-    await this.loadingPromise;
+    try {
+      await this.loadingPromise;
+    } finally {
+      if (!window.html2pdf) {
+        this.loadingPromise = null;
+      }
+    }
+
+    if (!window.html2pdf) {
+      throw new Error('html2pdf is not available');
+    }
+  }
+
+  private async loadBundleWithFallback(): Promise<void> {
+    try {
+      await this.loadLocalBundle();
+    } catch (localError) {
+      console.warn('[Html2PdfRenderer] Local html2pdf import failed, falling back to CDN', localError);
+      await this.loadCdnBundle();
+    }
+
+    if (!window.html2pdf) {
+      throw new Error('html2pdf failed to initialize');
+    }
+  }
+
+  private async loadLocalBundle(): Promise<void> {
+    const module = await import('html2pdf.js/dist/html2pdf.bundle.min.js');
+    const html2pdf =
+      (module as { default?: Html2Pdf }).default ||
+      ((module as unknown as { html2pdf?: Html2Pdf }).html2pdf) ||
+      (module as unknown as Html2Pdf);
+
+    if (typeof html2pdf !== 'function') {
+      throw new Error('html2pdf local bundle is invalid');
+    }
+
+    window.html2pdf = html2pdf as Html2Pdf & { (): any };
+  }
+
+  private loadCdnBundle(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (window.html2pdf) {
+        resolve();
+        return;
+      }
+
+      const existing = document.querySelector<HTMLScriptElement>('script[data-html2pdf]');
+      if (existing) {
+        existing.addEventListener('load', () => {
+          window.html2pdf ? resolve() : reject(new Error('html2pdf bundle load failed'));
+        });
+        existing.addEventListener('error', () => reject(new Error('html2pdf bundle load failed')));
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = CDN_SRC;
+      script.defer = true;
+      script.async = true;
+      script.crossOrigin = 'anonymous';
+      script.dataset.html2pdf = 'true';
+      script.onload = () => {
+        if (window.html2pdf) {
+          resolve();
+        } else {
+          reject(new Error('html2pdf not found after CDN load'));
+        }
+      };
+      script.onerror = () => reject(new Error('html2pdf bundle load failed'));
+      document.head.appendChild(script);
+    });
   }
 }
 

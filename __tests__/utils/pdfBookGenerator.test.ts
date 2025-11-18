@@ -4,6 +4,8 @@
 import { buildPhotoBookHTML } from '@/src/utils/pdfBookGenerator';
 import type { TravelForBook } from '@/src/types/pdf-export';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
+import type { Travel } from '@/src/types/types';
+import { TravelDataTransformer } from '@/src/services/pdf-export/TravelDataTransformer';
 
 // Mock QRCode
 jest.mock('qrcode', () => ({
@@ -57,6 +59,57 @@ describe('buildPhotoBookHTML', () => {
     includeGallery: true,
     includeMap: true,
   };
+
+  const travel503: Travel = {
+    id: 503,
+    name: 'Маршрут в Бескидах: от парковки до смотровой через водопад',
+    slug: 'marshrut-v-beskidakh-ot-parkovki-do-smotrovoi-cherez-vodopad',
+    url: '/travels/marshrut-v-beskidakh-ot-parkovki-do-smotrovoi-cherez-vodopad',
+    description:
+      '<h3>📊 Общая информация о маршруте</h3><ul><li>🗺️ <strong>Расположение:</strong> Живецкие Бескиды, южная Польша</li><li>🚗 <strong>От Кракова:</strong> ~120 км (~2–2.5 часа на машине)</li><li>🅿️ <strong>Старт:</strong> парковка в районе Żabnica Skałka (49.6355780, 19.5533252)</li><li>🎯 <strong>Финиш:</strong> смотровая точка (49.6224227, 19.5642096)</li><li>💧 <strong>Через:</strong> водопад на ручье Romanka (49.6319508, 19.5640755)</li><li>↔️ <strong>Общая длина маршрута:</strong> ~2.8 км в одну сторону (~5.6 км туда-обратно)</li><li>⛰️ <strong>Общий набор высоты:</strong> ~350 м</li><li>🕒 <strong>Время в пути вверх:</strong> ~1 ч 10 мин</li><li>🕒 <strong>Обратно:</strong> ~45 мин вниз</li><li>🥾 <strong>Сложность:</strong> лёгкий/умеренный маршрут</li><li>📶 <strong>Связь:</strong> нестабильная, лучше иметь оффлайн-карту</li><li>🎿 <strong>Ближайший горнолыжный склон:</strong> Ski Pilsko (около 15 минут на авто)</li><li>🧭 <strong>Тип маршрута:</strong> линейный, но можно сделать кольцевым</li></ul><p><img src="http://metravel.by/travel-description-image/503/description/4e629cf88f4141fe8647e77d546e238e.png"></p><p><strong>Маршрут:</strong></p><p>🅿️ <strong>Парковка:</strong> 49.6355780, 19.5533252</p><p>💧 <strong>Водопад:</strong> 49.6319508, 19.5640755</p><p>🔭 <strong>Смотровая точка:</strong> 49.6224227, 19.5642096</p><p><br></p><h3>🧭 Описание маршрута</h3><p>📍 <strong>Старт — парковка у леса, рядом с селом Żabnica Skałka</strong>.</p><p>Здесь удобно оставить машину — место малолюдное, бесплатное, рядом шлагбаум и начало тропы.</p><h4>🚶 Участок 1: от парковки до водопада</h4><ul><li><strong>Длина:</strong> ~1.3 км</li><li><strong>Набор высоты:</strong> около 80 м</li><li><strong>Время в пути:</strong> ~25–30 мин</li><li><strong>Путь:</strong> широкий лесной грейдер, параллельно ручью <strong>Potok Romanka</strong>.</li><li>Последние 200 м — каменистая тропа с легким уклоном, появляется шум воды.</li></ul><p>💧 <strong>Водопад</strong> небольшой, но живописный — скрыт в лесу, высотой ~3–4 м. Весной и после дождей особенно красив. Можно подойти почти вплотную, рядом — удобные камни для отдыха или перекуса.</p><p><img src="http://metravel.by/travel-description-image/503/description/b01bf56b4a0d4d27a41145b9e4a19a0a.JPG"></p><h4>🚶 Участок 2: от водопада до смотровой</h4><ul><li><strong>Длина:</strong> ~1.5 км</li><li><strong>Набор высоты:</strong> ~150 м</li><li><strong>Время в пути:</strong> ~40–50 мин</li><li><strong>Путь:</strong> узкая лесная тропа, местами крутой подъём, особенно на последних 400 м. Почва может быть скользкой после дождя.</li><li>Ориентир — держаться правее и выше русла ручья, на развилке идти вверх по направлению юго-запад.</li></ul><p>🔭 <strong>Смотровая точка</strong> находится на поляне с видом на гору <strong>Romanka</strong> и долину Żabnicy. При ясной погоде видно даже Словацкие Татры.</p><p><img src="http://metravel.by/travel-description-image/503/description/d8661d906af6449b97130c215b500ce6.JPG"></p><h3>🎿 Бонус: горнолыжный склон рядом</h3><p>Если ты поехал(а) зимой — бери не только термос, но и лыжи.</p><p>Всего в <strong>5 минутах на авто</strong> от парковки находится <strong>горнолыжный курорт <em>Ski Resort Złatna-Huta (ZwardońSki)</em></strong> и также <strong>Ski Centrum Pilsko</strong> чуть дальше.</p><p>🏔️ <strong>Ski Pilsko (Korbielów)</strong> — один из самых высоких и живописных курортов юга Польши:</p><ul><li>трассы до 4.5 км</li><li>высота до 1340 м</li><li>отличные виды и нет толп (в отличие от Закопане).</li></ul><p><img src="http://metravel.by/travel-description-image/503/description/2ebe8e3f11734186b332d9b012604844.JPG"></p><p><img src="http://metravel.by/travel-description-image/503/description/738e85f2eafe4b499121f03ab8daf0d4.JPG"></p><p>Так что если вы любите совмещать походы и катание — идеальное место.</p>',
+    year: '2023',
+    youtube_link: null,
+    number_days: 1,
+    countryName: 'Польша',
+    countryCode: 'pl',
+    countries: [160],
+    travelAddress: [
+      {
+        id: 14664,
+        address: 'Mosorne, Kącina, Zawoja, gmina Zawoja, Сухский повят, Малопольское воеводство, 34-222, Польша',
+        coord: '49.6355780,19.5533252',
+        categoryName: 'Парковка',
+        travelImageThumbUrl: 'https://metravel.by/address-image/14664/conversions/ee045ac5aa5d4bb58883889c19be1c30.JPG',
+      },
+      {
+        id: 14665,
+        address: 'Wieża widokowa na Mosornym Groniu, Trasa Enduro, Policzne, Zawoja, gmina Zawoja, Сухский повят, Малопольское воеводство, 34-223, Польша',
+        coord: '49.6224227,19.5642096',
+        categoryName: 'Башня, Обзорная точка',
+        travelImageThumbUrl: 'https://metravel.by/address-image/14665/conversions/609eb2485af84339818ee40a3d8079da.JPG',
+      },
+      {
+        id: 14666,
+        address: 'Gronik, Zawoja, гmina Zawoja, Сухский повят, Малопольское воеводство, 34-222, Польша',
+        coord: '49.6319508,19.5640755',
+        categoryName: 'Водопад',
+        travelImageThumbUrl: 'https://metravel.by/address-image/14666/conversions/c260453ee9dc457db86dd4da62660132.JPG',
+      },
+    ],
+    userName: 'Julia',
+    gallery: [
+      { url: 'https://metravel.by/gallery/503/gallery/ab655777952749a088e6b0ba5aa5d7e8.JPG', id: 2994 },
+      { url: 'https://metravel.by/gallery/503/gallery/0008125364fa416aa303c17cd8b3fa27.JPG', id: 2998 },
+      { url: 'https://metravel.by/gallery/503/gallery/6e4ae9a75335486292d06c1c5bf52423.JPG', id: 3003 },
+      { url: 'https://metravel.by/gallery/503/gallery/987a17e3d246462ab803b09033c70ffc.JPG', id: 3004 },
+    ],
+    travel_image_thumb_url: 'https://metravel.by/travel-image/503/conversions/4be970c7a1fb4147acd24ed9852d1280.JPG',
+    travel_image_url: 'https://metravel.by/travel-image/503/conversions/4be970c7a1fb4147acd24ed9852d1280.JPG',
+    recommendation:
+      '<ul><li>Лучше идти в <strong>треккинговой обуви(зимой кошки)</strong>.</li><li>Водопад особенно красив весной — в мае поток сильный.</li><li>Смотровая — отличное место для перекуса: есть пеньки и бревна, солнце прогревает поляну даже в холодные месяцы.</li><li><strong>Интернет ловит нестабильно</strong> — загрузи оффлайн-карту заранее (например, через Maps.me или Komoot).</li></ul>',
+    plus: null,
+    minus: null,
+  } as unknown as Travel;
 
   describe('Обложка', () => {
     it('должен содержать обложку с заголовком', async () => {
@@ -271,6 +324,36 @@ describe('buildPhotoBookHTML', () => {
   });
 
   describe('Обработка пустых данных', () => {
+    it('должен обработать пустой массив путешествий без запросов к бэкенду', async () => {
+      const html = await buildPhotoBookHTML([], defaultSettings);
+      
+      // Должен сгенерировать валидный HTML
+      expect(html).toContain('<!doctype html>');
+      expect(html).toContain('<html');
+      
+      // Должна быть обложка
+      expect(html).toContain('class="pdf-page cover-page"');
+      
+      // Должно показывать 0 путешествий
+      expect(html).toContain('0');
+      
+      // Не должно быть страниц с путешествиями
+      expect(html).not.toContain('class="pdf-page travel-photo-page"');
+      expect(html).not.toContain('class="pdf-page travel-text-page"');
+      
+      // Не должно быть оглавления (так как нет путешествий)
+      // Но если includeToc = true, оглавление может быть пустым
+      // Проверяем, что нет элементов путешествий в оглавлении
+      if (defaultSettings.includeToc) {
+        const tocMatches = html.match(/Содержание/g);
+        // Оглавление может быть, но без элементов путешествий
+        expect(html).not.toContain('Тестовое путешествие');
+      }
+      
+      // Должна быть заключительная страница
+      expect(html).toContain('class="pdf-page final-page"');
+    });
+
     it('должен обработать путешествие без описания', async () => {
       const travelWithoutDescription = { ...mockTravel, description: null };
       const html = await buildPhotoBookHTML([travelWithoutDescription], defaultSettings);
@@ -374,6 +457,16 @@ describe('buildPhotoBookHTML', () => {
       // Скрипты должны быть удалены
       expect(html).not.toContain('<script>');
       expect(html).toContain('Test');
+    });
+  });
+
+  describe('Регрессионные сценарии', () => {
+    it('успешно генерирует HTML для реальных данных путешествия 503', async () => {
+      const transformer = new TravelDataTransformer();
+      const travelsForBook = transformer.transform([travel503]);
+      await expect(buildPhotoBookHTML(travelsForBook, defaultSettings)).resolves.toContain(
+        'Маршрут в Бескидах'
+      );
     });
   });
 });

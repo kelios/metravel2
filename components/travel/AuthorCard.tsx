@@ -107,7 +107,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
 
           {travelsCount !== null && (
             <View style={styles.statsRow}>
-              <MaterialIcons name="explore" size={16} color="#ff9f5a" />
+              <MaterialIcons name="explore" size={16} color="#6b7280" /> {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
               <Text style={styles.statsText}>
                 {travelsCount} {travelsCount === 1 ? 'путешествие' : travelsCount < 5 ? 'путешествия' : 'путешествий'}
               </Text>
@@ -130,7 +130,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
             <Text style={[styles.viewButtonText, isMobile && styles.viewButtonTextMobile]}>
               Все путешествия
             </Text>
-            <Feather name="arrow-right" size={16} color="#ff9f5a" />
+            <Feather name="arrow-right" size={16} color="#6b7280" /> {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
           </Pressable>
         )}
       </View>
@@ -143,14 +143,20 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 24,
-    marginBottom: 32,
+    padding: Platform.select({
+      default: 20, // Мобильные
+      web: 24, // Десктоп
+    }),
+    marginBottom: Platform.select({
+      default: 24, // Мобильные
+      web: 32, // Десктоп
+    }),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 2,
-    borderWidth: 1,
+    shadowOpacity: 0.02, // ✅ УЛУЧШЕНИЕ: Упрощенная тень
+    shadowRadius: 4,
+    elevation: 1, // ✅ УЛУЧШЕНИЕ: Уменьшено с 2
+    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 1
     borderColor: 'rgba(0, 0, 0, 0.06)',
   },
   containerMobile: {
@@ -168,30 +174,48 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: '#ffe4d0',
+    width: Platform.select({
+      default: 64, // Мобильные
+      web: 80, // Десктоп
+    }),
+    height: Platform.select({
+      default: 64, // Мобильные
+      web: 80, // Десктоп
+    }),
+    borderRadius: Platform.select({
+      default: 32, // Мобильные
+      web: 40, // Десктоп
+    }),
+    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 3
+    borderColor: 'rgba(0, 0, 0, 0.06)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02, // ✅ УЛУЧШЕНИЕ: Упрощенная тень
+    shadowRadius: 2,
+    elevation: 1, // ✅ УЛУЧШЕНИЕ: Уменьшено с 3
   },
   avatarMobile: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    borderWidth: 2,
+    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 2
   },
   avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: Platform.select({
+      default: 64, // Мобильные
+      web: 80, // Десктоп
+    }),
+    height: Platform.select({
+      default: 64, // Мобильные
+      web: 80, // Десктоп
+    }),
+    borderRadius: Platform.select({
+      default: 32, // Мобильные
+      web: 40, // Десктоп
+    }),
     backgroundColor: '#f3f4f6',
-    borderWidth: 3,
-    borderColor: '#e5e7eb',
+    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 3
+    borderColor: 'rgba(0, 0, 0, 0.06)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -234,21 +258,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: Platform.select({
+      default: 10, // Мобильные
+      web: 12, // Десктоп
+    }),
+    paddingHorizontal: Platform.select({
+      default: 16, // Мобильные
+      web: 20, // Десктоп
+    }),
     borderRadius: 12,
-    backgroundColor: '#fff5eb',
-    borderWidth: 1,
-    borderColor: '#ffe4d0',
+    backgroundColor: 'rgba(0, 0, 0, 0.02)', // ✅ УЛУЧШЕНИЕ: Нейтральный фон
+    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 1
+    borderColor: 'rgba(0, 0, 0, 0.06)',
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
         transition: 'all 0.2s ease' as any,
         ':hover': {
-          backgroundColor: '#ffe4d0',
-          borderColor: '#ff9f5a',
+          backgroundColor: 'rgba(0, 0, 0, 0.04)',
+          borderColor: '#1f2937',
           transform: 'translateY(-2px) scale(1.02)' as any,
-          boxShadow: '0 4px 12px rgba(255, 159, 90, 0.2)' as any,
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)' as any,
         } as any,
       },
     }),
@@ -258,13 +288,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   viewButtonPressed: {
-    backgroundColor: '#ffe4d0',
+    backgroundColor: 'rgba(0, 0, 0, 0.04)', // ✅ УЛУЧШЕНИЕ: Нейтральный фон
     transform: [{ scale: 0.98 }],
   },
   viewButtonText: {
-    fontSize: 15,
+    fontSize: Platform.select({
+      default: 14, // Мобильные
+      web: 15, // Десктоп
+    }),
     fontWeight: '600',
-    color: '#ff9f5a',
+    color: '#6b7280', // ✅ УЛУЧШЕНИЕ: Нейтральный серый
   },
   viewButtonTextMobile: {
     fontSize: 14,

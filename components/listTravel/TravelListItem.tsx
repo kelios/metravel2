@@ -13,6 +13,7 @@ import { fetchTravel, fetchTravelBySlug } from "@/src/api/travels";
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize, generateSrcSet } from "@/utils/imageOptimization";
 // ✅ ДИЗАЙН: Импорт максимально легкой и воздушной палитры
 import { AIRY_COLORS, AIRY_SHADOWS, AIRY_BOX_SHADOWS } from "@/constants/airyColors";
+import { DESIGN_TOKENS } from "@/constants/designSystem";
 
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
@@ -399,11 +400,15 @@ const styles = StyleSheet.create({
         position: "relative",
         width: "100%",
         aspectRatio: 1,
-        borderRadius: 12, // ✅ ДИЗАЙН: Унифицированный радиус (medium)
+        borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
         backgroundColor: "#ffffff",
-        ...AIRY_SHADOWS.light, // ✅ ДИЗАЙН: Легкая воздушная тень
-        borderWidth: 1,
-        borderColor: AIRY_COLORS.border, // ✅ ДИЗАЙН: Почти невидимая граница
+        ...Platform.select({
+            web: {
+                boxShadow: "0 1px 4px rgba(0,0,0,0.04)", // ✅ ДИЗАЙН: Более легкая тень
+            },
+        }),
+        borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
+        borderColor: 'rgba(0, 0, 0, 0.06)', // ✅ ДИЗАЙН: Более светлая граница
         overflow: "hidden",
         ...Platform.select({
             web: {
@@ -411,9 +416,9 @@ const styles = StyleSheet.create({
                 cursor: "pointer",
                 // @ts-ignore - для hover эффектов
                 ":hover": {
-                    transform: "translateY(-4px) scale(1.02)", // ✅ ДИЗАЙН: Масштаб + подъем
-                    boxShadow: AIRY_BOX_SHADOWS.hover, // ✅ ДИЗАЙН: Легкая воздушная тень при hover
-                    borderColor: AIRY_COLORS.borderAccent, // ✅ ДИЗАЙН: Воздушная легкая персиковая граница при hover
+                    transform: "translateY(-2px)", // ✅ ДИЗАЙН: Меньше подъем для прозаичности
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.06)", // ✅ ДИЗАЙН: Более легкая тень при hover
+                    borderColor: 'rgba(0, 0, 0, 0.1)', // ✅ ДИЗАЙН: Нейтральная граница при hover
                 },
             },
         }),
@@ -427,8 +432,8 @@ const styles = StyleSheet.create({
     },
 
     selected: {
-        borderWidth: 2,
-        borderColor: AIRY_COLORS.accent, // ✅ ДИЗАЙН: Воздушный бирюзовый для выбранных элементов
+        borderWidth: 1.5, // ✅ ДИЗАЙН: Меньше толщина
+        borderColor: DESIGN_TOKENS.colors.text, // ✅ ДИЗАЙН: Нейтральный цвет для выбранных
     },
     selectionOverlay: {
         position: "absolute",
@@ -475,17 +480,17 @@ const styles = StyleSheet.create({
 
     favoriteButtonContainer: {
         position: "absolute",
-        top: 12,
-        right: 12,
+        top: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        right: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
         zIndex: 10,
         backgroundColor: "rgba(255,255,255,0.95)",
-        borderRadius: 22,
-        padding: 6,
-        borderWidth: 1,
-        borderColor: "rgba(17,24,39,0.1)",
+        borderRadius: Platform.select({ default: 18, web: 22 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
+        padding: Platform.select({ default: 5, web: 6 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
+        borderColor: "rgba(0, 0, 0, 0.06)", // ✅ ДИЗАЙН: Более светлая граница
         ...Platform.select({
             web: {
-                boxShadow: AIRY_BOX_SHADOWS.light,
+                boxShadow: "0 1px 3px rgba(0,0,0,0.04)", // ✅ ДИЗАЙН: Более легкая тень
                 transition: "all 0.2s ease",
             },
         }),
@@ -496,7 +501,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        padding: 14,
+        padding: Platform.select({ default: 12, web: 14 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
     },
     // ✅ БИЗНЕС: Badges для социального доказательства
     badgesContainer: {
@@ -532,45 +537,45 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: "rgba(255,255,255,0.55)",
-        borderRadius: 12,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderWidth: 1,
-        borderColor: "rgba(17,24,39,0.06)",
-        marginRight: 6,
-        marginBottom: 6,
+        borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
+        paddingHorizontal: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        paddingVertical: Platform.select({ default: 3, web: 4 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
+        borderColor: "rgba(0, 0, 0, 0.06)", // ✅ ДИЗАЙН: Более светлая граница
+        marginRight: Platform.select({ default: 4, web: 6 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        marginBottom: Platform.select({ default: 4, web: 6 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
     },
 
     tagTxt: {
-        fontSize: 12,
+        fontSize: Platform.select({ default: 11, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
         color: "#111827",
         fontWeight: "600",
     },
 
     titleBox: {
         backgroundColor: "rgba(255,255,255,0.95)", // ✅ ДИЗАЙН: Более непрозрачный фон
-        borderRadius: 10, // ✅ ДИЗАЙН: Меньший радиус для согласованности
-        paddingHorizontal: 14, // ✅ ДИЗАЙН: Увеличены отступы
-        paddingVertical: 10,
-        borderWidth: 1,
+        borderRadius: Platform.select({ default: 8, web: 10 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
+        paddingHorizontal: Platform.select({ default: 12, web: 14 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        paddingVertical: Platform.select({ default: 8, web: 10 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
         borderColor: "rgba(0, 0, 0, 0.06)", // ✅ ДИЗАЙН: Единая граница
-        marginBottom: 10,
+        marginBottom: Platform.select({ default: 8, web: 10 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
         ...Platform.select({
             web: {
                 backdropFilter: "blur(12px)", // ✅ ДИЗАЙН: Увеличен blur
                 WebkitBackdropFilter: "blur(12px)",
-                boxShadow: AIRY_BOX_SHADOWS.light, // ✅ ДИЗАЙН: Легкая воздушная тень
+                boxShadow: "0 1px 4px rgba(0,0,0,0.04)", // ✅ ДИЗАЙН: Более легкая тень
             },
         }),
     },
 
     title: {
-        fontSize: 18, // ✅ ДИЗАЙН: Увеличен размер для лучшей читаемости
+        fontSize: Platform.select({ default: 16, web: 18 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
         fontWeight: "700",
         fontFamily: Platform.select({ web: "Georgia, serif", default: undefined }), // ✅ ДИЗАЙН: Georgia для заголовков
         color: "#1a202c", // ✅ ДИЗАЙН: Единый цвет текста
-        lineHeight: 24, // ✅ ДИЗАЙН: Оптимальный line-height
-        letterSpacing: -0.3, // ✅ ДИЗАЙН: Отрицательный letter-spacing для читаемости
+        lineHeight: Platform.select({ default: 22, web: 24 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        letterSpacing: -0.2, // ✅ ДИЗАЙН: Меньше отрицательный letter-spacing
     },
 
     metaRow: {
@@ -582,37 +587,37 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: "rgba(255,255,255,0.5)",
-        borderRadius: 12,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderWidth: 1,
-        borderColor: "rgba(17,24,39,0.06)",
-        marginRight: 8,
-        marginBottom: 4,
+        borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
+        paddingHorizontal: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        paddingVertical: Platform.select({ default: 3, web: 4 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
+        borderColor: "rgba(0, 0, 0, 0.06)", // ✅ ДИЗАЙН: Более светлая граница
+        marginRight: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        marginBottom: Platform.select({ default: 3, web: 4 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
     },
 
     metaTxt: {
-        fontSize: 13, // ✅ ДИЗАЙН: Сохранен размер
+        fontSize: Platform.select({ default: 12, web: 13 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
         color: "#4a5568", // ✅ ДИЗАЙН: Вторичный цвет текста для метаданных
         fontWeight: "500",
-        lineHeight: 18,
+        lineHeight: Platform.select({ default: 16, web: 18 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
     },
 
     actions: {
         position: "absolute",
-        top: 12, // ✅ ДИЗАЙН: Увеличены отступы
-        right: 12,
+        top: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        right: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
         flexDirection: "row",
         backgroundColor: "rgba(255,255,255,0.95)",
-        borderRadius: 12, // ✅ ДИЗАЙН: Меньший радиус для согласованности
-        padding: 4, // ✅ ДИЗАЙН: Уменьшен padding
-        borderWidth: 1,
-        borderColor: "rgba(0, 0, 0, 0.08)",
+        borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
+        padding: Platform.select({ default: 3, web: 4 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
+        borderColor: "rgba(0, 0, 0, 0.06)", // ✅ ДИЗАЙН: Более светлая граница
         zIndex: 10,
-        gap: 4, // ✅ ДИЗАЙН: Используем gap вместо marginLeft
+        gap: Platform.select({ default: 3, web: 4 }), // ✅ АДАПТИВНОСТЬ: Меньше gap на мобильных
         ...Platform.select({
             web: {
-                boxShadow: AIRY_BOX_SHADOWS.light,
+                boxShadow: "0 1px 3px rgba(0,0,0,0.04)", // ✅ ДИЗАЙН: Более легкая тень
                 backdropFilter: "blur(8px)",
                 WebkitBackdropFilter: "blur(8px)",
             },

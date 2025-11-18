@@ -331,6 +331,12 @@ const MapPageComponent: React.FC<Props> = ({
   // Сохраняем ссылку на карту для кнопки "Мое местоположение" (должен быть до условных возвратов)
   const mapRef = useRef<any>(null);
 
+  // ✅ ИСПРАВЛЕНИЕ: Используем useRef для отслеживания инициализации
+  // Должны быть объявлены ДО условных возвратов, чтобы соблюдать правила хуков
+  const hasInitializedRef = useRef(false);
+  const lastModeRef = useRef<MapMode | null>(null);
+  const savedMapViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+
   // Функция для центрирования на местоположении пользователя (должна быть до условных возвратов)
   const centerOnUserLocation = useCallback(() => {
     if (!mapRef.current || !userLocation) return;
@@ -356,7 +362,6 @@ const MapPageComponent: React.FC<Props> = ({
   const MapLogic = () => {
     const map = useMap();
     useMapEvents({ click: handleMapClick });
-    const [hasCenteredOnUser, setHasCenteredOnUser] = useState(false);
     const [hasCenteredOnData, setHasCenteredOnData] = useState(false);
     
     // Сохраняем ссылку на карту
@@ -364,34 +369,74 @@ const MapPageComponent: React.FC<Props> = ({
       mapRef.current = map;
     }, [map]);
 
+    // Сохраняем текущую позицию карты при изменении (только в режиме route)
+    useEffect(() => {
+      if (!map || mode !== 'route') return;
+      
+      const saveView = () => {
+        const center = map.getCenter();
+        const zoom = map.getZoom();
+        savedMapViewRef.current = {
+          center: [center.lat, center.lng],
+          zoom,
+        };
+      };
+      
+      // Сохраняем позицию при изменении зума или перемещении
+      map.on('moveend', saveView);
+      map.on('zoomend', saveView);
+      
+      return () => {
+        map.off('moveend', saveView);
+        map.off('zoomend', saveView);
+      };
+    }, [map, mode]);
+
     // Центрирование на местоположение пользователя при первой загрузке
     useEffect(() => {
-      if (!map || !leafletModules.L || hasCenteredOnUser) return;
+      if (!map || !leafletModules.L) return;
       
-      if (userLocation) {
-        map.setView([userLocation.latitude, userLocation.longitude], 11, { animate: false });
-        setHasCenteredOnUser(true);
+      // ✅ ИСПРАВЛЕНИЕ: В режиме route НИКОГДА не центрируем автоматически
+      // Пользователь сам выбирает точки на карте, карта должна оставаться на текущей позиции
+      if (mode === 'route') {
+        // Только при первой инициализации используем coordinates
+        if (!hasInitializedRef.current && coordinates.latitude && coordinates.longitude) {
+          map.setView([coordinates.latitude, coordinates.longitude], 13, { animate: false });
+          hasInitializedRef.current = true;
+        }
+        // После инициализации НЕ трогаем карту - она остается на текущей позиции
+        lastModeRef.current = mode;
         return;
       }
       
-      // Если нет местоположения, центрируем на переданные coordinates
-      if (coordinates.latitude && coordinates.longitude) {
-        map.setView([coordinates.latitude, coordinates.longitude], 11, { animate: false });
-        setHasCenteredOnUser(true);
+      // Если переключились с route на radius, сбрасываем флаг инициализации
+      if (lastModeRef.current === 'route' && mode === 'radius') {
+        hasInitializedRef.current = false;
       }
-    }, [map, userLocation, coordinates, leafletModules.L, hasCenteredOnUser]);
+      
+      // Только для режима radius делаем центрирование при первой загрузке
+      if (!hasInitializedRef.current) {
+        if (userLocation) {
+          map.setView([userLocation.latitude, userLocation.longitude], 11, { animate: false });
+          hasInitializedRef.current = true;
+        } else if (coordinates.latitude && coordinates.longitude) {
+          map.setView([coordinates.latitude, coordinates.longitude], 11, { animate: false });
+          hasInitializedRef.current = true;
+        }
+      }
+      
+      lastModeRef.current = mode;
+    }, [map, userLocation, coordinates, leafletModules.L, mode]);
 
     // Автоматическое подгонка границ при изменении данных (но только если не отключено)
     useEffect(() => {
       if (disableFitBounds || !map || !leafletModules.L) return;
-      if (mode === 'route' && isMobileScreen) return;
+      
+      // ✅ ИСПРАВЛЕНИЕ: В режиме route НИКОГДА не делаем автоматический зум
+      // Это предотвращает зум при клике на старт/финиш и при переключении вкладок
+      if (mode === 'route') return;
 
       const allPoints: [number, number][] = [];
-      
-      // Добавляем точки маршрута
-      if (mode === 'route' && routePoints.length) {
-        allPoints.push(...routePoints);
-      }
       
       // Добавляем точки путешествий
       if (travel.data && travel.data.length > 0) {
@@ -479,8 +524,14 @@ const MapPageComponent: React.FC<Props> = ({
         )}
         
         <MapContainer
-            center={userLocation ? [userLocation.latitude, userLocation.longitude] : [coordinates.latitude, coordinates.longitude]}
-            zoom={userLocation ? 11 : 13}
+            center={
+              // ✅ ИСПРАВЛЕНИЕ: В режиме route всегда используем только coordinates
+              // Это предотвращает центрирование на пользователя при клике и переключении вкладок
+              mode === 'route' 
+                ? [coordinates.latitude, coordinates.longitude]
+                : (userLocation ? [userLocation.latitude, userLocation.longitude] : [coordinates.latitude, coordinates.longitude])
+            }
+            zoom={mode === 'route' ? 13 : (userLocation ? 11 : 13)}
             style={styles.map}
         >
           <TileLayer
@@ -505,13 +556,31 @@ const MapPageComponent: React.FC<Props> = ({
           )}
 
           {routePoints.length >= 1 && customIcons && (
-              <Marker position={[routePoints[0][1], routePoints[0][0]]} icon={customIcons.start}>
+              <Marker 
+                position={[routePoints[0][1], routePoints[0][0]]} 
+                icon={customIcons.start}
+                eventHandlers={{
+                  // ✅ ИСПРАВЛЕНИЕ: Отключаем зум при клике на маркер старт
+                  click: (e) => {
+                    e.originalEvent?.stopPropagation();
+                  }
+                }}
+              >
                 <Popup>Start</Popup>
               </Marker>
           )}
 
           {routePoints.length === 2 && customIcons && (
-              <Marker position={[routePoints[1][1], routePoints[1][0]]} icon={customIcons.end}>
+              <Marker 
+                position={[routePoints[1][1], routePoints[1][0]]} 
+                icon={customIcons.end}
+                eventHandlers={{
+                  // ✅ ИСПРАВЛЕНИЕ: Отключаем зум при клике на маркер финиш
+                  click: (e) => {
+                    e.originalEvent?.stopPropagation();
+                  }
+                }}
+              >
                 <Popup>End</Popup>
               </Marker>
           )}

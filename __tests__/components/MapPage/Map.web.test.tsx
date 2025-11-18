@@ -17,7 +17,13 @@ const mockLeaflet = {
 const mockReactLeaflet = {
   MapContainer: ({ children, ...props }: any) => <div data-testid="map-container" {...props}>{children}</div>,
   TileLayer: (props: any) => <div data-testid="tile-layer" {...props} />,
-  Marker: (props: any) => <div data-testid="marker" {...props} />,
+  Marker: (props: any) => {
+    // Сохраняем eventHandlers для тестирования
+    if (props.eventHandlers?.click) {
+      (window as any).lastMarkerClickHandler = props.eventHandlers.click
+    }
+    return <div data-testid="marker" {...props} />
+  },
   Popup: ({ children }: any) => <div data-testid="popup">{children}</div>,
   useMap: jest.fn(() => ({
     fitBounds: jest.fn(),
@@ -106,6 +112,8 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     jest.clearAllMocks()
     // Reset window.L
     ;(window as any).L = mockLeaflet
+    // Reset marker click handler
+    delete (window as any).lastMarkerClickHandler
   })
 
   it('renders loading state initially', async () => {
@@ -174,6 +182,102 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     expect(getByText(/Loading/i)).toBeTruthy()
   })
 
+  it('does not zoom when clicking on route start/finish markers', async () => {
+    const props = {
+      ...defaultProps,
+      mode: 'route' as const,
+      routePoints: [[27.5667, 53.9], [27.5767, 53.91]] as [number, number][],
+    }
+    const { useMap } = require('react-leaflet')
+    const mockFitBounds = jest.fn()
+    const mockSetView = jest.fn()
+    useMap.mockReturnValue({
+      fitBounds: mockFitBounds,
+      setView: mockSetView,
+      closePopup: jest.fn(),
+    })
+    
+    render(<MapPageComponent {...props} />)
+    await act(async () => {})
+    
+    // В режиме route не должно быть автоматического зума
+    // fitBounds не должен вызываться при изменении routePoints
+    expect(mockFitBounds).not.toHaveBeenCalled()
+    
+    // setView должен вызываться только при первой инициализации, не при изменении routePoints
+    // Проверяем, что setView вызывался только для начальной позиции
+    const setViewCalls = mockSetView.mock.calls.filter((call: any[]) => {
+      // Игнорируем вызовы для начальной позиции (координаты пользователя или дефолтные)
+      const [lat, lng] = call[0] || []
+      return !(lat === 53.9 && lng === 27.5667)
+    })
+    expect(setViewCalls.length).toBe(0)
+  })
+
+  it('does not zoom when route points are added in route mode', async () => {
+    const { useMap } = require('react-leaflet')
+    const mockFitBounds = jest.fn()
+    useMap.mockReturnValue({
+      fitBounds: mockFitBounds,
+      setView: jest.fn(),
+      closePopup: jest.fn(),
+    })
+    
+    const props = {
+      ...defaultProps,
+      mode: 'route' as const,
+      routePoints: [] as [number, number][],
+    }
+    
+    const { rerender } = render(<MapPageComponent {...props} />)
+    await act(async () => {})
+    
+    // Добавляем старт
+    rerender(<MapPageComponent {...props} routePoints={[[27.5667, 53.9]] as [number, number][]} />)
+    await act(async () => {})
+    expect(mockFitBounds).not.toHaveBeenCalled()
+    
+    // Добавляем финиш
+    rerender(<MapPageComponent {...props} routePoints={[[27.5667, 53.9], [27.5767, 53.91]] as [number, number][]} />)
+    await act(async () => {})
+    expect(mockFitBounds).not.toHaveBeenCalled()
+  })
+
+  it('start and finish markers have click handlers that prevent zoom', async () => {
+    const props = {
+      ...defaultProps,
+      mode: 'route' as const,
+      routePoints: [[27.5667, 53.9], [27.5767, 53.91]] as [number, number][],
+    }
+    
+    const { useMap } = require('react-leaflet')
+    useMap.mockReturnValue({
+      fitBounds: jest.fn(),
+      setView: jest.fn(),
+      closePopup: jest.fn(),
+    })
+    
+    render(<MapPageComponent {...props} />)
+    await act(async () => {})
+    
+    // Проверяем, что обработчики событий установлены для маркеров
+    // Они должны предотвращать зум при клике
+    const clickHandler = (window as any).lastMarkerClickHandler
+    expect(clickHandler).toBeDefined()
+    
+    // Симулируем клик на маркер
+    const mockEvent = {
+      originalEvent: {
+        stopPropagation: jest.fn(),
+      },
+    }
+    
+    if (clickHandler) {
+      clickHandler(mockEvent)
+      expect(mockEvent.originalEvent.stopPropagation).toHaveBeenCalled()
+    }
+  })
+
   it('generates correct icon URLs for all icon types', () => {
     const fs = require('fs')
     const path = require('path')
@@ -214,6 +318,267 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     // Should not use require() for .ico files (use public paths instead)
     const requireIcoPattern = /require\s*\(\s*[`'"]@\/assets\/icons\/.*\.ico[`'"]/
     expect(fileContent).not.toMatch(requireIcoPattern)
+  })
+
+  describe('Route mode zoom prevention', () => {
+    it('does not zoom when switching from radius to route mode', async () => {
+      const { useMap } = require('react-leaflet')
+      const mockFitBounds = jest.fn()
+      const mockSetView = jest.fn()
+      useMap.mockReturnValue({
+        fitBounds: mockFitBounds,
+        setView: mockSetView,
+        closePopup: jest.fn(),
+        getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.5667 })),
+        getZoom: jest.fn(() => 11),
+        on: jest.fn(),
+        off: jest.fn(),
+      })
+      
+      // Начинаем в режиме radius
+      const props = {
+        ...defaultProps,
+        mode: 'radius' as const,
+        routePoints: [] as [number, number][],
+      }
+      
+      const { rerender } = render(<MapPageComponent {...props} />)
+      await act(async () => {})
+      
+      // Очищаем моки перед переключением
+      mockFitBounds.mockClear()
+      mockSetView.mockClear()
+      
+      // Переключаемся на route mode
+      rerender(<MapPageComponent {...props} mode="route" />)
+      await act(async () => {})
+      
+      // В режиме route не должно быть автоматического зума
+      expect(mockFitBounds).not.toHaveBeenCalled()
+    })
+
+    it('does not center on user location when in route mode', async () => {
+      const { useMap } = require('react-leaflet')
+      const mockSetView = jest.fn()
+      useMap.mockReturnValue({
+        fitBounds: jest.fn(),
+        setView: mockSetView,
+        closePopup: jest.fn(),
+        getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.5667 })),
+        getZoom: jest.fn(() => 11),
+        on: jest.fn(),
+        off: jest.fn(),
+      })
+      
+      const props = {
+        ...defaultProps,
+        mode: 'route' as const,
+        routePoints: [] as [number, number][],
+      }
+      
+      render(<MapPageComponent {...props} />)
+      await act(async () => {})
+      
+      // Проверяем, что setView вызывался только для coordinates, а не для userLocation
+      const setViewCalls = mockSetView.mock.calls
+      // В режиме route должен быть только один вызов setView для инициализации с coordinates
+      expect(setViewCalls.length).toBeLessThanOrEqual(1)
+      
+      if (setViewCalls.length > 0) {
+        const [center, zoom] = setViewCalls[0]
+        // Должен использовать coordinates, а не userLocation
+        expect(center).toEqual([53.9, 27.5667]) // coordinates из defaultProps
+      }
+    })
+
+    it('preserves map position when route points are added', async () => {
+      const { useMap } = require('react-leaflet')
+      const mockSetView = jest.fn()
+      const mockGetCenter = jest.fn(() => ({ lat: 50.5, lng: 19.0 }))
+      const mockGetZoom = jest.fn(() => 12)
+      
+      useMap.mockReturnValue({
+        fitBounds: jest.fn(),
+        setView: mockSetView,
+        closePopup: jest.fn(),
+        getCenter: mockGetCenter,
+        getZoom: mockGetZoom,
+        on: jest.fn(),
+        off: jest.fn(),
+      })
+      
+      const props = {
+        ...defaultProps,
+        mode: 'route' as const,
+        routePoints: [] as [number, number][],
+      }
+      
+      const { rerender } = render(<MapPageComponent {...props} />)
+      await act(async () => {})
+      
+      // Сохраняем текущую позицию
+      const initialCenter = mockGetCenter()
+      const initialZoom = mockGetZoom()
+      
+      // Очищаем моки
+      mockSetView.mockClear()
+      
+      // Добавляем старт
+      rerender(<MapPageComponent {...props} routePoints={[[19.0, 50.5]] as [number, number][]} />)
+      await act(async () => {})
+      
+      // Карта не должна менять позицию
+      // setView не должен вызываться после инициализации в режиме route
+      const setViewCallsAfterStart = mockSetView.mock.calls
+      expect(setViewCallsAfterStart.length).toBe(0)
+    })
+
+    it('does not zoom when tab is switched (simulated by remounting)', async () => {
+      const { useMap } = require('react-leaflet')
+      const mockFitBounds = jest.fn()
+      const mockSetView = jest.fn()
+      
+      useMap.mockReturnValue({
+        fitBounds: mockFitBounds,
+        setView: mockSetView,
+        closePopup: jest.fn(),
+        getCenter: jest.fn(() => ({ lat: 50.5, lng: 19.0 })),
+        getZoom: jest.fn(() => 12),
+        on: jest.fn(),
+        off: jest.fn(),
+      })
+      
+      const props = {
+        ...defaultProps,
+        mode: 'route' as const,
+        routePoints: [[19.0, 50.5]] as [number, number][],
+      }
+      
+      // Первый рендер (симуляция открытия вкладки)
+      const { unmount } = render(<MapPageComponent {...props} />)
+      await act(async () => {})
+      
+      // Очищаем моки
+      mockFitBounds.mockClear()
+      mockSetView.mockClear()
+      
+      // Размонтируем (симуляция переключения вкладки)
+      unmount()
+      
+      // Снова монтируем (симуляция возврата на вкладку)
+      render(<MapPageComponent {...props} />)
+      await act(async () => {})
+      
+      // В режиме route не должно быть автоматического зума при возврате на вкладку
+      // setView может быть вызван только для инициализации, но не для центрирования на userLocation
+      const setViewCalls = mockSetView.mock.calls
+      expect(mockFitBounds).not.toHaveBeenCalled()
+      
+      // Если setView был вызван, он должен использовать coordinates, а не userLocation
+      if (setViewCalls.length > 0) {
+        const [center] = setViewCalls[0]
+        expect(center).toEqual([53.9, 27.5667]) // coordinates, не userLocation
+      }
+    })
+  })
+
+  describe('React Hooks rules compliance', () => {
+    it('declares all useRef hooks before conditional returns', () => {
+      const fs = require('fs')
+      const path = require('path')
+      const filePath = path.join(__dirname, '../../components/MapPage/Map.web.tsx')
+      
+      if (!fs.existsSync(filePath)) {
+        return
+      }
+      
+      const fileContent = fs.readFileSync(filePath, 'utf8')
+      
+      // Находим все useRef объявления
+      const useRefMatches = [...fileContent.matchAll(/const\s+\w+Ref\s*=\s*useRef/g)]
+      
+      // Находим условные возвраты (return statements before MapContainer)
+      const conditionalReturns = fileContent.match(/if\s*\([^)]+\)\s*return\s+<[^>]+>/g) || []
+      
+      if (conditionalReturns.length > 0) {
+        // Находим позицию первого условного возврата
+        const firstReturnIndex = fileContent.indexOf(conditionalReturns[0])
+        
+        // Проверяем, что все useRef объявлены до первого условного возврата
+        useRefMatches.forEach(match => {
+          const refIndex = match.index || 0
+          expect(refIndex).toBeLessThan(firstReturnIndex)
+        })
+      }
+    })
+
+    it('has useRef hooks in correct order', () => {
+      const fs = require('fs')
+      const path = require('path')
+      const filePath = path.join(__dirname, '../../components/MapPage/Map.web.tsx')
+      
+      if (!fs.existsSync(filePath)) {
+        return
+      }
+      
+      const fileContent = fs.readFileSync(filePath, 'utf8')
+      
+      // Проверяем наличие всех необходимых useRef хуков
+      expect(fileContent).toContain('const mapRef = useRef')
+      expect(fileContent).toContain('const hasInitializedRef = useRef')
+      expect(fileContent).toContain('const lastModeRef = useRef')
+      expect(fileContent).toContain('const savedMapViewRef = useRef')
+      
+      // Проверяем, что они объявлены до условных возвратов
+      const returnLoaderIndex = fileContent.indexOf('return <Loader')
+      const mapRefIndex = fileContent.indexOf('const mapRef = useRef')
+      const hasInitializedRefIndex = fileContent.indexOf('const hasInitializedRef = useRef')
+      
+      expect(mapRefIndex).toBeLessThan(returnLoaderIndex)
+      expect(hasInitializedRefIndex).toBeLessThan(returnLoaderIndex)
+    })
+  })
+
+  describe('Route mode initialization', () => {
+    it('only initializes once in route mode and does not re-center', async () => {
+      const { useMap } = require('react-leaflet')
+      const mockSetView = jest.fn()
+      const callOrder: string[] = []
+      
+      useMap.mockReturnValue({
+        fitBounds: jest.fn(),
+        setView: (...args: any[]) => {
+          callOrder.push('setView')
+          mockSetView(...args)
+        },
+        closePopup: jest.fn(),
+        getCenter: jest.fn(() => ({ lat: 50.5, lng: 19.0 })),
+        getZoom: jest.fn(() => 12),
+        on: jest.fn(),
+        off: jest.fn(),
+      })
+      
+      const props = {
+        ...defaultProps,
+        mode: 'route' as const,
+        routePoints: [] as [number, number][],
+      }
+      
+      const { rerender } = render(<MapPageComponent {...props} />)
+      await act(async () => {})
+      
+      const initialSetViewCalls = mockSetView.mock.calls.length
+      
+      // Симулируем несколько обновлений (как при переключении вкладок)
+      for (let i = 0; i < 3; i++) {
+        mockSetView.mockClear()
+        rerender(<MapPageComponent {...props} />)
+        await act(async () => {})
+        
+        // После первой инициализации setView не должен вызываться
+        expect(mockSetView.mock.calls.length).toBe(0)
+      }
+    })
   })
 })
 

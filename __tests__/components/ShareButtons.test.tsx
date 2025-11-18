@@ -120,6 +120,7 @@ describe('ShareButtons', () => {
   });
 
   it('should use custom URL when provided', () => {
+    (Platform.OS as any) = 'ios';
     const customUrl = 'https://custom-url.com/travel';
     const { getByLabelText } = render(<ShareButtons travel={mockTravel} url={customUrl} />);
 

@@ -313,6 +313,24 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   onChange={(v) => onFilterChange('radius', v)}
                   compact
                 />
+                <View style={styles.radiusQuickOptions}>
+                  {filters.radius.map((opt) => {
+                    const selected = String(opt.id) === String(filterValue.radius);
+                    return (
+                      <Pressable
+                        key={opt.id}
+                        onPress={() => onFilterChange('radius', opt.id)}
+                        style={[
+                          styles.radiusChip,
+                          selected && styles.radiusChipActive,
+                        ]}
+                        accessibilityRole="button"
+                      >
+                        <Text style={styles.radiusChipText}>{opt.name}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
             )}
           </>
@@ -574,6 +592,29 @@ const getStyles = (isMobile: boolean) => {
       fontSize: 12,
       fontWeight: '700',
       color: COLORS.primary,
+    },
+    radiusQuickOptions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 8,
+    },
+    radiusChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.card,
+    },
+    radiusChipActive: {
+      backgroundColor: COLORS.primarySoft,
+      borderColor: COLORS.primary,
+    },
+    radiusChipText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: COLORS.text,
     },
     transportTabs: {
       flexDirection: 'row',

@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface ActiveFiltersBadgeProps {
   filterValue: Record<string, any>;
@@ -19,7 +20,7 @@ export default function ActiveFiltersBadge({
     
     // Подсчитываем активные фильтры
     Object.entries(filterValue).forEach(([key, value]) => {
-      if (key === 'showModerationPending' && value) {
+      if (key === 'moderation' && value === 0) {
         count++;
       } else if (Array.isArray(value) && value.length > 0) {
         count += value.length;
@@ -36,7 +37,7 @@ export default function ActiveFiltersBadge({
   return (
     <View style={styles.container}>
       <View style={styles.badge}>
-        <Feather name="filter" size={14} color="#6b8e7f" />
+        <Feather name="filter" size={14} color={DESIGN_TOKENS.colors.primary} />
         <Text style={styles.badgeText}>
           {activeCount} {activeCount === 1 ? 'фильтр' : activeCount < 5 ? 'фильтра' : 'фильтров'}
         </Text>
@@ -48,7 +49,7 @@ export default function ActiveFiltersBadge({
           accessibilityLabel="Сбросить все фильтры"
           hitSlop={8}
         >
-          <Feather name="x" size={16} color="#666" />
+          <Feather name="x" size={16} color={DESIGN_TOKENS.colors.textMuted} />
         </Pressable>
       )}
     </View>
@@ -62,8 +63,8 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#f0f7f4',
-    borderRadius: 8,
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    borderRadius: DESIGN_TOKENS.radii.md,
     marginBottom: 12,
     ...Platform.select({
       web: {
@@ -79,11 +80,11 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6b8e7f',
+    color: DESIGN_TOKENS.colors.primary,
   },
   clearButton: {
     padding: 4,
-    borderRadius: 12,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     ...Platform.select({
       web: {
         cursor: 'pointer',

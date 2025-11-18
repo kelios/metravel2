@@ -232,14 +232,14 @@ const FiltersComponent = ({
     allFilterFields.forEach((key) => {
       onSelectedItemsChange(key, undefined);
     });
-    // Сбрасываем модерацию если она была включена
-    if (filterValue.showModerationPending) {
-      onSelectedItemsChange("showModerationPending", false);
+    // Сбрасываем модерацию если она была установлена
+    if (filterValue.moderation !== undefined) {
+      onSelectedItemsChange("moderation", undefined);
     }
     // ✅ ИСПРАВЛЕНИЕ: Применяем полностью очищенные фильтры немедленно
     const emptyFilters: Record<string, any> = {
       year: undefined,
-      showModerationPending: false,
+      moderation: undefined,
       countries: undefined,
       categories: undefined,
       categoryTravelAddress: undefined,
@@ -275,33 +275,36 @@ const FiltersComponent = ({
 
   /* ======= Модерация ======= */
   const renderModerationCheckbox = useMemo(
-    () =>
-      isSuperuser && (
+    () => {
+      if (!isSuperuser) return null;
+      const isModerationPending = filterValue.moderation === 0;
+      return (
         <View style={styles.groupBox}>
           <Text style={styles.groupLabel}>Модерация</Text>
           <View style={styles.itemsBox}>
             <Pressable
               onPress={() =>
-                onSelectedItemsChange("showModerationPending", !filterValue.showModerationPending)
+                onSelectedItemsChange("moderation", isModerationPending ? undefined : 0)
               }
               style={[styles.checkboxRow, Platform.OS === "web" && { cursor: "pointer" }]}
-              aria-pressed={filterValue.showModerationPending}
+              aria-pressed={isModerationPending}
               role="checkbox"
               accessibilityLabel="Показать статьи на модерации"
-              accessibilityState={{ checked: filterValue.showModerationPending }}
+              accessibilityState={{ checked: isModerationPending }}
               hitSlop={8}
             >
               <Feather
-                name={filterValue.showModerationPending ? "check-square" : "square"}
+                name={isModerationPending ? "check-square" : "square"}
                 size={20}
-                color={filterValue.showModerationPending ? DESIGN_COLORS.primary : "#999"} // ✅ ДИЗАЙН: Оранжевый при активном
+                color={isModerationPending ? DESIGN_COLORS.primary : "#999"} // ✅ ДИЗАЙН: Оранжевый при активном
               />
               <Text style={styles.itemText}>Показать статьи на модерации</Text>
             </Pressable>
           </View>
         </View>
-      ),
-    [isSuperuser, filterValue, onSelectedItemsChange]
+      );
+    },
+    [isSuperuser, filterValue.moderation, onSelectedItemsChange]
   );
 
   /* ======= Ввод Года ======= */
@@ -499,23 +502,28 @@ const styles = StyleSheet.create({
   },
 
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 8, paddingBottom: 12 },
-  content: { paddingHorizontal: 6 },
+  scrollContent: { 
+    paddingHorizontal: Platform.select({ default: 12, web: 8 }), 
+    paddingBottom: Platform.select({ default: 16, web: 12 }) 
+  },
+  content: { 
+    paddingHorizontal: Platform.select({ default: 10, web: 6 }) 
+  },
 
   groupBox: { 
-    marginBottom: 12, // ✅ ДИЗАЙН: Увеличен отступ
+    marginBottom: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
     backgroundColor: "#ffffff", // ✅ ДИЗАЙН: Белый фон
-    borderRadius: 12, // ✅ ДИЗАЙН: Увеличен радиус
-    borderWidth: 1,
-    borderColor: DESIGN_COLORS.border, // ✅ ДИЗАЙН: Единая граница
+    borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
+    borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница для прозаичного дизайна
+    borderColor: 'rgba(0, 0, 0, 0.06)', // ✅ ДИЗАЙН: Более светлая граница
     ...Platform.select({
       web: {
         transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.08)", // ✅ ДИЗАЙН: Level 1 тени
+        boxShadow: "0 1px 4px rgba(0,0,0,0.04)", // ✅ ДИЗАЙН: Более легкая тень
         // @ts-ignore
         ":hover": {
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          borderColor: DESIGN_COLORS.primary, // ✅ ДИЗАЙН: Оранжевая граница при hover
+          boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+          borderColor: 'rgba(0, 0, 0, 0.1)', // ✅ ДИЗАЙН: Нейтральная граница при hover
         },
       },
     }),
@@ -525,78 +533,80 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 14, // ✅ ДИЗАЙН: Увеличены отступы
-    paddingHorizontal: 16, // ✅ ДИЗАЙН: Увеличены отступы
-    borderRadius: 12, // ✅ ДИЗАЙН: Скругление внутри groupBox
+    paddingVertical: Platform.select({ default: 12, web: 14 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    paddingHorizontal: Platform.select({ default: 12, web: 16 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
     ...Platform.select({
       web: {
         transition: "all 0.2s ease",
         cursor: "pointer",
         // @ts-ignore
         ":hover": {
-          backgroundColor: DESIGN_COLORS.primaryLight, // ✅ ДИЗАЙН: Светло-оранжевый при hover
+          backgroundColor: 'rgba(0, 0, 0, 0.02)', // ✅ ДИЗАЙН: Нейтральный hover
         },
       },
     }),
   },
   groupLabel: { 
-    fontSize: 16, // ✅ ДИЗАЙН: Увеличен размер
-    fontWeight: "700", // ✅ ДИЗАЙН: Увеличен weight
+    fontSize: Platform.select({ default: 15, web: 16 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    fontWeight: "600", // ✅ ДИЗАЙН: Уменьшен weight для прозаичности
     color: DESIGN_COLORS.textPrimary, // ✅ ДИЗАЙН: Единый цвет
-    letterSpacing: -0.2, // ✅ ДИЗАЙН: Отрицательный letter-spacing
+    letterSpacing: -0.1, // ✅ ДИЗАЙН: Меньше отрицательный letter-spacing
   },
 
   itemsBox: { 
-    paddingHorizontal: 16, // ✅ ДИЗАЙН: Увеличены отступы
-    paddingBottom: 8, // ✅ ДИЗАЙН: Увеличены отступы
+    paddingHorizontal: Platform.select({ default: 12, web: 16 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    paddingBottom: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
   },
 
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10, // ✅ ДИЗАЙН: Увеличены отступы
-    paddingHorizontal: 8, // ✅ ДИЗАЙН: Увеличены отступы
-    gap: 12, // ✅ ДИЗАЙН: Увеличен gap
-    borderRadius: 8, // ✅ ДИЗАЙН: Увеличен радиус
-    marginBottom: 4, // ✅ ДИЗАЙН: Отступ между элементами
+    paddingVertical: Platform.select({ default: 8, web: 10 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    paddingHorizontal: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    gap: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше gap на мобильных
+    borderRadius: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
+    marginBottom: Platform.select({ default: 3, web: 4 }), // ✅ АДАПТИВНОСТЬ: Меньше отступ на мобильных
     ...Platform.select({
       web: {
         transition: "all 0.2s ease",
         cursor: "pointer",
         // @ts-ignore
         ":hover": {
-          backgroundColor: DESIGN_COLORS.primaryLight, // ✅ ДИЗАЙН: Светло-оранжевый при hover
-          transform: "translateX(2px)", // ✅ ДИЗАЙН: Небольшое смещение при hover
+          backgroundColor: 'rgba(0, 0, 0, 0.02)', // ✅ ДИЗАЙН: Нейтральный hover
         },
       },
     }),
   },
   itemText: { 
-    fontSize: 14, 
+    fontSize: Platform.select({ default: 13, web: 14 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
     color: DESIGN_COLORS.textPrimary, // ✅ ДИЗАЙН: Единый цвет
     flex: 1,
     fontWeight: "500",
-    lineHeight: 20,
+    lineHeight: Platform.select({ default: 18, web: 20 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
   },
 
-  yearBox: { paddingHorizontal: 12, paddingBottom: 8 },
+  yearBox: { 
+    paddingHorizontal: Platform.select({ default: 10, web: 12 }), 
+    paddingBottom: Platform.select({ default: 6, web: 8 }) 
+  },
   yearInputWrapper: { position: "relative" },
   yearInput: {
     backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: DESIGN_COLORS.border, // ✅ ДИЗАЙН: Единая граница
-    borderRadius: 8, // ✅ ДИЗАЙН: Увеличен радиус
-    paddingHorizontal: 12, // ✅ ДИЗАЙН: Увеличены отступы
-    paddingVertical: 10, // ✅ ДИЗАЙН: Увеличены отступы
-    fontSize: 15,
+    borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
+    borderColor: 'rgba(0, 0, 0, 0.06)', // ✅ ДИЗАЙН: Более светлая граница
+    borderRadius: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
+    paddingHorizontal: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    paddingVertical: Platform.select({ default: 8, web: 10 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    fontSize: Platform.select({ default: 14, web: 15 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
     color: DESIGN_COLORS.textPrimary, // ✅ ДИЗАЙН: Единый цвет
     ...Platform.select({
       web: {
         transition: "all 0.2s ease",
         // @ts-ignore
         ":focus": {
-          borderColor: DESIGN_COLORS.primary,
-          boxShadow: `0 0 0 3px ${DESIGN_COLORS.primaryLight}40`,
+          borderColor: 'rgba(0, 0, 0, 0.2)', // ✅ ДИЗАЙН: Нейтральный focus
+          boxShadow: '0 0 0 2px rgba(0, 0, 0, 0.05)',
           outline: "none",
         },
       },
@@ -612,41 +622,41 @@ const styles = StyleSheet.create({
 
   toggleAllBtn: {
     alignSelf: "flex-end",
-    paddingHorizontal: 12, // ✅ ДИЗАЙН: Увеличены отступы
-    paddingVertical: 8, // ✅ ДИЗАЙН: Увеличены отступы
-    marginBottom: 12,
-    borderRadius: 8, // ✅ ДИЗАЙН: Скругление
+    paddingHorizontal: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    paddingVertical: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    marginBottom: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    borderRadius: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
     ...Platform.select({
       web: {
         transition: "all 0.2s ease",
         cursor: "pointer",
         // @ts-ignore
         ":hover": {
-          backgroundColor: DESIGN_COLORS.primaryLight,
+          backgroundColor: 'rgba(0, 0, 0, 0.02)', // ✅ ДИЗАЙН: Нейтральный hover
         },
       },
     }),
   },
   toggleAllText: { 
-    fontSize: 13, 
+    fontSize: Platform.select({ default: 12, web: 13 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
     fontWeight: "600", 
-    color: DESIGN_COLORS.primary, // ✅ ДИЗАЙН: Оранжевый цвет
+    color: DESIGN_COLORS.textSecondary, // ✅ ДИЗАЙН: Нейтральный цвет вместо оранжевого
   },
 
   footer: {
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
+    paddingHorizontal: Platform.select({ default: 12, web: 10 }), // ✅ АДАПТИВНОСТЬ: Больше на мобильных
+    paddingVertical: Platform.select({ default: 12, web: 10 }), // ✅ АДАПТИВНОСТЬ: Больше на мобильных
+    borderTopWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
+    borderTopColor: 'rgba(0, 0, 0, 0.06)', // ✅ ДИЗАЙН: Более светлая граница
     backgroundColor: "#fff",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 3,
+        shadowOffset: { width: 0, height: -1 },
+        shadowOpacity: 0.03, // ✅ ДИЗАЙН: Более легкая тень
+        shadowRadius: 2,
       },
-      android: { elevation: 4 },
+      android: { elevation: 2 }, // ✅ ДИЗАЙН: Меньше elevation
       web: { position: "sticky" as any, bottom: 0, zIndex: 100 },
     }),
   },
@@ -654,8 +664,8 @@ const styles = StyleSheet.create({
   btn: {
     flex: 1,
     minWidth: "30%",
-    paddingVertical: 14, // ✅ ДИЗАЙН: Увеличена высота до 48px (14*2 + 20px текста)
-    borderRadius: 12, // ✅ ДИЗАЙН: Увеличен радиус
+    paddingVertical: Platform.select({ default: 12, web: 14 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
     alignItems: "center",
     justifyContent: "center",
     ...Platform.select({
@@ -675,15 +685,14 @@ const styles = StyleSheet.create({
   },
   reset: { 
     backgroundColor: "#f9fafb", // ✅ ДИЗАЙН: Светлый фон
-    borderWidth: 1,
-    borderColor: DESIGN_COLORS.border, // ✅ ДИЗАЙН: Единая граница
+    borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
+    borderColor: 'rgba(0, 0, 0, 0.06)', // ✅ ДИЗАЙН: Более светлая граница
     ...Platform.select({
       web: {
         // @ts-ignore
         ":hover": {
           backgroundColor: "#f3f4f6",
-          borderColor: DESIGN_COLORS.primary,
-          transform: "translateY(-1px)",
+          borderColor: 'rgba(0, 0, 0, 0.1)',
         },
       },
     }),
@@ -691,18 +700,17 @@ const styles = StyleSheet.create({
   resetTxt: { 
     color: DESIGN_COLORS.textSecondary, // ✅ ДИЗАЙН: Вторичный цвет
     fontWeight: "600",
+    fontSize: Platform.select({ default: 13, web: 14 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
   },
   apply: { 
-    backgroundColor: DESIGN_COLORS.primary, // ✅ ДИЗАЙН: Оранжевый фон
+    backgroundColor: DESIGN_COLORS.text, // ✅ ДИЗАЙН: Нейтральный серый вместо яркого оранжевого
     ...Platform.select({
       web: {
         // @ts-ignore
         ":hover": { 
-          backgroundColor: DESIGN_COLORS.primaryDark,
-          transform: "translateY(-2px) scale(1.02)",
-          boxShadow: "0 4px 12px rgba(255, 159, 90, 0.3)", // ✅ ДИЗАЙН: Оранжевая тень
+          backgroundColor: '#374151',
         },
-        boxShadow: "0 2px 8px rgba(255, 159, 90, 0.25)",
+        boxShadow: "0 1px 4px rgba(0, 0, 0, 0.1)", // ✅ ДИЗАЙН: Более легкая тень
       },
     }),
   },

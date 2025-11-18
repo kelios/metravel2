@@ -144,9 +144,9 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                     setRouteDistance(dist)
                 }
 
-                if (!(window as any).disableFitBounds && !avoidAutoFit) {
-                    map.fitBounds(line.getBounds().pad(0.2))
-                }
+                // ✅ ИСПРАВЛЕНИЕ: Убираем автоматический зум при построении маршрута
+                // Пользователь сам контролирует масштаб карты при клике на старт/финиш
+                // map.fitBounds(line.getBounds().pad(0.2))
                 ;(window as any).disableFitBounds = false
             } catch (e: any) {
                 if (e?.name === 'AbortError') return
@@ -166,7 +166,8 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                         polylineRef.current = line
                         if (typeof result.distance === 'number') setRouteDistance(result.distance)
                         else setRouteDistance(0)
-                        if (!(window as any).disableFitBounds && !avoidAutoFit) map.fitBounds(line.getBounds().pad(0.2))
+                        // ✅ ИСПРАВЛЕНИЕ: Убираем автоматический зум при построении маршрута
+                        // if (!(window as any).disableFitBounds && !avoidAutoFit) map.fitBounds(line.getBounds().pad(0.2))
                         ;(window as any).disableFitBounds = false
                         setErrors((prev: any) => ({ ...prev, routing: false }))
                     } catch {}

@@ -6,7 +6,7 @@ import {
 describe('filterQuery helpers', () => {
   it('normalizes base params with publish/moderation defaults', () => {
     const params = buildTravelQueryParams(
-      { categories: ['1', '2'], showModerationPending: false },
+      { categories: ['1', '2'] },
       { userId: null }
     )
 
@@ -14,7 +14,18 @@ describe('filterQuery helpers', () => {
       categories: [1, 2],
       moderation: 1,
       publish: 1,
-      showModerationPending: false,
+    })
+  })
+
+  it('uses moderation value from filter if provided', () => {
+    const params = buildTravelQueryParams(
+      { categories: ['1', '2'], moderation: 0 },
+      { userId: null }
+    )
+
+    expect(params).toEqual({
+      categories: [1, 2],
+      moderation: 0,
     })
   })
 

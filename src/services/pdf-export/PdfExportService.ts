@@ -118,6 +118,13 @@ export class PdfExportService {
         size: blob.size,
       };
     } catch (error) {
+      const currentProgress = this.progressTracker.getCurrentProgress();
+      console.error('[PdfExportService] export failed', {
+        stage: currentProgress.stage,
+        progress: currentProgress.progress,
+        message: currentProgress.message,
+        error,
+      });
       const exportError = this.errorHandler.handle(error);
       this.progressTracker.setStage(ExportStage.ERROR, 0, exportError.message);
       throw exportError;
@@ -195,6 +202,13 @@ export class PdfExportService {
         size: blob.size,
       };
     } catch (error) {
+      const currentProgress = this.progressTracker.getCurrentProgress();
+      console.error('[PdfExportService] preview failed', {
+        stage: currentProgress.stage,
+        progress: currentProgress.progress,
+        message: currentProgress.message,
+        error,
+      });
       const exportError = this.errorHandler.handle(error);
       this.progressTracker.setStage(ExportStage.ERROR, 0, exportError.message);
       throw exportError;

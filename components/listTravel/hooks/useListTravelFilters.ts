@@ -4,15 +4,12 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import type { FilterState, FilterOptions, CategoryWithCount } from '../utils/listTravelTypes';
-import { INITIAL_FILTER, BELARUS_ID, MAX_VISIBLE_CATEGORIES } from '../utils/listTravelConstants';
-import { calculateCategoriesWithCount } from '../utils/listTravelHelpers';
+import type { FilterState, FilterOptions } from '../utils/listTravelTypes';
+import { INITIAL_FILTER, BELARUS_ID } from '../utils/listTravelConstants';
 import { buildTravelQueryParams } from '@/src/utils/filterQuery';
-import type { Travel } from '@/src/types/types';
 
 export interface UseListTravelFiltersProps {
   options?: FilterOptions;
-  accumulatedData: Travel[];
   isMeTravel: boolean;
   isExport: boolean;
   isTravelBy: boolean;
@@ -28,7 +25,6 @@ export interface UseListTravelFiltersReturn {
   onSelect: (field: string, value: any) => void;
   applyFilter: (filter: FilterState) => void;
   handleToggleCategory: (categoryName: string) => void;
-  categoriesWithCount: CategoryWithCount[];
 }
 
 /**
@@ -43,7 +39,6 @@ export interface UseListTravelFiltersReturn {
  */
 export function useListTravelFilters({
   options,
-  accumulatedData,
   isMeTravel,
   isExport,
   isTravelBy,
@@ -61,14 +56,8 @@ export function useListTravelFilters({
       belarusId: BELARUS_ID,
       userId,
       routeUserId: user_id,
-      showModerationPending: filter.showModerationPending,
     });
   }, [filter, isMeTravel, isExport, isTravelBy, userId, user_id]);
-
-  // ✅ АРХИТЕКТУРА: Подсчет категорий с количеством
-  const categoriesWithCount = useMemo(() => {
-    return calculateCategoriesWithCount(accumulatedData, options?.categories).slice(0, MAX_VISIBLE_CATEGORIES);
-  }, [options?.categories, accumulatedData]);
 
   // ✅ АРХИТЕКТУРА: Сброс фильтров
   const resetFilters = useCallback(() => {
@@ -120,7 +109,6 @@ export function useListTravelFilters({
     onSelect,
     applyFilter,
     handleToggleCategory,
-    categoriesWithCount,
   };
 }
 

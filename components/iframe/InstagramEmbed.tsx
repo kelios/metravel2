@@ -1,78 +1,63 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useMemo } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 
 interface InstagramEmbedProps {
     url: string;
 }
 
+const buildEmbedUrl = (url: string) => {
+    try {
+        const normalized = url.replace(/\/embed.*$/, "").replace(/\/$/, "");
+        return `${normalized}/embed/captioned/?omitscript=true`;
+    } catch {
+        return `${url}/embed/captioned/?omitscript=true`;
+    }
+};
+
 const InstagramEmbed: React.FC<InstagramEmbedProps> = ({ url }) => {
-    const embedRef = useRef<HTMLDivElement | null>(null);
-    const scriptLoaded = useRef(false);
-    const [isRendered, setIsRendered] = useState(false);
-
-    useEffect(() => {
-        if (Platform.OS === "web") {
-            const scriptId = "instagram-embed-script";
-            if (!document.getElementById(scriptId)) {
-                const script = document.createElement("script");
-                script.src = "https://www.instagram.com/embed.js";
-                script.async = true;
-                script.id = scriptId;
-                document.body.appendChild(script);
-                script.onload = () => {
-                    scriptLoaded.current = true;
-                    if (window.instgrm) window.instgrm.Embeds.process();
-                    setIsRendered(true);
-                };
-            } else if (window.instgrm && !scriptLoaded.current) {
-                scriptLoaded.current = true;
-                setTimeout(() => {
-                    window.instgrm.Embeds.process();
-                    setIsRendered(true);
-                }, 500);
-            }
-        }
-    }, []);
-
-    useEffect(() => {
-        if (Platform.OS === "web" && window.instgrm) {
-            const observer = new MutationObserver(() => {
-                if (!isRendered && embedRef.current) {
-                    window.instgrm.Embeds.process();
-                    setIsRendered(true);
-                }
-            });
-            if (embedRef.current) {
-                observer.observe(embedRef.current, { childList: true, subtree: true });
-            }
-            return () => observer.disconnect();
-        }
-    }, [isRendered]);
+    const embedUrl = useMemo(() => buildEmbedUrl(url), [url]);
 
     if (Platform.OS === "web") {
         return (
-            <View style={styles.container}>
-                <blockquote
-                    className="instagram-media"
-                    data-instgrm-permalink={url}
-                    data-instgrm-version="14"
-                    ref={embedRef}
-                />
+            <View style={styles.webContainer}>
+                {React.createElement("iframe", {
+                    src: embedUrl,
+                    style: webIframeStyle,
+                    allow:
+                        "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+                    allowFullScreen: true,
+                    loading: "lazy",
+                    title: "Instagram post",
+                })}
             </View>
         );
     }
 
     const WebView = require("react-native-webview").WebView;
     return (
-        <View style={styles.container}>
+        <View style={styles.nativeContainer}>
             <WebView source={{ uri: url }} style={styles.webview} />
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { height: 600, width: "100%", overflow: "hidden" },
+    webContainer: {
+        width: "100%",
+        maxWidth: "100%",
+        alignSelf: "stretch",
+        overflow: "hidden",
+        borderRadius: 18,
+    },
+    nativeContainer: { height: 700, width: "100%", overflow: "hidden" },
     webview: { flex: 1 },
 });
+
+const webIframeStyle: React.CSSProperties = {
+    width: "100%",
+    minHeight: 820,
+    border: "none",
+    borderRadius: 18,
+};
 
 export default React.memo(InstagramEmbed);

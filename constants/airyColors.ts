@@ -32,9 +32,13 @@ export const AIRY_COLORS = {
   textTertiary: '#9ba5a8', // Очень светлый серый
   
   // Границы (почти невидимые)
-  border: 'rgba(0, 0, 0, 0.04)', // Очень мягкая граница
-  borderLight: 'rgba(0, 0, 0, 0.02)', // Еще мягче для разделителей
-  borderAccent: 'rgba(248, 212, 196, 0.3)', // Легкий персик для hover
+  border: 'rgba(0, 0, 0, 0.06)', // Очень мягкая граница
+  borderLight: 'rgba(0, 0, 0, 0.04)', // Еще мягче для разделителей
+  borderAccent: 'rgba(0, 0, 0, 0.08)', // Нейтральная граница для активных состояний
+  
+  // Активные состояния (нейтральные серые)
+  active: '#1f2937', // Темно-серый для активных состояний
+  activeLight: '#6b7280', // Нейтральный серый для акцентов
   
   // Тени (как легкий туман)
   shadowLight: 'rgba(0, 0, 0, 0.03)', // Почти невидимая
@@ -64,39 +68,41 @@ export const AIRY_GRADIENTS = {
 
 /**
  * Тени в формате для StyleSheet
+ * ✅ УЛУЧШЕНИЕ: Упрощенные тени для светлого прозаичного дизайна
  */
 export const AIRY_SHADOWS = {
   light: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
     elevation: 1,
   },
   medium: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 2,
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
   },
   heavy: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
 } as const;
 
 /**
  * Box shadows для web (легкие, воздушные)
+ * ✅ УЛУЧШЕНИЕ: Упрощенные тени для светлого прозаичного дизайна
  */
 export const AIRY_BOX_SHADOWS = {
-  light: '0 1px 8px rgba(0, 0, 0, 0.03)',
-  medium: '0 2px 12px rgba(0, 0, 0, 0.05)',
-  heavy: '0 4px 16px rgba(0, 0, 0, 0.08)',
-  hover: '0 4px 20px rgba(248, 212, 196, 0.15)', // Легкая персиковая тень при hover
+  light: '0 1px 4px rgba(0, 0, 0, 0.02)',
+  medium: '0 2px 6px rgba(0, 0, 0, 0.03)',
+  heavy: '0 4px 8px rgba(0, 0, 0, 0.04)',
+  hover: '0 2px 8px rgba(0, 0, 0, 0.06)', // Нейтральная тень при hover
 } as const;
 
 /**
