@@ -37,12 +37,25 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
     };
   }, [config]);
 
+  // ✅ ИСПРАВЛЕНИЕ: Флаг для отслеживания монтирования компонента
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   /**
    * Callback для обновления прогресса
    */
   const handleProgress = useCallback((progress: ExportProgress) => {
-    setProgress(progress.progress);
-    setCurrentStage(progress.stage);
+    // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
+    if (isMountedRef.current) {
+      setProgress(progress.progress);
+      setCurrentStage(progress.stage);
+    }
   }, []);
 
   const needsDetails = useCallback((travel: Travel) => {
@@ -123,6 +136,9 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
       return;
     }
 
+    // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
+    if (!isMountedRef.current) return;
+
     setIsGenerating(true);
     setError(null);
     setProgress(0);
@@ -148,14 +164,23 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
       document.body.removeChild(link);
       URL.revokeObjectURL(link.href);
 
-      Alert.alert('Успешно!', `PDF-фотоальбом "${settings.title}" успешно создан и сохранен`);
+      // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
+      if (isMountedRef.current) {
+        Alert.alert('Успешно!', `PDF-фотоальбом "${settings.title}" успешно создан и сохранен`);
+      }
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
-      setError(error);
-      Alert.alert('Ошибка', error.message);
+      // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
+      if (isMountedRef.current) {
+        setError(error);
+        Alert.alert('Ошибка', error.message);
+      }
     } finally {
-      setIsGenerating(false);
-      setProgress(0);
+      // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
+      if (isMountedRef.current) {
+        setIsGenerating(false);
+        setProgress(0);
+      }
     }
   }, [selected, handleProgress, loadDetailedTravels]);
 
@@ -167,6 +192,9 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
       Alert.alert('Ошибка', 'PDF превью недоступно');
       return null;
     }
+
+    // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
+    if (!isMountedRef.current) return null;
 
     setIsGenerating(true);
     setError(null);
@@ -234,12 +262,18 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
       return result.blobUrl;
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
-      setError(error);
-      Alert.alert('Ошибка', error.message);
+      // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
+      if (isMountedRef.current) {
+        setError(error);
+        Alert.alert('Ошибка', error.message);
+      }
       return null;
     } finally {
-      setIsGenerating(false);
-      setProgress(0);
+      // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
+      if (isMountedRef.current) {
+        setIsGenerating(false);
+        setProgress(0);
+      }
     }
   }, [selected, handleProgress, loadDetailedTravels]);
 

@@ -58,7 +58,15 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         // если точек недостаточно — убираем линию и выходим
         if (!hasTwoPoints) {
             if (polylineRef.current) {
-                try { map.removeLayer(polylineRef.current) } catch {}
+                try { 
+                    map.removeLayer(polylineRef.current); 
+                } catch (error) {
+                    // ✅ FIX-009: Логируем ошибки удаления слоя (не критично, но полезно для отладки)
+                    if (__DEV__) {
+                        const { devWarn } = require('@/src/utils/logger');
+                        devWarn('Error removing polyline layer:', error);
+                    }
+                }
                 polylineRef.current = null
             }
             setErrors((prev: any) => ({ ...prev, routing: false }))
@@ -112,13 +120,20 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             return { coordsLngLat, distance }
         }
 
+        // ✅ FIX-006: Флаг для отслеживания монтирования компонента
+        let isMounted = true;
+
         const run = async () => {
             try {
+                if (!isMounted) return;
                 setRoutingLoading(true)
                 setErrors((prev: any) => ({ ...prev, routing: false }))
 
                 // 1) пробуем ORS, если есть ключ; иначе — OSRM
                 const result = ORS_API_KEY ? await fetchORS() : await fetchOSRM()
+
+                // ✅ FIX-006: Проверяем монтирование перед обновлением состояния
+                if (!isMounted) return;
 
                 // обновляем состояния
                 setFullRouteCoords(result.coordsLngLat)
@@ -126,7 +141,15 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                 const latlngs = result.coordsLngLat.map(([lng, lat]) => L.latLng(lat, lng))
 
                 if (polylineRef.current) {
-                    try { map.removeLayer(polylineRef.current) } catch {}
+                    try { 
+                        map.removeLayer(polylineRef.current); 
+                    } catch (error) {
+                        // ✅ FIX-009: Логируем ошибки удаления слоя
+                        if (__DEV__) {
+                            const { devWarn } = require('@/src/utils/logger');
+                            devWarn('Error removing polyline layer:', error);
+                        }
+                    }
                     polylineRef.current = null
                 }
                 const line = L.polyline(latlngs, { color: '#3388ff', weight: 5, opacity: 0.85 })
@@ -149,12 +172,13 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                 // map.fitBounds(line.getBounds().pad(0.2))
                 ;(window as any).disableFitBounds = false
             } catch (e: any) {
-                if (e?.name === 'AbortError') return
+                if (e?.name === 'AbortError' || !isMounted) return
                 setErrors((prev: any) => ({ ...prev, routing: e?.message || true }))
                 // если ORS с ключом упал — пробуем OSRM разово
-                if (ORS_API_KEY) {
+                if (ORS_API_KEY && isMounted) {
                     try {
                         const result = await fetchOSRM()
+                        if (!isMounted) return;
                         setFullRouteCoords(result.coordsLngLat)
                         const latlngs = result.coordsLngLat.map(([lng, lat]) => L.latLng(lat, lng))
                         if (polylineRef.current) {
@@ -170,16 +194,26 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                         // if (!(window as any).disableFitBounds && !avoidAutoFit) map.fitBounds(line.getBounds().pad(0.2))
                         ;(window as any).disableFitBounds = false
                         setErrors((prev: any) => ({ ...prev, routing: false }))
-                    } catch {}
+                    } catch (error) {
+                        // ✅ FIX-009: Логируем ошибки fallback маршрутизации
+                        if (__DEV__) {
+                            const { devError } = require('@/src/utils/logger');
+                            devError('Error in OSRM fallback routing:', error);
+                        }
+                    }
                 }
             } finally {
-                setRoutingLoading(false)
+                if (isMounted) {
+                    setRoutingLoading(false)
+                }
             }
         }
 
         run()
 
         return () => {
+            // ✅ FIX-006: Устанавливаем флаг размонтирования
+            isMounted = false;
             if (abortRef.current) {
                 abortRef.current.abort()
                 abortRef.current = null

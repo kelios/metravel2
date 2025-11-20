@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 interface IconButtonProps {
   icon: React.ReactNode;
@@ -37,12 +38,15 @@ function IconButton({
       testID={testID}
       style={({ pressed }) => [
         styles.base,
+        globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
         {
           width: dimension,
           height: dimension,
+          minWidth: dimension, // ✅ ИСПРАВЛЕНИЕ: Минимальная ширина для touch-целей
+          minHeight: dimension, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
           borderRadius: radii.lg,
           backgroundColor: active ? palette.primary : palette.surface,
-          borderColor: active ? palette.primary : palette.border,
+          // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
         },
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
@@ -55,15 +59,26 @@ function IconButton({
 
 const styles = StyleSheet.create({
   base: {
-    borderWidth: 1,
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: spacing.xs / 2,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.05,
+    shadowColor: '#1f1f1f',
+    shadowOpacity: 0.08,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
     elevation: 2,
+    ...Platform.select({
+      web: {
+        transition: 'all 0.2s ease',
+        cursor: 'pointer',
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: palette.primarySoft,
+          transform: 'scale(1.05)',
+        },
+      },
+    }),
   },
   icon: {
     alignItems: 'center',

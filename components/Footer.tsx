@@ -15,6 +15,7 @@ import {
 import { Link, type Href } from "expo-router";
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from "@/constants/designSystem";
+import { globalFocusStyles } from "@/styles/globalFocus"; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 /** ========= Prop для передачи высоты дока ========= */
 type FooterProps = {
@@ -56,7 +57,12 @@ const Item = ({
 
   if (href) {
     return (
-      <Link href={href} accessibilityRole="link" accessibilityLabel={label} style={styles.item}>
+      <Link 
+        href={href} 
+        accessibilityRole="link" 
+        accessibilityLabel={label} 
+        style={[styles.item, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+      >
         {content}
       </Link>
     );
@@ -68,7 +74,11 @@ const Item = ({
       accessibilityRole="link"
       accessibilityLabel={label}
       hitSlop={6}
-      style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.item, 
+        pressed && styles.pressed,
+        globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+      ]}
     >
       {content}
     </Pressable>
@@ -182,10 +192,26 @@ const styles = StyleSheet.create({
   item: {
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 8, // Уменьшили отступы
-    paddingVertical: 4,   // Уменьшили отступы
-    minWidth: 60,         // Уменьшили минимальную ширину
-    minHeight: 44,        // Слегка уменьшили высоту
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 60,
+    minHeight: 44,
+    borderRadius: 8, // ✅ ИСПРАВЛЕНИЕ: Добавлен borderRadius для hover
+    // ✅ ИСПРАВЛЕНИЕ: Добавлены hover-состояния для веб
+    ...Platform.select({
+      web: {
+        transition: 'all 0.2s ease',
+        cursor: 'pointer',
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: palette.primarySoft,
+          transform: 'scale(1.05)',
+        },
+        ':active': {
+          transform: 'scale(1)',
+        },
+      },
+    }),
   },
   pressed: { opacity: 0.7 },
   itemInner: {
@@ -219,9 +245,8 @@ const mobileStyles = StyleSheet.create({
     backgroundColor: palette.dockBackground,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: palette.dockBorder,
-    shadowColor: "#0f172a",
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    shadowColor: "#1f1f1f",
     shadowOpacity: 0.12,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: -6 },
@@ -252,9 +277,8 @@ const desktopStyles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: palette.surface,
     borderRadius: 24,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: palette.border,
-    shadowColor: "#0f172a",
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    shadowColor: "#1f1f1f",
     shadowOpacity: 0.08,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },

@@ -72,6 +72,20 @@ jest.mock('leaflet', () => ({
 // Mock react-leaflet module
 jest.mock('react-leaflet', () => mockReactLeaflet);
 
+// Mock react-native Platform
+const mockPlatform = {
+  OS: 'web',
+  select: jest.fn((obj) => obj.web || obj.default),
+};
+
+jest.mock('react-native', () => {
+  const RN = jest.requireActual('react-native');
+  return {
+    ...RN,
+    Platform: mockPlatform,
+  };
+});
+
 // Mock PopupContentComponent
 jest.mock('@/components/MapPage/PopupContentComponent', () => {
   const React = require('react')
@@ -112,17 +126,16 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
   });
 
   it('renders placeholder when not on web', () => {
-    const originalPlatform = require('react-native').Platform;
-    require('react-native').Platform.OS = 'ios';
+    mockPlatform.OS = 'ios';
     
     const { getByText } = render(<MapClientSideComponent {...defaultProps} />);
     expect(getByText('Карта доступна только в браузере')).toBeTruthy();
     
-    require('react-native').Platform.OS = originalPlatform.OS;
+    mockPlatform.OS = 'web';
   });
 
   it('renders loading state initially on web', () => {
-    require('react-native').Platform.OS = 'web';
+    mockPlatform.OS = 'web';
     
     const rendered = render(<MapClientSideComponent {...defaultProps} />);
     expect(rendered.toJSON()).toBeTruthy();

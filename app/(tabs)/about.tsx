@@ -22,6 +22,8 @@ import { Image as ExpoImage } from 'expo-image';
 import InstantSEO from '@/components/seo/InstantSEO';
 import { sendFeedback } from '@/src/api/travels';
 import { useIsFocused } from '@react-navigation/native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 const EMAIL = 'metraveldev@gmail.com';
 const MAIL_SUBJECT = 'Info metravel.by';
@@ -410,9 +412,11 @@ export default function AboutAndContactScreen() {
                           style={[
                             styles.input, 
                             invalidName && styles.inputErr,
-                            focused.name && styles.inputFocused
+                            focused.name && styles.inputFocused,
+                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                           ]}
                           placeholder="Имя"
+                          placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
                           value={name}
                           onChangeText={setName}
                           returnKeyType="next"
@@ -423,16 +427,22 @@ export default function AboutAndContactScreen() {
                           }}
                           onSubmitEditing={() => emailRef.current?.focus()}
                       />
-                      {invalidName && <Text style={styles.fieldErr}>Укажите имя</Text>}
+                      {invalidName && (
+                        <View style={styles.errorContainer}>
+                          <Text style={styles.fieldErr}>Укажите имя</Text>
+                        </View>
+                      )}
 
                       <TextInput
                           ref={emailRef}
                           style={[
                             styles.input, 
                             invalidEmail && styles.inputErr,
-                            focused.email && styles.inputFocused
+                            focused.email && styles.inputFocused,
+                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                           ]}
                           placeholder="Email"
+                          placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
                           value={email}
                           onChangeText={setEmail}
                           autoCapitalize="none"
@@ -445,7 +455,11 @@ export default function AboutAndContactScreen() {
                           }}
                           onSubmitEditing={() => messageRef.current?.focus()}
                       />
-                      {invalidEmail && <Text style={styles.fieldErr}>Неверный e-mail</Text>}
+                      {invalidEmail && (
+                        <View style={styles.errorContainer}>
+                          <Text style={styles.fieldErr}>Неверный e-mail</Text>
+                        </View>
+                      )}
 
                       <TextInput
                           ref={messageRef}
@@ -453,9 +467,11 @@ export default function AboutAndContactScreen() {
                             styles.input, 
                             styles.message, 
                             invalidMessage && styles.inputErr,
-                            focused.message && styles.inputFocused
+                            focused.message && styles.inputFocused,
+                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                           ]}
                           placeholder="Сообщение"
+                          placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
                           value={message}
                           onChangeText={setMessage}
                           multiline
@@ -468,7 +484,11 @@ export default function AboutAndContactScreen() {
                           }}
                           onSubmitEditing={Platform.OS !== 'web' ? () => handleSubmit() : undefined}
                       />
-                      {invalidMessage && <Text style={styles.fieldErr}>Напишите сообщение</Text>}
+                      {invalidMessage && (
+                        <View style={styles.errorContainer}>
+                          <Text style={styles.fieldErr}>Напишите сообщение</Text>
+                        </View>
+                      )}
 
                       <Pressable
                           onPress={() => {
@@ -831,50 +851,57 @@ const styles = StyleSheet.create({
   contactTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1f2937',
+    color: DESIGN_TOKENS.colors.text,
     marginBottom: 8,
     letterSpacing: -0.4,
   },
   contactSubtitle: {
     fontSize: 16,
-    color: '#6b7280',
+    color: DESIGN_TOKENS.colors.textSecondary,
     textAlign: 'center',
   },
   form: {
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 20,
     padding: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
+    shadowColor: '#1f1f1f',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
+    borderColor: DESIGN_TOKENS.colors.border,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 2px 8px rgba(31, 31, 31, 0.06), 0 1px 2px rgba(31, 31, 31, 0.04)',
+      },
+    }),
   },
   input: { 
     padding: 16, 
     marginVertical: 8, 
     borderWidth: 2, 
-    borderColor: '#e5e7eb', 
-    borderRadius: 12, 
-    backgroundColor: '#fff',
+    borderColor: DESIGN_TOKENS.colors.border, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     fontSize: 16,
-    color: '#1f2937',
+    color: DESIGN_TOKENS.colors.text,
+    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
     ...(Platform.OS === 'web' && {
       outlineStyle: 'none',
-      transition: 'all 0.2s ease',
+      transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
     }),
   },
   inputFocused: {
-    borderColor: '#ff9f5a',
+    borderColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
     ...(Platform.OS === 'web' && {
-      boxShadow: '0 0 0 3px rgba(255, 159, 90, 0.1)',
+      boxShadow: `0 0 0 3px ${DESIGN_TOKENS.colors.focus}`, // ✅ ИСПРАВЛЕНИЕ: Используем единый focus цвет
     }),
   },
   inputErr: { 
-    borderColor: '#ef4444',
-    backgroundColor: '#fef2f2',
+    borderColor: DESIGN_TOKENS.colors.danger,
+    backgroundColor: DESIGN_TOKENS.colors.dangerLight,
+    borderWidth: 1.5,
   },
   message: { 
     height: 120, 
@@ -889,24 +916,34 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     fontWeight: '500',
   },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    padding: 10,
+    backgroundColor: DESIGN_TOKENS.colors.dangerLight,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: DESIGN_TOKENS.colors.danger,
+  },
   fieldErr: { 
-    color: '#ef4444', 
-    marginTop: -4, 
-    marginBottom: 8,
-    fontSize: 14,
-    marginLeft: 4,
+    color: DESIGN_TOKENS.colors.danger, 
+    fontSize: 13, // ✅ ИСПРАВЛЕНИЕ: Увеличен размер для читаемости
+    fontWeight: '500', // ✅ ИСПРАВЛЕНИЕ: Добавлен font-weight
+    flex: 1,
   },
   err: { 
-    color: '#ef4444',
-    backgroundColor: '#fef2f2',
+    color: DESIGN_TOKENS.colors.dangerDark,
+    backgroundColor: DESIGN_TOKENS.colors.dangerLight,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: DESIGN_TOKENS.colors.danger,
   },
   ok: { 
-    color: '#059669',
-    backgroundColor: '#d1fae5',
+    color: DESIGN_TOKENS.colors.successDark,
+    backgroundColor: DESIGN_TOKENS.colors.successLight,
     borderWidth: 1,
-    borderColor: '#a7f3d0',
+    borderColor: DESIGN_TOKENS.colors.success,
   },
   agreeRow: { 
     flexDirection: 'row', 

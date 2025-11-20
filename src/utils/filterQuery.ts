@@ -42,6 +42,18 @@ const sanitizeFilterObject = (
   const numericSet = new Set(numericFields)
 
   Object.entries(filter || {}).forEach(([key, value]) => {
+    // ✅ ИСПРАВЛЕНИЕ: Год обрабатываем отдельно - всегда как строка, если не пустой
+    if (key === 'year') {
+      // Год должен быть строкой и не пустой
+      if (value !== undefined && value !== null) {
+        const yearStr = String(value).trim()
+        if (yearStr !== '') {
+          sanitized[key] = yearStr
+        }
+      }
+      return
+    }
+
     if (isEmptyValue(value)) return
 
     if (Array.isArray(value)) {

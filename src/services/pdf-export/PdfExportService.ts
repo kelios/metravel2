@@ -4,7 +4,10 @@
 import { Platform } from 'react-native';
 import type { Travel } from '@/src/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
+import type { TravelForBook } from '@/src/types/pdf-export';
 import { buildPhotoBookHTML } from '@/src/utils/pdfBookGenerator';
+import { EnhancedPdfGenerator } from './generators/EnhancedPdfGenerator';
+import { getThemeConfig } from './themes/PdfThemeConfig';
 import { TravelDataTransformer } from './TravelDataTransformer';
 import { ImageLoader } from '@/src/infrastructure/image/ImageLoader';
 import { ErrorHandler } from '@/src/infrastructure/error/ErrorHandler';
@@ -74,12 +77,44 @@ export class PdfExportService {
 
       // Этап 3: Генерация HTML
       this.progressTracker.setStage(ExportStage.GENERATING_HTML, 0, 'Генерация содержимого...');
-      const html = await buildPhotoBookHTML(travelsForBook, settings);
+      
+      // ✅ НОВОЕ: Используем пользовательский макет, если он указан
+      let html: string;
+      if (settings.layout) {
+        const { LayoutHtmlGenerator } = await import('./generators/LayoutHtmlGenerator');
+        const layoutGenerator = new LayoutHtmlGenerator();
+        html = await layoutGenerator.generate(settings.layout, travelsForBook, settings);
+      } else {
+        // Используем новый генератор для новых тем, старый для legacy
+        const isNewTheme = ['minimal', 'light', 'dark', 'travel-magazine'].includes(settings.template);
+        html = isNewTheme
+          ? await this.generateWithNewGenerator(travelsForBook, settings)
+          : await buildPhotoBookHTML(travelsForBook, settings);
+      }
+      
+      // ✅ КРИТИЧНО: Проверяем что HTML не пустой
+      if (!html || html.trim().length === 0) {
+        throw this.errorHandler.handle(
+          new Error('Сгенерированный HTML пуст'),
+          { travelsCount: travelsForBook.length, settings }
+        );
+      }
+      
       this.progressTracker.setStage(ExportStage.GENERATING_HTML, 100);
 
       // Этап 4: Загрузка изображений
       this.progressTracker.setStage(ExportStage.LOADING_IMAGES, 0, 'Загрузка изображений...');
       const container = this.createContainer(html);
+      
+      // ✅ КРИТИЧНО: Проверяем что контейнер содержит контент
+      const pages = container.querySelectorAll('.pdf-page');
+      if (pages.length === 0) {
+        throw this.errorHandler.handle(
+          new Error('Контейнер не содержит страниц для PDF'),
+          { containerHTML: container.innerHTML.substring(0, 500) }
+        );
+      }
+      
       await this.imageLoader.loadImagesFromContainer(
         container,
         (loaded, total) => {
@@ -92,6 +127,10 @@ export class PdfExportService {
         }
       );
       this.progressTracker.setStage(ExportStage.LOADING_IMAGES, 100);
+
+      // ✅ КРИТИЧНО: Дополнительная проверка перед рендерингом
+      // Убеждаемся что контейнер видим для html2canvas
+      void container.offsetHeight; // Принудительный reflow
 
       // Этап 5: Рендеринг PDF
       this.progressTracker.setStage(ExportStage.RENDERING, 0, 'Создание PDF...');
@@ -118,13 +157,6 @@ export class PdfExportService {
         size: blob.size,
       };
     } catch (error) {
-      const currentProgress = this.progressTracker.getCurrentProgress();
-      console.error('[PdfExportService] export failed', {
-        stage: currentProgress.stage,
-        progress: currentProgress.progress,
-        message: currentProgress.message,
-        error,
-      });
       const exportError = this.errorHandler.handle(error);
       this.progressTracker.setStage(ExportStage.ERROR, 0, exportError.message);
       throw exportError;
@@ -165,11 +197,43 @@ export class PdfExportService {
       const travelsForBook = this.dataTransformer.transform(travels);
 
       this.progressTracker.setStage(ExportStage.GENERATING_HTML, 0, 'Генерация содержимого...');
-      const html = await buildPhotoBookHTML(travelsForBook, settings);
+      
+      // ✅ НОВОЕ: Используем пользовательский макет, если он указан
+      let html: string;
+      if (settings.layout) {
+        const { LayoutHtmlGenerator } = await import('./generators/LayoutHtmlGenerator');
+        const layoutGenerator = new LayoutHtmlGenerator();
+        html = await layoutGenerator.generate(settings.layout, travelsForBook, settings);
+      } else {
+        // Используем новый генератор для новых тем, старый для legacy
+        const isNewTheme = ['minimal', 'light', 'dark', 'travel-magazine'].includes(settings.template);
+        html = isNewTheme
+          ? await this.generateWithNewGenerator(travelsForBook, settings)
+          : await buildPhotoBookHTML(travelsForBook, settings);
+      }
+      
+      // ✅ КРИТИЧНО: Проверяем что HTML не пустой
+      if (!html || html.trim().length === 0) {
+        throw this.errorHandler.handle(
+          new Error('Сгенерированный HTML пуст'),
+          { travelsCount: travelsForBook.length, settings }
+        );
+      }
+      
       this.progressTracker.setStage(ExportStage.GENERATING_HTML, 100);
 
       this.progressTracker.setStage(ExportStage.LOADING_IMAGES, 0, 'Загрузка изображений...');
       const container = this.createContainer(html);
+      
+      // ✅ КРИТИЧНО: Проверяем что контейнер содержит контент
+      const pages = container.querySelectorAll('.pdf-page');
+      if (pages.length === 0) {
+        throw this.errorHandler.handle(
+          new Error('Контейнер не содержит страниц для PDF'),
+          { containerHTML: container.innerHTML.substring(0, 500) }
+        );
+      }
+      
       await this.imageLoader.loadImagesFromContainer(
         container,
         (loaded, total) => {
@@ -182,6 +246,10 @@ export class PdfExportService {
         }
       );
       this.progressTracker.setStage(ExportStage.LOADING_IMAGES, 100);
+
+      // ✅ КРИТИЧНО: Дополнительная проверка перед рендерингом
+      // Убеждаемся что контейнер видим для html2canvas
+      void container.offsetHeight; // Принудительный reflow
 
       this.progressTracker.setStage(ExportStage.RENDERING, 0, 'Создание превью...');
       const renderOptions = this.buildRenderOptions(settings);
@@ -202,13 +270,6 @@ export class PdfExportService {
         size: blob.size,
       };
     } catch (error) {
-      const currentProgress = this.progressTracker.getCurrentProgress();
-      console.error('[PdfExportService] preview failed', {
-        stage: currentProgress.stage,
-        progress: currentProgress.progress,
-        message: currentProgress.message,
-        error,
-      });
       const exportError = this.errorHandler.handle(error);
       this.progressTracker.setStage(ExportStage.ERROR, 0, exportError.message);
       throw exportError;
@@ -221,6 +282,7 @@ export class PdfExportService {
 
   /**
    * Создает DOM контейнер из HTML
+   * ✅ ИСПРАВЛЕНИЕ: Используем left: -9999px вместо zIndex: -1 для видимости html2canvas
    */
   private createContainer(html: string): HTMLElement {
     const parser = new DOMParser();
@@ -229,16 +291,22 @@ export class PdfExportService {
     const headStyles = doc.head.querySelectorAll('style');
 
     const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '0';
+    // ✅ КРИТИЧНО: Используем position: fixed с left: -9999px вместо zIndex: -1
+    // Это позволяет html2canvas видеть контент, но не мешает пользователю
+    // ВАЖНО: html2canvas может работать с элементами вне видимой области, но нужно убедиться что размеры правильные
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
     container.style.top = '0';
     container.style.width = '210mm';
     container.style.minHeight = '297mm';
     container.style.backgroundColor = '#fff';
     container.style.overflow = 'visible';
     container.style.opacity = '1';
-    container.style.zIndex = '-1';
+    container.style.visibility = 'visible';
+    container.style.zIndex = '1'; // Положительный z-index для html2canvas
     container.style.pointerEvents = 'none';
+    // ✅ КРИТИЧНО: Убеждаемся что контейнер имеет правильные размеры для html2canvas
+    container.style.height = 'auto'; // Автоматическая высота для контента
 
     // Вставляем содержимое
     container.innerHTML = bodyContent;
@@ -254,8 +322,16 @@ export class PdfExportService {
 
     document.body.appendChild(container);
 
-    // Принудительный reflow
+    // ✅ КРИТИЧНО: Принудительный reflow для применения стилей и расчета размеров
     void container.offsetHeight;
+    
+    // ✅ КРИТИЧНО: Если высота 0, но есть scrollHeight, устанавливаем явную высоту
+    const initialHeight = container.offsetHeight;
+    const scrollHeight = container.scrollHeight;
+    if (initialHeight === 0 && scrollHeight > 0) {
+      container.style.height = `${scrollHeight}px`;
+      void container.offsetHeight;
+    }
 
     return container;
   }
@@ -268,10 +344,12 @@ export class PdfExportService {
    * ✅ ИСПРАВЛЕНИЕ: Добавлена валидация всех опций для предотвращения ошибок toString
    */
   private buildRenderOptions(settings: BookSettings): PdfRenderOptions {
+    // ✅ ИСПРАВЛЕНИЕ: Безопасная проверка margins с fallback
+    const margins = settings.margins || 'standard';
     return {
-      margin: settings.margins === 'narrow' 
+      margin: margins === 'narrow' 
         ? [5, 5, 7, 5] 
-        : settings.margins === 'wide' 
+        : margins === 'wide' 
         ? [15, 15, 20, 15] 
         : [10, 10, 14, 10],
       image: {
@@ -307,6 +385,17 @@ export class PdfExportService {
    */
   subscribeToProgress(callback: ProgressCallback): () => void {
     return this.progressTracker.subscribe(callback);
+  }
+
+  /**
+   * Генерирует HTML с новым генератором
+   */
+  private async generateWithNewGenerator(
+    travels: TravelForBook[],
+    settings: BookSettings
+  ): Promise<string> {
+    const generator = new EnhancedPdfGenerator(settings.template);
+    return await generator.generate(travels, settings);
   }
 }
 

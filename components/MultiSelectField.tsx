@@ -12,10 +12,22 @@ const MultiSelectField = forwardRef(
         const handleChange = (selectedItems) => {
             if (single) {
                 const selected = selectedItems?.[0] || '';
-                onChange(selected);
+                // ✅ ИСПРАВЛЕНИЕ: Извлекаем значение, если это объект
+                const value = typeof selected === 'object' && selected !== null && valueField in selected
+                    ? selected[valueField]
+                    : selected;
+                onChange(value);
                 multiSelectRef.current?.close();
             } else {
-                onChange(selectedItems);
+                // ✅ ИСПРАВЛЕНИЕ: Извлекаем значения из объектов, если они есть
+                const values = Array.isArray(selectedItems)
+                    ? selectedItems.map(item => 
+                        typeof item === 'object' && item !== null && valueField in item
+                            ? item[valueField]
+                            : item
+                      )
+                    : selectedItems;
+                onChange(values);
             }
         };
 

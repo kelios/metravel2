@@ -3,7 +3,7 @@
 
 import React from 'react';
 import QRCode from 'qrcode';
-import { sanitizeRichText } from '@/src/utils/sanitizeRichText';
+import { sanitizeRichTextForPdf } from '@/src/utils/sanitizeRichText';
 
 interface Travel {
   id: number | string;
@@ -194,6 +194,49 @@ export default function TravelPageLayout({
           fontFamily: 'system-ui, -apple-system, sans-serif',
         }}
       >
+        <style>{`
+          .pdf-text-content {
+            white-space: normal !important;
+            word-wrap: break-word;
+            letter-spacing: normal !important;
+            word-spacing: normal !important;
+            text-rendering: optimizeLegibility;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .pdf-text-content p {
+            margin: 0 !important;
+            padding: 0 !important;
+            white-space: normal !important;
+            letter-spacing: normal !important;
+            word-spacing: normal !important;
+            display: block;
+            line-height: inherit;
+            page-break-inside: avoid !important;
+            page-break-after: auto !important;
+            page-break-before: auto !important;
+            break-inside: avoid !important;
+            break-after: auto !important;
+            break-before: auto !important;
+          }
+          .pdf-text-content p + p {
+            margin-top: 0 !important;
+          }
+          .pdf-text-content * {
+            white-space: normal !important;
+            letter-spacing: normal !important;
+            word-spacing: normal !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .pdf-text-content br {
+            line-height: inherit;
+          }
+          .pdf-text-content div,
+          .pdf-text-content span {
+            display: inline;
+          }
+        `}</style>
         {/* Описание */}
         {travel.description && (
           <div style={{ marginBottom: '12mm' }}>
@@ -212,13 +255,17 @@ export default function TravelPageLayout({
               Описание
             </h2>
             <div
-              dangerouslySetInnerHTML={{ __html: sanitizeRichText(travel.description) }}
+              dangerouslySetInnerHTML={{ __html: sanitizeRichTextForPdf(travel.description) }}
               style={{
                 fontSize: '11pt',
                 lineHeight: 1.7,
                 color: '#374151',
                 textAlign: 'justify',
+                whiteSpace: 'normal',
+                letterSpacing: 'normal',
+                wordSpacing: 'normal',
               }}
+              className="pdf-text-content"
             />
           </div>
         )}
@@ -241,13 +288,17 @@ export default function TravelPageLayout({
               Рекомендации
             </h2>
             <div
-              dangerouslySetInnerHTML={{ __html: sanitizeRichText(travel.recommendation) }}
+              dangerouslySetInnerHTML={{ __html: sanitizeRichTextForPdf(travel.recommendation) }}
               style={{
                 fontSize: '11pt',
                 lineHeight: 1.7,
                 color: '#374151',
                 textAlign: 'justify',
+                whiteSpace: 'normal',
+                letterSpacing: 'normal',
+                wordSpacing: 'normal',
               }}
+              className="pdf-text-content"
             />
           </div>
         )}
@@ -283,12 +334,16 @@ export default function TravelPageLayout({
                   ✅ Плюсы
                 </h3>
                 <div
-                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(travel.plus) }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichTextForPdf(travel.plus) }}
                   style={{
                     fontSize: '10pt',
                     lineHeight: 1.6,
                     color: '#374151',
+                    whiteSpace: 'normal',
+                    letterSpacing: 'normal',
+                    wordSpacing: 'normal',
                   }}
+                  className="pdf-text-content"
                 />
               </div>
             )}
@@ -314,12 +369,16 @@ export default function TravelPageLayout({
                   ⚠️ Минусы
                 </h3>
                 <div
-                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(travel.minus) }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichTextForPdf(travel.minus) }}
                   style={{
                     fontSize: '10pt',
                     lineHeight: 1.6,
                     color: '#374151',
+                    whiteSpace: 'normal',
+                    letterSpacing: 'normal',
+                    wordSpacing: 'normal',
                   }}
+                  className="pdf-text-content"
                 />
               </div>
             )}
@@ -337,7 +396,6 @@ export default function TravelPageLayout({
               gap: '10mm',
               justifyContent: 'center',
               borderTop: '2px solid #e5e7eb',
-              paddingTop: '15mm',
             }}
           >
             {qrCode && (

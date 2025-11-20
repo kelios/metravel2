@@ -25,8 +25,11 @@ import { Travel } from '@/src/types/types';
 import { fetchTravelsNear } from '@/src/api/travels';
 import TravelTmlRound from '@/components/travel/TravelTmlRound';
 import MapClientSideComponent from '@/components/Map';
+import { useLazyMap } from '@/hooks/useLazyMap';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
-const brandOrange = '#ff8c49';
+const brandOrange = '#ff8c49'; // Оставляем для обратной совместимости, но используем DESIGN_TOKENS где возможно
 const lightOrange = '#ffede2';
 const backgroundGray = '#f8f9fa';
 
@@ -52,6 +55,7 @@ const SegmentSwitch = ({
         segmentStyles.button,
         value === 'list' && segmentStyles.activeButton,
         pressed && segmentStyles.pressedButton,
+        globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
       ]}
       accessibilityRole="button"
       accessibilityLabel="Показать списком"
@@ -67,6 +71,7 @@ const SegmentSwitch = ({
         segmentStyles.button,
         value === 'map' && segmentStyles.activeButton,
         pressed && segmentStyles.pressedButton,
+        globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
       ]}
       accessibilityRole="button"
       accessibilityLabel="Показать на карте"
@@ -101,7 +106,14 @@ const MapContainer = memo(({
   showRoute?: boolean;
 }) => {
   const [mapHeight, setMapHeight] = useState(height);
-  const [isLoading, setIsLoading] = useState(true);
+  const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
+  
+  // ✅ УЛУЧШЕНИЕ: Ленивая загрузка карты
+  const { shouldLoad, setElementRef } = useLazyMap({
+    rootMargin: '200px',
+    threshold: 0.1,
+    enabled: isWeb,
+  });
 
   const canRenderMap = useMemo(
     () => typeof window !== 'undefined' && points.length > 0,
@@ -117,8 +129,31 @@ const MapContainer = memo(({
     );
   }
 
+  // Если карта еще не должна загружаться
+  if (!shouldLoad) {
+    return (
+      <View 
+        style={[styles.mapContainer, { height }]}
+        ref={setElementRef as any}
+      >
+        <View style={styles.mapHeader}>
+          <Text style={styles.mapTitle}>
+            🗺️ {points.length} {points.length === 1 ? 'точка' :
+            points.length < 5 ? 'точки' : 'точек'} на карте
+          </Text>
+        </View>
+        <View style={styles.mapWrapper}>
+          <Text style={styles.placeholderText}>Карта загрузится при прокрутке…</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.mapContainer, { height }]}>
+    <View 
+      style={[styles.mapContainer, { height }]}
+      ref={setElementRef as any}
+    >
       <View style={styles.mapHeader}>
         <Text style={styles.mapTitle}>
           🗺️ {points.length} {points.length === 1 ? 'точка' :
@@ -229,12 +264,15 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       } catch (e: any) {
         if (controller.signal.aborted) return;
         
+        // ✅ УЛУЧШЕНИЕ: Понятные сообщения об ошибках
         if (e.name === 'AbortError') {
-          setError('Превышено время ожидания загрузки');
+          setError('Превышено время ожидания загрузки. Проверьте подключение к интернету.');
         } else {
-          setError('Не удалось загрузить маршруты. Попробуйте позже.');
+          setError('Не удалось загрузить маршруты. Проверьте подключение и попробуйте позже.');
         }
-        console.error('Fetch error:', e);
+        if (__DEV__) {
+          console.error('Fetch error:', e);
+        }
         hasLoadedRef.current = false; // Разрешаем повторную попытку при ошибке
       } finally {
         clearTimeout(timeoutId);
@@ -414,14 +452,16 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                 ListFooterComponent={
                   visibleCount < travelsNear.length ? (
                     <View style={styles.loadMoreContainer}>
-                      <TouchableOpacity
+                      <Pressable
                         onPress={handleLoadMore}
-                        style={styles.loadMoreButton}
+                        style={[styles.loadMoreButton, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                        accessibilityRole="button"
+                        accessibilityLabel="Загрузить ещё путешествий"
                       >
                         <Text style={styles.loadMoreButtonText}>
                           📥 Загрузить ещё
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   ) : isLoading ? (
                     <View style={styles.skeletonContainer}>
@@ -606,20 +646,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadMoreButton: {
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     borderWidth: 2,
-    borderColor: brandOrange,
+    borderColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+    ...Platform.select({
+      web: {
+        transition: 'all 0.2s ease',
+        cursor: 'pointer',
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+          transform: 'translateY(-1px)',
+        },
+      },
+    }),
   },
   loadMoreButtonText: {
-    color: brandOrange,
+    color: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
     fontSize: 15,
     fontWeight: '600',
   },
@@ -661,18 +713,30 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   retryButton: {
-    backgroundColor: brandOrange,
+    backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+    ...Platform.select({
+      web: {
+        transition: 'all 0.2s ease',
+        cursor: 'pointer',
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: '#3a7a7a', // Темнее primary для hover
+          transform: 'translateY(-1px)',
+        },
+      },
+    }),
   },
   retryButtonText: {
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     fontSize: 16,
     fontWeight: '600',
   },
@@ -686,8 +750,8 @@ const styles = StyleSheet.create({
 const segmentStyles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#edf2f7',
-    borderRadius: 16,
+    backgroundColor: DESIGN_TOKENS.colors.mutedBackground, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    borderRadius: DESIGN_TOKENS.radii.lg, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     padding: 4,
     marginBottom: 20,
     alignSelf: 'center',
@@ -697,13 +761,23 @@ const segmentStyles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     alignItems: 'center',
     justifyContent: 'center',
-    transition: 'all 0.2s ease',
+    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+    ...Platform.select({
+      web: {
+        transition: 'all 0.2s ease',
+        cursor: 'pointer',
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        },
+      },
+    }),
   },
   activeButton: {
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -716,10 +790,10 @@ const segmentStyles = StyleSheet.create({
   text: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#718096',
+    color: DESIGN_TOKENS.colors.textMuted, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
   },
   activeText: {
-    color: brandOrange,
+    color: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
   },
 });
 

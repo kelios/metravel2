@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { usePathname } from 'expo-router';
 import ListTravel from '@/components/listTravel/ListTravel';
 import InstantSEO from '@/components/seo/InstantSEO';
-import {useIsFocused} from "@react-navigation/native/src";
+import {useIsFocused} from "@react-navigation/native";
 
 export default function TravelsByScreen() {
     const pathname = usePathname();

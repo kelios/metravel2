@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface ChipProps {
@@ -44,18 +44,31 @@ const styles = StyleSheet.create({
   base: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: 20, // ✅ УЛУЧШЕНИЕ: Увеличен padding для больших чипсов
+    paddingVertical: 10, // ✅ УЛУЧШЕНИЕ: Увеличен padding для высоты 40px
     borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: palette.border,
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
     backgroundColor: palette.surface,
     gap: spacing.xs,
-    minHeight: 36,
+    minHeight: 40, // ✅ УЛУЧШЕНИЕ: Увеличена минимальная высота
+    shadowColor: '#1f1f1f',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        ':hover': {
+          transform: 'scale(1.05)',
+        },
+      },
+    }),
   },
   selected: {
     backgroundColor: palette.primarySoft,
-    borderColor: palette.primary,
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
     shadowColor: palette.primary,
     shadowOpacity: 0.15,
     shadowOffset: { width: 0, height: 4 },

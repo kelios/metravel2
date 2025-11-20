@@ -1,3 +1,19 @@
+// Типы для gallery и travelAddress
+export type GalleryItem = string | {
+    id: number;
+    url: string;
+    updated_at?: string;
+}
+
+export type TravelAddressItem = string | {
+    id: number;
+    name: string;
+    description?: string;
+    coords?: string;
+    lat?: number;
+    lng?: number;
+}
+
 export type Travel = {
     id: number
     slug: string
@@ -15,8 +31,9 @@ export type Travel = {
     cityName: string
     countryName: string
     countUnicIpView: string
-    gallery: String[]
-    travelAddress: String[]
+    // ✅ ИСПРАВЛЕНО: Поддержка обоих форматов для обратной совместимости
+    gallery: GalleryItem[]
+    travelAddress: TravelAddressItem[]
     userIds: string
     year: string
     monthName: string
@@ -24,6 +41,14 @@ export type Travel = {
     companions: String[]
 
     countryCode: string
+    // Дополнительные поля, которые могут приходить из API
+    user?: {
+        id: number;
+        name: string;
+        avatar?: string;
+    }
+    created_at?: string
+    updated_at?: string
 }
 
 export type TravelCoords = {

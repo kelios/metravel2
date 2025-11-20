@@ -112,12 +112,13 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
     return { boxWidth: maxFrameWidth, boxHeight: heightIfFullWidth };
   }, [maxFrameWidth, aspect]);
 
+  // ✅ FIX: Убрали fetchpriority из webAttrs, так как ExpoImage не поддерживает этот проп
+  // Для веба ExpoImage использует priority prop вместо fetchpriority
   const webAttrs =
     Platform.OS === "web"
       ? ({
         loading: "lazy",
         decoding: "async",
-        fetchPriority: "low",
         referrerPolicy: "no-referrer",
         sizes: `(min-width: ${MAX_WIDTH}px) ${MAX_WIDTH}px, 100vw`,
       } as any)

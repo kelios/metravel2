@@ -44,11 +44,13 @@ jest.mock('expo-router', () => ({
 }));
 
 // Моки для react-native
+const mockUseWindowDimensions = jest.fn(() => ({ width: 1024, height: 768 }));
 jest.mock('react-native', () => {
     const RN = jest.requireActual('react-native');
     return {
         ...RN,
-        useWindowDimensions: () => ({ width: 1024, height: 768 }),
+        useWindowDimensions: () => mockUseWindowDimensions(),
+        Modal: ({ children, visible }: any) => (visible ? children : null),
     };
 });
 
@@ -57,7 +59,6 @@ describe('CustomHeader', () => {
     const mockRouter = {
         push: mockPush,
     };
-    let widthSpy: jest.SpyInstance;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -67,63 +68,101 @@ describe('CustomHeader', () => {
         mockFavoritesContext.isFavorite.mockClear();
         mockFiltersContext.updateFilters.mockClear();
         (useRouter as jest.Mock).mockReturnValue(mockRouter);
-        const rn = require('react-native');
-        widthSpy = jest.spyOn(rn, 'useWindowDimensions').mockReturnValue({ width: 1024, height: 768 });
-    });
-
-    afterEach(() => {
-        widthSpy?.mockRestore();
+        mockUseWindowDimensions.mockReturnValue({ width: 1024, height: 768 });
     });
 
     const renderHeader = () => render(<CustomHeader />);
 
-    it('renders desktop navigation by default', () => {
-        (usePathname as jest.Mock).mockReturnValue('/');
-        const utils = renderHeader();
-        expect(utils.getByText('Путешествия')).toBeTruthy();
+    describe('Desktop navigation', () => {
+        it('renders desktop navigation by default', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const utils = renderHeader();
+            expect(utils.getByText('Путешествия')).toBeTruthy();
+        });
+
+        it('shows navigation items on desktop', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const utils = renderHeader();
+            
+            expect(utils.getByText('Путешествия')).toBeTruthy();
+            expect(utils.getByText('Беларусь')).toBeTruthy();
+            expect(utils.getByText('Карта')).toBeTruthy();
+            expect(utils.getByText('Квесты')).toBeTruthy();
+        });
+
+        it('highlights active navigation item', () => {
+            (usePathname as jest.Mock).mockReturnValue('/map');
+            const utils = renderHeader();
+            
+            const mapItem = utils.getByLabelText('Карта');
+            expect(mapItem.props.accessibilityState?.selected).toBe(true);
+        });
+
+        it('navigates when navigation item is pressed', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const utils = renderHeader();
+            
+            const mapItem = utils.getByLabelText('Карта');
+            fireEvent.press(mapItem);
+            
+            expect(mockPush).toHaveBeenCalledWith('/map');
+        });
+
+        it('correctly identifies active path for nested routes', () => {
+            (usePathname as jest.Mock).mockReturnValue('/travels/some-travel');
+            const utils = renderHeader();
+            
+            const travelsItem = utils.getByLabelText('Путешествия');
+            expect(travelsItem.props.accessibilityState?.selected).toBe(true);
+        });
+
+        it('correctly identifies active path for quest routes', () => {
+            (usePathname as jest.Mock).mockReturnValue('/quests/minsk');
+            const utils = renderHeader();
+            
+            const questsItem = utils.getByLabelText('Квесты');
+            expect(questsItem.props.accessibilityState?.selected).toBe(true);
+        });
     });
 
-    it('shows navigation items on desktop', () => {
-        (usePathname as jest.Mock).mockReturnValue('/');
-        const utils = renderHeader();
-        
-        expect(utils.getByText('Путешествия')).toBeTruthy();
-        expect(utils.getByText('Беларусь')).toBeTruthy();
-        expect(utils.getByText('Карта')).toBeTruthy();
-        expect(utils.getByText('Квесты')).toBeTruthy();
-    });
+    describe('Mobile navigation', () => {
+        beforeEach(() => {
+            mockUseWindowDimensions.mockReturnValue({ width: 375, height: 667 });
+        });
 
-    it('highlights active navigation item', () => {
-        (usePathname as jest.Mock).mockReturnValue('/map');
-        const utils = renderHeader();
-        
-        const mapItem = utils.getByLabelText('Карта');
-        expect(mapItem.props.accessibilityState?.selected).toBe(true);
-    });
+        it('renders mobile menu button on mobile', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const { getByLabelText } = renderHeader();
+            expect(getByLabelText('Открыть меню')).toBeTruthy();
+        });
 
-    it('navigates when navigation item is pressed', () => {
-        (usePathname as jest.Mock).mockReturnValue('/');
-        const utils = renderHeader();
-        
-        const mapItem = utils.getByLabelText('Карта');
-        fireEvent.press(mapItem);
-        
-        expect(mockPush).toHaveBeenCalledWith('/map');
-    });
+        it('shows mobile menu when button is pressed', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const { getByLabelText, getByText } = renderHeader();
+            const menuButton = getByLabelText('Открыть меню');
+            fireEvent.press(menuButton);
+            expect(getByText('Меню')).toBeTruthy();
+        });
 
-    it('correctly identifies active path for nested routes', () => {
-        (usePathname as jest.Mock).mockReturnValue('/travels/some-travel');
-        const utils = renderHeader();
-        
-        const travelsItem = utils.getByLabelText('Путешествия');
-        expect(travelsItem.props.accessibilityState?.selected).toBe(true);
-    });
+        it('navigates when mobile menu item is pressed', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const { getByLabelText, getByText } = renderHeader();
+            const menuButton = getByLabelText('Открыть меню');
+            fireEvent.press(menuButton);
+            const mapItem = getByText('Карта');
+            fireEvent.press(mapItem);
+            expect(mockPush).toHaveBeenCalledWith('/map');
+        });
 
-    it('correctly identifies active path for quest routes', () => {
-        (usePathname as jest.Mock).mockReturnValue('/quests/minsk');
-        const utils = renderHeader();
-        
-        const questsItem = utils.getByLabelText('Квесты');
-        expect(questsItem.props.accessibilityState?.selected).toBe(true);
+        it('closes menu when close button is pressed', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const { getByLabelText, queryByText } = renderHeader();
+            const menuButton = getByLabelText('Открыть меню');
+            fireEvent.press(menuButton);
+            expect(queryByText('Меню')).toBeTruthy();
+            const closeButton = getByLabelText('Закрыть меню');
+            fireEvent.press(closeButton);
+            expect(queryByText('Меню')).toBeNull();
+        });
     });
 });

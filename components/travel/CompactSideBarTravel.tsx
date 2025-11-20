@@ -19,6 +19,8 @@ import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/tr
 import WeatherWidget from "@/components/WeatherWidget";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from "@/utils/imageOptimization";
+import ArticleExportModal from "@/components/export/ArticleExportModal";
+import { useArticlePdfExport } from "@/hooks/useArticlePdfExport";
 
 const Fallback = () => (
   <View style={styles.fallback}>
@@ -70,6 +72,8 @@ function CompactSideBarTravel({
   const { width } = useWindowDimensions();
   const isTablet = width >= 768 && width < 1024;
   const [active, setActive] = useState<string>("");
+  const [showExportModal, setShowExportModal] = useState(false);
+  const { exportArticle } = useArticlePdfExport();
 
   // ✅ УЛУЧШЕНИЕ: Используем внешнюю активную секцию, если она передана, иначе локальную
   const currentActive = externalActiveSection !== undefined ? externalActiveSection : active;
@@ -154,7 +158,17 @@ function CompactSideBarTravel({
       const cats = new Set<string>();
       travel.travelAddress.forEach((addr: any) => {
         if (addr?.categoryName) {
-          const parts = String(addr.categoryName).split(',').map(s => s.trim()).filter(Boolean);
+          // ✅ ИСПРАВЛЕНИЕ: Обрабатываем случай, когда categoryName может быть объектом с {id, name}
+          let categoryNameStr: string;
+          if (typeof addr.categoryName === 'string') {
+            categoryNameStr = addr.categoryName;
+          } else if (addr.categoryName && typeof addr.categoryName === 'object' && 'name' in addr.categoryName) {
+            categoryNameStr = String(addr.categoryName.name || '');
+          } else {
+            categoryNameStr = String(addr.categoryName || '');
+          }
+          
+          const parts = categoryNameStr.split(',').map(s => s.trim()).filter(Boolean);
           parts.forEach(cat => cats.add(cat));
         }
       });
@@ -172,6 +186,10 @@ function CompactSideBarTravel({
   const handleUserTravels = () =>
     openUrl(`/?user_id=${(travel as any).userIds ?? (travel as any).userId}`);
   const handleEdit = () => canEdit && openUrl(`/travel/${travel.id}`);
+  
+  const handleExport = useCallback((settings: any) => {
+    exportArticle(travel, settings);
+  }, [travel, exportArticle]);
 
   return (
     <View style={styles.root}>
@@ -211,7 +229,8 @@ function CompactSideBarTravel({
               {/* ✅ РЕДИЗАЙН: Компактное отображение просмотров */}
               {viewsSafe != null && Number.isFinite(viewsSafe) && (
                 <View style={styles.viewsRow}>
-                  <Feather name="eye" size={12} color="#6b7280" /> {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+                  {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+                  <Feather name="eye" size={12} color="#6b7280" />
                   <Text style={styles.viewsTxt}>
                     {new Intl.NumberFormat("ru-RU").format(viewsSafe)}
                   </Text>
@@ -220,15 +239,15 @@ function CompactSideBarTravel({
             </View>
 
             <View style={{ flex: 1 }}>
-              {(titleLine || canEdit) && (
-                <View style={styles.userRow}>
-                  {titleLine ? (
-                    <Text style={styles.userName} numberOfLines={1}>
-                      {titleLine}
-                    </Text>
-                  ) : (
-                    <View />
-                  )}
+              <View style={styles.userRow}>
+                {titleLine ? (
+                  <Text style={styles.userName} numberOfLines={1}>
+                    {titleLine}
+                  </Text>
+                ) : (
+                  <View />
+                )}
+                <View style={styles.actionsRow}>
                   {canEdit && (
                     <Pressable
                       onPress={handleEdit}
@@ -239,20 +258,30 @@ function CompactSideBarTravel({
                       <MaterialIcons name="edit" size={18} color="#2F332E" />
                     </Pressable>
                   )}
+                  <Pressable
+                    onPress={() => setShowExportModal(true)}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityLabel="Экспорт в PDF"
+                  >
+                    <MaterialIcons name="picture-as-pdf" size={18} color="#b83a3a" />
+                  </Pressable>
                 </View>
-              )}
+              </View>
 
               {/* ✅ РЕДИЗАЙН: Компактная ключевая информация */}
               {whenLine && (
                 <View style={styles.keyInfoRow}>
-                  <MaterialIcons name="calendar-today" size={14} color="#6b7280" /> {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+                  {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+                  <MaterialIcons name="calendar-today" size={14} color="#6b7280" />
                   <Text style={styles.userYear}>{whenLine}</Text>
                 </View>
               )}
 
               {daysText && (
                 <View style={styles.keyInfoRow}>
-                  <MaterialIcons name="schedule" size={14} color="#6b7280" /> {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+                  {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+                  <MaterialIcons name="schedule" size={14} color="#6b7280" />
                   <Text style={styles.userDays}>{daysText}</Text>
                 </View>
               )}
@@ -264,7 +293,8 @@ function CompactSideBarTravel({
             {/* ✅ РЕДИЗАЙН: Компактная информация - убираем лишние элементы для максимальной компактности */}
             {categories.length > 0 && (
               <View style={styles.infoRow}>
-                <MaterialIcons name="category" size={14} color="#6b7280" /> {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+                {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+                <MaterialIcons name="category" size={14} color="#6b7280" />
                 <View style={[styles.categoriesWrap, { marginLeft: 6, flex: 1 }]}>
                   {categories.slice(0, 2).map((cat, idx) => (
                     <View key={idx} style={styles.categoryTagWrapper}>
@@ -294,7 +324,8 @@ function CompactSideBarTravel({
                 accessibilityRole="button"
                 accessibilityLabel="Координаты"
               >
-                <MaterialIcons name="place" size={14} color="#6b7280" /> {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+                {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+                <MaterialIcons name="place" size={14} color="#6b7280" />
                 <Text style={[styles.infoText, { marginLeft: 6, flex: 1 }]} numberOfLines={1}>
                   {firstCoord}
                 </Text>
@@ -370,6 +401,13 @@ function CompactSideBarTravel({
           <WeatherWidget points={travel.travelAddress as any} />
         </Suspense>
       </ScrollView>
+
+      <ArticleExportModal
+        visible={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExport}
+        travelData={travel}
+      />
 
       {isMobile && (
         <View style={styles.closeBar}>
@@ -576,6 +614,11 @@ const styles = StyleSheet.create({
     alignItems: "center", 
     justifyContent: "space-between", 
     marginBottom: 6, // Уменьшено с 8
+  },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   userName: { 
     fontSize: 14, // Уменьшено с 16

@@ -2,7 +2,7 @@
 // NOTE: изображения берём как есть; html2canvas сам прогрузит их при конверте.
 
 import QRCode from 'qrcode'
-import { sanitizeRichText } from './sanitizeRichText'
+import { sanitizeRichTextForPdf } from './sanitizeRichText'
 
 type Travel = {
     id: number | string
@@ -109,10 +109,10 @@ export async function buildBookHTML(selected: Travel[], opts?: { title?: string,
       `
 
             const right = `
-        ${t.description ? `<h3>Описание</h3>${sanitizeRichText(t.description)}` : ''}
-        ${t.recommendation ? `<h3>Рекомендации</h3>${sanitizeRichText(t.recommendation)}` : ''}
-        ${t.plus ? `<h3>Плюсы</h3>${sanitizeRichText(t.plus)}` : ''}
-        ${t.minus ? `<h3>Минусы</h3>${sanitizeRichText(t.minus)}` : ''}
+        ${t.description ? `<h3>Описание</h3><div class="pdf-text-content">${sanitizeRichTextForPdf(t.description)}</div>` : ''}
+        ${t.recommendation ? `<h3>Рекомендации</h3><div class="pdf-text-content">${sanitizeRichTextForPdf(t.recommendation)}</div>` : ''}
+        ${t.plus ? `<h3>Плюсы</h3><div class="pdf-text-content">${sanitizeRichTextForPdf(t.plus)}</div>` : ''}
+        ${t.minus ? `<h3>Минусы</h3><div class="pdf-text-content">${sanitizeRichTextForPdf(t.minus)}</div>` : ''}
       `
 
             return `
@@ -170,6 +170,49 @@ export async function buildBookHTML(selected: Travel[], opts?: { title?: string,
   .gallery-title { margin-top: 12px; font-weight: 700; text-transform: uppercase; color:#555; letter-spacing: .04em; }
   .gallery-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
   .gallery-grid img { height: 140px; object-fit: cover; border-radius: 6px; }
+
+  /* убираем лишние пробелы, сохраняем нормальное форматирование */
+  .pdf-text-content {
+    white-space: normal !important;
+    word-wrap: break-word;
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
+    text-rendering: optimizeLegibility;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .pdf-text-content p {
+    margin: 0 !important;
+    padding: 0 !important;
+    white-space: normal !important;
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
+    display: block;
+    line-height: inherit;
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+    page-break-before: auto !important;
+    break-inside: avoid !important;
+    break-after: auto !important;
+    break-before: auto !important;
+  }
+  .pdf-text-content p + p {
+    margin-top: 0 !important;
+  }
+  .pdf-text-content * {
+    white-space: normal !important;
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .pdf-text-content br {
+    line-height: inherit;
+  }
+  .pdf-text-content div,
+  .pdf-text-content span {
+    display: inline;
+  }
 
   /* печать */
   @media print {

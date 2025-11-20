@@ -17,19 +17,25 @@ export const PER_PAGE = 12;
 // ✅ АРХИТЕКТУРА: Ключи для хранения состояния видимости
 export const PERSONALIZATION_VISIBLE_KEY = 'personalization_visible';
 export const WEEKLY_HIGHLIGHTS_VISIBLE_KEY = 'weekly_highlights_visible';
+export const RECOMMENDATIONS_VISIBLE_KEY = 'recommendations_visible';
 
 // ✅ АРХИТЕКТУРА: Breakpoints для адаптивности
+// ✅ ИСПРАВЛЕНИЕ: Добавлены промежуточные breakpoints для лучшей адаптивности
 export const BREAKPOINTS = {
   MOBILE: 768,
   TABLET: 1024,
-  DESKTOP: 1200,
+  TABLET_LANDSCAPE: 1280,
+  DESKTOP: 1440,
 } as const;
 
 // ✅ АРХИТЕКТУРА: Количество колонок для разных экранов
+// ✅ ИСПРАВЛЕНИЕ: Оптимизировано для планшетов (2-3 колонки в зависимости от размера)
 export const GRID_COLUMNS = {
   MOBILE: 1,
-  TABLET: 2,
-  DESKTOP: 3,
+  TABLET: 2,        // 768-1024px: 2 колонки
+  TABLET_LANDSCAPE: 3, // 1024-1280px: 3 колонки
+  DESKTOP: 4,       // 1280-1440px: 4 колонки
+  DESKTOP_LARGE: 5, // >1440px: 5 колонок
 } as const;
 
 // ✅ АРХИТЕКТУРА: Время кеширования для React Query (staleTime)

@@ -47,9 +47,9 @@ export function useListTravelFilters({
 }: UseListTravelFiltersProps): UseListTravelFiltersReturn {
   const [filter, setFilter] = useState<FilterState>(INITIAL_FILTER);
 
-  // ✅ АРХИТЕКТУРА: Нормализация queryParams с useMemo
+  // ✅ ИСПРАВЛЕНИЕ: Стабилизация queryParams для предотвращения лишних запросов
   const queryParams = useMemo(() => {
-    return buildTravelQueryParams(filter, {
+    const params = buildTravelQueryParams(filter, {
       isMeTravel,
       isExport,
       isTravelBy,
@@ -57,6 +57,24 @@ export function useListTravelFilters({
       userId,
       routeUserId: user_id,
     });
+    
+    // ✅ ИСПРАВЛЕНИЕ: Убираем пустые значения для стабильности
+    const cleaned: Record<string, any> = {};
+    Object.keys(params)
+      .sort() // ✅ ИСПРАВЛЕНИЕ: Сортируем ключи для стабильного сравнения
+      .forEach(key => {
+        const value = params[key];
+        // Пропускаем пустые значения
+        if (value === undefined || value === null || value === '') {
+          return;
+        }
+        if (Array.isArray(value) && value.length === 0) {
+          return;
+        }
+        cleaned[key] = value;
+      });
+    
+    return cleaned;
   }, [filter, isMeTravel, isExport, isTravelBy, userId, user_id]);
 
   // ✅ АРХИТЕКТУРА: Сброс фильтров
@@ -81,10 +99,20 @@ export function useListTravelFilters({
   const applyFilter = useCallback((newFilter: FilterState) => {
     const cleaned: FilterState = {};
     Object.entries(newFilter).forEach(([key, value]) => {
+      // ✅ ИСПРАВЛЕНИЕ: Год обрабатываем отдельно - сохраняем как строку, если он не пустой
+      if (key === 'year') {
+        // Год должен быть строкой и не пустой
+        if (value && typeof value === 'string' && value.trim() !== '') {
+          cleaned[key as keyof FilterState] = value.trim() as any;
+        }
+        // Если год пустой или undefined, не добавляем его в cleaned (будет удален из состояния)
+        return;
+      }
+      
       if (value === undefined || value === null || value === "") {
-        cleaned[key as keyof FilterState] = undefined;
+        // Не добавляем пустые значения
       } else if (Array.isArray(value) && value.length === 0) {
-        cleaned[key as keyof FilterState] = undefined;
+        // Не добавляем пустые массивы
       } else {
         cleaned[key as keyof FilterState] = value as any;
       }

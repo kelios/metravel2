@@ -37,7 +37,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
         href="/images/hero.avif"
         as="image"
         type="image/avif"
-        fetchPriority="high"
+        fetchpriority="high"
       />
       
       {/* Preload критичных ресурсов */}

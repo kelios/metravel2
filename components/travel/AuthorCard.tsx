@@ -107,7 +107,8 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
 
           {travelsCount !== null && (
             <View style={styles.statsRow}>
-              <MaterialIcons name="explore" size={16} color="#6b7280" /> {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+              {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+              <MaterialIcons name="explore" size={16} color="#6b7280" />
               <Text style={styles.statsText}>
                 {travelsCount} {travelsCount === 1 ? 'путешествие' : travelsCount < 5 ? 'путешествия' : 'путешествий'}
               </Text>
@@ -130,7 +131,8 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
             <Text style={[styles.viewButtonText, isMobile && styles.viewButtonTextMobile]}>
               Все путешествия
             </Text>
-            <Feather name="arrow-right" size={16} color="#6b7280" /> {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+            {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+            <Feather name="arrow-right" size={16} color="#6b7280" />
           </Pressable>
         )}
       </View>

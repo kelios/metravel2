@@ -469,5 +469,115 @@ describe('buildPhotoBookHTML', () => {
       );
     });
   });
+
+  describe('Верстка и стили', () => {
+    it('должен содержать стили для улучшения читаемости HTML контента', async () => {
+      const html = await buildPhotoBookHTML([mockTravel], defaultSettings);
+      
+      // Проверяем наличие стилей для текстовых страниц
+      expect(html).toContain('.travel-text-page p');
+      expect(html).toContain('line-height: 1.75');
+      expect(html).toContain('text-align: justify');
+    });
+
+    it('должен содержать стили для заголовков', async () => {
+      const html = await buildPhotoBookHTML([mockTravel], defaultSettings);
+      
+      expect(html).toContain('.travel-text-page h1');
+      expect(html).toContain('.travel-text-page h2');
+      expect(html).toContain('.travel-text-page h3');
+      expect(html).toContain('font-weight: 700');
+    });
+
+    it('должен содержать стили для списков', async () => {
+      const html = await buildPhotoBookHTML([mockTravel], defaultSettings);
+      
+      expect(html).toContain('.travel-text-page ul');
+      expect(html).toContain('.travel-text-page ol');
+      expect(html).toContain('padding-left: 1.5em');
+    });
+
+    it('должен содержать улучшенные стили для обложки', async () => {
+      const html = await buildPhotoBookHTML([mockTravel], defaultSettings);
+      
+      expect(html).toContain('class="pdf-page cover-page"');
+      // Проверяем наличие улучшенных стилей (padding, font-size, font-weight)
+      expect(html).toContain('padding:');
+      expect(html).toContain('font-size:');
+    });
+
+    it('должен содержать улучшенные стили для страницы с фото', async () => {
+      const html = await buildPhotoBookHTML([mockTravel], defaultSettings);
+      
+      expect(html).toContain('class="pdf-page travel-photo-page"');
+      // Проверяем наличие градиента для текста поверх изображения
+      expect(html).toContain('linear-gradient');
+    });
+
+    it('должен содержать улучшенные стили для плюсов и минусов', async () => {
+      const html = await buildPhotoBookHTML([mockTravel], defaultSettings);
+      
+      expect(html).toContain('Плюсы');
+      expect(html).toContain('Минусы');
+      // Проверяем наличие стилей для карточек (border-radius, box-shadow)
+      expect(html).toContain('border-radius');
+    });
+
+    it('должен содержать улучшенные стили для оглавления', async () => {
+      const html = await buildPhotoBookHTML([mockTravel], defaultSettings);
+      
+      expect(html).toContain('class="pdf-page toc-page"');
+      // Проверяем наличие улучшенных стилей для элементов оглавления
+      expect(html).toContain('border-bottom');
+    });
+
+    it('должен содержать улучшенные стили для галереи', async () => {
+      const html = await buildPhotoBookHTML([mockTravel], defaultSettings);
+      
+      expect(html).toContain('class="pdf-page gallery-page"');
+      // Проверяем наличие grid layout
+      expect(html).toContain('grid-template-columns');
+    });
+
+    it('должен содержать улучшенные стили для карты', async () => {
+      const html = await buildPhotoBookHTML([mockTravel], defaultSettings);
+      
+      expect(html).toContain('class="pdf-page map-page"');
+      // Проверяем наличие grid layout для карты и списка локаций
+      expect(html).toContain('grid-template-columns');
+    });
+  });
+
+  describe('Очистка React Native компонентов', () => {
+    it('должен удалять React Native компоненты из HTML', async () => {
+      const travelWithReactComponents = {
+        ...mockTravel,
+        description: '<View><Text>Test content</Text></View>',
+      };
+      
+      const html = await buildPhotoBookHTML([travelWithReactComponents], defaultSettings);
+      
+      // React Native компоненты должны быть удалены
+      expect(html).not.toContain('<View>');
+      expect(html).not.toContain('</View>');
+      expect(html).not.toContain('<Text>');
+      expect(html).not.toContain('</Text>');
+      // Но содержимое должно остаться
+      expect(html).toContain('Test content');
+    });
+
+    it('должен обрабатывать вложенные React Native компоненты', async () => {
+      const travelWithNestedComponents = {
+        ...mockTravel,
+        description: '<View><View><Text>Nested content</Text></View></View>',
+      };
+      
+      const html = await buildPhotoBookHTML([travelWithNestedComponents], defaultSettings);
+      
+      expect(html).not.toContain('<View>');
+      expect(html).not.toContain('<Text>');
+      expect(html).toContain('Nested content');
+    });
+  });
 });
 

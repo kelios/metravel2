@@ -10,6 +10,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import type { Travel } from '@/src/types/types';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 interface CTASectionProps {
   travel: Travel;
@@ -75,6 +77,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
               styles.primaryButton,
               isMobile && styles.primaryButtonMobile,
               pressed && styles.buttonPressed,
+              globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
             ]}
             onPress={() => router.push('/login')}
             accessibilityRole="button"
@@ -99,6 +102,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
             isMobile && styles.actionButtonMobile,
             isFavorite && styles.actionButtonActive,
             pressed && styles.buttonPressed,
+            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
           ]}
           onPress={handleFavorite}
           accessibilityRole="button"
@@ -127,6 +131,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
               isMobile && styles.actionButtonMobile,
               styles.actionButtonSecondary,
               pressed && styles.buttonPressed,
+              globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
             ]}
             onPress={handleViewAuthorTravels}
             accessibilityRole="button"
@@ -149,6 +154,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
             isMobile && styles.actionButtonMobile,
             styles.actionButtonSecondary,
             pressed && styles.buttonPressed,
+            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
           ]}
           onPress={handleCreateTravel}
           accessibilityRole="button"
@@ -179,8 +185,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
   },
   containerMobile: {
     padding: 20,
@@ -220,19 +225,19 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 14,
     paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: '#fff5eb',
-    borderWidth: 1,
-    borderColor: '#ffe4d0',
+    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
+    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
         transition: 'all 0.2s ease' as any,
         ':hover': {
-          backgroundColor: '#ffe4d0',
-          borderColor: '#ff9f5a',
+          backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+          borderColor: DESIGN_TOKENS.colors.primary,
           transform: 'translateY(-2px) scale(1.02)' as any,
-          boxShadow: '0 4px 12px rgba(255, 159, 90, 0.2)' as any,
+          boxShadow: DESIGN_TOKENS.shadows.medium as any,
         } as any,
       },
     }),
@@ -242,12 +247,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   actionButtonSecondary: {
-    backgroundColor: '#f9fafb',
-    borderColor: '#e5e7eb',
+    backgroundColor: DESIGN_TOKENS.colors.mutedBackground, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    borderColor: DESIGN_TOKENS.colors.border,
   },
   actionButtonActive: {
-    backgroundColor: '#ff9f5a',
-    borderColor: '#ff9f5a',
+    backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
+    borderColor: DESIGN_TOKENS.colors.primary,
   },
   buttonPressed: {
     transform: [{ scale: 0.98 }],
@@ -256,7 +261,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#ff9f5a',
+    color: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
   },
   actionButtonTextMobile: {
     fontSize: 14,
@@ -267,18 +272,19 @@ const styles = StyleSheet.create({
   primaryButton: {
     paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 12,
-    backgroundColor: '#ff9f5a',
+    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
+    backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
         transition: 'all 0.2s ease' as any,
         ':hover': {
-          backgroundColor: '#ff8c42',
+          backgroundColor: '#3a7a7a', // Темнее primary для hover
           transform: 'translateY(-2px) scale(1.02)' as any,
-          boxShadow: '0 4px 12px rgba(255, 159, 90, 0.3)' as any,
+          boxShadow: DESIGN_TOKENS.shadows.medium as any,
         } as any,
       },
     }),

@@ -6,9 +6,15 @@ const path = require('path')
 const config = getDefaultConfig(__dirname)
 
 // Блокируем react-native-maps на веб на уровне blockList
+// Инициализируем blockList как массив, если его нет
 if (!config.resolver.blockList) {
   config.resolver.blockList = [];
+} else if (!Array.isArray(config.resolver.blockList)) {
+  // Если blockList не массив, преобразуем в массив
+  config.resolver.blockList = [config.resolver.blockList];
 }
+// Блокируем jsPDF (используем только pdf-lib из-за проблем с html2canvas)
+config.resolver.blockList.push(/node_modules\/jspdf\/.*/);
 // Добавляем react-native-maps в blockList только для веб (через resolver)
 
 // Настройка resolver для исключения react-native-maps на веб
@@ -16,6 +22,14 @@ const originalResolveRequest = config.resolver.resolveRequest
 config.resolver = {
   ...config.resolver,
   resolveRequest: (context, moduleName, platform, modulePath) => {
+    // Исключаем html2canvas для jsPDF (не нужен для нашего использования)
+    if (moduleName === 'html2canvas' || moduleName.includes('html2canvas')) {
+      // Возвращаем пустой stub для html2canvas
+      return {
+        filePath: path.resolve(__dirname, 'metro-stubs/html2canvas.js'),
+        type: 'sourceFile',
+      };
+    }
     // На веб заменяем react-native-maps на пустой stub
     // Проверяем platform напрямую и через context
     const isWeb = platform === 'web' || (context && context.platform === 'web');
@@ -75,6 +89,11 @@ config.resolver = {
       return originalResolveRequest(context, moduleName, platform, modulePath)
     }
     return context.resolveRequest(context, moduleName, platform, modulePath)
+  },
+  // Добавляем html2canvas в extraNodeModules для правильного разрешения
+  extraNodeModules: {
+    ...(config.resolver.extraNodeModules || {}),
+    'html2canvas': path.resolve(__dirname, 'metro-stubs/html2canvas.js'),
   },
 }
 

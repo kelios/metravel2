@@ -43,7 +43,10 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
                     }
                 }
             } catch (error) {
-                console.warn('[WeeklyHighlights] Failed to read collapsed state', error);
+                // ✅ BUG-001: Логируем только в dev режиме
+                if (__DEV__) {
+                    console.warn('[WeeklyHighlights] Failed to read collapsed state', error);
+                }
             }
         };
 
@@ -149,8 +152,10 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <View style={[styles.iconContainer, { backgroundColor: AIRY_COLORS.primaryLight }]}> {/* ✅ ДИЗАЙН: Воздушный легкий персиковый фон */}
-                    <MaterialIcons name="auto-awesome" size={20} color={AIRY_COLORS.primary} /> {/* ✅ БИЗНЕС: Оранжевая иконка */}
+                {/* ✅ ДИЗАЙН: Воздушный легкий персиковый фон */}
+            <View style={[styles.iconContainer, { backgroundColor: AIRY_COLORS.primaryLight }]}>
+                    {/* ✅ БИЗНЕС: Оранжевая иконка */}
+                    <MaterialIcons name="auto-awesome" size={20} color={AIRY_COLORS.primary} />
                 </View>
                 <View style={styles.titleContainer}>
                     <Text style={styles.title}>Подборка недели</Text>
@@ -158,13 +163,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
                         <Text style={styles.badgeText}>Выбор недели</Text>
                     </View>
                 </View>
-                <Pressable 
-                    onPress={handleCollapse}
-                    style={styles.collapseButton}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                    <MaterialIcons name="expand-less" size={20} color="#6b7280" />
-                </Pressable>
+                {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
             </View>
             <Text style={styles.subtitle}>Популярные маршруты, которые вы еще не видели</Text>
             <ScrollView
@@ -217,17 +216,17 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
 
 const styles = StyleSheet.create({
     container: {
-        marginVertical: 16,
-        padding: 16,
-        backgroundColor: '#fff',
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: 'rgba(15, 23, 42, 0.08)',
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: Platform.OS === 'web' ? 0 : 0.05,
-        shadowRadius: 10,
-        elevation: 2,
+        marginVertical: 8, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше отступов
+        padding: 12, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше padding
+        backgroundColor: 'transparent', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Прозрачный фон
+        borderRadius: 12, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше радиус
+        borderWidth: 0, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Без границы
+        borderColor: 'transparent',
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
     },
     header: {
         flexDirection: 'row',
@@ -256,28 +255,22 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     title: {
-        fontSize: 20, // ✅ БИЗНЕС: Увеличен размер
-        fontWeight: '700',
-        fontFamily: Platform.select({ web: 'Georgia, serif', default: undefined }), // ✅ БИЗНЕС: Georgia
+        fontSize: 15, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше размер
+        fontWeight: '600', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше жирность
         color: '#1a202c',
-        letterSpacing: -0.3,
+        letterSpacing: -0.1,
     },
     badgeContainer: {
-        backgroundColor: AIRY_COLORS.primary, // ✅ ДИЗАЙН: Воздушный легкий персиковый badge
-        borderRadius: 12,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        ...Platform.select({
-            web: {
-                boxShadow: '0 2px 4px rgba(255, 159, 90, 0.3)',
-            },
-        }),
+        backgroundColor: 'rgba(74, 140, 140, 0.1)', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Прозрачный фон
+        borderRadius: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
     },
     badgeText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#ffffff',
-        letterSpacing: 0.2,
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#4a8c8c', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Цвет текста вместо белого
+        letterSpacing: 0.1,
     },
     subtitle: {
         fontSize: 13,

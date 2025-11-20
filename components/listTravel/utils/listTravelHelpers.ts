@@ -24,17 +24,18 @@ export function normalizeApiResponse(data: any): { items: Travel[]; total: numbe
     let items: Travel[] = [];
     let total = 0;
 
-    // Если data.data - массив
+    // ✅ ИСПРАВЛЕНИЕ: Если data.data - массив (основной случай)
     if (Array.isArray(data.data)) {
       items = data.data;
-      total = data.total ?? items.length;
+      // ✅ ИСПРАВЛЕНИЕ: Используем total из ответа, если он есть, иначе длину массива
+      total = typeof data.total === 'number' ? data.total : items.length;
     }
     // Если data.data - один объект
-    else if (data.data && typeof data.data === 'object') {
+    else if (data.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
       items = [data.data as Travel];
-      total = data.total ?? 1;
+      total = typeof data.total === 'number' ? data.total : 1;
     }
-    // Если есть total, но нет data
+    // ✅ ИСПРАВЛЕНИЕ: Если есть total, но нет data (пустой результат)
     else if (typeof data.total === 'number') {
       total = data.total;
       items = [];
@@ -60,14 +61,21 @@ export function deduplicateTravels(travels: Travel[]): Travel[] {
 }
 
 // ✅ АРХИТЕКТУРА: Расчет количества колонок
+// ✅ ИСПРАВЛЕНИЕ: Улучшена адаптивность для планшетов и больших экранов
 export function calculateColumns(width: number): number {
   if (width < BREAKPOINTS.MOBILE) {
-    return GRID_COLUMNS.MOBILE;
+    return GRID_COLUMNS.MOBILE; // < 768px: 1 колонка
   }
   if (width < BREAKPOINTS.TABLET) {
-    return GRID_COLUMNS.TABLET;
+    return GRID_COLUMNS.TABLET; // 768-1024px: 2 колонки
   }
-  return GRID_COLUMNS.DESKTOP;
+  if (width < BREAKPOINTS.TABLET_LANDSCAPE) {
+    return GRID_COLUMNS.TABLET_LANDSCAPE; // 1024-1280px: 3 колонки
+  }
+  if (width < BREAKPOINTS.DESKTOP) {
+    return GRID_COLUMNS.DESKTOP; // 1280-1440px: 4 колонки
+  }
+  return GRID_COLUMNS.DESKTOP_LARGE; // > 1440px: 5 колонок
 }
 
 // ✅ АРХИТЕКТУРА: Определение badges для социального доказательства

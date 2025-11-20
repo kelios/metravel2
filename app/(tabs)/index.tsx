@@ -13,7 +13,11 @@ import { useIsFocused } from '@react-navigation/native';
 
 import ListTravelSkeleton from '@/components/listTravel/ListTravelSkeleton';
 import InstantSEO from '@/components/seo/InstantSEO';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
+// @ts-ignore - Dynamic imports are supported in runtime
 const LazyListTravel = lazy(() => import('@/components/listTravel/ListTravel'));
 
 function TravelScreen() {
@@ -47,9 +51,29 @@ function TravelScreen() {
     }, [listReady]);
 
     const listContent = listReady ? (
-        <Suspense fallback={<ListTravelSkeleton />}>
-            <LazyListTravel />
-        </Suspense>
+        <ErrorBoundary
+            fallback={
+                <View style={styles.errorContainer}>
+                    <ErrorDisplay
+                        message="Не удалось загрузить список путешествий"
+                        onRetry={() => {
+                            if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                                window.location.reload();
+                            } else {
+                                // Для React Native можно использовать router.reload()
+                                setListReady(false);
+                                setTimeout(() => setListReady(true), 100);
+                            }
+                        }}
+                        variant="error"
+                    />
+                </View>
+            }
+        >
+            <Suspense fallback={<ListTravelSkeleton />}>
+                <LazyListTravel />
+            </Suspense>
+        </ErrorBoundary>
     ) : (
         <ListTravelSkeleton />
     );
@@ -76,7 +100,13 @@ function TravelScreen() {
 const styles = StyleSheet.create({
     container: { 
         flex: 1,
-        backgroundColor: '#f9fafb',
+        backgroundColor: '#ffffff', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Чистый белый фон
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
     },
 });
 

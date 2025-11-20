@@ -9,11 +9,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/src/types/types";
 import FavoriteButton from "@/components/FavoriteButton";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travels";
+import TravelCardHoverActions from "./TravelCardHoverActions";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize, generateSrcSet } from "@/utils/imageOptimization";
 // ✅ ДИЗАЙН: Импорт максимально легкой и воздушной палитры
 import { AIRY_COLORS, AIRY_SHADOWS, AIRY_BOX_SHADOWS } from "@/constants/airyColors";
 import { DESIGN_TOKENS } from "@/constants/designSystem";
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
@@ -110,6 +112,7 @@ type Props = {
     selectable?: boolean;
     isSelected?: boolean;
     onToggle?: () => void;
+    isMobile?: boolean; // ✅ УЛУЧШЕНИЕ: Добавлен проп для определения мобильного устройства
 };
 
 function TravelListItem({
@@ -122,6 +125,7 @@ function TravelListItem({
                             selectable = false,
                             isSelected = false,
                             onToggle,
+                            isMobile = false,
                         }: Props) {
     if (!travel) return null;
 
@@ -133,6 +137,7 @@ function TravelListItem({
         countryName = "",
         userName,
         countUnicIpView = 0,
+        number_days = 0,
     } = travel;
 
     // ✅ УЛУЧШЕНИЕ: Оптимизация превью под карточку с использованием новых утилит
@@ -170,12 +175,15 @@ function TravelListItem({
         const updatedAt = (travel as any).updated_at;
         const createdAt = (travel as any).created_at || updatedAt;
         
+        // ✅ ИСПРАВЛЕНИЕ: Используем тёмный текст для лучшего контраста на светлых badges
+        const badgeTextColor = AIRY_COLORS.badgeText || '#1a1a1a';
+        
         // "Популярное" - более 1000 просмотров
         if (views > 1000) {
             result.push({
                 label: 'Популярное',
-                color: '#fff',
-                bgColor: AIRY_COLORS.badgePopular, // ✅ ДИЗАЙН: Воздушный полупрозрачный персик
+                color: badgeTextColor, // ✅ ИСПРАВЛЕНИЕ: Тёмный текст для контраста
+                bgColor: AIRY_COLORS.badgePopular,
             });
         }
         
@@ -186,8 +194,8 @@ function TravelListItem({
             if (daysSinceCreated <= 7) {
                 result.push({
                     label: 'Новое',
-                    color: '#fff',
-                    bgColor: AIRY_COLORS.badgeNew, // ✅ ДИЗАЙН: Воздушный полупрозрачный мятный
+                    color: badgeTextColor, // ✅ ИСПРАВЛЕНИЕ: Тёмный текст для контраста
+                    bgColor: AIRY_COLORS.badgeNew,
                 });
             }
         }
@@ -199,8 +207,8 @@ function TravelListItem({
             if (daysSinceUpdated <= 30 && !result.find(b => b.label === 'Новое')) {
                 result.push({
                     label: 'Тренд',
-                    color: '#fff',
-                    bgColor: AIRY_COLORS.badgeTrend, // ✅ ДИЗАЙН: Воздушный полупрозрачный голубой
+                    color: badgeTextColor, // ✅ ИСПРАВЛЕНИЕ: Тёмный текст для контраста
+                    bgColor: AIRY_COLORS.badgeTrend,
                 });
             }
         }
@@ -250,15 +258,21 @@ function TravelListItem({
         onDeletePress?.(id);
     }, [id, onDeletePress]);
 
+    // ✅ УЛУЧШЕНИЕ: Состояние hover для десктопа
+    const [isHovered, setIsHovered] = React.useState(false);
+
     return (
         <View style={styles.wrap}>
             <Pressable
                 onPress={handlePress}
+                onHoverIn={Platform.OS === 'web' ? () => setIsHovered(true) : undefined}
+                onHoverOut={Platform.OS === 'web' ? () => setIsHovered(false) : undefined}
                 android_ripple={
                     Platform.OS === "android" ? { color: "rgba(17,24,39,0.06)" } : undefined
                 }
                 style={[
                     styles.card,
+                    globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                     Platform.OS === "android" && styles.androidOptimized,
                     isSingle && styles.single,
                     selectable && isSelected && styles.selected,
@@ -302,7 +316,15 @@ function TravelListItem({
 
                 {/* Кнопка избранного */}
                 {!selectable && (
-                    <View style={styles.favoriteButtonContainer} pointerEvents="box-none">
+                    <View 
+                        style={styles.favoriteButtonContainer} 
+                        pointerEvents="box-none"
+                        {...(Platform.OS === 'web' && {
+                            // Prevent clicks on favorite button from triggering parent Pressable on web
+                            onClick: (e: any) => e.stopPropagation(),
+                            onMouseDown: (e: any) => e.stopPropagation(),
+                        })}
+                    >
                         <FavoriteButton
                             id={id}
                             type="travel"
@@ -325,6 +347,26 @@ function TravelListItem({
 
                 {/* Контент поверх изображения */}
                 <View style={styles.overlay} pointerEvents="none">
+                    {/* ✅ UX УЛУЧШЕНИЕ: Badge с ключевой информацией вверху */}
+                    <View style={styles.topBadges}>
+                        {countries.length > 0 && countries[0] && (
+                            <View style={styles.infoBadge}>
+                                <Feather name="map-pin" size={11} color="#fff" />
+                                <Text style={styles.infoBadgeText} numberOfLines={1}>
+                                    {countries[0]}
+                                </Text>
+                            </View>
+                        )}
+                        {number_days > 0 && (
+                            <View style={styles.infoBadge}>
+                                <Feather name="calendar" size={11} color="#fff" />
+                                <Text style={styles.infoBadgeText}>
+                                    {number_days} {number_days === 1 ? 'день' : number_days < 5 ? 'дня' : 'дней'}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                    
                     <CountriesList countries={countries} />
 
                     {/* ✅ БИЗНЕС: Badges для социального доказательства */}
@@ -380,12 +422,42 @@ function TravelListItem({
                 {/* Кнопки действий (редактирование/удаление) */}
                 {canEdit && !selectable && (
                     <View style={styles.actions} pointerEvents="box-none">
-                        <Pressable onPress={handleEdit} hitSlop={10} style={styles.btn} accessibilityLabel="Редактировать">
-                            <Feather name="edit-2" size={16} color={ICON_COLOR} />
+                        <Pressable 
+                            onPress={handleEdit} 
+                            hitSlop={10} 
+                            style={[styles.btn, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                            accessibilityRole="button"
+                            accessibilityLabel="Редактировать"
+                        >
+                            {/* ✅ ИСПРАВЛЕНИЕ: Увеличен размер иконки */}
+                            <Feather name="edit-2" size={18} color={ICON_COLOR} />
                         </Pressable>
-                        <Pressable onPress={handleDelete} hitSlop={10} style={styles.btn} accessibilityLabel="Удалить">
-                            <Feather name="trash-2" size={16} color={ICON_COLOR} />
+                        <Pressable 
+                            onPress={handleDelete} 
+                            hitSlop={10} 
+                            style={[styles.btn, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                            accessibilityRole="button"
+                            accessibilityLabel="Удалить"
+                        >
+                            {/* ✅ ИСПРАВЛЕНИЕ: Увеличен размер иконки */}
+                            <Feather name="trash-2" size={18} color={ICON_COLOR} />
                         </Pressable>
+                    </View>
+                )}
+
+                {/* ✅ УЛУЧШЕНИЕ: Hover действия на десктопе */}
+                {Platform.OS === 'web' && !isMobile && !selectable && !canEdit && (
+                    <View 
+                        style={[
+                            styles.hoverOverlay,
+                            isHovered && styles.hoverOverlayVisible
+                        ]}
+                        pointerEvents={isHovered ? 'auto' : 'none'}
+                    >
+                        <TravelCardHoverActions
+                            travel={travel}
+                            visible={isHovered}
+                        />
                     </View>
                 )}
             </Pressable>
@@ -400,28 +472,42 @@ const styles = StyleSheet.create({
         position: "relative",
         width: "100%",
         aspectRatio: 1,
-        borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
-        backgroundColor: "#ffffff",
-        ...Platform.select({
-            web: {
-                boxShadow: "0 1px 4px rgba(0,0,0,0.04)", // ✅ ДИЗАЙН: Более легкая тень
-            },
-        }),
-        borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
-        borderColor: 'rgba(0, 0, 0, 0.06)', // ✅ ДИЗАЙН: Более светлая граница
+        borderRadius: Platform.select({ default: 10, web: 12 }),
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+        shadowColor: '#1f1f1f',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+        elevation: 2,
         overflow: "hidden",
         ...Platform.select({
             web: {
-                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)", // ✅ ДИЗАЙН: Плавный переход
+                boxShadow: DESIGN_TOKENS.shadows.light,
+                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                 cursor: "pointer",
                 // @ts-ignore - для hover эффектов
                 ":hover": {
-                    transform: "translateY(-2px)", // ✅ ДИЗАЙН: Меньше подъем для прозаичности
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.06)", // ✅ ДИЗАЙН: Более легкая тень при hover
-                    borderColor: 'rgba(0, 0, 0, 0.1)', // ✅ ДИЗАЙН: Нейтральная граница при hover
+                    transform: "translateY(-4px)",
+                    boxShadow: DESIGN_TOKENS.shadows.hover,
                 },
             },
         }),
+    },
+    hoverOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        opacity: 0,
+        transition: "opacity 0.2s ease",
+        pointerEvents: "none",
+        borderRadius: Platform.select({ default: 10, web: 12 }),
+    },
+    hoverOverlayVisible: {
+        opacity: 1,
+        pointerEvents: "auto",
     },
 
     androidOptimized: {
@@ -432,8 +518,12 @@ const styles = StyleSheet.create({
     },
 
     selected: {
-        borderWidth: 1.5, // ✅ ДИЗАЙН: Меньше толщина
-        borderColor: DESIGN_TOKENS.colors.text, // ✅ ДИЗАЙН: Нейтральный цвет для выбранных
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень и overlay
+        ...Platform.select({
+            web: {
+                boxShadow: `0 0 0 2px ${DESIGN_TOKENS.colors.primary}`,
+            },
+        }),
     },
     selectionOverlay: {
         position: "absolute",
@@ -460,14 +550,14 @@ const styles = StyleSheet.create({
     img: {
         width: "100%",
         height: "100%",
-        backgroundColor: "#f3f4f6",
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     },
 
     imgStub: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#f1f5f9",
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     },
 
     grad: {
@@ -486,12 +576,12 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(255,255,255,0.95)",
         borderRadius: Platform.select({ default: 18, web: 22 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
         padding: Platform.select({ default: 5, web: 6 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
-        borderColor: "rgba(0, 0, 0, 0.06)", // ✅ ДИЗАЙН: Более светлая граница
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
         ...Platform.select({
             web: {
-                boxShadow: "0 1px 3px rgba(0,0,0,0.04)", // ✅ ДИЗАЙН: Более легкая тень
-                transition: "all 0.2s ease",
+                boxShadow: '0 1px 3px rgba(31, 31, 31, 0.04)',
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
             },
         }),
     },
@@ -502,6 +592,34 @@ const styles = StyleSheet.create({
         right: 0,
         bottom: 0,
         padding: Platform.select({ default: 12, web: 14 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    },
+    // ✅ UX УЛУЧШЕНИЕ: Badge с ключевой информацией вверху карточки
+    topBadges: {
+        position: "absolute",
+        top: Platform.select({ default: 10, web: 12 }),
+        left: Platform.select({ default: 10, web: 12 }),
+        flexDirection: "row",
+        gap: 6,
+        zIndex: 10,
+    },
+    infoBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        backgroundColor: "rgba(0, 0, 0, 0.65)",
+        borderRadius: Platform.select({ default: 8, web: 10 }),
+        paddingHorizontal: Platform.select({ default: 8, web: 10 }),
+        paddingVertical: Platform.select({ default: 4, web: 5 }),
+        ...Platform.select({
+            web: {
+                backdropFilter: "blur(8px)",
+            },
+        }),
+    },
+    infoBadgeText: {
+        fontSize: Platform.select({ default: 11, web: 12 }),
+        color: "#fff",
+        fontWeight: "600",
     },
     // ✅ БИЗНЕС: Badges для социального доказательства
     badgesContainer: {
@@ -625,20 +743,34 @@ const styles = StyleSheet.create({
     },
 
     btn: {
-        width: 32,
-        height: 32,
-        borderRadius: 8, // ✅ ДИЗАЙН: Меньший радиус
+        // ✅ ИСПРАВЛЕНИЕ: Увеличен размер до минимума 44x44px для touch-целей
+        minWidth: 44,
+        minHeight: 44,
+        width: 44,
+        height: 44,
+        borderRadius: 8,
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: "rgba(255,255,255,0.95)",
+        padding: 6, // Добавлен padding для визуального размера
         ...Platform.select({
             web: {
                 transition: "all 0.2s ease",
                 cursor: "pointer",
+                outlineWidth: 2,
+                outlineColor: DESIGN_TOKENS.colors.primary,
+                outlineStyle: 'solid',
+                outlineOffset: 2,
                 // @ts-ignore
                 ":hover": {
-                    backgroundColor: AIRY_COLORS.primary, // ✅ ДИЗАЙН: Воздушный легкий персик при hover
+                    backgroundColor: AIRY_COLORS.primary,
                     transform: "scale(1.1)",
+                },
+                ":focus": {
+                    outlineWidth: 2,
+                    outlineColor: DESIGN_TOKENS.colors.primary,
+                    outlineStyle: 'solid',
+                    outlineOffset: 2,
                 },
             },
         }),

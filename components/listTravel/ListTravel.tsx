@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import {
     ActivityIndicator,
+    Alert,
     FlatList,
     SafeAreaView,
     StyleSheet,
@@ -22,29 +23,39 @@ import {
     NativeScrollEvent,
     NativeSyntheticEvent,
     RefreshControl,
+    Animated,
+    Modal,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useRoute } from "@react-navigation/native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Feather } from "@expo/vector-icons";
 
 import FiltersComponent from "./FiltersComponent";
 import RenderTravelItem from "./RenderTravelItem";
 import SearchAndFilterBar from "./SearchAndFilterBar";
 import ConfirmDialog from "../ConfirmDialog";
 import UIButton from '@/components/ui/Button';
+import HeroSection from "./HeroSection";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 // Ленивая загрузка объединенного компонента с табами
-const RecommendationsTabs = lazy(() => 
-    typeof window !== 'undefined' && 'requestIdleCallback' in window
-        ? new Promise(resolve => {
+// @ts-ignore - Dynamic imports are supported in runtime
+const RecommendationsTabs = lazy(() => {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        return new Promise<{ default: React.ComponentType<any> }>(resolve => {
             (window as any).requestIdleCallback(() => {
-                resolve(import('./RecommendationsTabs'));
+                // @ts-ignore
+                import('./RecommendationsTabs').then(module => {
+                    resolve(module);
+                });
             }, { timeout: 2000 });
-        })
-        : import('./RecommendationsTabs')
-);
+        });
+    }
+    // @ts-ignore
+    return import('./RecommendationsTabs');
+});
 
 import {
     deleteTravel,
@@ -52,17 +63,23 @@ import {
     fetchFiltersCountry,
     fetchTravels,
 } from "@/src/api/travels";
+import { Travel } from "@/src/types/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { TravelListSkeleton } from "@/components/SkeletonLoader";
 import EmptyState from "@/components/EmptyState";
 import CategoryChips from "@/components/CategoryChips";
 import ActiveFiltersBadge from "./ActiveFiltersBadge";
+import ProgressIndicator from "@/components/ProgressIndicator";
+import ScrollToTopButton from "@/components/ScrollToTopButton";
+import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
 
 const palette = DESIGN_TOKENS.colors;
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
 
+// @ts-ignore - Dynamic imports are supported in runtime
 const TravelPdfTemplate = lazy(() => import('@/components/export/TravelPdfTemplate'));
+// @ts-ignore - Dynamic imports are supported in runtime
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
 
 // ✅ АРХИТЕКТУРА: Импорт констант, типов, утилит и хуков
@@ -70,6 +87,7 @@ import {
   PER_PAGE, 
   PERSONALIZATION_VISIBLE_KEY, 
   WEEKLY_HIGHLIGHTS_VISIBLE_KEY,
+  RECOMMENDATIONS_VISIBLE_KEY,
   MAX_VISIBLE_CATEGORIES,
 } from "./utils/listTravelConstants";
 import { useListTravelVisibility } from "./hooks/useListTravelVisibility";
@@ -77,10 +95,22 @@ import { useListTravelFilters } from "./hooks/useListTravelFilters";
 import { useListTravelData } from "./hooks/useListTravelData";
 import { useListTravelExport } from "./hooks/useListTravelExport";
 import { calculateColumns, isMobile as checkIsMobile, calculateCategoriesWithCount } from "./utils/listTravelHelpers";
+import type { FilterState } from "./utils/listTravelTypes";
 
+// ✅ УЛУЧШЕНИЕ: Улучшенный skeleton для рекомендаций
 const RecommendationsPlaceholder = () => (
   <View style={styles.recommendationsLoader}>
-    <ActivityIndicator size="small" color="#6b8e7f" />
+    <View style={styles.recommendationsSkeleton}>
+      <View style={styles.recommendationsSkeletonHeader}>
+        <View style={styles.recommendationsSkeletonTitle} />
+        <View style={styles.recommendationsSkeletonTabs} />
+      </View>
+      <View style={styles.recommendationsSkeletonContent}>
+        {[1, 2, 3].map((i) => (
+          <View key={i} style={styles.recommendationsSkeletonCard} />
+        ))}
+      </View>
+    </View>
   </View>
 );
 
@@ -171,7 +201,18 @@ const ExportBar = memo(function ExportBar({
 
           {isGenerating && Platform.OS === "web" && (
             <View style={styles.progressWrapper}>
-              <View style={[styles.progressBar, { width: `${progress || 0}%` }]} />
+              <ProgressIndicator
+                progress={progress ?? 0}
+                stage={(progress ?? 0) < 30 ? 'Подготовка данных...' : 
+                       (progress ?? 0) < 60 ? 'Генерация содержимого...' :
+                       (progress ?? 0) < 90 ? 'Обработка изображений...' : 
+                       'Создание PDF...'}
+                message={(progress ?? 0) < 30 ? 'Проверка выбранных путешествий' :
+                         (progress ?? 0) < 60 ? 'Формирование макета' :
+                         (progress ?? 0) < 90 ? 'Оптимизация изображений' :
+                         'Финальная обработка'}
+                showPercentage={true}
+              />
             </View>
           )}
       </View>
@@ -194,53 +235,19 @@ function ListTravel({
     isPersonalizationVisible: externalPersonalizationVisible,
     isWeeklyHighlightsVisible: externalWeeklyHighlightsVisible,
 }: ListTravelProps = {}) {
-    // ✅ ИСПРАВЛЕНИЕ: Старые пропсы оставлены для обратной совместимости, но не используются
     // ✅ АРХИТЕКТУРА: Использование кастомного хука для видимости
-    // ✅ ИСПРАВЛЕНИЕ: Объединенная видимость для всех рекомендаций
-    const [isRecommendationsVisible, setIsRecommendationsVisible] = useState(true);
-    const [isInitialized, setIsInitialized] = useState(false);
-
-    // Загружаем сохраненное состояние
-    useEffect(() => {
-        const loadVisibility = async () => {
-            try {
-                if (Platform.OS === 'web') {
-                    const saved = sessionStorage.getItem('recommendations_visible');
-                    setIsRecommendationsVisible(saved !== 'false');
-                } else {
-                    const saved = await AsyncStorage.getItem('recommendations_visible');
-                    setIsRecommendationsVisible(saved !== 'false');
-                }
-            } catch (error) {
-                console.error('Error loading recommendations visibility:', error);
-            } finally {
-                setIsInitialized(true);
-            }
-        };
-        loadVisibility();
-    }, []);
-
-    const handleToggleRecommendations = useCallback(() => {
-        const newValue = !isRecommendationsVisible;
-        setIsRecommendationsVisible(newValue);
-        try {
-            if (Platform.OS === 'web') {
-                if (newValue) {
-                    sessionStorage.removeItem('recommendations_visible');
-                } else {
-                    sessionStorage.setItem('recommendations_visible', 'false');
-                }
-            } else {
-                if (newValue) {
-                    AsyncStorage.removeItem('recommendations_visible');
-                } else {
-                    AsyncStorage.setItem('recommendations_visible', 'false');
-                }
-            }
-        } catch (error) {
-            console.error('Error saving recommendations visibility:', error);
-        }
-    }, [isRecommendationsVisible]);
+    const {
+        isPersonalizationVisible,
+        isWeeklyHighlightsVisible,
+        isInitialized,
+        handleTogglePersonalization,
+        handleToggleWeeklyHighlights,
+    } = useListTravelVisibility({
+        externalPersonalizationVisible,
+        externalWeeklyHighlightsVisible,
+        onTogglePersonalization,
+        onToggleWeeklyHighlights,
+    });
 
     const { width } = useWindowDimensions();
     const isMobile = checkIsMobile(width);
@@ -249,7 +256,59 @@ function ListTravel({
     const listKey = useMemo(() => `grid-${columns}`, [columns]);
 
     const [recommendationsReady, setRecommendationsReady] = useState(Platform.OS !== 'web');
+    const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(true);
+    const [recommendationsVisibilityInitialized, setRecommendationsVisibilityInitialized] = useState(false);
 
+    // ✅ ИСПРАВЛЕНИЕ: Загружаем сохраненное состояние видимости рекомендаций
+    useEffect(() => {
+        const loadRecommendationsVisibility = async () => {
+            try {
+                if (Platform.OS === 'web') {
+                    const saved = sessionStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
+                    setIsRecommendationsVisible(saved !== 'false'); // По умолчанию true, если не сохранено 'false'
+                } else {
+                    const saved = await AsyncStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
+                    setIsRecommendationsVisible(saved !== 'false'); // По умолчанию true, если не сохранено 'false'
+                }
+            } catch (error) {
+                console.error('Error loading recommendations visibility:', error);
+            } finally {
+                setRecommendationsVisibilityInitialized(true);
+            }
+        };
+        
+        loadRecommendationsVisibility();
+    }, []);
+
+    // ✅ ИСПРАВЛЕНИЕ: Сохраняем состояние видимости рекомендаций при изменении
+    const handleRecommendationsVisibilityChange = useCallback((visible: boolean) => {
+        setIsRecommendationsVisible(visible);
+        
+        // Сохраняем в storage
+        const saveVisibility = async () => {
+            try {
+                if (Platform.OS === 'web') {
+                    if (visible) {
+                        sessionStorage.removeItem(RECOMMENDATIONS_VISIBLE_KEY);
+                    } else {
+                        sessionStorage.setItem(RECOMMENDATIONS_VISIBLE_KEY, 'false');
+                    }
+                } else {
+                    if (visible) {
+                        await AsyncStorage.removeItem(RECOMMENDATIONS_VISIBLE_KEY);
+                    } else {
+                        await AsyncStorage.setItem(RECOMMENDATIONS_VISIBLE_KEY, 'false');
+                    }
+                }
+            } catch (error) {
+                console.error('Error saving recommendations visibility:', error);
+            }
+        };
+        
+        saveVisibility();
+    }, []);
+
+    // ✅ УЛУЧШЕНИЕ: Уменьшен timeout для более быстрой загрузки рекомендаций
     useEffect(() => {
         if (recommendationsReady) return;
         if (typeof window === 'undefined') {
@@ -261,9 +320,11 @@ function ListTravel({
         const markReady = () => setRecommendationsReady(true);
 
         if ('requestIdleCallback' in window) {
-            idleHandle = (window as any).requestIdleCallback(markReady, { timeout: 1200 });
+            // ✅ УЛУЧШЕНИЕ: Уменьшен timeout с 1200ms до 500ms
+            idleHandle = (window as any).requestIdleCallback(markReady, { timeout: 500 });
         } else {
-            timeoutHandle = setTimeout(markReady, 400);
+            // ✅ УЛУЧШЕНИЕ: Уменьшен timeout с 400ms до 200ms
+            timeoutHandle = setTimeout(markReady, 200);
         }
 
         return () => {
@@ -303,13 +364,15 @@ function ListTravel({
 
     const [currentPage, setCurrentPage] = useState(0);
     const onMomentumRef = useRef(false);
+    const scrollY = useRef(new Animated.Value(0)).current;
 
     /* UI / dialogs */
     const [deleteId, setDelete] = useState<number | null>(null);
     const [showFilters, setShowFilters] = useState(false);
+    const flatListRef = useRef<FlatList>(null);
 
     /* Filters options */
-    const { data: options } = useQuery({
+    const { data: rawOptions } = useQuery({
         queryKey: ["filter-options"],
         queryFn: async () => {
             const [base, countries] = await Promise.all([
@@ -320,6 +383,41 @@ function ListTravel({
         },
         staleTime: 10 * 60 * 1000,
     });
+
+    // ✅ ИСПРАВЛЕНИЕ: Преобразуем данные из API в формат FilterOptions
+    const options = useMemo((): import('./utils/listTravelTypes').FilterOptions | undefined => {
+        if (!rawOptions) return undefined;
+        
+        const transformed: import('./utils/listTravelTypes').FilterOptions = {
+            countries: rawOptions.countries || [],
+        };
+
+        // Преобразуем строковые массивы в объекты с id и name
+        const stringArrayFields = ['categories', 'categoryTravelAddress', 'transports', 'companions', 'complexity', 'month', 'over_nights_stay'] as const;
+        
+        stringArrayFields.forEach(field => {
+            const value = (rawOptions as any)[field];
+            if (Array.isArray(value) && value.length > 0) {
+                // ✅ ИСПРАВЛЕНИЕ: Обрабатываем как строки, так и объекты
+                (transformed as any)[field] = value.map((item: any) => {
+                    // Если уже объект с id и name, возвращаем как есть
+                    if (typeof item === 'object' && item !== null && 'id' in item && 'name' in item) {
+                        return item;
+                    }
+                    // Если строка, создаем объект
+                    return {
+                        id: String(item),
+                        name: String(item),
+                    };
+                });
+            } else if (Array.isArray(value) && value.length === 0) {
+                // ✅ ИСПРАВЛЕНИЕ: Сохраняем пустые массивы
+                (transformed as any)[field] = [];
+            }
+        });
+
+        return transformed;
+    }, [rawOptions]);
 
     const {
         filter,
@@ -336,6 +434,7 @@ function ListTravel({
         userId,
         user_id,
     });
+
 
     const isQueryEnabled = useMemo(
       () => (isMeTravel || isExport ? !!userId : true),
@@ -368,16 +467,53 @@ function ListTravel({
     });
 
     const categoriesWithCount = useMemo(
-      () => calculateCategoriesWithCount(travels, options?.categories).slice(0, MAX_VISIBLE_CATEGORIES),
+      () => calculateCategoriesWithCount(travels, options?.categories as any).slice(0, MAX_VISIBLE_CATEGORIES),
       [travels, options?.categories]
     );
 
     /* Delete */
     const handleDelete = useCallback(async () => {
         if (!deleteId) return;
-        await deleteTravel(deleteId);
-        setDelete(null);
-        queryClient.invalidateQueries({ queryKey: ["travels"] });
+        try {
+            await deleteTravel(String(deleteId));
+            setDelete(null);
+            queryClient.invalidateQueries({ queryKey: ["travels"] });
+            // ✅ УЛУЧШЕНИЕ: Показываем успешное сообщение
+            if (Platform.OS === 'web') {
+                // Можно добавить Toast здесь, если нужно
+            }
+        } catch (error) {
+            // ✅ BUG-002: Обработка ошибок при удалении
+            // ✅ UX-001: Улучшенные сообщения об ошибках
+            let errorMessage = 'Не удалось удалить путешествие.';
+            let errorDetails = 'Попробуйте позже.';
+            
+            if (error instanceof Error) {
+                if (error.message.includes('timeout') || error.message.includes('время ожидания')) {
+                    errorMessage = 'Превышено время ожидания';
+                    errorDetails = 'Проверьте подключение к интернету и попробуйте снова.';
+                } else if (error.message.includes('network') || error.message.includes('сеть')) {
+                    errorMessage = 'Проблема с подключением';
+                    errorDetails = 'Проверьте подключение к интернету и попробуйте снова.';
+                } else if (error.message.includes('404') || error.message.includes('не найдено')) {
+                    errorMessage = 'Путешествие не найдено';
+                    errorDetails = 'Возможно, оно уже было удалено.';
+                } else if (error.message.includes('403') || error.message.includes('доступ')) {
+                    errorMessage = 'Нет доступа';
+                    errorDetails = 'У вас нет прав для удаления этого путешествия.';
+                } else {
+                    errorDetails = error.message;
+                }
+            }
+            
+            if (Platform.OS === 'web') {
+                alert(`${errorMessage}\n\n${errorDetails}`);
+            } else {
+                // Для мобильных используем Alert из react-native
+                Alert.alert(errorMessage, errorDetails);
+            }
+            // Не закрываем диалог при ошибке, чтобы пользователь мог попробовать снова
+        }
     }, [deleteId, queryClient]);
 
     /* Selection for export */
@@ -453,188 +589,360 @@ function ListTravel({
     }, []);
     const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
         // если контента мало, RN web может сразу дёрнуть onEndReached — защитимся
-        const { contentSize, layoutMeasurement } = e.nativeEvent;
+        const { contentSize, layoutMeasurement, contentOffset } = e.nativeEvent;
         if (contentSize.height <= layoutMeasurement.height * 1.05) {
             onMomentumRef.current = true;
         }
-    }, []);
+        // ✅ УЛУЧШЕНИЕ: Обновляем scrollY для кнопки "Наверх"
+        if (Platform.OS === 'web') {
+            scrollY.setValue(contentOffset.y);
+        }
+    }, [scrollY]);
 
     const displayData = travels;
 
+    // ✅ UX УЛУЧШЕНИЕ: Подсчитываем количество активных фильтров
+    const activeFiltersCount = useMemo(() => {
+      let count = 0;
+      
+      if (filter.categories && filter.categories.length > 0) {
+        count += filter.categories.length;
+      }
+      if (filter.transports && filter.transports.length > 0) {
+        count += filter.transports.length;
+      }
+      if (filter.categoryTravelAddress && filter.categoryTravelAddress.length > 0) {
+        count += filter.categoryTravelAddress.length;
+      }
+      if (filter.companions && filter.companions.length > 0) {
+        count += filter.companions.length;
+      }
+      if (filter.complexity && filter.complexity.length > 0) {
+        count += filter.complexity.length;
+      }
+      if (filter.month && filter.month.length > 0) {
+        count += filter.month.length;
+      }
+      if (filter.over_nights_stay && filter.over_nights_stay.length > 0) {
+        count += filter.over_nights_stay.length;
+      }
+      if (filter.year) {
+        count += 1;
+      }
+      if (filter.moderation !== undefined) {
+        count += 1;
+      }
+      if (debSearch && debSearch.trim().length > 0) {
+        count += 1;
+      }
+      
+      return count;
+    }, [filter, debSearch]);
+
+    // ✅ UX УЛУЧШЕНИЕ: Генерируем красивое сообщение для пустого состояния
+    const getEmptyStateMessage = useMemo(() => {
+      if (!showEmptyState) return null;
+      
+      const activeFilters: string[] = [];
+
+      // Определяем активные фильтры
+      if (filter.categories && filter.categories.length > 0) {
+        const categoryNames = (options?.categories || [])
+          .filter((cat: any) => filter.categories?.includes(cat.id))
+          .map((cat: any) => cat.name)
+          .slice(0, 2);
+        if (categoryNames.length > 0) {
+          activeFilters.push(`категории "${categoryNames.join('", "')}"${categoryNames.length < (filter.categories?.length || 0) ? ' и другие' : ''}`);
+        }
+      }
+      
+      if (filter.transports && filter.transports.length > 0) {
+        const transportNames = (options?.transports || [])
+          .filter((t: any) => {
+            const transportId = String(t.id);
+            return filter.transports?.some((fid: any) => String(fid) === transportId);
+          })
+          .map((t: any) => t.name)
+          .slice(0, 2);
+        if (transportNames.length > 0) {
+          activeFilters.push(`транспорт "${transportNames.join('", "')}"${transportNames.length < (filter.transports?.length || 0) ? ' и другой' : ''}`);
+        }
+      }
+      
+      if (filter.categoryTravelAddress && filter.categoryTravelAddress.length > 0) {
+        const objectNames = (options?.categoryTravelAddress || [])
+          .filter((obj: any) => {
+            const objId = String(obj.id);
+            return filter.categoryTravelAddress?.some((fid: any) => String(fid) === objId);
+          })
+          .map((obj: any) => obj.name)
+          .slice(0, 2);
+        if (objectNames.length > 0) {
+          activeFilters.push(`объекты "${objectNames.join('", "')}"${objectNames.length < (filter.categoryTravelAddress?.length || 0) ? ' и другие' : ''}`);
+        }
+      }
+      
+      if (filter.companions && filter.companions.length > 0) {
+        activeFilters.push('спутники');
+      }
+      
+      if (filter.complexity && filter.complexity.length > 0) {
+        activeFilters.push('сложность');
+      }
+      
+      if (filter.month && filter.month.length > 0) {
+        activeFilters.push('месяц');
+      }
+      
+      if (filter.over_nights_stay && filter.over_nights_stay.length > 0) {
+        activeFilters.push('ночлег');
+      }
+      
+      if (filter.year) {
+        activeFilters.push(`год ${filter.year}`);
+      }
+
+      if (debSearch) {
+        activeFilters.push(`поиск "${debSearch}"`);
+      }
+
+      if (activeFilters.length === 0) {
+        return {
+          icon: 'inbox',
+          title: 'Пока нет путешествий',
+          description: 'Путешествия появятся здесь, когда будут добавлены.',
+          variant: 'empty' as const,
+        };
+      }
+
+      // Формируем красивое описание
+      let description = '';
+      if (activeFilters.length === 1) {
+        description = `По фильтру ${activeFilters[0]} ничего не найдено.`;
+      } else if (activeFilters.length === 2) {
+        description = `По фильтрам ${activeFilters[0]} и ${activeFilters[1]} ничего не найдено.`;
+      } else {
+        const lastFilter = activeFilters[activeFilters.length - 1];
+        const otherFilters = activeFilters.slice(0, -1).join(', ');
+        description = `По фильтрам ${otherFilters} и ${lastFilter} ничего не найдено.`;
+      }
+
+      description += ' Попробуйте изменить параметры поиска или выбрать другие фильтры.';
+
+      return {
+        icon: 'search',
+        title: 'Ничего не найдено',
+        description,
+        variant: 'search' as const,
+      };
+    }, [showEmptyState, filter, options, debSearch]);
+
     return (
       <SafeAreaView style={styles.root}>
-          <View style={[styles.container, { flexDirection: isMobile ? "column" : "row" }]}>
+        <View style={styles.container}>
+          <View style={styles.content}>
+            {/* Сайдбар с фильтрами (только на десктопе) */}
+            {!isMobile && (
+              <View style={styles.sidebar}>
+                {/* Фильтры без поиска */}
+                <MemoizedFilters
+                  filters={options || {}}
+                  filterValue={filter}
+                  onSelectedItemsChange={onSelect}
+                  handleApplyFilters={(newFilter: FilterState) => applyFilter(newFilter)}
+                  resetFilters={resetFilters}
+                  isSuperuser={isSuper}
+                  closeMenu={undefined}
+                  search={undefined}
+                  setSearch={undefined}
+                  onToggleRecommendations={undefined}
+                  isRecommendationsVisible={undefined}
+                  hasFilters={Object.keys(queryParams).length > 0}
+                  resultsCount={total}
+                  onClearAll={() => {
+                    setSearch('');
+                    resetFilters();
+                  }}
+                />
+              </View>
+            )}
+
+            {/* Основной контент */}
+            <View style={styles.main}>
+              {/* Поиск для веб-версии - в основном контенте, как на картинке */}
               {!isMobile && (
-                <View style={styles.sidebar} aria-label="Фильтры">
-                    <MemoizedFilters
-                      filtersLoadedKey={listKey}
-                      filters={options || {}}
-                      filterValue={filter}
-                      onSelectedItemsChange={onSelect}
-                      handleApplyFilters={applyFilter}
-                      resetFilters={resetFilters}
-                      isSuperuser={isSuper}
-                      closeMenu={() => {}}
-                    />
+                <View style={styles.searchSectionMain}>
+                  <SearchAndFilterBar
+                    search={search}
+                    setSearch={setSearch}
+                    onToggleFilters={undefined}
+                    onToggleRecommendations={() => handleRecommendationsVisibilityChange(!isRecommendationsVisible)}
+                    isRecommendationsVisible={isRecommendationsVisible}
+                    hasFilters={Object.keys(queryParams).length > 0}
+                    resultsCount={total}
+                    activeFiltersCount={activeFiltersCount}
+                    onClearAll={() => {
+                      setSearch('');
+                      resetFilters();
+                    }}
+                  />
                 </View>
               )}
 
-              <View style={styles.main}>
-                  {/* ✅ ДИЗАЙН: Увеличен верхний отступ для SearchAndFilterBar */}
-                  <View style={[styles.searchSection, isMobile && styles.searchSectionMobile]}>
-                      <SearchAndFilterBar
-                        search={search}
-                        setSearch={setSearch}
-                        onToggleFilters={isMobile ? () => setShowFilters(true) : undefined}
-                        onToggleRecommendations={handleToggleRecommendations}
-                        isRecommendationsVisible={isRecommendationsVisible}
-                      />
-                  </View>
-
-                  {isExport && hasSelection && (
-                    <View style={styles.selectionBanner}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.selectionBannerTitle}>{selectionLabel}</Text>
-                        <Text style={styles.selectionBannerSubtitle}>
-                          Настройки: {settingsSummary}
-                        </Text>
-                      </View>
-                      <Pressable
-                        onPress={clearSelection}
-                        style={styles.selectionBannerClear}
-                        accessibilityLabel="Очистить выбор"
-                      >
-                        <Text style={styles.selectionBannerClearText}>Очистить</Text>
-                      </Pressable>
-                    </View>
-                  )}
-
-                  {/* Сортировка временно отключена - бэкенд не поддерживает */}
-
-                  {/* ✅ УЛУЧШЕНИЕ: Счетчик активных фильтров */}
-                  <ActiveFiltersBadge
-                    filterValue={filter}
-                    onClear={resetFilters}
-                    showClearButton={true}
+              {/* Поиск для мобильной версии */}
+              {isMobile && (
+                <View style={styles.searchSection}>
+                  <SearchAndFilterBar
+                    search={search}
+                    setSearch={setSearch}
+                    onToggleFilters={() => setShowFilters(true)}
+                    onToggleRecommendations={() => handleRecommendationsVisibilityChange(!isRecommendationsVisible)}
+                    isRecommendationsVisible={isRecommendationsVisible}
+                    hasFilters={Object.keys(queryParams).length > 0}
+                    resultsCount={total}
+                    activeFiltersCount={activeFiltersCount}
+                    onClearAll={() => {
+                      setSearch('');
+                      resetFilters();
+                    }}
                   />
+                </View>
+              )}
 
-                  {/* ✅ ДИЗАЙН: Категории-чипсы с улучшенными отступами */}
-                  {categoriesWithCount.length > 0 && (
-                    <View style={styles.categoriesSection}>
-                      <CategoryChips
-                        categories={categoriesWithCount}
-                        selectedCategories={filter.categories || []}
-                        onToggleCategory={handleToggleCategory}
-                        maxVisible={8}
-                      />
-                    </View>
-                  )}
+              {/* Скелетон загрузки */}
+              {showInitialLoading && (
+                <TravelListSkeleton count={PER_PAGE} />
+              )}
 
-                  {showInitialLoading && (
-                    <TravelListSkeleton count={PER_PAGE} />
-                  )}
+              {/* Ошибка */}
+              {isError && (
+                <EmptyState
+                  icon="alert-circle"
+                  title="Ошибка загрузки"
+                  description="Не удалось загрузить путешествия."
+                  variant="error"
+                  action={{
+                    label: "Повторить",
+                    onPress: () => refetch(),
+                  }}
+                />
+              )}
 
-                  {isError && (
+              {/* Список путешествий */}
+              <FlatList
+                ref={flatListRef}
+                data={displayData}
+                renderItem={renderItem}
+                keyExtractor={keyExtractor}
+                key={listKey}
+                numColumns={columns}
+                columnWrapperStyle={columns > 1 ? { 
+                    gap: spacing.md,
+                    justifyContent: 'flex-start', // ✅ ИСПРАВЛЕНИЕ: Выравнивание карточек по левому краю
+                } : undefined}
+                contentContainerStyle={styles.listContent}
+                onEndReached={handleListEndReached}
+                onEndReachedThreshold={0.5}
+                onScroll={onScroll}
+                scrollEventThrottle={16}
+                onMomentumScrollBegin={onMomentumBegin}
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                ListEmptyComponent={
+                  showEmptyState && getEmptyStateMessage ? (
                     <EmptyState
-                      icon="alert-circle"
-                      title="Ошибка загрузки"
-                      description="Не удалось загрузить путешествия. Проверьте подключение к интернету и попробуйте снова."
-                      action={{
-                        label: "Повторить",
-                        onPress: () => refetch(),
-                      }}
-                    />
-                  )}
-                  {showEmptyState && (
-                    <EmptyState
-                      icon="search"
-                      title="Ничего не найдено"
-                      description={
-                        debSearch || Object.keys(queryParams).length > 0
-                          ? "Попробуйте изменить параметры поиска или фильтры"
-                          : "Пока нет доступных путешествий"
-                      }
+                      icon={getEmptyStateMessage.icon}
+                      title={getEmptyStateMessage.title}
+                      description={getEmptyStateMessage.description}
+                      variant={getEmptyStateMessage.variant}
                       action={
-                        (debSearch || Object.keys(queryParams).length > 0) && {
-                          label: "Сбросить фильтры",
-                          onPress: resetFilters,
-                        }
+                        (debSearch || Object.keys(queryParams).length > 0) ? {
+                          label: activeFiltersCount > 0 ? `Сбросить фильтры (${activeFiltersCount})` : "Сбросить фильтры",
+                          onPress: () => {
+                            setSearch('');
+                            resetFilters();
+                          },
+                        } : undefined
                       }
                     />
-                  )}
-
-                  {/* ✅ ИСПРАВЛЕНИЕ: FlatList всегда рендерится, рекомендации в ListHeaderComponent для общего скролла */}
-                  <FlatList
-                    key={listKey}
-                    data={displayData}
-                    keyExtractor={keyExtractor}
-                    renderItem={renderItem}
-                    numColumns={columns}
-                    columnWrapperStyle={columns > 1 ? styles.columnWrapper : undefined}
-                    contentContainerStyle={[
-                        styles.list,
-                        { paddingBottom: isExport ? 76 : 32 },
-                    ]}
-                    showsVerticalScrollIndicator={false}
-                    removeClippedSubviews={true} // ✅ ОПТИМИЗАЦИЯ: Удалять невидимые элементы
-                    initialNumToRender={listVirtualization.initial}
-                    maxToRenderPerBatch={listVirtualization.batch}
-                    windowSize={listVirtualization.window}
-                    updateCellsBatchingPeriod={100} // ✅ ОПТИМИЗАЦИЯ: Увеличить период батчинга
-                    onEndReachedThreshold={0.5}
-                    onEndReached={handleListEndReached}
-                    onMomentumScrollBegin={onMomentumBegin}
-                    onScroll={onScroll}
-                    extraData={selectionCount}
-                    accessibilityRole="list"
-                    refreshControl={
-                      <RefreshControl
-                        refreshing={isRefreshing}
-                        onRefresh={handleRefresh}
-                        tintColor="#6b8e7f"
-                        colors={['#6b8e7f']}
-                      />
-                    }
-                    ListHeaderComponent={
-                      isInitialized && isRecommendationsVisible && recommendationsReady ? (
+                  ) : null
+                }
+                ListFooterComponent={
+                  showNextPageLoading ? (
+                    <View style={styles.footerLoader}>
+                      <ActivityIndicator size="small" />
+                    </View>
+                  ) : null
+                }
+                ListHeaderComponent={
+                  // ✅ ИСПРАВЛЕНИЕ: Перемещаем рекомендации и категории в ListHeaderComponent, чтобы они скроллились вместе с путешествиями
+                  !isMeTravel && !isExport ? (
+                    <View>
+                      {/* Рекомендации - показываем только если видимы, при сворачивании полностью скрываем */}
+                      {isRecommendationsVisible === true && recommendationsVisibilityInitialized && recommendationsReady && (
                         <Suspense fallback={<RecommendationsPlaceholder />}>
                           <RecommendationsTabs 
-                            forceVisible={isRecommendationsVisible}
-                            onVisibilityChange={(visible) => {
-                              if (!visible) {
-                                setIsRecommendationsVisible(false);
-                              }
-                            }}
+                            onVisibilityChange={handleRecommendationsVisibilityChange}
                           />
                         </Suspense>
-                      ) : isInitialized && isRecommendationsVisible ? (
-                        <RecommendationsPlaceholder />
-                      ) : null
-                    }
-                    ListFooterComponent={
-                        showNextPageLoading ? (
-                          <View style={styles.footerLoader}>
-                              <ActivityIndicator size="small" />
-                          </View>
-                        ) : null
-                    }
-                  />
-              </View>
-          </View>
+                      )}
 
-          {isMobile && showFilters && (
+                      {/* Категории */}
+                      {categoriesWithCount.length > 0 && (
+                        <View style={styles.categoriesSectionMain}>
+                          <Text style={styles.categoriesTitle}>Популярные категории</Text>
+                          <CategoryChips
+                            categories={categoriesWithCount}
+                            selectedCategories={filter.categories || []}
+                            onToggleCategory={handleToggleCategory}
+                            maxVisible={8}
+                            showIcons={true}
+                          />
+                        </View>
+                      )}
+                    </View>
+                  ) : null
+                }
+                initialNumToRender={listVirtualization.initial}
+                maxToRenderPerBatch={listVirtualization.batch}
+                windowSize={listVirtualization.window}
+                removeClippedSubviews={Platform.OS !== 'web'}
+              />
+            </View>
+          </View>
+        </View>
+
+            {/* Модальное окно фильтров для мобильной версии */}
+        {isMobile && (
+          <Modal
+            visible={showFilters}
+            animationType="slide"
+            onRequestClose={() => setShowFilters(false)}
+          >
             <MemoizedFilters
-              modal
-              filtersLoadedKey={listKey}
               filters={options || {}}
               filterValue={filter}
               onSelectedItemsChange={onSelect}
-              handleApplyFilters={applyFilter}
+              handleApplyFilters={(newFilter: FilterState) => {
+                applyFilter(newFilter);
+                setShowFilters(false);
+              }}
               resetFilters={resetFilters}
               isSuperuser={isSuper}
               closeMenu={() => setShowFilters(false)}
+              search={search}
+              setSearch={setSearch}
+              onToggleRecommendations={() => handleRecommendationsVisibilityChange(!isRecommendationsVisible)}
+              isRecommendationsVisible={isRecommendationsVisible}
+              hasFilters={Object.keys(queryParams).length > 0}
+              resultsCount={total}
+              onClearAll={() => {
+                setSearch('');
+                resetFilters();
+              }}
             />
-          )}
+          </Modal>
+        )}
 
           <ConfirmDialog
             visible={!!deleteId}
@@ -685,72 +993,142 @@ function ListTravel({
               />
             </Suspense>
           )}
+
+          {/* ✅ УЛУЧШЕНИЕ: Кнопка "Наверх" для длинных страниц */}
+          {Platform.OS === 'web' && (
+            <ScrollToTopButton
+              flatListRef={flatListRef}
+              scrollY={scrollY}
+              threshold={400}
+            />
+          )}
       </SafeAreaView>
     );
 }
 
 /* ===== Styles ===== */
 const styles = StyleSheet.create({
-    root: { flex: 1, backgroundColor: palette.background },
+    root: { 
+        flex: 1, 
+        backgroundColor: '#ffffff', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Чистый белый фон вместо кремового
+    },
     container: {
         flex: 1,
         ...(Platform.OS === "web" && { alignItems: "stretch" }),
     },
+    content: {
+        flex: 1,
+        flexDirection: Platform.select({ 
+            ios: 'column',
+            android: 'column',
+            web: 'row',
+            default: 'column',
+        }),
+    },
     sidebar: {
         width: Platform.select({ 
+            ios: '100%',
+            android: '100%',
+            web: '280px',
             default: '100%', // Мобильные - полная ширина
-            web: 280 
-        }),
+        }) as any, // ✅ ИСПРАВЛЕНИЕ: Для веба используем строку с единицами
         backgroundColor: palette.surface,
-        borderRightWidth: Platform.select({ default: 0, web: 0.5 }), // ✅ АДАПТИВНОСТЬ: Без границы на мобильных, тонкая на десктопе
-        borderColor: 'rgba(0, 0, 0, 0.06)', // ✅ ДИЗАЙН: Более светлая граница
+        borderRightWidth: Platform.select({ 
+            ios: StyleSheet.hairlineWidth,
+            android: StyleSheet.hairlineWidth,
+            web: StyleSheet.hairlineWidth,
+            default: 0,
+        }), // ✅ ИСПРАВЛЕНИЕ: Используем hairlineWidth для более тонкой границы
+        borderColor: palette.border, // ✅ ИСПРАВЛЕНИЕ: Используем цвет из дизайн-системы
         ...Platform.select({
             web: {
-                boxShadow: "0 1px 4px rgba(0,0,0,0.04)", // ✅ ДИЗАЙН: Более легкая тень
+                boxShadow: DESIGN_TOKENS.shadows.soft, // ✅ ИСПРАВЛЕНИЕ: Используем тень из дизайн-системы
                 position: "sticky" as any,
                 top: 0,
                 alignSelf: "flex-start",
-                maxHeight: "100vh",
+                maxHeight: "100vh" as any, // ✅ ИСПРАВЛЕНИЕ: Используем полную высоту viewport
+                paddingTop: spacing.sm, // ✅ ИСПРАВЛЕНИЕ: Добавляем отступ сверху для лучшего визуального разделения
                 overflowY: "auto" as any,
+                zIndex: 10, // ✅ УЛУЧШЕНИЕ: Добавлен z-index для sticky позиционирования
             },
         }),
     },
     main: {
         flex: 1,
-        padding: Platform.select({
-            default: spacing.sm,
-            web: spacing.md,
+        backgroundColor: 'transparent', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Прозрачный фон для большего белого пространства
+        ...Platform.select({
+            default: {
+                paddingHorizontal: spacing.sm, // ✅ ИСПРАВЛЕНИЕ: Разделяем горизонтальные и вертикальные отступы
+                paddingTop: spacing.sm,
+                paddingBottom: 0, // ✅ ИСПРАВЛЕНИЕ: Убираем нижний padding, т.к. listContent уже имеет paddingBottom
+            },
+            web: {
+                paddingHorizontal: spacing.lg, // ✅ ИСПРАВЛЕНИЕ: Больше горизонтальных отступов на десктопе
+                paddingTop: spacing.lg, // ✅ РЕДИЗАЙН: Больше отступ сверху для поиска
+                paddingBottom: 0, // ✅ ИСПРАВЛЕНИЕ: Убираем нижний padding, т.к. listContent уже имеет paddingBottom
+            },
         }),
         ...(Platform.OS === "web" && {
-            maxWidth: 1440,
+            maxWidth: 1400, // ✅ УЛУЧШЕНИЕ: Оптимизировано для больших экранов (было 1440)
             marginHorizontal: "auto" as any,
             width: "100%",
         }),
     },
-    // ✅ ДИЗАЙН: Секция поиска с улучшенными отступами
     searchSection: {
         marginTop: Platform.select({
+            ios: spacing.xs,
+            android: spacing.xs,
+            web: spacing.md,
             default: spacing.xs,
-            web: spacing.lg,
         }),
         marginBottom: Platform.select({
-            default: spacing.sm,
+            ios: spacing.sm,
+            android: spacing.sm,
             web: spacing.lg,
+            default: spacing.sm,
         }),
+        paddingHorizontal: Platform.select({
+            ios: spacing.sm,
+            android: spacing.sm,
+            web: 0,
+            default: spacing.sm,
+        }), // ✅ ИСПРАВЛЕНИЕ: Добавляем горизонтальные отступы на мобильных для лучшего выравнивания
     },
-    searchSectionMobile: {
-        marginTop: spacing.xs,
-        marginBottom: spacing.sm,
+    // ✅ РЕДИЗАЙН: Поиск в основном контенте для веб-версии (как на картинке)
+    searchSectionMain: {
+        marginBottom: 0, // ✅ ИСПРАВЛЕНИЕ: Убран marginBottom
+        paddingHorizontal: Platform.select({
+            default: 0,
+            web: 0,
+        }),
     },
     // ✅ ДИЗАЙН: Секция категорий с улучшенными отступами
-    categoriesSection: {
+    categoriesSectionMain: {
         marginTop: Platform.select({
-            default: spacing.md,
-            web: spacing.lg,
+            default: spacing.sm,
+            web: spacing.md,
         }),
         marginBottom: Platform.select({
             default: spacing.md,
             web: spacing.lg,
+        }),
+        paddingVertical: spacing.sm,
+    },
+    categoriesTitle: {
+        fontSize: Platform.select({
+            default: 14,
+            web: 15,
+        }),
+        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+        color: palette.text,
+        marginBottom: Platform.select({
+            default: spacing.sm,
+            web: spacing.md,
+        }),
+        ...Platform.select({
+            web: {
+                fontFamily: DESIGN_TOKENS.typography.fontFamily,
+            },
         }),
     },
     loader: {
@@ -765,6 +1143,14 @@ const styles = StyleSheet.create({
     },
     status: { marginTop: 40, textAlign: "center", fontSize: 16, color: palette.textMuted },
     list: { gap: spacing.md },
+    listContent: {
+        padding: Platform.select({
+            default: spacing.xs, // ✅ ИСПРАВЛЕНИЕ: Меньше padding на мобильных, т.к. main уже имеет padding
+            web: spacing.sm, // ✅ ИСПРАВЛЕНИЕ: Меньше padding на десктопе, т.к. main уже имеет padding
+        }),
+        gap: spacing.md,
+        paddingBottom: spacing.xl, // ✅ ИСПРАВЛЕНИЕ: Больше отступ снизу для лучшей прокрутки
+    },
     columnWrapper: { gap: spacing.md, justifyContent: "space-between" },
     exportBar: {
         gap: spacing.sm,
@@ -821,38 +1207,40 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.lg,
         alignItems: "center",
     },
-    selectionBanner: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: spacing.md,
-        marginBottom: spacing.md,
-        borderRadius: radii.md,
-        backgroundColor: palette.successSoft,
-        borderWidth: 1,
-        borderColor: palette.success,
+    recommendationsSkeleton: {
+        width: "100%",
+        paddingHorizontal: spacing.md,
         gap: spacing.md,
     },
-    selectionBannerTitle: {
-        fontSize: 16,
-        fontWeight: "700",
-        color: palette.text,
+    recommendationsSkeletonHeader: {
+        gap: spacing.sm,
+        marginBottom: spacing.md,
     },
-    selectionBannerSubtitle: {
-        fontSize: 13,
-        color: palette.textMuted,
+    recommendationsSkeletonTitle: {
+        height: 24,
+        width: 200,
+        backgroundColor: palette.surfaceMuted,
+        borderRadius: radii.sm,
     },
-    selectionBannerClear: {
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs,
-        borderRadius: radii.pill,
-        backgroundColor: palette.surface,
-        borderWidth: 1,
-        borderColor: palette.success,
+    recommendationsSkeletonTabs: {
+        height: 32,
+        width: 300,
+        backgroundColor: palette.surfaceMuted,
+        borderRadius: radii.md,
     },
-    selectionBannerClearText: {
-        color: palette.success,
-        fontWeight: "600",
+    recommendationsSkeletonContent: {
+        flexDirection: "row",
+        gap: spacing.md,
+        flexWrap: "wrap",
+    },
+    recommendationsSkeletonCard: {
+        width: Platform.select({
+            default: "100%",
+            web: "calc(33.333% - 12px)" as any,
+        }),
+        height: 200,
+        backgroundColor: palette.surfaceMuted,
+        borderRadius: radii.md,
     },
 });
 

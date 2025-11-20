@@ -3,13 +3,18 @@
  * Позволяет поделиться путешествием через различные платформы
  */
 
-import React, { useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, useWindowDimensions, Platform, Alert } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 import type { Travel } from '@/src/types/types';
+import BookSettingsModal, { type BookSettings } from '@/components/export/BookSettingsModal';
+import { usePdfExport } from '@/src/hooks/usePdfExport';
+import { ExportStage } from '@/src/types/pdf-export';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 interface ShareButtonsProps {
   travel: Travel;
@@ -23,6 +28,14 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
   const pathname = usePathname();
 
   const [copied, setCopied] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [travels, setTravels] = useState<Travel[]>([travel]);
+  const { exportPdf, isGenerating, progress, currentStage } = usePdfExport(travels);
+
+  // Обновляем travels при изменении travel
+  useEffect(() => {
+    setTravels([travel]);
+  }, [travel]);
 
   // Формируем URL для поделиться
   const shareUrl = useMemo(() => {
@@ -129,6 +142,11 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
     }
   }, [shareUrl, shareTitle, shareText]);
 
+  // Обработчик экспорта в PDF
+  const handleExport = useCallback(async (settings: BookSettings) => {
+    await exportPdf(settings);
+  }, [exportPdf]);
+
   const shareButtons = [
     {
       key: 'copy',
@@ -136,6 +154,14 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
       icon: 'content-copy',
       onPress: handleCopyLink,
       color: '#667085',
+    },
+    {
+      key: 'export',
+      label: isGenerating ? `Экспорт... ${progress}%` : 'Экспорт в PDF',
+      icon: 'picture-as-pdf',
+      onPress: () => setShowExportModal(true),
+      color: '#ff9f5a',
+      disabled: isGenerating,
     },
     {
       key: 'telegram',
@@ -172,31 +198,58 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
   }
 
   return (
-    <View style={[styles.container, isMobile && styles.containerMobile]}>
-      <Text style={styles.title}>Поделиться</Text>
-      <View style={[styles.buttonsContainer, isMobile && styles.buttonsContainerMobile]}>
-        {shareButtons.map((button) => (
-          <Pressable
-            key={button.key}
-            onPress={button.onPress}
-            style={({ pressed }) => [
-              styles.button,
-              pressed && styles.buttonPressed,
-              button.key === 'copy' && copied && styles.buttonCopied,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={button.label}
-            android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
-          >
-            <MaterialIcons name={button.icon as any} size={20} color={button.color} />
-            {!isMobile && <Text style={styles.buttonText}>{button.label}</Text>}
-            {button.key === 'copy' && copied && (
-              <Text style={styles.copiedText}>✓</Text>
-            )}
-          </Pressable>
-        ))}
+    <>
+      <View style={[styles.container, isMobile && styles.containerMobile]}>
+        <Text style={styles.title}>Поделиться</Text>
+        <View style={[styles.buttonsContainer, isMobile && styles.buttonsContainerMobile]}>
+          {shareButtons.map((button) => (
+            <Pressable
+              key={button.key}
+              onPress={button.onPress}
+              disabled={button.disabled}
+              style={({ pressed }) => [
+                styles.button,
+                pressed && styles.buttonPressed,
+                button.key === 'copy' && copied && styles.buttonCopied,
+                button.disabled && styles.buttonDisabled,
+                globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={button.label}
+              android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
+            >
+              <MaterialIcons name={button.icon as any} size={20} color={button.color} />
+              {!isMobile && <Text style={styles.buttonText}>{button.label}</Text>}
+              {button.key === 'copy' && copied && (
+                <Text style={styles.copiedText}>✓</Text>
+              )}
+            </Pressable>
+          ))}
+        </View>
+        {isGenerating && Platform.OS === 'web' && (
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressBar, { width: `${progress}%` }]} />
+            <Text style={styles.progressText}>
+              {currentStage === ExportStage.VALIDATING && 'Проверка данных...'}
+              {currentStage === ExportStage.TRANSFORMING && 'Преобразование данных...'}
+              {currentStage === ExportStage.GENERATING_HTML && 'Генерация содержимого...'}
+              {currentStage === ExportStage.LOADING_IMAGES && 'Загрузка изображений...'}
+              {currentStage === ExportStage.RENDERING && 'Создание PDF...'}
+              {currentStage === ExportStage.COMPLETE && 'Готово!'}
+            </Text>
+          </View>
+        )}
       </View>
-    </View>
+      <BookSettingsModal
+        visible={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onSave={handleExport}
+        travelCount={1}
+        defaultSettings={{
+          title: travel.name || 'Путешествие',
+        }}
+      />
+    </>
   );
 }
 
@@ -211,12 +264,11 @@ const styles = StyleSheet.create({
       WebkitBackdropFilter: 'blur(20px)' as any,
     } : {}),
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
     marginBottom: 24,
-    shadowColor: '#000',
+    shadowColor: '#1f1f1f',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 4,
   },
@@ -248,19 +300,21 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 12,
     paddingHorizontal: 18,
-    borderRadius: 12,
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.08)',
+    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
+    backgroundColor: DESIGN_TOKENS.colors.mutedBackground, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
+    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+    minWidth: 44,
+    justifyContent: 'center',
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' as any,
         ':hover': {
-          backgroundColor: '#fff',
-          borderColor: 'rgba(0, 0, 0, 0.12)',
+          backgroundColor: DESIGN_TOKENS.colors.surface,
+          borderColor: DESIGN_TOKENS.colors.borderStrong,
           transform: 'translateY(-2px) scale(1.02)' as any,
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' as any,
+          boxShadow: DESIGN_TOKENS.shadows.medium as any,
         } as any,
       },
     }),
@@ -270,8 +324,8 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   buttonCopied: {
-    backgroundColor: '#dcfce7',
-    borderColor: '#86efac',
+    backgroundColor: DESIGN_TOKENS.colors.successSoft, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    borderColor: DESIGN_TOKENS.colors.success,
   },
   buttonText: {
     fontSize: 15,
@@ -284,6 +338,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#16a34a',
     marginLeft: 6,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  progressContainer: {
+    marginTop: 16,
+    height: 4,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
+    borderRadius: 2,
+    transition: 'width 0.3s ease',
+  },
+  progressText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
   },
 });
 

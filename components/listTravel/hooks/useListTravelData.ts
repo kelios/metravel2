@@ -11,10 +11,11 @@ import {
   PER_PAGE, 
   STALE_TIME, 
   GC_TIME, 
-  QUERY_CONFIG,
+  QUERY_CONFIG, 
   FLATLIST_CONFIG 
 } from '../utils/listTravelConstants';
 import { normalizeApiResponse, deduplicateTravels, calculateIsEmpty } from '../utils/listTravelHelpers';
+import { safeJsonParseString } from '@/src/utils/safeJsonParse';
 
 export interface UseListTravelDataProps {
   currentPage: number;
@@ -63,17 +64,42 @@ export function useListTravelData({
   const [accumulatedData, setAccumulatedData] = useState<Travel[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isLoadingMoreRef = useRef(false);
+  const hasRequestedFirstPageRef = useRef(false);
+  const prevQueryKeyStringRef = useRef<string>('');
+  
+  // ✅ ИСПРАВЛЕНИЕ: Стабильная функция для сравнения queryParams
+  const queryParamsStringified = useMemo(() => {
+    // Сортируем ключи для стабильного сравнения
+    const sorted = Object.keys(queryParams)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = queryParams[key];
+        return acc;
+      }, {} as Record<string, any>);
+    return JSON.stringify(sorted);
+  }, [queryParams]);
 
-  // ✅ АРХИТЕКТУРА: Query key с useMemo
+  // ✅ ИСПРАВЛЕНИЕ: Отслеживаем предыдущие значения для определения изменений
+  const prevQueryParamsStringRef = useRef<string>(queryParamsStringified);
+  const prevSearchRef = useRef<string>(search.trim());
+  const prevQueryKeyRef = useRef<string>('');
+
+  // ✅ АРХИТЕКТУРА: Query key с useMemo и стабильными параметрами
   const queryKey = useMemo(() => [
     "travels",
     { 
       page: currentPage, 
       perPage: PER_PAGE, 
-      search, 
-      params: queryParams 
+      search: search.trim(), // ✅ ИСПРАВЛЕНИЕ: Убираем пробелы для стабильности
+      params: queryParamsStringified // ✅ ИСПРАВЛЕНИЕ: Используем строку вместо объекта
     },
-  ], [currentPage, search, queryParams]);
+  ], [currentPage, search, queryParamsStringified]);
+  
+  // ✅ ИСПРАВЛЕНИЕ: Восстанавливаем queryParams из строки для queryFn
+  // ✅ FIX-010: Используем безопасный парсинг JSON
+  const queryParamsForFetch = useMemo(() => {
+    return safeJsonParseString(queryParamsStringified, {});
+  }, [queryParamsStringified]);
 
   // ✅ АРХИТЕКТУРА: React Query запрос
   const {
@@ -85,15 +111,16 @@ export function useListTravelData({
   } = useQuery({
     queryKey,
     queryFn: ({ queryKey, signal }) => {
-      const [, { page, perPage, search, params }] = queryKey as any;
-      return fetchTravels(page, perPage, search, params, { signal });
+      const [, { page, perPage, search }] = queryKey as any;
+      // ✅ ИСПРАВЛЕНИЕ: Используем восстановленные queryParams
+      return fetchTravels(page, perPage, search, queryParamsForFetch, { signal });
     },
     enabled: isQueryEnabled,
     staleTime: STALE_TIME.TRAVELS,
     gcTime: GC_TIME.TRAVELS,
     refetchOnMount: QUERY_CONFIG.REFETCH_ON_MOUNT,
     refetchOnWindowFocus: QUERY_CONFIG.REFETCH_ON_WINDOW_FOCUS,
-    keepPreviousData: QUERY_CONFIG.KEEP_PREVIOUS_DATA,
+    keepPreviousData: true, // ✅ ИСПРАВЛЕНИЕ: Включаем keepPreviousData чтобы показывать старые данные во время загрузки новых
   });
 
   // ✅ АРХИТЕКТУРА: Нормализация ответа API
@@ -106,61 +133,107 @@ export function useListTravelData({
 
   // ✅ АРХИТЕКТУРА: Накопление данных для infinite scroll
   useEffect(() => {
-    if (!isQueryEnabled || status !== "success" || !items || items.length === 0) {
+    // ✅ ИСПРАВЛЕНИЕ: Обрабатываем только успешные запросы и когда есть данные
+    if (!isQueryEnabled) {
       return;
     }
 
-    // Нормализуем данные в массив
-    let chunk: Travel[] = [];
-    if (Array.isArray(items)) {
-      chunk = items;
-    } else if (items && typeof items === 'object') {
-      if (Array.isArray((items as any).data)) {
-        chunk = (items as any).data;
-      } else if ((items as any).data && typeof (items as any).data === 'object') {
-        chunk = [(items as any).data as Travel];
-      }
-    }
-
-    // ✅ АРХИТЕКТУРА: При currentPage === 0 всегда заменяем данные
-    if (currentPage === 0) {
-      setAccumulatedData(chunk);
-    } else {
-      // Добавляем данные для пагинации с защитой от дубликатов
-      setAccumulatedData((prev) => {
-        const deduplicated = deduplicateTravels([...prev, ...chunk]);
-        return deduplicated;
-      });
+    // ✅ ИСПРАВЛЕНИЕ: Проверяем, изменился ли queryKey
+    // Если queryKey изменился, нужно обновить данные, даже если rawData еще от старого запроса
+    const currentQueryKeyString = JSON.stringify(queryKey);
+    const queryKeyChanged = currentQueryKeyString !== prevQueryKeyRef.current;
+    
+    // ✅ ИСПРАВЛЕНИЕ: Обрабатываем данные когда status === "success"
+    // Или когда есть rawData и queryKey не изменился (keepPreviousData)
+    if (status !== "success" && !rawData) {
+      return;
     }
     
-    isLoadingMoreRef.current = false;
-  }, [isQueryEnabled, status, items, currentPage, queryParams, search]);
+    // ✅ ИСПРАВЛЕНИЕ: Если queryKey изменился и status не success, не обрабатываем старые данные
+    if (queryKeyChanged && status !== "success") {
+      return;
+    }
 
-  // ✅ АРХИТЕКТУРА: Сброс накопленных данных при изменении фильтров или поиска
-  useEffect(() => {
-    setCurrentPage(0);
+    // ✅ ИСПРАВЛЕНИЕ: normalizeApiResponse уже возвращает массив в items
+    // items всегда массив Travel[] после нормализации
+    const chunk: Travel[] = Array.isArray(items) ? items : [];
+
+    // ✅ ИСПРАВЛЕНИЕ: При currentPage === 0 всегда заменяем данные (даже если пусто)
+    // Это важно для отображения пустого состояния при изменении фильтров
+    if (currentPage === 0) {
+      // ✅ ИСПРАВЛЕНИЕ: Если queryKey изменился, всегда заменяем данные
+      // Если queryKey не изменился, но status === "success", также обновляем
+      if (queryKeyChanged || status === "success") {
+        setAccumulatedData(chunk); // ✅ ИСПРАВЛЕНИЕ: Упростил логику - просто заменяем данные
+        // Отмечаем, что данные для первой страницы получены
+        if (status === "success") {
+          hasRequestedFirstPageRef.current = true;
+        }
+      }
+    } else {
+      // Добавляем данные для пагинации с защитой от дубликатов
+      // Только если есть новые данные
+      if (chunk.length > 0) {
+        setAccumulatedData((prev) => {
+          const deduplicated = deduplicateTravels([...prev, ...chunk]);
+          return deduplicated;
+        });
+      }
+    }
+    
+    // Обновляем prevQueryKeyRef
+    prevQueryKeyRef.current = currentQueryKeyString;
     isLoadingMoreRef.current = false;
-    // Не очищаем accumulatedData сразу - это вызовет показ "Ничего не найдено"
-    // React Query сам обновит данные при изменении queryParams
-  }, [search, queryParams, setCurrentPage]);
+  }, [isQueryEnabled, status, items, currentPage, rawData, queryKey]);
+
+  // ✅ ИСПРАВЛЕНИЕ: Объединенный эффект для сброса данных и управления запросами
+  // Предотвращает множественные запросы при изменении фильтров
+  useEffect(() => {
+    // ✅ ИСПРАВЛЕНИЕ: Используем стабильную проверку изменений через queryParamsStringified
+    const queryParamsChanged = queryParamsStringified !== prevQueryParamsStringRef.current;
+    const searchChanged = prevSearchRef.current !== search.trim();
+    
+    // ✅ ИСПРАВЛЕНИЕ: Выполняем сброс только при реальных изменениях
+    if (queryParamsChanged || searchChanged) {
+      // Сначала очищаем накопленные данные
+      setAccumulatedData([]);
+      isLoadingMoreRef.current = false;
+      hasRequestedFirstPageRef.current = false;
+      
+      // Сбрасываем страницу на первую
+      setCurrentPage(0);
+      
+      // Обновляем refs для следующего сравнения
+      prevQueryParamsStringRef.current = queryParamsStringified;
+      prevSearchRef.current = search.trim();
+      prevQueryKeyStringRef.current = '';
+      prevQueryKeyRef.current = ''; // ✅ ИСПРАВЛЕНИЕ: Сбрасываем prevQueryKeyRef чтобы эффект обновления данных сработал
+      
+      // ✅ ИСПРАВЛЕНИЕ: Не отменяем и не инвалидируем запросы здесь
+      // React Query автоматически отменит старые запросы и выполнит новый
+      // при изменении queryKey через useQuery
+      // Это предотвращает AbortError и гарантирует выполнение запроса
+    }
+  }, [search, queryParamsStringified, setCurrentPage, queryClient, queryKey]);
 
   // ✅ АРХИТЕКТУРА: Prefetch следующей страницы
   useEffect(() => {
     if (!isQueryEnabled) return;
     if (!hasMore) return;
     if (isFetching) return;
+    if (currentPage !== 0) return; // ✅ ИСПРАВЛЕНИЕ: Prefetch только на первой странице
 
     const nextPage = currentPage + 1;
     queryClient.prefetchQuery({
       queryKey: [
         "travels",
-        { page: nextPage, perPage: PER_PAGE, search, params: queryParams },
+        { page: nextPage, perPage: PER_PAGE, search: search.trim(), params: queryParamsStringified },
       ],
       queryFn: ({ signal }) =>
-        fetchTravels(nextPage, PER_PAGE, search, queryParams, { signal }),
+        fetchTravels(nextPage, PER_PAGE, search.trim(), queryParamsForFetch, { signal }),
       staleTime: STALE_TIME.TRAVELS,
     });
-  }, [isQueryEnabled, hasMore, isFetching, currentPage, search, queryParams, queryClient]);
+  }, [isQueryEnabled, hasMore, isFetching, currentPage, search, queryParamsStringified, queryParamsForFetch, queryClient]);
 
   // ✅ АРХИТЕКТУРА: Состояния загрузки
   const isInitialLoading = isLoading && !hasAnyItems;

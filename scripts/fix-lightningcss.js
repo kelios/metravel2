@@ -8,26 +8,31 @@
 const fs = require('fs');
 const path = require('path');
 
-const lightningcssPath = path.join(
-  __dirname,
-  '..',
-  'node_modules',
-  '@expo',
-  'metro-config',
-  'node_modules',
-  'lightningcss',
-  'node',
-  'index.js'
-);
+// Проверяем несколько возможных путей
+const possiblePaths = [
+  path.join(__dirname, '..', 'node_modules', '@expo', 'metro-config', 'node_modules', 'lightningcss', 'node', 'index.js'),
+  path.join(__dirname, '..', 'node_modules', 'expo', 'node_modules', 'lightningcss', 'node', 'index.js'),
+  path.join(__dirname, '..', 'node_modules', 'lightningcss', 'node', 'index.js'),
+];
 
-const lightningcssDir = path.dirname(lightningcssPath);
-const arm64BinaryPath = path.join(lightningcssDir, '..', 'lightningcss-darwin-arm64', 'lightningcss.darwin-arm64.node');
-const x64BinaryPath = path.join(lightningcssDir, 'lightningcss.darwin-x64.node');
+let lightningcssPath = null;
+for (const possiblePath of possiblePaths) {
+  if (fs.existsSync(possiblePath)) {
+    lightningcssPath = possiblePath;
+    break;
+  }
+}
 
-if (!fs.existsSync(lightningcssPath)) {
-  console.log('lightningcss not found, skipping fix');
+if (!lightningcssPath) {
+  console.log('lightningcss not found in any expected location, skipping fix');
   process.exit(0);
 }
+
+const lightningcssDir = path.dirname(lightningcssPath);
+const arm64BinaryPath = path.join(lightningcssDir, '..', '..', 'lightningcss-darwin-arm64', 'lightningcss.darwin-arm64.node');
+const x64BinaryPath = path.join(lightningcssDir, 'lightningcss.darwin-x64.node');
+
+// Уже проверено выше
 
 // Copy arm64 binary to x64 location if it doesn't exist
 if (fs.existsSync(arm64BinaryPath) && !fs.existsSync(x64BinaryPath)) {

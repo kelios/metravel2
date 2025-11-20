@@ -66,6 +66,49 @@ const BookPageView: React.FC<{ travel: Travel; pageNumber: number }> = ({ travel
             pageBreakInside: "avoid",
             fontFamily: "'Segoe UI', Roboto, sans-serif"
         }}>
+            <style>{`
+                .pdf-text-content {
+                    white-space: normal !important;
+                    word-wrap: break-word;
+                    letter-spacing: normal !important;
+                    word-spacing: normal !important;
+                    text-rendering: optimizeLegibility;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                }
+                .pdf-text-content p {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    white-space: normal !important;
+                    letter-spacing: normal !important;
+                    word-spacing: normal !important;
+                    display: block;
+                    line-height: inherit;
+                    page-break-inside: avoid !important;
+                    page-break-after: auto !important;
+                    page-break-before: auto !important;
+                    break-inside: avoid !important;
+                    break-after: auto !important;
+                    break-before: auto !important;
+                }
+                .pdf-text-content p + p {
+                    margin-top: 0 !important;
+                }
+                .pdf-text-content * {
+                    white-space: normal !important;
+                    letter-spacing: normal !important;
+                    word-spacing: normal !important;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                }
+                .pdf-text-content br {
+                    line-height: inherit;
+                }
+                .pdf-text-content div,
+                .pdf-text-content span {
+                    display: inline;
+                }
+            `}</style>
             {/* Заголовок и обложка */}
             {coverImage && (
                 <div style={{
@@ -143,8 +186,12 @@ const BookPageView: React.FC<{ travel: Travel; pageNumber: number }> = ({ travel
                         columnCount: 2,
                         columnGap: "10mm",
                         marginBottom: "10mm",
-                        lineHeight: 1.5
+                        lineHeight: 1.5,
+                        whiteSpace: 'normal',
+                        letterSpacing: 'normal',
+                        wordSpacing: 'normal',
                     }}
+                    className="pdf-text-content"
                     dangerouslySetInnerHTML={{ __html: travel.description }}
                 />
             )}
@@ -169,7 +216,15 @@ const BookPageView: React.FC<{ travel: Travel; pageNumber: number }> = ({ travel
                             }}>
                                 Плюсы
                             </h3>
-                            <div dangerouslySetInnerHTML={{ __html: travel.plus }} />
+                            <div 
+                                className="pdf-text-content"
+                                style={{ 
+                                    whiteSpace: 'normal',
+                                    letterSpacing: 'normal',
+                                    wordSpacing: 'normal',
+                                }}
+                                dangerouslySetInnerHTML={{ __html: travel.plus }} 
+                            />
                         </div>
                     )}
                     {travel.minus && (
@@ -184,7 +239,15 @@ const BookPageView: React.FC<{ travel: Travel; pageNumber: number }> = ({ travel
                             }}>
                                 Минусы
                             </h3>
-                            <div dangerouslySetInnerHTML={{ __html: travel.minus }} />
+                            <div 
+                                className="pdf-text-content"
+                                style={{ 
+                                    whiteSpace: 'normal',
+                                    letterSpacing: 'normal',
+                                    wordSpacing: 'normal',
+                                }}
+                                dangerouslySetInnerHTML={{ __html: travel.minus }} 
+                            />
                         </div>
                     )}
                 </div>
@@ -199,7 +262,15 @@ const BookPageView: React.FC<{ travel: Travel; pageNumber: number }> = ({ travel
                     marginBottom: "10mm"
                 }}>
                     <h3 style={{ marginTop: 0 }}>Рекомендации</h3>
-                    <div dangerouslySetInnerHTML={{ __html: travel.recommendation }} />
+                    <div 
+                        className="pdf-text-content"
+                        style={{ 
+                            whiteSpace: 'normal',
+                            letterSpacing: 'normal',
+                            wordSpacing: 'normal',
+                        }}
+                        dangerouslySetInnerHTML={{ __html: travel.recommendation }} 
+                    />
                 </div>
             )}
 

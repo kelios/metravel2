@@ -11,7 +11,10 @@ import { FavoritesProvider } from "@/context/FavoritesContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
+import SkipLinks from "@/components/SkipLinks";
+import { NetworkStatus } from "@/components/NetworkStatus";
 import { useFonts } from "expo-font";
+import { DESIGN_TOKENS } from "@/constants/designSystem"; // ✅ ИСПРАВЛЕНИЕ: Импорт единой палитры
 
 const Footer = lazy(() => import("@/components/Footer"));
 
@@ -19,18 +22,19 @@ const Footer = lazy(() => import("@/components/Footer"));
 const isWeb = Platform.OS === "web";
 
 /** Тема */
+// ✅ ИСПРАВЛЕНИЕ: Унифицирована цветовая палитра - используется DESIGN_TOKENS
 const theme = {
     ...DefaultTheme,
     colors: {
         ...DefaultTheme.colors,
-        primary: "#ff9f5a",
-        secondary: "#ffd28f",
-        background: "#f6f7fb",
-        surface: "#ffffff",
-        error: "#d32f2f",
-        outline: "#e6e6e6",
-        onPrimary: "#1b1b1b",
-        onSecondary: "#1b1b1b",
+        primary: DESIGN_TOKENS.colors.primary, // ✅ Бирюзовый (#4a8c8c) вместо оранжевого
+        secondary: DESIGN_TOKENS.colors.accent,
+        background: DESIGN_TOKENS.colors.background,
+        surface: DESIGN_TOKENS.colors.surface,
+        error: DESIGN_TOKENS.colors.danger,
+        outline: DESIGN_TOKENS.colors.border,
+        onPrimary: DESIGN_TOKENS.colors.surface, // Белый текст на primary фоне
+        onSecondary: DESIGN_TOKENS.colors.text,
     },
     fonts: { ...DefaultTheme.fonts },
 } as const;
@@ -40,8 +44,36 @@ const queryClient = new QueryClient({
         queries: {
             staleTime: 5 * 60 * 1000,
             refetchOnWindowFocus: false,
-            retry: 1,
-            keepPreviousData: true,
+            retry: (failureCount, error: any) => {
+                // ✅ ИСПРАВЛЕНИЕ: Не повторяем запросы при сетевых ошибках или 4xx ошибках
+                if (failureCount >= 2) return false;
+                
+                // Не повторяем при ошибках клиента (4xx)
+                if (error?.status >= 400 && error?.status < 500) {
+                    return false;
+                }
+                
+                // Повторяем только при сетевых ошибках или ошибках сервера
+                return true;
+            },
+            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+            // ✅ FIX: keepPreviousData заменен на placeholderData в React Query v5
+            placeholderData: (previousData) => previousData,
+            // ✅ ИСПРАВЛЕНИЕ: Обработка ошибок в запросах
+            onError: (error: any) => {
+                if (__DEV__) {
+                    console.error('[QueryClient] Query error:', error);
+                }
+            },
+        },
+        mutations: {
+            // ✅ ИСПРАВЛЕНИЕ: Обработка ошибок в мутациях
+            onError: (error: any) => {
+                if (__DEV__) {
+                    console.error('[QueryClient] Mutation error:', error);
+                }
+            },
+            retry: false, // Мутации не повторяем автоматически
         },
     },
 });
@@ -52,6 +84,7 @@ if (!isWeb) {
 }
 
 /** Хук готовности по бездействию (web) */
+// ✅ FIX-006: Исправлена утечка памяти - все подписки и таймеры очищаются
 function useIdleFlag(timeout = 2000) {
     const [ready, setReady] = useState(!isWeb ? true : false);
 
@@ -59,30 +92,41 @@ function useIdleFlag(timeout = 2000) {
         if (!isWeb) return;
 
         let fired = false;
+        let idleHandle: number | null = null;
+        let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
         const arm = () => {
             if (fired) return;
             fired = true;
             setReady(true);
-            cleanup();
         };
 
         const cleanup = () => {
+            // Очищаем все подписки
             ["scroll", "mousemove", "touchstart", "keydown", "click"].forEach((e) => {
                 window.removeEventListener(e, arm, { passive: true } as any);
             });
+            
+            // Очищаем таймеры
+            if (idleHandle && 'cancelIdleCallback' in window) {
+                (window as any).cancelIdleCallback(idleHandle);
+            }
+            if (timeoutHandle) {
+                clearTimeout(timeoutHandle);
+            }
         };
 
         if ("requestIdleCallback" in window) {
-            (window as any).requestIdleCallback(arm, { timeout });
+            idleHandle = (window as any).requestIdleCallback(arm, { timeout });
         } else {
-            const t = setTimeout(arm, timeout);
-            return () => clearTimeout(t);
+            timeoutHandle = setTimeout(arm, timeout);
         }
 
         ["scroll", "mousemove", "touchstart", "keydown", "click"].forEach((e) =>
           window.addEventListener(e, arm, { passive: true, once: true } as any)
         );
 
+        // ✅ FIX-006: Всегда возвращаем cleanup функцию
         return cleanup;
     }, [timeout]);
 
@@ -115,6 +159,13 @@ function RootLayoutNav() {
 
     /** === динамическая высота ДОКА футера (только иконки) === */
     const [dockHeight, setDockHeight] = useState(0);
+    
+    /** === SSR-safe Toast: рендерим только на клиенте === */
+    const [isMounted, setIsMounted] = useState(false);
+    
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     const BottomGutter = () =>
       showFooter && isMobile && dockHeight > 0 ? <View style={{ height: dockHeight}} /> : null;
@@ -164,6 +215,12 @@ function RootLayoutNav() {
                                 )}
                             </Head>
 
+                            {/* ✅ УЛУЧШЕНИЕ: Skip links для доступности */}
+                            {Platform.OS === 'web' && <SkipLinks />}
+
+                            {/* ✅ FIX-005: Индикатор статуса сети */}
+                            <NetworkStatus position="top" />
+
                             <View style={styles.content}>
                                 <Stack screenOptions={{ headerShown: false }}>
                                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -194,9 +251,11 @@ function RootLayoutNav() {
               </QueryClientProvider>
           </FavoritesProvider>
           </AuthProvider>
-          <Toast />
-          {/* Мониторинг производительности (только в dev режиме) */}
-          {__DEV__ && <PerformanceMonitor enabled={__DEV__} showUI={false} />}
+          {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
+          {isMounted && <Toast />}
+          {/* ✅ УЛУЧШЕНИЕ: Мониторинг производительности для production */}
+          {/* Метрики скрыты, но собираются в фоне. Чтобы показать, установите showUI={true} */}
+          <PerformanceMonitor enabled={true} showUI={false} />
       </PaperProvider>
       </ErrorBoundary>
     );

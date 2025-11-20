@@ -1,6 +1,7 @@
 // Error Boundary для обработки ошибок React
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface Props {
   children: ReactNode;
@@ -24,7 +25,12 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // ✅ УЛУЧШЕНИЕ: Используем новый logger с поддержкой мониторинга
+    const { logError } = require('@/src/utils/logger');
+    logError(error, {
+      componentStack: errorInfo.componentStack,
+      errorBoundary: true,
+    });
     this.props.onError?.(error, errorInfo);
   }
 
@@ -73,7 +79,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f9f8f2',
+    backgroundColor: DESIGN_TOKENS.colors.background,
   },
   content: {
     maxWidth: 400,
@@ -82,39 +88,67 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontWeight: '600',
+    color: DESIGN_TOKENS.colors.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   message: {
     fontSize: 16,
-    color: '#6b7280',
+    color: DESIGN_TOKENS.colors.textSecondary,
     marginBottom: 24,
     textAlign: 'center',
     lineHeight: 24,
   },
   button: {
-    backgroundColor: '#6b8e7f',
+    backgroundColor: DESIGN_TOKENS.colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: DESIGN_TOKENS.radii.md,
     marginBottom: 12,
     minWidth: 200,
+    minHeight: 44,
+    shadowColor: '#1f1f1f',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: '0 2px 6px rgba(31, 31, 31, 0.06)',
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: DESIGN_TOKENS.colors.primaryDark,
+          transform: 'translateY(-1px)',
+          boxShadow: '0 3px 8px rgba(31, 31, 31, 0.12)',
+        },
+      },
+    }),
   },
   buttonText: {
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.textInverse,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
   },
   secondaryButton: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#6b8e7f',
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только цвет текста
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        },
+      },
+    }),
   },
   secondaryButtonText: {
-    color: '#6b8e7f',
+    color: DESIGN_TOKENS.colors.primary,
   },
 });
 

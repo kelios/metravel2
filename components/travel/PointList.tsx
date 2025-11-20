@@ -25,6 +25,8 @@ import {
 } from 'lucide-react-native';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 type Point = {
   id: string;
@@ -87,7 +89,13 @@ const openExternal = async (url: string) => {
   try {
     const can = await Linking.canOpenURL(url);
     if (can) await Linking.openURL(url);
-  } catch {}
+  } catch (error) {
+    // ✅ FIX-009: Логируем ошибки открытия ссылок (не критично)
+    if (__DEV__) {
+      const { devWarn } = require('@/src/utils/logger');
+      devWarn('Error opening URL:', error);
+    }
+  }
 };
 
 // ✅ РЕДИЗАЙН: Компонент удален - заменен на встроенные кнопки в карточке
@@ -128,18 +136,15 @@ const PointCard = React.memo(function PointCard({
     >
       <Pressable 
         onPress={openMapFromLink} 
-        style={styles.cardPressable}
+        style={[styles.cardPressable, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
         accessibilityRole="button"
         accessibilityLabel={`Открыть место: ${point.address}`}
       >
         <View 
           style={[
-            styles.imageWrap, 
+            styles.imageWrap,
             { 
-              minHeight: responsive.imageMinHeight,
-              ...(responsive.aspectRatio && Platform.OS === 'web' ? {
-                aspectRatio: responsive.aspectRatio,
-              } : {}),
+              height: responsive.imageMinHeight,
             }
           ]}
         >
@@ -147,7 +152,7 @@ const PointCard = React.memo(function PointCard({
             <ExpoImage
               source={{ uri: imgUri }}
               style={styles.image}
-              contentFit="cover"
+              contentFit="contain"
               cachePolicy="memory-disk"
               transition={120}
               priority="low"
@@ -202,43 +207,44 @@ const PointCard = React.memo(function PointCard({
               </View>
             </View>
           )}
+        </View>
 
-          {/* ✅ РЕДИЗАЙН: Информационная панель - всегда видима, но улучшенная */}
-          <View style={styles.infoPanel}>
-            <View style={styles.infoContent}>
-              {/* Заголовок */}
-              <Text 
-                style={[styles.addressText, { fontSize: responsive.titleSize }]} 
-                numberOfLines={2}
-              >
-                {point.address}
+        {/* ✅ РЕДИЗАЙН: Информационная панель - под изображением, без перекрытия */}
+        <View style={styles.infoPanel}>
+          <View style={styles.infoContent}>
+            {/* Заголовок */}
+            <Text 
+              style={[styles.addressText, { fontSize: responsive.titleSize }]} 
+              numberOfLines={2}
+            >
+              {point.address}
+            </Text>
+
+            {/* Координаты */}
+            <Pressable 
+              style={[styles.coordButton, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+              onPress={(e) => {
+                e.stopPropagation();
+                openMapFromLink();
+              }}
+              accessibilityLabel={`Координаты: ${point.coord}`}
+              accessibilityRole="button"
+            >
+              {/* ✅ ИСПРАВЛЕНИЕ: Используем единый цвет */}
+              <MapPinned size={14} color={DESIGN_TOKENS.colors.text} />
+              <Text style={[styles.coordText, { fontSize: responsive.coordSize }]} numberOfLines={1}>
+                {point.coord}
               </Text>
+            </Pressable>
 
-              {/* Координаты */}
-              <Pressable 
-                style={styles.coordButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  openMapFromLink();
-                }}
-                accessibilityLabel={`Координаты: ${point.coord}`}
-                accessibilityRole="button"
-              >
-                <MapPinned size={14} color="#fff" />
-                <Text style={[styles.coordText, { fontSize: responsive.coordSize }]} numberOfLines={1}>
-                  {point.coord}
+            {/* Категория */}
+            {!!point.categoryName && (
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryText} numberOfLines={1}>
+                  {point.categoryName.split(',')[0]?.trim()}
                 </Text>
-              </Pressable>
-
-              {/* Категория */}
-              {!!point.categoryName && (
-                <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryText} numberOfLines={1}>
-                    {point.categoryName.split(',')[0]?.trim()}
-                  </Text>
-                </View>
-              )}
-            </View>
+              </View>
+            )}
           </View>
         </View>
       </Pressable>
@@ -387,14 +393,18 @@ const PointList: React.FC<PointListProps> = ({ points }) => {
     <View style={styles.wrapper}>
       <Pressable
         onPress={() => setShowList((p) => !p)}
-        style={({ pressed }) => [styles.toggle, pressed && styles.togglePressed]}
+        style={({ pressed }) => [styles.toggle, pressed && styles.togglePressed, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+        accessibilityRole="button"
+        accessibilityLabel={showList ? 'Скрыть координаты мест' : 'Показать координаты мест'}
+        accessibilityState={{ expanded: showList }}
       >
         <View style={styles.toggleRow}>
-          <MapPinned size={22} color="#334155" />
+          {/* ✅ ИСПРАВЛЕНИЕ: Используем единый цвет */}
+          <MapPinned size={22} color={DESIGN_TOKENS.colors.text} />
           <Text style={[styles.toggleText, isMobile && styles.toggleTextSm]}>
             {showList ? 'Скрыть координаты мест' : 'Показать координаты мест'}
           </Text>
-          {showList ? <ChevronUp size={18} color="#334155" /> : <ChevronDown size={18} color="#334155" />}
+          {showList ? <ChevronUp size={18} color={DESIGN_TOKENS.colors.text} /> : <ChevronDown size={18} color={DESIGN_TOKENS.colors.text} />} {/* ✅ ИСПРАВЛЕНИЕ: Используем единый цвет */}
         </View>
       </Pressable>
 
@@ -448,28 +458,29 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 const styles = StyleSheet.create({
   wrapper: { width: '100%', marginTop: 16 },
 
-  // ✅ УЛУЧШЕНИЕ: Современная кнопка переключения с улучшенной интерактивностью
+  // ✅ ИСПРАВЛЕНИЕ: Современная кнопка переключения с улучшенной интерактивностью и единой палитрой
   toggle: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.08)',
+    borderColor: DESIGN_TOKENS.colors.border, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 10,
     elevation: 3,
+    minHeight: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
     ...Platform.select({
       web: {
         transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         cursor: 'pointer' as any,
         ':hover': {
-          borderColor: '#ff9f5a',
+          borderColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
           shadowOpacity: 0.12,
           shadowRadius: 14,
           transform: 'translateY(-1px)',
-          backgroundColor: '#fffefb',
+          backgroundColor: DESIGN_TOKENS.colors.primarySoft, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
         } as any,
         ':active': {
           transform: 'translateY(0)',
@@ -478,8 +489,8 @@ const styles = StyleSheet.create({
     }),
   },
   togglePressed: { 
-    backgroundColor: '#fffefb',
-    borderColor: '#ff9f5a',
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    borderColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
     transform: [{ scale: 0.98 }],
   },
   toggleRow: {
@@ -493,7 +504,7 @@ const styles = StyleSheet.create({
   toggleText: { 
     fontSize: 16, 
     fontWeight: '600', 
-    color: '#1f2937',
+    color: DESIGN_TOKENS.colors.text, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     letterSpacing: -0.3,
   },
   toggleTextSm: { 
@@ -548,19 +559,17 @@ const styles = StyleSheet.create({
     width: '100%' 
   },
 
-  // ✅ УЛУЧШЕНИЕ: Пропорциональная карточка с фиксированным соотношением сторон
+  // ✅ УЛУЧШЕНИЕ: Матовая карточка без границ, только тени
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.lg,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: '#1f1f1f',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-    // ✅ УЛУЧШЕНИЕ: Одинаковая высота для всех карточек в строке
+    shadowRadius: 8,
+    elevation: 3,
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
     display: 'flex' as any,
     flexDirection: 'column' as any,
     ...Platform.select({
@@ -568,15 +577,14 @@ const styles = StyleSheet.create({
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         willChange: 'transform, box-shadow',
         height: '100%',
+        boxShadow: DESIGN_TOKENS.shadows.card,
         ':hover': {
-          transform: 'translateY(-6px) scale(1.01)',
-          shadowOpacity: 0.18,
-          shadowRadius: 24,
-          shadowOffset: { width: 0, height: 8 },
-          borderColor: 'rgba(255,159,90,0.3)',
+          transform: 'translateY(-4px)',
+          boxShadow: DESIGN_TOKENS.shadows.hover,
         } as any,
         ':active': {
-          transform: 'translateY(-2px) scale(0.99)',
+          transform: 'translateY(-1px)',
+          boxShadow: DESIGN_TOKENS.shadows.medium,
         } as any,
       },
     }),
@@ -594,28 +602,23 @@ const styles = StyleSheet.create({
     position: 'relative', 
     width: '100%',
     overflow: 'hidden',
-    backgroundColor: '#f8fafc',
-    // ✅ УЛУЧШЕНИЕ: Пропорциональное соотношение сторон для всех карточек
-    ...Platform.select({
-      web: {
-        aspectRatio: '4/3',
-      },
-    }),
+    backgroundColor: '#f5f4f2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   image: { 
-    width: '100%', 
-    height: '100%', 
-    minHeight: 240,
+    width: '100%',
+    height: '100%',
     display: 'block',
-    backgroundColor: '#f3f4f6',
-    objectFit: 'cover' as any,
+    backgroundColor: '#f0efed',
     ...Platform.select({
       web: {
+        objectFit: 'contain' as any,
         transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
         willChange: 'transform',
-        ':hover': {
-          transform: 'scale(1.05)',
-        } as any,
+      },
+      default: {
+        resizeMode: 'contain' as any,
       },
     }),
   },
@@ -697,57 +700,40 @@ const styles = StyleSheet.create({
     }),
   },
 
-  // ✅ УЛУЧШЕНИЕ: Информационная панель с улучшенным градиентом и читаемостью
+  // ✅ РЕДИЗАЙН: Информационная панель под изображением, без перекрытия
   infoPanel: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    // ✅ ИСПРАВЛЕНИЕ: Используем backgroundColor для мобильных, backgroundImage для web
-    ...Platform.select({
-      web: {
-        backgroundColor: 'transparent',
-        backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 50%, rgba(0,0,0,0.4) 80%, transparent 100%)' as any,
-      },
-      default: {},
-    }),
-    ...Platform.select({
-      default: {
-        backgroundColor: 'rgba(0,0,0,0.75)',
-      },
-    }),
-    paddingTop: 36,
+    paddingTop: 16,
     paddingBottom: 16,
     paddingHorizontal: 18,
+    backgroundColor: '#fff',
   },
   infoContent: {
-    gap: 10,
+    gap: 12,
   },
   addressText: { 
-    color: '#fff', 
+    color: '#1f2937', 
     fontWeight: '700', 
     lineHeight: 24,
     letterSpacing: -0.4,
-    textShadow: '0 2px 8px rgba(0,0,0,0.4)',
   },
   coordButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: '#f3f4f6',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#e5e7eb',
     ...Platform.select({
       web: {
         transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         cursor: 'pointer' as any,
         ':hover': {
-          backgroundColor: 'rgba(255,159,90,0.9)',
-          borderColor: 'rgba(255,255,255,0.3)',
+          backgroundColor: '#ffb380',
+          borderColor: '#ff9f5a',
           transform: 'translateY(-1px)',
           boxShadow: '0 4px 12px rgba(255,159,90,0.3)',
         } as any,
@@ -755,7 +741,7 @@ const styles = StyleSheet.create({
     }),
   },
   coordText: {
-    color: '#fff',
+    color: '#374151',
     fontWeight: '600',
     fontFamily: Platform.select({
       web: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
@@ -763,9 +749,8 @@ const styles = StyleSheet.create({
     }),
     letterSpacing: 0.4,
     fontSize: 13,
-    textShadow: '0 1px 3px rgba(0,0,0,0.3)',
   },
-  // ✅ УЛУЧШЕНИЕ: Современный бейдж категории с улучшенной видимостью
+  // ✅ РЕДИЗАЙН: Современный бейдж категории
   categoryBadge: {
     alignSelf: 'flex-start',
     backgroundColor: '#ff9f5a',
@@ -773,7 +758,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderColor: '#ff9f5a',
     ...Platform.select({
       web: {
         boxShadow: '0 2px 8px rgba(255,159,90,0.4)',
@@ -790,6 +775,5 @@ const styles = StyleSheet.create({
     fontWeight: '700', 
     fontSize: 12,
     letterSpacing: 0.3,
-    textShadow: '0 1px 3px rgba(0,0,0,0.2)',
   },
 });

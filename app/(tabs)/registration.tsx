@@ -22,25 +22,12 @@ import { usePathname } from 'expo-router';
 import InstantSEO from '@/components/seo/InstantSEO';
 import { registration } from '@/src/api/travels';
 import type { FormValues } from '@/src/types/types';
+import { registrationSchema } from '@/utils/validation';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import FormFieldWithValidation from '@/components/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
 
 const { height } = Dimensions.get('window');
-
-/* ---------- Yup-схема ---------- */
-const RegisterSchema = Yup.object().shape({
-    username: Yup.string()
-        .trim()
-        .matches(/^[\w\-]{2,30}$/, 'Допустимы буквы, цифры, -, _ (2-30 симв.)')
-        .required('Поле обязательно'),
-    email: Yup.string()
-        .email('Некорректный email')
-        .required('Поле обязательно'),
-    password: Yup.string()
-        .min(8, 'Минимум 8 символов')
-        .required('Поле обязательно'),
-    confirmPassword: Yup.string()
-        .oneOf([Yup.ref('password')], 'Пароли не совпадают')
-        .required('Подтверждение обязательно'),
-});
 
 export default function RegisterForm() {
     const [showPass, setShowPass] = useState(false);
@@ -97,7 +84,7 @@ export default function RegisterForm() {
                     >
                         <Formik<FormValues>
                             initialValues={{ username: '', email: '', password: '', confirmPassword: '' }}
-                            validationSchema={RegisterSchema}
+                            validationSchema={registrationSchema}
                             onSubmit={onSubmit}
                         >
                             {({
@@ -123,86 +110,154 @@ export default function RegisterForm() {
                                                 </Text>
                                             )}
 
-                                            {/* ---------- username ---------- */}
-                                            <View style={styles.inputWrap}>
-                                                <MaterialCommunityIcons name="account" size={20} color="#888" />
-                                                <TextInput
-                                                    style={styles.input}
-                                                    placeholder="Имя пользователя"
-                                                    placeholderTextColor="#888"
-                                                    value={values.username}
-                                                    onChangeText={handleChange('username')}
-                                                    onBlur={handleBlur('username')}
-                                                    autoCapitalize="none"
-                                                    returnKeyType="next"
-                                                />
-                                            </View>
-                                            {touched.username && errors.username && (
-                                                <Text style={styles.err}>{errors.username}</Text>
-                                            )}
-
-                                            {/* ---------- email ---------- */}
-                                            <View style={styles.inputWrap}>
-                                                <MaterialCommunityIcons name="email" size={20} color="#888" />
-                                                <TextInput
-                                                    style={styles.input}
-                                                    placeholder="Email"
-                                                    placeholderTextColor="#888"
-                                                    value={values.email}
-                                                    onChangeText={handleChange('email')}
-                                                    onBlur={handleBlur('email')}
-                                                    keyboardType="email-address"
-                                                    autoCapitalize="none"
-                                                    returnKeyType="next"
-                                                />
-                                            </View>
-                                            {touched.email && errors.email && (
-                                                <Text style={styles.err}>{errors.email}</Text>
-                                            )}
-
-                                            {/* ---------- password ---------- */}
-                                            <View style={styles.inputWrap}>
-                                                <MaterialCommunityIcons name="lock" size={20} color="#888" />
-                                                <TextInput
-                                                    style={styles.input}
-                                                    placeholder="Пароль"
-                                                    placeholderTextColor="#888"
-                                                    value={values.password}
-                                                    onChangeText={handleChange('password')}
-                                                    onBlur={handleBlur('password')}
-                                                    secureTextEntry={!showPass}
-                                                    returnKeyType="next"
-                                                />
-                                                <TouchableOpacity onPress={() => setShowPass(v => !v)}>
-                                                    <MaterialCommunityIcons
-                                                        name={showPass ? 'eye-off' : 'eye'}
-                                                        size={20}
-                                                        color="#888"
+                                            {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для username */}
+                                            <FormFieldWithValidation
+                                                label="Имя пользователя"
+                                                error={touched.username && errors.username ? errors.username : null}
+                                                required
+                                            >
+                                                <View style={[
+                                                    styles.inputWrap,
+                                                    touched.username && errors.username && styles.inputWrapError,
+                                                ]}>
+                                                    <MaterialCommunityIcons 
+                                                        name="account" 
+                                                        size={20} 
+                                                        color={touched.username && errors.username 
+                                                            ? DESIGN_TOKENS.colors.danger 
+                                                            : DESIGN_TOKENS.colors.textMuted
+                                                        } 
                                                     />
-                                                </TouchableOpacity>
-                                            </View>
-                                            {touched.password && errors.password && (
-                                                <Text style={styles.err}>{errors.password}</Text>
-                                            )}
+                                                    <TextInput
+                                                        style={[
+                                                            styles.input,
+                                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                                                        ]}
+                                                        placeholder="Имя пользователя"
+                                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                                        value={values.username}
+                                                        onChangeText={handleChange('username')}
+                                                        onBlur={handleBlur('username')}
+                                                        autoCapitalize="none"
+                                                        returnKeyType="next"
+                                                    />
+                                                </View>
+                                            </FormFieldWithValidation>
 
-                                            {/* ---------- confirm ---------- */}
-                                            <View style={styles.inputWrap}>
-                                                <MaterialCommunityIcons name="lock-check" size={20} color="#888" />
-                                                <TextInput
-                                                    style={styles.input}
-                                                    placeholder="Повторите пароль"
-                                                    placeholderTextColor="#888"
-                                                    value={values.confirmPassword}
-                                                    onChangeText={handleChange('confirmPassword')}
-                                                    onBlur={handleBlur('confirmPassword')}
-                                                    secureTextEntry={!showPass}
-                                                    returnKeyType="done"
-                                                    onSubmitEditing={() => handleSubmit()}
-                                                />
-                                            </View>
-                                            {touched.confirmPassword && errors.confirmPassword && (
-                                                <Text style={styles.err}>{errors.confirmPassword}</Text>
-                                            )}
+                                            {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для email */}
+                                            <FormFieldWithValidation
+                                                label="Email"
+                                                error={touched.email && errors.email ? errors.email : null}
+                                                required
+                                            >
+                                                <View style={[
+                                                    styles.inputWrap,
+                                                    touched.email && errors.email && styles.inputWrapError,
+                                                ]}>
+                                                    <MaterialCommunityIcons 
+                                                        name="email" 
+                                                        size={20} 
+                                                        color={touched.email && errors.email 
+                                                            ? DESIGN_TOKENS.colors.danger 
+                                                            : DESIGN_TOKENS.colors.textMuted
+                                                        } 
+                                                    />
+                                                    <TextInput
+                                                        style={[
+                                                            styles.input,
+                                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                                                        ]}
+                                                        placeholder="Email"
+                                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                                        value={values.email}
+                                                        onChangeText={handleChange('email')}
+                                                        onBlur={handleBlur('email')}
+                                                        keyboardType="email-address"
+                                                        autoCapitalize="none"
+                                                        returnKeyType="next"
+                                                    />
+                                                </View>
+                                            </FormFieldWithValidation>
+
+                                            {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для пароля */}
+                                            <FormFieldWithValidation
+                                                label="Пароль"
+                                                error={touched.password && errors.password ? errors.password : null}
+                                                required
+                                            >
+                                                <View style={[
+                                                    styles.inputWrap,
+                                                    touched.password && errors.password && styles.inputWrapError,
+                                                ]}>
+                                                    <MaterialCommunityIcons 
+                                                        name="lock" 
+                                                        size={20} 
+                                                        color={touched.password && errors.password 
+                                                            ? DESIGN_TOKENS.colors.danger 
+                                                            : DESIGN_TOKENS.colors.textMuted
+                                                        } 
+                                                    />
+                                                    <TextInput
+                                                        style={[
+                                                            styles.input,
+                                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                                                        ]}
+                                                        placeholder="Пароль"
+                                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                                        value={values.password}
+                                                        onChangeText={handleChange('password')}
+                                                        onBlur={handleBlur('password')}
+                                                        secureTextEntry={!showPass}
+                                                        returnKeyType="next"
+                                                    />
+                                                    <TouchableOpacity 
+                                                        onPress={() => setShowPass(v => !v)}
+                                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                                        style={styles.eyeButton}
+                                                    >
+                                                        <MaterialCommunityIcons
+                                                            name={showPass ? 'eye-off' : 'eye'}
+                                                            size={20}
+                                                            color={DESIGN_TOKENS.colors.textMuted}
+                                                        />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </FormFieldWithValidation>
+
+                                            {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для подтверждения пароля */}
+                                            <FormFieldWithValidation
+                                                label="Повторите пароль"
+                                                error={touched.confirmPassword && errors.confirmPassword ? errors.confirmPassword : null}
+                                                required
+                                            >
+                                                <View style={[
+                                                    styles.inputWrap,
+                                                    touched.confirmPassword && errors.confirmPassword && styles.inputWrapError,
+                                                ]}>
+                                                    <MaterialCommunityIcons 
+                                                        name="lock-check" 
+                                                        size={20} 
+                                                        color={touched.confirmPassword && errors.confirmPassword 
+                                                            ? DESIGN_TOKENS.colors.danger 
+                                                            : DESIGN_TOKENS.colors.textMuted
+                                                        } 
+                                                    />
+                                                    <TextInput
+                                                        style={[
+                                                            styles.input,
+                                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                                                        ]}
+                                                        placeholder="Повторите пароль"
+                                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                                        value={values.confirmPassword}
+                                                        onChangeText={handleChange('confirmPassword')}
+                                                        onBlur={handleBlur('confirmPassword')}
+                                                        secureTextEntry={!showPass}
+                                                        returnKeyType="done"
+                                                        onSubmitEditing={() => handleSubmit()}
+                                                    />
+                                                </View>
+                                            </FormFieldWithValidation>
 
                                             {/* ---------- button ---------- */}
                                             <Button
@@ -241,16 +296,59 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 6,
-        backgroundColor: '#fff',
-        paddingHorizontal: 10,
-        marginBottom: 12,
+        borderColor: DESIGN_TOKENS.colors.border,
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        paddingHorizontal: 12,
+        marginBottom: 0, // ✅ ИСПРАВЛЕНИЕ: Отступ управляется FormFieldWithValidation
+        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+        ...Platform.select({
+            web: {
+                transition: 'border-color 0.2s ease',
+            },
+        }),
     },
-    input: { flex: 1, paddingVertical: 10, fontSize: 16 },
-    err: { color: '#d32f2f', marginBottom: 6, textAlign: 'left' },
-    ok: { color: '#2e7d32', marginBottom: 20, textAlign: 'center', fontWeight: 'bold' },
-    msg: { marginBottom: 20, textAlign: 'center', fontSize: 16 },
+    // ✅ ИСПРАВЛЕНИЕ: Стиль для ошибок в inputWrap
+    inputWrapError: {
+        borderColor: DESIGN_TOKENS.colors.danger,
+        borderWidth: 2,
+        backgroundColor: 'rgba(239, 68, 68, 0.05)', // Светло-красный фон для ошибок
+    },
+    input: { 
+        flex: 1, 
+        paddingVertical: 10, 
+        fontSize: 16,
+        color: DESIGN_TOKENS.colors.text,
+        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+    },
+    eyeButton: {
+        padding: 4,
+        minWidth: 32,
+        minHeight: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    // ✅ ИСПРАВЛЕНИЕ: Стили больше не используются (ошибки показываются через FormFieldWithValidation)
+    err: { color: DESIGN_TOKENS.colors.danger, marginBottom: 6, textAlign: 'left' },
+    ok: { 
+        color: DESIGN_TOKENS.colors.success, 
+        marginBottom: 20, 
+        textAlign: 'center', 
+        fontWeight: 'bold',
+        padding: 12,
+        borderRadius: 8,
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        borderLeftWidth: 3,
+        borderLeftColor: DESIGN_TOKENS.colors.success,
+    },
+    msg: { 
+        marginBottom: 20, 
+        textAlign: 'center', 
+        fontSize: 16,
+        padding: 12,
+        borderRadius: 8,
+        fontWeight: '500',
+    },
     btn: { backgroundColor: '#6aaaaa', borderRadius: 6, marginTop: 8 },
     btnContent: { paddingVertical: 10 },
 });

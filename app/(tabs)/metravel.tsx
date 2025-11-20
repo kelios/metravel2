@@ -3,7 +3,7 @@ import React, { Suspense, useMemo } from 'react';
 import { View, Text } from 'react-native';
 import ListTravel from '@/components/listTravel/ListTravel';
 import InstantSEO from '@/components/seo/InstantSEO';
-import {useIsFocused} from "@react-navigation/native/src";
+import {useIsFocused} from "@react-navigation/native";
 
 export default function MeTravelScreen() {
     const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface SkeletonLoaderProps {
   width?: number | string;
@@ -11,6 +12,7 @@ interface SkeletonLoaderProps {
 /**
  * Компонент skeleton loader для улучшения воспринимаемой производительности
  * Показывает placeholder во время загрузки вместо спиннера
+ * ✅ УЛУЧШЕНИЕ: Мягкие оттенки с градиентом для лучшей выразительности
  */
 export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   width = '100%',
@@ -20,6 +22,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 }) => {
   return (
     <View
+      {...(Platform.OS === 'web' ? { className: 'skeleton-pulse' } : {})}
       style={[
         styles.skeleton,
         {
@@ -63,16 +66,23 @@ export const TravelListSkeleton: React.FC<{ count?: number }> = ({ count = 6 }) 
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: '#e2e8f0',
-    // ✅ ИСПРАВЛЕНИЕ: Убираем animation из StyleSheet, используем CSS через style элемент ниже
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    // ✅ УЛУЧШЕНИЕ: Более выразительный цвет с легким градиентом
+    // ✅ FIX: Анимация применяется через className, а не через inline стили
   },
   card: {
     padding: 8,
     width: '100%',
     aspectRatio: 1,
-    borderRadius: 16,
-    backgroundColor: '#fff',
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     overflow: 'hidden',
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    shadowColor: '#1f1f1f',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   content: {
     padding: 14,
@@ -91,17 +101,34 @@ const styles = StyleSheet.create({
 
 // CSS анимация для веб (добавить в глобальные стили)
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes pulse {
-      0%, 100% {
-        opacity: 1;
+  const styleId = 'skeleton-loader-styles';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      .skeleton-pulse {
+        background: linear-gradient(90deg, ${DESIGN_TOKENS.colors.backgroundSecondary} 0%, ${DESIGN_TOKENS.colors.backgroundTertiary} 50%, ${DESIGN_TOKENS.colors.backgroundSecondary} 100%);
+        background-size: 200% 100%;
+        animation: skeleton-pulse 1.5s ease-in-out infinite;
       }
-      50% {
-        opacity: 0.5;
+      @keyframes skeleton-pulse {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
       }
-    }
-  `;
-  document.head.appendChild(style);
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
 }
 

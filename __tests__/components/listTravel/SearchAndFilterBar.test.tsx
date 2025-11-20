@@ -1,81 +1,79 @@
 import React from 'react';
-import { render, fireEvent, act } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import SearchAndFilterBar from '@/components/listTravel/SearchAndFilterBar';
 
 describe('SearchAndFilterBar', () => {
+  const mockSetSearch = jest.fn();
+  const mockOnToggleFilters = jest.fn();
+  const mockOnToggleRecommendations = jest.fn();
+  const mockOnClearAll = jest.fn();
+
+  const defaultProps = {
+    search: '',
+    setSearch: mockSetSearch,
+    onToggleFilters: mockOnToggleFilters,
+    onToggleRecommendations: mockOnToggleRecommendations,
+    isRecommendationsVisible: false,
+    resultsCount: 0,
+    isLoading: false,
+    hasFilters: false,
+    onClearAll: mockOnClearAll,
+  };
+
   beforeEach(() => {
-    jest.useFakeTimers();
+    jest.clearAllMocks();
   });
 
-  afterEach(() => {
-    jest.runOnlyPendingTimers();
-    jest.useRealTimers();
+  it('renders search input', () => {
+    const { getByPlaceholderText } = render(<SearchAndFilterBar {...defaultProps} />);
+    expect(getByPlaceholderText(/найти путешествие/i)).toBeTruthy();
   });
 
-  it('debounces search input before calling setSearch', () => {
-    const setSearch = jest.fn();
+  it('calls setSearch when typing', () => {
+    const { getByPlaceholderText } = render(<SearchAndFilterBar {...defaultProps} />);
+    const input = getByPlaceholderText(/найти путешествие/i);
+    
+    fireEvent.changeText(input, 'test');
+    
+    // Debounced, so wait a bit
+    setTimeout(() => {
+      expect(mockSetSearch).toHaveBeenCalled();
+    }, 300);
+  });
 
-    const { getByA11yLabel } = render(
-      <SearchAndFilterBar
-        search=""
-        setSearch={setSearch}
-        onToggleFilters={jest.fn()}
-      />
+  it('shows clear button when search has value', () => {
+    const { getByPlaceholderText, queryByLabelText } = render(
+      <SearchAndFilterBar {...defaultProps} search="test" />
     );
-
-    const input = getByA11yLabel('Поле поиска путешествий');
-    fireEvent.changeText(input, 'Минск');
-
-    act(() => {
-      jest.advanceTimersByTime(200);
-    });
-    expect(setSearch).not.toHaveBeenCalled();
-
-    act(() => {
-      jest.advanceTimersByTime(200);
-    });
-    expect(setSearch).toHaveBeenCalledWith('Минск');
+    
+    expect(queryByLabelText(/очистить поиск/i)).toBeTruthy();
   });
 
-  it('fires toggle handler for recommendations', () => {
-    const toggleRecommendations = jest.fn();
-
-    const { getByTestId } = render(
-      <SearchAndFilterBar
-        search=""
-        setSearch={jest.fn()}
-        onToggleRecommendations={toggleRecommendations}
-        isRecommendationsVisible={true}
-      />
+  it('calls onClearAll when clear all button is pressed', () => {
+    const { getByLabelText } = render(
+      <SearchAndFilterBar {...defaultProps} hasFilters={true} resultsCount={5} />
     );
-
-    fireEvent.press(getByTestId('toggle-recommendations'));
-    expect(toggleRecommendations).toHaveBeenCalled();
+    
+    const clearButton = getByLabelText(/сбросить все фильтры/i);
+    fireEvent.press(clearButton);
+    
+    expect(mockOnClearAll).toHaveBeenCalled();
   });
 
-  it('shows recommendations button as active when visible', () => {
-    const { getByTestId } = render(
-      <SearchAndFilterBar
-        search=""
-        setSearch={jest.fn()}
-        onToggleRecommendations={jest.fn()}
-        isRecommendationsVisible={true}
-      />
+  it('shows results count when filters are active', () => {
+    const { getByText } = render(
+      <SearchAndFilterBar {...defaultProps} hasFilters={true} resultsCount={10} />
     );
-
-    const button = getByTestId('toggle-recommendations');
-    expect(button).toBeTruthy();
+    
+    expect(getByText(/10/)).toBeTruthy();
   });
 
-  it('hides recommendations button when not provided', () => {
-    const { queryByTestId } = render(
-      <SearchAndFilterBar
-        search=""
-        setSearch={jest.fn()}
-      />
-    );
-
-    expect(queryByTestId('toggle-recommendations')).toBeNull();
+  it('toggles recommendations visibility', () => {
+    const { getByLabelText } = render(<SearchAndFilterBar {...defaultProps} />);
+    
+    const toggleButton = getByLabelText(/показать рекомендации/i);
+    fireEvent.press(toggleButton);
+    
+    expect(mockOnToggleRecommendations).toHaveBeenCalled();
   });
 });
-

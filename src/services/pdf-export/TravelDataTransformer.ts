@@ -43,17 +43,6 @@ export class TravelDataTransformer {
    */
   private transformSingle(travel: any): TravelForBook {
     try {
-      // ✅ КРИТИЧНО: Логируем входные данные для диагностики
-      console.log(`[TravelDataTransformer] INPUT Travel ${travel.id} (${travel.name}):`, {
-        hasDescription: travel.description != null,
-        descriptionType: typeof travel.description,
-        descriptionLength: typeof travel.description === 'string' ? travel.description.length : 0,
-        hasGallery: travel.gallery != null,
-        galleryType: typeof travel.gallery,
-        galleryIsArray: Array.isArray(travel.gallery),
-        galleryLength: Array.isArray(travel.gallery) ? travel.gallery.length : 0,
-      });
-      
       const result: TravelForBook = {
         id: travel.id,
         name: travel.name || '',
@@ -75,16 +64,6 @@ export class TravelDataTransformer {
         youtube_link: travel.youtube_link || null,
         userName: travel.userName || null,
       };
-      
-      // ✅ ОТЛАДКА: Логируем результат преобразования
-      console.log(`[TravelDataTransformer] OUTPUT Travel ${travel.id} (${travel.name}):`, {
-        description: result.description ? `[${result.description.length} chars]` : 'null',
-        descriptionType: typeof result.description,
-        recommendation: result.recommendation ? `[${result.recommendation.length} chars]` : 'null',
-        gallery: result.gallery ? `[${result.gallery.length} items]` : 'null/undefined',
-        galleryType: typeof result.gallery,
-        galleryIsArray: Array.isArray(result.gallery),
-      });
       
       return result;
     } catch (error) {
@@ -113,8 +92,41 @@ export class TravelDataTransformer {
       return null;
     }
 
+    // ✅ КРИТИЧНО: Удаляем React Native компоненты (View, Text) которые могут попасть в HTML
+    // Эти компоненты не являются валидными HTML элементами и ломают рендеринг
+    // Используем рекурсивный подход для удаления вложенных компонентов
+    
+    let withoutReactComponents = stringValue;
+    let previousLength = 0;
+    let iterations = 0;
+    const maxIterations = 10; // Защита от бесконечного цикла
+    
+    // Рекурсивно удаляем React Native компоненты пока они есть
+    while (iterations < maxIterations) {
+      const currentLength = withoutReactComponents.length;
+      if (currentLength === previousLength) break; // Больше нечего удалять
+      previousLength = currentLength;
+      
+      // Удаляем <View> и </View> теги, сохраняя их содержимое
+      withoutReactComponents = withoutReactComponents
+        .replace(/<View[^>]*>/gi, '')
+        .replace(/<\/View>/gi, '')
+        // Удаляем <Text> и </Text> теги, сохраняя их содержимое
+        .replace(/<Text[^>]*>/gi, '')
+        .replace(/<\/Text>/gi, '')
+        // Удаляем другие возможные React Native компоненты
+        .replace(/<ScrollView[^>]*>.*?<\/ScrollView>/gis, '')
+        .replace(/<Image[^>]*\/?>/gi, '')
+        .replace(/<TouchableOpacity[^>]*>.*?<\/TouchableOpacity>/gis, '')
+        .replace(/<TouchableHighlight[^>]*>.*?<\/TouchableHighlight>/gis, '')
+        .replace(/<SafeAreaView[^>]*>.*?<\/SafeAreaView>/gis, '')
+        .replace(/<ActivityIndicator[^>]*\/?>/gi, '');
+      
+      iterations++;
+    }
+
     // Удаляем определения CSS-переменных (они ломают html2canvas)
-    const withoutVariables = stringValue
+    const withoutVariables = withoutReactComponents
       .replace(/--[\w-]+\s*:[^;{}]+;?/gi, '')
       .replace(/:root\s*\{[^}]*\}/gi, '');
 
@@ -132,6 +144,14 @@ export class TravelDataTransformer {
 
     const sanitizedStyles = this.sanitizeInlineStyles(withSafeImages);
 
+    // ✅ КРИТИЧНО: Убеждаемся что HTML валиден - если остался голый текст без тегов,
+    // оборачиваем его в <p> для корректного отображения
+    const trimmedResult = sanitizedStyles.trim();
+    if (trimmedResult && !trimmedResult.match(/^<[a-z]/i)) {
+      // Если строка начинается не с HTML тега, оборачиваем в параграф
+      return `<p>${trimmedResult}</p>`;
+    }
+
     return sanitizedStyles;
   }
 
@@ -141,7 +161,6 @@ export class TravelDataTransformer {
   private transformGallery(gallery: any): TravelForBook['gallery'] {
     if (!gallery) return undefined;
     if (!Array.isArray(gallery)) {
-      console.warn('[TravelDataTransformer] Gallery is not an array:', typeof gallery, gallery);
       return undefined;
     }
     if (gallery.length === 0) return undefined;
@@ -160,7 +179,6 @@ export class TravelDataTransformer {
     
     // Если после фильтрации массив пустой, возвращаем undefined
     if (filtered.length === 0) {
-      console.warn('[TravelDataTransformer] Gallery filtered to empty array');
       return undefined;
     }
     
@@ -185,8 +203,16 @@ export class TravelDataTransformer {
 
   /**
    * Валидирует данные перед трансформацией
+   * ✅ PDF-001: Добавлена валидация размера данных
    */
   validate(travels: Travel[]): void {
+    // Константы для валидации
+    const MAX_TRAVELS = 50;
+    const MAX_TEXT_LENGTH = 50000; // Максимальная длина текста в одном поле
+    const MAX_IMAGES_PER_TRAVEL = 30;
+    const MAX_TOTAL_IMAGES = 200;
+    const MAX_TOTAL_TEXT_LENGTH = 500000; // Общая длина всего текста
+
     if (!Array.isArray(travels)) {
       throw new ExportError(
         ExportErrorType.VALIDATION_ERROR,
@@ -200,6 +226,17 @@ export class TravelDataTransformer {
         'Необходимо выбрать хотя бы одно путешествие'
       );
     }
+
+    // ✅ PDF-001: Проверка максимального количества путешествий
+    if (travels.length > MAX_TRAVELS) {
+      throw new ExportError(
+        ExportErrorType.VALIDATION_ERROR,
+        `Слишком много путешествий выбрано (${travels.length}). Максимум ${MAX_TRAVELS} путешествий для одного экспорта.`
+      );
+    }
+
+    let totalImages = 0;
+    let totalTextLength = 0;
 
     travels.forEach((travel, index) => {
       if (!travel || !travel.id) {
@@ -215,7 +252,57 @@ export class TravelDataTransformer {
           `Путешествие ${travel.id} невалидно: отсутствует название`
         );
       }
+
+      // ✅ PDF-001: Проверка длины текстовых полей
+      const textFields = [
+        travel.description,
+        travel.recommendation,
+        travel.plus,
+        travel.minus,
+      ].filter(Boolean);
+
+      textFields.forEach((text, fieldIndex) => {
+        const textLength = typeof text === 'string' ? text.length : String(text).length;
+        if (textLength > MAX_TEXT_LENGTH) {
+          const fieldNames = ['описание', 'рекомендации', 'плюсы', 'минусы'];
+          throw new ExportError(
+            ExportErrorType.VALIDATION_ERROR,
+            `Путешествие "${travel.name}" содержит слишком длинное ${fieldNames[fieldIndex]} (${textLength} символов). Максимум ${MAX_TEXT_LENGTH} символов.`
+          );
+        }
+        totalTextLength += textLength;
+      });
+
+      // ✅ PDF-001: Проверка количества изображений
+      const galleryCount = Array.isArray(travel.gallery) ? travel.gallery.length : 0;
+      const thumbCount = travel.travel_image_thumb_url ? 1 : 0;
+      const imageCount = galleryCount + thumbCount;
+
+      if (imageCount > MAX_IMAGES_PER_TRAVEL) {
+        throw new ExportError(
+          ExportErrorType.VALIDATION_ERROR,
+          `Путешествие "${travel.name}" содержит слишком много изображений (${imageCount}). Максимум ${MAX_IMAGES_PER_TRAVEL} изображений на путешествие.`
+        );
+      }
+
+      totalImages += imageCount;
     });
+
+    // ✅ PDF-001: Проверка общего количества изображений
+    if (totalImages > MAX_TOTAL_IMAGES) {
+      throw new ExportError(
+        ExportErrorType.VALIDATION_ERROR,
+        `Слишком много изображений в выбранных путешествиях (${totalImages}). Максимум ${MAX_TOTAL_IMAGES} изображений для одного экспорта.`
+      );
+    }
+
+    // ✅ PDF-001: Проверка общей длины текста
+    if (totalTextLength > MAX_TOTAL_TEXT_LENGTH) {
+      throw new ExportError(
+        ExportErrorType.VALIDATION_ERROR,
+        `Слишком много текста в выбранных путешествиях (${totalTextLength} символов). Максимум ${MAX_TOTAL_TEXT_LENGTH} символов для одного экспорта.`
+      );
+    }
   }
 
   private buildSafeImageUrl(url?: string | null): string {

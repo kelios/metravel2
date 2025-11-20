@@ -3,6 +3,7 @@
 
 import { ExportConfig } from '@/src/types/pdf-export';
 import { ErrorHandler } from '@/src/infrastructure/error/ErrorHandler';
+import { devWarn } from '@/src/utils/logger';
 
 interface ImageLoadResult {
   url: string;
@@ -33,8 +34,9 @@ export class ImageLoader {
 
   /**
    * Загружает одно изображение с retry
+   * ✅ PDF-002: При ошибке возвращает placeholder вместо throw
    */
-  async loadImage(url: string, retryCount = 0): Promise<HTMLImageElement> {
+  async loadImage(url: string, retryCount = 0, usePlaceholderOnError = true): Promise<HTMLImageElement> {
     // Проверяем кэш
     if (this.loadedImages.has(url)) {
       return this.loadedImages.get(url)!;
@@ -42,11 +44,16 @@ export class ImageLoader {
 
     // Проверяем, не провалилось ли уже
     if (this.failedImages.has(url) && retryCount === 0) {
+      if (usePlaceholderOnError) {
+        devWarn(`[ImageLoader] Image ${url} previously failed, using placeholder`);
+        return this.createPlaceholderImage();
+      }
       throw new Error(`Image ${url} previously failed to load`);
     }
 
     const maxRetries = this.config.maxRetries || 3;
-    const timeout = this.config.imageLoadTimeout || 10000;
+    // ✅ ИСПРАВЛЕНИЕ: Уменьшаем таймаут на попытку, т.к. пробуем несколько стратегий
+    const timeout = Math.min(this.config.imageLoadTimeout || 10000, 5000);
 
     try {
       const img = await this.loadImageWithTimeout(url, timeout);
@@ -56,9 +63,19 @@ export class ImageLoader {
       if (retryCount < maxRetries) {
         const delay = this.errorHandler.getRetryDelay(retryCount);
         await new Promise(resolve => setTimeout(resolve, delay));
-        return this.loadImage(url, retryCount + 1);
+        return this.loadImage(url, retryCount + 1, usePlaceholderOnError);
       } else {
         this.failedImages.add(url);
+        
+        // ✅ PDF-002: Возвращаем placeholder вместо throw, если включен режим graceful degradation
+        if (usePlaceholderOnError) {
+          devWarn(`[ImageLoader] Failed to load image after ${maxRetries} retries: ${url}, using placeholder`);
+          const placeholder = this.createPlaceholderImage();
+          // Кэшируем placeholder для этого URL, чтобы не создавать его каждый раз
+          this.loadedImages.set(url, placeholder);
+          return placeholder;
+        }
+        
         throw this.errorHandler.handle(
           error,
           { url, retryCount, maxRetries }
@@ -68,16 +85,115 @@ export class ImageLoader {
   }
 
   /**
-   * Загружает изображение с таймаутом
+   * ✅ PDF-002: Создает placeholder изображение
    */
-  private loadImageWithTimeout(url: string, timeout: number): Promise<HTMLImageElement> {
+  createPlaceholderImage(): HTMLImageElement {
+    const img = new Image();
+    img.src = PLACEHOLDER_DATA_URL;
+    img.alt = 'Изображение недоступно';
+    return img;
+  }
+
+  /**
+   * Извлекает оригинальный URL из прокси URL (images.weserv.nl)
+   */
+  private extractOriginalUrl(proxyUrl: string): string | null {
+    try {
+      if (proxyUrl.includes('images.weserv.nl')) {
+        const url = new URL(proxyUrl);
+        const urlParam = url.searchParams.get('url');
+        if (urlParam) {
+          // Декодируем URL и добавляем протокол если отсутствует
+          const decoded = decodeURIComponent(urlParam);
+          if (decoded.startsWith('http://') || decoded.startsWith('https://')) {
+            return decoded;
+          }
+          return `https://${decoded}`;
+        }
+      }
+    } catch (error) {
+      devWarn('[ImageLoader] Failed to extract original URL from proxy:', error);
+    }
+    return null;
+  }
+
+  /**
+   * Загружает изображение с таймаутом и fallback на оригинальный URL
+   * ✅ ИСПРАВЛЕНИЕ: Пробует несколько стратегий загрузки для обхода CORS
+   */
+  private loadImageWithTimeout(url: string, timeout: number, attempt = 0): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
+      const isProxyUrl = url.includes('images.weserv.nl');
+      const originalUrl = isProxyUrl ? this.extractOriginalUrl(url) : null;
+      
+      // Стратегии загрузки для прокси URL:
+      // 0: Прокси без crossOrigin (может работать если прокси поддерживает)
+      // 1: Прокси с crossOrigin (для html2canvas)
+      // 2: Оригинальный URL с crossOrigin
+      // 3: Оригинальный URL без crossOrigin (последняя попытка)
+      
+      // Стратегии для обычных URL:
+      // 0: С crossOrigin (для html2canvas)
+      // 1: Без crossOrigin (fallback)
+      
+      let currentUrl = url;
+      let useCrossOrigin = false;
+      let maxAttempts = isProxyUrl && originalUrl ? 4 : 2;
+      
+      if (isProxyUrl) {
+        if (attempt === 0) {
+          // Первая попытка: прокси без crossOrigin
+          useCrossOrigin = false;
+          currentUrl = url;
+        } else if (attempt === 1) {
+          // Вторая попытка: прокси с crossOrigin
+          useCrossOrigin = true;
+          currentUrl = url;
+        } else if (attempt === 2 && originalUrl) {
+          // Третья попытка: оригинальный URL с crossOrigin
+          useCrossOrigin = true;
+          currentUrl = originalUrl;
+          devWarn(`[ImageLoader] Proxy failed, trying original URL with CORS: ${originalUrl}`);
+        } else if (attempt === 3 && originalUrl) {
+          // Четвертая попытка: оригинальный URL без crossOrigin
+          useCrossOrigin = false;
+          currentUrl = originalUrl;
+          devWarn(`[ImageLoader] Trying original URL without CORS: ${originalUrl}`);
+        } else {
+          reject(new Error(`Failed to load image after all attempts: ${url}`));
+          return;
+        }
+      } else {
+        // Обычный URL (не прокси)
+        if (attempt === 0) {
+          // Первая попытка: с crossOrigin
+          useCrossOrigin = true;
+          currentUrl = url;
+        } else if (attempt === 1) {
+          // Вторая попытка: без crossOrigin
+          useCrossOrigin = false;
+          currentUrl = url;
+        } else {
+          reject(new Error(`Failed to load image after all attempts: ${url}`));
+          return;
+        }
+      }
+
       const img = new Image();
-      img.crossOrigin = 'anonymous';
+      if (useCrossOrigin) {
+        img.crossOrigin = 'anonymous';
+      }
       img.referrerPolicy = 'no-referrer';
 
       const timeoutId = setTimeout(() => {
-        reject(new Error(`Image load timeout: ${url}`));
+        // Пробуем следующую стратегию
+        if (attempt + 1 < maxAttempts) {
+          this.loadImageWithTimeout(url, timeout, attempt + 1)
+            .then(resolve)
+            .catch(reject);
+        } else {
+          reject(new Error(`Image load timeout: ${url}`));
+        }
       }, timeout);
 
       img.onload = () => {
@@ -85,12 +201,19 @@ export class ImageLoader {
         resolve(img);
       };
 
-      img.onerror = (error) => {
+      img.onerror = () => {
         clearTimeout(timeoutId);
-        reject(new Error(`Failed to load image: ${url}`));
+        // Пробуем следующую стратегию
+        if (attempt + 1 < maxAttempts) {
+          this.loadImageWithTimeout(url, timeout, attempt + 1)
+            .then(resolve)
+            .catch(reject);
+        } else {
+          reject(new Error(`Failed to load image: ${url}`));
+        }
       };
 
-      img.src = url;
+      img.src = currentUrl;
     });
   }
 
@@ -115,15 +238,19 @@ export class ImageLoader {
       
       const batchPromises = batch.map(async (url) => {
         try {
-          const img = await this.loadImage(url);
+          // ✅ PDF-002: Используем placeholder при ошибке (usePlaceholderOnError = true по умолчанию)
+          const img = await this.loadImage(url, 0, true);
           results.set(url, img);
           loaded++;
           onProgress?.(loaded, total);
           return { url, success: true, element: img };
         } catch (error) {
+          // ✅ PDF-002: Даже при ошибке возвращаем placeholder
           loaded++;
           onProgress?.(loaded, total);
-          return { url, success: false, error: error as Error };
+          const placeholder = this.createPlaceholderImage();
+          results.set(url, placeholder);
+          return { url, success: false, error: error as Error, element: placeholder };
         }
       });
 

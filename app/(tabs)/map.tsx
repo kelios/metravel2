@@ -37,6 +37,8 @@ import { fetchFiltersMap, fetchTravelsForMap, fetchTravelsNearRoute } from '@/sr
 import InstantSEO from '@/components/seo/InstantSEO';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/src/utils/filterQuery';
+import ErrorDisplay from '@/components/ErrorDisplay';
+import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
 
 interface Coordinates { latitude: number; longitude: number; }
 interface FilterValues { categories: string[]; radius: string; address: string; }
@@ -188,6 +190,9 @@ export default function MapScreen() {
         isLoading: loading,
         isFetching,
         isPlaceholderData,
+        isError: mapError,
+        error: mapErrorDetails,
+        refetch: refetchMapData,
     } = useQuery<any[]>({
         queryKey: ['travelsForMap', mapQueryDescriptor],
         enabled:
@@ -213,19 +218,25 @@ export default function MapScreen() {
 
             let data: any[] = [];
 
-            if (params.mode === 'radius') {
-                const result = await fetchTravelsForMap(0, 100, {
-                    lat: params.lat.toString(),
-                    lng: params.lng.toString(),
-                    radius: params.radius,
-                    categories: params.filters.categories,
-                });
-                data = Object.values(result || {});
-            } else if (params.mode === 'route' && params.routePoints.length >= 2) {
-                const result = await fetchTravelsNearRoute(params.routePoints, 2);
-                if (result && typeof result === 'object') {
-                    data = Array.isArray(result) ? result : Object.values(result);
+            try {
+                if (params.mode === 'radius') {
+                    const result = await fetchTravelsForMap(0, 100, {
+                        lat: params.lat.toString(),
+                        lng: params.lng.toString(),
+                        radius: params.radius,
+                        categories: params.filters.categories,
+                    });
+                    data = Object.values(result || {});
+                } else if (params.mode === 'route' && params.routePoints.length >= 2) {
+                    const result = await fetchTravelsNearRoute(params.routePoints, 2);
+                    if (result && typeof result === 'object') {
+                        data = Array.isArray(result) ? result : Object.values(result);
+                    }
                 }
+            } catch (error) {
+                // ✅ ИСПРАВЛЕНИЕ: Логируем ошибку и пробрасываем дальше
+                console.error('Error fetching travels for map:', error);
+                throw error;
             }
 
             return data;
@@ -530,6 +541,15 @@ export default function MapScreen() {
                                             <ActivityIndicator size="small" />
                                             <Text style={styles.loaderText}>Загрузка...</Text>
                                         </View>
+                                    ) : mapError ? (
+                                        // ✅ ИСПРАВЛЕНИЕ: Отображение ошибки загрузки данных
+                                        <View style={styles.errorContainer}>
+                                            <ErrorDisplay
+                                                message={getUserFriendlyNetworkError(mapErrorDetails)}
+                                                onRetry={() => refetchMapData()}
+                                                variant="error"
+                                            />
+                                        </View>
                                     ) : (
                                         <>
                                             {isFetching && isPlaceholderData && (
@@ -743,5 +763,10 @@ const getStyles = (isMobile: boolean, insetTop: number) => StyleSheet.create({
         marginTop: 8,
         fontSize: 14,
         color: '#8c99a6',
+    },
+    errorContainer: {
+        flex: 1,
+        padding: 16,
+        justifyContent: 'center',
     },
 });

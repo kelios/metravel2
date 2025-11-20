@@ -71,17 +71,12 @@ export class ErrorHandler {
       timestamp: new Date().toISOString(),
     };
 
-    // В production можно отправлять в систему мониторинга
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[ExportError]', logData);
-    } else {
-      // TODO: Интеграция с системой мониторинга (Sentry, LogRocket, etc.)
-      console.error('[ExportError]', {
-        type,
-        message: error.message,
-        ...(context && { context }),
-      });
-    }
+    // ✅ УЛУЧШЕНИЕ: Используем новый logger с поддержкой мониторинга
+    const { logError } = require('@/src/utils/logger');
+    logError(error, {
+      ...logData,
+      ...(context && { context }),
+    });
   }
 
   /**

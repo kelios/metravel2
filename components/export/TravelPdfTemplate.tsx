@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { useQuery } from "@tanstack/react-query";
 import { fetchTravel } from '@/src/api/travels';
-import { sanitizeRichText } from '@/src/utils/sanitizeRichText';
+import { Travel as TravelType } from '@/src/types/types';
+import { sanitizeRichText, sanitizeRichTextForPdf } from '@/src/utils/sanitizeRichText';
 
 interface Travel {
     id: number;
@@ -36,6 +37,61 @@ interface Travel {
     };
     created_at?: string;
     updated_at?: string;
+    userName?: string; // Fallback для user.name
+}
+
+/**
+ * Нормализует данные путешествия из API в формат для PDF шаблона
+ */
+function normalizeTravelForPdf(travel: TravelType): Travel {
+    // Нормализуем gallery: может быть string[] или объекты
+    const normalizedGallery = Array.isArray(travel.gallery) && travel.gallery.length > 0
+        ? travel.gallery.map((item, idx) => {
+            if (typeof item === 'string') {
+                return { id: idx, url: item };
+            }
+            return typeof item === 'object' && item !== null && 'url' in item
+                ? { id: (item as any).id || idx, url: (item as any).url, updated_at: (item as any).updated_at }
+                : { id: idx, url: String(item) };
+        })
+        : undefined;
+
+    // Нормализуем travelAddress: может быть string[] или объекты
+    const normalizedTravelAddress = Array.isArray(travel.travelAddress) && travel.travelAddress.length > 0
+        ? travel.travelAddress.map((item, idx) => {
+            if (typeof item === 'string') {
+                return { id: idx, name: item, description: undefined };
+            }
+            return typeof item === 'object' && item !== null
+                ? { 
+                    id: (item as any).id || idx, 
+                    name: (item as any).name || String(item),
+                    description: (item as any).description,
+                    coords: (item as any).coords
+                }
+                : { id: idx, name: String(item) };
+        })
+        : undefined;
+
+    return {
+        id: travel.id,
+        name: travel.name || '',
+        countryName: travel.countryName,
+        countryCode: travel.countryCode,
+        year: travel.year,
+        number_days: travel.number_days,
+        description: travel.description,
+        plus: travel.plus,
+        minus: travel.minus,
+        recommendation: travel.recommendation,
+        youtube_link: travel.youtube_link,
+        gallery: normalizedGallery,
+        travelAddress: normalizedTravelAddress,
+        user: travel.userName ? { name: travel.userName } : undefined,
+        userName: travel.userName,
+        // created_at и updated_at могут приходить из API, но их нет в базовом типе
+        // Если нужны, их нужно добавить в TravelType или получать отдельно
+    };
 }
 
 interface TravelPdfTemplateProps {
@@ -43,7 +99,7 @@ interface TravelPdfTemplateProps {
 }
 
 const TravelPdfTemplate: React.FC<TravelPdfTemplateProps> = ({ travelId }) => {
-    const { data: travel, isLoading, isError } = useQuery<Travel>({
+    const { data: rawTravel, isLoading, isError } = useQuery<TravelType>({
         queryKey: ['travelDetails', travelId],
         queryFn: () => {
             if (!travelId) {
@@ -54,6 +110,11 @@ const TravelPdfTemplate: React.FC<TravelPdfTemplateProps> = ({ travelId }) => {
         staleTime: 600_000,
         enabled: !!travelId, // Запрос выполняется только если travelId существует
     });
+
+    // Нормализуем данные для использования в компоненте
+    const travel: Travel | undefined = useMemo(() => {
+        return rawTravel ? normalizeTravelForPdf(rawTravel) : undefined;
+    }, [rawTravel]);
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return '';
@@ -74,16 +135,17 @@ const TravelPdfTemplate: React.FC<TravelPdfTemplateProps> = ({ travelId }) => {
         return (
             <div
                 style={styles.htmlContent}
+                className="pdf-text-content"
                 dangerouslySetInnerHTML={{ __html: html }}
             />
         );
     };
 
     const sanitizedSections = useMemo(() => ({
-        description: travel?.description ? sanitizeRichText(travel.description) : '',
-        recommendation: travel?.recommendation ? sanitizeRichText(travel.recommendation) : '',
-        plus: travel?.plus ? sanitizeRichText(travel.plus) : '',
-        minus: travel?.minus ? sanitizeRichText(travel.minus) : '',
+        description: travel?.description ? sanitizeRichTextForPdf(travel.description) : '',
+        recommendation: travel?.recommendation ? sanitizeRichTextForPdf(travel.recommendation) : '',
+        plus: travel?.plus ? sanitizeRichTextForPdf(travel.plus) : '',
+        minus: travel?.minus ? sanitizeRichTextForPdf(travel.minus) : '',
         travelAddress: travel?.travelAddress?.map((place) => ({
             ...place,
             description: place.description ? sanitizeRichText(place.description) : '',
@@ -105,6 +167,9 @@ const TravelPdfTemplate: React.FC<TravelPdfTemplateProps> = ({ travelId }) => {
             </div>
         );
     }
+
+    // TypeScript guard: travel гарантированно определен после проверки выше
+    const normalizedTravel: Travel = travel;
 
     return (
         <div style={styles.container}>
@@ -132,41 +197,82 @@ const TravelPdfTemplate: React.FC<TravelPdfTemplateProps> = ({ travelId }) => {
                     ul, ol {
                         padding-left: 20px;
                     }
+                    .pdf-text-content {
+                        white-space: normal !important;
+                        word-wrap: break-word;
+                        letter-spacing: normal !important;
+                        word-spacing: normal !important;
+                        text-rendering: optimizeLegibility;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+                    .pdf-text-content p {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        white-space: normal !important;
+                        letter-spacing: normal !important;
+                        word-spacing: normal !important;
+                        display: block;
+                        line-height: inherit;
+                        page-break-inside: avoid !important;
+                        page-break-after: auto !important;
+                        page-break-before: auto !important;
+                        break-inside: avoid !important;
+                        break-after: auto !important;
+                        break-before: auto !important;
+                    }
+                    .pdf-text-content p + p {
+                        margin-top: 0 !important;
+                    }
+                    .pdf-text-content * {
+                        white-space: normal !important;
+                        letter-spacing: normal !important;
+                        word-spacing: normal !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+                    .pdf-text-content br {
+                        line-height: inherit;
+                    }
+                    .pdf-text-content div,
+                    .pdf-text-content span {
+                        display: inline;
+                    }
                 `}
             </style>
 
             <header style={styles.header}>
-                <h1 style={styles.title}>{travel.name}</h1>
+                <h1 style={styles.title}>{normalizedTravel.name}</h1>
 
                 <div style={styles.metaContainer}>
-                    {travel.countryName && (
+                    {normalizedTravel.countryName && (
                         <div style={styles.metaItem}>
                             <span style={styles.metaLabel}>Страна:</span>
-                            <span style={styles.metaValue}>{travel.countryName}</span>
+                            <span style={styles.metaValue}>{normalizedTravel.countryName}</span>
                         </div>
                     )}
-                    {travel.year && (
+                    {normalizedTravel.year && (
                         <div style={styles.metaItem}>
                             <span style={styles.metaLabel}>Год:</span>
-                            <span style={styles.metaValue}>{travel.year}</span>
+                            <span style={styles.metaValue}>{normalizedTravel.year}</span>
                         </div>
                     )}
-                    {travel.number_days && (
+                    {normalizedTravel.number_days && (
                         <div style={styles.metaItem}>
                             <span style={styles.metaLabel}>Длительность:</span>
-                            <span style={styles.metaValue}>{travel.number_days} дней</span>
+                            <span style={styles.metaValue}>{normalizedTravel.number_days} дней</span>
                         </div>
                     )}
-                    {travel.user?.name && (
+                    {normalizedTravel.user?.name && (
                         <div style={styles.metaItem}>
                             <span style={styles.metaLabel}>Автор:</span>
-                            <span style={styles.metaValue}>{travel.user.name}</span>
+                            <span style={styles.metaValue}>{normalizedTravel.user.name}</span>
                         </div>
                     )}
-                    {travel.created_at && (
+                    {normalizedTravel.created_at && (
                         <div style={styles.metaItem}>
                             <span style={styles.metaLabel}>Опубликовано:</span>
-                            <span style={styles.metaValue}>{formatDate(travel.created_at)}</span>
+                            <span style={styles.metaValue}>{formatDate(normalizedTravel.created_at)}</span>
                         </div>
                     )}
                 </div>
@@ -180,11 +286,11 @@ const TravelPdfTemplate: React.FC<TravelPdfTemplateProps> = ({ travelId }) => {
                     </section>
                 )}
 
-                {travel.gallery?.length > 0 && (
+                {normalizedTravel.gallery && normalizedTravel.gallery.length > 0 && (
                     <section style={styles.section}>
                         <h2 style={styles.sectionTitle}>Фотографии из путешествия</h2>
                         <div style={styles.galleryGrid}>
-                            {travel.gallery.map((img, i) => (
+                            {normalizedTravel.gallery.map((img, i) => (
                                 <div key={`${img.id}-${i}`} style={styles.galleryItem}>
                                     <img
                                         src={img.url}
@@ -237,7 +343,7 @@ const TravelPdfTemplate: React.FC<TravelPdfTemplateProps> = ({ travelId }) => {
                     <section style={styles.section}>
                         <h2 style={styles.sectionTitle}>Посещенные места</h2>
                         <ul style={styles.placesList}>
-                            {sanitizedSections.travelAddress.map(place => (
+                            {sanitizedSections.travelAddress.map((place: { id: number; name: string; description?: string }) => (
                                 <li key={place.id} style={styles.placeItem}>
                                     <h3 style={styles.placeName}>{place.name}</h3>
                                     {place.description && renderHtmlContent(place.description)}
@@ -247,12 +353,12 @@ const TravelPdfTemplate: React.FC<TravelPdfTemplateProps> = ({ travelId }) => {
                     </section>
                 )}
 
-                {travel.youtube_link && (
+                {normalizedTravel.youtube_link && (
                     <section style={styles.section}>
                         <h2 style={styles.sectionTitle}>Видео из путешествия</h2>
                         <div style={styles.videoContainer}>
                             <p style={styles.videoLink}>
-                                Ссылка на видео: {travel.youtube_link}
+                                Ссылка на видео: {normalizedTravel.youtube_link}
                             </p>
                         </div>
                     </section>
@@ -364,6 +470,7 @@ const styles = {
         lineHeight: 1.6,
         fontSize: '14px',
         color: '#444',
+        whiteSpace: 'normal',
     } as React.CSSProperties,
 
     galleryGrid: {

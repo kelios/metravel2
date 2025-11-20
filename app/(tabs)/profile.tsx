@@ -17,6 +17,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/EmptyState';
+import { fetchTravels } from '@/src/api/travels';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 interface UserStats {
   travelsCount: number;
@@ -44,15 +47,37 @@ export default function ProfileScreen() {
   const loadUserData = async () => {
     setIsLoading(true);
     try {
-      // Загружаем статистику пользователя
-      const [userName, userId] = await Promise.all([
-        AsyncStorage.getItem('userName'),
-        AsyncStorage.getItem('userId'),
-      ]);
+      // ✅ FIX-004: Используем батчинг для загрузки данных
+      const { getStorageBatch } = await import('@/src/utils/storageBatch');
+      const storageData = await getStorageBatch(['userName', 'userId']);
+      const userName = storageData.userName;
+      const userId = storageData.userId;
+
+      // ✅ ИСПРАВЛЕНИЕ: Загружаем статистику путешествий из API
+      let travelsCount = 0;
+      if (userId) {
+        try {
+          // Загружаем путешествия пользователя (только опубликованные)
+          const travelsData = await fetchTravels(
+            0, // page
+            1, // itemsPerPage - нам нужен только total
+            '', // search
+            {
+              user_id: userId,
+              publish: 1, // только опубликованные
+              moderation: 1, // только прошедшие модерацию
+            }
+          );
+          travelsCount = travelsData?.total || 0;
+        } catch (error) {
+          console.error('Error loading travels count:', error);
+          // В случае ошибки оставляем 0
+        }
+      }
 
       // Подсчитываем статистику
       setStats({
-        travelsCount: 0, // TODO: загрузить из API
+        travelsCount,
         favoritesCount: favorites.length,
         viewsCount: viewHistory.length,
       });
@@ -92,7 +117,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loader}>
-          <ActivityIndicator size="large" color="#4a8c8c" />
+          <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} /> {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
         </View>
       </SafeAreaView>
     );
@@ -118,7 +143,7 @@ export default function ProfileScreen() {
       label: 'История просмотров',
       count: stats.viewsCount,
       onPress: () => router.push('/history'),
-      color: '#ff9f5a',
+      color: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
     },
     {
       icon: 'settings',
@@ -135,7 +160,7 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
-              <Feather name="user" size={32} color="#4a8c8c" />
+              <Feather name="user" size={32} color={DESIGN_TOKENS.colors.primary} /> {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
             </View>
           </View>
           <Text style={styles.userName}>{user?.name || 'Пользователь'}</Text>
@@ -145,7 +170,7 @@ export default function ProfileScreen() {
         {/* Statistics */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <Feather name="map" size={24} color="#4a8c8c" />
+            <Feather name="map" size={24} color={DESIGN_TOKENS.colors.primary} /> {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
             <Text style={styles.statNumber}>{stats.travelsCount}</Text>
             <Text style={styles.statLabel}>Путешествий</Text>
           </View>
@@ -155,7 +180,7 @@ export default function ProfileScreen() {
             <Text style={styles.statLabel}>Избранное</Text>
           </View>
           <View style={styles.statCard}>
-            <Feather name="eye" size={24} color="#ff9f5a" />
+            <Feather name="eye" size={24} color={DESIGN_TOKENS.colors.primary} /> {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
             <Text style={styles.statNumber}>{stats.viewsCount}</Text>
             <Text style={styles.statLabel}>Просмотров</Text>
           </View>
@@ -166,8 +191,10 @@ export default function ProfileScreen() {
           {menuItems.map((item, index) => (
             <Pressable
               key={index}
-              style={styles.menuItem}
+              style={[styles.menuItem, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
               onPress={item.onPress}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
               {...Platform.select({
                 web: { cursor: 'pointer' },
               })}
@@ -188,13 +215,15 @@ export default function ProfileScreen() {
 
         {/* Logout Button */}
         <Pressable
-          style={styles.logoutButton}
+          style={[styles.logoutButton, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
           onPress={handleLogout}
+          accessibilityRole="button"
+          accessibilityLabel="Выйти из аккаунта"
           {...Platform.select({
             web: { cursor: 'pointer' },
           })}
         >
-          <Feather name="log-out" size={20} color="#ef5350" />
+          <Feather name="log-out" size={20} color={DESIGN_TOKENS.colors.danger} /> {/* ✅ ИСПРАВЛЕНИЕ: Используем единый danger цвет */}
           <Text style={styles.logoutText}>Выйти</Text>
         </Pressable>
       </ScrollView>
@@ -205,7 +234,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: DESIGN_TOKENS.colors.mutedBackground, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
   },
   scrollView: {
     flex: 1,
@@ -222,8 +251,8 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     paddingVertical: 24,
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    borderRadius: DESIGN_TOKENS.radii.lg, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     marginBottom: 16,
     ...Platform.select({
       web: {
@@ -251,7 +280,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#4a8c8c',
+    borderColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
   },
   userName: {
     fontSize: 20,
@@ -270,8 +299,8 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     padding: 16,
     alignItems: 'center',
     ...Platform.select({
@@ -302,8 +331,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   menuContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    borderRadius: DESIGN_TOKENS.radii.lg, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     marginBottom: 16,
     overflow: 'hidden',
     ...Platform.select({
@@ -325,11 +354,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
+    minHeight: 56, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: DESIGN_TOKENS.colors.border, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     ...Platform.select({
       web: {
-        transition: 'background-color 0.2s ease',
+        transition: 'all 0.2s ease',
+        cursor: 'pointer',
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        },
       },
     }),
   },
@@ -362,21 +397,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     borderWidth: 1,
-    borderColor: '#ef5350',
+    borderColor: DESIGN_TOKENS.colors.danger, // ✅ ИСПРАВЛЕНИЕ: Используем единый danger цвет
     gap: 8,
+    minHeight: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
     ...Platform.select({
       web: {
         cursor: 'pointer',
         transition: 'all 0.2s ease',
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: DESIGN_TOKENS.colors.dangerSoft,
+          borderColor: DESIGN_TOKENS.colors.danger,
+        },
       },
     }),
   },
   logoutText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ef5350',
+    color: DESIGN_TOKENS.colors.danger, // ✅ ИСПРАВЛЕНИЕ: Используем единый danger цвет
   },
 });
