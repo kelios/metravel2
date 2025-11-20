@@ -6,6 +6,7 @@
 
 import { Platform, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { MODERN_MATTE_PALETTE } from '@/constants/modernMattePalette'
 
 export const globalFocusStyles = StyleSheet.create({
   /**
@@ -16,7 +17,7 @@ export const globalFocusStyles = StyleSheet.create({
     ...Platform.select({
       web: {
         outlineWidth: 2,
-        outlineColor: DESIGN_TOKENS.colors.primary,
+        outlineColor: DESIGN_TOKENS.colors.transparent,
         outlineStyle: 'solid',
         outlineOffset: 2,
         transition: 'outline 0.2s ease',
