@@ -8,7 +8,7 @@ type Html2Pdf = (element: HTMLElement | string, options?: any) => {
 
 declare global {
     interface Window {
-        html2pdf?: Html2Pdf & { (): Html2Pdf };
+        html2pdf?: Html2Pdf & (() => any);
     }
 }
 

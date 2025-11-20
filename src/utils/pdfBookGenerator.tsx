@@ -58,6 +58,57 @@ interface TemplateTheme {
 }
 
 const TEMPLATE_THEMES: Record<TemplateName, TemplateTheme> = {
+  light: {
+    accent: '#4f46e5',
+    accentStrong: '#4338ca',
+    accentSoft: '#e0e7ff',
+    text: '#1f2937',
+    muted: '#6b7280',
+    mutedLight: '#a5b4fc',
+    pageBackground: '#f3f4f6',
+    surface: '#ffffff',
+    surfaceAlt: '#eef2ff',
+    border: '#e0e7ff',
+    highlight: '#eef2ff',
+    coverGradient: ['#6366f1', '#a5b4fc'],
+    coverText: '#ffffff',
+    headingFont: "'Roboto Slab', 'Georgia', serif",
+    bodyFont: "'Source Sans Pro', 'Helvetica Neue', sans-serif",
+  },
+  dark: {
+    accent: '#facc15',
+    accentStrong: '#eab308',
+    accentSoft: '#fde047',
+    text: '#f9fafb',
+    muted: '#d1d5db',
+    mutedLight: '#9ca3af',
+    pageBackground: '#111827',
+    surface: '#1f2937',
+    surfaceAlt: '#0f172a',
+    border: '#374151',
+    highlight: '#1f2937',
+    coverGradient: ['#0f172a', '#4c1d95'],
+    coverText: '#f9fafb',
+    headingFont: "'Space Grotesk', 'Inter', sans-serif",
+    bodyFont: "'Inter', 'Segoe UI', sans-serif",
+  },
+  'travel-magazine': {
+    accent: '#f97316',
+    accentStrong: '#ea580c',
+    accentSoft: '#ffedd5',
+    text: '#111827',
+    muted: '#6b7280',
+    mutedLight: '#a1a1aa',
+    pageBackground: '#fff7ed',
+    surface: '#ffffff',
+    surfaceAlt: '#fff4e5',
+    border: '#fed7aa',
+    highlight: '#fff7ed',
+    coverGradient: ['#f97316', '#fb923c'],
+    coverText: '#111827',
+    headingFont: "'Oswald', 'Montserrat', sans-serif",
+    bodyFont: "'Roboto', 'Helvetica Neue', sans-serif",
+  },
   classic: {
     accent: '#ff9f5a',
     accentStrong: '#ff8c42',
@@ -1049,4 +1100,3 @@ export async function buildPhotoBookHTML(
 
   return sanitizedHtml;
 }
-

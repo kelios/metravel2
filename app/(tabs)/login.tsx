@@ -220,19 +220,18 @@ export default function Login() {
                                                 >
                                                     <Text style={styles.forgot}>Забыли пароль?</Text>
                                                 </TouchableOpacity>
-                                            </>
+                                            <View style={styles.registerContainer}>
+                                                <Text style={styles.registerText}>Нет аккаунта? </Text>
+                                                <TouchableOpacity 
+                                                    onPress={() => router.push('/registration' as any)} 
+                                                    disabled={isSubmitting}
+                                                >
+                                                    <Text style={styles.registerLink}>Зарегистрируйтесь</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </>
                                         )}
                                     </Formik>
-
-                                    <View style={styles.registerContainer}>
-                                        <Text style={styles.registerText}>Нет аккаунта? </Text>
-                                        <TouchableOpacity 
-                                            onPress={() => router.push('/registration' as any)} 
-                                            disabled={isSubmitting}
-                                        >
-                                            <Text style={styles.registerLink}>Зарегистрируйтесь</Text>
-                                        </TouchableOpacity>
-                                    </View>
                                 </Card.Content>
                             </Card>
                         </View>

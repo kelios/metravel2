@@ -487,7 +487,7 @@ export const fetchArticles = async (
     page: number,
     itemsPerPage: number,
     urlParams: Record<string, any>,
-) => {
+): Promise<{ data: any[]; total: number }> => {
     try {
         // ✅ ИСПРАВЛЕНИЕ: Используем moderation и publish из urlParams, если они есть
         const whereObject = {
@@ -505,10 +505,22 @@ export const fetchArticles = async (
 
         const urlArticles = `${GET_ARTICLES}?${params}`;
         const res = await fetchWithTimeout(urlArticles, {}, LONG_TIMEOUT);
-        return await safeJsonParse<any[]>(res, []);
+        const result = await safeJsonParse<any>(res, []);
+
+        if (Array.isArray(result)) {
+            return { data: result, total: result.length };
+        }
+
+        if (result && typeof result === 'object') {
+            const data = Array.isArray(result.data) ? result.data : [];
+            const total = typeof result.total === 'number' ? result.total : data.length;
+            return { data, total };
+        }
+
+        return { data: [], total: 0 };
     } catch (e: any) {
         devError('Error fetching Articles:', e);
-        return [];
+        return { data: [], total: 0 };
     }
 };
 

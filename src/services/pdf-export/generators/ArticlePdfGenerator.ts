@@ -1,7 +1,7 @@
 // src/services/pdf-export/generators/ArticlePdfGenerator.ts
 // ✅ АРХИТЕКТУРА: Генератор HTML для PDF одной статьи путешествия
 
-import type { ArticlePdfModel } from '@/src/types/article-pdf';
+import type { ArticlePdfModel, Section } from '@/src/types/article-pdf';
 import type { PdfThemeConfig } from '../themes/PdfThemeConfig';
 import { getThemeConfig } from '../themes/PdfThemeConfig';
 
@@ -624,7 +624,7 @@ export class ArticlePdfGenerator {
 
       case 'list':
         const tagName = section.ordered ? 'ol' : 'ul';
-        const items = section.items.map((item) => `<li>${this.escapeHtml(item)}</li>`).join('');
+        const items = section.items.map((item: string) => `<li>${this.escapeHtml(item)}</li>`).join('');
         return `<${tagName}>${items}</${tagName}>`;
 
       case 'quote':
@@ -643,7 +643,7 @@ export class ArticlePdfGenerator {
         </div>`;
 
       case 'imageGallery':
-        const galleryImages = section.images.map((img) => 
+        const galleryImages = section.images.map((img: { url: string; alt?: string }) => 
           `<img src="${this.escapeHtml(img.url)}" alt="${this.escapeHtml(img.alt || '')}" />`
         ).join('');
         return `
@@ -828,4 +828,3 @@ export class ArticlePdfGenerator {
     return many;
   }
 }
-

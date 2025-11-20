@@ -70,7 +70,7 @@ export class ArticleConstructorService {
       dpi: config.dpi || 300,
       imageFormat: config.imageFormat || 'png',
       imageQuality: config.imageQuality || 0.95,
-      optimizeImages: config.optimimizeImages ?? true,
+      optimizeImages: config.optimizeImages ?? true,
       compressPdf: config.compressPdf ?? true,
     };
 
@@ -162,4 +162,3 @@ export class ArticleConstructorService {
     }
   }
 }
-

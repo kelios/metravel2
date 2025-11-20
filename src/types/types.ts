@@ -39,6 +39,13 @@ export type Travel = {
     monthName: string
     number_days: number
     companions: String[]
+    coordsMeTravel?: Array<{
+        lat: number
+        lng: number
+        title?: string
+        description?: string
+        coord?: string
+    }>
 
     countryCode: string
     // Дополнительные поля, которые могут приходить из API
@@ -102,14 +109,7 @@ export type Travels = {
 }
 
 export type Articles = {
-    data: {
-        id?: number
-        name: string
-        description: string
-        article_image_thumb_url: string
-        article_image_thumb_small_url: string
-        article_type: ArticleType
-    }
+    data: Article[]
     total: number
 }
 
@@ -218,5 +218,3 @@ export interface MarkerData {
     categories: number[];
     image: string;
 }
-
-

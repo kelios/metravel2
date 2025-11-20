@@ -12,7 +12,7 @@ export const defaultQueryOptions: DefaultOptions = {
     staleTime: 5 * 60 * 1000, // 5 минут
     
     // Время хранения данных в кеше после удаления из памяти
-    cacheTime: 10 * 60 * 1000, // 10 минут
+    gcTime: 10 * 60 * 1000, // 10 минут
     
     // Количество повторных попыток при ошибке
     retry: (failureCount, error: any) => {
@@ -69,21 +69,21 @@ export const queryConfigs = {
   // Для часто изменяющихся данных (списки, поиск)
   dynamic: {
     staleTime: 1 * 60 * 1000, // 1 минута
-    cacheTime: 5 * 60 * 1000, // 5 минут
+    gcTime: 5 * 60 * 1000, // 5 минут
     refetchOnMount: true,
   },
   
   // Для редко изменяющихся данных (профили, настройки)
   static: {
     staleTime: 30 * 60 * 1000, // 30 минут
-    cacheTime: 60 * 60 * 1000, // 1 час
+    gcTime: 60 * 60 * 1000, // 1 час
     refetchOnMount: false,
   },
   
   // Для критических данных (аутентификация)
   critical: {
     staleTime: 0, // Всегда проверять
-    cacheTime: 5 * 60 * 1000, // 5 минут
+    gcTime: 5 * 60 * 1000, // 5 минут
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   },
@@ -91,9 +91,8 @@ export const queryConfigs = {
   // Для больших списков (пагинация)
   paginated: {
     staleTime: 5 * 60 * 1000, // 5 минут
-    cacheTime: 10 * 60 * 1000, // 10 минут
+    gcTime: 10 * 60 * 1000, // 10 минут
     keepPreviousData: true,
     refetchOnMount: false,
   },
 };
-

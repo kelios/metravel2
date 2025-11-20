@@ -317,9 +317,9 @@ export async function mockAIMessage(userMessage: string): Promise<{
         // Поиск статей
         // fetchArticles не поддерживает поисковый запрос напрямую, используем только фильтры
         const articlesResult = await fetchArticles(0, 10, searchParams);
-        const articles = Array.isArray(articlesResult) 
-            ? articlesResult 
-            : (articlesResult?.data || []);
+        const articles = Array.isArray(articlesResult?.data)
+            ? articlesResult.data
+            : [];
 
         // Формируем ответ
         const replyText = formatResponse(keywords.intent, travels, articles, keywords);
@@ -348,4 +348,3 @@ export async function mockAIMessage(userMessage: string): Promise<{
         };
     }
 }
-

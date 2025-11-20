@@ -11,6 +11,7 @@
     // "module": "esnext" // можно явно указать, но лучше не переопределять
 
     "target": "esnext",
+    "module": "esnext",
     "moduleResolution": "node",
 
     // ✅ алиас @ на корень репо
@@ -22,7 +23,8 @@
     // если реально используешь отдельную папку под типы — ок; иначе можно убрать
     "typeRoots": ["./src/types", "./node_modules/@types"],
 
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["jest", "node"]
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }

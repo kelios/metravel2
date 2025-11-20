@@ -18,7 +18,7 @@ export class PageImageRenderer {
       dpi: config.dpi || 300,
       imageFormat: config.imageFormat || 'png',
       imageQuality: config.imageQuality || 0.95,
-      optimizeImages: config.optimimizeImages ?? true,
+      optimizeImages: config.optimizeImages ?? true,
       compressPdf: config.compressPdf ?? true,
     };
     this.imageLoader = ImageLoader.getInstance();
@@ -325,11 +325,12 @@ export class PageImageRenderer {
     const fontSize = styles.fontSize || (type === 'h1' ? theme.typography.headingSizes.h1 : type === 'h2' ? theme.typography.headingSizes.h2 : type === 'h3' ? theme.typography.headingSizes.h3 : theme.typography.bodySize);
     const fontFamily = styles.fontFamily || (type.startsWith('h') ? theme.typography.headingFont : theme.typography.bodyFont);
     const fontWeight = styles.fontWeight || (type.startsWith('h') ? 'bold' : 'normal');
+    const fontStyle = styles.fontStyle || 'normal';
     const color = styles.color || theme.colors.text;
     const lineHeight = styles.lineHeight || theme.typography.lineHeight;
     const textAlign = styles.textAlign || 'left';
 
-    ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+    ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`.trim().replace(/\s+/g, ' ');
     ctx.fillStyle = color;
     ctx.textAlign = textAlign as CanvasTextAlign;
     ctx.textBaseline = 'top';
@@ -508,8 +509,8 @@ export class PageImageRenderer {
     // Текст
     if (typeof block.content === 'string') {
       ctx.fillStyle = theme.colors.textSecondary;
-      ctx.fontStyle = 'italic';
-      this.renderText(ctx, block.content, x + 16 * pixelsPerMm, y + 16 * pixelsPerMm, width - 32 * pixelsPerMm, block.styles, theme, 'body');
+      const quoteStyles = { ...block.styles, fontStyle: 'italic' as const };
+      this.renderText(ctx, block.content, x + 16 * pixelsPerMm, y + 16 * pixelsPerMm, width - 32 * pixelsPerMm, quoteStyles, theme, 'body');
     }
   }
 
@@ -684,4 +685,3 @@ export class PageImageRenderer {
     });
   }
 }
-

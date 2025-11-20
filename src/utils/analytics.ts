@@ -3,7 +3,10 @@ const API_SECRET = process.env.EXPO_PUBLIC_GOOGLE_API_SECRET;
 
 const generateClientId = () => `${Date.now()}.${Math.floor(Math.random() * 1e9)}`;
 
-export const sendAnalyticsEvent = async (eventName, eventParams = {}) => {
+export const sendAnalyticsEvent = async (
+    eventName: string,
+    eventParams: Record<string, unknown> = {}
+) => {
     if (!MEASUREMENT_ID || !API_SECRET) {
         console.warn('GA4: Missing MEASUREMENT_ID or API_SECRET');
         return;
