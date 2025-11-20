@@ -2,6 +2,7 @@ import { MODERN_MATTE_PALETTE, MODERN_MATTE_SHADOWS, MODERN_MATTE_BOX_SHADOWS } 
 
 export const DESIGN_TOKENS = {
   colors: {
+    transparent: MODERN_MATTE_PALETTE.transparent,
     // Фоны (матовые, теплые)
     background: MODERN_MATTE_PALETTE.background,
     backgroundSecondary: MODERN_MATTE_PALETTE.backgroundSecondary,
