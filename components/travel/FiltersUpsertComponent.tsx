@@ -89,6 +89,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
         }
     };
 
+
     return (
         <ScrollView
             contentContainerStyle={{ flexGrow: 1 }}
@@ -125,6 +126,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                 </Button>
             ) : null}
 
+
             <CheckboxComponent
                 label="Сохранить как черновик"
                 value={!formData.publish}
@@ -154,7 +156,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             )}
 
             <MultiSelectField
-                label="Страны для путешествия"
+                label="Страны для путешествия *"
                 items={filters.countries}
                 value={formData.countries ?? []}
                 onChange={(countries) => setFormData({ ...formData, countries })}
@@ -163,7 +165,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             />
 
             <MultiSelectField
-                label="Категории путешествий"
+                label="Категории путешествий *"
                 items={filters.categories}
                 value={formData.categories ?? []}
                 onChange={(categories) => setFormData({ ...formData, categories })}

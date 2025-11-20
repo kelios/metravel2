@@ -76,7 +76,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
         height={height}
         loading={loading}
         decoding="async"
-        fetchPriority={priority}
+        fetchpriority={priority}
         style={webStyle}
         className={className}
         {...(props as any)}

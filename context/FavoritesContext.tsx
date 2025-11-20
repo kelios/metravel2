@@ -1,10 +1,52 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useAuth } from './AuthContext';
+import { apiClient } from '@/src/api/client';
+import { safeJsonParseString } from '@/src/utils/safeJsonParse';
+import { devError } from '@/src/utils/logger';
+import { getStorageBatch } from '@/src/utils/storageBatch';
 
 const FAVORITES_KEY = 'metravel_favorites';
 const VIEW_HISTORY_KEY = 'metravel_view_history';
+const SYNC_QUEUE_KEY = 'metravel_sync_queue';
 const MAX_HISTORY_ITEMS = 50;
+
+// Типы для очереди синхронизации
+type SyncAction = {
+    id: string;
+    type: 'add' | 'remove';
+    item: FavoriteItem;
+    timestamp: number;
+};
+
+// Проверка доступности сети
+const isOnline = (): boolean => {
+    if (Platform.OS === 'web') {
+        return typeof navigator !== 'undefined' && navigator.onLine;
+    }
+    // ✅ ИСПРАВЛЕНИЕ: Для React Native используем более надежный подход
+    // Проверяем сеть через обработку ошибок при синхронизации
+    // Для простоты считаем онлайн, если нет явных признаков офлайна
+    // Реальная проверка происходит при попытке синхронизации
+    return true;
+};
+
+// Вспомогательная функция для проверки сетевой ошибки
+const isNetworkError = (error: any): boolean => {
+    if (!error) return false;
+    const message = error?.message?.toLowerCase() || '';
+    const code = error?.code?.toLowerCase() || '';
+    return (
+        message.includes('network') ||
+        message.includes('fetch') ||
+        message.includes('timeout') ||
+        code === 'network_error' ||
+        code === 'econnrefused' ||
+        (Platform.OS === 'web' && !navigator.onLine)
+    );
+};
 
 export type FavoriteItem = {
     id: string | number;
@@ -45,36 +87,61 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
     const { isAuthenticated, userId } = useAuth();
     const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
     const [viewHistory, setViewHistory] = useState<ViewHistoryItem[]>([]);
+    const isProcessingQueueRef = useRef(false);
+    const processSyncQueueRef = useRef<(() => Promise<void>) | null>(null);
 
-    // Загрузка избранного при монтировании
-    useEffect(() => {
-        loadFavorites();
-        loadViewHistory();
-    }, [isAuthenticated, userId]);
-
-    const loadFavorites = async () => {
+    const loadFavorites = useCallback(async () => {
         try {
             const key = userId ? `${FAVORITES_KEY}_${userId}` : FAVORITES_KEY;
             const data = await AsyncStorage.getItem(key);
             if (data) {
-                setFavorites(JSON.parse(data));
+                // ✅ FIX-010: Используем безопасный парсинг JSON
+                setFavorites(safeJsonParseString(data, []));
             }
         } catch (error) {
-            console.error('Ошибка загрузки избранного:', error);
+            // ✅ FIX-007: Используем централизованный logger
+            devError('Ошибка загрузки избранного:', error);
         }
-    };
+    }, [userId]);
 
-    const loadViewHistory = async () => {
+    const loadViewHistory = useCallback(async () => {
         try {
             const key = userId ? `${VIEW_HISTORY_KEY}_${userId}` : VIEW_HISTORY_KEY;
             const data = await AsyncStorage.getItem(key);
             if (data) {
-                setViewHistory(JSON.parse(data));
+                // ✅ FIX-010: Используем безопасный парсинг JSON
+                setViewHistory(safeJsonParseString(data, []));
             }
         } catch (error) {
-            console.error('Ошибка загрузки истории:', error);
+            // ✅ FIX-007: Используем централизованный logger
+            devError('Ошибка загрузки истории:', error);
         }
-    };
+    }, [userId]);
+
+    // ✅ FIX-004: Оптимизированная загрузка favorites и viewHistory за один запрос
+    const loadFavoritesAndHistory = useCallback(async () => {
+        try {
+            const favoritesKey = userId ? `${FAVORITES_KEY}_${userId}` : FAVORITES_KEY;
+            const historyKey = userId ? `${VIEW_HISTORY_KEY}_${userId}` : VIEW_HISTORY_KEY;
+            
+            const storageData = await getStorageBatch([favoritesKey, historyKey]);
+            
+            if (storageData[favoritesKey]) {
+                // ✅ FIX-010: Используем безопасный парсинг JSON
+                setFavorites(safeJsonParseString(storageData[favoritesKey]!, []));
+            }
+            if (storageData[historyKey]) {
+                // ✅ FIX-010: Используем безопасный парсинг JSON
+                setViewHistory(safeJsonParseString(storageData[historyKey]!, []));
+            }
+        } catch (error) {
+            // ✅ FIX-007: Используем централизованный logger
+            devError('Ошибка загрузки избранного и истории:', error);
+            // Fallback на отдельные загрузки при ошибке
+            loadFavorites();
+            loadViewHistory();
+        }
+    }, [userId, loadFavorites, loadViewHistory]);
 
     const saveFavorites = async (newFavorites: FavoriteItem[]) => {
         try {
@@ -82,7 +149,8 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
             await AsyncStorage.setItem(key, JSON.stringify(newFavorites));
             setFavorites(newFavorites);
         } catch (error) {
-            console.error('Ошибка сохранения избранного:', error);
+            // ✅ FIX-007: Используем централизованный logger
+            devError('Ошибка сохранения избранного:', error);
         }
     };
 
@@ -92,9 +160,141 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
             await AsyncStorage.setItem(key, JSON.stringify(newHistory));
             setViewHistory(newHistory);
         } catch (error) {
-            console.error('Ошибка сохранения истории:', error);
+            // ✅ FIX-007: Используем централизованный logger
+            devError('Ошибка сохранения истории:', error);
         }
     };
+
+    /**
+     * Добавляет действие в очередь синхронизации
+     */
+    const addToSyncQueue = useCallback(async (item: FavoriteItem, action: 'add' | 'remove') => {
+        try {
+            const key = userId ? `${SYNC_QUEUE_KEY}_${userId}` : SYNC_QUEUE_KEY;
+            const queueData = await AsyncStorage.getItem(key);
+            // ✅ FIX-010: Используем безопасный парсинг JSON
+            const queue: SyncAction[] = queueData ? safeJsonParseString(queueData, []) : [];
+            
+            queue.push({
+                id: `${item.id}_${item.type}_${Date.now()}`,
+                type: action,
+                item,
+                timestamp: Date.now(),
+            });
+
+            await AsyncStorage.setItem(key, JSON.stringify(queue));
+        } catch (error) {
+            // ✅ FIX-007: Используем централизованный logger
+            devError('Ошибка добавления в очередь синхронизации:', error);
+        }
+    }, [userId]);
+
+    /**
+     * Синхронизирует избранное с сервером
+     */
+    const syncFavoriteToServer = useCallback(async (item: FavoriteItem, action: 'add' | 'remove') => {
+        if (!isAuthenticated || !userId) return;
+
+        try {
+            if (action === 'add') {
+                await apiClient.post(`/api/favorites/`, {
+                    item_id: item.id,
+                    item_type: item.type,
+                });
+            } else {
+                await apiClient.delete(`/api/favorites/${item.id}/`);
+            }
+        } catch (error) {
+            // ✅ ИСПРАВЛЕНИЕ: Проверяем, является ли ошибка сетевой
+            // Если это сетевая ошибка, добавляем в очередь для повторной попытки
+            if (isNetworkError(error)) {
+                await addToSyncQueue(item, action);
+            }
+            // Пробрасываем ошибку дальше для обработки в вызывающем коде
+            throw error;
+        }
+    }, [isAuthenticated, userId, addToSyncQueue]);
+
+    /**
+     * Обрабатывает очередь синхронизации
+     */
+    const processSyncQueue = useCallback(async () => {
+        if (!isAuthenticated || !userId || !isOnline() || isProcessingQueueRef.current) return;
+
+        isProcessingQueueRef.current = true;
+        try {
+            const key = `${SYNC_QUEUE_KEY}_${userId}`;
+            const queueData = await AsyncStorage.getItem(key);
+            if (!queueData) {
+                isProcessingQueueRef.current = false;
+                return;
+            }
+
+            // ✅ FIX-010: Используем безопасный парсинг JSON
+            const queue: SyncAction[] = safeJsonParseString(queueData, []);
+            if (queue.length === 0) {
+                isProcessingQueueRef.current = false;
+                return;
+            }
+
+            const processed: string[] = [];
+            for (const action of queue) {
+                try {
+                    await syncFavoriteToServer(action.item, action.type);
+                    processed.push(action.id);
+                } catch (error) {
+                    // Если не удалось синхронизировать, оставляем в очереди
+                    console.warn('Не удалось синхронизировать действие:', action.id);
+                }
+            }
+
+            // Удаляем обработанные действия
+            const remaining = queue.filter(a => !processed.includes(a.id));
+            if (remaining.length === 0) {
+                await AsyncStorage.removeItem(key);
+            } else {
+                await AsyncStorage.setItem(key, JSON.stringify(remaining));
+            }
+        } catch (error) {
+            console.error('Ошибка обработки очереди синхронизации:', error);
+        } finally {
+            isProcessingQueueRef.current = false;
+        }
+    }, [isAuthenticated, userId, syncFavoriteToServer]);
+
+    // Обновляем ref при изменении функции
+    useEffect(() => {
+        processSyncQueueRef.current = processSyncQueue;
+    }, [processSyncQueue]);
+
+    // ✅ FIX-004: Загрузка избранного и истории при монтировании (оптимизировано)
+    useEffect(() => {
+        loadFavoritesAndHistory();
+    }, [isAuthenticated, userId, loadFavoritesAndHistory]);
+
+    // Обработка очереди синхронизации при восстановлении сети
+    useEffect(() => {
+        if (!isAuthenticated || !isOnline()) return;
+
+        // Вызываем только если не обрабатываем уже
+        if (!isProcessingQueueRef.current && processSyncQueueRef.current) {
+            processSyncQueueRef.current();
+        }
+
+        // Слушаем события изменения сети (только для web)
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            const handleOnline = () => {
+                if (isAuthenticated && !isProcessingQueueRef.current && processSyncQueueRef.current) {
+                    processSyncQueueRef.current();
+                }
+            };
+
+            window.addEventListener('online', handleOnline);
+            return () => {
+                window.removeEventListener('online', handleOnline);
+            };
+        }
+    }, [isAuthenticated]);
 
     const addFavorite = useCallback(async (item: Omit<FavoriteItem, 'addedAt'>) => {
         const newFavorite: FavoriteItem = {
@@ -103,15 +303,75 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
         };
 
         const newFavorites = [...favorites, newFavorite];
-        await saveFavorites(newFavorites);
-    }, [favorites, userId]);
+        
+        try {
+            // Сохраняем локально
+            await saveFavorites(newFavorites);
+            
+            // Пробуем синхронизировать с сервером
+            if (isAuthenticated && isOnline()) {
+                try {
+                    await syncFavoriteToServer(newFavorite, 'add');
+                } catch (error) {
+                    // ✅ ИСПРАВЛЕНИЕ: Показываем уведомление только для сетевых ошибок
+                    if (isNetworkError(error)) {
+                        await addToSyncQueue(newFavorite, 'add');
+                        if (Platform.OS === 'web') {
+                            Toast.show({
+                                type: 'info',
+                                text1: 'Сохранено локально',
+                                text2: 'Синхронизация произойдет при восстановлении сети',
+                            });
+                        }
+                    } else {
+                        // Для других ошибок показываем общее сообщение
+                        if (Platform.OS === 'web') {
+                            Toast.show({
+                                type: 'error',
+                                text1: 'Ошибка синхронизации',
+                                text2: 'Не удалось синхронизировать с сервером',
+                            });
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Ошибка добавления в избранное:', error);
+            if (Platform.OS === 'web') {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Ошибка',
+                    text2: 'Не удалось добавить в избранное',
+                });
+            }
+            throw error;
+        }
+    }, [favorites, userId, isAuthenticated, syncFavoriteToServer, addToSyncQueue]);
 
     const removeFavorite = useCallback(async (id: string | number, type: 'travel' | 'article') => {
+        const favoriteToRemove = favorites.find(f => f.id === id && f.type === type);
         const newFavorites = favorites.filter(
             f => !(f.id === id && f.type === type)
         );
-        await saveFavorites(newFavorites);
-    }, [favorites, userId]);
+        
+        try {
+            // Сохраняем локально
+            await saveFavorites(newFavorites);
+            
+            // Пробуем синхронизировать с сервером
+            if (favoriteToRemove && isAuthenticated && isOnline()) {
+                try {
+                    await syncFavoriteToServer(favoriteToRemove, 'remove');
+                } catch (error) {
+                    // Если синхронизация не удалась, добавляем в очередь
+                    await addToSyncQueue(favoriteToRemove, 'remove');
+                }
+            }
+        } catch (error) {
+            console.error('Ошибка удаления из избранного:', error);
+            throw error;
+        }
+    }, [favorites, userId, isAuthenticated, syncFavoriteToServer, addToSyncQueue]);
 
     const isFavorite = useCallback((id: string | number, type: 'travel' | 'article') => {
         return favorites.some(f => f.id === id && f.type === type);

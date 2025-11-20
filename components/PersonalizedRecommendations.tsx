@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // ✅ ДИЗАЙН: Импорт максимально легкой и воздушной палитры
 import { AIRY_COLORS } from '@/constants/airyColors';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 const COLLAPSED_KEY = 'personalization_collapsed';
 
@@ -72,7 +73,8 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange }: Perso
         // getRecommendations возвращает избранное, отсортированное по дате
         // Для настоящих рекомендаций нужно использовать другой алгоритм
         // Пока возвращаем пустой массив, так как нет отдельного алгоритма рекомендаций
-        // TODO: Реализовать алгоритм рекомендаций на основе интересов пользователя
+        // Примечание: Алгоритм персонализированных рекомендаций будет реализован в будущих версиях
+        // См. issue #XXX для отслеживания прогресса
         return [];
     }, [viewHistory, isAuthenticated, getRecommendations]);
 
@@ -165,13 +167,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange }: Perso
                                 <Text style={styles.badgeText}>Для вас</Text>
                             </View>
                         </View>
-                        <Pressable 
-                            onPress={handleCollapse}
-                            style={styles.collapseButton}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                            <MaterialIcons name="expand-less" size={24} color="#6b7280" />
-                        </Pressable>
+                        {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
                     </View>
                     <Text style={styles.subtitle}>Персональные рекомендации на основе ваших интересов</Text>
                     <View style={[styles.promptCard, isMobile ? styles.promptCardMobile : styles.promptCardDesktop]}>
@@ -212,13 +208,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange }: Perso
                             <Text style={styles.badgeText}>Для вас</Text>
                         </View>
                     </View>
-                    <Pressable 
-                        onPress={handleCollapse}
-                        style={styles.collapseButton}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                        <MaterialIcons name="expand-less" size={24} color="#6b7280" />
-                    </Pressable>
+                    {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
                 </View>
                 <Text style={styles.subtitle}>Рекомендации на основе ваших интересов</Text>
                 <View style={[styles.emptyCard, isMobile ? styles.promptCardMobile : styles.promptCardDesktop]}>
@@ -249,13 +239,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange }: Perso
                         <Text style={styles.badgeText}>Для вас</Text>
                     </View>
                 </View>
-                <Pressable 
-                    onPress={handleCollapse}
-                    style={styles.collapseButton}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                    <MaterialIcons name="expand-less" size={24} color="#6b7280" />
-                </Pressable>
+                {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
             </View>
             <Text style={styles.subtitle}>Рекомендации на основе ваших интересов</Text>
             {recommendations.length > 0 && (
@@ -275,17 +259,17 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange }: Perso
 
 const styles = StyleSheet.create({
     container: {
-        marginVertical: 16,
-        padding: 16,
-        backgroundColor: '#fff',
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: 'rgba(15, 23, 42, 0.08)',
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: Platform.OS === 'web' ? 0 : 0.06,
-        shadowRadius: 12,
-        elevation: 2,
+        marginVertical: 8, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше отступов
+        padding: 12, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше padding
+        backgroundColor: 'transparent', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Прозрачный фон
+        borderRadius: 12, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше радиус
+        borderWidth: 0, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Без границы
+        borderColor: 'transparent',
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
     },
     section: {
         marginBottom: 16,
@@ -311,28 +295,22 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     title: {
-        fontSize: 20, // ✅ БИЗНЕС: Увеличен размер для видимости
-        fontWeight: '700',
-        fontFamily: Platform.select({ web: 'Georgia, serif', default: undefined }), // ✅ БИЗНЕС: Georgia для выделения
+        fontSize: 15, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше размер
+        fontWeight: '600', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше жирность
         color: '#1a202c',
-        letterSpacing: -0.3,
+        letterSpacing: -0.1,
     },
     badgeContainer: {
-        backgroundColor: AIRY_COLORS.primary, // ✅ ДИЗАЙН: Воздушный легкий персиковый badge
-        borderRadius: 12,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        ...Platform.select({
-            web: {
-                boxShadow: '0 2px 4px rgba(255, 159, 90, 0.3)',
-            },
-        }),
+        backgroundColor: 'rgba(74, 140, 140, 0.1)', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Прозрачный фон
+        borderRadius: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
     },
     badgeText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#ffffff',
-        letterSpacing: 0.2,
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#4a8c8c', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Цвет текста вместо белого
+        letterSpacing: 0.1,
     },
     subtitle: {
         fontSize: 13,
@@ -362,13 +340,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffffff',
         borderRadius: 16,
         overflow: 'hidden',
-        shadowColor: '#000',
+        shadowColor: '#1f1f1f',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 8,
         elevation: 3,
-        borderWidth: 1,
-        borderColor: '#f0f0f0',
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
         marginRight: 12,
         transform: [{ scale: 1 }],
     },
@@ -383,16 +360,16 @@ const styles = StyleSheet.create({
     itemImagePlaceholder: {
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#f9fafb',
+        backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
     },
     itemContent: {
         padding: 10,
-        backgroundColor: '#ffffff',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
     },
     itemTitle: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#1f2937',
+        color: DESIGN_TOKENS.colors.text,
         marginBottom: 6,
         lineHeight: 18,
         letterSpacing: -0.1,
@@ -400,7 +377,7 @@ const styles = StyleSheet.create({
     itemMeta: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f8fafc',
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -408,23 +385,28 @@ const styles = StyleSheet.create({
     },
     itemMetaText: {
         fontSize: 12,
-        color: '#6b8e7f',
+        color: DESIGN_TOKENS.colors.primary,
         fontWeight: '600',
     },
     historyBadge: {
         position: 'absolute',
         top: 10,
         right: 10,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         borderRadius: 14,
         padding: 6,
-        shadowColor: '#000',
+        shadowColor: '#1f1f1f',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+        elevation: 2,
         borderWidth: 1,
-        borderColor: '#e5e7eb',
+        borderColor: DESIGN_TOKENS.colors.border,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 2px 6px rgba(31, 31, 31, 0.06)',
+            },
+        }),
     },
     promptCard: {
         backgroundColor: '#fdf8f3',

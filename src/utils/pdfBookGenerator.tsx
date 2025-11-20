@@ -401,23 +401,24 @@ function buildLocationList(locations: NormalizedLocation[], theme: TemplateTheme
   return locations
     .map(
       (location, index) => `
-        <div style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 0;
-          border-bottom: 1px solid ${theme.border};">
-          <div style="width: 28px; height: 28px; border-radius: 50%; background: ${theme.accentSoft};
-            color: ${theme.accentStrong}; display: flex; align-items: center; justify-content: center;
-            font-weight: 700;">${index + 1}</div>
+        <div style="display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px;
+          border-bottom: 1px solid ${theme.border}; background: ${index % 2 === 0 ? theme.surface : theme.surfaceAlt};
+          border-radius: 6px; margin-bottom: 4px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: ${theme.accent};
+            color: #fff; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 12pt; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">${index + 1}</div>
           <div style="flex: 1;">
-            <div style="font-weight: 600; color: ${theme.text}; margin-bottom: 2px;">
+            <div style="font-weight: 600; color: ${theme.text}; margin-bottom: 4px; font-size: 11pt; line-height: 1.4;">
               ${escapeHtml(location.address)}
             </div>
             ${
               location.categoryName
-                ? `<div style="font-size: 11pt; color: ${theme.muted};">${escapeHtml(location.categoryName)}</div>`
+                ? `<div style="font-size: 10pt; color: ${theme.muted}; margin-bottom: 2px; font-weight: 500;">${escapeHtml(location.categoryName)}</div>`
                 : ''
             }
             ${
               location.coord
-                ? `<div style="font-size: 10pt; color: ${theme.mutedLight};">${escapeHtml(location.coord)}</div>`
+                ? `<div style="font-size: 9pt; color: ${theme.mutedLight}; font-family: monospace;">${escapeHtml(location.coord)}</div>`
                 : ''
             }
           </div>
@@ -446,7 +447,9 @@ function buildStyles(theme: TemplateTheme): string {
       font-family: ${theme.bodyFont};
       color: ${theme.text};
       background: ${theme.pageBackground};
-      line-height: 1.6;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
     .pdf-page {
       width: 210mm;
@@ -455,12 +458,45 @@ function buildStyles(theme: TemplateTheme): string {
       margin: 0 auto 16px;
       box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
       position: relative;
+      overflow: hidden;
     }
-    img { max-width: 100%; display: block; }
-    h1, h2, h3, h4 { font-family: ${theme.headingFont}; color: ${theme.text}; }
+    img { 
+      max-width: 100%; 
+      display: block; 
+      height: auto;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
+    h1, h2, h3, h4 { 
+      font-family: ${theme.headingFont}; 
+      color: ${theme.text};
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 0.5em;
+    }
+    p {
+      margin-bottom: 1em;
+      line-height: 1.7;
+      text-align: justify;
+      hyphens: auto;
+    }
+    ul, ol {
+      margin-bottom: 1em;
+      padding-left: 1.5em;
+      line-height: 1.7;
+    }
+    li {
+      margin-bottom: 0.5em;
+    }
     @media print {
       body { background: #ffffff; }
-      .pdf-page { page-break-after: always; box-shadow: none; margin: 0 auto; }
+      .pdf-page { 
+        page-break-after: always; 
+        box-shadow: none; 
+        margin: 0 auto;
+        width: 210mm;
+        min-height: 297mm;
+      }
     }
   `;
 }
@@ -565,26 +601,27 @@ function renderTocPage(options: {
         getPrimaryPhoto(travel);
       const thumb = buildSafeImageUrl(thumbRaw);
       return `
-        <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 16px;
-          padding: 12px 16px; background: ${theme.surface}; border-radius: 14px;
-          border: 1px solid ${theme.border}; box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);">
+        <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 14px;
+          padding: 14px 18px; background: ${theme.surface}; border-radius: 12px;
+          border: 2px solid ${theme.border}; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+          transition: all 0.2s ease;">
           ${
             thumb
-              ? `<div style="width: 52px; height: 52px; border-radius: 12px; overflow: hidden;">
+              ? `<div style="width: 56px; height: 56px; border-radius: 10px; overflow: hidden; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
                   <img src="${escapeHtml(thumb)}" alt="${escapeHtml(travel.name)}"
-                    style="width: 100%; height: 100%; object-fit: cover;" crossorigin="anonymous" />
+                    style="width: 100%; height: 100%; object-fit: cover; display: block;" crossorigin="anonymous" />
                 </div>`
-              : `<div style="width: 52px; height: 52px; border-radius: 12px; background: ${theme.accentSoft};
-                  display: flex; align-items: center; justify-content: center; font-size: 18pt;">🧭</div>`
+              : `<div style="width: 56px; height: 56px; border-radius: 10px; background: ${theme.accentSoft};
+                  display: flex; align-items: center; justify-content: center; font-size: 20pt; flex-shrink: 0;">🧭</div>`
           }
-          <div>
-            <div style="font-weight: 700; font-size: 14pt;">${index + 1}. ${escapeHtml(travel.name)}</div>
-            <div style="font-size: 11pt; color: ${theme.muted}; display: flex; gap: 12px;">
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-weight: 700; font-size: 15pt; margin-bottom: 4px; color: ${theme.text}; line-height: 1.3;">${index + 1}. ${escapeHtml(travel.name)}</div>
+            <div style="font-size: 10.5pt; color: ${theme.muted}; display: flex; gap: 14px; flex-wrap: wrap; font-weight: 500;">
               ${travel.countryName ? `<span>📍 ${escapeHtml(travel.countryName)}</span>` : ''}
               ${travel.year ? `<span>📅 ${escapeHtml(String(travel.year))}</span>` : ''}
             </div>
           </div>
-          <div style="font-weight: 700; color: ${theme.accent}; font-size: 16pt;">
+          <div style="font-weight: 700; color: ${theme.accent}; font-size: 18pt; flex-shrink: 0; display: flex; align-items: center;">
             ${item.startPage}
           </div>
         </div>
@@ -593,17 +630,17 @@ function renderTocPage(options: {
     .join('');
 
   return `
-    <section class="pdf-page toc-page" style="padding: 30mm 28mm; background: linear-gradient(180deg, ${theme.surfaceAlt}, #ffffff);">
-      <div style="text-align: center; margin-bottom: 24mm;">
-        <h2 style="font-size: 34pt; margin-bottom: 8px;">Содержание</h2>
-        <p style="color: ${theme.muted}; font-size: 12pt;">
+    <section class="pdf-page toc-page" style="padding: 28mm 26mm; background: linear-gradient(180deg, ${theme.surfaceAlt}, #ffffff);">
+      <div style="text-align: center; margin-bottom: 22mm; padding-bottom: 16mm; border-bottom: 3px solid ${theme.accent};">
+        <h2 style="font-size: 36pt; margin-bottom: 10px; font-weight: 800; color: ${theme.text}; letter-spacing: -0.02em;">Содержание</h2>
+        <p style="color: ${theme.muted}; font-size: 13pt; font-weight: 500;">
           ${meta.length} ${meta.length === 1 ? 'путешествие' : meta.length < 5 ? 'путешествия' : 'путешествий'}
         </p>
       </div>
-      <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
         ${tocItems}
       </div>
-      <div style="position: absolute; bottom: 15mm; right: 25mm; font-size: 12pt; color: ${theme.mutedLight};">
+      <div style="position: absolute; bottom: 15mm; right: 25mm; font-size: 11pt; color: ${theme.mutedLight}; font-weight: 500;">
         ${pageNumber}
       </div>
     </section>
@@ -621,31 +658,32 @@ function renderTravelPhotoPage(options: { travel: TravelForBook; pageNumber: num
   ].filter(Boolean);
 
   return `
-    <section class="pdf-page travel-photo-page" style="padding: 20mm;">
+    <section class="pdf-page travel-photo-page" style="padding: 18mm;">
       ${
         safeCoverImage
-          ? `<div style="border-radius: 18px; overflow: hidden; position: relative; box-shadow: 0 15px 40px rgba(15,23,42,0.25);">
+          ? `<div style="border-radius: 16px; overflow: hidden; position: relative; box-shadow: 0 12px 32px rgba(15,23,42,0.2); height: 100%; min-height: 260mm;">
               <img src="${escapeHtml(safeCoverImage)}" alt="${escapeHtml(travel.name)}"
-                style="width: 100%; height: 210mm; object-fit: cover;" crossorigin="anonymous" />
+                style="width: 100%; height: 100%; object-fit: cover; display: block;" crossorigin="anonymous" 
+                onerror="this.style.display='none'; this.parentElement.style.background='${theme.accentSoft}';" />
               <div style="position: absolute; left: 0; right: 0; bottom: 0;
-                background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 100%);
-                padding: 24mm 18mm;">
-                <h1 style="color: #ffffff; font-size: 28pt; margin-bottom: 6mm;">${escapeHtml(travel.name)}</h1>
+                background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.85) 100%);
+                padding: 28mm 22mm;">
+                <h1 style="color: #ffffff; font-size: 32pt; margin-bottom: 8mm; font-weight: 800; line-height: 1.2; text-shadow: 0 4px 12px rgba(0,0,0,0.5);">${escapeHtml(travel.name)}</h1>
                 ${
                   metaPieces.length
-                    ? `<div style="color: rgba(255,255,255,0.9); font-size: 12pt; display: flex; gap: 14px;">
-                        ${metaPieces.join('<span>•</span>')}
+                    ? `<div style="color: rgba(255,255,255,0.95); font-size: 13pt; display: flex; gap: 16px; flex-wrap: wrap; font-weight: 500;">
+                        ${metaPieces.join('<span style="opacity: 0.7;">•</span>')}
                       </div>`
                     : ''
                 }
               </div>
             </div>`
-          : `<div style="border-radius: 18px; background: ${theme.accentSoft}; height: 210mm;
-              display: flex; align-items: center; justify-content: center; color: ${theme.accentStrong};">
-              <h1 style="font-size: 28pt;">${escapeHtml(travel.name)}</h1>
+          : `<div style="border-radius: 16px; background: linear-gradient(135deg, ${theme.accentSoft} 0%, ${theme.highlight} 100%); height: 260mm;
+              display: flex; align-items: center; justify-content: center; color: ${theme.accentStrong}; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+              <h1 style="font-size: 32pt; font-weight: 800; text-align: center; padding: 20mm;">${escapeHtml(travel.name)}</h1>
             </div>`
       }
-      <div style="position: absolute; bottom: 15mm; right: 25mm; font-size: 12pt; color: ${theme.mutedLight};">
+      <div style="position: absolute; bottom: 15mm; right: 25mm; font-size: 11pt; color: ${theme.mutedLight}; font-weight: 500;">
         ${pageNumber}
       </div>
     </section>
@@ -660,51 +698,91 @@ function renderTravelTextPage(options: {
   theme: TemplateTheme;
 }) {
   const { travel, qr, url, pageNumber, theme } = options;
+  
   const description = travel.description ? sanitizeRichText(travel.description) : null;
   const recommendation = travel.recommendation ? sanitizeRichText(travel.recommendation) : null;
   const plus = travel.plus ? sanitizeRichText(travel.plus) : null;
   const minus = travel.minus ? sanitizeRichText(travel.minus) : null;
 
+  // ✅ УЛУЧШЕНИЕ ВЕРСТКИ: Добавляем стили для улучшения читаемости HTML контента
+  const contentStyles = `
+    <style>
+      .travel-text-page p {
+        margin-bottom: 1em;
+        line-height: 1.75;
+        text-align: justify;
+      }
+      .travel-text-page h1, .travel-text-page h2, .travel-text-page h3 {
+        margin-top: 1.2em;
+        margin-bottom: 0.6em;
+        font-weight: 700;
+        line-height: 1.3;
+      }
+      .travel-text-page ul, .travel-text-page ol {
+        margin-bottom: 1em;
+        padding-left: 1.5em;
+      }
+      .travel-text-page li {
+        margin-bottom: 0.4em;
+        line-height: 1.7;
+      }
+      .travel-text-page img {
+        max-width: 100%;
+        height: auto;
+        margin: 1em 0;
+        border-radius: 6px;
+      }
+      .travel-text-page strong, .travel-text-page b {
+        font-weight: 700;
+        color: ${theme.text};
+      }
+      .travel-text-page em, .travel-text-page i {
+        font-style: italic;
+      }
+    </style>
+  `;
+
   return `
-    <section class="pdf-page travel-text-page" style="padding: 28mm 30mm;">
-      <div style="display: flex; flex-direction: column; gap: 16px;">
+    <section class="pdf-page travel-text-page" style="padding: 25mm 28mm;">
+      ${contentStyles}
+      <div style="display: flex; flex-direction: column; gap: 20px;">
         <div>
-          <h2 style="font-size: 18pt; text-transform: uppercase; letter-spacing: 0.1em; color: ${theme.accent};">
+          <h2 style="font-size: 20pt; text-transform: uppercase; letter-spacing: 0.08em; color: ${theme.accent}; margin-bottom: 12px; font-weight: 700; border-left: 4px solid ${theme.accent}; padding-left: 12px;">
             Описание
           </h2>
-          <div style="font-size: 12pt; color: ${theme.text};">
+          <div style="font-size: 11pt; color: ${theme.text}; line-height: 1.75; text-align: justify;">
             ${
               description ||
-              `<p style="color: ${theme.mutedLight}; font-style: italic;">Описание путешествия отсутствует</p>`
+              `<p style="color: ${theme.mutedLight}; font-style: italic; margin: 0;">Описание путешествия отсутствует</p>`
             }
           </div>
         </div>
         ${
           recommendation
             ? `<div>
-                <h2 style="font-size: 18pt; text-transform: uppercase; letter-spacing: 0.1em; color: ${theme.accent};">
+                <h2 style="font-size: 20pt; text-transform: uppercase; letter-spacing: 0.08em; color: ${theme.accent}; margin-bottom: 12px; font-weight: 700; border-left: 4px solid ${theme.accent}; padding-left: 12px;">
                   Рекомендации
                 </h2>
-                <div style="font-size: 12pt;">${recommendation}</div>
+                <div style="font-size: 11pt; line-height: 1.75; text-align: justify;">${recommendation}</div>
               </div>`
             : ''
         }
         ${
           plus || minus
-            ? `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px;">
+            ? `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px;">
                 ${
                   plus
-                    ? `<div style="background: #f0fdf4; border-radius: 12px; padding: 12px 14px; border: 1px solid #86efac;">
-                        <h3 style="margin-bottom: 8px; color: #15803d;">Плюсы</h3>
-                        <div style="font-size: 11pt;">${plus}</div>
+                    ? `<div style="background: #f0fdf4; border-radius: 10px; padding: 16px 18px; border: 2px solid #86efac; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.1);">
+                        <h3 style="margin: 0 0 10px 0; color: #15803d; font-size: 14pt; font-weight: 700;">Плюсы</h3>
+                        <div style="font-size: 10.5pt; line-height: 1.7; color: #166534;">${plus}</div>
                       </div>`
                     : ''
                 }
                 ${
                   minus
-                    ? `<div style="background: #fef2f2; border-radius: 12px; padding: 12px 14px; border: 1px solid #fca5a5;">
-                        <h3 style="margin-bottom: 8px; color: #b91c1c;">Минусы</h3>
-                        <div style="font-size: 11pt;">${minus}</div>
+                    ? `<div style="background: #fef2f2; border-radius: 10px; padding: 16px 18px; border: 2px solid #fca5a5; box-shadow: 0 2px 8px rgba(185, 28, 28, 0.1);">
+                        <h3 style="margin: 0 0 10px 0; color: #b91c1c; font-size: 14pt; font-weight: 700;">Минусы</h3>
+                        <div style="font-size: 10.5pt; line-height: 1.7; color: #991b1b;">${minus}</div>
                       </div>`
                     : ''
                 }
@@ -713,15 +791,15 @@ function renderTravelTextPage(options: {
         }
         ${
           url
-            ? `<div style="margin-top: 24px; display: flex; gap: 16px; align-items: center; border-top: 1px solid ${theme.border}; padding-top: 16px;">
+            ? `<div style="margin-top: 28px; display: flex; gap: 18px; align-items: flex-start; border-top: 2px solid ${theme.border}; padding-top: 20px;">
                 ${
                   qr
-                    ? `<img src="${qr}" alt="QR" style="width: 45mm; height: 45mm; border-radius: 12px; border: 4px solid ${theme.surfaceAlt};" />`
+                    ? `<img src="${qr}" alt="QR" style="width: 50mm; height: 50mm; border-radius: 10px; border: 3px solid ${theme.surfaceAlt}; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />`
                     : ''
                 }
-                <div style="font-size: 11pt; color: ${theme.muted};">
-                  <div style="text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;">Онлайн-версия</div>
-                  <div style="word-break: break-all;">${escapeHtml(url)}</div>
+                <div style="font-size: 10.5pt; color: ${theme.muted}; flex: 1;">
+                  <div style="text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; margin-bottom: 8px; color: ${theme.accent}; font-size: 11pt;">Онлайн-версия</div>
+                  <div style="word-break: break-all; line-height: 1.6; color: ${theme.text};">${escapeHtml(url)}</div>
                 </div>
               </div>`
             : ''
@@ -745,32 +823,34 @@ function renderGalleryPage(options: { travel: TravelForBook; pageNumber: number;
   if (!photos.length) return '';
 
   const columns = photos.length <= 4 ? 2 : photos.length <= 6 ? 3 : 4;
+  const imageHeight = photos.length <= 4 ? '80mm' : photos.length <= 6 ? '65mm' : '55mm';
 
   return `
-    <section class="pdf-page gallery-page" style="padding: 22mm 24mm;">
-      <div style="text-align: center; margin-bottom: 16mm;">
-        <h2 style="font-size: 22pt; margin-bottom: 4mm;">Фотогалерея</h2>
-        <p style="color: ${theme.muted};">${escapeHtml(travel.name)}</p>
+    <section class="pdf-page gallery-page" style="padding: 20mm 22mm;">
+      <div style="text-align: center; margin-bottom: 18mm;">
+        <h2 style="font-size: 24pt; margin-bottom: 6mm; font-weight: 700; color: ${theme.text}; letter-spacing: 0.02em;">Фотогалерея</h2>
+        <p style="color: ${theme.muted}; font-size: 12pt; font-weight: 500;">${escapeHtml(travel.name)}</p>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: 8mm;">
+      <div style="display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: 6mm;">
         ${photos
           .map(
             (photo, index) => `
-              <div style="border-radius: 12px; overflow: hidden; position: relative; box-shadow: 0 8px 20px rgba(15,23,42,0.15);">
+              <div style="border-radius: 10px; overflow: hidden; position: relative; box-shadow: 0 4px 12px rgba(15,23,42,0.12); background: ${theme.surfaceAlt};">
                 <img src="${escapeHtml(photo)}" alt="Фото ${index + 1}"
-                  style="width: 100%; height: 70mm; object-fit: cover;" crossorigin="anonymous" />
-                <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.55);
-                  color: #fff; width: 28px; height: 28px; border-radius: 50%; display: flex;
-                  align-items: center; justify-content: center; font-size: 11pt;">${index + 1}</div>
+                  style="width: 100%; height: ${imageHeight}; object-fit: cover; display: block;" crossorigin="anonymous" 
+                  onerror="this.style.display='none'; this.parentElement.style.background='#f3f4f6';" />
+                <div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7);
+                  color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex;
+                  align-items: center; justify-content: center; font-size: 11pt; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${index + 1}</div>
               </div>
             `
           )
           .join('')}
       </div>
-      <div style="margin-top: 12mm; text-align: center; color: ${theme.muted}; font-size: 11pt;">
+      <div style="margin-top: 14mm; text-align: center; color: ${theme.muted}; font-size: 11pt; font-weight: 500;">
         ${photos.length} ${photos.length === 1 ? 'фотография' : photos.length < 5 ? 'фотографии' : 'фотографий'}
       </div>
-      <div style="position: absolute; bottom: 15mm; right: 25mm; font-size: 12pt; color: ${theme.mutedLight};">
+      <div style="position: absolute; bottom: 15mm; right: 25mm; font-size: 11pt; color: ${theme.mutedLight}; font-weight: 500;">
         ${pageNumber}
       </div>
     </section>
@@ -965,7 +1045,6 @@ export async function buildPhotoBookHTML(
 
   if (sanitizedHtml.includes('var(')) {
     const tokens = sanitizedHtml.match(/var\([^)]*\)/g);
-    console.warn('[PDFGenerator] Unresolved CSS variables detected:', tokens);
   }
 
   return sanitizedHtml;

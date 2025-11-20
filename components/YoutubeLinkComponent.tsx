@@ -1,76 +1,111 @@
 import React, {useEffect, useState} from 'react';
-import {StyleSheet, Text, TextInput, View} from 'react-native';
+import {StyleSheet, Text, TextInput, View, Platform} from 'react-native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface YoutubeLinkComponentProps {
     label: string;
     value: string;
     onChange: (value: string) => void;
+    error?: string | null;
+    hint?: string;
 }
 
-const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({ label, value, onChange }) => {
+const palette = DESIGN_TOKENS.colors;
+
+const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({ 
+    label, 
+    value, 
+    onChange,
+    error,
+    hint,
+}) => {
     const [inputValue, setInputValue] = useState(value);
-    const [isValid, setIsValid] = useState(true);
 
     useEffect(() => {
         setInputValue(value);
     }, [value]);
 
-    const validateYoutubeUrl = (url: string) => {
-        const regex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})(\S+)?$/;
-        return regex.test(url);
+    const handleChange = (text: string) => {
+        setInputValue(text);
+        onChange(text);
     };
 
-    const handleBlur = () => {
-        if (inputValue.trim() === '') {
-            setIsValid(true);
-            onChange('');
-            return;
-        }
-
-        const valid = validateYoutubeUrl(inputValue);
-        setIsValid(valid);
-        if (valid) {
-            onChange(inputValue);
-        }
-    };
+    const displayError = error || null;
 
     return (
         <View style={styles.container}>
             <Text style={styles.label}>{label}</Text>
+            {hint && !displayError && (
+                <Text style={styles.hint}>{hint}</Text>
+            )}
             <TextInput
-                style={[styles.input, !isValid && styles.invalidInput]}
+                style={[
+                    styles.input,
+                    displayError && styles.invalidInput,
+                ]}
                 value={inputValue}
-                onChangeText={setInputValue}
-                onBlur={handleBlur}
+                onChangeText={handleChange}
                 placeholder="Введите ссылку на YouTube"
+                placeholderTextColor={palette.textMuted}
+                {...Platform.select({
+                    web: {
+                        outlineWidth: 0,
+                        // @ts-ignore
+                        ':focus': {
+                            borderColor: displayError ? '#ef4444' : palette.primary,
+                        },
+                    },
+                })}
             />
-            {!isValid && <Text style={styles.errorText}>Неверная ссылка на YouTube</Text>}
+            {displayError && (
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{displayError}</Text>
+                </View>
+            )}
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: 20,
+        marginBottom: 16,
     },
     label: {
-        marginBottom: 5,
-        fontSize: 16,
-        color: '#333',
+        marginBottom: 6,
+        fontSize: 14,
+        fontWeight: '600',
+        color: palette.text,
+    },
+    hint: {
+        fontSize: 12,
+        color: palette.textMuted,
+        marginBottom: 6,
     },
     input: {
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        padding: 10,
-        fontSize: 16,
+        borderColor: palette.border,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        fontSize: 15,
+        backgroundColor: palette.surface,
+        color: palette.text,
+        minHeight: 44,
+        ...Platform.select({
+            web: {
+                transition: 'border-color 0.2s ease',
+            },
+        }),
     },
     invalidInput: {
-        borderColor: 'red',
+        borderColor: '#ef4444',
+    },
+    errorContainer: {
+        marginTop: 4,
     },
     errorText: {
-        color: 'red',
-        marginTop: 5,
+        fontSize: 12,
+        color: '#ef4444',
     },
 });
 

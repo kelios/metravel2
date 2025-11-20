@@ -14,6 +14,7 @@ import RenderHTML from 'react-native-render-html'
 import { WebView } from 'react-native-webview'
 import { Card, Title } from 'react-native-paper'
 import { fetchArticle } from '@/src/api/travels'
+import { SafeHtml } from '@/components/SafeHtml'
 
 export default function ArticleDetails() {
   const { width } = useWindowDimensions()
@@ -53,8 +54,9 @@ export default function ArticleDetails() {
                   <Title>{article.name}</Title>
                   {Platform.select({
                     web: (
-                        <div
-                            dangerouslySetInnerHTML={{ __html: article.description }}
+                        <SafeHtml 
+                            html={article.description}
+                            style={{ marginTop: 16 }}
                         />
                     ),
                     default: (

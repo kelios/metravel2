@@ -1,30 +1,51 @@
 import React, {useState} from 'react'
-import {Dimensions, Image, StyleSheet, TextInput, View} from 'react-native'
+import {Dimensions, Image, StyleSheet, TextInput, View, Text, Platform} from 'react-native'
 import {Button, Card} from 'react-native-paper'
 import {useNavigation} from '@react-navigation/native'
 import {useRoute} from "@react-navigation/core";
 import {useAuth} from "@/context/AuthContext";
+import {Formik, FormikHelpers} from 'formik';
+import {setNewPasswordSchema} from '@/utils/validation';
+import FormFieldWithValidation from '@/components/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 
 const {width, height} = Dimensions.get('window')
 
-export default function login() {
+interface SetPasswordFormValues {
+    password: string;
+    confirmPassword: string;
+}
+
+export default function SetPassword() {
     const navigation = useNavigation();
     const route = useRoute();
-    const [newPassword, setParamNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
     const { setNewPassword } = useAuth();
+    const [msg, setMsg] = useState<{ text: string; error: boolean }>({ text: '', error: false });
 
-    const { password_reset_token } = route.params || {};
+    const routeParams = route.params as { password_reset_token?: string } || {};
+    const { password_reset_token } = routeParams;
 
-    const handleResetPassword = async () => {
-        if (newPassword !== confirmPassword) {
-            alert('Пароли не совпадают');
-            return;
+    const handleResetPassword = async (
+        values: SetPasswordFormValues,
+        { setSubmitting }: FormikHelpers<SetPasswordFormValues>
+    ) => {
+        try {
+            const success = await setNewPassword(password_reset_token, values.password);
+            if (success) {
+                setMsg({ text: 'Пароль успешно изменен', error: false });
+                setTimeout(() => {
+                    navigation.navigate('login' as never);
+                }, 1500);
+            } else {
+                setMsg({ text: 'Не удалось изменить пароль', error: true });
+            }
+        } catch (e: any) {
+            setMsg({ text: e?.message || 'Ошибка при изменении пароля', error: true });
+        } finally {
+            setSubmitting(false);
         }
-        setNewPassword(password_reset_token, newPassword);
-        // После успешного сброса пароля, возможно, стоит перенаправить пользователя на экран входа
-         navigation.navigate('login');
     };
 
     return (
@@ -35,29 +56,82 @@ export default function login() {
             />
             <Card style={styles.card}>
                 <Card.Content>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Новый пароль"
-                        secureTextEntry
-                        value={newPassword}
-                        onChangeText={setParamNewPassword}
-                    />
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Подтвердите пароль"
-                        secureTextEntry
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                    />
-                    <Button
-                        mode="contained"
-                        style={styles.applyButton}
-                        contentStyle={styles.applyButtonContent}
-                        onPress={handleResetPassword}
-                    >
-                        Сменить пароль
-                    </Button>
+                    {msg.text !== '' && (
+                        <Text style={[styles.message, msg.error ? styles.err : styles.ok]}>
+                            {msg.text}
+                        </Text>
+                    )}
 
+                    <Formik
+                        initialValues={{ password: '', confirmPassword: '' }}
+                        validationSchema={setNewPasswordSchema}
+                        onSubmit={handleResetPassword}
+                    >
+                        {({
+                            handleChange,
+                            handleBlur,
+                            handleSubmit,
+                            values,
+                            errors,
+                            touched,
+                            isSubmitting,
+                        }) => (
+                            <>
+                                {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для пароля */}
+                                <FormFieldWithValidation
+                                    label="Новый пароль"
+                                    error={touched.password && errors.password ? errors.password : null}
+                                    required
+                                >
+                                    <TextInput
+                                        style={[
+                                            styles.input,
+                                            touched.password && errors.password && styles.inputError,
+                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                                        ]}
+                                        placeholder="Новый пароль"
+                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                        secureTextEntry
+                                        value={values.password}
+                                        onChangeText={handleChange('password')}
+                                        onBlur={handleBlur('password')}
+                                    />
+                                </FormFieldWithValidation>
+
+                                {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для подтверждения пароля */}
+                                <FormFieldWithValidation
+                                    label="Подтвердите пароль"
+                                    error={touched.confirmPassword && errors.confirmPassword ? errors.confirmPassword : null}
+                                    required
+                                >
+                                    <TextInput
+                                        style={[
+                                            styles.input,
+                                            touched.confirmPassword && errors.confirmPassword && styles.inputError,
+                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                                        ]}
+                                        placeholder="Подтвердите пароль"
+                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                        secureTextEntry
+                                        value={values.confirmPassword}
+                                        onChangeText={handleChange('confirmPassword')}
+                                        onBlur={handleBlur('confirmPassword')}
+                                    />
+                                </FormFieldWithValidation>
+
+                                <Button
+                                    mode="contained"
+                                    style={styles.applyButton}
+                                    contentStyle={styles.applyButtonContent}
+                                    onPress={handleSubmit}
+                                    disabled={isSubmitting}
+                                    loading={isSubmitting}
+                                >
+                                    {isSubmitting ? 'Изменение...' : 'Сменить пароль'}
+                                </Button>
+                            </>
+                        )}
+                    </Formik>
                 </Card.Content>
             </Card>
         </View>
@@ -86,12 +160,22 @@ const styles = StyleSheet.create({
         height: 500,
     },
     input: {
-        marginBottom: 20,
+        marginBottom: 0, // ✅ ИСПРАВЛЕНИЕ: Отступ управляется FormFieldWithValidation
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 5,
-        padding: 10,
-        width: 500,
+        borderColor: DESIGN_TOKENS.colors.border,
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        padding: 12,
+        width: '100%',
+        maxWidth: 500,
+        fontSize: 16,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        color: DESIGN_TOKENS.colors.text,
+        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+        ...Platform.select({
+            web: {
+                transition: 'border-color 0.2s ease',
+            },
+        }),
     },
     text: {
         padding: 10,
@@ -112,5 +196,38 @@ const styles = StyleSheet.create({
     },
     applyButtonContent: {
         paddingVertical: 10
-    }
+    },
+    message: {
+        marginBottom: 15,
+        textAlign: 'center',
+        fontSize: 16,
+        padding: 12,
+        borderRadius: 8,
+        fontWeight: '500',
+    },
+    err: {
+        color: DESIGN_TOKENS.colors.danger,
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        borderLeftWidth: 3,
+        borderLeftColor: DESIGN_TOKENS.colors.danger,
+    },
+    ok: {
+        color: DESIGN_TOKENS.colors.success,
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        borderLeftWidth: 3,
+        borderLeftColor: DESIGN_TOKENS.colors.success,
+    },
+    inputError: {
+        borderColor: DESIGN_TOKENS.colors.danger,
+        borderWidth: 2,
+        backgroundColor: 'rgba(239, 68, 68, 0.05)', // ✅ ИСПРАВЛЕНИЕ: Светло-красный фон для ошибок
+    },
+    // ✅ ИСПРАВЛЕНИЕ: Стиль больше не используется (ошибки показываются через FormFieldWithValidation)
+    errorText: {
+        color: DESIGN_TOKENS.colors.danger,
+        fontSize: 12,
+        marginTop: -10,
+        marginBottom: 10,
+        marginLeft: 4,
+    },
 })

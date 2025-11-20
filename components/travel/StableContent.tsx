@@ -237,24 +237,82 @@ const WEB_RICH_TEXT_STYLES = `
   display: block;
   clear: both;
 }
+/* Instagram wrapper - обёртка для всех Instagram embed'ов */
+.${WEB_RICH_TEXT_CLASS} .instagram-wrapper,
 .${WEB_RICH_TEXT_CLASS} .instagram-media {
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
-  margin: 20px 0 !important;
+  margin: 24px auto !important;
   border-radius: 18px !important;
+  overflow: hidden !important;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  position: relative;
+  display: block;
 }
+
+/* Instagram iframe - занимает всю ширину, пропорциональная высота */
+.${WEB_RICH_TEXT_CLASS} .instagram-wrapper iframe,
+.${WEB_RICH_TEXT_CLASS} .instagram-embed,
 .${WEB_RICH_TEXT_CLASS} .instagram-media iframe,
-.${WEB_RICH_TEXT_CLASS} .instagram-media > * {
+.${WEB_RICH_TEXT_CLASS} iframe.ql-video[src*="instagram.com"],
+.${WEB_RICH_TEXT_CLASS} iframe[src*="instagram.com"] {
+  width: 100% !important;
   max-width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  aspect-ratio: 4 / 5 !important;
+  border: none !important;
+  border-radius: 18px !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
 }
+
+/* Скрытие лишних элементов внутри Instagram embed через CSS */
+/* Примечание: из-за CORS мы не можем напрямую изменять содержимое iframe,
+   но можем использовать CSS для скрытия элементов, которые рендерятся поверх iframe */
+.${WEB_RICH_TEXT_CLASS} .instagram-wrapper::before,
+.${WEB_RICH_TEXT_CLASS} .instagram-wrapper::after {
+  display: none !important;
+}
+
+/* Попытка скрыть элементы, которые могут рендериться поверх iframe */
+/* Эти стили применяются к элементам, которые Instagram может добавить в DOM */
+.${WEB_RICH_TEXT_CLASS} .instagram-wrapper + *,
+.${WEB_RICH_TEXT_CLASS} .instagram-wrapper ~ * {
+  /* Скрываем элементы после wrapper, которые могут быть добавлены Instagram скриптом */
+}
+
+/* Убираем лишние отступы и границы */
+.${WEB_RICH_TEXT_CLASS} .instagram-wrapper {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* Дополнительные стили для мобильных устройств */
+@media (max-width: 900px) {
+  .${WEB_RICH_TEXT_CLASS} .instagram-wrapper,
+  .${WEB_RICH_TEXT_CLASS} .instagram-media {
+    margin: 20px auto !important;
+    border-radius: 12px !important;
+  }
+  .${WEB_RICH_TEXT_CLASS} .instagram-wrapper iframe,
+  .${WEB_RICH_TEXT_CLASS} .instagram-embed,
+  .${WEB_RICH_TEXT_CLASS} .instagram-media iframe {
+    border-radius: 12px !important;
+  }
+}
+
+/* Стили для подписей Instagram */
 .${WEB_RICH_TEXT_CLASS} .instagram-caption {
-  font-size: 15px;
-  color: #374151;
+  font-size: 14px;
+  color: #6b7280;
   line-height: 1.5;
-  margin-top: 6px;
-  margin-bottom: 18px;
+  margin-top: 8px;
+  margin-bottom: 20px;
+  text-align: center;
 }
 .${WEB_RICH_TEXT_CLASS} .instagram-caption-text {
   display: inline;
@@ -356,8 +414,11 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
 
         if (isInstagram(src)) {
           const url = src.replace("/embed/captioned/", "/").split("?")[0];
+          const wrapperStyle = Platform.OS === "web" 
+            ? [styles.instagramEmbedWrapper, styles.instagramEmbedWrapperWeb]
+            : styles.instagramEmbedWrapper;
           return (
-            <View style={styles.instagramEmbedWrapper}>
+            <View style={wrapperStyle}>
               <Suspense fallback={<Text>Instagram…</Text>}>
                 <LazyInstagram url={url} />
               </Suspense>
@@ -507,6 +568,126 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
     document.head.appendChild(style);
   }, []);
 
+  // Обработка Instagram iframe'ов, вставленных напрямую в HTML
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+
+    let processing = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const processInstagramEmbeds = () => {
+      // Предотвращаем параллельные вызовы
+      if (processing) return;
+      processing = true;
+
+      try {
+        const richTextContainer = document.querySelector(`.${WEB_RICH_TEXT_CLASS}`);
+        if (!richTextContainer) {
+          processing = false;
+          return;
+        }
+
+        // Находим все iframe'ы с Instagram, которые ещё не обработаны
+        const instagramIframes = richTextContainer.querySelectorAll(
+          'iframe[src*="instagram.com"]:not(.instagram-processed), iframe.ql-video[src*="instagram.com"]:not(.instagram-processed)'
+        );
+
+        instagramIframes.forEach((iframe) => {
+          // Проверяем, не обёрнут ли уже
+          if (iframe.parentElement?.classList.contains('instagram-wrapper')) {
+            iframe.classList.add('instagram-processed');
+            return;
+          }
+
+          // Создаём обёртку
+          const wrapper = document.createElement('div');
+          wrapper.className = 'instagram-wrapper';
+          
+          // Перемещаем iframe в обёртку
+          iframe.parentNode?.insertBefore(wrapper, iframe);
+          wrapper.appendChild(iframe);
+          
+          // Добавляем классы к iframe
+          iframe.classList.add('instagram-embed', 'instagram-processed');
+        });
+
+        // Обрабатываем blockquote.instagram-media (если есть)
+        const instagramBlockquotes = richTextContainer.querySelectorAll(
+          'blockquote.instagram-media:not(.instagram-processed)'
+        );
+
+        instagramBlockquotes.forEach((blockquote) => {
+          // Убеждаемся, что у него правильные стили
+          blockquote.classList.add('instagram-wrapper', 'instagram-processed');
+        });
+      } catch (error) {
+        // Игнорируем ошибки обработки
+        if (__DEV__) {
+          console.warn('[StableContent] Error processing Instagram embeds:', error);
+        }
+      } finally {
+        processing = false;
+      }
+    };
+
+    // Debounced версия для MutationObserver
+    const debouncedProcess = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(() => {
+        processInstagramEmbeds();
+        timeoutId = null;
+      }, 300);
+    };
+
+    // Выполняем сразу
+    processInstagramEmbeds();
+
+    // Используем MutationObserver для обработки динамически загруженных embed'ов
+    // Но только для добавления новых элементов, не для изменений существующих
+    const observer = new MutationObserver((mutations) => {
+      // Проверяем, есть ли новые iframe'ы
+      const hasNewIframes = mutations.some((mutation) => {
+        return Array.from(mutation.addedNodes).some((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as Element;
+            return (
+              el.tagName === 'IFRAME' && 
+              (el.getAttribute('src')?.includes('instagram.com') || 
+               el.classList.contains('ql-video'))
+            ) || 
+            el.querySelector?.('iframe[src*="instagram.com"]');
+          }
+          return false;
+        });
+      });
+
+      if (hasNewIframes) {
+        debouncedProcess();
+      }
+    });
+
+    const richTextContainer = document.querySelector(`.${WEB_RICH_TEXT_CLASS}`);
+    if (richTextContainer) {
+      observer.observe(richTextContainer, {
+        childList: true,
+        subtree: true,
+      });
+    }
+
+    // Также обрабатываем после небольшой задержки (для асинхронно загружаемых embed'ов)
+    const initialTimeoutId = setTimeout(processInstagramEmbeds, 1000);
+
+    return () => {
+      observer.disconnect();
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      clearTimeout(initialTimeoutId);
+    };
+  }, [prepared]);
+
   if (Platform.OS === "web") {
     return (
       <div
@@ -562,5 +743,11 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
     alignSelf: "stretch",
     overflow: "hidden",
+  },
+  instagramEmbedWrapperWeb: {
+    width: "100vw",
+    maxWidth: "100vw",
+    marginLeft: "calc(50% - 50vw)",
+    marginRight: "calc(50% - 50vw)",
   },
 });

@@ -5,11 +5,13 @@ import {
   StyleSheet,
   Text,
   View,
+  Platform,
   type GestureResponderEvent,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -57,6 +59,7 @@ const ButtonComponent = ({
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
+        globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
         sizeStyles[size],
         variantStyles[variant],
         fullWidth && styles.fullWidth,
@@ -97,10 +100,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    minHeight: 44,
+    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     gap: spacing.xs,
+    ...Platform.select({
+      web: {
+        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        cursor: 'pointer',
+        willChange: 'transform, box-shadow, background-color',
+      },
+    }),
   },
   content: {
     flexDirection: 'row',
@@ -152,24 +162,87 @@ const sizeStyles: Record<ButtonSize, ViewStyle> = {
 const variantStyles: Record<ButtonVariant, ViewStyle> = {
   primary: {
     backgroundColor: palette.primary,
-    borderColor: 'transparent',
-    shadowColor: palette.primary,
-    shadowOpacity: 0.16,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 12,
-    elevation: 2,
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    shadowColor: '#1f1f1f',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 3,
+    ...Platform.select({
+      web: {
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: palette.primaryDark,
+          transform: 'translateY(-2px)',
+          boxShadow: '0 4px 12px rgba(31, 31, 31, 0.15), 0 2px 4px rgba(31, 31, 31, 0.1)',
+        },
+        ':active': {
+          transform: 'translateY(0)',
+          boxShadow: '0 2px 6px rgba(31, 31, 31, 0.12)',
+        },
+      },
+    }),
   },
   secondary: {
     backgroundColor: palette.surface,
-    borderColor: palette.border,
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    shadowColor: '#1f1f1f',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
+    ...Platform.select({
+      web: {
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: palette.primaryLight,
+          transform: 'translateY(-1px)',
+          boxShadow: '0 3px 10px rgba(31, 31, 31, 0.12), 0 1px 4px rgba(31, 31, 31, 0.08)',
+        },
+        ':active': {
+          transform: 'translateY(0)',
+        },
+      },
+    }),
   },
   ghost: {
     backgroundColor: 'transparent',
     borderColor: 'transparent',
+    ...Platform.select({
+      web: {
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: palette.primarySoft,
+          transform: 'translateY(-1px)',
+        },
+        ':active': {
+          transform: 'translateY(0)',
+        },
+      },
+    }),
   },
   danger: {
     backgroundColor: palette.danger,
-    borderColor: 'transparent',
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    shadowColor: '#1f1f1f',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 3,
+    ...Platform.select({
+      web: {
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: palette.dangerDark,
+          transform: 'translateY(-2px)',
+          boxShadow: '0 4px 12px rgba(31, 31, 31, 0.15), 0 2px 4px rgba(31, 31, 31, 0.1)',
+        },
+        ':active': {
+          transform: 'translateY(0)',
+          boxShadow: '0 2px 6px rgba(31, 31, 31, 0.12)',
+        },
+      },
+    }),
   },
 };
 

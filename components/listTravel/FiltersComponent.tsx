@@ -22,6 +22,9 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute } from "@react-navigation/native";
 import { debounce } from "lodash";
+import SearchAndFilterBar from "./SearchAndFilterBar";
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 /* ===================== */
 /*   Служебные элементы  */
@@ -40,20 +43,31 @@ const GroupBoxItem = memo(function GroupBoxItem({
 }) {
   return (
     <Pressable
-      style={[styles.checkboxRow, Platform.OS === "web" && { cursor: "pointer" }]}
+      style={[
+        styles.checkboxRow, 
+        Platform.OS === "web" && { cursor: "pointer" },
+        globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+      ]}
       onPress={onPress}
       aria-pressed={checked}
       role="checkbox"
       accessibilityLabel={title}
       accessibilityState={{ checked }}
       hitSlop={8}
+      {...Platform.select({
+        web: {
+          // ✅ ИСПРАВЛЕНИЕ: Убеждаемся, что элемент кликабелен на веб
+          pointerEvents: 'auto' as any,
+          userSelect: 'none' as any,
+        },
+      })}
     >
       <Feather 
         name={checked ? "check-square" : "square"} 
-        size={20} 
-        color={checked ? DESIGN_COLORS.primary : "#999"} // ✅ ДИЗАЙН: Оранжевый при активном
+        size={20} // ✅ ИСПРАВЛЕНИЕ: Увеличен размер для лучшей видимости
+        color={checked ? DESIGN_TOKENS.colors.primary : DESIGN_TOKENS.colors.textMuted} // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
       />
-      <Text style={[styles.itemText, checked && { color: DESIGN_COLORS.primary, fontWeight: "600" }]}>
+      <Text style={[styles.itemText, checked && { color: DESIGN_TOKENS.colors.primary, fontWeight: "600" }]}>
         {title}
       </Text>
     </Pressable>
@@ -76,17 +90,27 @@ const GroupBox = memo(function GroupBox({
   return (
     <View style={styles.groupBox}>
       <Pressable
-        style={[styles.groupHeader, Platform.OS === "web" && { cursor: "pointer" }]}
+        style={[
+          styles.groupHeader, 
+          Platform.OS === "web" && { cursor: "pointer" },
+          globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+        ]}
         onPress={() => toggle(field)}
         aria-expanded={open}
         accessibilityLabel={label}
         hitSlop={6}
+        {...Platform.select({
+          web: {
+            // ✅ ИСПРАВЛЕНИЕ: Убеждаемся, что элемент кликабелен на веб
+            pointerEvents: 'auto' as any,
+          },
+        })}
       >
         <Text style={styles.groupLabel}>{label}</Text>
         <Feather 
           name={open ? "chevron-up" : "chevron-down"} 
-          size={18} 
-          color={open ? DESIGN_COLORS.primary : DESIGN_COLORS.textSecondary} // ✅ ДИЗАЙН: Оранжевый при открытом
+          size={18} // ✅ ИСПРАВЛЕНИЕ: Увеличен размер для лучшей видимости
+          color={open ? DESIGN_TOKENS.colors.primary : DESIGN_TOKENS.colors.textMuted} // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
         />
       </Pressable>
 
@@ -94,12 +118,16 @@ const GroupBox = memo(function GroupBox({
         <View style={styles.itemsBox}>
           {items.map((it: any) => {
             const id = it[valKey];
+            // ✅ ИСПРАВЛЕНИЕ: Нормализуем типы для корректного сравнения (строки и числа)
+            const normalizedId = String(id);
+            const normalizedSelected = (selectedItems ?? []).map((v: any) => String(v));
+            const isChecked = normalizedSelected.includes(normalizedId);
             return (
               <GroupBoxItem
                 key={id}
                 id={id}
                 title={it[labelKey]}
-                checked={selectedItems.includes(id)}
+                checked={isChecked}
                 onPress={() => handleCheckForField(id)}
               />
             );
@@ -125,6 +153,13 @@ const FiltersComponent = ({
                             isCompact = false,
                             disableApplyOnMobileClose = false,
                             initialOpenState = {},
+                            search,
+                            setSearch,
+                            onToggleRecommendations,
+                            isRecommendationsVisible,
+                            resultsCount,
+                            hasFilters,
+                            onClearAll,
                           }) => {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -139,6 +174,7 @@ const FiltersComponent = ({
   const [yearOpen, setYearOpen] = useState(false);
   const [allExpanded, setAllExpanded] = useState(false);
   const [applying, setApplying] = useState(false); // ⟵ добавлено
+  const [yearApplied, setYearApplied] = useState(false); // ✅ UX: Индикатор применения фильтра по году
 
   const scrollRef = useRef<ScrollView>(null);
   const yearInputRef = useRef<TextInput>(null);
@@ -160,19 +196,32 @@ const FiltersComponent = ({
   const apply = useCallback(() => {
     Keyboard.dismiss();
 
+    // ✅ ИСПРАВЛЕНИЕ: Год всегда берем из локального состояния year, а не из filterValue
+    // Это гарантирует, что актуальное значение года попадет в запрос
+    const yearValue = year && typeof year === 'string' && year.trim() !== '' 
+      ? year.trim() 
+      : undefined;
+    
+    // ✅ ИСПРАВЛЕНИЕ: Обновляем год в filterValue перед применением
+    const updatedFilterValue = {
+      ...filterValue,
+      year: yearValue,
+    };
+
     // приводим пустые массивы к undefined, чтобы родитель не слал пустые фильтры
     const cleanedFilterValue = Object.fromEntries(
-      Object.entries(filterValue).map(([key, value]) => {
+      Object.entries(updatedFilterValue).map(([key, value]) => {
         if (Array.isArray(value) && value.length === 0) return [key, undefined];
         return [key, value];
       })
     );
 
     setApplying(true);
-    handleApplyFilters({
-      ...cleanedFilterValue,
-      year: year || undefined,
-    });
+    if (yearValue && yearValue.length === 4) {
+      setYearApplied(true); // ✅ UX: Показываем индикатор применения только если год валидный
+    }
+    
+    handleApplyFilters(cleanedFilterValue);
 
     // 🔧 МЯГКОЕ ЗАКРЫТИЕ НА МОБИЛЕ
     // даём одному-двум кадрам отрисоваться (чтобы список не мигал «Нет данных»),
@@ -191,38 +240,73 @@ const FiltersComponent = ({
     }
   }, [filterValue, year, isMobile, disableApplyOnMobileClose, handleApplyFilters, closeMenu]);
 
-  // единый дебаунс для авто-применения (мобила)
-  const debouncedApply = useMemo(() => debounce(apply, 300), [apply]);
-  useEffect(() => () => debouncedApply.cancel(), [debouncedApply]);
-
-  const toggle = useCallback((field: string) => {
-    setOpen((prev) => ({ ...prev, [field]: !prev[field] }));
+  // ✅ ИСПРАВЛЕНИЕ: Улучшенный дебаунс для предотвращения множественных применений
+  const debouncedApplyRef = useRef<ReturnType<typeof debounce> | null>(null);
+  
+  // ✅ ИСПРАВЛЕНИЕ: Создаем дебаунс один раз и переиспользуем
+  useEffect(() => {
+    debouncedApplyRef.current = debounce(apply, 400);
+    return () => {
+      debouncedApplyRef.current?.cancel();
+      debouncedApplyRef.current = null;
+    };
+  }, [apply]);
+  
+  const debouncedApply = useCallback(() => {
+    debouncedApplyRef.current?.();
   }, []);
 
-  // чекбоксы: обновляем и авто-применяем на мобиле
+  // ✅ UX: Синхронизация индикатора применения с filterValue.year
+  useEffect(() => {
+    if (filterValue.year && filterValue.year === year && year.length === 4) {
+      setYearApplied(true);
+    } else if (!filterValue.year || filterValue.year !== year) {
+      setYearApplied(false);
+    }
+  }, [filterValue.year, year]);
+
+  const toggle = useCallback((field: string) => {
+    setOpen((prev) => ({ ...prev, [field]: !(prev[field] ?? false) }));
+  }, []);
+
+  // чекбоксы: обновляем и авто-применяем всегда (без кнопок)
   const handleCheckForField = useCallback(
     (field: string) => (id: any) => {
       const selected = filterValue[field] ?? [];
-      const next = selected.includes(id) ? selected.filter((v: any) => v !== id) : [...selected, id];
+      // ✅ ИСПРАВЛЕНИЕ: Нормализуем типы для корректного сравнения (строки и числа)
+      const normalizedId = String(id);
+      const normalizedSelected = selected.map((v: any) => String(v));
+      const isSelected = normalizedSelected.includes(normalizedId);
+      const next = isSelected 
+        ? selected.filter((v: any) => String(v) !== normalizedId)
+        : [...selected, id];
       onSelectedItemsChange(field, next);
-      if (isMobile) debouncedApply();
+      debouncedApply(); // ✅ КОМПАКТНОСТЬ: Авто-применение всегда
     },
-    [filterValue, onSelectedItemsChange, debouncedApply, isMobile]
+    [filterValue, onSelectedItemsChange, debouncedApply]
   );
 
   const handleYearChange = useCallback(
     (text: string) => {
       const cleaned = text.replace(/[^0-9]/g, "").slice(0, 4);
       setYear(cleaned);
-      if (isMobile) {
-        if (cleaned.length === 4) debouncedApply();
+      setYearApplied(false); // ✅ UX: Сбрасываем индикатор при изменении
+      // ✅ ИСПРАВЛЕНИЕ: Немедленно обновляем год в фильтрах при изменении
+      const yearValue = cleaned && cleaned.length > 0 ? cleaned : undefined;
+      onSelectedItemsChange('year', yearValue);
+      // ✅ UX: Авто-применение при вводе 4 цифр
+      if (cleaned.length === 4) {
+        debouncedApply();
+        // Устанавливаем индикатор после debounce
+        setTimeout(() => setYearApplied(true), 400);
       }
     },
-    [debouncedApply, isMobile]
+    [debouncedApply, onSelectedItemsChange]
   );
 
   const handleReset = useCallback(() => {
     setYear("");
+    setYearApplied(false); // ✅ UX: Сбрасываем индикатор применения
     // ✅ ИСПРАВЛЕНИЕ: Сбрасываем все фильтры через onSelectedItemsChange перед вызовом resetFilters
     // Очищаем все поля фильтров явно
     const allFilterFields = [
@@ -267,11 +351,15 @@ const FiltersComponent = ({
   const handleToggleAll = useCallback(() => {
     const newState: Record<string, boolean> = {};
     groups.forEach(({ field, hidden }) => {
-      if (!hidden) newState[field] = !allExpanded;
+      if (!hidden) {
+        // ✅ ИСПРАВЛЕНИЕ: Учитываем текущее состояние, если оно есть
+        const currentState = open[field] ?? false;
+        newState[field] = !allExpanded ? true : false;
+      }
     });
     setOpen(newState);
     setAllExpanded(!allExpanded);
-  }, [groups, allExpanded]);
+  }, [groups, allExpanded, open]);
 
   /* ======= Модерация ======= */
   const renderModerationCheckbox = useMemo(
@@ -283,9 +371,10 @@ const FiltersComponent = ({
           <Text style={styles.groupLabel}>Модерация</Text>
           <View style={styles.itemsBox}>
             <Pressable
-              onPress={() =>
-                onSelectedItemsChange("moderation", isModerationPending ? undefined : 0)
-              }
+              onPress={() => {
+                onSelectedItemsChange("moderation", isModerationPending ? undefined : 0);
+                debouncedApply(); // ✅ КОМПАКТНОСТЬ: Авто-применение
+              }}
               style={[styles.checkboxRow, Platform.OS === "web" && { cursor: "pointer" }]}
               aria-pressed={isModerationPending}
               role="checkbox"
@@ -295,8 +384,8 @@ const FiltersComponent = ({
             >
               <Feather
                 name={isModerationPending ? "check-square" : "square"}
-                size={20}
-                color={isModerationPending ? DESIGN_COLORS.primary : "#999"} // ✅ ДИЗАЙН: Оранжевый при активном
+                size={18} // ✅ КОМПАКТНОСТЬ: Меньше размер иконки
+                color={isModerationPending ? DESIGN_TOKENS.colors.primary : DESIGN_TOKENS.colors.textMuted} // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
               />
               <Text style={styles.itemText}>Показать статьи на модерации</Text>
             </Pressable>
@@ -304,7 +393,7 @@ const FiltersComponent = ({
         </View>
       );
     },
-    [isSuperuser, filterValue.moderation, onSelectedItemsChange]
+    [isSuperuser, filterValue.moderation, onSelectedItemsChange, debouncedApply]
   );
 
   /* ======= Ввод Года ======= */
@@ -322,91 +411,129 @@ const FiltersComponent = ({
           hitSlop={6}
         >
           <Text style={styles.groupLabel}>Год</Text>
-          <Feather name={yearOpen ? "chevron-up" : "chevron-down"} size={18} color="#333" />
+          {/* ✅ КОМПАКТНОСТЬ: Меньше размер иконки */}
+          <Feather name={yearOpen ? "chevron-up" : "chevron-down"} size={16} color="#333" />
         </Pressable>
 
         {yearOpen && (
           <View style={styles.yearBox}>
             <View style={styles.yearInputWrapper}>
-              <TextInput
-                ref={yearInputRef}
-                value={year}
-                onChangeText={handleYearChange}
-                placeholder="2023"
-                keyboardType="numeric"
-                maxLength={4}
-                style={styles.yearInput}
-                returnKeyType="done"
-                onSubmitEditing={apply}
-                accessibilityLabel="Введите год"
-              />
-              {year.length > 0 && (
-                <Pressable onPress={() => setYear("")} style={styles.clearIcon} accessibilityLabel="Очистить год" hitSlop={8}>
-                  <Feather name="x" size={16} color="#999" />
+              <View style={styles.yearInputContainer}>
+                <TextInput
+                  ref={yearInputRef}
+                  value={year}
+                  onChangeText={handleYearChange}
+                  placeholder="2023"
+                  keyboardType="numeric"
+                  maxLength={4}
+                  style={[
+                    styles.yearInput,
+                    yearApplied && year.length === 4 && styles.yearInputApplied,
+                  ]}
+                  returnKeyType="done"
+                  onSubmitEditing={apply}
+                  accessibilityLabel="Введите год"
+                />
+                {/* ✅ UX: Индикатор применения (галочка при примененном фильтре) */}
+                {yearApplied && year.length === 4 && (
+                  <View style={styles.yearAppliedIndicator}>
+                    {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
+                    <Feather name="check-circle" size={18} color={DESIGN_TOKENS.colors.primary} />
+                  </View>
+                )}
+                {/* ✅ UX: Кнопка очистки */}
+                {year.length > 0 && (
+                  <Pressable
+                    onPress={() => {
+                      setYear("");
+                      setYearApplied(false);
+                      // Применяем пустой фильтр
+                      const cleanedFilterValue = Object.fromEntries(
+                        Object.entries(filterValue).map(([key, value]) => {
+                          if (Array.isArray(value) && value.length === 0) return [key, undefined];
+                          return [key, value];
+                        })
+                      );
+                      handleApplyFilters({
+                        ...cleanedFilterValue,
+                        year: undefined,
+                      });
+                    }}
+                    style={styles.clearIcon}
+                    accessibilityLabel="Очистить год"
+                    hitSlop={8}
+                    {...Platform.select({
+                      web: { cursor: 'pointer' },
+                    })}
+                  >
+                    <Feather name="x" size={16} color="#999" />
+                  </Pressable>
+                )}
+              </View>
+              {/* ✅ UX: Кнопка "Применить" для явного контроля (показываем при 1-3 цифрах) */}
+              {year.length > 0 && year.length < 4 && (
+                <Pressable
+                  onPress={apply}
+                  style={[styles.applyYearButton, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                  accessibilityLabel="Применить фильтр по году"
+                  hitSlop={8}
+                  {...Platform.select({
+                    web: { cursor: 'pointer' },
+                  })}
+                >
+                  <Feather name="check" size={14} color="#fff" />
+                  <Text style={styles.applyYearButtonText}>Применить</Text>
                 </Pressable>
               )}
             </View>
+            {/* ✅ UX: Подсказка о поведении фильтра */}
+            {year.length > 0 && year.length < 4 && (
+              <Text style={styles.yearHint}>
+                Автоматически применится при вводе 4 цифр
+              </Text>
+            )}
+            {yearApplied && year.length === 4 && (
+              <Text style={styles.yearAppliedText}>
+                ✓ Фильтр применен
+              </Text>
+            )}
           </View>
         )}
       </View>
     ),
-    [yearOpen, year, handleYearChange, apply]
+    [yearOpen, year, yearApplied, handleYearChange, apply, filterValue, handleApplyFilters]
   );
 
   /* ======= Футер кнопок ======= */
+  // ✅ КОМПАКТНОСТЬ: Убраны кнопки "Сбросить" и "Применить" - фильтры применяются автоматически
   const renderFooter = useMemo(
-    () => (
-      <View
-        style={[
-          styles.footer,
-          {
-            paddingBottom: Math.max(insets.bottom, 18),
-            flexDirection: "row",
-            flexWrap: "wrap",
-            justifyContent: "space-between",
-            gap: 8,
-          },
-        ]}
-      >
-        {isMobile && (
-          <Pressable
-            style={[styles.btn, { flex: 1 }, styles.close]}
-            onPress={closeMenu}
-            accessibilityLabel="Закрыть фильтры"
-            hitSlop={8}
+    () => {
+      // На мобиле оставляем только кнопку "Закрыть"
+      if (isMobile && closeMenu) {
+        return (
+          <View
+            style={[
+              styles.footer,
+              {
+                paddingBottom: Math.max(insets.bottom, 12),
+              },
+            ]}
           >
-            <Text style={styles.btnTxt}>Закрыть</Text>
-          </Pressable>
-        )}
-        <Pressable
-          style={[styles.btn, { flex: 1 }, styles.reset]}
-          onPress={handleReset}
-          accessibilityLabel="Сбросить фильтры"
-          hitSlop={8}
-        >
-          <Text style={[styles.btnTxt, styles.resetTxt]}>Сбросить</Text>
-        </Pressable>
-        <Pressable
-          style={[
-            styles.btn,
-            { flex: 1 },
-            styles.apply,
-            applying && { opacity: 0.7 },
-            Platform.OS === "web" && {
-              // @ts-ignore - web-specific CSS property
-              background: `linear-gradient(135deg, ${DESIGN_COLORS.primary} 0%, ${DESIGN_COLORS.primaryDark} 100%)`,
-            },
-          ]}
-          onPress={apply}
-          disabled={applying}
-          accessibilityLabel="Применить фильтры"
-          hitSlop={8}
-        >
-          <Text style={styles.btnTxt}>{applying ? "Применяю..." : "Применить"}</Text>
-        </Pressable>
-      </View>
-    ),
-    [isMobile, insets.bottom, closeMenu, handleReset, apply, applying]
+            <Pressable
+              style={[styles.btn, styles.close]}
+              onPress={closeMenu}
+              accessibilityLabel="Закрыть фильтры"
+              hitSlop={8}
+            >
+              <Text style={styles.btnTxt}>Закрыть</Text>
+            </Pressable>
+          </View>
+        );
+      }
+      // На десктопе футер не нужен
+      return null;
+    },
+    [isMobile, insets.bottom, closeMenu]
   );
 
   return (
@@ -414,12 +541,26 @@ const FiltersComponent = ({
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 8 }]}
+        contentContainerStyle={[styles.scrollContent, isMobileFullScreenMode && { paddingTop: insets.top + 8 }]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         removeClippedSubviews={Platform.OS !== "web"}
       >
         <View style={styles.content}>
+          {search !== undefined && setSearch && isMobile && (
+            <View style={styles.searchInFilters}>
+              <SearchAndFilterBar
+                search={search}
+                setSearch={setSearch}
+                onToggleFilters={undefined}
+                onToggleRecommendations={onToggleRecommendations}
+                isRecommendationsVisible={isRecommendationsVisible}
+                hasFilters={hasFilters}
+                resultsCount={resultsCount}
+                onClearAll={onClearAll}
+              />
+            </View>
+          )}
           {renderModerationCheckbox}
 
           <Pressable
@@ -442,7 +583,7 @@ const FiltersComponent = ({
                 labelKey={labelKey}
                 filterValue={filterValue}
                 handleCheckForField={handleCheckForField(field)}
-                open={open[field]}
+                open={!!open[field]}
                 toggle={toggle}
               />
             )
@@ -451,7 +592,6 @@ const FiltersComponent = ({
           {renderYearInput}
         </View>
       </ScrollView>
-
       {renderFooter}
     </View>
   );
@@ -463,19 +603,8 @@ export default memo(FiltersComponent);
 /*         Стили         */
 /* ===================== */
 
-// ✅ ДИЗАЙН: Централизованные цвета и константы
-// ✅ ДИЗАЙН: Используем максимально легкую и воздушную палитру
-import { AIRY_COLORS, AIRY_SHADOWS, AIRY_BOX_SHADOWS } from '@/constants/airyColors';
-
-const DESIGN_COLORS = {
-  primary: AIRY_COLORS.primary,
-  primaryDark: AIRY_COLORS.primaryDark,
-  primaryLight: AIRY_COLORS.primaryLight,
-  background: AIRY_COLORS.surface,
-  border: AIRY_COLORS.border,
-  textPrimary: AIRY_COLORS.textPrimary,
-  textSecondary: AIRY_COLORS.textSecondary,
-};
+// ✅ ИСПРАВЛЕНИЕ: Используем единую палитру DESIGN_TOKENS вместо локальной DESIGN_COLORS
+// DESIGN_COLORS заменён на DESIGN_TOKENS для унификации цветов
 
 const styles = StyleSheet.create({
   root: { 
@@ -503,23 +632,28 @@ const styles = StyleSheet.create({
 
   scroll: { flex: 1 },
   scrollContent: { 
-    paddingHorizontal: Platform.select({ default: 12, web: 8 }), 
-    paddingBottom: Platform.select({ default: 16, web: 12 }) 
+    paddingHorizontal: Platform.select({ default: 12, web: 4 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
+    paddingBottom: Platform.select({ default: 16, web: 8 }) // ✅ КОМПАКТНОСТЬ: Меньше отступы
   },
   content: { 
-    paddingHorizontal: Platform.select({ default: 10, web: 6 }) 
+    paddingHorizontal: Platform.select({ default: 10, web: 4 }) // ✅ КОМПАКТНОСТЬ: Меньше отступы
+  },
+  searchInFilters: {
+    marginBottom: Platform.select({ default: 12, web: 8 }),
+    paddingBottom: Platform.select({ default: 12, web: 8 }),
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
   },
 
   groupBox: { 
-    marginBottom: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    marginBottom: Platform.select({ default: 8, web: 6 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
     backgroundColor: "#ffffff", // ✅ ДИЗАЙН: Белый фон
-    borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
-    borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница для прозаичного дизайна
-    borderColor: 'rgba(0, 0, 0, 0.06)', // ✅ ДИЗАЙН: Более светлая граница
+    borderRadius: Platform.select({ default: 8, web: 8 }), // ✅ КОМПАКТНОСТЬ: Меньше радиус
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
     ...Platform.select({
       web: {
         transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.04)", // ✅ ДИЗАЙН: Более легкая тень
+        boxShadow: DESIGN_TOKENS.shadows.light, // ✅ ДИЗАЙН: Используем тень из дизайн-системы
         // @ts-ignore
         ":hover": {
           boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
@@ -533,9 +667,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: Platform.select({ default: 12, web: 14 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-    paddingHorizontal: Platform.select({ default: 12, web: 16 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-    borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
+    paddingVertical: Platform.select({ default: 10, web: 8 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
+    paddingHorizontal: Platform.select({ default: 10, web: 10 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
+    borderRadius: Platform.select({ default: 8, web: 8 }), // ✅ КОМПАКТНОСТЬ: Меньше радиус
     ...Platform.select({
       web: {
         transition: "all 0.2s ease",
@@ -548,25 +682,25 @@ const styles = StyleSheet.create({
     }),
   },
   groupLabel: { 
-    fontSize: Platform.select({ default: 15, web: 16 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    fontSize: Platform.select({ default: 14, web: 14 }), // ✅ КОМПАКТНОСТЬ: Меньше размер шрифта
     fontWeight: "600", // ✅ ДИЗАЙН: Уменьшен weight для прозаичности
-    color: DESIGN_COLORS.textPrimary, // ✅ ДИЗАЙН: Единый цвет
+    color: DESIGN_TOKENS.colors.text, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     letterSpacing: -0.1, // ✅ ДИЗАЙН: Меньше отрицательный letter-spacing
   },
 
   itemsBox: { 
-    paddingHorizontal: Platform.select({ default: 12, web: 16 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-    paddingBottom: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    paddingHorizontal: Platform.select({ default: 10, web: 8 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
+    paddingBottom: Platform.select({ default: 4, web: 6 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
   },
 
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: Platform.select({ default: 8, web: 10 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-    paddingHorizontal: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-    gap: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше gap на мобильных
-    borderRadius: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
-    marginBottom: Platform.select({ default: 3, web: 4 }), // ✅ АДАПТИВНОСТЬ: Меньше отступ на мобильных
+    paddingVertical: Platform.select({ default: 6, web: 6 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
+    paddingHorizontal: Platform.select({ default: 4, web: 6 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
+    gap: Platform.select({ default: 8, web: 8 }), // ✅ КОМПАКТНОСТЬ: Меньше gap
+    borderRadius: Platform.select({ default: 6, web: 6 }), // ✅ КОМПАКТНОСТЬ: Меньше радиус
+    marginBottom: Platform.select({ default: 2, web: 2 }), // ✅ КОМПАКТНОСТЬ: Меньше отступ
     ...Platform.select({
       web: {
         transition: "all 0.2s ease",
@@ -579,53 +713,134 @@ const styles = StyleSheet.create({
     }),
   },
   itemText: { 
-    fontSize: Platform.select({ default: 13, web: 14 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-    color: DESIGN_COLORS.textPrimary, // ✅ ДИЗАЙН: Единый цвет
+    fontSize: Platform.select({ default: 12, web: 13 }), // ✅ КОМПАКТНОСТЬ: Меньше размер шрифта
+    color: DESIGN_TOKENS.colors.text, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     flex: 1,
     fontWeight: "500",
-    lineHeight: Platform.select({ default: 18, web: 20 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    lineHeight: Platform.select({ default: 16, web: 18 }), // ✅ КОМПАКТНОСТЬ: Меньше line-height
   },
 
   yearBox: { 
-    paddingHorizontal: Platform.select({ default: 10, web: 12 }), 
-    paddingBottom: Platform.select({ default: 6, web: 8 }) 
+    paddingHorizontal: Platform.select({ default: 10, web: 8 }),
+    paddingBottom: Platform.select({ default: 4, web: 6 }),
   },
-  yearInputWrapper: { position: "relative" },
+  yearInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    width: '100%',
+    flexWrap: 'wrap', // ✅ ИСПРАВЛЕНИЕ: Разрешаем перенос на новую строку
+  },
+  yearInputContainer: {
+    flex: 1,
+    position: "relative",
+    minWidth: 120, // ✅ ИСПРАВЛЕНИЕ: Минимальная ширина для инпута
+    maxWidth: '100%',
+  },
   yearInput: {
+    width: '100%',
     backgroundColor: "#fff",
-    borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
-    borderColor: 'rgba(0, 0, 0, 0.06)', // ✅ ДИЗАЙН: Более светлая граница
-    borderRadius: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
-    paddingHorizontal: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-    paddingVertical: Platform.select({ default: 8, web: 10 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-    fontSize: Platform.select({ default: 14, web: 15 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-    color: DESIGN_COLORS.textPrimary, // ✅ ДИЗАЙН: Единый цвет
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    borderRadius: Platform.select({ default: 6, web: 6 }),
+    shadowColor: '#1f1f1f',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+    paddingHorizontal: Platform.select({ default: 8, web: 8 }),
+    paddingVertical: Platform.select({ default: 6, web: 6 }),
+    paddingRight: Platform.select({ default: 30, web: 30 }), // ✅ UX: Отступ для кнопок справа
+    fontSize: Platform.select({ default: 13, web: 14 }),
+    color: DESIGN_TOKENS.colors.text,
     ...Platform.select({
       web: {
         transition: "all 0.2s ease",
         // @ts-ignore
         ":focus": {
-          borderColor: 'rgba(0, 0, 0, 0.2)', // ✅ ДИЗАЙН: Нейтральный focus
+          borderColor: 'rgba(0, 0, 0, 0.2)',
           boxShadow: '0 0 0 2px rgba(0, 0, 0, 0.05)',
           outline: "none",
         },
       },
     }),
   },
+  yearInputApplied: {
+    // ✅ UX: Подсветка примененного фильтра
+    borderColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: 'rgba(255, 159, 90, 0.05)', // Светлый фон
+  },
+  applyYearButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
+    paddingVertical: 8, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
+    backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
+    borderRadius: DESIGN_TOKENS.radii.sm, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
+    flexShrink: 0, // ✅ ИСПРАВЛЕНИЕ: Не сжимаем кнопку
+    minHeight: 32, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+    minWidth: 32,
+    ...Platform.select({
+      web: {
+        transition: 'all 0.2s ease',
+        cursor: 'pointer',
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: '#3a7a7a', // Темнее primary для hover
+          transform: 'scale(1.05)',
+        },
+        whiteSpace: 'nowrap' as any, // ✅ ИСПРАВЛЕНИЕ: Текст не переносится
+      },
+    }),
+  },
+  applyYearButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  yearAppliedIndicator: {
+    position: 'absolute',
+    right: 28, // ✅ ИСПРАВЛЕНИЕ: Позиционируем справа от инпута, но слева от кнопки очистки
+    top: '50%',
+    transform: [{ translateY: -9 }], // ✅ ИСПРАВЛЕНИЕ: Центрируем по вертикали
+    ...Platform.select({
+      web: {
+        transform: 'translateY(-50%)' as any,
+      },
+    }),
+  },
   clearIcon: {
-    position: "absolute",
-    right: 8,
-    top: "50%",
-    marginTop: -8,
+    position: 'absolute',
+    right: 6, // ✅ ИСПРАВЛЕНИЕ: Позиционируем справа от инпута
+    top: '50%',
+    transform: [{ translateY: -8 }], // ✅ ИСПРАВЛЕНИЕ: Центрируем по вертикали
     padding: 4,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transform: 'translateY(-50%)' as any,
+      },
+    }),
+  },
+  yearHint: {
+    fontSize: 11,
+    color: DESIGN_TOKENS.colors.textMuted,
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  yearAppliedText: {
+    fontSize: 11,
+    color: DESIGN_TOKENS.colors.primary,
+    marginTop: 4,
+    fontWeight: "500",
   },
 
   toggleAllBtn: {
     alignSelf: "flex-end",
-    paddingHorizontal: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-    paddingVertical: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-    marginBottom: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-    borderRadius: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
+    paddingHorizontal: Platform.select({ default: 8, web: 8 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
+    paddingVertical: Platform.select({ default: 4, web: 4 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
+    marginBottom: Platform.select({ default: 8, web: 6 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
+    borderRadius: Platform.select({ default: 6, web: 6 }), // ✅ КОМПАКТНОСТЬ: Меньше радиус
     ...Platform.select({
       web: {
         transition: "all 0.2s ease",
@@ -638,14 +853,17 @@ const styles = StyleSheet.create({
     }),
   },
   toggleAllText: { 
-    fontSize: Platform.select({ default: 12, web: 13 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+    fontSize: Platform.select({ default: 11, web: 12 }), // ✅ КОМПАКТНОСТЬ: Меньше размер шрифта
     fontWeight: "600", 
-    color: DESIGN_COLORS.textSecondary, // ✅ ДИЗАЙН: Нейтральный цвет вместо оранжевого
+    color: DESIGN_TOKENS.colors.textMuted, // ✅ ДИЗАЙН: Нейтральный цвет вместо оранжевого
   },
 
+  moderationBox: {
+    marginBottom: Platform.select({ default: 8, web: 6 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
+  },
   footer: {
-    paddingHorizontal: Platform.select({ default: 12, web: 10 }), // ✅ АДАПТИВНОСТЬ: Больше на мобильных
-    paddingVertical: Platform.select({ default: 12, web: 10 }), // ✅ АДАПТИВНОСТЬ: Больше на мобильных
+    paddingHorizontal: Platform.select({ default: 12, web: 8 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
+    paddingVertical: Platform.select({ default: 10, web: 8 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
     borderTopWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
     borderTopColor: 'rgba(0, 0, 0, 0.06)', // ✅ ДИЗАЙН: Более светлая граница
     backgroundColor: "#fff",
@@ -685,8 +903,7 @@ const styles = StyleSheet.create({
   },
   reset: { 
     backgroundColor: "#f9fafb", // ✅ ДИЗАЙН: Светлый фон
-    borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
-    borderColor: 'rgba(0, 0, 0, 0.06)', // ✅ ДИЗАЙН: Более светлая граница
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
     ...Platform.select({
       web: {
         // @ts-ignore
@@ -698,12 +915,12 @@ const styles = StyleSheet.create({
     }),
   },
   resetTxt: { 
-    color: DESIGN_COLORS.textSecondary, // ✅ ДИЗАЙН: Вторичный цвет
+    color: DESIGN_TOKENS.colors.textMuted, // ✅ ДИЗАЙН: Вторичный цвет
     fontWeight: "600",
     fontSize: Platform.select({ default: 13, web: 14 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
   },
   apply: { 
-    backgroundColor: DESIGN_COLORS.text, // ✅ ДИЗАЙН: Нейтральный серый вместо яркого оранжевого
+    backgroundColor: DESIGN_TOKENS.colors.text, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     ...Platform.select({
       web: {
         // @ts-ignore

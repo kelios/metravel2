@@ -1,0 +1,132 @@
+// components/listTravel/ListTravelRedesigned.tsx
+// ✅ РЕДИЗАЙН: Новая версия ListTravel с управляемыми блоками
+
+import React, { useState, useMemo } from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
+import { useWindowDimensions } from 'react-native';
+import MainHubLayout from '@/components/MainHubLayout';
+import CollapsibleBlock from '@/components/CollapsibleBlock';
+import WelcomeBanner from '@/components/WelcomeBanner';
+import RecentViews from '@/components/RecentViews';
+import FiltersPanelCollapsible from '@/components/FiltersPanelCollapsible';
+import SearchAndFilterBar from './SearchAndFilterBar';
+import { useBlockVisibility } from '@/hooks/useBlockVisibility';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+
+// Это пример интеграции - полная версия будет в основном файле
+// Показываю структуру новой страницы
+
+interface ListTravelRedesignedProps {
+  // Все пропсы из оригинального ListTravel
+}
+
+const palette = DESIGN_TOKENS.colors;
+
+export default function ListTravelRedesigned({}: ListTravelRedesignedProps) {
+  const { width } = useWindowDimensions();
+  const isMobile = width <= 768;
+  const [mode, setMode] = useState<'compact' | 'expanded' | 'smart'>('smart');
+  
+  const {
+    getBlockState,
+    toggleExpanded,
+    toggleHidden,
+    isLoaded,
+  } = useBlockVisibility();
+
+  if (!isLoaded) {
+    return null; // Можно показать skeleton
+  }
+
+  return (
+    <MainHubLayout mode={mode} onModeChange={setMode}>
+      {/* Блок приветствия */}
+      <CollapsibleBlock
+        id="welcomeBanner"
+        title="Добро пожаловать"
+        description="Откройте мир путешествий"
+        icon="sun"
+        defaultExpanded={getBlockState('welcomeBanner').expanded}
+        defaultHidden={getBlockState('welcomeBanner').hidden}
+        onToggle={(expanded) => toggleExpanded('welcomeBanner')}
+        onHide={(hidden) => toggleHidden('welcomeBanner')}
+        compactMode={mode === 'compact'}
+      >
+        <WelcomeBanner compact={mode === 'compact'} />
+      </CollapsibleBlock>
+
+      {/* Блок поиска */}
+      <CollapsibleBlock
+        id="search"
+        title="Поиск путешествий"
+        description="Найдите интересующие вас маршруты"
+        icon="search"
+        defaultExpanded={getBlockState('search').expanded}
+        defaultHidden={getBlockState('search').hidden}
+        onToggle={(expanded) => toggleExpanded('search')}
+        onHide={(hidden) => toggleHidden('search')}
+        compactMode={mode === 'compact'}
+      >
+        <View style={styles.searchWrapper}>
+          {/* SearchAndFilterBar будет здесь */}
+        </View>
+      </CollapsibleBlock>
+
+      {/* Блок фильтров */}
+      {!isMobile && (
+        <CollapsibleBlock
+          id="filters"
+          title="Фильтры"
+          description="Настройте параметры поиска"
+          icon="filter"
+          defaultExpanded={getBlockState('filters').expanded}
+          defaultHidden={getBlockState('filters').hidden}
+          onToggle={(expanded) => toggleExpanded('filters')}
+          onHide={(hidden) => toggleHidden('filters')}
+          compactMode={mode === 'compact'}
+        >
+          <FiltersPanelCollapsible
+            filters={null} // Будет из пропсов
+            filterValue={{}}
+            onSelectedItemsChange={() => {}}
+            handleApplyFilters={() => {}}
+            resetFilters={() => {}}
+            isExpanded={getBlockState('filters').expanded}
+            isHidden={getBlockState('filters').hidden}
+            onToggleExpanded={() => toggleExpanded('filters')}
+            onToggleHidden={() => toggleHidden('filters')}
+          />
+        </CollapsibleBlock>
+      )}
+
+      {/* Блок недавних просмотров */}
+      <CollapsibleBlock
+        id="recentViews"
+        title="Недавние просмотры"
+        description="Путешествия, которые вы недавно смотрели"
+        icon="clock"
+        defaultExpanded={getBlockState('recentViews').expanded}
+        defaultHidden={getBlockState('recentViews').hidden}
+        onToggle={(expanded) => toggleExpanded('recentViews')}
+        onHide={(hidden) => toggleHidden('recentViews')}
+        compactMode={mode === 'compact'}
+      >
+        <RecentViews compact={mode === 'compact'} />
+      </CollapsibleBlock>
+
+      {/* Здесь будут остальные блоки:
+          - Tabs (Рекомендации / Подборка недели)
+          - Recommendations
+          - Travel Cards
+          - Popular Categories
+      */}
+    </MainHubLayout>
+  );
+}
+
+const styles = StyleSheet.create({
+  searchWrapper: {
+    padding: 0,
+  },
+});
+

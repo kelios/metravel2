@@ -5,21 +5,25 @@
   "private": true,
   "packageManager": "npm@10",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "web:prod": "NODE_ENV=production expo start --web",
+    "check-deps": "node scripts/check-dependencies.js",
+    "start": "npx expo start",
+    "android": "npx expo start --android",
+    "ios": "npx expo start --ios",
+    "web": "npx expo start --web",
+    "web:prod": "NODE_ENV=production npx expo start --web",
     "test": "jest --watchAll",
     "format": "npx prettier --write .",
-    "build:web": "expo export --web",
-    "clean": "expo start --clear",
-    "reset": "EXPO_RESET_CACHE=true expo start --clear",
-    "prod:web": "NODE_ENV=production expo export --web",
+    "build:web": "npx expo export --web",
+    "clean": "npx expo start --clear",
+    "reset": "EXPO_RESET_CACHE=true npx expo start --clear",
+    "prod:web": "NODE_ENV=production npx expo export --web",
     "postinstall": "node scripts/fix-lightningcss.js"
   },
   "dependencies": {
     "@babel/runtime": "^7.25.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@expo/metro-runtime": "~4.0.1",
     "@expo/vector-icons": "^14.0.4",
     "@native-html/iframe-plugin": "^2.6.1",
@@ -64,15 +68,14 @@
     "format": "^0.2.2",
     "formik": "^2.4.5",
     "html2pdf.js": "^0.10.3",
+    "jspdf": "^3.0.3",
     "leaflet": "^1.9.4",
     "lightningcss": "^1.30.2",
     "lint": "^1.1.2",
     "lucide-react-native": "^0.487.0",
-    "metro": "^0.81.0",
-    "metro-config": "^0.81.0",
-    "metro-core": "^0.81.0",
     "metro-react-native-babel-transformer": "^0.77.0",
     "ms": "^2.1.3",
+    "pdf-lib": "^1.17.1",
     "pretty-format": "^29.7.0",
     "qrcode": "^1.5.4",
     "react": "18.3.1",
@@ -110,9 +113,11 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@babel/helper-compilation-targets": "^7.27.2",
     "@babel/plugin-transform-export-namespace-from": "^7.25.9",
     "@babel/preset-env": "^7.24.1",
     "@babel/preset-typescript": "^7.24.1",
+    "@expo/metro-config": "^54.0.9",
     "@jest/test-sequencer": "^29.7.0",
     "@tanstack/react-query-devtools": "^5.76.2",
     "@testing-library/jest-native": "^5.4.3",
@@ -164,6 +169,6 @@
     ]
   },
   "optionalDependencies": {
-    "lightningcss-darwin-x64": "^1.27.0"
+    "lightningcss-darwin-x64": "^1.30.2"
   }
 }

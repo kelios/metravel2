@@ -7,6 +7,7 @@ import { buildPhotoBookHTML, TravelForBook } from '@/src/utils/pdfBookGenerator'
 import { BookSettings } from '@/components/export/BookSettingsModal';
 import { saveHtmlAsPdf, getPdfBlob } from '@/src/utils/html2pdf';
 import type { Travel } from '@/src/types/types';
+import { pdfLog, pdfWarn, pdfError } from '@/src/utils/logger';
 
 interface UseListTravelExportEnhancedProps {
   selected: Travel[] | any[];
@@ -18,12 +19,12 @@ function convertTravelToBookFormat(travel: any): TravelForBook {
   // ✅ КРИТИЧНО: Заменяем все undefined на пустые строки или null, чтобы избежать ошибок в html2pdf
   // ✅ ОТЛАДКА: Логируем входные данные
   if (!travel) {
-    console.error('[convertTravelToBookFormat] Travel is null or undefined');
+    pdfError('[convertTravelToBookFormat] Travel is null or undefined');
     throw new Error('Travel is null or undefined');
   }
   
-  // ✅ КРИТИЧНО: Логируем входные данные для диагностики
-  console.log(`[convertTravelToBookFormat] INPUT Travel ${travel.id} (${travel.name}):`, {
+  // ✅ КРИТИЧНО: Логируем входные данные для диагностики (только в dev)
+  pdfLog(`[convertTravelToBookFormat] INPUT Travel ${travel.id} (${travel.name}):`, {
     hasDescription: travel.description != null,
     descriptionType: typeof travel.description,
     descriptionValue: travel.description ? (typeof travel.description === 'string' ? travel.description.substring(0, 50) + '...' : String(travel.description).substring(0, 50)) : 'null/undefined',
@@ -94,8 +95,8 @@ function convertTravelToBookFormat(travel: any): TravelForBook {
     userName: travel.userName || null,
   };
   
-  // ✅ ОТЛАДКА: Логируем результат преобразования
-  console.log(`[convertTravelToBookFormat] OUTPUT Travel ${travel.id} (${travel.name}):`, {
+  // ✅ ОТЛАДКА: Логируем результат преобразования (только в dev)
+  pdfLog(`[convertTravelToBookFormat] OUTPUT Travel ${travel.id} (${travel.name}):`, {
     description: result.description ? `[${result.description.length} chars]` : 'null',
     descriptionType: typeof result.description,
     recommendation: result.recommendation ? `[${result.recommendation.length} chars]` : 'null',
@@ -175,8 +176,8 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
       const bodyContent = doc.body.innerHTML;
       const headStyles = doc.head.querySelectorAll('style');
       
-      console.log('[PDFExport] Body content length:', bodyContent.length);
-      console.log('[PDFExport] Styles found:', headStyles.length);
+      pdfLog('[PDFExport] Body content length:', bodyContent.length);
+      pdfLog('[PDFExport] Styles found:', headStyles.length);
       
       // Вставляем стили в контейнер
       if (headStyles.length > 0) {
@@ -188,12 +189,12 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
       // Вставляем содержимое body
       container.innerHTML = bodyContent;
       
-      console.log('[PDFExport] Container innerHTML length:', container.innerHTML.length);
-      console.log('[PDFExport] Container children:', container.children.length);
+      pdfLog('[PDFExport] Container innerHTML length:', container.innerHTML.length);
+      pdfLog('[PDFExport] Container children:', container.children.length);
       
       // ✅ ИСПРАВЛЕНИЕ: Проверяем, что контент действительно вставлен
       if (container.children.length === 0 && !container.textContent?.trim()) {
-        console.error('[PDFExport] Container is empty after HTML insertion!');
+        pdfError('[PDFExport] Container is empty after HTML insertion!');
         Alert.alert('Ошибка', 'Не удалось вставить содержимое в контейнер');
         return;
       }
@@ -244,9 +245,27 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
       }
 
       Alert.alert('Успешно!', `PDF-фотоальбом "${bookSettings.title}" успешно создан и сохранен`);
-    } catch (error) {
-      console.error('[PDFExport] Error:', error);
-      Alert.alert('Ошибка', 'Произошла ошибка при создании PDF. Попробуйте еще раз.');
+    } catch (error: any) {
+      pdfError('[PDFExport] Error:', error);
+      
+      // Улучшенная обработка ошибок с понятными сообщениями
+      let errorMessage = 'Произошла ошибка при создании PDF. Попробуйте еще раз.';
+      let errorTitle = 'Ошибка создания PDF';
+      
+      if (error?.message) {
+        if (error.message.includes('CORS') || error.message.includes('image')) {
+          errorTitle = 'Ошибка загрузки изображений';
+          errorMessage = 'Некоторые изображения не удалось загрузить. Проверьте интернет-соединение и попробуйте еще раз.';
+        } else if (error.message.includes('memory') || error.message.includes('Memory')) {
+          errorTitle = 'Недостаточно памяти';
+          errorMessage = 'Выбрано слишком много путешествий. Попробуйте выбрать меньше путешествий для экспорта.';
+        } else if (error.message.includes('timeout') || error.message.includes('Timeout')) {
+          errorTitle = 'Превышено время ожидания';
+          errorMessage = 'Операция заняла слишком много времени. Попробуйте выбрать меньше путешествий или проверьте интернет-соединение.';
+        }
+      }
+      
+      Alert.alert(errorTitle, errorMessage);
     } finally {
       setIsGenerating(false);
       setProgress(0);
@@ -277,10 +296,10 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
 
     try {
       // ✅ ИСПРАВЛЕНИЕ: Проверяем, что данные не пустые
-      console.log('[PDFPreview] Selected travels:', selected.length, selected);
+      pdfLog('[PDFPreview] Selected travels:', selected.length, selected);
       
       // Преобразуем данные в формат для книги
-      console.log('[PDFPreview] Raw selected travels:', selected.length, selected.map(t => ({
+      pdfLog('[PDFPreview] Raw selected travels:', selected.length, selected.map(t => ({
         id: t.id,
         name: t.name,
         hasDescription: !!t.description,
@@ -292,7 +311,7 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
       })));
       
       const travelsForBook: TravelForBook[] = selected.map(convertTravelToBookFormat);
-      console.log('[PDFPreview] Converted travels:', travelsForBook.length, travelsForBook.map(t => ({
+      pdfLog('[PDFPreview] Converted travels:', travelsForBook.length, travelsForBook.map(t => ({
         id: t.id,
         name: t.name,
         hasDescription: !!t.description,
@@ -303,9 +322,9 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
         galleryLength: Array.isArray(t.gallery) ? t.gallery.length : 0,
       })));
       
-      // ✅ ОТЛАДКА: Проверяем наличие описаний и галерей
+      // ✅ ОТЛАДКА: Проверяем наличие описаний и галерей (только в dev)
       travelsForBook.forEach((travel, idx) => {
-        console.log(`[PDFPreview] Travel ${idx + 1} (${travel.name}):`, {
+        pdfLog(`[PDFPreview] Travel ${idx + 1} (${travel.name}):`, {
           hasDescription: !!travel.description,
           descriptionLength: travel.description?.length || 0,
           hasRecommendation: !!travel.recommendation,
@@ -341,7 +360,7 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
       setProgress(10);
 
       const html = await buildPhotoBookHTML(travelsForBook, bookSettings);
-      console.log('[PDFPreview] Generated HTML length:', html.length);
+      pdfLog('[PDFPreview] Generated HTML length:', html.length);
       
       if (!html || html.trim().length === 0) {
         Alert.alert('Ошибка', 'Не удалось сгенерировать содержимое для превью');
@@ -356,8 +375,8 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
       const bodyContent = doc.body.innerHTML;
       const headStyles = doc.head.querySelectorAll('style');
       
-      console.log('[PDFPreview] Body content length:', bodyContent.length);
-      console.log('[PDFPreview] Styles found:', headStyles.length);
+      pdfLog('[PDFPreview] Body content length:', bodyContent.length);
+      pdfLog('[PDFPreview] Styles found:', headStyles.length);
       
       // Очищаем контейнер перед вставкой
       container.innerHTML = '';
@@ -367,20 +386,20 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
         const styleElement = document.createElement('style');
         styleElement.textContent = Array.from(headStyles).map(s => s.textContent).join('\n');
         container.appendChild(styleElement);
-        console.log('[PDFPreview] Styles inserted, length:', styleElement.textContent.length);
+        pdfLog('[PDFPreview] Styles inserted, length:', styleElement.textContent.length);
       }
       
       // Вставляем содержимое body
       container.innerHTML = bodyContent;
       
-      console.log('[PDFPreview] Container innerHTML length:', container.innerHTML.length);
-      console.log('[PDFPreview] Container children:', container.children.length);
-      console.log('[PDFPreview] Container text content length:', container.textContent?.length || 0);
+      pdfLog('[PDFPreview] Container innerHTML length:', container.innerHTML.length);
+      pdfLog('[PDFPreview] Container children:', container.children.length);
+      pdfLog('[PDFPreview] Container text content length:', container.textContent?.length || 0);
       
       // ✅ ИСПРАВЛЕНИЕ: Проверяем, что контент действительно вставлен
       if (container.children.length === 0 && !container.textContent?.trim()) {
-        console.error('[PDFPreview] Container is empty after HTML insertion!');
-        console.error('[PDFPreview] HTML was:', html.substring(0, 1000));
+        pdfError('[PDFPreview] Container is empty after HTML insertion!');
+        pdfError('[PDFPreview] HTML was:', html.substring(0, 1000));
         Alert.alert('Ошибка', 'Не удалось вставить содержимое в контейнер');
         return;
       }
@@ -412,10 +431,10 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
       
       // ✅ КРИТИЧНО: Проверяем, что контент действительно отрендерен
       const sections = container.querySelectorAll('.pdf-page');
-      console.log('[PDFPreview] Found PDF pages:', sections.length);
+      pdfLog('[PDFPreview] Found PDF pages:', sections.length);
       if (sections.length === 0) {
-        console.error('[PDFPreview] No PDF pages found in container!');
-        console.error('[PDFPreview] Container HTML:', container.innerHTML.substring(0, 2000));
+        pdfError('[PDFPreview] No PDF pages found in container!');
+        pdfError('[PDFPreview] Container HTML:', container.innerHTML.substring(0, 2000));
         Alert.alert('Ошибка', 'Контент не отрендерился. Проверьте консоль для деталей.');
         return;
       }
@@ -426,7 +445,7 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
       const containerWidth = container.scrollWidth || container.offsetWidth || 794; // 210mm в пикселях при 96 DPI
       const containerHeight = container.scrollHeight || container.offsetHeight || 1123; // 297mm в пикселях при 96 DPI
       
-      console.log('[PDFPreview] Container dimensions:', {
+      pdfLog('[PDFPreview] Container dimensions:', {
         scrollWidth: container.scrollWidth,
         scrollHeight: container.scrollHeight,
         offsetWidth: container.offsetWidth,
@@ -437,7 +456,7 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
       
       // ✅ ИСПРАВЛЕНИЕ: Проверяем, что html2pdf доступен
       if (typeof window === 'undefined' || !window.html2pdf) {
-        console.error('[PDFPreview] html2pdf is not available');
+        pdfError('[PDFPreview] html2pdf is not available');
         Alert.alert('Ошибка', 'Библиотека для генерации PDF не загружена. Попробуйте обновить страницу.');
         return;
       }
@@ -463,18 +482,18 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
       
       // ✅ КРИТИЧНО: Проверяем что контейнер не пустой и имеет размеры
       if (!container || container.children.length === 0) {
-        console.error('[PDFPreview] Container is empty or invalid');
+        pdfError('[PDFPreview] Container is empty or invalid');
         Alert.alert('Ошибка', 'Контент для превью пуст. Проверьте выбранные путешествия.');
         return;
       }
       
       if (containerWidth <= 0 || containerHeight <= 0) {
-        console.error('[PDFPreview] Container has invalid dimensions:', { containerWidth, containerHeight });
+        pdfError('[PDFPreview] Container has invalid dimensions:', { containerWidth, containerHeight });
         Alert.alert('Ошибка', 'Не удалось определить размеры контента для превью.');
         return;
       }
       
-      console.log('[PDFPreview] Starting PDF generation with html2pdf...', {
+      pdfLog('[PDFPreview] Starting PDF generation with html2pdf...', {
         format,
         orientation,
         margins,
@@ -518,10 +537,10 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
         },
       });
 
-      console.log('[PDFPreview] Generated blob:', blob.size, 'bytes');
+      pdfLog('[PDFPreview] Generated blob:', blob.size, 'bytes');
 
       if (!blob || blob.size === 0) {
-        console.error('[PDFPreview] Generated blob is empty!');
+        pdfError('[PDFPreview] Generated blob is empty!');
         Alert.alert('Ошибка', 'PDF пуст. Проверьте данные путешествий.');
         return;
       }
@@ -565,7 +584,7 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
       // ✅ ИСПРАВЛЕНИЕ: Не удаляем контейнер сразу - он нужен для превью
       // Удалим его только при закрытии
     } catch (error) {
-      console.error('[PDFPreview] Error:', error);
+      pdfError('[PDFPreview] Error:', error);
       Alert.alert('Ошибка', `Произошла ошибка при создании превью: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
       
       // ✅ ИСПРАВЛЕНИЕ: Очищаем ресурсы при ошибке
@@ -604,10 +623,10 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
 function waitForImages(container: HTMLElement): Promise<void> {
   return new Promise((resolve) => {
     const images = container.querySelectorAll('img');
-    console.log('[waitForImages] Found images:', images.length);
+    pdfLog('[waitForImages] Found images:', images.length);
     
     if (images.length === 0) {
-      console.log('[waitForImages] No images found, resolving immediately');
+      pdfLog('[waitForImages] No images found, resolving immediately');
       resolve();
       return;
     }
@@ -617,9 +636,9 @@ function waitForImages(container: HTMLElement): Promise<void> {
     const total = images.length;
 
     const checkComplete = () => {
-      console.log(`[waitForImages] Progress: ${loaded} loaded, ${errored} errored, ${total} total`);
+      pdfLog(`[waitForImages] Progress: ${loaded} loaded, ${errored} errored, ${total} total`);
       if (loaded + errored >= total) {
-        console.log('[waitForImages] All images processed');
+        pdfLog('[waitForImages] All images processed');
         resolve();
       }
     };
@@ -633,17 +652,17 @@ function waitForImages(container: HTMLElement): Promise<void> {
       // ✅ ИСПРАВЛЕНИЕ: Обрабатываем ошибки загрузки изображений
       if (img.complete && img.naturalHeight !== 0) {
         loaded++;
-        console.log(`[waitForImages] Image ${index} already loaded`);
+        pdfLog(`[waitForImages] Image ${index} already loaded`);
         checkComplete();
       } else {
         img.onload = () => {
           loaded++;
-          console.log(`[waitForImages] Image ${index} loaded successfully`);
+          pdfLog(`[waitForImages] Image ${index} loaded successfully`);
           checkComplete();
         };
         img.onerror = (e) => {
           errored++;
-          console.warn(`[waitForImages] Image ${index} failed to load:`, img.src, e);
+          pdfWarn(`[waitForImages] Image ${index} failed to load:`, img.src, e);
           // ✅ ИСПРАВЛЕНИЕ: Заменяем на placeholder при ошибке
           img.style.display = 'none';
           const placeholder = document.createElement('div');
@@ -657,7 +676,7 @@ function waitForImages(container: HTMLElement): Promise<void> {
 
     // Таймаут на случай, если изображения не загрузятся
     setTimeout(() => {
-      console.log('[waitForImages] Timeout reached, resolving');
+      pdfLog('[waitForImages] Timeout reached, resolving');
       resolve();
     }, 30000); // 30 секунд максимум
   });

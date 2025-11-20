@@ -1,32 +1,74 @@
+import { MODERN_MATTE_PALETTE, MODERN_MATTE_SHADOWS, MODERN_MATTE_BOX_SHADOWS } from './modernMattePalette';
+
 export const DESIGN_TOKENS = {
   colors: {
-    background: "#f6f4ef",
-    surface: "#ffffff",
-    surfaceMuted: "rgba(255,255,255,0.82)",
-    card: "#ffffff",
-    cardMuted: "#f7f6f2",
-    dockBackground: "rgba(255,255,255,0.92)",
-    dockBorder: "rgba(74,140,140,0.15)",
-    text: "#1f2937",
-    textMuted: "#525866",
-    textSubtle: "#8c8f98",
-    primary: "#4a8c8c",
-    primarySoft: "rgba(74,140,140,0.12)",
-    accent: "#6b7280", // ✅ УЛУЧШЕНИЕ: Нейтральный серый вместо яркого оранжевого
-    accentSoft: "rgba(107, 114, 128, 0.12)",
-    success: "#22c55e",
-    successSoft: "rgba(34,197,94,0.15)",
-    warning: "#fbbf24",
-    warningSoft: "rgba(251,191,36,0.15)",
-    danger: "#ef4444",
-    dangerSoft: "rgba(239,68,68,0.12)",
-    info: "#3b82f6",
-    infoSoft: "rgba(59,130,246,0.12)",
-    border: "rgba(15,23,42,0.08)",
-    borderStrong: "rgba(15,23,42,0.16)",
-    focus: "rgba(74,140,140,0.35)",
-    mutedBackground: "#f4f3ef",
-    disabled: "#d4d4d4",
+    // Фоны (матовые, теплые)
+    background: MODERN_MATTE_PALETTE.background,
+    backgroundSecondary: MODERN_MATTE_PALETTE.backgroundSecondary,
+    surface: MODERN_MATTE_PALETTE.surface,
+    surfaceMuted: MODERN_MATTE_PALETTE.surfaceMuted,
+    surfaceElevated: MODERN_MATTE_PALETTE.surfaceElevated,
+    card: MODERN_MATTE_PALETTE.surface,
+    cardMuted: MODERN_MATTE_PALETTE.backgroundSecondary,
+    dockBackground: MODERN_MATTE_PALETTE.surfaceElevated,
+    dockBorder: MODERN_MATTE_PALETTE.border,
+    
+    // Текст (высококонтрастный, но мягкий)
+    text: MODERN_MATTE_PALETTE.text,
+    textMuted: MODERN_MATTE_PALETTE.textSecondary,
+    textSubtle: MODERN_MATTE_PALETTE.textTertiary,
+    textInverse: MODERN_MATTE_PALETTE.textInverse,
+    
+    // Акцентные цвета (мягкие, матовые)
+    primary: MODERN_MATTE_PALETTE.primary,
+    primaryDark: MODERN_MATTE_PALETTE.primaryDark,
+    primaryLight: MODERN_MATTE_PALETTE.primaryLight,
+    primarySoft: MODERN_MATTE_PALETTE.primarySoft,
+    
+    accent: MODERN_MATTE_PALETTE.accent,
+    accentDark: MODERN_MATTE_PALETTE.accentDark,
+    accentLight: MODERN_MATTE_PALETTE.accentLight,
+    accentSoft: MODERN_MATTE_PALETTE.accentSoft,
+    
+    // Функциональные цвета (мягкие, не агрессивные)
+    success: MODERN_MATTE_PALETTE.success,
+    successDark: MODERN_MATTE_PALETTE.successDark,
+    successLight: MODERN_MATTE_PALETTE.successLight,
+    successSoft: MODERN_MATTE_PALETTE.successSoft,
+    
+    warning: MODERN_MATTE_PALETTE.warning,
+    warningDark: MODERN_MATTE_PALETTE.warningDark,
+    warningLight: MODERN_MATTE_PALETTE.warningLight,
+    warningSoft: MODERN_MATTE_PALETTE.warningSoft,
+    
+    danger: MODERN_MATTE_PALETTE.danger,
+    dangerDark: MODERN_MATTE_PALETTE.dangerDark,
+    dangerLight: MODERN_MATTE_PALETTE.dangerLight,
+    dangerSoft: MODERN_MATTE_PALETTE.dangerSoft,
+    
+    info: MODERN_MATTE_PALETTE.info,
+    infoDark: MODERN_MATTE_PALETTE.infoDark,
+    infoLight: MODERN_MATTE_PALETTE.infoLight,
+    infoSoft: MODERN_MATTE_PALETTE.infoSoft,
+    
+    // Границы (мягкие, матовые)
+    border: MODERN_MATTE_PALETTE.border,
+    borderLight: MODERN_MATTE_PALETTE.borderLight,
+    borderStrong: MODERN_MATTE_PALETTE.borderStrong,
+    borderAccent: MODERN_MATTE_PALETTE.borderAccent,
+    
+    // Focus и интерактивность
+    focus: MODERN_MATTE_PALETTE.focus,
+    focusStrong: MODERN_MATTE_PALETTE.focusStrong,
+    
+    // Состояния
+    mutedBackground: MODERN_MATTE_PALETTE.mutedBackground,
+    disabled: MODERN_MATTE_PALETTE.disabled,
+    disabledText: MODERN_MATTE_PALETTE.disabledText,
+    
+    // Overlay
+    overlay: MODERN_MATTE_PALETTE.overlay,
+    overlayLight: MODERN_MATTE_PALETTE.overlayLight,
   },
   radii: {
     xl: 28,
@@ -36,9 +78,16 @@ export const DESIGN_TOKENS = {
     pill: 999,
   },
   shadows: {
-    soft: "0 2px 6px rgba(0, 0, 0, 0.03)", // ✅ УЛУЧШЕНИЕ: Упрощенные тени
-    medium: "0 4px 8px rgba(0, 0, 0, 0.04)",
+    light: MODERN_MATTE_BOX_SHADOWS.light,
+    medium: MODERN_MATTE_BOX_SHADOWS.medium,
+    heavy: MODERN_MATTE_BOX_SHADOWS.heavy,
+    hover: MODERN_MATTE_BOX_SHADOWS.hover,
+    card: MODERN_MATTE_BOX_SHADOWS.card,
+    modal: MODERN_MATTE_BOX_SHADOWS.modal,
+    // Для обратной совместимости
+    soft: MODERN_MATTE_BOX_SHADOWS.light,
   },
+  shadowsNative: MODERN_MATTE_SHADOWS,
   spacing: {
     xxs: 2,
     xs: 6,

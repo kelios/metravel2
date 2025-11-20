@@ -65,7 +65,9 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
       } catch (error) {
         if (mountedRef.current) {
           setHasError(true);
-          console.error('Error fetching popular travels:', error);
+          if (__DEV__) {
+            console.error('Error fetching popular travels:', error);
+          }
         }
       } finally {
         if (mountedRef.current) {

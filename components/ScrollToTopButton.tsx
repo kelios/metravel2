@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Pressable, StyleSheet, Animated, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 interface ScrollToTopButtonProps {
   scrollViewRef?: React.RefObject<any>;
@@ -59,7 +61,18 @@ export default function ScrollToTopButton({
     if (scrollViewRef?.current) {
       scrollViewRef.current.scrollTo({ y: 0, animated: true });
     } else if (flatListRef?.current) {
-      flatListRef.current.scrollToOffset({ offset: 0, animated: true });
+      // ✅ УЛУЧШЕНИЕ: Улучшенная прокрутка для FlatList
+      try {
+        flatListRef.current.scrollToOffset({ offset: 0, animated: true });
+      } catch (e) {
+        // Fallback для веб-версии
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+    } else if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // Fallback для веб-версии без ref
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -76,7 +89,7 @@ export default function ScrollToTopButton({
       ]}
     >
       <Pressable
-        style={styles.button}
+        style={[styles.button, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
         onPress={scrollToTop}
         accessibilityRole="button"
         accessibilityLabel="Прокрутить наверх"
@@ -90,7 +103,7 @@ export default function ScrollToTopButton({
             tabIndex: 0,
           },
         })}
-      testID="scroll-to-top-button"
+        testID="scroll-to-top-button"
       >
         <Feather name="arrow-up" size={20} color="#fff" />
       </Pressable>
@@ -108,13 +121,21 @@ const styles = StyleSheet.create({
   button: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: '#6b8e7f',
+    minWidth: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная ширина для touch-целей
+    minHeight: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+    borderRadius: DESIGN_TOKENS.radii.pill, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
+    backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
     justifyContent: 'center',
     alignItems: 'center',
     ...Platform.select({
       web: {
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        boxShadow: DESIGN_TOKENS.shadows.medium,
+        transition: 'all 0.2s ease',
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: '#3a7a7a', // Темнее primary для hover
+          transform: 'translateY(-2px) scale(1.05)',
+        },
       },
       ios: {
         shadowColor: '#000',

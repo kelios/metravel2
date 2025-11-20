@@ -17,22 +17,31 @@ export function useAutoSaveForm<T>(formData: T, options: Options<T>) {
     useEffect(() => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
+        let isMounted = true; // ✅ ИСПРАВЛЕНИЕ: Флаг для проверки монтирования
+
         timeoutRef.current = setTimeout(async () => {
             if (!deepEqual(formData, originalDataRef.current)) {
                 try {
                     const savedData = await onSave(formData);
-                    originalDataRef.current = savedData; // Обновили эталон
-                    onSuccess?.(savedData);
+                    // ✅ ИСПРАВЛЕНИЕ: Проверяем, что компонент еще смонтирован
+                    if (isMounted) {
+                        originalDataRef.current = savedData; // Обновили эталон
+                        onSuccess?.(savedData);
+                    }
                 } catch (err) {
-                    onError?.(err);
+                    // ✅ ИСПРАВЛЕНИЕ: Проверяем перед вызовом onError
+                    if (isMounted) {
+                        onError?.(err);
+                    }
                 }
             }
         }, debounce);
 
         return () => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            isMounted = false; // ✅ ИСПРАВЛЕНИЕ: Сбрасываем флаг при размонтировании
         };
-    }, [formData]);
+    }, [formData, debounce, onSave, onSuccess, onError]);
 
     const resetOriginalData = (newData: T) => {
         originalDataRef.current = newData;

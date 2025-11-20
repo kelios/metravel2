@@ -19,6 +19,8 @@ import { Video, ResizeMode } from 'expo-av';
 import * as Clipboard from 'expo-clipboard';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
 import BelkrajWidget from "@/components/belkraj/BelkrajWidget";
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 const QuestFullMap = lazy(() => import("@/components/quests/QuestFullMap"));
 
@@ -203,8 +205,13 @@ const StepCard = memo((props: StepCardProps) => {
                             <>
                                 <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
                                     <TextInput
-                                        style={[styles.input, error ? styles.inputError : null]}
+                                        style={[
+                                            styles.input, 
+                                            error ? styles.inputError : null,
+                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                                        ]}
                                         placeholder="Ваш ответ..."
+                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
                                         value={value}
                                         onChangeText={setValue}
                                         onSubmitEditing={handleCheck}
@@ -214,15 +221,41 @@ const StepCard = memo((props: StepCardProps) => {
                                         autoCorrect={false}
                                     />
                                 </Animated.View>
-                                {error && <Text style={styles.errorText}>{error}</Text>}
+                                {error && (
+                                    <View style={styles.errorContainer}>
+                                        <Text style={styles.errorText}>{error}</Text>
+                                    </View>
+                                )}
                                 <View style={styles.actions}>
-                                    <Pressable style={styles.primaryButton} onPress={handleCheck} hitSlop={6}><Text style={styles.buttonText}>Проверить</Text></Pressable>
+                                    <Pressable 
+                                        style={styles.primaryButton} 
+                                        onPress={handleCheck} 
+                                        hitSlop={6}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Проверить ответ"
+                                    >
+                                        <Text style={styles.buttonText}>Проверить</Text>
+                                    </Pressable>
                                     {step.hint && (
-                                        <Pressable style={styles.secondaryButton} onPress={onToggleHint} hitSlop={6}>
+                                        <Pressable 
+                                            style={styles.secondaryButton} 
+                                            onPress={onToggleHint} 
+                                            hitSlop={6}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={hintVisible ? 'Скрыть подсказку' : 'Показать подсказку'}
+                                        >
                                             <Text style={styles.secondaryButtonText}>{hintVisible ? 'Скрыть подсказку' : 'Подсказка'}</Text>
                                         </Pressable>
                                     )}
-                                    <Pressable style={styles.ghostButton} onPress={onSkip} hitSlop={6}><Text style={styles.ghostButtonText}>Пропустить</Text></Pressable>
+                                    <Pressable 
+                                        style={styles.ghostButton} 
+                                        onPress={onSkip} 
+                                        hitSlop={6}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Пропустить шаг"
+                                    >
+                                        <Text style={styles.ghostButtonText}>Пропустить</Text>
+                                    </Pressable>
                                 </View>
                                 {step.hint && attempts < showHintAfter && !hintVisible && (
                                     <Text style={styles.hintPrompt}>Подсказка откроется после {showHintAfter - attempts} попыток</Text>
@@ -314,7 +347,9 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                 suppressSave.current = true;
                 const saved = await AsyncStorage.getItem(storageKey);
                 if (saved) {
-                    const data = JSON.parse(saved);
+                    // ✅ FIX-010: Используем безопасный парсинг JSON
+                    const { safeJsonParseString } = require('@/src/utils/safeJsonParse');
+                    const data = safeJsonParseString(saved, { index: 0, unlocked: 0, answers: {}, attempts: {}, hints: {}, showMap: true });
                     setCurrentIndex(data.index ?? 0);
                     setUnlockedIndex(data.unlocked ?? 0);
                     setAnswers(data.answers ?? {});
@@ -325,7 +360,9 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                     setCurrentIndex(0); setUnlockedIndex(0); setAnswers({}); setAttempts({}); setHints({}); setShowMap(true);
                 }
             } catch (e) {
-                console.log('Error loading progress:', e);
+                // ✅ FIX-007: Используем централизованный logger
+                const { devError } = require('@/src/utils/logger');
+                devError('Error loading quest progress:', e);
             } finally {
                 setTimeout(() => { suppressSave.current = false; }, 0);
             }
@@ -659,13 +696,18 @@ const styles = StyleSheet.create({
 
     stepPill: {
         flexDirection: 'row', alignItems: 'center', borderRadius: 999,
-        paddingVertical: 6, paddingHorizontal: 10, borderWidth: 1, borderColor: COLORS.border,
+        paddingVertical: 6, paddingHorizontal: 10, // ✅ УЛУЧШЕНИЕ: Убрана граница
         backgroundColor: '#FFF', maxWidth: 260, marginRight: 6, marginBottom: 6,
+        shadowColor: '#1f1f1f',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+        elevation: 1,
     },
     stepPillNarrow: { maxWidth: 140, paddingHorizontal: 8, paddingVertical: 6 },
     stepPillUnlocked: { backgroundColor: '#FFF' },
-    stepPillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primaryDark },
-    stepPillDone: { backgroundColor: COLORS.primary, borderColor: COLORS.primaryDark },
+    stepPillActive: { backgroundColor: COLORS.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
+    stepPillDone: { backgroundColor: COLORS.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
     stepPillLocked: { opacity: 0.5 },
     stepPillIndex: { fontSize: 12, fontWeight: '700', color: COLORS.primary, marginRight: 6 },
     stepPillTitle: { fontSize: 12, fontWeight: '600', color: COLORS.text },
@@ -673,11 +715,17 @@ const styles = StyleSheet.create({
     stepDotMini: {
         width: 32, height: 32, borderRadius: 16, marginRight: 6,
         alignItems: 'center', justifyContent: 'center',
-        borderWidth: 1, borderColor: COLORS.border, backgroundColor: '#FFF',
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
+        backgroundColor: '#FFF',
+        shadowColor: '#1f1f1f',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+        elevation: 1,
     },
     stepDotMiniUnlocked: { opacity: 1 },
-    stepDotMiniActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primaryDark },
-    stepDotMiniDone: { backgroundColor: COLORS.primary, borderColor: COLORS.primaryDark },
+    stepDotMiniActive: { backgroundColor: COLORS.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
+    stepDotMiniDone: { backgroundColor: COLORS.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
     stepDotMiniLocked: { opacity: 0.45 },
     stepDotMiniText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
 
@@ -710,17 +758,134 @@ const styles = StyleSheet.create({
     storyText: { fontSize: 14, lineHeight: 20, color: COLORS.text },
 
     taskText: { fontSize: 16, fontWeight: '600', color: COLORS.text, marginBottom: SPACING.md, lineHeight: 22 },
-    input: { backgroundColor: '#FFF', borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: SPACING.md, fontSize: 16, marginBottom: SPACING.sm },
-    inputError: { borderColor: COLORS.error },
-    errorText: { color: '#EF4444', fontSize: 14, marginBottom: SPACING.md },
+    input: { 
+        backgroundColor: DESIGN_TOKENS.colors.surface, 
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+        borderRadius: DESIGN_TOKENS.radii.sm, 
+        padding: SPACING.md, 
+        fontSize: 16, 
+        marginBottom: SPACING.sm,
+        color: DESIGN_TOKENS.colors.text,
+        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+        shadowColor: '#1f1f1f',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+        elevation: 1,
+        ...Platform.select({
+            web: {
+                transition: 'box-shadow 0.2s ease',
+                boxShadow: '0 1px 3px rgba(31, 31, 31, 0.04)',
+            },
+        }),
+    },
+    inputError: { 
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон и тень
+        backgroundColor: 'rgba(239, 68, 68, 0.05)', // ✅ ИСПРАВЛЕНИЕ: Светло-красный фон для ошибок
+        ...Platform.select({
+            web: {
+                boxShadow: '0 0 0 2px rgba(239, 68, 68, 0.3), 0 1px 3px rgba(31, 31, 31, 0.04)',
+            },
+        }),
+    },
+    errorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 6,
+        marginBottom: SPACING.md,
+        padding: 8,
+        backgroundColor: 'rgba(239, 68, 68, 0.1)', // ✅ ИСПРАВЛЕНИЕ: Светло-красный фон
+        borderRadius: 6,
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
+    },
+    errorText: { 
+        color: DESIGN_TOKENS.colors.danger, 
+        fontSize: 13, // ✅ ИСПРАВЛЕНИЕ: Увеличен размер для читаемости
+        fontWeight: '500', // ✅ ИСПРАВЛЕНИЕ: Добавлен font-weight
+        flex: 1,
+    },
 
-    actions: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.sm },
-    primaryButton: { backgroundColor: COLORS.primary, paddingHorizontal: SPACING.lg, paddingVertical: 12, borderRadius: 10, flex: 1, minWidth: '45%' },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.sm, gap: 8 },
+    primaryButton: { 
+        backgroundColor: DESIGN_TOKENS.colors.primary, 
+        paddingHorizontal: SPACING.lg, 
+        paddingVertical: 12, 
+        borderRadius: DESIGN_TOKENS.radii.md, 
+        flex: 1, 
+        minWidth: '45%',
+        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+        ...Platform.select({
+            web: {
+                transition: 'all 0.2s ease',
+                cursor: 'pointer',
+                // @ts-ignore
+                ':hover': {
+                    backgroundColor: '#3a7a7a',
+                    transform: 'translateY(-1px)',
+                },
+                ':active': {
+                    transform: 'translateY(0)',
+                },
+            },
+        }),
+    },
     buttonText: { color: '#FFF', fontWeight: '600', textAlign: 'center', fontSize: 14 },
-    secondaryButton: { borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING.lg, paddingVertical: 12, borderRadius: 10, backgroundColor: '#FFF', flex: 1, minWidth: '45%' },
-    secondaryButtonText: { color: COLORS.text, fontWeight: '600', textAlign: 'center', fontSize: 14 },
-    ghostButton: { paddingHorizontal: SPACING.lg, paddingVertical: 12, borderRadius: 10, flex: 1, minWidth: '45%' },
-    ghostButtonText: { color: COLORS.textSecondary, fontWeight: '600', textAlign: 'center', fontSize: 14 },
+    secondaryButton: { 
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+        paddingHorizontal: SPACING.lg, 
+        paddingVertical: 12, 
+        borderRadius: DESIGN_TOKENS.radii.md, 
+        backgroundColor: DESIGN_TOKENS.colors.surface, 
+        flex: 1, 
+        minWidth: '45%',
+        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#1f1f1f',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
+        elevation: 2,
+        ...globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+        ...Platform.select({
+            web: {
+                transition: 'all 0.2s ease',
+                cursor: 'pointer',
+                boxShadow: DESIGN_TOKENS.shadows.light,
+                // @ts-ignore
+                ':hover': {
+                    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+                },
+            },
+        }),
+    },
+    secondaryButtonText: { color: DESIGN_TOKENS.colors.text, fontWeight: '600', textAlign: 'center', fontSize: 14 },
+    ghostButton: { 
+        paddingHorizontal: SPACING.lg, 
+        paddingVertical: 12, 
+        borderRadius: DESIGN_TOKENS.radii.md, 
+        flex: 1, 
+        minWidth: '45%',
+        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+        ...Platform.select({
+            web: {
+                transition: 'all 0.2s ease',
+                cursor: 'pointer',
+                // @ts-ignore
+                ':hover': {
+                    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+                },
+            },
+        }),
+    },
+    ghostButtonText: { color: DESIGN_TOKENS.colors.textMuted, fontWeight: '600', textAlign: 'center', fontSize: 14 },
 
     hintPrompt: { fontSize: 12, color: COLORS.textSecondary, textAlign: 'center', marginTop: SPACING.xs },
     hintContainer: { backgroundColor: 'rgba(34,197,94,0.10)', padding: SPACING.md, borderRadius: 8, marginTop: SPACING.md },
@@ -730,10 +895,14 @@ const styles = StyleSheet.create({
     answerValue: { fontSize: 16, fontWeight: '600', color: COLORS.text },
 
     mapActions: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.md },
-    mapButton: { backgroundColor: '#FFF', borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, minWidth: 110, marginRight: 6, marginBottom: 6 },
+    mapButton: { backgroundColor: '#FFF', // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+        paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, minWidth: 110, marginRight: 6, marginBottom: 6,
+        shadowColor: '#1f1f1f', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
     mapButtonText: { color: COLORS.text, fontSize: 12, fontWeight: '500', textAlign: 'center' },
 
-    mapPhotoButton: { borderWidth: 1, borderColor: COLORS.primaryDark, backgroundColor: COLORS.chip, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 999 },
+    mapPhotoButton: { // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
+        backgroundColor: COLORS.chip, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 999,
+        shadowColor: COLORS.primaryDark, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
     mapPhotoButtonText: { color: COLORS.primaryDark, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
     photoHint: { fontSize: 12, color: COLORS.textSecondary, marginBottom: SPACING.xs },

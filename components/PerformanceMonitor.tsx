@@ -1,7 +1,7 @@
 // Компонент для мониторинга производительности
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { usePerformanceMetrics, logPerformanceMetrics } from '@/hooks/usePerformanceMetrics';
+import { usePerformanceMonitoring, logPerformanceMetrics, PerformanceMetrics } from '@/hooks/usePerformanceMonitoring';
 
 interface PerformanceMonitorProps {
   enabled?: boolean;
@@ -14,15 +14,57 @@ export default function PerformanceMonitor({
   showUI = false,
   onMetricsReady,
 }: PerformanceMonitorProps) {
-  const [metrics, setMetrics] = useState<any>({});
+  const [metrics, setMetrics] = useState<PerformanceMetrics>({});
+  const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingMetricsRef = useRef<PerformanceMetrics>({});
 
-  usePerformanceMetrics((newMetrics) => {
-    setMetrics((prev: any) => ({ ...prev, ...newMetrics }));
-    logPerformanceMetrics(newMetrics);
-    if (onMetricsReady) {
-      onMetricsReady(newMetrics);
+  // ✅ FIX: Дебаунсим обновления чтобы избежать бесконечных обновлений
+  const handleMetricsReady = useCallback((newMetrics: PerformanceMetrics) => {
+    // Сохраняем новые метрики в ref
+    pendingMetricsRef.current = { ...pendingMetricsRef.current, ...newMetrics };
+    
+    // Очищаем предыдущий таймер
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
     }
-  });
+    
+    // Дебаунсим обновление состояния (батчим несколько обновлений в одно)
+    updateTimeoutRef.current = setTimeout(() => {
+      const finalMetrics = { ...pendingMetricsRef.current };
+      
+      // ✅ FIX: Обновляем состояние только если метрики действительно изменились
+      setMetrics((prev) => {
+        // Проверяем, есть ли реальные изменения
+        const hasChanges = Object.keys(finalMetrics).some(
+          (key) => prev[key as keyof PerformanceMetrics] !== finalMetrics[key as keyof PerformanceMetrics]
+        );
+        
+        if (!hasChanges) {
+          return prev; // Возвращаем предыдущее состояние, чтобы избежать лишнего рендера
+        }
+        
+        return { ...prev, ...finalMetrics };
+      });
+      
+      logPerformanceMetrics(finalMetrics);
+      if (onMetricsReady) {
+        onMetricsReady(finalMetrics);
+      }
+      pendingMetricsRef.current = {};
+    }, 100); // Батчим обновления в течение 100ms
+  }, [onMetricsReady]);
+
+  // ✅ УЛУЧШЕНИЕ: Используем новый хук мониторинга производительности
+  usePerformanceMonitoring(handleMetricsReady, enabled);
+
+  // ✅ FIX: Очищаем таймер при размонтировании
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!enabled || Platform.OS !== 'web') return null;
 

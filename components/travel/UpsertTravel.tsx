@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Snackbar } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
 
 import {
     fetchAllCountries,
@@ -12,6 +13,7 @@ import {
     saveFormData,
 } from '@/src/api/travels';
 import { TravelFormData, MarkerData, Travel } from '@/src/types/types';
+import { useAuth } from '@/context/AuthContext';
 
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
@@ -21,6 +23,7 @@ import { useAutoSaveForm } from '@/hooks/useAutoSaveForm';
 export default function UpsertTravel() {
     const router = useRouter();
     const { id } = useLocalSearchParams();
+    const { userId, isAuthenticated } = useAuth();
     const isNew = !id;
     const windowWidth = Dimensions.get('window').width;
     const isMobile = windowWidth <= 768;
@@ -33,6 +36,8 @@ export default function UpsertTravel() {
     const [snackbarVisible, setSnackbarVisible] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasAccess, setHasAccess] = useState(false);
 
     const saveFormDataWithId = async (data: TravelFormData) => {
         const cleanedData = cleanEmptyFields({ ...data, id: data.id || null });
@@ -69,11 +74,26 @@ export default function UpsertTravel() {
                 console.error('Ошибка загрузки фильтров:', error);
             }
         })();
-        if (!isNew) loadTravelData(id as string);
+        if (!isNew && id) {
+            loadTravelData(id as string);
+        } else if (isNew) {
+            // Для нового путешествия проверяем авторизацию
+            if (!isAuthenticated) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Требуется авторизация',
+                    text2: 'Войдите в систему для создания путешествия',
+                });
+                router.replace('/login');
+            } else {
+                setHasAccess(true);
+                setIsLoading(false);
+            }
+        }
         return () => {
             isMounted = false;
         };
-    }, [id]);
+    }, [id, isNew, isAuthenticated, userId, isSuperAdmin, router]);
 
     const handleManualSave = async () => {
         try {
@@ -87,12 +107,60 @@ export default function UpsertTravel() {
     };
 
     const loadTravelData = async (travelId: string) => {
+        try {
+            setIsLoading(true);
         const travelData = await fetchTravel(Number(travelId));
+            
+            // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Проверка прав доступа при редактировании
+            if (!isNew && travelData) {
+                const travelUserId = travelData.userIds || travelData.user?.id?.toString() || '';
+                const currentUserIdStr = userId?.toString() || '';
+                
+                // Проверяем, что пользователь является владельцем или супер-админом
+                const isOwner = travelUserId === currentUserIdStr;
+                const canEdit = isOwner || isSuperAdmin;
+                
+                if (!canEdit) {
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Нет доступа',
+                        text2: 'Вы можете редактировать только свои путешествия',
+                    });
+                    router.replace('/');
+                    return;
+                }
+                
+                setHasAccess(true);
+            } else if (isNew) {
+                // Для нового путешествия проверяем авторизацию
+                if (!isAuthenticated) {
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Требуется авторизация',
+                        text2: 'Войдите в систему для создания путешествия',
+                    });
+                    router.replace('/login');
+                    return;
+                }
+                setHasAccess(true);
+            }
+            
         const transformed = transformTravelToFormData(travelData);
         setTravelDataOld(travelData);
         setFormData(transformed);
         setMarkers(transformed.coordsMeTravel || []);
         resetOriginalData(transformed);
+        } catch (error) {
+            console.error('Ошибка загрузки путешествия:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Ошибка загрузки',
+                text2: 'Не удалось загрузить путешествие',
+            });
+            router.replace('/');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleCountrySelect = (countryId: string) => {
@@ -116,6 +184,21 @@ export default function UpsertTravel() {
         setSnackbarMessage(message);
         setSnackbarVisible(true);
     };
+
+    // Показываем загрузку или блокируем доступ
+    if (isLoading) {
+        return (
+            <SafeAreaView style={styles.safeContainer}>
+                <View style={styles.loadingContainer}>
+                    <Button loading mode="text">Загрузка...</Button>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (!hasAccess) {
+        return null; // Редирект уже произошел
+    }
 
     return (
         <SafeAreaView style={styles.safeContainer}>
@@ -218,6 +301,11 @@ const styles = StyleSheet.create({
         borderColor: '#007AFF',
         borderRadius: 50,
         minWidth: 100,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });
 

@@ -67,10 +67,14 @@ export default function ImprovedChat() {
     try {
       const history = await AsyncStorage.getItem(CHAT_HISTORY_KEY);
       if (history) {
-        setMessages(JSON.parse(history));
+        // ✅ FIX-010: Используем безопасный парсинг JSON
+        const { safeJsonParseString } = require('@/src/utils/safeJsonParse');
+        setMessages(safeJsonParseString(history, []));
       }
     } catch (error) {
-      console.error('Error loading chat history:', error);
+      // ✅ FIX-007: Используем централизованный logger
+      const { devError } = require('@/src/utils/logger');
+      devError('Error loading chat history:', error);
     }
   };
 
@@ -120,7 +124,10 @@ export default function ImprovedChat() {
 
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
-      console.error('Ошибка при отправке запроса:', error);
+      // ✅ BUG-001: Логируем только в dev режиме
+      if (__DEV__) {
+        console.error('Ошибка при отправке запроса:', error);
+      }
       
       // Обновляем статус на ошибку
       setMessages((prev) =>
@@ -129,10 +136,14 @@ export default function ImprovedChat() {
         )
       );
 
-      // Добавляем сообщение об ошибке
+      // ✅ УЛУЧШЕНИЕ: Показываем понятное сообщение об ошибке
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
-        text: 'Произошла ошибка. Попробуйте еще раз.',
+        text: error instanceof Error 
+          ? (error.message.includes('timeout') || error.message.includes('время ожидания')
+              ? 'Превышено время ожидания. Попробуйте еще раз.'
+              : 'Произошла ошибка. Проверьте подключение к интернету и попробуйте еще раз.')
+          : 'Произошла ошибка. Попробуйте еще раз.',
         isUser: false,
         timestamp: Date.now(),
       };
@@ -354,8 +365,12 @@ const styles = StyleSheet.create({
   botMessage: {
     backgroundColor: '#fff',
     borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
+    shadowColor: '#1f1f1f',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   messageText: {
     fontSize: 15,
@@ -385,15 +400,19 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: '#fff',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    shadowColor: '#1f1f1f',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
     alignSelf: 'flex-start',
     marginTop: 8,
   },
   typingText: {
     marginLeft: 8,
     fontSize: 13,
-    color: '#666',
+    color: '#4a4946',
     fontStyle: 'italic',
   },
   emptyState: {
@@ -404,13 +423,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1b1f23',
+    color: '#1f1f1f',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyDescription: {
     fontSize: 14,
-    color: '#666',
+    color: '#4a4946',
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
@@ -422,15 +441,19 @@ const styles = StyleSheet.create({
   quickQuestion: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    shadowColor: '#1f1f1f',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
     marginRight: 8,
   },
   quickQuestionText: {
     fontSize: 13,
-    color: '#6b8e7f',
+    color: '#5b8a7a',
     fontWeight: '500',
   },
   inputContainer: {
@@ -438,9 +461,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    backgroundColor: '#ffffff',
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется отступ для разделения
     gap: 8,
   },
   input: {
@@ -448,13 +470,24 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f5f4f2',
     borderRadius: 20,
     fontSize: 15,
-    color: '#1b1f23',
+    color: '#1f1f1f',
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    shadowColor: '#1f1f1f',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
     ...Platform.select({
       web: {
         outlineWidth: 0,
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: '0 1px 3px rgba(31, 31, 31, 0.04)',
+        ':focus': {
+          boxShadow: '0 0 0 3px rgba(91, 138, 122, 0.3), 0 2px 6px rgba(31, 31, 31, 0.08)',
+        },
       },
     }),
   },
@@ -462,12 +495,23 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#6b8e7f',
+    backgroundColor: '#5b8a7a',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#1f1f1f',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
     ...Platform.select({
       web: {
         cursor: 'pointer',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        ':hover': {
+          backgroundColor: '#4a7264',
+          transform: 'translateY(-1px)',
+          boxShadow: '0 3px 8px rgba(31, 31, 31, 0.12)',
+        },
       },
     }),
   },

@@ -1,6 +1,8 @@
 import React, {createContext, FC, ReactNode, useContext, useEffect, useState,} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi,} from '@/src/api/travels';
+import { setSecureItem, getSecureItem, removeSecureItems } from '@/src/utils/secureStorage';
+import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/src/utils/storageBatch';
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -38,17 +40,27 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     // Функции, не содержащие хуков
     const checkAuthentication = async () => {
         try {
-            const token = await AsyncStorage.getItem('userToken');
-            const storedUserId = await AsyncStorage.getItem('userId');
-            const storedUsername = await AsyncStorage.getItem('userName');
-            const superuserFlag = await AsyncStorage.getItem('isSuperuser');
+            // ✅ FIX-001: Используем безопасное хранилище для токена
+            // ✅ FIX-004: Используем батчинг для остальных данных
+            const [token, storageData] = await Promise.all([
+                getSecureItem('userToken'),
+                getStorageBatch(['userId', 'userName', 'isSuperuser']),
+            ]);
 
             setIsAuthenticated(!!token);
-            setUserId(storedUserId);
-            setUsername(storedUsername || '');
-            setIsSuperuser(superuserFlag === 'true');
+            setUserId(storageData.userId);
+            setUsername(storageData.userName || '');
+            setIsSuperuser(storageData.isSuperuser === 'true');
         } catch (error) {
-            console.error('Ошибка при проверке аутентификации:', error);
+            // ✅ ИСПРАВЛЕНИЕ: Логируем ошибку и сбрасываем состояние при ошибке
+            if (__DEV__) {
+                console.error('Ошибка при проверке аутентификации:', error);
+            }
+            // Сбрасываем состояние при ошибке для предотвращения некорректного состояния
+            setIsAuthenticated(false);
+            setUserId(null);
+            setUsername('');
+            setIsSuperuser(false);
         }
     };
 
@@ -56,15 +68,19 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
         try {
             const userData = await loginApi(email, password);
             if (userData) {
-                await AsyncStorage.multiSet([
-                    ['userToken', userData.token],
-                    ['userId', userData.id],
-                    ['userName', userData.name?.trim() || userData.email],
-                    ['isSuperuser', userData.is_superuser ? 'true' : 'false'],
+                // ✅ FIX-001: Токен сохраняем в безопасное хранилище
+                // ✅ FIX-004: Используем батчинг для остальных данных
+                await Promise.all([
+                    setSecureItem('userToken', userData.token),
+                    setStorageBatch([
+                        ['userId', String(userData.id)],
+                        ['userName', userData.name?.trim() || userData.email],
+                        ['isSuperuser', userData.is_superuser ? 'true' : 'false'],
+                    ]),
                 ]);
 
                 setIsAuthenticated(true);
-                setUserId(userData.id);
+                setUserId(String(userData.id));
                 setUsername(userData.name?.trim() || userData.email);
                 setIsSuperuser(userData.is_superuser);
 
@@ -72,7 +88,10 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
             }
             return false;
         } catch (error) {
-            console.error('Ошибка входа:', error);
+            // ✅ ИСПРАВЛЕНИЕ: Логируем только в dev режиме
+            if (__DEV__) {
+                console.error('Ошибка входа:', error);
+            }
             return false;
         }
     };
@@ -82,13 +101,16 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
             // Всегда удаляем локальные данные, даже если api не сработал
             await logoutApi();
         } catch (e) {
-            console.warn('Ошибка при логауте с сервера:', e);
+            // ✅ ИСПРАВЛЕНИЕ: Логируем только в dev режиме
+            if (__DEV__) {
+                console.warn('Ошибка при логауте с сервера:', e);
+            }
         } finally {
-            await AsyncStorage.multiRemove([
-                'userToken',
-                'userName',
-                'isSuperuser',
-                'userId',
+            // ✅ FIX-001: Удаляем токен из безопасного хранилища
+            // ✅ FIX-004: Используем батчинг для удаления остальных данных
+            await Promise.all([
+                removeSecureItems(['userToken', 'refreshToken']),
+                removeStorageBatch(['userName', 'isSuperuser', 'userId']),
             ]);
             setIsAuthenticated(false);
             setUserId(null);
@@ -104,7 +126,10 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
                 ? response
                 : 'Что-то пошло не так. Попробуйте снова.';
         } catch (error) {
-            console.error('Ошибка при сбросе пароля:', error);
+            // ✅ ИСПРАВЛЕНИЕ: Логируем только в dev режиме
+            if (__DEV__) {
+                console.error('Ошибка при сбросе пароля:', error);
+            }
             return 'Произошла ошибка. Попробуйте ещё раз.';
         }
     };

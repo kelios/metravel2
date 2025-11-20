@@ -11,6 +11,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import type { Travel } from '@/src/types/types';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 interface NavigationArrowsProps {
   currentTravel: Travel;
@@ -97,13 +99,14 @@ export default function NavigationArrows({
       {prevTravel ? (
         <Pressable
           onPress={() => handleNavigate(prevTravel)}
-          style={[styles.navCard, styles.prevCard]}
+          style={[styles.navCard, styles.prevCard, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
           accessibilityRole="button"
           accessibilityLabel={`Предыдущее путешествие: ${prevTravel.name || ''}`}
           android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
         >
           <View style={styles.navContent}>
-            <MaterialIcons name="chevron-left" size={24} color="#ff9f5a" />
+            {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
+            <MaterialIcons name="chevron-left" size={24} color={DESIGN_TOKENS.colors.primary} />
             <View style={styles.navInfo}>
               <Text style={styles.navLabel} numberOfLines={1}>
                 Предыдущее
@@ -135,7 +138,7 @@ export default function NavigationArrows({
       {nextTravel ? (
         <Pressable
           onPress={() => handleNavigate(nextTravel)}
-          style={[styles.navCard, styles.nextCard]}
+          style={[styles.navCard, styles.nextCard, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
           accessibilityRole="button"
           accessibilityLabel={`Следующее путешествие: ${nextTravel.name || ''}`}
           android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
@@ -162,7 +165,8 @@ export default function NavigationArrows({
                 {nextTravel.name || 'Без названия'}
               </Text>
             </View>
-            <MaterialIcons name="chevron-right" size={24} color="#ff9f5a" />
+            {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
+            <MaterialIcons name="chevron-right" size={24} color={DESIGN_TOKENS.colors.primary} />
           </View>
         </Pressable>
       ) : (
@@ -187,24 +191,28 @@ const styles = StyleSheet.create({
   },
   navCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    shadowColor: '#000',
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    shadowColor: '#1f1f1f',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    minHeight: 80, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
     ...Platform.select({
       web: {
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         ':hover': {
-          borderColor: '#ff9f5a',
+          borderColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
           shadowOpacity: 0.1,
           shadowRadius: 12,
+          transform: 'translateY(-2px)',
+        } as any,
+        ':active': {
+          transform: 'translateY(0)',
         } as any,
       },
     }),

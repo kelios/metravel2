@@ -14,6 +14,8 @@ import { router } from "expo-router";
 import type { Travel } from "@/src/types/types";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from "@/utils/imageOptimization";
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 type Props = { travel: Travel };
 
@@ -100,9 +102,10 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
             <Pressable
                 onPress={onPress}
                 disabled={!canOpen}
-                android_ripple={{ color: "rgba(255,159,90,0.2)", borderless: false }}
+                android_ripple={{ color: `${DESIGN_TOKENS.colors.primary}33`, borderless: false }} // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
                 style={({ pressed }) => [
                     styles.card,
+                    globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                     { padding: cardDimensions.cardPadding },
                     pressed && styles.cardPressed,
                     !canOpen && styles.cardDisabled,
@@ -162,34 +165,32 @@ const styles = StyleSheet.create({
         }),
     },
 
-    // ✅ УЛУЧШЕНИЕ: Современная карточка с улучшенными тенями и анимациями
+    // ✅ УЛУЧШЕНИЕ: Современная матовая карточка без границ, только тени
     card: {
         alignItems: "center",
-        borderRadius: 20,
-        backgroundColor: "#fff",
+        borderRadius: DESIGN_TOKENS.radii.lg,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         width: '100%',
         height: '100%',
-        shadowColor: "#000",
+        shadowColor: "#1f1f1f",
         shadowOpacity: 0.08,
-        shadowRadius: 12,
+        shadowRadius: 8,
         shadowOffset: { width: 0, height: 2 },
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.06)',
-        ...(Platform.OS === "android" ? { elevation: 4 } : null),
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+        ...(Platform.OS === "android" ? { elevation: 3 } : null),
         ...Platform.select({
             web: {
                 cursor: "pointer" as any,
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 willChange: 'transform, box-shadow',
+                boxShadow: DESIGN_TOKENS.shadows.card,
                 ':hover': {
-                    transform: 'translateY(-6px) scale(1.02)',
-                    shadowOpacity: 0.15,
-                    shadowRadius: 20,
-                    shadowOffset: { width: 0, height: 8 },
-                    borderColor: 'rgba(255,159,90,0.3)',
+                    transform: 'translateY(-4px)',
+                    boxShadow: DESIGN_TOKENS.shadows.hover,
                 } as any,
                 ':active': {
-                    transform: 'translateY(-2px) scale(0.98)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: DESIGN_TOKENS.shadows.medium,
                 } as any,
             },
         }),
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     imageWrapper: {
         width: '100%',
         overflow: "hidden",
-        backgroundColor: "#f3f4f6",
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
         marginBottom: 12,
         ...Platform.select({
             web: {

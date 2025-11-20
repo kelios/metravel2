@@ -67,9 +67,9 @@ const DescriptionComponent: React.FC<Props> = ({
         <div className={className}>
             <label
                 htmlFor={inputId}
-                style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}
+                style={{ display: 'block', fontWeight: 600, marginBottom: 6, color: '#1f1f1f', fontSize: '14px' }}
             >
-                {label} {required ? <span aria-hidden="true" style={{ color: '#d32f2f' }}>*</span> : null}
+                {label} {required ? <span aria-hidden="true" style={{ color: '#c47a7a' }}>*</span> : null}
             </label>
 
             <textarea
@@ -86,13 +86,27 @@ const DescriptionComponent: React.FC<Props> = ({
                 style={{
                     width: '100%',
                     resize: 'vertical',
-                    padding: '10px 12px',
-                    borderRadius: 8,
-                    border: `1px solid ${error ? '#d32f2f' : '#d1d5db'}`,
+                    padding: '12px 14px',
+                    borderRadius: 12,
+                    border: `1.5px solid ${error ? '#c47a7a' : 'rgba(31, 31, 31, 0.08)'}`,
                     outline: 'none',
                     font: 'inherit',
-                    background: disabled ? '#f5f5f5' : '#fff',
-                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)',
+                    backgroundColor: disabled ? '#f5f4f2' : '#ffffff', // ✅ FIX: Заменено background на backgroundColor
+                    color: '#1f1f1f',
+                    fontSize: '15px',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+                onFocus={(e) => {
+                    if (!error) {
+                        e.target.style.borderColor = '#5b8a7a';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3)';
+                    }
+                }}
+                onBlur={(e) => {
+                    if (!error) {
+                        e.target.style.borderColor = 'rgba(31, 31, 31, 0.08)';
+                        e.target.style.boxShadow = 'none';
+                    }
                 }}
             />
 
@@ -103,8 +117,8 @@ const DescriptionComponent: React.FC<Props> = ({
                         display: 'flex',
                         justifyContent: 'space-between',
                         marginTop: 6,
-                        fontSize: 12,
-                        color: error ? '#d32f2f' : '#6b7280',
+                        fontSize: 13,
+                        color: error ? '#b46a6a' : '#4a4946',
                     }}
                 >
                     <span>{helperText}</span>

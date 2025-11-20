@@ -7,6 +7,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, useWindowDimensions, Pressable, Platform } from 'react-native';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import type { Travel } from '@/src/types/types';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface QuickFactsProps {
   travel: Travel;
@@ -31,7 +32,17 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
       const cats = new Set<string>();
       travel.travelAddress.forEach((addr: any) => {
         if (addr?.categoryName) {
-          const parts = String(addr.categoryName).split(',').map(s => s.trim()).filter(Boolean);
+          // ✅ ИСПРАВЛЕНИЕ: Обрабатываем случай, когда categoryName может быть объектом с {id, name}
+          let categoryNameStr: string;
+          if (typeof addr.categoryName === 'string') {
+            categoryNameStr = addr.categoryName;
+          } else if (addr.categoryName && typeof addr.categoryName === 'object' && 'name' in addr.categoryName) {
+            categoryNameStr = String(addr.categoryName.name || '');
+          } else {
+            categoryNameStr = String(addr.categoryName || '');
+          }
+          
+          const parts = categoryNameStr.split(',').map(s => s.trim()).filter(Boolean);
           parts.forEach(cat => cats.add(cat));
         }
       });
@@ -62,7 +73,8 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
       {/* Дата */}
       {whenLine && (
         <View style={styles.factItem}>
-          <MaterialIcons name="calendar-today" size={Platform.select({ default: 16, web: 18 })} color="#6b7280" /> {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+          {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+          <MaterialIcons name="calendar-today" size={Platform.select({ default: 16, web: 18 })} color="#6b7280" />
           <Text style={styles.factText}>{whenLine}</Text>
         </View>
       )}
@@ -70,7 +82,8 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
       {/* Длительность */}
       {daysText && (
         <View style={styles.factItem}>
-          <MaterialIcons name="schedule" size={Platform.select({ default: 16, web: 18 })} color="#6b7280" /> {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+          {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+          <MaterialIcons name="schedule" size={Platform.select({ default: 16, web: 18 })} color="#6b7280" />
           <Text style={styles.factText}>{daysText}</Text>
         </View>
       )}
@@ -78,7 +91,8 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
       {/* Страна */}
       {countryName && (
         <View style={styles.factItem}>
-          <Feather name="map-pin" size={Platform.select({ default: 16, web: 18 })} color="#6b7280" /> {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+          {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+          <Feather name="map-pin" size={Platform.select({ default: 16, web: 18 })} color="#6b7280" />
           <Text style={styles.factText}>{countryName}</Text>
         </View>
       )}
@@ -86,7 +100,8 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
       {/* Категории */}
       {categories.length > 0 && (
         <View style={[styles.factItem, styles.categoriesContainer]}>
-          <MaterialIcons name="label" size={Platform.select({ default: 16, web: 18 })} color="#6b7280" /> {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+          {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
+          <MaterialIcons name="label" size={Platform.select({ default: 16, web: 18 })} color="#6b7280" />
           <View style={styles.categoriesWrap}>
             {categories.map((cat, index) => (
               <Pressable
@@ -125,20 +140,24 @@ const styles = StyleSheet.create({
       default: 20, // Мобильные
       web: 28, // Десктоп
     }),
-    backgroundColor: Platform.OS === 'web' ? 'rgba(255, 255, 255, 0.9)' : '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     ...(Platform.OS === 'web' ? {
       backdropFilter: 'blur(20px)' as any,
       WebkitBackdropFilter: 'blur(20px)' as any,
     } : {}),
-    borderRadius: 20,
+    borderRadius: DESIGN_TOKENS.radii.lg,
     marginBottom: 24,
-    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 1
-    borderColor: 'rgba(0, 0, 0, 0.06)',
-    shadowColor: '#000',
+    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    shadowColor: '#1f1f1f',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02, // ✅ УЛУЧШЕНИЕ: Упрощенная тень
-    shadowRadius: 4,
-    elevation: 1, // ✅ УЛУЧШЕНИЕ: Уменьшено с 4
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: DESIGN_TOKENS.shadows.card,
+      },
+    }),
   },
   containerMobile: {
     paddingVertical: 20,
@@ -158,7 +177,7 @@ const styles = StyleSheet.create({
       web: 16, // Десктоп
     }),
     fontWeight: '600',
-    color: '#1a202c',
+    color: DESIGN_TOKENS.colors.text,
     fontFamily: 'Georgia',
     letterSpacing: -0.2,
   },
@@ -177,7 +196,7 @@ const styles = StyleSheet.create({
   },
   // ✅ РЕДИЗАЙН: Улучшенные теги категорий с hover эффектами
   categoryTag: {
-    backgroundColor: 'rgba(0, 0, 0, 0.02)', // ✅ УЛУЧШЕНИЕ: Нейтральный фон
+    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
     paddingHorizontal: Platform.select({
       default: 10, // Мобильные
       web: 12, // Десктоп
@@ -187,17 +206,17 @@ const styles = StyleSheet.create({
       web: 6, // Десктоп
     }),
     borderRadius: 16,
-    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 1
-    borderColor: 'rgba(0, 0, 0, 0.06)',
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.border,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' as any,
         ':hover': {
-          backgroundColor: 'rgba(0, 0, 0, 0.04)',
-          borderColor: '#1f2937',
+          backgroundColor: DESIGN_TOKENS.colors.primaryLight,
+          borderColor: DESIGN_TOKENS.colors.primary,
           transform: 'translateY(-2px) scale(1.05)' as any,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)' as any,
+          boxShadow: '0 2px 8px rgba(31, 31, 31, 0.08)' as any,
         } as any,
       },
     }),

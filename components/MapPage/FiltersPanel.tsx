@@ -25,18 +25,21 @@ import RoutePointControls from '@/components/MapPage/RoutePointControls';
 import MapLegend from '@/components/MapPage/MapLegend';
 import RouteStats from '@/components/MapPage/RouteStats';
 import RouteHint from '@/components/MapPage/RouteHint';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 const DEBOUNCE_MS = 300;
 
+// ✅ ИСПРАВЛЕНИЕ: Используем единую палитру DESIGN_TOKENS вместо локальной COLORS
 const COLORS = {
-  bg: '#ffffff',
-  card: '#f7f9fb',
-  text: '#1b1f23',
-  textMuted: '#667085',
-  primary: '#2f7a7a',
-  primarySoft: '#e6f2f2',
-  border: '#e6e9ee',
-  danger: '#ef5350',
+  bg: DESIGN_TOKENS.colors.surface,
+  card: DESIGN_TOKENS.colors.mutedBackground,
+  text: DESIGN_TOKENS.colors.text,
+  textMuted: DESIGN_TOKENS.colors.textMuted,
+  primary: DESIGN_TOKENS.colors.primary,
+  primarySoft: DESIGN_TOKENS.colors.primarySoft,
+  border: DESIGN_TOKENS.colors.border,
+  danger: DESIGN_TOKENS.colors.danger,
   shadow: '#000',
 };
 
@@ -133,6 +136,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         accessibilityLabel={accessibilityLabel || title || icon}
         style={({ pressed }) => [
           styles.compactButton,
+          globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
           { backgroundColor: color },
           pressed && { opacity: 0.9 },
           compact && styles.compactButtonSmall,
@@ -171,13 +175,14 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           if (!name) return null;
           const qty = travelCategoriesCount[name];
           if (!qty) return null;
+          // ✅ ИСПРАВЛЕНИЕ: Создаем чистый объект только с нужными полями, чтобы избежать рендеринга лишних свойств
           return {
-            ...c,
+            id: c?.id || name,
             label: `${name} (${qty})`,
             value: name,
           };
         })
-        .filter(Boolean) as { id: number; label: string; value: string }[],
+        .filter(Boolean) as { id: string | number; label: string; value: string }[],
     [filters.categories, travelCategoriesCount]
   );
 
@@ -191,8 +196,21 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   }, [setMode]);
 
   const handleCategoryRemove = useCallback(
-    (cat: string) => {
-      onFilterChange('categories', filterValue.categories.filter((c) => c !== cat));
+    (cat: string | { id?: string | number; name?: string; value?: string }) => {
+      // ✅ ИСПРАВЛЕНИЕ: Обрабатываем случай, когда cat может быть объектом
+      const catValue = typeof cat === 'string' 
+        ? cat 
+        : (cat && typeof cat === 'object' && 'value' in cat ? cat.value : (cat && typeof cat === 'object' && 'name' in cat ? cat.name : String(cat || '')));
+      
+      onFilterChange('categories', filterValue.categories.filter((c) => {
+        if (typeof c === 'string') {
+          return c !== catValue;
+        } else if (c && typeof c === 'object') {
+          const cValue = 'value' in c ? c.value : ('name' in c ? c.name : String(c || ''));
+          return cValue !== catValue;
+        }
+        return true;
+      }));
     },
     [filterValue.categories, onFilterChange]
   );
@@ -233,11 +251,14 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         {SEARCH_MODES.map(({ key, icon, label }) => {
           const active = mode === key;
           return (
-            <TouchableOpacity
+            <Pressable
               key={key}
-              style={[styles.modeTab, active && styles.modeTabActive]}
+              style={[
+                styles.modeTab, 
+                active && styles.modeTabActive,
+                globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+              ]}
               onPress={() => handleSetMode(key)}
-              activeOpacity={0.8}
               accessibilityRole="tab"
               accessibilityState={{ selected: active }}
             >
@@ -245,7 +266,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               <Text style={[styles.modeTabText, active && styles.modeTabTextActive]}>
                 {label}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </View>
@@ -266,7 +287,13 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 <Text style={styles.sectionLabel}>Категории</Text>
                 <MultiSelectField
                   items={categoriesWithCount}
-                  value={filterValue.categories}
+                  value={Array.isArray(filterValue.categories) 
+                    ? filterValue.categories.map(cat => 
+                        typeof cat === 'string' 
+                          ? cat 
+                          : (cat && typeof cat === 'object' && 'value' in cat ? cat.value : String(cat || ''))
+                      )
+                    : []}
                   onChange={(v) => onFilterChange('categories', v)}
                   labelField="label"
                   valueField="value"
@@ -281,16 +308,34 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     style={styles.chipsContainer}
                     contentContainerStyle={styles.chipsContent}
                   >
-                    {filterValue.categories.slice(0, 5).map((cat) => (
-                      <View key={cat} style={styles.categoryChip}>
-                        <Text style={styles.categoryChipText} numberOfLines={1}>
-                          {cat.split(' ')[0]}
-                        </Text>
-                        <Pressable onPress={() => handleCategoryRemove(cat)} hitSlop={8}>
-                          <Icon name="close" size={14} color={COLORS.primary} />
-                        </Pressable>
-                      </View>
-                    ))}
+                    {filterValue.categories.slice(0, 5).map((cat) => {
+                      // ✅ ИСПРАВЛЕНИЕ: Обрабатываем случай, когда cat может быть объектом с {id, name}
+                      const catValue = typeof cat === 'string' 
+                        ? cat 
+                        : (cat && typeof cat === 'object' && 'name' in cat ? cat.name : String(cat || ''));
+                      const catKey = typeof cat === 'string' 
+                        ? cat 
+                        : (cat && typeof cat === 'object' && 'id' in cat ? String(cat.id) : String(cat || ''));
+                      const displayText = typeof catValue === 'string' ? catValue.split(' ')[0] : String(catValue || '');
+                      
+                      return (
+                        <View key={catKey} style={styles.categoryChip}>
+                          <Text style={styles.categoryChipText} numberOfLines={1}>
+                            {displayText}
+                          </Text>
+                          <Pressable 
+                            onPress={() => handleCategoryRemove(cat)} 
+                            hitSlop={8}
+                            style={globalFocusStyles.focusable} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                            accessibilityRole="button"
+                            accessibilityLabel="Удалить категорию"
+                          >
+                            {/* ✅ ИСПРАВЛЕНИЕ: Увеличен размер иконки */}
+                            <Icon name="close" size={16} color={COLORS.primary} />
+                          </Pressable>
+                        </View>
+                      );
+                    })}
                     {filterValue.categories.length > 5 && (
                       <View style={styles.moreChip}>
                         <Text style={styles.moreChipText}>
@@ -323,8 +368,11 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                         style={[
                           styles.radiusChip,
                           selected && styles.radiusChipActive,
+                          globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                         ]}
                         accessibilityRole="button"
+                        accessibilityLabel={`Выбрать радиус: ${opt.name}`}
+                        accessibilityState={{ selected }}
                       >
                         <Text style={styles.radiusChipText}>{opt.name}</Text>
                       </Pressable>
@@ -343,11 +391,17 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 {TRANSPORT_MODES.map(({ key, label, emoji }) => {
                   const active = transportMode === key;
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={key}
-                      style={[styles.transportTab, active && styles.transportTabActive]}
+                      style={[
+                        styles.transportTab, 
+                        active && styles.transportTabActive,
+                        globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                      ]}
                       onPress={() => setTransportMode(key)}
-                      activeOpacity={0.8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Выбрать транспорт: ${TRANSPORT_MODES.find(m => m.key === key)?.label}`}
+                      accessibilityState={{ selected: active }}
                       accessibilityRole="button"
                       accessibilityState={{ selected: active }}
                     >
@@ -357,7 +411,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                       >
                         {label}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -480,8 +534,7 @@ const getStyles = (isMobile: boolean) => {
       shadowRadius: 12,
       elevation: 6,
       alignSelf: isMobile ? 'center' : 'flex-start',
-      borderWidth: 1,
-      borderColor: COLORS.border,
+      // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
     },
     header: {
       flexDirection: 'row',
@@ -503,18 +556,28 @@ const getStyles = (isMobile: boolean) => {
       borderRadius: 10,
       padding: 4,
       marginBottom: 12,
-      borderWidth: 1,
-      borderColor: COLORS.border,
+      // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
     },
     modeTab: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 8,
-      borderRadius: 8,
-      paddingHorizontal: 10,
+      paddingVertical: 10, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
+      borderRadius: DESIGN_TOKENS.radii.sm, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
+      paddingHorizontal: 12, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
       marginHorizontal: 2,
+      minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+      ...Platform.select({
+        web: {
+          transition: 'all 0.2s ease',
+          cursor: 'pointer',
+          // @ts-ignore
+          ':hover': {
+            backgroundColor: COLORS.primarySoft,
+          },
+        },
+      }),
     },
     modeTabActive: {
       backgroundColor: COLORS.primary,
@@ -547,12 +610,16 @@ const getStyles = (isMobile: boolean) => {
     },
     input: {
       height: 40,
-      borderWidth: 1,
-      borderColor: COLORS.border,
+      // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
       borderRadius: 10,
       paddingHorizontal: 12,
       fontSize: 14,
       backgroundColor: '#fbfcfe',
+      shadowColor: '#1f1f1f',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.04,
+      shadowRadius: 3,
+      elevation: 1,
     },
     chipsContainer: {
       marginTop: 8,
@@ -570,8 +637,7 @@ const getStyles = (isMobile: boolean) => {
       borderRadius: 14,
       maxWidth: 112,
       marginRight: 6,
-      borderWidth: 1,
-      borderColor: COLORS.border,
+      // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
     },
     categoryChipText: {
       fontSize: 12,
@@ -585,8 +651,7 @@ const getStyles = (isMobile: boolean) => {
       paddingHorizontal: 10,
       paddingVertical: 6,
       borderRadius: 14,
-      borderWidth: 1,
-      borderColor: COLORS.border,
+      // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
     },
     moreChipText: {
       fontSize: 12,
@@ -600,16 +665,26 @@ const getStyles = (isMobile: boolean) => {
       marginTop: 8,
     },
     radiusChip: {
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: COLORS.border,
+      paddingHorizontal: 12, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
+      paddingVertical: 8, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
+      borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
+      // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
       backgroundColor: COLORS.card,
+      minHeight: 36, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+      ...Platform.select({
+        web: {
+          transition: 'all 0.2s ease',
+          cursor: 'pointer',
+          // @ts-ignore
+          ':hover': {
+            backgroundColor: COLORS.primarySoft,
+          },
+        },
+      }),
     },
     radiusChipActive: {
       backgroundColor: COLORS.primarySoft,
-      borderColor: COLORS.primary,
+      // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
     },
     radiusChipText: {
       fontSize: 12,
@@ -621,19 +696,29 @@ const getStyles = (isMobile: boolean) => {
       backgroundColor: '#f2f4f7',
       borderRadius: 10,
       padding: 2,
-      borderWidth: 1,
-      borderColor: COLORS.border,
+      // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
     },
     transportTab: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 8,
-      paddingHorizontal: 8,
-      borderRadius: 8,
+      paddingVertical: 10, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
+      paddingHorizontal: 10, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
+      borderRadius: DESIGN_TOKENS.radii.sm, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
       marginHorizontal: 2,
       gap: 6,
+      minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+      ...Platform.select({
+        web: {
+          transition: 'all 0.2s ease',
+          cursor: 'pointer',
+          // @ts-ignore
+          ':hover': {
+            backgroundColor: COLORS.primarySoft,
+          },
+        },
+      }),
     },
     transportTabActive: {
       backgroundColor: COLORS.primary,
@@ -653,8 +738,12 @@ const getStyles = (isMobile: boolean) => {
       backgroundColor: COLORS.card,
       borderRadius: 10,
       padding: 12,
-      borderWidth: 1,
-      borderColor: COLORS.border,
+      // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+      shadowColor: '#1f1f1f',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.04,
+      shadowRadius: 3,
+      elevation: 1,
     },
     routeItem: {
       flexDirection: 'row',
@@ -685,16 +774,27 @@ const getStyles = (isMobile: boolean) => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 10,
-      minHeight: 36,
+      paddingHorizontal: 14, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
+      paddingVertical: 10, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
+      borderRadius: DESIGN_TOKENS.radii.sm, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
+      minHeight: 40, // ✅ ИСПРАВЛЕНИЕ: Увеличена минимальная высота для touch-целей
       marginLeft: 8,
+      ...Platform.select({
+        web: {
+          transition: 'all 0.2s ease',
+          cursor: 'pointer',
+          // @ts-ignore
+          ':hover': {
+            opacity: 0.9,
+            transform: 'scale(1.05)',
+          },
+        },
+      }),
     },
     compactButtonSmall: {
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      minHeight: 32,
+      paddingHorizontal: 12, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
+      paddingVertical: 8, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
+      minHeight: 36, // ✅ ИСПРАВЛЕНИЕ: Увеличена минимальная высота для touch-целей
     },
     compactButtonText: {
       fontSize: 13,
@@ -705,16 +805,14 @@ const getStyles = (isMobile: boolean) => {
     footer: {
       marginTop: 8,
       paddingTop: 8,
-      borderTopWidth: 1,
-      borderTopColor: COLORS.border,
+      // ✅ УЛУЧШЕНИЕ: Убрана граница, используется отступ для разделения
     },
     infoBox: {
       backgroundColor: COLORS.primarySoft,
       borderRadius: 10,
       padding: 12,
       marginBottom: 12,
-      borderWidth: 1,
-      borderColor: COLORS.border,
+      // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
     },
     infoRow: {
       flexDirection: 'row',

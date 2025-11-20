@@ -6,9 +6,12 @@ import {
     Platform,
     Animated,
     useWindowDimensions,
+    Pressable,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 export default function AIAssistantButton() {
     const router = useRouter();
@@ -46,10 +49,9 @@ export default function AIAssistantButton() {
                 },
             ]}
         >
-            <TouchableOpacity
-                style={styles.button}
+            <Pressable
+                style={[styles.button, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                 onPress={handlePress}
-                activeOpacity={0.8}
                 accessibilityRole="button"
                 accessibilityLabel="Открыть AI-помощника"
             >
@@ -59,7 +61,7 @@ export default function AIAssistantButton() {
                         <MaterialIcons name="auto-awesome" size={12} color="#6b8e7f" />
                     </View>
                 )}
-            </TouchableOpacity>
+            </Pressable>
         </Animated.View>
     );
 }
@@ -72,17 +74,29 @@ const styles = StyleSheet.create({
     button: {
         width: 56,
         height: 56,
-        borderRadius: 28,
-        backgroundColor: '#6b8e7f',
+        minWidth: 56, // ✅ ИСПРАВЛЕНИЕ: Минимальная ширина для touch-целей
+        minHeight: 56, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+        borderRadius: DESIGN_TOKENS.radii.pill, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
+        backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#6b8e7f',
+        shadowColor: DESIGN_TOKENS.colors.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.4,
         shadowRadius: 8,
         elevation: 8,
-        borderWidth: 3,
-        borderColor: '#ffffff',
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+        ...Platform.select({
+            web: {
+                transition: 'all 0.2s ease',
+                cursor: 'pointer',
+                // @ts-ignore
+                ':hover': {
+                    backgroundColor: '#3a7a7a', // Темнее primary для hover
+                    transform: 'scale(1.1)',
+                },
+            },
+        }),
     },
     badge: {
         position: 'absolute',
@@ -91,11 +105,15 @@ const styles = StyleSheet.create({
         width: 20,
         height: 20,
         borderRadius: 10,
-        backgroundColor: '#ffffff',
+        backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#6b8e7f',
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+        shadowColor: DESIGN_TOKENS.colors.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 2,
     },
 });
 

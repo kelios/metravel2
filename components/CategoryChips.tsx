@@ -9,6 +9,7 @@ interface Category {
   id: string | number;
   name: string;
   count?: number;
+  icon?: string; // ✅ УЛУЧШЕНИЕ: Добавлена поддержка иконок
 }
 
 interface CategoryChipsProps {
@@ -16,13 +17,29 @@ interface CategoryChipsProps {
   selectedCategories: string[];
   onToggleCategory: (categoryName: string) => void;
   maxVisible?: number;
+  showIcons?: boolean; // ✅ УЛУЧШЕНИЕ: Флаг для показа иконок
 }
+
+// ✅ УЛУЧШЕНИЕ: Маппинг популярных категорий на иконки
+const CATEGORY_ICONS: Record<string, string> = {
+  'Горы': 'mountain',
+  'Пляжи': 'sun',
+  'Города': 'map-pin',
+  'Природа': 'tree',
+  'Музеи': 'building',
+  'Озера': 'droplet',
+  'Культура': 'music',
+  'Спорт': 'activity',
+  'Еда': 'coffee',
+  'Архитектура': 'layers',
+};
 
 export default function CategoryChips({
   categories,
   selectedCategories,
   onToggleCategory,
   maxVisible = 10,
+  showIcons = true, // ✅ УЛУЧШЕНИЕ: По умолчанию показываем иконки
 }: CategoryChipsProps) {
   const visibleCategories = useMemo(
     () => categories.slice(0, maxVisible),
@@ -40,13 +57,22 @@ export default function CategoryChips({
     >
       {visibleCategories.map((category) => {
         const isSelected = selectedCategories.includes(category.name);
+        // ✅ УЛУЧШЕНИЕ: Используем иконку из пропса или маппинга
+        const iconName = category.icon || CATEGORY_ICONS[category.name];
+        const shouldShowIcon = showIcons && iconName && !isSelected;
+        const icon = isSelected ? (
+          <Feather name="x" size={14} color="#fff" />
+        ) : shouldShowIcon ? (
+          <Feather name={iconName as any} size={14} color={DESIGN_TOKENS.colors.primary} />
+        ) : undefined;
+
         return (
           <Chip
             key={category.id}
             label={category.name}
             selected={isSelected}
             count={category.count}
-            icon={isSelected ? <Feather name="x" size={12} color="#fff" /> : undefined}
+            icon={icon}
             onPress={() => onToggleCategory(category.name)}
           />
         );

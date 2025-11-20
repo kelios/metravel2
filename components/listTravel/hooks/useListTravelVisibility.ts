@@ -70,13 +70,12 @@ export function useListTravelVisibility({
           setInternalPersonalizationVisible(personalizationVisible !== 'false');
           setInternalWeeklyHighlightsVisible(weeklyHighlightsVisible !== 'false');
         } else {
-          const [personalizationVisible, weeklyHighlightsVisible] = await Promise.all([
-            AsyncStorage.getItem(PERSONALIZATION_VISIBLE_KEY),
-            AsyncStorage.getItem(WEEKLY_HIGHLIGHTS_VISIBLE_KEY),
-          ]);
+          // ✅ FIX-004: Используем батчинг для загрузки данных
+          const { getStorageBatch } = await import('@/src/utils/storageBatch');
+          const storageData = await getStorageBatch([PERSONALIZATION_VISIBLE_KEY, WEEKLY_HIGHLIGHTS_VISIBLE_KEY]);
           
-          setInternalPersonalizationVisible(personalizationVisible !== 'false');
-          setInternalWeeklyHighlightsVisible(weeklyHighlightsVisible !== 'false');
+          setInternalPersonalizationVisible(storageData[PERSONALIZATION_VISIBLE_KEY] !== 'false');
+          setInternalWeeklyHighlightsVisible(storageData[WEEKLY_HIGHLIGHTS_VISIBLE_KEY] !== 'false');
         }
       } catch (error) {
         console.error('Error loading visibility state:', error);

@@ -126,6 +126,11 @@ function RecommendationsTabs({ forceVisible, onVisibilityChange }: Recommendatio
         onVisibilityChange?.(true);
     }, [onVisibilityChange]);
 
+    // ✅ ИСПРАВЛЕНИЕ: Если свернуто - полностью скрываем компонент (не показываем кнопку "Показать рекомендации")
+    if (!forceVisible && isCollapsed) {
+        return null;
+    }
+
     const tabs = useMemo(() => {
         const tabsList = [
             { id: 'recommendations' as TabType, label: 'Рекомендации', icon: 'star' },
@@ -143,17 +148,6 @@ function RecommendationsTabs({ forceVisible, onVisibilityChange }: Recommendatio
     const renderHistory = useCallback(() => {
         return <HistoryTab viewHistory={viewHistory} isAuthenticated={isAuthenticated} router={router} />;
     }, [viewHistory, isAuthenticated, router]);
-
-    if (!forceVisible && isCollapsed) {
-        return (
-            <View style={styles.collapsedContainer}>
-                <Pressable onPress={handleExpand} style={styles.expandButton}>
-                    <MaterialIcons name="expand-more" size={24} color={DESIGN_TOKENS.colors.textMuted} />
-                    <Text style={styles.expandText}>Показать рекомендации</Text>
-                </Pressable>
-            </View>
-        );
-    }
 
     return (
         <View style={styles.container}>
@@ -307,9 +301,20 @@ const styles = StyleSheet.create({
         marginBottom: Platform.select({ default: 16, web: 24 }),
         backgroundColor: DESIGN_TOKENS.colors.surface,
         borderRadius: DESIGN_TOKENS.radii.md,
-        borderWidth: 0.5, // Более тонкая граница для прозаичного дизайна
-        borderColor: 'rgba(0, 0, 0, 0.06)', // Более светлая граница
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
         overflow: 'hidden',
+        shadowColor: '#1f1f1f',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 2,
+        ...Platform.select({
+            web: {
+                boxShadow: DESIGN_TOKENS.shadows.medium,
+            },
+        }),
+        // ✅ ИСПРАВЛЕНИЕ: Убираем фиксированное позиционирование, чтобы блок скроллился с основной страницей
+        position: 'relative',
     },
     header: {
         flexDirection: 'row',
@@ -317,8 +322,8 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: Platform.select({ default: 12, web: 16 }),
         paddingVertical: Platform.select({ default: 10, web: 12 }),
-        borderBottomWidth: 0.5, // Более тонкая граница
-        borderBottomColor: 'rgba(0, 0, 0, 0.06)', // Более светлая граница
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется отступ для разделения
+        marginBottom: 4,
     },
     tabsContainer: {
         flexDirection: 'row',
@@ -334,17 +339,30 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: Platform.select({ default: 4, web: 6 }),
-        paddingHorizontal: Platform.select({ default: 10, web: 12 }),
-        paddingVertical: Platform.select({ default: 6, web: 8 }),
+        paddingHorizontal: Platform.select({ default: 12, web: 14 }),
+        paddingVertical: Platform.select({ default: 8, web: 10 }),
         borderRadius: DESIGN_TOKENS.radii.sm,
+        minHeight: 44,
         ...Platform.select({
             web: {
                 cursor: 'pointer',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                willChange: 'background-color, transform',
+                // @ts-ignore
+                ':hover': {
+                    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+                },
             },
         }),
     },
     tabActive: {
-        backgroundColor: 'rgba(0, 0, 0, 0.04)', // Более светлый и нейтральный
+        backgroundColor: DESIGN_TOKENS.colors.primaryLight,
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон и тень
+        ...Platform.select({
+            web: {
+                boxShadow: `0 2px 4px rgba(93, 140, 124, 0.15)`,
+            },
+        }),
     },
     tabText: {
         fontSize: Platform.select({ default: 13, web: 14 }),
@@ -352,8 +370,8 @@ const styles = StyleSheet.create({
         color: DESIGN_TOKENS.colors.textMuted,
     },
     tabTextActive: {
-        color: DESIGN_TOKENS.colors.text, // Нейтральный цвет вместо яркого primary
-        fontWeight: '600',
+        color: DESIGN_TOKENS.colors.primary,
+        fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
     },
     collapseButton: {
         padding: 8,
@@ -420,11 +438,29 @@ const styles = StyleSheet.create({
     loginButton: {
         paddingHorizontal: Platform.select({ default: 20, web: 24 }),
         paddingVertical: Platform.select({ default: 10, web: 12 }),
-        backgroundColor: DESIGN_TOKENS.colors.text, // Нейтральный серый вместо яркого primary
-        borderRadius: DESIGN_TOKENS.radii.sm,
+        backgroundColor: DESIGN_TOKENS.colors.primary,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        shadowColor: '#1f1f1f',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        elevation: 3,
+        minHeight: 44,
         ...Platform.select({
             web: {
                 cursor: 'pointer',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                willChange: 'transform, box-shadow',
+                boxShadow: DESIGN_TOKENS.shadows.medium,
+                // @ts-ignore
+                ':hover': {
+                    backgroundColor: DESIGN_TOKENS.colors.primaryDark,
+                    transform: 'translateY(-2px)',
+                    boxShadow: DESIGN_TOKENS.shadows.hover,
+                },
+                ':active': {
+                    transform: 'translateY(0)',
+                },
             },
         }),
     },
@@ -443,13 +479,25 @@ const styles = StyleSheet.create({
             web: 280,
         }),
         backgroundColor: DESIGN_TOKENS.colors.surface,
-        borderRadius: DESIGN_TOKENS.radii.sm,
+        borderRadius: DESIGN_TOKENS.radii.md,
         overflow: 'hidden',
-        borderWidth: 0.5, // Более тонкая граница
-        borderColor: 'rgba(0, 0, 0, 0.06)', // Более светлая граница
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+        shadowColor: '#1f1f1f',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 2,
         ...Platform.select({
             web: {
                 cursor: 'pointer',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                willChange: 'transform, box-shadow',
+                boxShadow: DESIGN_TOKENS.shadows.medium,
+                // @ts-ignore
+                ':hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: DESIGN_TOKENS.shadows.hover,
+                },
             },
         }),
     },

@@ -10,6 +10,7 @@ import { useFavorites } from '@/context/FavoritesContext';
 import { useFilters } from '@/providers/FiltersProvider';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 // Навигационные элементы для быстрого доступа
 const NAV_ITEMS = [
@@ -59,7 +60,17 @@ export default React.memo(function CustomHeader() {
     }, [logout]);
 
     return (
-      <View style={styles.container}>
+      <View 
+        style={styles.container}
+        {...Platform.select({
+          web: {
+            // @ts-ignore
+            id: 'main-navigation',
+            role: 'navigation',
+            'aria-label': 'Основная навигация',
+          },
+        })}
+      >
           <View style={styles.wrapper}>
               <View style={[styles.inner, isMobile && styles.innerMobile]}>
                   {/* Логотип - слева */}
@@ -74,7 +85,11 @@ export default React.memo(function CustomHeader() {
                                   <Pressable
                                       key={item.path}
                                       onPress={() => handleNavPress(item.path)}
-                                      style={[styles.navItem, isActive && styles.navItemActive]}
+                                      style={[
+                                          styles.navItem, 
+                                          isActive && styles.navItemActive,
+                                          globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                                      ]}
                                       accessibilityRole="button"
                                       accessibilityLabel={item.label}
                                       accessibilityState={{ selected: isActive }}
@@ -99,7 +114,10 @@ export default React.memo(function CustomHeader() {
                       {isMobile ? (
                           <Pressable
                               onPress={() => setMobileMenuVisible(true)}
-                              style={styles.mobileMenuButton}
+                              style={[
+                                  styles.mobileMenuButton,
+                                  globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                              ]}
                               accessibilityRole="button"
                               accessibilityLabel="Открыть меню"
                           >
@@ -153,7 +171,11 @@ export default React.memo(function CustomHeader() {
                                       <Pressable
                                           key={item.path}
                                           onPress={() => handleNavPress(item.path)}
-                                          style={[styles.modalNavItem, isActive && styles.modalNavItemActive]}
+                                          style={[
+                                              styles.modalNavItem, 
+                                              isActive && styles.modalNavItemActive,
+                                              globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                                          ]}
                                           accessibilityRole="button"
                                           accessibilityLabel={item.label}
                                           accessibilityState={{ selected: isActive }}
@@ -273,30 +295,37 @@ export default React.memo(function CustomHeader() {
 const styles = StyleSheet.create({
     container: {
         backgroundColor: palette.surface,
+        // ✅ УЛУЧШЕНИЕ: Sticky header для лучшей навигации
+        ...Platform.select({
+            web: {
+                position: 'sticky',
+                top: 0,
+                zIndex: 1000,
+            },
+        }),
     },
     wrapper: {
         width: '100%',
         backgroundColor: palette.surface,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: palette.border,
-        // Более мягкая тень для мобильных
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень для разделения
         ...Platform.select({
             ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.03,
-                shadowRadius: 2,
+                shadowColor: '#1f1f1f',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.08,
+                shadowRadius: 6,
             },
             android: {
-                elevation: 1,
-                shadowColor: '#000',
+                elevation: 3,
+                shadowColor: '#1f1f1f',
             },
             web: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 3,
+                shadowColor: '#1f1f1f',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
                 elevation: 2,
+                boxShadow: '0 2px 10px rgba(31, 31, 31, 0.1), 0 1px 3px rgba(31, 31, 31, 0.06)',
             }
         })
     },
@@ -350,26 +379,58 @@ const styles = StyleSheet.create({
     navItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        gap: 8,
         backgroundColor: 'transparent',
+        // ✅ УЛУЧШЕНИЕ: Увеличен размер touch-цели для мобильных
+        minHeight: 44,
+        minWidth: 44,
+        // ✅ УЛУЧШЕНИЕ: Улучшенные hover-состояния с лучшей визуальной иерархией
+        ...Platform.select({
+            web: {
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer',
+                willChange: 'background-color, transform',
+                // @ts-ignore
+                ':hover': {
+                    backgroundColor: palette.primarySoft,
+                    transform: 'translateY(-1px)',
+                },
+                ':active': {
+                    transform: 'translateY(0)',
+                },
+            },
+        }),
     },
     navItemActive: {
-        backgroundColor: palette.primarySoft,
+        backgroundColor: palette.primaryLight,
+        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон и тень
+        ...Platform.select({
+            web: {
+                boxShadow: `0 2px 4px rgba(93, 140, 124, 0.15)`,
+            },
+        }),
     },
     navLabel: {
         fontSize: 14,
         color: palette.textMuted,
-        fontWeight: '500',
+        fontWeight: DESIGN_TOKENS.typography.weights.medium,
+        letterSpacing: -0.1,
     },
     navLabelActive: {
         color: palette.primary,
-        fontWeight: '600',
+        fontWeight: DESIGN_TOKENS.typography.weights.bold, // ✅ УЛУЧШЕНИЕ: Более жирный шрифт для активного состояния
+        letterSpacing: -0.2,
     },
     mobileMenuButton: {
         padding: 8,
+        // ✅ УЛУЧШЕНИЕ: Увеличен размер touch-цели для мобильных (минимум 44x44px)
+        minWidth: 44,
+        minHeight: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     modalOverlay: {
         flex: 1,
@@ -409,9 +470,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 16,
         gap: 12,
+        // ✅ УЛУЧШЕНИЕ: Увеличен размер touch-цели для мобильных
+        minHeight: 48,
     },
     modalNavItemActive: {
-        backgroundColor: palette.primarySoft,
+        backgroundColor: palette.primaryLight,
+        borderLeftWidth: 3,
+        borderLeftColor: palette.primary,
+        paddingLeft: 17, // Компенсация для border
     },
     modalNavLabel: {
         fontSize: 16,

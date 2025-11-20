@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, Platform, Text, ActivityIndicator } from 'react-native';
+import { useLazyMap } from '@/hooks/useLazyMap';
 
 type LatLng = { latitude: number; longitude: number };
 
@@ -42,13 +43,20 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                            }) => {
     const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
 
-    // Динамически импортируем веб-карту, только в браузере
+    // ✅ УЛУЧШЕНИЕ: Ленивая загрузка карты с Intersection Observer
+    const { shouldLoad, setElementRef } = useLazyMap({
+        rootMargin: '200px',
+        threshold: 0.1,
+        enabled: isWeb,
+    });
+
+    // Динамически импортируем веб-карту, только в браузере и когда нужно
     const [WebMap, setWebMap] = useState<React.ComponentType<any> | null>(null);
-    const [loading, setLoading] = useState(isWeb);
+    const [loading, setLoading] = useState(isWeb && shouldLoad);
 
     useEffect(() => {
         let mounted = true;
-        if (!isWeb) return;
+        if (!isWeb || !shouldLoad) return;
 
         (async () => {
             try {
@@ -64,18 +72,32 @@ const MapPanel: React.FC<MapPanelProps> = ({
         return () => {
             mounted = false;
         };
-    }, [isWeb]);
+    }, [isWeb, shouldLoad]);
 
     const travelProp = useMemo(() => ({ data: travelsData }), [travelsData]);
 
     if (!isWeb) return <Placeholder />;
+
+    if (!shouldLoad) {
+        return (
+            <View 
+                style={styles.mapContainer}
+                ref={setElementRef as any}
+            >
+                <Placeholder text="Карта загрузится при прокрутке…" />
+            </View>
+        );
+    }
 
     if (loading || !WebMap) {
         return <Placeholder text="Инициализация карты…" />;
     }
 
     return (
-        <View style={styles.mapContainer}>
+        <View 
+            style={styles.mapContainer}
+            ref={setElementRef as any}
+        >
             <WebMap
                 travel={travelProp}
                 coordinates={coordinates}
