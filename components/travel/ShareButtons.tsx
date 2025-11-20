@@ -3,15 +3,14 @@
  * Позволяет поделиться путешествием через различные платформы
  */
 
-import React, { useCallback, useState, useMemo, useEffect } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, useWindowDimensions, Platform, Alert } from 'react-native';
-import { useRouter, usePathname } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 import type { Travel } from '@/src/types/types';
 import BookSettingsModal, { type BookSettings } from '@/components/export/BookSettingsModal';
-import { usePdfExport } from '@/src/hooks/usePdfExport';
+import { useSingleTravelExport } from '@/components/travel/hooks/useSingleTravelExport';
 import { ExportStage } from '@/src/types/pdf-export';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
@@ -24,18 +23,16 @@ interface ShareButtonsProps {
 export default function ShareButtons({ travel, url }: ShareButtonsProps) {
   const { width } = useWindowDimensions();
   const isMobile = width <= 768;
-  const router = useRouter();
-  const pathname = usePathname();
 
   const [copied, setCopied] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [travels, setTravels] = useState<Travel[]>([travel]);
-  const { exportPdf, isGenerating, progress, currentStage } = usePdfExport(travels);
-
-  // Обновляем travels при изменении travel
-  useEffect(() => {
-    setTravels([travel]);
-  }, [travel]);
+  const {
+    pdfExport,
+    lastSettings,
+    handleSaveWithSettings,
+    handlePreviewWithSettings,
+  } = useSingleTravelExport(travel);
+  const { isGenerating, progress, currentStage } = pdfExport;
 
   // Формируем URL для поделиться
   const shareUrl = useMemo(() => {
@@ -143,9 +140,21 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
   }, [shareUrl, shareTitle, shareText]);
 
   // Обработчик экспорта в PDF
-  const handleExport = useCallback(async (settings: BookSettings) => {
-    await exportPdf(settings);
-  }, [exportPdf]);
+  const handleExport = useCallback(
+    async (settings: BookSettings) => {
+      await handleSaveWithSettings(settings);
+      setShowExportModal(false);
+    },
+    [handleSaveWithSettings]
+  );
+
+  const handlePreview = useCallback(
+    async (settings: BookSettings) => {
+      await handlePreviewWithSettings(settings);
+      setShowExportModal(false);
+    },
+    [handlePreviewWithSettings]
+  );
 
   const shareButtons = [
     {
@@ -244,10 +253,11 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
         visible={showExportModal}
         onClose={() => setShowExportModal(false)}
         onSave={handleExport}
+        onPreview={handlePreview}
         travelCount={1}
-        defaultSettings={{
-          title: travel.name || 'Путешествие',
-        }}
+        defaultSettings={lastSettings}
+        userName={travel.userName || undefined}
+        mode="preview"
       />
     </>
   );
@@ -362,4 +372,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

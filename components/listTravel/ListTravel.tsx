@@ -264,7 +264,7 @@ function ListTravel({
     const columns = useMemo(() => {
         // На главной ограничиваем сетку максимум тремя колонками
         const calculatedColumns = calculateColumns(width);
-        return isMeTravel ? Math.min(calculatedColumns, 3) : calculatedColumns;
+        return Math.min(calculatedColumns, 3);
     }, [width, isMeTravel]);
 
     const listKey = useMemo(() => `grid-${columns}`, [columns]);

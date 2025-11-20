@@ -8,6 +8,22 @@ import { getThemeConfig, type PdfThemeName } from '../themes/PdfThemeConfig';
 import { ContentParser } from '../parsers/ContentParser';
 import { BlockRenderer } from '../renderers/BlockRenderer';
 
+const CHECKLIST_LIBRARY: Record<BookSettings['checklistSections'][number], string[]> = {
+  clothing: ['Термобельё', 'Тёплый слой/флис', 'Дождевик/пончо', 'Треккинговая обувь', 'Шапка, перчатки, бафф'],
+  food: ['Перекусы', 'Термос', 'Походная посуда', 'Мультитул/нож', 'Фильтр или запас воды'],
+  electronics: ['Повербанк', 'Камера/GoPro', 'Переходники', 'Налобный фонарь', 'Запасные карты памяти'],
+  documents: ['Паспорт', 'Билеты/бронирования', 'Страховка', 'Водительские права', 'Список контактов'],
+  medicine: ['Индивидуальные лекарства', 'Пластыри и бинт', 'Средство от насекомых', 'Солнцезащита', 'Антисептик'],
+};
+
+const CHECKLIST_LABELS: Record<BookSettings['checklistSections'][number], string> = {
+  clothing: 'Одежда',
+  food: 'Еда',
+  electronics: 'Электроника',
+  documents: 'Документы',
+  medicine: 'Аптечка',
+};
+
 /**
  * Генератор улучшенного PDF
  */
@@ -82,6 +98,14 @@ export class EnhancedPdfGenerator {
         currentPage++;
       }
     });
+
+    if (settings.includeChecklists) {
+      const checklistPage = this.renderChecklistPage(settings, currentPage);
+      if (checklistPage) {
+        pages.push(checklistPage);
+        currentPage++;
+      }
+    }
 
     // Финальная страница
     pages.push(this.renderFinalPage(currentPage));
@@ -771,6 +795,106 @@ export class EnhancedPdfGenerator {
   }
 
   /**
+   * Рендерит страницу чек-листов
+   */
+  private renderChecklistPage(settings: BookSettings, pageNumber: number): string | null {
+    if (!settings.checklistSections || !settings.checklistSections.length) {
+      return null;
+    }
+
+    const { colors, typography, spacing } = this.theme;
+    const sections = settings.checklistSections
+      .map((section) => ({
+        key: section,
+        label: CHECKLIST_LABELS[section] || 'Секция',
+        items: CHECKLIST_LIBRARY[section] || [],
+      }))
+      .filter((section) => section.items.length > 0);
+
+    if (!sections.length) return null;
+
+    const cards = sections
+      .map(
+        (section) => `
+        <div style="
+          border: ${this.theme.blocks.borderWidth} solid ${colors.border};
+          border-radius: ${this.theme.blocks.borderRadius};
+          padding: ${spacing.blockSpacing};
+          background: ${colors.surface};
+          box-shadow: ${this.theme.blocks.shadow};
+        ">
+          <div style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: ${spacing.elementSpacing};
+          ">
+            <h3 style="
+              margin: 0;
+              font-size: ${typography.h4.size};
+              font-weight: ${typography.h4.weight};
+              color: ${colors.text};
+              font-family: ${typography.headingFont};
+            ">${section.label}</h3>
+            <span style="
+              font-size: ${typography.caption.size};
+              color: ${colors.textMuted};
+              font-weight: 600;
+              font-family: ${typography.bodyFont};
+            ">${section.items.length} пунктов</span>
+          </div>
+          <ul style="
+            margin: 0;
+            padding-left: 18px;
+            color: ${colors.textMuted};
+            font-size: ${typography.body.size};
+            line-height: ${typography.body.lineHeight};
+            font-family: ${typography.bodyFont};
+          ">
+            ${section.items.map((item) => `<li>${this.escapeHtml(item)}</li>`).join('')}
+          </ul>
+        </div>
+      `
+      )
+      .join('');
+
+    return `
+      <section class="pdf-page checklist-page" style="padding: ${spacing.pagePadding};">
+        <div style="text-align: center; margin-bottom: ${spacing.sectionSpacing};">
+          <h2 style="
+            font-size: ${typography.h2.size};
+            font-weight: ${typography.h2.weight};
+            margin-bottom: ${spacing.elementSpacing};
+            letter-spacing: -0.01em;
+            color: ${colors.text};
+            font-family: ${typography.headingFont};
+          ">Чек-листы путешествия</h2>
+          <p style="
+            color: ${colors.textMuted};
+            font-size: ${typography.body.size};
+            font-family: ${typography.bodyFont};
+          ">Подходит для печати и отметок</p>
+        </div>
+        <div style="
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: ${spacing.elementSpacing};
+        ">
+          ${cards}
+        </div>
+        <div style="
+          position: absolute;
+          bottom: 15mm;
+          right: 25mm;
+          font-size: ${typography.caption.size};
+          color: ${colors.textMuted};
+          font-family: ${typography.bodyFont};
+        ">${pageNumber}</div>
+      </section>
+    `;
+  }
+
+  /**
    * Рендерит финальную страницу
    */
   private renderFinalPage(pageNumber: number): string {
@@ -1294,4 +1418,3 @@ interface NormalizedLocation {
   lat?: number;
   lng?: number;
 }
-

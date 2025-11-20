@@ -8,6 +8,7 @@ import { ExportError, ExportErrorType, ExportStage } from '@/src/types/pdf-expor
 import type { Travel } from '@/src/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { Platform } from 'react-native';
+import { JSDOM } from 'jsdom';
 
 // Mock html2pdf
 const mockHtml2PdfWorker = {
@@ -22,10 +23,6 @@ const mockHtml2PdfWorker = {
 };
 
 const mockHtml2Pdf = jest.fn(() => mockHtml2PdfWorker);
-
-global.window = {
-  html2pdf: mockHtml2Pdf as any,
-} as any;
 
 // Mock buildPhotoBookHTML
 jest.mock('@/src/utils/pdfBookGenerator', () => ({
@@ -59,6 +56,11 @@ describe('PdfExportService', () => {
     (Platform as any).OS = 'web';
     renderer = new Html2PdfRenderer();
     service = new PdfExportService(renderer);
+    const dom = new JSDOM('<!doctype html><html><body></body></html>');
+    (global as any).window = dom.window as any;
+    (global as any).document = dom.window.document;
+    (global as any).DOMParser = dom.window.DOMParser;
+    (dom.window as any).html2pdf = mockHtml2Pdf as any;
     
     mockTravels = [
       {
@@ -86,42 +88,6 @@ describe('PdfExportService', () => {
       },
     ];
 
-    // Mock document.createElement
-    global.document = {
-      createElement: jest.fn((tag: string) => {
-        const element = {
-          tagName: tag.toUpperCase(),
-          style: {} as any,
-          innerHTML: '',
-          textContent: '',
-          children: [],
-          parentNode: null,
-          appendChild: jest.fn(),
-          querySelectorAll: jest.fn(() => []),
-          scrollWidth: 794,
-          scrollHeight: 1123,
-          offsetWidth: 794,
-          offsetHeight: 1123,
-          offsetHeight: 1123,
-        } as any;
-        return element;
-      }),
-      body: {
-        appendChild: jest.fn(),
-        removeChild: jest.fn(),
-      } as any,
-      head: {
-        appendChild: jest.fn(),
-      } as any,
-    } as any;
-
-    // Mock DOMParser
-    global.DOMParser = jest.fn().mockImplementation(() => ({
-      parseFromString: jest.fn(() => ({
-        body: { innerHTML: '<section>Test</section>' },
-        head: { querySelectorAll: jest.fn(() => []) },
-      })),
-    })) as any;
   });
 
   afterEach(() => {
@@ -138,11 +104,17 @@ describe('PdfExportService', () => {
       orientation: 'portrait',
       margins: 'standard',
       imageQuality: 'high',
-      sortOrder: 'date-desc',
-      includeToc: true,
-      includeGallery: true,
-      includeMap: true,
-    };
+    sortOrder: 'date-desc',
+    includeToc: true,
+    includeGallery: true,
+    includeMap: true,
+    colorTheme: 'blue',
+    fontFamily: 'sans',
+    photoMode: 'gallery',
+    mapMode: 'full-page',
+    includeChecklists: false,
+    checklistSections: ['clothing', 'food', 'electronics'],
+  };
 
     it('должен успешно экспортировать PDF', async () => {
       const result = await service.export(mockTravels, settings);
@@ -257,4 +229,3 @@ describe('PdfExportService', () => {
     });
   });
 });
-
