@@ -410,7 +410,7 @@ export class LayoutHtmlGenerator {
             color: #1f2937;
           ">Фотогалерея</h2>
           <div style="${gridStyle}">
-            ${displayPhotos.map(photo => `
+            ${displayPhotos.map((photo: string) => `
               <div style="
                 width: 100%;
                 height: ${imageHeight};
@@ -631,4 +631,3 @@ export class LayoutHtmlGenerator {
       .replace(/on\w+="[^"]*"/gi, '');
   }
 }
-

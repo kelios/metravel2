@@ -306,7 +306,7 @@ export class ArticleImporter {
         (estimatedBlockHeight > availableHeight && currentY > marginTop + 10 && estimatedBlockHeight > 0);
       
       if (needsNewPage) {
-        if (typeof console !== 'undefined' && console.log) {
+        if (typeof console !== 'undefined' && typeof console.log === 'function') {
           console.log(`[ArticleImporter] Новая страница:`, {
             reason: section.type === 'heading' ? 'H2 заголовок' : 'блок не помещается',
             blockHeight: estimatedBlockHeight.toFixed(1) + 'mm',
@@ -325,7 +325,7 @@ export class ArticleImporter {
         // Если блок больше рабочей области, ограничиваем его размером рабочей области
         // В реальности такой блок нужно разбивать, но для простоты ограничим
         blockHeight = Math.min(blockHeight, contentHeight);
-        if (typeof console !== 'undefined' && console.log) {
+        if (typeof console !== 'undefined' && typeof console.log === 'function') {
           console.warn(`[ArticleImporter] Блок больше страницы, ограничиваем до ${blockHeight.toFixed(1)}mm`);
         }
       }
@@ -338,7 +338,7 @@ export class ArticleImporter {
         block.position.height = blockHeight;
         
         // ✅ ОТЛАДКА: Логируем размещение блока (можно убрать в продакшене)
-        if (typeof console !== 'undefined' && console.log) {
+        if (typeof console !== 'undefined' && typeof console.log === 'function') {
           console.log(`[ArticleImporter] Размещение блока:`, {
             type: section.type,
             height: blockHeight.toFixed(1) + 'mm',
@@ -357,7 +357,7 @@ export class ArticleImporter {
         // Это предотвращает создание страниц с одним маленьким блоком внизу
         const remainingHeight = pageHeight - marginBottom - currentY;
         if (remainingHeight < 30 && remainingHeight > 0) {
-          if (typeof console !== 'undefined' && console.log) {
+          if (typeof console !== 'undefined' && typeof console.log === 'function') {
             console.log(`[ArticleImporter] Мало места (${remainingHeight.toFixed(1)}mm), новая страница`);
           }
           currentPage = builder.addPage();
@@ -367,7 +367,7 @@ export class ArticleImporter {
     }
     
     // ✅ ОТЛАДКА: Итоговая статистика
-    if (typeof console !== 'undefined' && console.log) {
+    if (typeof console !== 'undefined' && typeof console.log === 'function') {
       const document = builder.getDocument();
       const totalPages = document.pages.length;
       const totalBlocks = mergedSections.length;
@@ -700,4 +700,3 @@ export class ArticleImporter {
     }
   }
 }
-

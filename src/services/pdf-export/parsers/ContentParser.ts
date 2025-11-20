@@ -393,7 +393,7 @@ export class ContentParser {
    * Парсит параграф
    * ✅ ИСПРАВЛЕНИЕ: Объединяет весь текст из вложенных элементов
    */
-  private parseParagraph(element: HTMLElement): ParagraphBlock | null {
+  private parseParagraph(element: HTMLElement): ParagraphBlock | InfoBlock | null {
     // Проверяем, не является ли это специальным блоком
     const specialBlock = this.detectSpecialBlock(element);
     if (specialBlock) {
@@ -447,7 +447,7 @@ export class ContentParser {
 
     // Пытаемся найти автора (обычно в <cite> или <footer>)
     const cite = element.querySelector('cite, footer');
-    const author = cite ? this.normalizeText(this.extractTextContent(cite)) : undefined;
+    const author = cite instanceof HTMLElement ? this.normalizeText(this.extractTextContent(cite)) : undefined;
 
     return {
       type: 'quote',
@@ -629,7 +629,7 @@ export class ContentParser {
    */
   private extractTitle(element: HTMLElement): string | undefined {
     const titleElement = element.querySelector('strong, b, .title, .heading, h1, h2, h3, h4, h5, h6');
-    if (!titleElement) return undefined;
+    if (!(titleElement instanceof HTMLElement)) return undefined;
     return this.normalizeText(this.extractTextContent(titleElement)) || undefined;
   }
 

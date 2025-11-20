@@ -1,4 +1,4 @@
-import sanitizeHtml from 'sanitize-html'
+import sanitizeHtml, { Attributes } from 'sanitize-html'
 
 const ALLOWED_IFRAME_HOSTS = [
   'youtube.com',
@@ -203,7 +203,7 @@ export function sanitizeRichText(html?: string | null): string {
     allowedSchemesByTag,
     allowProtocolRelative: false,
     transformTags: {
-      a: (_tag, attribs) => {
+      a: (_tag: string, attribs: Attributes) => {
         const href = normalizeUrl(attribs.href)
         const result: Record<string, string> = {}
         if (href) {
@@ -217,7 +217,7 @@ export function sanitizeRichText(html?: string | null): string {
         if (attribs.name) result.name = attribs.name
         return { tagName: 'a', attribs: result }
       },
-      iframe: (_tag, attribs) => {
+      iframe: (_tag: string, attribs: Attributes) => {
         const src = normalizeUrl(attribs.src)
         if (!src || !isAllowedIframe(src)) {
           return { tagName: 'div', text: '' }
@@ -266,4 +266,3 @@ export function sanitizeRichTextForPdf(html?: string | null): string {
   // Затем объединяем в один блок
   return flattenHtmlForPdf(sanitized);
 }
-

@@ -80,7 +80,8 @@ export async function removeStorageBatch(keys: string[]): Promise<void> {
  */
 export async function getAllStorageKeys(): Promise<string[]> {
   try {
-    return await AsyncStorage.getAllKeys();
+    const keys = await AsyncStorage.getAllKeys();
+    return Array.isArray(keys) ? [...keys] : [];
   } catch (error) {
     if (__DEV__) {
       console.error('Error in getAllStorageKeys:', error);
@@ -102,4 +103,3 @@ export async function clearAllStorage(): Promise<void> {
     throw error;
   }
 }
-

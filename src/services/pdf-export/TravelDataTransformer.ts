@@ -337,9 +337,9 @@ export class TravelDataTransformer {
       const styleContent = doubleQuoted ?? singleQuoted ?? '';
       const declarations = styleContent
         .split(';')
-        .map((decl) => decl.trim())
+        .map((decl: string) => decl.trim())
         .filter(Boolean)
-        .filter((decl) => {
+        .filter((decl: string) => {
           const invalidValuePattern = /(inherit|initial|unset|currentcolor)/i;
           if (/^color\s*:/i.test(decl) && invalidValuePattern.test(decl)) {
             return false;
@@ -349,7 +349,7 @@ export class TravelDataTransformer {
           }
           return true;
         })
-        .map((decl) => (decl.endsWith(';') ? decl : `${decl};`));
+        .map((decl: string) => (decl.endsWith(';') ? decl : `${decl};`));
       if (!declarations.length) {
         return '';
       }
@@ -357,4 +357,3 @@ export class TravelDataTransformer {
     });
   }
 }
-

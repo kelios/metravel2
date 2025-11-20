@@ -66,6 +66,7 @@ export interface BlockStyles {
   fontSize?: number;
   fontFamily?: string;
   fontWeight?: 'normal' | 'bold' | '300' | '400' | '500' | '600' | '700';
+  fontStyle?: 'normal' | 'italic' | 'oblique';
   lineHeight?: number;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
   color?: string;
@@ -333,4 +334,3 @@ export interface PdfExportResult {
   pagesCount: number;
   renderedPages: RenderedPage[];
 }
-

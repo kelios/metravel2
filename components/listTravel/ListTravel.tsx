@@ -250,8 +250,22 @@ function ListTravel({
     });
 
     const { width } = useWindowDimensions();
+    const route = useRoute();
+    const router = useRouter();
+
+    const params = useLocalSearchParams<{ user_id?: string }>();
+    const user_id = params.user_id;
+
+    const isMeTravel = (route as any).name === "metravel";
+    const isTravelBy = (route as any).name === "travelsby";
+    const isExport = (route as any).name === "export";
+
     const isMobile = checkIsMobile(width);
-    const columns = calculateColumns(width);
+    const columns = useMemo(() => {
+        // На главной ограничиваем сетку максимум тремя колонками
+        const calculatedColumns = calculateColumns(width);
+        return isMeTravel ? Math.min(calculatedColumns, 3) : calculatedColumns;
+    }, [width, isMeTravel]);
 
     const listKey = useMemo(() => `grid-${columns}`, [columns]);
 
@@ -334,16 +348,6 @@ function ListTravel({
             if (timeoutHandle) clearTimeout(timeoutHandle);
         };
     }, [recommendationsReady]);
-
-    const route = useRoute();
-    const router = useRouter();
-
-    const params = useLocalSearchParams<{ user_id?: string }>();
-    const user_id = params.user_id;
-
-    const isMeTravel = (route as any).name === "metravel";
-    const isTravelBy = (route as any).name === "travelsby";
-    const isExport = (route as any).name === "export";
 
     const queryClient = useQueryClient();
 
