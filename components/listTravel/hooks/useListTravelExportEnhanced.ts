@@ -132,6 +132,12 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
     includeToc: true,
     includeGallery: true,
     includeMap: true,
+    colorTheme: 'blue',
+    fontFamily: 'sans',
+    photoMode: 'gallery',
+    mapMode: 'full-page',
+    includeChecklists: false,
+    checklistSections: ['clothing', 'food', 'electronics'],
   };
 
   const generatePDF = useCallback(async (bookSettings: BookSettings) => {
@@ -681,4 +687,3 @@ function waitForImages(container: HTMLElement): Promise<void> {
     }, 30000); // 30 секунд максимум
   });
 }
-

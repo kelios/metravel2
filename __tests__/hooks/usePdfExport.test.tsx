@@ -8,6 +8,29 @@ import { usePdfExport } from '@/src/hooks/usePdfExport';
 import type { Travel } from '@/src/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 
+jest.mock('@/src/api/travels', () => ({
+  fetchTravel: jest.fn(async () => ({
+    id: 99,
+    name: 'Detailed Travel',
+    description: 'Full description',
+    recommendation: 'Some tips',
+    plus: 'Pros',
+    minus: 'Cons',
+    gallery: [],
+    travelAddress: [],
+  }) as unknown as Travel),
+  fetchTravelBySlug: jest.fn(async () => ({
+    id: 100,
+    name: 'Slug Travel',
+    description: 'Full description',
+    recommendation: 'Some tips',
+    plus: 'Pros',
+    minus: 'Cons',
+    gallery: [],
+    travelAddress: [],
+  }) as unknown as Travel),
+}));
+
 // Mock PdfExportService
 const mockExport = jest.fn();
 const mockPreview = jest.fn();
@@ -110,6 +133,12 @@ describe('usePdfExport', () => {
     includeToc: true,
     includeGallery: true,
     includeMap: true,
+    colorTheme: 'blue',
+    fontFamily: 'sans',
+    photoMode: 'gallery',
+    mapMode: 'full-page',
+    includeChecklists: false,
+    checklistSections: ['clothing', 'food', 'electronics'],
   };
 
   beforeEach(() => {
@@ -302,4 +331,3 @@ afterAll(() => {
   });
   alertSpy.mockRestore();
 });
-

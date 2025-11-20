@@ -196,6 +196,131 @@ const TEMPLATE_THEMES: Record<TemplateName, TemplateTheme> = {
   },
 };
 
+type ColorThemeName = BookSettings['colorTheme'];
+type FontFamilyName = BookSettings['fontFamily'];
+type ChecklistSectionName = BookSettings['checklistSections'][number];
+
+const COLOR_THEME_OVERRIDES: Partial<Record<ColorThemeName, Partial<TemplateTheme>>> = {
+  blue: {
+    accent: '#3b82f6',
+    accentStrong: '#2563eb',
+    accentSoft: '#dbeafe',
+    text: '#0f172a',
+    muted: '#475569',
+    mutedLight: '#93c5fd',
+    pageBackground: '#eff6ff',
+    surfaceAlt: '#e8f0ff',
+    border: '#cfe0ff',
+    highlight: '#e0f2ff',
+    coverGradient: ['#1d4ed8', '#60a5fa'],
+    coverText: '#f8fafc',
+  },
+  green: {
+    accent: '#10b981',
+    accentStrong: '#047857',
+    accentSoft: '#d1fae5',
+    text: '#064e3b',
+    muted: '#0f766e',
+    mutedLight: '#a7f3d0',
+    pageBackground: '#f0fdf4',
+    surfaceAlt: '#ecfdf5',
+    border: '#bbf7d0',
+    highlight: '#dcfce7',
+    coverGradient: ['#065f46', '#10b981'],
+    coverText: '#f1f5f9',
+  },
+  orange: {
+    accent: '#fb923c',
+    accentStrong: '#ea580c',
+    accentSoft: '#ffedd5',
+    text: '#2b1b14',
+    muted: '#7c2d12',
+    mutedLight: '#fdba74',
+    pageBackground: '#fff7ed',
+    surfaceAlt: '#fff1e6',
+    border: '#fed7aa',
+    highlight: '#fffbeb',
+    coverGradient: ['#b45309', '#fb923c'],
+    coverText: '#fff7ed',
+  },
+  gray: {
+    accent: '#6b7280',
+    accentStrong: '#374151',
+    accentSoft: '#e5e7eb',
+    text: '#111827',
+    muted: '#4b5563',
+    mutedLight: '#cbd5f5',
+    pageBackground: '#f7f7fa',
+    surfaceAlt: '#f4f4f5',
+    border: '#d1d5db',
+    highlight: '#edeef2',
+    coverGradient: ['#0f172a', '#6b7280'],
+    coverText: '#f9fafb',
+  },
+  pastel: {
+    accent: '#f472b6',
+    accentStrong: '#ec4899',
+    accentSoft: '#fce7f3',
+    text: '#4a1d32',
+    muted: '#9d4b73',
+    mutedLight: '#f9a8d4',
+    pageBackground: '#fff4fb',
+    surfaceAlt: '#fff0f7',
+    border: '#fbcfe8',
+    highlight: '#fdf2f8',
+    coverGradient: ['#f472b6', '#fdba74'],
+    coverText: '#fff6fb',
+  },
+  mono: {
+    accent: '#111827',
+    accentStrong: '#030712',
+    accentSoft: '#e5e7eb',
+    text: '#111827',
+    muted: '#4b5563',
+    mutedLight: '#9ca3af',
+    pageBackground: '#ffffff',
+    surfaceAlt: '#f8fafc',
+    border: '#e5e7eb',
+    highlight: '#f3f4f6',
+    coverGradient: ['#0f172a', '#111827'],
+    coverText: '#f1f5f9',
+  },
+};
+
+const FONT_FAMILY_OVERRIDES: Record<
+  FontFamilyName,
+  Pick<TemplateTheme, 'headingFont' | 'bodyFont'>
+> = {
+  sans: {
+    headingFont: "'Inter', 'Roboto', 'Segoe UI', sans-serif",
+    bodyFont: "'Inter', 'Segoe UI', sans-serif",
+  },
+  serif: {
+    headingFont: "'Playfair Display', 'Times New Roman', serif",
+    bodyFont: "'Cormorant Garamond', 'Georgia', serif",
+  },
+  rounded: {
+    headingFont: "'Quicksand', 'Nunito', 'Poppins', sans-serif",
+    bodyFont: "'Nunito', 'Poppins', 'Arial', sans-serif",
+  },
+};
+
+const CHECKLIST_LIBRARY: Record<ChecklistSectionName, string[]> = {
+  clothing: ['Термобельё', 'Тёплый слой/флис', 'Дождевик/пончо', 'Треккинговая обувь', 'Шапка, перчатки, бафф'],
+  food: ['Перекусы', 'Термос', 'Походная посуда', 'Мультитул/нож', 'Фильтр или запас воды'],
+  electronics: ['Повербанк', 'Камера/GoPro', 'Переходники', 'Налобный фонарь', 'Запасные карты памяти'],
+  documents: ['Паспорт', 'Билеты/бронирования', 'Страховка', 'Водительские права', 'Список контактов'],
+  medicine: ['Индивидуальные лекарства', 'Пластыри и бинт', 'Средство от насекомых', 'Солнцезащита', 'Антисептик'],
+};
+
+const CHECKLIST_LABELS: Record<ChecklistSectionName, string> = {
+  clothing: 'Одежда',
+  food: 'Еда',
+  electronics: 'Электроника',
+  documents: 'Документы',
+  medicine: 'Аптечка',
+};
+
 const DEFAULT_THEME = TEMPLATE_THEMES.classic;
 const IMAGE_PROXY_BASE = 'https://images.weserv.nl/?url=';
 const DEFAULT_IMAGE_PARAMS = 'w=1600&fit=inside';
@@ -208,6 +333,26 @@ const PLACEHOLDER_IMAGE = `data:image/svg+xml;charset=utf-8,${encodeURIComponent
     <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#cbd5f5" font-family="sans-serif" font-size="48">Изображение недоступно</text>
   </svg>`
 )}`;
+
+function applyCustomTheme(theme: TemplateTheme, settings: BookSettings): TemplateTheme {
+  const colorOverride = settings.colorTheme ? COLOR_THEME_OVERRIDES[settings.colorTheme] : undefined;
+  const fontOverride = settings.fontFamily ? FONT_FAMILY_OVERRIDES[settings.fontFamily] : undefined;
+  return {
+    ...theme,
+    ...(colorOverride || {}),
+    ...(fontOverride || {}),
+  };
+}
+
+function getGalleryPhotos(travel?: TravelForBook): string[] {
+  if (!travel || !Array.isArray(travel.gallery)) return [];
+  return travel.gallery
+    .map((item) => {
+      if (typeof item === 'string') return buildSafeImageUrl(item);
+      return buildSafeImageUrl(item?.url);
+    })
+    .filter((url): url is string => Boolean(url && url.trim().length > 0));
+}
 
 function isLocalResource(url: string): boolean {
   const lower = url.toLowerCase();
@@ -248,8 +393,8 @@ interface NormalizedLocation {
 
 interface TravelSectionMeta {
   travel: TravelForBook;
-  hasGallery: boolean;
-  hasMap: boolean;
+  hasGalleryPage: boolean;
+  hasMapPage: boolean;
   locations: NormalizedLocation[];
   startPage: number;
 }
@@ -337,9 +482,13 @@ function getYearRange(travels: TravelForBook[]): string | undefined {
   return min === max ? String(min) : `${min} - ${max}`;
 }
 
-function getTemplateTheme(template?: TemplateName): TemplateTheme {
-  if (!template) return DEFAULT_THEME;
-  return TEMPLATE_THEMES[template] ?? DEFAULT_THEME;
+function applyThemeOverrides(base: TemplateTheme, settings: BookSettings): TemplateTheme {
+  return applyCustomTheme(base, settings);
+}
+
+function getTemplateTheme(settings: BookSettings): TemplateTheme {
+  const base = TEMPLATE_THEMES[settings.template as TemplateName] ?? DEFAULT_THEME;
+  return applyThemeOverrides(base, settings);
 }
 
 function resolveCoverImage(travels: TravelForBook[], settings: BookSettings): string | undefined {
@@ -747,13 +896,18 @@ function renderTravelTextPage(options: {
   url?: string;
   pageNumber: number;
   theme: TemplateTheme;
+  photoMode: BookSettings['photoMode'];
+  mapMode: BookSettings['mapMode'];
+  locations: NormalizedLocation[];
 }) {
-  const { travel, qr, url, pageNumber, theme } = options;
-  
+  const { travel, qr, url, pageNumber, theme, photoMode, mapMode, locations } = options;
+
   const description = travel.description ? sanitizeRichText(travel.description) : null;
   const recommendation = travel.recommendation ? sanitizeRichText(travel.recommendation) : null;
   const plus = travel.plus ? sanitizeRichText(travel.plus) : null;
   const minus = travel.minus ? sanitizeRichText(travel.minus) : null;
+  const inlinePhotos = photoMode === 'inline' ? getGalleryPhotos(travel).slice(0, 6) : [];
+  const inlineMapLocations = mapMode === 'inline' ? locations.slice(0, 4) : [];
 
   // ✅ УЛУЧШЕНИЕ ВЕРСТКИ: Добавляем стили для улучшения читаемости HTML контента
   const contentStyles = `
@@ -793,6 +947,62 @@ function renderTravelTextPage(options: {
     </style>
   `;
 
+  const inlineGalleryBlock =
+    inlinePhotos.length > 0
+      ? `
+        <div style="margin-top: 18px;">
+          <h3 style="font-size: 15pt; margin-bottom: 8px; color: ${theme.text};">Фото из путешествия</h3>
+          <div style="display: grid; grid-template-columns: repeat(${Math.min(
+            inlinePhotos.length,
+            3
+          )}, 1fr); gap: 8px;">
+            ${inlinePhotos
+              .map(
+                (photo) => `
+                  <div style="border-radius: 10px; overflow: hidden; box-shadow: 0 2px 6px rgba(15,23,42,0.12); background: ${theme.surfaceAlt};">
+                    <img src="${escapeHtml(photo)}" alt="Фото путешествия"
+                      style="width: 100%; height: 70mm; object-fit: cover;" crossorigin="anonymous" />
+                  </div>
+                `
+              )
+              .join('')}
+          </div>
+        </div>
+      `
+      : '';
+
+  const inlineMapBlock =
+    inlineMapLocations.length > 0
+      ? `
+        <div style="margin-top: 18px; padding: 14px; border-radius: 14px; border: 1.5px solid ${theme.border}; background: ${theme.surfaceAlt};">
+          <div style="display: grid; grid-template-columns: 2fr 3fr; gap: 12px; align-items: center;">
+            <div style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(15,23,42,0.08);">
+              ${buildRouteSvg(inlineMapLocations, theme)}
+            </div>
+            <div>
+              ${inlineMapLocations
+                .map(
+                  (location, idx) => `
+                    <div style="display: flex; gap: 8px; margin-bottom: 6px; color: ${theme.muted}; font-size: 11.5pt;">
+                      <div style="width: 24px; height: 24px; border-radius: 50%; background: ${theme.accentSoft}; color: ${theme.accentStrong}; display: flex; align-items: center; justify-content: center; font-weight: 700;">${idx + 1}</div>
+                      <div style="flex: 1;">
+                        <div style="font-weight: 600; color: ${theme.text};">${escapeHtml(location.address)}</div>
+                        ${
+                          location.coord
+                            ? `<div style="font-size: 10pt; color: ${theme.mutedLight};">${escapeHtml(location.coord)}</div>`
+                            : ''
+                        }
+                      </div>
+                    </div>
+                  `
+                )
+                .join('')}
+            </div>
+          </div>
+        </div>
+      `
+      : '';
+
   return `
     <section class="pdf-page travel-text-page" style="padding: 25mm 28mm;">
       ${contentStyles}
@@ -818,6 +1028,8 @@ function renderTravelTextPage(options: {
               </div>`
             : ''
         }
+        ${inlineGalleryBlock}
+        ${inlineMapBlock}
         ${
           plus || minus
             ? `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px;">
@@ -863,23 +1075,33 @@ function renderTravelTextPage(options: {
   `;
 }
 
-function renderGalleryPage(options: { travel: TravelForBook; pageNumber: number; theme: TemplateTheme }) {
-  const { travel, pageNumber, theme } = options;
-  const photos = (travel.gallery || [])
-    .map((item) => {
-      const raw = typeof item === 'string' ? item : item?.url;
-      return buildSafeImageUrl(raw);
-    })
-    .filter((url): url is string => !!url && url.trim().length > 0);
+function renderGalleryPage(options: {
+  travel: TravelForBook;
+  pageNumber: number;
+  theme: TemplateTheme;
+  photoMode: BookSettings['photoMode'];
+}) {
+  const { travel, pageNumber, theme, photoMode } = options;
+  const photos = getGalleryPhotos(travel);
   if (!photos.length) return '';
 
-  const columns = photos.length <= 4 ? 2 : photos.length <= 6 ? 3 : 4;
-  const imageHeight = photos.length <= 4 ? '80mm' : photos.length <= 6 ? '65mm' : '55mm';
+  const columns =
+    photoMode === 'full' ? 1 : photos.length <= 4 ? 2 : photos.length <= 8 ? 3 : 4;
+  const imageHeight =
+    photoMode === 'full'
+      ? '180mm'
+      : columns === 2
+      ? '90mm'
+      : columns === 3
+      ? '70mm'
+      : '60mm';
 
   return `
     <section class="pdf-page gallery-page" style="padding: 20mm 22mm;">
       <div style="text-align: center; margin-bottom: 18mm;">
-        <h2 style="font-size: 24pt; margin-bottom: 6mm; font-weight: 700; color: ${theme.text}; letter-spacing: 0.02em;">Фотогалерея</h2>
+        <h2 style="font-size: 24pt; margin-bottom: 6mm; font-weight: 700; color: ${theme.text}; letter-spacing: 0.02em;">
+          ${photoMode === 'full' ? 'Фотоистории' : 'Фотогалерея'}
+        </h2>
         <p style="color: ${theme.muted}; font-size: 12pt; font-weight: 500;">${escapeHtml(travel.name)}</p>
       </div>
       <div style="display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: 6mm;">
@@ -941,6 +1163,52 @@ function renderMapPage(options: {
   `;
 }
 
+function renderChecklistPage(options: {
+  sections: ChecklistSectionName[];
+  theme: TemplateTheme;
+  pageNumber: number;
+}) {
+  const { sections, theme, pageNumber } = options;
+  const cards = sections
+    .map((section) => ({
+      key: section,
+      label: CHECKLIST_LABELS[section] || 'Секция',
+      items: CHECKLIST_LIBRARY[section] || [],
+    }))
+    .filter((section) => section.items.length > 0)
+    .map(
+      (section) => `
+        <div style="border: 1.5px solid ${theme.border}; border-radius: 14px; padding: 14px 16px; background: ${theme.surface}; box-shadow: 0 4px 12px rgba(15,23,42,0.06);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <h3 style="margin: 0; font-size: 15pt; font-weight: 700; color: ${theme.text};">${section.label}</h3>
+            <span style="font-size: 11px; color: ${theme.mutedLight}; font-weight: 600;">${section.items.length} пунктов</span>
+          </div>
+          <ul style="margin: 0; padding-left: 18px; color: ${theme.muted}; font-size: 11.5pt; line-height: 1.6;">
+            ${section.items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
+          </ul>
+        </div>
+      `
+    )
+    .join('');
+
+  if (!cards) return '';
+
+  return `
+    <section class="pdf-page checklist-page" style="padding: 26mm 28mm;">
+      <div style="text-align: center; margin-bottom: 18mm;">
+        <h2 style="font-size: 26pt; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.01em; color: ${theme.text};">Чек-листы путешествия</h2>
+        <p style="color: ${theme.muted}; font-size: 12pt;">Подходит для печати и отметок</p>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
+        ${cards}
+      </div>
+      <div style="position: absolute; bottom: 15mm; right: 25mm; font-size: 11pt; color: ${theme.mutedLight}; font-weight: 500;">
+        ${pageNumber}
+      </div>
+    </section>
+  `;
+}
+
 function renderFinalPage(pageNumber: number, theme: TemplateTheme) {
   return `
     <section class="pdf-page final-page" style="padding: 40mm 32mm; display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center;">
@@ -964,7 +1232,11 @@ export async function buildPhotoBookHTML(
   settings: BookSettings
 ): Promise<string> {
   const sortedTravels = sortTravels(travels, settings.sortOrder);
-  const theme = getTemplateTheme(settings.template);
+  const theme = getTemplateTheme(settings);
+  const allowGallery = settings.includeGallery !== false;
+  const allowMap = settings.includeMap !== false;
+  const photoMode = allowGallery ? settings.photoMode || 'gallery' : 'none';
+  const mapMode = allowMap ? settings.mapMode || 'full-page' : 'none';
   const coverImage = resolveCoverImage(sortedTravels, settings);
   const yearRange = getYearRange(sortedTravels);
   const userName = sortedTravels[0]?.userName || 'Путешественник';
@@ -979,23 +1251,22 @@ export async function buildPhotoBookHTML(
   let currentPage = settings.includeToc ? 3 : 2;
   const meta: TravelSectionMeta[] = [];
 
-  sortedTravels.forEach((travel, index) => {
+  sortedTravels.forEach((travel) => {
     const locations = normalizeLocations(travel);
-    const hasGallery = Boolean(settings.includeGallery && travel.gallery && travel.gallery.length);
-    const hasMap = Boolean(settings.includeMap && locations.length);
+    const hasGalleryPage =
+      photoMode !== 'inline' && photoMode !== 'none' && Boolean(travel.gallery && travel.gallery.length);
+    const hasMapPage = Boolean(mapMode === 'full-page' && locations.length);
     meta.push({
       travel,
-      hasGallery,
-      hasMap,
+      hasGalleryPage,
+      hasMapPage,
       locations,
       startPage: currentPage,
     });
     currentPage += 2; // photo + text
-    if (hasGallery) currentPage += 1;
-    if (hasMap) currentPage += 1;
+    if (hasGalleryPage) currentPage += 1;
+    if (hasMapPage) currentPage += 1;
   });
-
-  const finalPageNumber = currentPage;
 
   let runningPage = 1;
   const pages: string[] = [];
@@ -1045,22 +1316,26 @@ export async function buildPhotoBookHTML(
           : item.travel.url,
         pageNumber: textPageNumber,
         theme,
+        photoMode,
+        mapMode,
+        locations: item.locations,
       })
     );
     runningPage += 1;
 
-    if (item.hasGallery) {
+    if (item.hasGalleryPage) {
       pages.push(
         renderGalleryPage({
           travel: item.travel,
           pageNumber: runningPage,
           theme,
+          photoMode,
         })
       );
       runningPage += 1;
     }
 
-    if (item.hasMap) {
+    if (item.hasMapPage) {
       pages.push(
         renderMapPage({
           travel: item.travel,
@@ -1073,6 +1348,19 @@ export async function buildPhotoBookHTML(
     }
   });
 
+  if (settings.includeChecklists && settings.checklistSections?.length) {
+    const checklistPage = renderChecklistPage({
+      sections: settings.checklistSections,
+      theme,
+      pageNumber: runningPage,
+    });
+    if (checklistPage.trim().length) {
+      pages.push(checklistPage);
+      runningPage += 1;
+    }
+  }
+
+  const finalPageNumber = runningPage;
   pages.push(renderFinalPage(finalPageNumber, theme));
 
   const html = `

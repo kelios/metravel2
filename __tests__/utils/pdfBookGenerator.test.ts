@@ -58,6 +58,12 @@ describe('buildPhotoBookHTML', () => {
     includeToc: true,
     includeGallery: true,
     includeMap: true,
+    colorTheme: 'blue',
+    fontFamily: 'sans',
+    photoMode: 'gallery',
+    mapMode: 'full-page',
+    includeChecklists: false,
+    checklistSections: ['clothing', 'food', 'electronics'],
   };
 
   const travel503: Travel = {
@@ -548,6 +554,49 @@ describe('buildPhotoBookHTML', () => {
     });
   });
 
+  describe('Расширенные настройки', () => {
+    it('встраивает мини-галерею при photoMode = inline', async () => {
+      const settings: BookSettings = { ...defaultSettings, photoMode: 'inline' };
+      const html = await buildPhotoBookHTML([mockTravel], settings);
+
+      expect(html).toContain('Фото из путешествия');
+      expect(html).not.toContain('class="pdf-page gallery-page"');
+    });
+
+    it('встраивает мини-карту при mapMode = inline', async () => {
+      const settings: BookSettings = { ...defaultSettings, mapMode: 'inline' };
+      const html = await buildPhotoBookHTML([mockTravel], settings);
+
+      expect(html).toContain('grid-template-columns: 2fr 3fr; gap: 12px; align-items: center;');
+      expect(html).not.toContain('class="pdf-page map-page"');
+    });
+
+    it('добавляет страницу чек-листов, когда includeChecklists = true', async () => {
+      const settings: BookSettings = {
+        ...defaultSettings,
+        includeChecklists: true,
+        checklistSections: ['clothing', 'documents'],
+      };
+      const html = await buildPhotoBookHTML([mockTravel], settings);
+
+      expect(html).toContain('class="pdf-page checklist-page"');
+      expect(html).toContain('Чек-листы путешествия');
+      expect(html).toContain('Документы');
+    });
+
+    it('применяет выбранную цветовую тему и шрифты', async () => {
+      const settings: BookSettings = {
+        ...defaultSettings,
+        colorTheme: 'green',
+        fontFamily: 'serif',
+      };
+      const html = await buildPhotoBookHTML([mockTravel], settings);
+
+      expect(html).toContain('#10b981');
+      expect(html).toContain('Playfair Display');
+    });
+  });
+
   describe('Очистка React Native компонентов', () => {
     it('должен удалять React Native компоненты из HTML', async () => {
       const travelWithReactComponents = {
@@ -580,4 +629,3 @@ describe('buildPhotoBookHTML', () => {
     });
   });
 });
-

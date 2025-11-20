@@ -1,12 +1,23 @@
 // components/export/BookSettingsModal.tsx
 // ✅ УЛУЧШЕНИЕ: Модальное окно настроек фотоальбома
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, TextInput, Platform } from 'react-native';
 // ✅ ИСПРАВЛЕНИЕ: Picker не используется в веб-версии модального окна
 // import { Picker } from '@react-native-picker/picker';
 import PdfLayoutBuilder from './PdfLayoutBuilder';
 import type { PdfLayout } from '@/src/types/pdf-layout';
+
+export type ColorThemeOption = 'blue' | 'green' | 'orange' | 'gray' | 'pastel' | 'mono';
+export type FontOption = 'sans' | 'serif' | 'rounded';
+export type PhotoModeOption = 'full' | 'gallery' | 'inline' | 'none';
+export type MapModeOption = 'full-page' | 'inline' | 'none';
+export type ChecklistSection =
+  | 'clothing'
+  | 'food'
+  | 'electronics'
+  | 'documents'
+  | 'medicine';
 
 // ✅ Экспортируем интерфейс для использования в других компонентах
 export interface BookSettings {
@@ -23,8 +34,56 @@ export interface BookSettings {
   includeToc: boolean;
   includeGallery: boolean;
   includeMap: boolean;
+  colorTheme: ColorThemeOption;
+  fontFamily: FontOption;
+  photoMode: PhotoModeOption;
+  mapMode: MapModeOption;
+  includeChecklists: boolean;
+  checklistSections: ChecklistSection[];
   layout?: PdfLayout; // Пользовательский макет
 }
+
+const DEFAULT_CHECKLIST_SELECTION: ChecklistSection[] = ['clothing', 'food', 'electronics'];
+
+const COLOR_THEME_OPTIONS = [
+  { value: 'blue', label: 'Голубой океан', accent: '#3b82f6', description: 'Свежий и универсальный акцент', gradient: ['#dbeafe', '#1d4ed8'] },
+  { value: 'green', label: 'Зелёный лес', accent: '#10b981', description: 'Натуральный спокойный стиль', gradient: ['#d1fae5', '#047857'] },
+  { value: 'orange', label: 'Оранжевый закат', accent: '#fb923c', description: 'Тёплые журнальные развороты', gradient: ['#ffedd5', '#c2410c'] },
+  { value: 'gray', label: 'Графитовый', accent: '#6b7280', description: 'Современный монохром', gradient: ['#f3f4f6', '#374151'] },
+  { value: 'pastel', label: 'Пастель', accent: '#f472b6', description: 'Мягкие открытки и дневники', gradient: ['#fde4cf', '#f472b6'] },
+  { value: 'mono', label: 'Монохром', accent: '#111827', description: 'Контрастная типографика', gradient: ['#f8fafc', '#111827'] },
+] as const;
+
+const FONT_OPTIONS = [
+  { value: 'sans', label: 'Sans', description: 'Inter / Roboto — современно' },
+  { value: 'serif', label: 'Serif', description: 'Playfair / Georgia — книжно' },
+  { value: 'rounded', label: 'Rounded', description: 'Nunito / Quicksand — дружелюбно' },
+] as const;
+
+const PHOTO_MODE_OPTIONS = [
+  { value: 'full', label: 'Большие фото', description: 'Каждое фото занимает всю страницу' },
+  { value: 'gallery', label: 'Галерея', description: '3–6 фото на страницу в сетке' },
+  { value: 'inline', label: 'Фото в тексте', description: 'Мини-галерея прямо в описании' },
+  { value: 'none', label: 'Без фото', description: 'Отключить фотоблоки' },
+] as const;
+
+const MAP_MODE_OPTIONS = [
+  { value: 'full-page', label: 'Большая карта', description: 'Отдельная страница с маршрутом' },
+  { value: 'inline', label: 'Мини-карта', description: 'Компактный блок рядом с текстом' },
+  { value: 'none', label: 'Без карты', description: 'В книге не будет карт' },
+] as const;
+
+const CHECKLIST_OPTIONS: Array<{
+  value: ChecklistSection;
+  label: string;
+  items: string[];
+}> = [
+  { value: 'clothing', label: 'Одежда', items: ['Слои', 'Обувь', 'Дождевик'] },
+  { value: 'food', label: 'Еда', items: ['Перекусы', 'Термос', 'Посуда'] },
+  { value: 'electronics', label: 'Электроника', items: ['Повербанк', 'Камера', 'Переходники'] },
+  { value: 'documents', label: 'Документы', items: ['Паспорт', 'Визы', 'Страховка'] },
+  { value: 'medicine', label: 'Аптечка', items: ['Базовая аптечка', 'Пластыри', 'Солнцезащита'] },
+];
 
 interface BookSettingsModalProps {
   visible: boolean;
@@ -50,6 +109,49 @@ const defaultBookSettings: BookSettings = {
   includeToc: true,
   includeGallery: true,
   includeMap: true,
+  colorTheme: 'blue',
+  fontFamily: 'sans',
+  photoMode: 'gallery',
+  mapMode: 'full-page',
+  includeChecklists: false,
+  checklistSections: DEFAULT_CHECKLIST_SELECTION,
+};
+
+const buildInitialSettings = (
+  overrides?: Partial<BookSettings>,
+  userName?: string
+): BookSettings => {
+  const merged: BookSettings = {
+    ...defaultBookSettings,
+    ...overrides,
+  };
+
+  merged.title =
+    overrides?.title || (userName ? `Путешествия ${userName}` : defaultBookSettings.title);
+
+  merged.photoMode =
+    overrides?.photoMode ??
+    (merged.includeGallery === false ? 'none' : merged.photoMode || 'gallery');
+  merged.includeGallery = merged.photoMode !== 'none';
+
+  merged.mapMode =
+    overrides?.mapMode ??
+    (merged.includeMap === false ? 'none' : merged.mapMode || 'full-page');
+  merged.includeMap = merged.mapMode !== 'none';
+
+  merged.checklistSections =
+    overrides?.checklistSections && overrides.checklistSections.length > 0
+      ? overrides.checklistSections
+      : DEFAULT_CHECKLIST_SELECTION;
+
+  if (typeof merged.includeChecklists === 'undefined') {
+    merged.includeChecklists = defaultBookSettings.includeChecklists;
+  }
+
+  merged.colorTheme = overrides?.colorTheme ?? merged.colorTheme;
+  merged.fontFamily = overrides?.fontFamily ?? merged.fontFamily;
+
+  return merged;
 };
 
 export default function BookSettingsModal({
@@ -62,12 +164,56 @@ export default function BookSettingsModal({
   userName,
   mode = 'save',
 }: BookSettingsModalProps) {
-  const [settings, setSettings] = useState<BookSettings>({
-    ...defaultBookSettings,
-    title: defaultSettings?.title || (userName ? `Путешествия ${userName}` : 'Мои путешествия'),
-    ...defaultSettings,
-  });
+  const [settings, setSettings] = useState<BookSettings>(() =>
+    buildInitialSettings(defaultSettings, userName)
+  );
   const [showLayoutBuilder, setShowLayoutBuilder] = useState(false);
+
+  useEffect(() => {
+    setSettings(buildInitialSettings(defaultSettings, userName));
+  }, [defaultSettings, userName]);
+
+  const checklistSections = settings.checklistSections || [];
+
+  const handlePhotoModeChange = (mode: PhotoModeOption) => {
+    setSettings((prev) => ({
+      ...prev,
+      photoMode: mode,
+      includeGallery: mode !== 'none',
+    }));
+  };
+
+  const handleMapModeChange = (mode: MapModeOption) => {
+    setSettings((prev) => ({
+      ...prev,
+      mapMode: mode,
+      includeMap: mode !== 'none',
+    }));
+  };
+
+  const toggleChecklistSection = (section: ChecklistSection) => {
+    setSettings((prev) => {
+      const current = prev.checklistSections || [];
+      const exists = current.includes(section);
+      return {
+        ...prev,
+        checklistSections: exists
+          ? current.filter((item) => item !== section)
+          : [...current, section],
+      };
+    });
+  };
+
+  const handleToggleChecklists = (enabled: boolean) => {
+    setSettings((prev) => ({
+      ...prev,
+      includeChecklists: enabled,
+      checklistSections:
+        enabled && (!prev.checklistSections || prev.checklistSections.length === 0)
+          ? DEFAULT_CHECKLIST_SELECTION
+          : prev.checklistSections,
+    }));
+  };
 
   const handleSave = () => {
     onSave(settings);
@@ -317,6 +463,77 @@ export default function BookSettingsModal({
             </select>
           </div>
 
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
+              Цветовая тема
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+              {COLOR_THEME_OPTIONS.map((theme) => {
+                const isActive = settings.colorTheme === theme.value;
+                return (
+                  <button
+                    key={theme.value}
+                    onClick={() => setSettings({ ...settings, colorTheme: theme.value })}
+                    style={{
+                      borderRadius: '14px',
+                      padding: '12px',
+                      border: isActive ? '2px solid #5b8a7a' : '1.5px solid rgba(31, 31, 31, 0.08)',
+                      backgroundColor: '#fff',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      minHeight: '80px',
+                      boxShadow: isActive ? '0 6px 18px rgba(91, 138, 122, 0.15)' : '0 2px 6px rgba(31, 31, 31, 0.04)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '32px',
+                        borderRadius: '10px',
+                        marginBottom: '10px',
+                        background: `linear-gradient(135deg, ${theme.gradient[0]}, ${theme.gradient[1]})`,
+                      }}
+                    />
+                    <div style={{ fontWeight: 600, color: '#1f1f1f', marginBottom: '4px' }}>{theme.label}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{theme.description}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
+              Шрифты
+            </label>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              {FONT_OPTIONS.map((font) => {
+                const isActive = settings.fontFamily === font.value;
+                return (
+                  <button
+                    key={font.value}
+                    onClick={() => setSettings({ ...settings, fontFamily: font.value })}
+                    style={{
+                      flex: '1 1 160px',
+                      borderRadius: '12px',
+                      border: isActive ? '2px solid #5b8a7a' : '1.5px solid rgba(31, 31, 31, 0.08)',
+                      padding: '12px 14px',
+                      backgroundColor: '#fff',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      boxShadow: isActive ? '0 6px 18px rgba(91, 138, 122, 0.12)' : '0 2px 6px rgba(31,31,31,0.04)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, color: '#1f1f1f', marginBottom: '4px' }}>{font.label}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{font.description}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#374151' }}>
@@ -433,6 +650,68 @@ export default function BookSettingsModal({
 
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
+              Фото-режим
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+              {PHOTO_MODE_OPTIONS.map((option) => {
+                const isActive = settings.photoMode === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => handlePhotoModeChange(option.value)}
+                    style={{
+                      borderRadius: '14px',
+                      border: isActive ? '2px solid #5b8a7a' : '1.5px solid rgba(31, 31, 31, 0.08)',
+                      padding: '14px',
+                      backgroundColor: '#fff',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      minHeight: '90px',
+                      boxShadow: isActive ? '0 6px 18px rgba(91, 138, 122, 0.12)' : '0 2px 6px rgba(31,31,31,0.04)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, color: '#1f1f1f', marginBottom: '6px' }}>{option.label}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{option.description}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
+              Карты и география
+            </label>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              {MAP_MODE_OPTIONS.map((option) => {
+                const isActive = settings.mapMode === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => handleMapModeChange(option.value)}
+                    style={{
+                      flex: '1 1 200px',
+                      borderRadius: '12px',
+                      border: isActive ? '2px solid #5b8a7a' : '1.5px solid rgba(31, 31, 31, 0.08)',
+                      padding: '14px',
+                      backgroundColor: '#fff',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      boxShadow: isActive ? '0 6px 18px rgba(91, 138, 122, 0.12)' : '0 2px 6px rgba(31,31,31,0.04)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, color: '#1f1f1f', marginBottom: '6px' }}>{option.label}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{option.description}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
               Сортировка
             </label>
             <select
@@ -485,42 +764,60 @@ export default function BookSettingsModal({
             </label>
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={settings.includeGallery}
-                onChange={(e) => setSettings({ ...settings, includeGallery: e.target.checked })}
-                style={{ 
-                  width: '20px',
-                  height: '20px',
-                  minWidth: '20px',
-                  minHeight: '20px',
-                  cursor: 'pointer',
-                  accentColor: '#5b8a7a',
-                }}
-              />
-              <span style={{ fontWeight: 500, color: '#1f1f1f', fontSize: '15px' }}>Включить галереи фотографий</span>
-            </label>
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={settings.includeMap}
-                onChange={(e) => setSettings({ ...settings, includeMap: e.target.checked })}
-                style={{ 
-                  width: '20px',
-                  height: '20px',
-                  minWidth: '20px',
-                  minHeight: '20px',
-                  cursor: 'pointer',
-                  accentColor: '#5b8a7a',
-                }}
-              />
-              <span style={{ fontWeight: 500, color: '#1f1f1f', fontSize: '15px' }}>Включить карты и координаты</span>
-            </label>
+          <div style={{ marginBottom: '20px', padding: '18px', borderRadius: '14px', border: '1px solid rgba(31,31,31,0.08)', backgroundColor: '#f8f7f4' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <label style={{ fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
+                Чек-листы путешественника
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+                <input
+                  type="checkbox"
+                  checked={settings.includeChecklists}
+                  onChange={(e) => handleToggleChecklists(e.target.checked)}
+                  style={{ width: '20px', height: '20px', accentColor: '#5b8a7a', cursor: 'pointer' }}
+                />
+                Добавить в PDF
+              </label>
+            </div>
+            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: settings.includeChecklists ? '12px' : 0 }}>
+              Стандартные списки для печати: экипировка, еда, документы, техника и аптечка.
+            </div>
+            {settings.includeChecklists && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                {CHECKLIST_OPTIONS.map((option) => {
+                  const selected = checklistSections.includes(option.value);
+                  return (
+                    <label
+                      key={option.value}
+                      style={{
+                        borderRadius: '12px',
+                        border: selected ? '2px solid #5b8a7a' : '1px solid rgba(31,31,31,0.12)',
+                        padding: '12px',
+                        backgroundColor: '#fff',
+                        cursor: 'pointer',
+                        display: 'block',
+                        boxShadow: selected ? '0 6px 18px rgba(91, 138, 122, 0.1)' : '0 1px 3px rgba(31,31,31,0.05)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <span style={{ fontWeight: 600, color: '#1f1f1f' }}>{option.label}</span>
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => toggleChecklistSection(option.value)}
+                          style={{ width: '18px', height: '18px', accentColor: '#5b8a7a', cursor: 'pointer' }}
+                        />
+                      </div>
+                      <ul style={{ margin: 0, padding: '0 0 0 16px', fontSize: '12px', color: '#6b7280' }}>
+                        {option.items.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Кнопка конструктора макета */}
@@ -719,4 +1016,3 @@ export default function BookSettingsModal({
     </Modal>
   );
 }
-

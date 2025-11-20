@@ -96,6 +96,12 @@ describe('PDF Content Validation - Проверка всех элементов'
     includeToc: true,
     includeGallery: true,
     includeMap: true,
+    colorTheme: 'blue',
+    fontFamily: 'sans',
+    photoMode: 'gallery',
+    mapMode: 'full-page',
+    includeChecklists: false,
+    checklistSections: ['clothing', 'food', 'electronics'],
   };
 
   describe('Обязательные элементы', () => {
@@ -354,4 +360,3 @@ describe('PDF Content Validation - Проверка всех элементов'
     });
   });
 });
-

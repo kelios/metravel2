@@ -77,6 +77,12 @@ export function useListTravelExport(
       includeToc: true,
       includeGallery: true,
       includeMap: true,
+      colorTheme: 'blue',
+      fontFamily: 'sans',
+      photoMode: 'gallery',
+      mapMode: 'full-page',
+      includeChecklists: false,
+      checklistSections: ['clothing', 'food', 'electronics'],
     }),
     [ownerName]
   );
@@ -127,4 +133,3 @@ export function useListTravelExport(
     handlePreviewWithSettings,
   };
 }
-

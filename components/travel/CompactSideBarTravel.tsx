@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   ActivityIndicator,
   DeviceEventEmitter,
+  Alert,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { MaterialIcons, Feather } from "@expo/vector-icons";
@@ -19,8 +20,8 @@ import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/tr
 import WeatherWidget from "@/components/WeatherWidget";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from "@/utils/imageOptimization";
-import ArticleExportModal from "@/components/export/ArticleExportModal";
-import { useArticlePdfExport } from "@/hooks/useArticlePdfExport";
+import BookSettingsModal, { type BookSettings } from "@/components/export/BookSettingsModal";
+import { useSingleTravelExport } from "@/components/travel/hooks/useSingleTravelExport";
 
 const Fallback = () => (
   <View style={styles.fallback}>
@@ -72,8 +73,14 @@ function CompactSideBarTravel({
   const { width } = useWindowDimensions();
   const isTablet = width >= 768 && width < 1024;
   const [active, setActive] = useState<string>("");
-  const [showExportModal, setShowExportModal] = useState(false);
-  const { exportArticle } = useArticlePdfExport();
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const {
+    pdfExport,
+    lastSettings,
+    settingsSummary,
+    handleSaveWithSettings,
+    handlePreviewWithSettings,
+  } = useSingleTravelExport(travel);
 
   // ✅ УЛУЧШЕНИЕ: Используем внешнюю активную секцию, если она передана, иначе локальную
   const currentActive = externalActiveSection !== undefined ? externalActiveSection : active;
@@ -186,11 +193,31 @@ function CompactSideBarTravel({
   const handleUserTravels = () =>
     openUrl(`/?user_id=${(travel as any).userIds ?? (travel as any).userId}`);
   const handleEdit = () => canEdit && openUrl(`/travel/${travel.id}`);
-  
-  const handleExport = useCallback((settings: any) => {
-    exportArticle(travel, settings);
-  }, [travel, exportArticle]);
 
+  const handleOpenExport = useCallback(() => {
+    if (Platform.OS !== 'web') {
+      Alert.alert?.('Недоступно', 'Экспорт PDF доступен только в веб-версии');
+      return;
+    }
+    setShowSettingsModal(true);
+  }, []);
+
+  const handleSaveSettings = useCallback(
+    async (settings: BookSettings) => {
+      await handleSaveWithSettings(settings);
+      setShowSettingsModal(false);
+    },
+    [handleSaveWithSettings]
+  );
+
+  const handlePreviewSettings = useCallback(
+    async (settings: BookSettings) => {
+      await handlePreviewWithSettings(settings);
+      setShowSettingsModal(false);
+    },
+    [handlePreviewWithSettings]
+  );
+  
   return (
     <View style={styles.root}>
         <ScrollView
@@ -259,15 +286,29 @@ function CompactSideBarTravel({
                     </Pressable>
                   )}
                   <Pressable
-                    onPress={() => setShowExportModal(true)}
+                    onPress={handleOpenExport}
                     hitSlop={6}
+                    disabled={Platform.OS !== 'web' || pdfExport.isGenerating}
                     accessibilityRole="button"
                     accessibilityLabel="Экспорт в PDF"
                   >
-                    <MaterialIcons name="picture-as-pdf" size={18} color="#b83a3a" />
+                    {pdfExport.isGenerating ? (
+                      <ActivityIndicator size="small" color="#b83a3a" />
+                    ) : (
+                      <MaterialIcons
+                        name="picture-as-pdf"
+                        size={18}
+                        color={Platform.OS === 'web' ? "#b83a3a" : "#a1a1a1"}
+                      />
+                    )}
                   </Pressable>
                 </View>
               </View>
+              {Platform.OS === 'web' && (
+                <Text style={styles.exportSummary} numberOfLines={1}>
+                  PDF: {settingsSummary}
+                </Text>
+              )}
 
               {/* ✅ РЕДИЗАЙН: Компактная ключевая информация */}
               {whenLine && (
@@ -402,12 +443,18 @@ function CompactSideBarTravel({
         </Suspense>
       </ScrollView>
 
-      <ArticleExportModal
-        visible={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        onExport={handleExport}
-        travelData={travel}
-      />
+      {Platform.OS === "web" && (
+        <BookSettingsModal
+          visible={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          onSave={handleSaveSettings}
+          onPreview={handlePreviewSettings}
+          defaultSettings={lastSettings}
+          travelCount={1}
+          userName={travel.userName || undefined}
+          mode="preview"
+        />
+      )}
 
       {isMobile && (
         <View style={styles.closeBar}>
@@ -649,6 +696,11 @@ const styles = StyleSheet.create({
     color: "#374151", 
     fontFamily: "Georgia",
     lineHeight: 15,
+  },
+  exportSummary: {
+    fontSize: 11,
+    color: "#6b7280",
+    marginTop: 4,
   },
 
   // ✅ РЕДИЗАЙН: Компактные пункты меню

@@ -4,6 +4,19 @@
 import { EnhancedPdfGenerator } from '@/src/services/pdf-export/generators/EnhancedPdfGenerator';
 import type { TravelForBook } from '@/src/types/pdf-export';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
+import { JSDOM } from 'jsdom';
+
+const ensureDomGlobals = () => {
+  const globalObj = global as any;
+  const dom = new JSDOM('<!doctype html><html><body></body></html>');
+  globalObj.window = dom.window;
+  globalObj.document = dom.window.document;
+  globalObj.DOMParser = dom.window.DOMParser;
+  globalObj.Node = dom.window.Node;
+  globalObj.HTMLElement = dom.window.HTMLElement;
+};
+
+ensureDomGlobals();
 
 describe('EnhancedPdfGenerator', () => {
   const mockTravel: TravelForBook = {
@@ -28,6 +41,8 @@ describe('EnhancedPdfGenerator', () => {
       },
     ],
     userName: 'Тестовый пользователь',
+    plus: '<p>Плюсы: красиво</p>',
+    minus: '<p>Минусы: дорого</p>',
   };
 
   const defaultSettings: BookSettings = {
@@ -43,6 +58,12 @@ describe('EnhancedPdfGenerator', () => {
     includeToc: true,
     includeGallery: true,
     includeMap: true,
+    colorTheme: 'blue',
+    fontFamily: 'sans',
+    photoMode: 'gallery',
+    mapMode: 'full-page',
+    includeChecklists: false,
+    checklistSections: ['clothing', 'food', 'electronics'],
   };
 
   describe('Генерация HTML', () => {
@@ -170,6 +191,37 @@ describe('EnhancedPdfGenerator', () => {
     });
   });
 
+  describe('Специальные блоки', () => {
+    it('должен выводить плюсы и минусы, если данные есть', async () => {
+      const generator = new EnhancedPdfGenerator('minimal');
+      const html = await generator.generate([mockTravel], defaultSettings);
+
+      expect(html).toContain('Плюсы');
+      expect(html).toContain('Минусы');
+    });
+
+    it('должен выводить QR и ссылку на онлайн-версию', async () => {
+      const generator = new EnhancedPdfGenerator('minimal');
+      const html = await generator.generate([mockTravel], defaultSettings);
+
+      expect(html).toContain('Онлайн-версия');
+      expect(html).toContain('https://metravel.by/travels/test-travel');
+    });
+
+    it('должен добавлять страницу чек-листов при включении', async () => {
+      const generator = new EnhancedPdfGenerator('minimal');
+      const settings = {
+        ...defaultSettings,
+        includeChecklists: true,
+        checklistSections: ['clothing', 'documents'],
+      } as BookSettings;
+
+      const html = await generator.generate([mockTravel], settings);
+      expect(html).toContain('Чек-листы путешествия');
+      expect(html).toContain('Документы');
+    });
+  });
+
   describe('Карта', () => {
     it('должен включать карту когда includeMap = true и есть адреса', async () => {
       const generator = new EnhancedPdfGenerator('minimal');
@@ -266,4 +318,3 @@ describe('EnhancedPdfGenerator', () => {
     });
   });
 });
-
