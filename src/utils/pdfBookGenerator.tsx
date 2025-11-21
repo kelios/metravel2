@@ -321,7 +321,7 @@ const CHECKLIST_LABELS: Record<ChecklistSectionName, string> = {
   medicine: 'Аптечка',
 };
 
-const DEFAULT_THEME = TEMPLATE_THEMES.classic;
+const DEFAULT_THEME = TEMPLATE_THEMES.minimal;
 const IMAGE_PROXY_BASE = 'https://images.weserv.nl/?url=';
 const DEFAULT_IMAGE_PARAMS = 'w=1600&fit=inside';
 const PLACEHOLDER_IMAGE = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(

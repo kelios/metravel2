@@ -6,7 +6,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { FilterState, FilterOptions } from '../utils/listTravelTypes';
 import { INITIAL_FILTER, BELARUS_ID } from '../utils/listTravelConstants';
-import { buildTravelQueryParams } from '@/src/utils/filterQuery';
+import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/src/utils/filterQuery';
 
 export interface UseListTravelFiltersProps {
   options?: FilterOptions;
@@ -26,6 +26,43 @@ export interface UseListTravelFiltersReturn {
   applyFilter: (filter: FilterState) => void;
   handleToggleCategory: (categoryName: string) => void;
 }
+
+const isMeaningfulString = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
+
+const extractCategoryNames = (categories?: Array<string | number>): string[] => {
+  if (!categories?.length) {
+    return [];
+  }
+  return categories.filter((value): value is string => {
+    if (!isMeaningfulString(value)) {
+      return false;
+    }
+    const numericCandidate = Number(value.trim());
+    return Number.isNaN(numericCandidate);
+  });
+};
+
+const extractNumericCategoryIds = (categories?: Array<string | number>): number[] => {
+  if (!categories?.length) {
+    return [];
+  }
+
+  return categories
+    .map((value) => {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+      if (isMeaningfulString(value)) {
+        const parsed = Number(value.trim());
+        if (Number.isFinite(parsed)) {
+          return parsed;
+        }
+      }
+      return null;
+    })
+    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+};
 
 /**
  * ✅ АРХИТЕКТУРА: Хук для управления фильтрами
@@ -47,9 +84,35 @@ export function useListTravelFilters({
 }: UseListTravelFiltersProps): UseListTravelFiltersReturn {
   const [filter, setFilter] = useState<FilterState>(INITIAL_FILTER);
 
+  const filterForQuery = useMemo(() => {
+    const textualCategories = extractCategoryNames(filter.categories);
+    if (!textualCategories.length) {
+      return filter;
+    }
+
+    if (!options?.categories?.length) {
+      return filter;
+    }
+
+    const mappedCategoryIds = mapCategoryNamesToIds(textualCategories, options.categories);
+    if (!mappedCategoryIds.length) {
+      return filter;
+    }
+
+    const currentNumericIds = extractNumericCategoryIds(filter.categories);
+    const normalizedCategories = Array.from(
+      new Set<number>([...currentNumericIds, ...mappedCategoryIds])
+    );
+
+    return {
+      ...filter,
+      categories: normalizedCategories,
+    };
+  }, [filter, options?.categories]);
+
   // ✅ ИСПРАВЛЕНИЕ: Стабилизация queryParams для предотвращения лишних запросов
   const queryParams = useMemo(() => {
-    const params = buildTravelQueryParams(filter, {
+    const params = buildTravelQueryParams(filterForQuery, {
       isMeTravel,
       isExport,
       isTravelBy,
@@ -75,7 +138,7 @@ export function useListTravelFilters({
       });
     
     return cleaned;
-  }, [filter, isMeTravel, isExport, isTravelBy, userId, user_id]);
+  }, [filterForQuery, isMeTravel, isExport, isTravelBy, userId, user_id]);
 
   // ✅ АРХИТЕКТУРА: Сброс фильтров
   const resetFilters = useCallback(() => {
@@ -139,4 +202,3 @@ export function useListTravelFilters({
     handleToggleCategory,
   };
 }
-

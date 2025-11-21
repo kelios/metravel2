@@ -53,6 +53,14 @@ function SearchAndFilterBar({
     
     const hasActiveSearchOrFilters = (search && search.trim().length > 0) || hasFilters;
     const showResultsInfo = resultsCount !== undefined && hasActiveSearchOrFilters;
+    const resultsNoun = useMemo(() => {
+        if (resultsCount === undefined) return "";
+        const mod10 = resultsCount % 10;
+        const mod100 = resultsCount % 100;
+        if (mod10 === 1 && mod100 !== 11) return "путешествие";
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "путешествия";
+        return "путешествий";
+    }, [resultsCount]);
 
     // Локальное состояние с синхронизацией от внешнего пропса
     const [text, setText] = useState(search);
@@ -188,12 +196,20 @@ function SearchAndFilterBar({
                 )}
 
                 <View style={styles.searchContainer} ref={searchBoxRef}>
-                    <View style={[
-                        styles.searchBox, 
-                        isMobile && styles.searchBoxMobile,
-                        hasActiveSearchOrFilters && styles.searchBoxActive
-                    ]}>
-                        {Icons.search}
+                    <View
+                        style={[
+                            styles.searchBox,
+                            isMobile && styles.searchBoxMobile,
+                            hasActiveSearchOrFilters && styles.searchBoxActive,
+                        ]}
+                    >
+                        <View style={[styles.searchIconBadge, isMobile && styles.searchIconBadgeMobile]}>
+                            {Icons.search}
+                        </View>
+                        <View
+                            style={[styles.searchDivider, isMobile && styles.searchDividerMobile]}
+                            pointerEvents="none"
+                        />
 
                         <TextInput
                             ref={inputRef}
@@ -272,14 +288,17 @@ function SearchAndFilterBar({
 
             {/* ✅ ИСПРАВЛЕНИЕ ВЕРСТКИ: Счетчик результатов на отдельной строке на мобильных */}
             {showResultsInfo && (
-                <View style={[styles.resultsRow, isMobile && styles.resultsRowMobile]}>
+                    <View style={[styles.resultsRow, isMobile && styles.resultsRowMobile]}>
                     <View style={styles.resultsContent}>
                         {isLoading ? (
                             <ActivityIndicator size="small" color={palette.primary} />
                         ) : (
-                            <Text style={styles.resultsText} numberOfLines={1}>
-                                {resultsCount} {resultsCount === 1 ? 'путешествие' : resultsCount < 5 ? 'путешествия' : 'путешествий'}
-                            </Text>
+                            <View style={[styles.resultsBadge, isMobile && styles.resultsBadgeMobile]}>
+                                <Feather name="map" size={14} color={palette.primary} />
+                                <Text style={styles.resultsText} numberOfLines={1}>
+                                    {resultsCount ?? 0} {resultsNoun}
+                                </Text>
+                            </View>
                         )}
                     </View>
                     {onClearAll && (
@@ -324,14 +343,26 @@ export default memo(
 const styles = StyleSheet.create({
     wrap: {
         flexDirection: "column",
-        marginBottom: 0, // ✅ КОМПАКТНОСТЬ: Убран marginBottom
-        gap: Platform.select({ default: 3, web: 4 }), // ✅ КОМПАКТНОСТЬ: Еще уменьшен gap между строками
-        paddingHorizontal: Platform.select({ default: spacing.xs, web: spacing.sm }), // ✅ КОМПАКТНОСТЬ: Уменьшены горизонтальные отступы
+        marginBottom: 0,
+        gap: Platform.select({ default: 6, web: 8 }),
+        paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
+        paddingVertical: Platform.select({ default: spacing.xs, web: spacing.sm }),
         width: '100%',
         maxWidth: '100%',
-        overflow: 'hidden',
+        borderRadius: DESIGN_TOKENS.radii.lg,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         ...Platform.select({
+            ios: {
+                shadowColor: "#1f1f1f",
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.05,
+                shadowRadius: 16,
+            },
+            android: {
+                elevation: 3,
+            },
             web: {
+                boxShadow: DESIGN_TOKENS.shadows.card,
                 position: 'relative' as any,
                 zIndex: 1,
             },
@@ -362,25 +393,26 @@ const styles = StyleSheet.create({
         }),
     },
     wrapMobile: { 
-        paddingHorizontal: Platform.select({ default: spacing.xs, web: spacing.xs }), // ✅ КОМПАКТНОСТЬ: Уменьшены отступы
-        paddingBottom: Platform.select({ default: spacing.xxs, web: spacing.xxs }), // ✅ КОМПАКТНОСТЬ: Меньше нижний отступ
-        paddingTop: 0, 
-        marginBottom: Platform.select({ default: spacing.xxs, web: spacing.xxs }), // ✅ КОМПАКТНОСТЬ: Меньше нижний margin
+        paddingHorizontal: spacing.xs,
+        paddingVertical: spacing.xs,
+        marginBottom: spacing.xs,
         marginTop: 0, 
-        gap: Platform.select({ default: spacing.xxs, web: spacing.xs }) // ✅ КОМПАКТНОСТЬ: Меньше gap
+        gap: spacing.xs,
+        borderRadius: DESIGN_TOKENS.radii.md,
     },
     searchBox: {
         flex: 1,
         flexDirection: "row",
         alignItems: "center",
-        gap: Platform.select({ default: 8, web: 10 }), // ✅ КОМПАКТНОСТЬ: Еще уменьшен gap
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        borderRadius: Platform.select({ default: 8, web: DESIGN_TOKENS.radii.sm }), // ✅ КОМПАКТНОСТЬ: Уменьшен радиус
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-        paddingHorizontal: Platform.select({ default: 10, web: 14 }), // ✅ КОМПАКТНОСТЬ: Уменьшены горизонтальные отступы
+        gap: Platform.select({ default: 4, web: 6 }),
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.borderLight,
+        paddingHorizontal: Platform.select({ default: 12, web: 18 }),
         height: Platform.select({
-            default: 44, // ✅ КОМПАКТНОСТЬ: Уменьшена высота с 48 до 44
-            web: 50, // ✅ КОМПАКТНОСТЬ: Уменьшена высота с 56 до 50
+            default: 52, // Повышена высота для лучшей читаемости
+            web: 60,
         }),
         ...Platform.select({
             ios: {
@@ -399,7 +431,7 @@ const styles = StyleSheet.create({
         }),
     },
     searchBoxActive: {
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень для активного состояния
+        borderColor: DESIGN_TOKENS.colors.primaryLight,
         ...Platform.select({
             ios: {
                 shadowOpacity: 0.12,
@@ -414,17 +446,16 @@ const styles = StyleSheet.create({
         }),
     },
     searchBoxMobile: {
-        height: 38, // ✅ КОМПАКТНОСТЬ: Еще уменьшена высота с 40 до 38
-        paddingHorizontal: 8, // ✅ КОМПАКТНОСТЬ: Еще уменьшены горизонтальные отступы с 10 до 8
-        gap: 5, // ✅ КОМПАКТНОСТЬ: Еще уменьшен gap с 6 до 5
-        borderRadius: 7, // ✅ КОМПАКТНОСТЬ: Еще уменьшен радиус с 8 до 7
+        height: 48,
+        paddingHorizontal: 10,
+        gap: 4,
     },
     input: {
         flex: 1,
-        fontSize: Platform.select({ default: 13, web: 13 }), // ✅ КОМПАКТНОСТЬ: Уменьшен размер шрифта на web
+        fontSize: Platform.select({ default: 14, web: 15 }),
         color: DESIGN_TOKENS.colors.text,
         paddingVertical: 0,
-        lineHeight: Platform.select({ default: 18, web: 20 }), // ✅ КОМПАКТНОСТЬ: Уменьшен line-height
+        lineHeight: Platform.select({ default: 20, web: 22 }),
         ...Platform.select({
             web: {
                 outlineWidth: 0,
@@ -433,26 +464,54 @@ const styles = StyleSheet.create({
         }),
     },
     inputMobile: {
-        fontSize: 13, // ✅ КОМПАКТНОСТЬ: Уменьшен размер шрифта
+        fontSize: 14,
         paddingVertical: 0,
-        lineHeight: 18, // ✅ КОМПАКТНОСТЬ: Уменьшен line-height
+        lineHeight: 20,
     },
-    clearBtn: {
-        padding: 4, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding для лучшей touch-цели
-        borderRadius: radii.sm, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-        minWidth: 32, // ✅ ИСПРАВЛЕНИЕ: Увеличена минимальная ширина для touch-целей
-        minHeight: 32, // ✅ ИСПРАВЛЕНИЕ: Увеличена минимальная высота для touch-целей
+    searchIconBadge: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
-        ...Platform.select({ 
-            web: { 
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: DESIGN_TOKENS.colors.borderLight,
+    },
+    searchIconBadgeMobile: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+    },
+    searchDivider: {
+        width: StyleSheet.hairlineWidth,
+        alignSelf: 'stretch',
+        backgroundColor: DESIGN_TOKENS.colors.borderLight,
+        opacity: 0.8,
+        marginHorizontal: 10,
+    },
+    searchDividerMobile: {
+        marginHorizontal: 8,
+    },
+    clearBtn: {
+        padding: 6,
+        borderRadius: radii.pill,
+        minWidth: 36,
+        minHeight: 36,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: DESIGN_TOKENS.colors.borderLight,
+        ...Platform.select({
+            web: {
                 cursor: "pointer",
                 transition: 'all 0.2s ease',
                 // @ts-ignore
                 ':hover': {
                     backgroundColor: palette.primarySoft,
                 },
-            } 
+            }
         }),
     },
     actionIcons: {
@@ -474,34 +533,14 @@ const styles = StyleSheet.create({
     resultsRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        flexWrap: 'wrap', // ✅ ИСПРАВЛЕНИЕ: Разрешаем перенос на новую строку
-        gap: Platform.select({ default: 5, web: 6 }), // ✅ КОМПАКТНОСТЬ: Еще уменьшен gap
-        marginTop: Platform.select({ default: 2, web: 4 }), // ✅ КОМПАКТНОСТЬ: Еще уменьшен marginTop
-        marginLeft: Platform.select({ default: 0, web: spacing.xs }),
-        paddingLeft: Platform.select({ default: 0, web: spacing.xs }),
-        borderLeftWidth: Platform.select({ default: 0, web: 1 }),
-        borderLeftColor: palette.border,
-        paddingTop: Platform.select({ default: 2, web: 4 }), // ✅ КОМПАКТНОСТЬ: Еще уменьшен paddingTop
-        paddingBottom: Platform.select({ default: 2, web: 4 }), // ✅ КОМПАКТНОСТЬ: Еще уменьшен paddingBottom
+        flexWrap: 'wrap',
+        gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
+        marginTop: spacing.xs,
         width: '100%',
         maxWidth: '100%',
-        overflow: 'hidden',
-        ...Platform.select({
-            web: {
-                position: 'relative' as any,
-                zIndex: 1,
-            },
-        }),
     },
     resultsRowMobile: {
-        marginTop: 1, // ✅ КОМПАКТНОСТЬ: Еще уменьшен marginTop
-        paddingTop: 2, // ✅ КОМПАКТНОСТЬ: Еще уменьшен paddingTop
-        paddingBottom: 2, // ✅ КОМПАКТНОСТЬ: Еще уменьшен paddingBottom
-        borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: palette.border,
-        borderLeftWidth: 0,
-        paddingLeft: 0,
-        marginLeft: 0,
+        marginTop: spacing.xs,
     },
     resultsContent: {
         flex: 1, // ✅ ИСПРАВЛЕНИЕ: Занимает доступное пространство
@@ -513,35 +552,44 @@ const styles = StyleSheet.create({
             },
         }),
     },
+    resultsBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: radii.pill,
+        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.borderLight,
+    },
+    resultsBadgeMobile: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
     resultsText: {
         fontSize: Platform.select({
-            default: 11,
-            web: 12, // ✅ КОМПАКТНОСТЬ: Уменьшен размер шрифта
+            default: 13,
+            web: 14,
         }),
-        fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-        color: palette.textMuted,
+        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+        color: palette.text,
         lineHeight: Platform.select({
-            default: 14,
-            web: 16, // ✅ КОМПАКТНОСТЬ: Уменьшен line-height
-        }),
-        ...Platform.select({
-            web: {
-                whiteSpace: 'nowrap' as any,
-                overflow: 'hidden' as any,
-                textOverflow: 'ellipsis' as any,
-                display: 'block' as any,
-            },
+            default: 18,
+            web: 20,
         }),
     },
     clearAllBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        paddingHorizontal: Platform.select({ default: 10, web: 12 }), // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
-        paddingVertical: Platform.select({ default: 6, web: 8 }), // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
-        borderRadius: radii.sm,
-        backgroundColor: palette.primarySoft,
-        minHeight: Platform.select({ default: 36, web: 40 }), // ✅ ИСПРАВЛЕНИЕ: Увеличена минимальная высота для touch-целей
+        paddingHorizontal: Platform.select({ default: 14, web: 16 }),
+        paddingVertical: Platform.select({ default: 8, web: 10 }),
+        borderRadius: radii.pill,
+        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.borderLight,
+        minHeight: Platform.select({ default: 38, web: 42 }),
         minWidth: 36, // ✅ ИСПРАВЛЕНИЕ: Минимальная ширина для touch-целей
         flexShrink: 0,
         ...Platform.select({
@@ -551,16 +599,15 @@ const styles = StyleSheet.create({
                 whiteSpace: 'nowrap' as any,
                 // @ts-ignore
                 ':hover': {
-                    backgroundColor: palette.primary,
-                    transform: 'scale(1.05)',
+                    backgroundColor: palette.primarySoft,
                 },
             },
         }),
     },
     clearAllBtnText: {
-        fontSize: Platform.select({ default: 11, web: 12 }), // ✅ КОМПАКТНОСТЬ: Уменьшен размер шрифта
+        fontSize: Platform.select({ default: 12, web: 13 }),
         fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-        color: palette.primary,
+        color: palette.text,
     },
     recommendationsToggle: {
         width: Platform.select({ default: 36, web: 40 }), // ✅ ИСПРАВЛЕНИЕ: Увеличена ширина для touch-целей

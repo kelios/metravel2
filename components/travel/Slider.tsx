@@ -20,6 +20,7 @@ import {
   AccessibilityInfo,
   useWindowDimensions,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -35,6 +36,7 @@ import Animated, {
 } from "react-native-reanimated";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl } from "@/utils/imageOptimization";
+import { Feather } from "@expo/vector-icons";
 
 /* -------------------------------------------------------------------------- */
 /*                                  Types                                     */
@@ -70,6 +72,8 @@ export interface SliderRef {
   prev: () => void;
 }
 
+type LoadStatus = "loading" | "loaded" | "error";
+
 /* -------------------------------------------------------------------------- */
 
 const DEFAULT_AR = 16 / 9;
@@ -78,6 +82,9 @@ const DOT_ACTIVE_SIZE = 24; // Увеличиваем для современн�
 const NAV_BTN_OFFSET = 16;
 const MOBILE_HEIGHT_PERCENT = 0.7;
 const ARROW_ANIMATION_DURATION = 200;
+const GLASS_BG = "rgba(255,255,255,0.55)";
+const GLASS_BORDER = "rgba(255,255,255,0.35)";
+const GLASS_CARD = "rgba(255,255,255,0.92)";
 
 const buildUri = (img: SliderImage, containerWidth?: number, containerHeight?: number, isFirst: boolean = false) => {
   const versionedUrl = buildVersionedImageUrl(img.url, img.updated_at, img.id);
@@ -180,6 +187,30 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   const [reduceMotion, setReduceMotion] = useState(false);
   // ✅ УЛУЧШЕНИЕ: Состояние для текущего индекса (для счетчика)
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [loadStatuses, setLoadStatuses] = useState<LoadStatus[]>(() =>
+    images.map(() => "loading")
+  );
+  const [showSwipeHint, setShowSwipeHint] = useState(images.length > 1);
+
+  useEffect(() => {
+    setLoadStatuses(images.map(() => "loading"));
+    setShowSwipeHint(images.length > 1);
+  }, [images]);
+
+  const updateLoadStatus = useCallback((idx: number, status: LoadStatus) => {
+    setLoadStatuses((prev) => {
+      if (prev[idx] === status) return prev;
+      const next = [...prev];
+      next[idx] = status;
+      return next;
+    });
+  }, []);
+  const dismissSwipeHint = useCallback(() => setShowSwipeHint(false), []);
+  useEffect(() => {
+    if (!showSwipeHint) return;
+    const timer = setTimeout(() => setShowSwipeHint(false), 6500);
+    return () => clearTimeout(timer);
+  }, [showSwipeHint]);
 
   // Сначала вычисляем firstAR, так как он нужен для computeHeight
   const firstAR = useMemo(() => {
@@ -274,6 +305,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   }, []);
 
   const next = useCallback(() => {
+    dismissSwipeHint();
     if (!images.length) return;
     const target = (indexRef.current + 1) % images.length;
     indexRef.current = target;
@@ -283,7 +315,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
       offset: target * containerW,
       animated: !reduceMotion,
     });
-  }, [images.length, containerW, reduceMotion]);
+  }, [images.length, containerW, reduceMotion, dismissSwipeHint]);
 
   const scheduleAutoplay = useCallback(() => {
     clearAutoplay();
@@ -342,12 +374,13 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   );
 
   const prev = useCallback(() => {
+    dismissSwipeHint();
     if (!images.length) return;
     const target = (indexRef.current - 1 + images.length) % Math.max(1, images.length);
     indexRef.current = target;
     setCurrentIndex(target); // ✅ УЛУЧШЕНИЕ: Обновляем текущий индекс для счетчика
     scrollTo(target);
-  }, [images.length, scrollTo]);
+  }, [images.length, scrollTo, dismissSwipeHint]);
 
   useImperativeHandle(
     ref,
@@ -417,38 +450,88 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   const renderItem = useCallback(
     ({ item, index }: { item: SliderImage; index: number }) => {
       const uri = uriMap[index];
+      const ratio =
+        item.width && item.height ? item.width / item.height : aspectRatio;
+      const isPortrait = ratio < 0.95;
+      const isSquareish = ratio >= 0.95 && ratio <= 1.1;
+      const shouldBlur = blurBackground && (isPortrait || isSquareish);
+      const slideHeight = containerH ?? computeHeight(containerW);
+      const status = loadStatuses[index] ?? "loading";
+
       return (
-        <View style={{ width: containerW, height: containerH ?? computeHeight(containerW) }}>
-          {blurBackground && (
-            <ExpoImage
-              source={{ uri }}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-              cachePolicy="disk"
-              priority={index === 0 ? "high" : "low"}
-              blurRadius={20}
-            />
+        <View
+          style={[styles.slide, { width: containerW, height: slideHeight }]}
+        >
+          {shouldBlur ? (
+            <>
+              <ExpoImage
+                testID={`slider-blur-bg-${index}`}
+                source={{ uri }}
+                style={styles.blurBg}
+                contentFit="cover"
+                cachePolicy="disk"
+                priority={index === 0 ? "high" : "low"}
+                blurRadius={30}
+              />
+              <View style={styles.blurOverlay} />
+            </>
+          ) : (
+            <View style={styles.flatBackground} testID={`slider-flat-bg-${index}`} />
           )}
-          <ExpoImage
-            source={{ uri }}
-            style={styles.img}
-            contentFit="cover"
-            cachePolicy="disk"
-            priority={index === 0 ? "high" : "low"}
-            transition={reduceMotion ? 0 : 200}
-            contentPosition="center"
-            accessibilityIgnoresInvertColors
-            accessibilityRole="image"
-            accessibilityLabel={
-              item.width && item.height
-                ? `Изображение ${index + 1} из ${images.length}`
-                : `Фотография путешествия ${index + 1} из ${images.length}`
-            }
-            onLoad={() => {
-              if (index === 0) onFirstImageLoad?.();
-            }}
-            {...imageProps}
-          />
+
+          <View
+            style={[
+              styles.imageCardWrapper,
+              (isPortrait || isSquareish) && styles.imageCardWrapperElevated,
+            ]}
+          >
+            <View style={styles.imageCardSurface}>
+              {status === "error" ? (
+                <View style={styles.placeholder} testID={`slider-placeholder-${index}`}>
+                  <Feather name="image" size={32} color="#94a3b8" />
+                  <Text style={styles.placeholderTitle}>Фото не загрузилось</Text>
+                  <Text style={styles.placeholderSubtitle}>
+                    Проверьте подключение или попробуйте позже
+                  </Text>
+                </View>
+              ) : (
+                <ExpoImage
+                  testID={`slider-image-${index}`}
+                  source={{ uri }}
+                  style={styles.img}
+                  contentFit="contain"
+                  cachePolicy="disk"
+                  priority={index === 0 ? "high" : "low"}
+                  transition={reduceMotion ? 0 : 250}
+                  contentPosition="center"
+                  accessibilityIgnoresInvertColors
+                  accessibilityRole="image"
+                  accessibilityLabel={
+                    item.width && item.height
+                      ? `Изображение ${index + 1} из ${images.length}`
+                      : `Фотография путешествия ${index + 1} из ${images.length}`
+                  }
+                  onLoad={() => {
+                    updateLoadStatus(index, "loaded");
+                    if (index === 0) onFirstImageLoad?.();
+                  }}
+                  onLoadStart={() => updateLoadStatus(index, "loading")}
+                  onError={() => updateLoadStatus(index, "error")}
+                  {...imageProps}
+                />
+              )}
+
+              {status === "loading" && (
+                <View
+                  style={styles.loadingOverlay}
+                  pointerEvents="none"
+                  testID={`slider-loading-overlay-${index}`}
+                >
+                  <ActivityIndicator color="#0f172a" />
+                </View>
+              )}
+            </View>
+          </View>
         </View>
       );
     },
@@ -462,6 +545,9 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
       imageProps,
       reduceMotion,
       images.length,
+      loadStatuses,
+      aspectRatio,
+      updateLoadStatus,
     ]
   );
 
@@ -507,9 +593,14 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
       }
     }, [isMobile, arrowOpacity, arrowScale]);
 
+    const iconSize = isMobile ? 20 : 24;
+
     return (
       <TouchableOpacity
-        onPress={onPress}
+        onPress={() => {
+          dismissSwipeHint();
+          onPress();
+        }}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         // @ts-ignore - web-only props
@@ -530,7 +621,12 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
       >
         <Animated.View style={animatedStyle}>
           <View style={styles.arrowIconContainer}>
-            <View style={[styles.arrowIcon, dir === "left" ? styles.arrowLeft : styles.arrowRight]} />
+            <Feather
+              name={dir === "left" ? "chevron-left" : "chevron-right"}
+              size={iconSize}
+              color="#ffffff"
+              style={styles.arrowIcon}
+            />
           </View>
         </Animated.View>
       </TouchableOpacity>
@@ -538,17 +634,18 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   };
 
   return (
-    <View
-      onLayout={onLayout}
-      style={[
-        styles.wrapper,
-        { height: containerH ?? computeHeight(containerW) },
-        isMobile && styles.wrapperMobile,
-      ]}
-      accessibilityRole="group"
-      accessibilityLabel="Image slider"
-    >
-      <Animated.FlatList
+    <View style={styles.sliderStack}>
+      <View
+        onLayout={onLayout}
+        style={[
+          styles.wrapper,
+          { height: containerH ?? computeHeight(containerW) },
+          isMobile && styles.wrapperMobile,
+        ]}
+        accessibilityRole="group"
+        accessibilityLabel="Image slider"
+      >
+        <Animated.FlatList
         ref={listRef}
         data={images}
         keyExtractor={keyExtractor}
@@ -571,6 +668,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
         onScrollBeginDrag={() => {
           pausedByTouch.current = true;
           clearAutoplay();
+          dismissSwipeHint();
         }}
         onScrollEndDrag={() => {
           pausedByTouch.current = false;
@@ -588,9 +686,9 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         extraData={containerW}
-      />
+        />
 
-      {showArrows && images.length > 1 && (
+        {showArrows && images.length > 1 && (
         <>
           <Arrow dir="left" onPress={prev} />
           <Arrow dir="right" onPress={next} />
@@ -627,7 +725,10 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
                 accessibilityRole="tab"
                 accessibilityState={{ selected: indexRef.current === i }}
                 accessibilityLabel={`Go to slide ${i + 1}`}
-                onPress={() => scrollTo(i)}
+                onPress={() => {
+                  dismissSwipeHint();
+                  scrollTo(i);
+                }}
                 hitSlop={8}
                 activeOpacity={0.7}
               >
@@ -643,6 +744,24 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
           </View>
         </View>
       )}
+      </View>
+
+      {images.length > 1 && showSwipeHint && (
+        <View style={[styles.metaRow, isMobile && styles.metaRowMobile]}>
+          <View style={[styles.swipeHint, isMobile && styles.swipeHintMobile]}>
+            <Feather
+              name={isMobile ? "smartphone" : "arrow-right"}
+              size={12}
+              color="#0f172a"
+            />
+            <Text style={styles.swipeHintText}>
+              {isMobile
+                ? "Свайпайте, чтобы увидеть больше"
+                : "Используйте стрелки или клавиши ← →"}
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 });
@@ -652,40 +771,148 @@ export default memo(Slider);
 /* --------------------------------- Styles ---------------------------------- */
 
 const styles = StyleSheet.create({
+  sliderStack: {
+    width: "100%",
+  },
   wrapper: {
     width: "100%",
-    backgroundColor: "#f9f8f2",
+    backgroundColor: GLASS_BG,
     position: "relative",
     overflow: "hidden",
-    borderRadius: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
     ...Platform.select({
       web: {
-        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+        boxShadow: "0 25px 60px rgba(15,23,42,0.12)",
+        backdropFilter: "blur(26px)",
       },
       ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
+        shadowColor: "#0f172a",
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.12,
+        shadowRadius: 24,
       },
       android: {
-        elevation: 4,
+        elevation: 8,
       },
     }),
   },
   wrapperMobile: {
-    borderRadius: 8,
+    borderRadius: 16,
     marginVertical: 8,
+  },
+  slide: {
+    flex: 1,
+    position: "relative",
+    overflow: "hidden",
+    backgroundColor: "transparent",
+  },
+  blurBg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  blurOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255,255,255,0.6)",
+  },
+  flatBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(248,250,252,0.9)",
+    ...Platform.select({
+      web: {
+        backgroundImage:
+          "linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(229,235,241,0.75) 100%)",
+      },
+    }),
+  },
+  imageCardWrapper: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    alignSelf: "stretch",
+    maxWidth: 1280,
+    width: "100%",
+  },
+  imageCardWrapperElevated: {
+    ...Platform.select({
+      web: {
+        filter: "drop-shadow(0 25px 45px rgba(15,23,42,0.18))",
+      },
+      ios: {
+        shadowColor: "#0f172a",
+        shadowOpacity: 0.15,
+        shadowRadius: 30,
+        shadowOffset: { width: 0, height: 18 },
+      },
+      android: {
+        elevation: 10,
+      },
+    }),
+  },
+  imageCardSurface: {
+    width: "100%",
+    height: "100%",
+    alignSelf: "center",
+    borderRadius: 28,
+    overflow: "hidden",
+    backgroundColor: GLASS_CARD,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    justifyContent: "center",
+    alignItems: "center",
+    ...Platform.select({
+      web: {
+        backdropFilter: "blur(18px)",
+      },
+    }),
   },
   img: {
     width: "100%",
     height: "100%",
+    borderRadius: 24,
+  },
+  placeholder: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+  },
+  placeholderTitle: {
+    color: "#0f172a",
+    fontSize: 16,
+    fontWeight: "600",
+    marginTop: 12,
+    textAlign: "center",
+  },
+  placeholderSubtitle: {
+    color: "#475569",
+    fontSize: 13,
+    marginTop: 4,
+    textAlign: "center",
+  },
+  loadingOverlay: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.45)",
   },
   navBtn: {
     position: "absolute",
     top: "50%",
     marginTop: -24,
-    backgroundColor: "rgba(255,255,255,0.95)",
+    backgroundColor: "rgba(255,255,255,0.35)",
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -696,16 +923,17 @@ const styles = StyleSheet.create({
       web: {
         cursor: "pointer",
         transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+        boxShadow: "0 12px 24px rgba(15,23,42,0.15)",
+        backdropFilter: "blur(16px)",
       },
       ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        shadowColor: "#0f172a",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.12,
+        shadowRadius: 12,
       },
       android: {
-        elevation: 4,
+        elevation: 6,
       },
     }),
   },
@@ -717,13 +945,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: "rgba(255,255,255,0.4)",
   },
   navBtnHover: {
-    backgroundColor: "rgba(255,255,255,1)",
+    backgroundColor: "rgba(255,255,255,0.85)",
     ...Platform.select({
       web: {
-        boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+        boxShadow: "0 16px 42px rgba(15,23,42,0.25)",
       },
     }),
   },
@@ -734,19 +962,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   arrowIcon: {
-    width: 12,
-    height: 12,
-    borderTopWidth: 2,
-    borderRightWidth: 2,
-    borderColor: "#2f332e",
-  },
-  arrowLeft: {
-    transform: [{ rotate: "-135deg" }],
-    marginLeft: 2,
-  },
-  arrowRight: {
-    transform: [{ rotate: "45deg" }],
-    marginRight: 2,
+    textShadowColor: "rgba(15,23,42,0.35)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   dots: {
     position: "absolute",
@@ -762,10 +980,12 @@ const styles = StyleSheet.create({
   dotsContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: "rgba(255,255,255,0.65)",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
     ...Platform.select({
       web: {
         backdropFilter: "blur(8px)",
@@ -777,7 +997,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   dot: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "rgba(15,23,42,0.6)",
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
     ...Platform.select({
@@ -804,10 +1024,12 @@ const styles = StyleSheet.create({
     right: 12,
   },
   counterContainer: {
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(255,255,255,0.75)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
     ...Platform.select({
       web: {
         backdropFilter: "blur(8px)",
@@ -815,10 +1037,39 @@ const styles = StyleSheet.create({
     }),
   },
   counterText: {
-    color: "#ffffff",
+    color: "#0f172a",
     fontSize: 13,
     fontWeight: "600",
     fontFamily: Platform.OS === "web" ? "system-ui, -apple-system" : undefined,
     letterSpacing: 0.5,
+  },
+  metaRow: {
+    width: "100%",
+    marginTop: 12,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  metaRowMobile: {
+    alignItems: "center",
+  },
+  swipeHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.7)",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.35)",
+  },
+  swipeHintMobile: {
+    marginTop: 8,
+  },
+  swipeHintText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: "#0f172a",
+    fontWeight: "500",
   },
 });

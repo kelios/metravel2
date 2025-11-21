@@ -4,6 +4,9 @@ import { usePathname, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTravelBySlug, fetchTravel } from '@/src/api/travels';
+import { getQuestById } from '@/components/quests/registry';
+
+const MAX_BREADCRUMB_LENGTH = 50;
 
 interface BreadcrumbItem {
   label: string;
@@ -48,6 +51,33 @@ export default function Breadcrumbs({ items, showHome = true, travelName }: Brea
   // Используем переданное название или из запроса
   const finalTravelName = travelName || travelData?.name || null;
 
+  const questBreadcrumbInfo = useMemo(() => {
+    if (!pathname?.startsWith('/quests/')) {
+      return null;
+    }
+
+    const parts = pathname.split('/').filter(Boolean);
+    if (parts.length < 3) {
+      return null;
+    }
+
+    const questSlug = parts[2];
+    const questBundle = getQuestById(questSlug);
+    let questTitle =
+      questBundle?.title ||
+      questSlug
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+
+    if (questTitle.length > MAX_BREADCRUMB_LENGTH) {
+      questTitle = questTitle.slice(0, MAX_BREADCRUMB_LENGTH).trim() + '...';
+    }
+
+    const questPath = pathname || '/' + parts.slice(0, 3).join('/');
+    return { label: questTitle, path: questPath };
+  }, [pathname]);
+
   const breadcrumbs = useMemo(() => {
     const result: BreadcrumbItem[] = [];
 
@@ -59,6 +89,13 @@ export default function Breadcrumbs({ items, showHome = true, travelName }: Brea
     // Если переданы кастомные элементы, используем их
     if (items && items.length > 0) {
       return [...result, ...items];
+    }
+
+    // Специальный случай для детальных страниц квестов
+    if (questBreadcrumbInfo) {
+      result.push({ label: 'Квесты', path: '/quests' });
+      result.push(questBreadcrumbInfo);
+      return result;
     }
 
     // Автоматическое определение навигационной цепочки из pathname
@@ -120,7 +157,6 @@ export default function Breadcrumbs({ items, showHome = true, travelName }: Brea
       }
       
       // ✅ РЕАЛИЗАЦИЯ: Обрезаем слишком длинные названия (max 50 символов)
-      const MAX_BREADCRUMB_LENGTH = 50;
       if (label.length > MAX_BREADCRUMB_LENGTH) {
         label = label.slice(0, MAX_BREADCRUMB_LENGTH).trim() + '...';
       }
@@ -129,7 +165,7 @@ export default function Breadcrumbs({ items, showHome = true, travelName }: Brea
     });
 
     return result;
-  }, [pathname, items, showHome, finalTravelName, isTravelPage]);
+  }, [pathname, items, showHome, finalTravelName, isTravelPage, questBreadcrumbInfo]);
 
   // Не показываем навигационную цепочку если только главная страница
   if (breadcrumbs.length <= 1) {
@@ -220,4 +256,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

@@ -27,11 +27,25 @@ const isEmptyValue = (value: any) => {
   return false
 }
 
+const unique = <T,>(items: T[]): T[] => Array.from(new Set(items))
+
 export const normalizeNumericArray = (values: any): number[] => {
   if (!Array.isArray(values)) return []
-  return values
+
+  const normalized = values
     .map((item) => (typeof item === 'number' ? item : Number(String(item).trim())))
     .filter((item) => Number.isFinite(item))
+
+  return unique(normalized).sort((a, b) => a - b)
+}
+
+const normalizeStringArray = (values: any[]): string[] => {
+  const cleaned = values
+    .map((item) => (typeof item === 'string' ? item : String(item ?? '').toString()))
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+
+  return unique(cleaned).sort((a, b) => a.localeCompare(b))
 }
 
 const sanitizeFilterObject = (
@@ -60,7 +74,7 @@ const sanitizeFilterObject = (
       const isNumeric = numericSet.has(key)
       const cleanedArray = isNumeric
         ? normalizeNumericArray(value)
-        : value.filter((item) => !isEmptyValue(item))
+        : normalizeStringArray(value)
 
       if (cleanedArray.length > 0) {
         sanitized[key] = cleanedArray
@@ -149,8 +163,9 @@ export const mapCategoryNamesToIds = (
     lookup.set(nameKey, numericId)
   })
 
-  return selectedNames
+  const ids = selectedNames
     .map((name) => lookup.get(String(name || '').trim().toLowerCase()))
     .filter((id): id is number => typeof id === 'number' && Number.isFinite(id))
-}
 
+  return unique(ids)
+}

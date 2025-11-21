@@ -87,7 +87,7 @@ describe('PDF Content Validation - Проверка всех элементов'
     title: 'Мои путешествия',
     subtitle: 'Тестовый альбом',
     coverType: 'auto',
-    template: 'classic',
+    template: 'minimal',
     format: 'A4',
     orientation: 'portrait',
     margins: 'standard',

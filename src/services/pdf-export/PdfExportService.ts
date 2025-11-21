@@ -23,6 +23,13 @@ import {
   PdfRenderOptions,
 } from '@/src/types/pdf-export';
 
+const MODERN_TEMPLATES: ReadonlySet<BookSettings['template']> = new Set([
+  'minimal',
+  'light',
+  'dark',
+  'travel-magazine',
+]);
+
 /**
  * Основной сервис для экспорта в PDF
  * Оркестрирует весь процесс экспорта
@@ -86,7 +93,7 @@ export class PdfExportService {
         html = await layoutGenerator.generate(settings.layout, travelsForBook, settings);
       } else {
         // Используем новый генератор для новых тем, старый для legacy
-        const isNewTheme = ['minimal', 'light', 'dark', 'travel-magazine'].includes(settings.template);
+        const isNewTheme = MODERN_TEMPLATES.has(settings.template);
         html = isNewTheme
           ? await this.generateWithNewGenerator(travelsForBook, settings)
           : await buildPhotoBookHTML(travelsForBook, settings);
@@ -206,7 +213,7 @@ export class PdfExportService {
         html = await layoutGenerator.generate(settings.layout, travelsForBook, settings);
       } else {
         // Используем новый генератор для новых тем, старый для legacy
-        const isNewTheme = ['minimal', 'light', 'dark', 'travel-magazine'].includes(settings.template);
+        const isNewTheme = MODERN_TEMPLATES.has(settings.template);
         html = isNewTheme
           ? await this.generateWithNewGenerator(travelsForBook, settings)
           : await buildPhotoBookHTML(travelsForBook, settings);
@@ -398,4 +405,3 @@ export class PdfExportService {
     return await generator.generate(travels, settings);
   }
 }
-

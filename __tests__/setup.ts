@@ -1,5 +1,8 @@
 import '@testing-library/jest-native/extend-expect'
 
+// Ensure critical Expo env vars exist for API clients referenced in tests
+process.env.EXPO_PUBLIC_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://example.test/api'
+
 // Basic DOM polyfills for react-native-web components used in tests
 if (typeof window === 'undefined') {
   ;(global as any).window = {
@@ -110,10 +113,53 @@ jest.mock('expo-router', () => {
   }
 })
 
-// Mock AsyncStorage
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
-)
+// Mock AsyncStorage with basic in-memory store (multi* helpers included)
+jest.mock('@react-native-async-storage/async-storage', () => {
+  const store = new Map<string, string>()
+
+  const getItem = jest.fn(async (key: string) => (store.has(key) ? store.get(key)! : null))
+  const setItem = jest.fn(async (key: string, value: string) => {
+    store.set(key, value)
+  })
+  const removeItem = jest.fn(async (key: string) => {
+    store.delete(key)
+  })
+  const clear = jest.fn(async () => {
+    store.clear()
+  })
+  const multiGet = jest.fn(async (keys: ReadonlyArray<string>) =>
+    keys.map((key) => [key, store.has(key) ? store.get(key)! : null] as [string, string | null])
+  )
+  const multiSet = jest.fn(async (entries: ReadonlyArray<[string, string]>) => {
+    entries.forEach(([key, value]) => store.set(key, value))
+  })
+  const multiRemove = jest.fn(async (keys: ReadonlyArray<string>) => {
+    keys.forEach((key) => store.delete(key))
+  })
+  const getAllKeys = jest.fn(async () => Array.from(store.keys()))
+
+  return {
+    getItem,
+    setItem,
+    removeItem,
+    clear,
+    multiGet,
+    multiSet,
+    multiRemove,
+    getAllKeys,
+    __reset: () => {
+      store.clear()
+      getItem.mockClear()
+      setItem.mockClear()
+      removeItem.mockClear()
+      clear.mockClear()
+      multiGet.mockClear()
+      multiSet.mockClear()
+      multiRemove.mockClear()
+      getAllKeys.mockClear()
+    },
+  }
+})
 
 // Mock react-native-vector-icons
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
@@ -236,4 +282,3 @@ jest.mock('react-native-reanimated', () => {
 });
 
 global.__reanimatedWorkletInit = global.__reanimatedWorkletInit || jest.fn();
-

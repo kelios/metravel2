@@ -123,7 +123,7 @@ export function useListTravelExportEnhanced({ selected, userName }: UseListTrave
     title: userName ? `Путешествия ${userName}` : 'Мои путешествия',
     subtitle: '',
     coverType: 'auto',
-    template: 'classic',
+    template: 'minimal',
     format: 'A4',
     orientation: 'portrait',
     margins: 'standard',

@@ -10,7 +10,7 @@ export interface FilterState {
   year?: string;
   moderation?: number; // 0 - на модерации, 1 - прошедшие модерацию, undefined - по умолчанию (1)
   countries?: number[];
-  categories?: string[];
+  categories?: Array<string | number>;
   categoryTravelAddress?: number[];
   transports?: number[];
   companions?: number[];
@@ -107,4 +107,3 @@ export interface AuthFlags {
   userId: string | null;
   isSuperuser: boolean;
 }
-

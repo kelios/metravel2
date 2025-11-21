@@ -456,10 +456,10 @@ export default function BookSettingsModal({
               <option value="light">Светлая</option>
               <option value="dark">Темная</option>
               <option value="travel-magazine">Travel Magazine</option>
-              <option value="classic">Классический (legacy)</option>
-              <option value="modern">Современный (legacy)</option>
-              <option value="romantic">Романтический (legacy)</option>
-              <option value="adventure">Приключенческий (legacy)</option>
+              <option value="classic">Классический</option>
+              <option value="modern">Современный</option>
+              <option value="romantic">Романтический</option>
+              <option value="adventure">Приключенческий</option>
             </select>
           </div>
 

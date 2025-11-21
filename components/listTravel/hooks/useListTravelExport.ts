@@ -68,7 +68,7 @@ export function useListTravelExport(
       title: ownerName ? `Путешествия ${ownerName}` : 'Мои путешествия',
       subtitle: '',
       coverType: 'auto',
-      template: 'classic',
+      template: 'minimal',
       format: 'A4',
       orientation: 'portrait',
       margins: 'standard',
@@ -96,7 +96,7 @@ export function useListTravelExport(
   const settingsSummary = useMemo(() => {
     const orientation = lastSettings.orientation === 'landscape' ? 'Альбомная' : 'Книжная';
     const format = lastSettings.format?.toUpperCase?.() || 'A4';
-    const template = lastSettings.template || 'classic';
+    const template = lastSettings.template || 'minimal';
     return `${format} • ${orientation} • ${template}`;
   }, [lastSettings]);
 

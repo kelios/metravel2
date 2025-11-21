@@ -121,6 +121,7 @@
     "@jest/test-sequencer": "^29.7.0",
     "@tanstack/react-query-devtools": "^5.76.2",
     "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react": "^16.3.0",
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^30.0.0",
     "@types/react": "^18.3.12",
