@@ -86,7 +86,7 @@ export default function ErrorDisplay({
               style={[styles.button, styles.secondaryButton]}
               onPress={() => {
                 if (Platform.OS === 'web') {
-                  window.open('https://www.instagram.com/metravelby/', '_blank');
+                  window?.open?.('https://www.instagram.com/metravelby/', '_blank');
                 } else {
                   // На мобильных можно открыть приложение Instagram
                   // или показать email
@@ -230,4 +230,3 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
-

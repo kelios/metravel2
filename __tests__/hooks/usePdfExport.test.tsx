@@ -124,7 +124,7 @@ describe('usePdfExport', () => {
     title: 'Test Book',
     subtitle: '',
     coverType: 'auto',
-    template: 'classic',
+    template: 'minimal',
     format: 'A4',
     orientation: 'portrait',
     margins: 'standard',

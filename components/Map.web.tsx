@@ -124,9 +124,18 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     });
   }, [L]);
 
-  // Пока ещё не загрузили библиотеки — лёгкий placeholder (не блокирует main thread)
+  const renderPlaceholder = (message: string) => (
+    <View style={styles.mapContainer} ref={setElementRef as any}>
+      <Text style={styles.placeholderText}>{message}</Text>
+    </View>
+  );
+
+  if (!shouldLoad) {
+    return renderPlaceholder('Карта загрузится при прокрутке…');
+  }
+
   if (!L || !rl || !meTravelIcon) {
-    return <View style={[styles.mapContainer, { minHeight: 300 }]} />;
+    return renderPlaceholder('Загружаем карту…');
   }
 
   const { MapContainer, TileLayer, Marker, Popup, useMap } = rl;
@@ -189,27 +198,6 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       </Popup>
     );
   };
-
-  // Если карта еще не должна загружаться, показываем placeholder
-  if (!shouldLoad) {
-    return (
-      <View 
-        style={styles.mapContainer}
-        ref={setElementRef as any}
-      >
-        <Text style={styles.placeholderText}>Карта загрузится при прокрутке…</Text>
-      </View>
-    );
-  }
-
-  // Если библиотеки еще не загружены, показываем загрузку
-  if (!L || !rl) {
-    return (
-      <View style={styles.mapContainer}>
-        <Text style={styles.placeholderText}>Загрузка карты…</Text>
-      </View>
-    );
-  }
 
   return (
     <View 

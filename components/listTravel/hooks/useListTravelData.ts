@@ -253,15 +253,31 @@ export function useListTravelData({
 
   // ✅ АРХИТЕКТУРА: Обработчик достижения конца списка
   const handleEndReached = useCallback(() => {
+    // ✅ FIX: Не загружаем следующую страницу, пока первая страница для текущих фильтров не получена
+    if (!hasRequestedFirstPageRef.current) {
+      return;
+    }
+
+    // ✅ FIX: Пустой список не должен пытаться грузить следующую страницу (это сбивает пагинацию)
+    if (!hasAnyItems) {
+      return;
+    }
+
+    // ✅ FIX: Если первая страница всё ещё загружается (например, после смены фильтра), не начинаем подгружать следующие
+    if (isFetching && currentPage === 0) {
+      return;
+    }
+
     const canLoadMore = !isNextPageLoading && hasMore;
     if (!canLoadMore || isLoadingMoreRef.current) return;
     isLoadingMoreRef.current = true;
     setCurrentPage((p) => p + 1);
-  }, [isNextPageLoading, hasMore, setCurrentPage]);
+  }, [currentPage, hasAnyItems, isFetching, isNextPageLoading, hasMore, setCurrentPage]);
 
   // ✅ АРХИТЕКТУРА: Pull-to-Refresh
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
+    hasRequestedFirstPageRef.current = false;
     setCurrentPage(0);
     setAccumulatedData([]);
     await refetch();
@@ -291,4 +307,3 @@ export function useListTravelData({
     resetAccumulatedData,
   };
 }
-

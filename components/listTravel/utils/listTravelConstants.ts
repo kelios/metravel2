@@ -3,10 +3,10 @@
  * Централизация всех констант для улучшения поддерживаемости
  */
 
+import type { FilterState } from "./listTravelTypes";
+
 // ✅ АРХИТЕКТУРА: Начальное состояние фильтров
-export const INITIAL_FILTER = { 
-  year: "", 
-} as const;
+export const INITIAL_FILTER: FilterState = {};
 
 // ✅ АРХИТЕКТУРА: ID Беларуси для специальной страницы
 export const BELARUS_ID = 3;
@@ -84,4 +84,3 @@ export const FLATLIST_CONFIG = {
   UPDATE_CELLS_BATCHING_PERIOD: 100,
   ON_END_REACHED_THRESHOLD: 0.5,
 } as const;
-

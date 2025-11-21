@@ -9,44 +9,40 @@ jest.mock('expo-router', () => ({
   },
 }));
 
-// Mock useWindowDimensions
-jest.mock('react-native', () => {
-  const RN = jest.requireActual('react-native');
-  return {
-    ...RN,
-    useWindowDimensions: () => ({ width: 375, height: 667 }),
-  };
-});
+const mockUseWindowDimensions = jest.fn(() => ({ width: 375, height: 667 }));
 
-// Mock Image component
+// Mock react-native pieces we rely on
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
+  const React = require('react');
+
   return {
     ...RN,
-    Image: ({ source, style, ...props }: any) => {
-      const { View } = require('react-native');
-      return React.createElement(View, { 
+    useWindowDimensions: mockUseWindowDimensions,
+    Image: ({ style, ...props }: any) =>
+      React.createElement(RN.View, {
         testID: 'logo-image',
         style,
-        ...props 
-      });
-    },
-    useWindowDimensions: () => ({ width: 375, height: 667 }),
+        ...props,
+      }),
   };
 });
 
+const getUseWindowDimensionsMock = () => mockUseWindowDimensions;
+
 describe('Logo', () => {
+  beforeEach(() => {
+    getUseWindowDimensionsMock().mockReturnValue({ width: 375, height: 667 });
+  });
+
   it('should render logo image', () => {
-    const { getByTestId } = render(<Logo />);
-    expect(getByTestId('logo-image')).toBeTruthy();
+    const { UNSAFE_getAllByType } = render(<Logo />);
+    const { Image } = require('react-native');
+    expect(UNSAFE_getAllByType(Image).length).toBeGreaterThan(0);
   });
 
   it('should render logo text on desktop', () => {
-    // Mock desktop width
-    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
-      width: 1024,
-      height: 768,
-    });
+    getUseWindowDimensionsMock().mockReturnValue({ width: 1024, height: 768 });
 
     const { toJSON } = render(<Logo />);
     const tree = toJSON();
@@ -58,12 +54,6 @@ describe('Logo', () => {
   });
 
   it('should not render logo text on mobile', () => {
-    // Mock mobile width
-    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
-      width: 375,
-      height: 667,
-    });
-
     const { toJSON } = render(<Logo />);
     const tree = toJSON();
     const treeStr = JSON.stringify(tree);
@@ -98,14 +88,10 @@ describe('Logo', () => {
   });
 
   it('should apply mobile styles on small screens', () => {
-    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
-      width: 320,
-      height: 568,
-    });
+    getUseWindowDimensionsMock().mockReturnValue({ width: 320, height: 568 });
 
     const { toJSON } = render(<Logo />);
     const tree = toJSON();
     expect(tree).toBeTruthy();
   });
 });
-

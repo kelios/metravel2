@@ -2,6 +2,7 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'expo-router';
+import { getQuestById } from '@/components/quests/registry';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 jest.mock('@/src/api/travels', () => ({
@@ -22,6 +23,10 @@ jest.mock('react-native', () => {
   };
 });
 
+jest.mock('@/components/quests/registry', () => ({
+  getQuestById: jest.fn(),
+}));
+
 describe('Breadcrumbs', () => {
   const mockPush = jest.fn();
   const mockRouter = {
@@ -41,6 +46,8 @@ describe('Breadcrumbs', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
+    (getQuestById as jest.Mock).mockReset();
+    (getQuestById as jest.Mock).mockReturnValue(null);
   });
 
   it('should not render on home page', () => {
@@ -92,6 +99,18 @@ describe('Breadcrumbs', () => {
     const { getByText } = renderWithClient(<Breadcrumbs />);
     expect(getByText('Главная')).toBeTruthy();
     expect(getByText('Карта')).toBeTruthy();
+  });
+
+  it('should render quest breadcrumbs with Russian quest title', () => {
+    (usePathname as jest.Mock).mockReturnValue('/quests/barkovshchina/test-quest');
+    (getQuestById as jest.Mock).mockReturnValue({ title: 'Тайна родника' });
+
+    const { getByText, queryByText } = renderWithClient(<Breadcrumbs />);
+    expect(getByText('Главная')).toBeTruthy();
+    expect(getByText('Квесты')).toBeTruthy();
+    expect(getByText('Тайна родника')).toBeTruthy();
+    expect(queryByText('Barkovshchina')).toBeNull();
+    expect(queryByText('Test Quest')).toBeNull();
   });
 
   it('should navigate when clicking on breadcrumb', () => {
@@ -183,4 +202,3 @@ describe('Breadcrumbs', () => {
     expect(mockPush).toHaveBeenCalledWith('/');
   });
 });
-

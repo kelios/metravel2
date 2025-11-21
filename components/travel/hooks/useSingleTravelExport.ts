@@ -13,7 +13,7 @@ export function buildDefaultSettingsForTravel(travel?: Travel): BookSettings {
     title: travel?.name ? `Путешествие: ${travel.name}` : 'Мои путешествия',
     subtitle: travel?.countryName || travel?.cityName || '',
     coverType: 'auto',
-    template: 'classic',
+    template: 'minimal',
     format: 'A4',
     orientation: 'portrait',
     margins: 'standard',
@@ -78,4 +78,3 @@ export function useSingleTravelExport(travel?: Travel) {
     handlePreviewWithSettings,
   }
 }
-

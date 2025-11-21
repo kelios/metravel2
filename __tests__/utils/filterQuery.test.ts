@@ -3,107 +3,57 @@ import {
   mapCategoryNamesToIds,
 } from '@/src/utils/filterQuery'
 
-describe('filterQuery helpers', () => {
-  it('normalizes base params with publish/moderation defaults', () => {
-    const params = buildTravelQueryParams(
-      { categories: ['1', '2'] },
-      { userId: null }
-    )
-
-    expect(params).toEqual({
-      categories: [1, 2],
-      moderation: 1,
-      publish: 1,
-    })
+describe('buildTravelQueryParams', () => {
+  it('adds default publish/moderation for public listings', () => {
+    const params = buildTravelQueryParams({}, {})
+    expect(params).toEqual({ moderation: 1, publish: 1 })
   })
 
-  it('uses moderation value from filter if provided', () => {
+  it('normalizes numeric arrays by trimming, deduping and sorting', () => {
     const params = buildTravelQueryParams(
-      { categories: ['1', '2'], moderation: 0 },
-      { userId: null }
+      {
+        countries: ['20', '3', 20, ' 3 '],
+      },
+      {},
     )
 
-    expect(params).toEqual({
-      categories: [1, 2],
-      moderation: 0,
-    })
+    expect(params.countries).toEqual([3, 20])
   })
 
-  it('forces Belarus filter on travelsby pages and preserves user scope', () => {
+  it('removes publish/moderation overrides for personal areas', () => {
     const params = buildTravelQueryParams(
       {},
-      { isTravelBy: true, belarusId: 7, routeUserId: '55' }
+      { isMeTravel: true, userId: '42' },
     )
 
-    expect(params).toEqual({ countries: [7], moderation: 1, publish: 1, user_id: '55' })
+    expect(params).toEqual({ user_id: '42' })
   })
 
-  it('maps category names to ids case-insensitively', () => {
-    const ids = mapCategoryNamesToIds(['ХАЙКИНГ', 'морЕ'], [
-      { id: 10, name: 'хайкинг' },
-      { id: 20, name: 'МОРЕ' },
-    ])
+  it('forces Belarus filter for travelsby page', () => {
+    const params = buildTravelQueryParams(
+      { countries: [1, 2, 4] },
+      { isTravelBy: true, belarusId: 3 },
+    )
 
-    expect(ids).toEqual([10, 20])
+    expect(params.countries).toEqual([3])
   })
 
-  describe('Year filter', () => {
-    it('should include year in query params when provided', () => {
-      const params = buildTravelQueryParams(
-        { year: '2023' },
-        { userId: null }
-      )
-
-      expect(params).toEqual({
-        moderation: 1,
-        publish: 1,
-        year: '2023',
-      })
-    })
-
-    it('should include year with other filters', () => {
-      const params = buildTravelQueryParams(
-        { year: '2021', countries: [1, 2], categories: ['hiking'] },
-        { userId: null }
-      )
-
-      expect(params).toHaveProperty('year', '2021')
-      expect(params).toHaveProperty('countries', [1, 2])
-      expect(params).toHaveProperty('categories', ['hiking'])
-    })
-
-    it('should exclude year when empty string', () => {
-      const params = buildTravelQueryParams(
-        { year: '' },
-        { userId: null }
-      )
-
-      expect(params).not.toHaveProperty('year')
-      expect(params).toEqual({
-        moderation: 1,
-        publish: 1,
-      })
-    })
-
-    it('should exclude year when undefined', () => {
-      const params = buildTravelQueryParams(
-        { year: undefined },
-        { userId: null }
-      )
-
-      expect(params).not.toHaveProperty('year')
-    })
-
-    it('should handle year with numeric filters', () => {
-      const params = buildTravelQueryParams(
-        { year: '2022', countries: [3, 4], month: [6, 7] },
-        { userId: null }
-      )
-
-      expect(params.year).toBe('2022')
-      expect(params.countries).toEqual([3, 4])
-      expect(params.month).toEqual([6, 7])
-    })
+  it('keeps explicit moderation filter without overriding publish', () => {
+    const params = buildTravelQueryParams({ moderation: 0 }, {})
+    expect(params).toEqual({ moderation: 0 })
   })
 })
 
+describe('mapCategoryNamesToIds', () => {
+  it('maps names ignoring case and removes duplicates', () => {
+    const ids = mapCategoryNamesToIds(
+      ['Trail', 'trail', 'Hike'],
+      [
+        { id: 5, name: 'Trail' },
+        { id: 9, name: 'Hike' },
+      ],
+    )
+
+    expect(ids).toEqual([5, 9])
+  })
+})

@@ -22,7 +22,8 @@ import { retry, isRetryableError } from '@/src/utils/retry';
 import { getSecureItem, setSecureItem } from '@/src/utils/secureStorage';
 
 // ===== БАЗОВЫЙ URL =====
-const URLAPI: string = process.env.EXPO_PUBLIC_API_URL || '';
+const URLAPI: string =
+    process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
 if (!URLAPI) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }

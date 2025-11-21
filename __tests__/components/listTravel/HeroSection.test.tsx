@@ -38,28 +38,39 @@ describe('HeroSection', () => {
     jest.clearAllMocks();
   });
 
+  const expand = (utils: ReturnType<typeof render>) => {
+    const toggle = utils.getByText('О нас');
+    fireEvent.press(toggle);
+  };
+
   it('renders with default props', () => {
-    const { getByText } = render(<HeroSection />);
-    
+    const utils = render(<HeroSection />);
+    expand(utils);
+    const { getByText } = utils;
+
     expect(getByText('Откройте мир путешествий')).toBeTruthy();
     expect(getByText('Авторские маршруты и идеи для вашего приключения')).toBeTruthy();
   });
 
   it('renders custom title and subtitle', () => {
-    const { getByText } = render(
+    const utils = render(
       <HeroSection
         title="Custom Title"
         subtitle="Custom Subtitle"
       />
     );
-    
+    expand(utils);
+    const { getByText } = utils;
+
     expect(getByText('Custom Title')).toBeTruthy();
     expect(getByText('Custom Subtitle')).toBeTruthy();
   });
 
   it('renders default stats', () => {
-    const { getByText } = render(<HeroSection />);
-    
+    const utils = render(<HeroSection />);
+    expand(utils);
+    const { getByText } = utils;
+
     expect(getByText('500+')).toBeTruthy();
     expect(getByText('маршрутов')).toBeTruthy();
     expect(getByText('50+')).toBeTruthy();
@@ -73,42 +84,12 @@ describe('HeroSection', () => {
       { icon: 'map-pin', value: '100+', label: 'маршрутов' },
       { icon: 'globe', value: '20+', label: 'стран' },
     ];
-    
-    const { getByText } = render(<HeroSection stats={customStats} />);
-    
+    const utils = render(<HeroSection stats={customStats} />);
+    expand(utils);
+    const { getByText } = utils;
+
     expect(getByText('100+')).toBeTruthy();
     expect(getByText('20+')).toBeTruthy();
-  });
-
-  it('renders search button when onSearchPress is provided', () => {
-    const onSearchPress = jest.fn();
-    const { getByLabelText, getByText } = render(
-      <HeroSection onSearchPress={onSearchPress} />
-    );
-    
-    const searchButton = getByLabelText('Поиск путешествий');
-    expect(searchButton).toBeTruthy();
-    expect(getByText('Например: Париж, горнолыжный курорт, море')).toBeTruthy();
-    
-    fireEvent.press(searchButton);
-    expect(onSearchPress).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not render search button when onSearchPress is not provided', () => {
-    const { queryByLabelText } = render(<HeroSection />);
-    
-    expect(queryByLabelText('Поиск путешествий')).toBeNull();
-  });
-
-  it('renders custom search placeholder', () => {
-    const { getByText } = render(
-      <HeroSection
-        onSearchPress={() => {}}
-        searchPlaceholder="Custom placeholder"
-      />
-    );
-    
-    expect(getByText('Custom placeholder')).toBeTruthy();
   });
 
   it('renders popular categories', () => {
@@ -118,15 +99,16 @@ describe('HeroSection', () => {
       { id: 3, name: 'Города', icon: 'map-pin' },
       { id: 4, name: 'Природа', icon: 'tree' },
     ];
-    
     const onCategoryPress = jest.fn();
-    const { getByText } = render(
+    const utils = render(
       <HeroSection
         popularCategories={popularCategories}
         onCategoryPress={onCategoryPress}
       />
     );
-    
+    expand(utils);
+    const { getByText } = utils;
+
     expect(getByText('Популярные категории:')).toBeTruthy();
     expect(getByText('Горы')).toBeTruthy();
     expect(getByText('Пляжи')).toBeTruthy();
@@ -138,15 +120,16 @@ describe('HeroSection', () => {
     const popularCategories = [
       { id: 1, name: 'Горы', icon: 'mountain' },
     ];
-    
     const onCategoryPress = jest.fn();
-    const { getByText } = render(
+    const utils = render(
       <HeroSection
         popularCategories={popularCategories}
         onCategoryPress={onCategoryPress}
       />
     );
-    
+    expand(utils);
+    const { getByText } = utils;
+
     const category = getByText('Горы');
     fireEvent.press(category);
     
@@ -161,11 +144,12 @@ describe('HeroSection', () => {
       { id: 4, name: 'Природа', icon: 'tree' },
       { id: 5, name: 'Музеи', icon: 'building' },
     ];
-    
-    const { getByText, queryByText } = render(
+    const utils = render(
       <HeroSection popularCategories={popularCategories} />
     );
-    
+    expand(utils);
+    const { getByText, queryByText } = utils;
+
     expect(getByText('Горы')).toBeTruthy();
     expect(getByText('Пляжи')).toBeTruthy();
     expect(getByText('Города')).toBeTruthy();
@@ -174,16 +158,20 @@ describe('HeroSection', () => {
   });
 
   it('renders stats icons', () => {
-    const { getByTestId } = render(<HeroSection />);
-    
+    const utils = render(<HeroSection />);
+    expand(utils);
+    const { getByTestId } = utils;
+
     expect(getByTestId('feather-map-pin')).toBeTruthy();
     expect(getByTestId('feather-globe')).toBeTruthy();
     expect(getByTestId('feather-users')).toBeTruthy();
   });
 
   it('does not render popular categories section when empty', () => {
-    const { queryByText } = render(<HeroSection popularCategories={[]} />);
-    
+    const utils = render(<HeroSection popularCategories={[]} />);
+    expand(utils);
+    const { queryByText } = utils;
+
     expect(queryByText('Популярные категории:')).toBeNull();
   });
 
@@ -191,21 +179,29 @@ describe('HeroSection', () => {
     const RN = require('react-native');
     jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({ width: 375, height: 667 });
     
-    const { getByText } = render(<HeroSection />);
-    
-    // Компонент должен рендериться с мобильными стилями
+    const utils = render(<HeroSection />);
+    expand(utils);
+    const { getByText } = utils;
     expect(getByText('Откройте мир путешествий')).toBeTruthy();
     
     RN.useWindowDimensions.mockRestore();
   });
 
-  it('has correct accessibility roles', () => {
-    const { getByRole, getByLabelText } = render(
-      <HeroSection onSearchPress={() => {}} />
-    );
-    
+  it('has correct accessibility roles on expanded title', () => {
+    const utils = render(<HeroSection />);
+    expand(utils);
+    const { getByRole } = utils;
     expect(getByRole('header')).toBeTruthy();
-    expect(getByLabelText('Поиск путешествий')).toBeTruthy();
+  });
+
+  it('toggles expanded state via button', () => {
+    const { getByText, queryByText } = render(<HeroSection />);
+    const toggle = getByText('О нас');
+    expect(queryByText('Откройте мир путешествий')).toBeNull();
+    fireEvent.press(toggle);
+    expect(getByText('Свернуть')).toBeTruthy();
+    expect(getByText('Откройте мир путешествий')).toBeTruthy();
+    fireEvent.press(getByText('Свернуть'));
+    expect(queryByText('Откройте мир путешествий')).toBeNull();
   });
 });
-

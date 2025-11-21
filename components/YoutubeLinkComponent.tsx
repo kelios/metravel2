@@ -20,17 +20,35 @@ const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({
     hint,
 }) => {
     const [inputValue, setInputValue] = useState(value);
+    const [localError, setLocalError] = useState<string | null>(null);
 
     useEffect(() => {
         setInputValue(value);
+        setLocalError(null);
     }, [value]);
 
     const handleChange = (text: string) => {
         setInputValue(text);
         onChange(text);
+        if (localError) {
+            setLocalError(null);
+        }
     };
 
-    const displayError = error || null;
+    const validateLink = (text: string): string | null => {
+        if (!text.trim()) {
+            return null;
+        }
+        const youtubeRegex =
+            /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=|shorts\/)?[A-Za-z0-9_-]{11}/;
+        return youtubeRegex.test(text.trim()) ? null : 'Неверная ссылка на YouTube';
+    };
+
+    const handleBlur = () => {
+        setLocalError(validateLink(inputValue));
+    };
+
+    const displayError = error ?? localError ?? null;
 
     return (
         <View style={styles.container}>
@@ -45,6 +63,7 @@ const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({
                 ]}
                 value={inputValue}
                 onChangeText={handleChange}
+                onBlur={handleBlur}
                 placeholder="Введите ссылку на YouTube"
                 placeholderTextColor={palette.textMuted}
                 {...Platform.select({

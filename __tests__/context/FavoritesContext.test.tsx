@@ -4,13 +4,6 @@ import { FavoritesProvider, useFavorites, FavoriteItem, ViewHistoryItem } from '
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '@/context/AuthContext';
 
-// Mock AsyncStorage
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-}));
-
 // Mock AuthContext
 const mockAuthContext = {
   isAuthenticated: false,
@@ -36,11 +29,22 @@ const TestComponent: React.FC<{ onContext?: (context: any) => void }> = ({ onCon
   return null;
 };
 
+const seedFavorites = async (items: FavoriteItem[], userId: string | null = null) => {
+  const key = userId ? `metravel_favorites_${userId}` : 'metravel_favorites';
+  await AsyncStorage.setItem(key, JSON.stringify(items));
+};
+
+const seedHistory = async (items: ViewHistoryItem[], userId: string | null = null) => {
+  const key = userId ? `metravel_view_history_${userId}` : 'metravel_view_history';
+  await AsyncStorage.setItem(key, JSON.stringify(items));
+};
+
 describe('FavoritesContext', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
-    (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
+    (AsyncStorage as any).__reset?.();
+    mockAuthContext.isAuthenticated = false;
+    mockAuthContext.userId = null;
   });
 
   it('throws error when useFavorites is used outside provider', () => {
@@ -84,8 +88,8 @@ describe('FavoritesContext', () => {
       },
     ];
 
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(JSON.stringify(mockFavorites));
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(null);
+    await seedFavorites(mockFavorites);
+    jest.clearAllMocks();
 
     let contextValue: any;
 
@@ -153,8 +157,8 @@ describe('FavoritesContext', () => {
       },
     ];
 
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(JSON.stringify(mockFavorites));
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(null);
+    await seedFavorites(mockFavorites);
+    jest.clearAllMocks();
 
     let contextValue: any;
 
@@ -191,8 +195,8 @@ describe('FavoritesContext', () => {
       },
     ];
 
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(JSON.stringify(mockFavorites));
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(null);
+    await seedFavorites(mockFavorites);
+    jest.clearAllMocks();
 
     let contextValue: any;
 
@@ -250,8 +254,8 @@ describe('FavoritesContext', () => {
       viewedAt: Date.now() - i * 1000,
     }));
 
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(null);
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(JSON.stringify(mockHistory));
+    await seedHistory(mockHistory);
+    jest.clearAllMocks();
 
     let contextValue: any;
 
@@ -293,8 +297,8 @@ describe('FavoritesContext', () => {
       },
     ];
 
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(null);
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(JSON.stringify(mockHistory));
+    await seedHistory(mockHistory);
+    jest.clearAllMocks();
 
     let contextValue: any;
 
@@ -339,8 +343,8 @@ describe('FavoritesContext', () => {
       },
     ];
 
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(JSON.stringify(mockFavorites));
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(null);
+    await seedFavorites(mockFavorites);
+    jest.clearAllMocks();
 
     let contextValue: any;
 
@@ -374,11 +378,13 @@ describe('FavoritesContext', () => {
     );
 
     await waitFor(() => {
-      expect(AsyncStorage.getItem).toHaveBeenCalledWith('metravel_favorites_user123');
+      const firstCall = (AsyncStorage.multiGet as jest.Mock).mock.calls[0]?.[0] || [];
+      expect(firstCall).toEqual(
+        expect.arrayContaining(['metravel_favorites_user123', 'metravel_view_history_user123'])
+      );
     });
 
     mockAuthContext.isAuthenticated = false;
     mockAuthContext.userId = null;
   });
 });
-

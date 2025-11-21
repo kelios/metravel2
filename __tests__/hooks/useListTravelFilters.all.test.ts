@@ -2,7 +2,7 @@
  * Комплексные тесты для хука useListTravelFilters - все типы фильтров
  */
 
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react-native';
 import { useListTravelFilters } from '@/components/listTravel/hooks/useListTravelFilters';
 
 describe('useListTravelFilters - All Filters', () => {
@@ -11,6 +11,13 @@ describe('useListTravelFilters - All Filters', () => {
     isExport: false,
     isTravelBy: false,
     userId: null,
+    options: {
+      categories: [
+        { id: 1, name: 'hiking' },
+        { id: 2, name: 'cycling' },
+        { id: 3, name: 'mountains' },
+      ],
+    },
   };
 
   describe('Countries filter', () => {
@@ -71,7 +78,7 @@ describe('useListTravelFilters - All Filters', () => {
       });
 
       expect(result.current.filter.categories).toEqual(['hiking', 'cycling']);
-      expect(result.current.queryParams.categories).toEqual(['hiking', 'cycling']);
+      expect(result.current.queryParams.categories).toEqual([1, 2]);
     });
 
     it('should toggle category using handleToggleCategory', () => {
@@ -103,6 +110,58 @@ describe('useListTravelFilters - All Filters', () => {
 
       expect(result.current.filter.categories).toContain('hiking');
       expect(result.current.filter.categories).toContain('cycling');
+    });
+
+    it('should merge numeric selections with mapped category names', () => {
+      const customProps = {
+        ...defaultProps,
+        options: {
+          categories: [
+            { id: 1, name: 'hiking' },
+            { id: 2, name: 'cycling' },
+            { id: 42, name: 'sailing' },
+          ],
+        },
+      };
+      const { result } = renderHook(() => useListTravelFilters(customProps));
+
+      act(() => {
+        result.current.onSelect('categories', [3]);
+      });
+
+      act(() => {
+        result.current.handleToggleCategory('sailing');
+      });
+
+      expect(result.current.filter.categories).toEqual([3, 'sailing']);
+      expect(result.current.queryParams.categories).toEqual([3, 42]);
+    });
+
+    it('should re-map stored category names when options become available', () => {
+      const initialProps = {
+        ...defaultProps,
+        options: undefined,
+      };
+      const { result, rerender } = renderHook(
+        (props: any) => useListTravelFilters(props),
+        { initialProps }
+      );
+
+      act(() => {
+        result.current.handleToggleCategory('mountains');
+      });
+
+      expect(result.current.filter.categories).toEqual(['mountains']);
+      expect(result.current.queryParams.categories).toBeUndefined();
+
+      rerender({
+        ...initialProps,
+        options: {
+          categories: [{ id: 3, name: 'mountains' }],
+        },
+      });
+
+      expect(result.current.queryParams.categories).toEqual([3]);
     });
   });
 
@@ -227,7 +286,7 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.filter.year).toBe('2023');
 
       expect(result.current.queryParams.countries).toEqual([1, 2]);
-      expect(result.current.queryParams.categories).toEqual(['hiking']);
+      expect(result.current.queryParams.categories).toEqual([1]);
       expect(result.current.queryParams.transports).toEqual([1]);
       expect(result.current.queryParams.year).toBe('2023');
     });
@@ -450,4 +509,3 @@ describe('useListTravelFilters - All Filters', () => {
     });
   });
 });
-

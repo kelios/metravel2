@@ -585,8 +585,9 @@ function ListTravel({
 
     const handleListEndReached = useCallback(() => {
         if (onMomentumRef.current) return;
+        if (!hasAnyItems) return; // ✅ FIX: Без элементов не запускаем пагинацию, чтобы не пропускать первую страницу фильтра
         handleEndReached();
-    }, [handleEndReached]);
+    }, [handleEndReached, hasAnyItems]);
 
     const onMomentumBegin = useCallback(() => {
         onMomentumRef.current = false;
@@ -836,6 +837,7 @@ function ListTravel({
               <FlatList
                 ref={flatListRef}
                 data={displayData}
+                extraData={displayData.length}
                 renderItem={renderItem}
                 keyExtractor={keyExtractor}
                 key={listKey}

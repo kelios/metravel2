@@ -13,6 +13,10 @@ import type { Travel } from '@/src/types/types';
 interface RecentViewsProps {
   maxItems?: number;
   compact?: boolean;
+  /**
+   * Optional seed data (useful for deterministic tests or server-provided state)
+   */
+  initialTravels?: Travel[];
 }
 
 const palette = DESIGN_TOKENS.colors;
@@ -20,13 +24,28 @@ const spacing = DESIGN_TOKENS.spacing;
 
 const STORAGE_KEY = 'metravel_recent_views';
 
-export default function RecentViews({ maxItems = 6, compact = false }: RecentViewsProps) {
+export default function RecentViews({
+  maxItems = 6,
+  compact = false,
+  initialTravels,
+}: RecentViewsProps) {
   const router = useRouter();
   const [recentTravels, setRecentTravels] = React.useState<Travel[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
+    if (initialTravels) {
+      setRecentTravels(initialTravels.slice(0, maxItems));
+      setIsLoading(false);
+      return;
+    }
+
     const loadRecentViews = async () => {
+      if (!AsyncStorage?.getItem) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -45,9 +64,14 @@ export default function RecentViews({ maxItems = 6, compact = false }: RecentVie
     };
 
     loadRecentViews();
-  }, [maxItems]);
+  }, [initialTravels, maxItems]);
 
   const handleClear = async () => {
+    if (!AsyncStorage?.removeItem) {
+      setRecentTravels([]);
+      return;
+    }
+
     try {
       await AsyncStorage.removeItem(STORAGE_KEY);
       setRecentTravels([]);
@@ -169,4 +193,3 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
   },
 });
-

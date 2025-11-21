@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import ErrorDisplay from '@/components/ErrorDisplay';
-import { Text } from 'react-native';
+import { Text, Platform } from 'react-native';
 
 // Mock Feather icons
 jest.mock('@expo/vector-icons', () => ({
@@ -23,13 +23,20 @@ jest.mock('@/constants/designSystem', () => ({
   },
 }));
 
-// Mock window for web
-const mockWindow = {
-  open: jest.fn(),
-};
+let openSpy: jest.Mock;
 
 beforeAll(() => {
-  (global as any).window = mockWindow;
+  openSpy = jest.fn();
+  Object.defineProperty(globalThis, 'window', {
+    value: {
+      open: openSpy,
+    },
+    writable: true,
+  });
+});
+
+beforeEach(() => {
+  openSpy.mockClear();
 });
 
 // Mock __DEV__
@@ -202,6 +209,8 @@ describe('ErrorDisplay', () => {
   });
 
   it('should open support link when contact button is pressed', () => {
+    const originalPlatform = Platform.OS;
+    Platform.OS = 'web';
     const { UNSAFE_getAllByType } = render(
       <ErrorDisplay 
         message="Error"
@@ -223,13 +232,12 @@ describe('ErrorDisplay', () => {
       return false;
     });
 
-    if (contactButton) {
-      fireEvent.press(contactButton);
-      expect(mockWindow.open).toHaveBeenCalledWith(
-        'https://www.instagram.com/metravelby/',
-        '_blank'
-      );
-    }
+    expect(contactButton).toBeDefined();
+    fireEvent.press(contactButton);
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://www.instagram.com/metravelby/',
+      '_blank'
+    );
+    Platform.OS = originalPlatform;
   });
 });
-

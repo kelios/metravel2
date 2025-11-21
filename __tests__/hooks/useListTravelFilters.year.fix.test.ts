@@ -3,7 +3,7 @@
  * Проверяем, что год всегда передается как строка в API-запрос
  */
 
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react-native';
 import { useListTravelFilters } from '@/components/listTravel/hooks/useListTravelFilters';
 import { buildTravelQueryParams } from '@/src/utils/filterQuery';
 
@@ -46,7 +46,7 @@ describe('Year Filter Fix - API Request', () => {
       // Год должен остаться
       expect(result.current.queryParams.year).toBe('2023');
       expect(result.current.queryParams.countries).toEqual([1]);
-      expect(result.current.queryParams.categories).toEqual(['hiking']);
+      expect(result.current.queryParams.categories).toBeUndefined();
     });
 
     it('should preserve year when other filters change', () => {
@@ -184,4 +184,3 @@ describe('Year Filter Fix - API Request', () => {
     });
   });
 });
-

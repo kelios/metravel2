@@ -4,8 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListTravel from '@/components/listTravel/ListTravel';
 
 // Mock dependencies
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  multiGet: jest.fn(() => Promise.resolve([['userId', '1'], ['isSuperuser', 'false']])),
+jest.mock('@/components/listTravel/RecommendationsTabs', () => ({
+  __esModule: true,
+  default: () => null,
 }));
 
 jest.mock('expo-router', () => ({
@@ -40,38 +41,20 @@ describe('ListTravel', () => {
     queryClient.clear();
   });
 
-  it('renders without crashing', async () => {
+  const renderComponent = () =>
     render(
       <QueryClientProvider client={queryClient}>
         <ListTravel />
       </QueryClientProvider>
     );
 
-    await waitFor(() => {
-      expect(screen.queryByTestId('travel-list')).toBeTruthy();
-    });
+  it('renders the search input', async () => {
+    renderComponent();
+    expect(await screen.findByPlaceholderText(/Найти путешествия/)).toBeTruthy();
   });
 
-  it('shows search bar', () => {
-    render(
-      <QueryClientProvider client={queryClient}>
-        <ListTravel />
-      </QueryClientProvider>
-    );
-
-    expect(screen.getByPlaceholderText(/найти путешествие/i)).toBeTruthy();
-  });
-
-  it('handles empty state', async () => {
-    render(
-      <QueryClientProvider client={queryClient}>
-        <ListTravel />
-      </QueryClientProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.queryByText(/ничего не найдено/i)).toBeTruthy();
-    });
+  it('renders an empty state message when there are no items', async () => {
+    renderComponent();
+    expect(await screen.findByText(/Ничего не найдено/i)).toBeTruthy();
   });
 });
-

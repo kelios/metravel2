@@ -8,8 +8,20 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListTravel from '@/components/listTravel/ListTravel';
 import { fetchTravels, fetchFilters, fetchFiltersCountry } from '@/src/api/travels';
 
+jest.mock('@/components/listTravel/RecommendationsTabs', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+jest.mock('@/components/FavoriteButton', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+const mockRoute = { name: 'travels', params: {} } as any;
+
 jest.mock('@react-navigation/native', () => ({
-  useRoute: () => ({ name: 'travels', params: {} }),
+  useRoute: () => mockRoute,
 }));
 
 jest.mock('expo-router', () => ({
@@ -19,12 +31,6 @@ jest.mock('expo-router', () => ({
     back: jest.fn(),
   }),
   useLocalSearchParams: () => ({}),
-}));
-
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(() => Promise.resolve(null)),
-  setItem: jest.fn(),
-  multiGet: jest.fn(() => Promise.resolve([['userId', null], ['isSuperuser', 'false']])),
 }));
 
 // Mock API
@@ -162,6 +168,30 @@ describe('ListTravel - Filters Integration', () => {
 
       // Verify multiple filters can be combined
       // This would require UI interaction in real scenario
+    });
+  });
+
+  describe('Travelsby preset filters', () => {
+    it('forces Belarus country filter and renders data', async () => {
+      jest.useRealTimers();
+      mockRoute.name = 'travelsby';
+
+      (fetchTravels as jest.Mock).mockResolvedValue(
+        mockTravelsResponse([
+          { id: 1, name: 'Беларусь маршрут', travel_image_thumb_url: 'http://example.com/img.jpg' },
+        ], 160)
+      );
+
+      const { findByText } = renderComponent();
+
+      const cardTitle = await findByText('Беларусь маршрут');
+      expect(cardTitle).toBeTruthy();
+
+      const params = (fetchTravels as jest.Mock).mock.calls[0][3];
+      expect(params.countries).toEqual([3]);
+
+      mockRoute.name = 'travels';
+      jest.useFakeTimers();
     });
   });
 
@@ -339,4 +369,3 @@ describe('ListTravel - Filters Integration', () => {
     });
   });
 });
-

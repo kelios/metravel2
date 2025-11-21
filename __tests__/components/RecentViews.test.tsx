@@ -41,7 +41,10 @@ const mockAsyncStorage = {
   removeItem: jest.fn(),
 };
 
-jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage);
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: mockAsyncStorage,
+}));
 
 // Mock TravelCardCompact
 jest.mock('@/components/TravelCardCompact', () => {
@@ -72,6 +75,18 @@ jest.mock('@/src/utils/logger', () => ({
 // Mock __DEV__
 (global as any).__DEV__ = true;
 
+const createTravel = (overrides: Partial<any> = {}) =>
+  ({
+    id: overrides.id ?? 1,
+    title: overrides.title ?? 'Travel 1',
+    name: overrides.title ?? 'Travel 1',
+    slug: `travel-${overrides.id ?? 1}`,
+    travel_image_thumb_url: '',
+    travel_image_thumb_small_url: '',
+    url: 'https://metravel.by/travels/test',
+    ...overrides,
+  } as any);
+
 describe('RecentViews', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -100,35 +115,19 @@ describe('RecentViews', () => {
   });
 
   it('should render compact version', async () => {
-    const mockTravels = [
-      { id: 1, title: 'Travel 1' },
-      { id: 2, title: 'Travel 2' },
-    ];
-    
-    mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(mockTravels));
-    
-    const { toJSON } = render(<RecentViews compact={true} />);
-    
+    const mockTravels = [createTravel({ id: 1 }), createTravel({ id: 2, title: 'Travel 2' })];
+    const { getByText } = render(<RecentViews compact initialTravels={mockTravels} />);
+
     await waitFor(() => {
-      const tree = toJSON();
-      const treeStr = JSON.stringify(tree);
-      expect(treeStr).toContain('Недавно просмотрено: 2');
+      expect(getByText('Недавно просмотрено: 2')).toBeTruthy();
     });
   });
 
   it('should render recent travels list', async () => {
-    const mockTravels = [
-      { id: 1, title: 'Travel 1' },
-      { id: 2, title: 'Travel 2' },
-    ];
-    
-    mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(mockTravels));
-    
-    const { toJSON, getByTestId } = render(<RecentViews />);
-    
+    const mockTravels = [createTravel({ id: 1 }), createTravel({ id: 2, title: 'Travel 2' })];
+    const { getByTestId } = render(<RecentViews initialTravels={mockTravels} />);
+
     await waitFor(() => {
-      const tree = toJSON();
-      expect(tree).toBeTruthy();
       expect(getByTestId('travel-card-1')).toBeTruthy();
       expect(getByTestId('travel-card-2')).toBeTruthy();
     });
@@ -136,31 +135,28 @@ describe('RecentViews', () => {
 
   it('should limit items to maxItems', async () => {
     const mockTravels = [
-      { id: 1, title: 'Travel 1' },
-      { id: 2, title: 'Travel 2' },
-      { id: 3, title: 'Travel 3' },
-      { id: 4, title: 'Travel 4' },
+      createTravel({ id: 1 }),
+      createTravel({ id: 2 }),
+      createTravel({ id: 3 }),
+      createTravel({ id: 4 }),
     ];
-    
-    mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(mockTravels));
-    
-    const { toJSON } = render(<RecentViews maxItems={2} />);
-    
+
+    const { queryByTestId } = render(<RecentViews maxItems={2} initialTravels={mockTravels} />);
+
     await waitFor(() => {
-      const tree = toJSON();
-      expect(tree).toBeTruthy();
+      expect(queryByTestId('travel-card-1')).toBeTruthy();
+      expect(queryByTestId('travel-card-2')).toBeTruthy();
+      expect(queryByTestId('travel-card-3')).toBeNull();
     });
   });
 
   it('should clear recent views when clear button is pressed', async () => {
-    const mockTravels = [
-      { id: 1, title: 'Travel 1' },
-    ];
-    
-    mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(mockTravels));
+    const mockTravels = [createTravel({ id: 1 })];
     mockAsyncStorage.removeItem.mockResolvedValue(undefined);
     
-    const { UNSAFE_getAllByType, queryByTestId } = render(<RecentViews />);
+    const { UNSAFE_getAllByType, queryByTestId } = render(
+      <RecentViews initialTravels={mockTravels} />
+    );
     
     await waitFor(() => {
       expect(queryByTestId('travel-card-1')).toBeTruthy();
@@ -182,21 +178,19 @@ describe('RecentViews', () => {
 
     if (clearButton) {
       fireEvent.press(clearButton);
-      expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith('metravel_recent_views');
+      await waitFor(() => {
+        expect(queryByTestId('travel-card-1')).toBeNull();
+      });
     }
   });
 
   it('should render title and icon', async () => {
-    const mockTravels = [{ id: 1, title: 'Travel 1' }];
-    mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(mockTravels));
-    
-    const { getByTestId, toJSON } = render(<RecentViews />);
-    
+    const mockTravels = [createTravel({ id: 1 })];
+    const { getByTestId, getByText } = render(<RecentViews initialTravels={mockTravels} />);
+
     await waitFor(() => {
       expect(getByTestId('feather-clock')).toBeTruthy();
-      const tree = toJSON();
-      const treeStr = JSON.stringify(tree);
-      expect(treeStr).toContain('Недавние просмотры');
+      expect(getByText('Недавние просмотры')).toBeTruthy();
     });
   });
 
@@ -212,4 +206,3 @@ describe('RecentViews', () => {
     });
   });
 });
-

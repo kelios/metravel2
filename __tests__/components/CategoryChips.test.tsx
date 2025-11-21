@@ -57,7 +57,7 @@ describe('CategoryChips', () => {
   });
 
   it('returns null when categories is empty', () => {
-    const { container } = render(
+    const { toJSON } = render(
       <CategoryChips
         categories={[]}
         selectedCategories={[]}
@@ -65,7 +65,7 @@ describe('CategoryChips', () => {
       />
     );
     
-    expect(container.children.length).toBe(0);
+    expect(toJSON()).toBeNull();
   });
 
   it('renders categories correctly', () => {
@@ -334,4 +334,3 @@ describe('CategoryChips', () => {
     expect(queryByTestId('chip-icon-Неизвестная категория')).toBeNull();
   });
 });
-
