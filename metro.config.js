@@ -5,6 +5,9 @@ const path = require('path')
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname)
 
+// Отключаем кастомный FileStore от Expo
+config.cacheStores = [];
+
 // Блокируем react-native-maps на веб на уровне blockList
 // Инициализируем blockList как массив, если его нет
 if (!config.resolver.blockList) {
