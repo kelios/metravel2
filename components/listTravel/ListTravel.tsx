@@ -366,7 +366,6 @@ function ListTravel({
     const [search, setSearch] = useState("");
     const debSearch = useDebouncedValue(search, 400);
 
-    const [currentPage, setCurrentPage] = useState(0);
     const onMomentumRef = useRef(false);
     const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -463,8 +462,6 @@ function ListTravel({
         handleRefresh,
         isRefreshing,
     } = useListTravelData({
-        currentPage,
-        setCurrentPage,
         queryParams,
         search: debSearch,
         isQueryEnabled,
