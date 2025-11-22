@@ -312,7 +312,8 @@ const styles = `
   position: relative;
   overflow: hidden;
   width: 100%;
-  min-height: 170px;
+  /* Фиксированная высота, чтобы карточки с фото и без фото были одинаковыми */
+  height: 280px;
   background-color: #020617;
 }
 
@@ -793,7 +794,7 @@ const styles = `
 
 @media (max-width: 700px) {
   .popup-card {
-    max-width: min(320px, calc(100vw - 6px));
+    max-width: min(400px, calc(100vw - 12px));
   }
 
   .popup-expanded-card {

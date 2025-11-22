@@ -509,6 +509,8 @@ const MapPageComponent: React.FC<Props> = ({
             }
             zoom={mode === 'route' ? 13 : (userLocation ? 11 : 13)}
             style={styles.map}
+            zoomAnimation={false}
+            markerZoomAnimation={false}
         >
           <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

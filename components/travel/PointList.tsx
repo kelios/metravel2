@@ -27,6 +27,7 @@ import {
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
 
 type Point = {
   id: string;
@@ -38,7 +39,7 @@ type Point = {
   description?: string;
 };
 
-type PointListProps = { points: Point[] };
+type PointListProps = { points: Point[]; baseUrl?: string };
 
 type Responsive = {
   imageMinHeight: number;
@@ -253,7 +254,7 @@ const PointCard = React.memo(function PointCard({
 
 /* ---------------- list ---------------- */
 
-const PointList: React.FC<PointListProps> = ({ points }) => {
+const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
   const safePoints = useMemo(() => (Array.isArray(points) ? points : []), [points]);
   const { width } = useWindowDimensions();
   // ✅ УЛУЧШЕНИЕ: Более точные брейкпоинты для адаптивности
@@ -360,10 +361,9 @@ const PointList: React.FC<PointListProps> = ({ points }) => {
 
   // ✅ УЛУЧШЕНИЕ: Более плавные переходы между количеством колонок
   const numColumns = useMemo(() => {
-    if (width >= 1440) return 3; // Большие десктопы
-    if (width >= 1024) return 3; // Десктопы
-    if (width >= 768) return 2;  // Планшеты
-    return 1; // Мобильные
+    if (width >= 1024) return 2; // Десктопы и большие экраны: 2 колонки, чтобы карточки были крупнее
+    if (width >= 768) return 2;  // Планшеты: 2 колонки
+    return 1; // Мобильные: одна карточка в ряд
   }, [width]);
 
   const keyExtractor = useCallback((item: Point) => item.id, []);
@@ -375,14 +375,30 @@ const PointList: React.FC<PointListProps> = ({ points }) => {
           numColumns === 3 ? styles.col3 : numColumns === 2 ? styles.col2 : styles.col1,
         ]}
       >
-        <PointCard
-          point={item}
-          isMobile={isMobile}
-          responsive={responsive}
-          onCopy={onCopy}
-          onShare={onShare}
-          onOpenMap={onOpenMap}
-        />
+        {Platform.OS === 'web' ? (
+          <div style={{ padding: 8, width: '100%' }}>
+            <PopupContentComponent
+              travel={{
+                address: item.address,
+                coord: item.coord,
+                travelImageThumbUrl: item.travelImageThumbUrl,
+                categoryName: item.categoryName,
+                description: item.description,
+                articleUrl: baseUrl,
+                urlTravel: baseUrl,
+              }}
+            />
+          </div>
+        ) : (
+          <PointCard
+            point={item}
+            isMobile={isMobile}
+            responsive={responsive}
+            onCopy={onCopy}
+            onShare={onShare}
+            onOpenMap={onOpenMap}
+          />
+        )}
       </View>
     ),
     [isMobile, numColumns, onCopy, onOpenMap, onShare, responsive]
