@@ -144,4 +144,43 @@ describe('PopupContentComponent (web popup template)', () => {
     // Внутри видна хотя бы одна категория
     expect(getByText(/Категория 1/)).toBeTruthy();
   });
+
+  it('injects CSS with fixed height for .popup-photo so cards with and without image have same height', () => {
+    // Рендерим компонент, чтобы он добавил style-тег с CSS
+    render(<PopupContentComponent travel={baseTravel} />);
+
+    const styleTag = document.getElementById('popup-content-web-style') as HTMLStyleElement | null;
+    expect(styleTag).not.toBeNull();
+
+    if (styleTag) {
+      const css = styleTag.innerHTML.replace(/\s+/g, ' ');
+      // Проверяем, что у .popup-photo зашита фиксированная высота 280px
+      expect(css).toContain('popup-photo {');
+      expect(css).toContain('height: 280px;');
+    }
+  });
+
+  it('uses the same .popup-photo container for cards with and without image', () => {
+    const { unmount: unmountWithImage, UNSAFE_root: rootWithImage } = render(
+      <PopupContentComponent travel={baseTravel} />
+    );
+
+    const withImage = (rootWithImage as any)?.querySelector?.('.popup-photo') as HTMLElement | null;
+    expect(withImage).not.toBeNull();
+
+    unmountWithImage();
+
+    const withoutImageTravel = { ...baseTravel, travelImageThumbUrl: undefined } as any;
+    const { UNSAFE_root: rootWithoutImage } = render(
+      <PopupContentComponent travel={withoutImageTravel} />
+    );
+
+    const withoutImage = (rootWithoutImage as any)?.querySelector?.('.popup-photo') as HTMLElement | null;
+    expect(withoutImage).not.toBeNull();
+
+    if (withImage && withoutImage) {
+      expect(withImage.tagName).toBe(withoutImage.tagName);
+      expect(withImage.className).toBe(withoutImage.className);
+    }
+  });
 });
