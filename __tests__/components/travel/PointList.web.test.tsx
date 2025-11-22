@@ -1,8 +1,8 @@
 import React from 'react';
 import { Platform, View, Text } from 'react-native';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 
-const popupMock = jest.fn((props: any) => (
+const mockPopup = jest.fn((props: any) => (
   <View testID="popup-content-mock">
     <Text testID="popup-article-url">{props.travel.articleUrl}</Text>
   </View>
@@ -10,7 +10,7 @@ const popupMock = jest.fn((props: any) => (
 
 jest.mock('@/components/MapPage/PopupContentComponent', () => ({
   __esModule: true,
-  default: (props: any) => popupMock(props),
+  default: (props: any) => mockPopup(props),
 }));
 
 import PointList from '@/components/travel/PointList';
@@ -31,17 +31,14 @@ describe('PointList (web coordinates list uses popup template)', () => {
 
     const baseUrl = 'https://example.com/travel-page';
 
-    const { getByTestId } = render(
+    const { getByLabelText } = render(
       <PointList points={[basePoint as any]} baseUrl={baseUrl} />
     );
 
-    const popup = getByTestId('popup-content-mock');
-    expect(popup).toBeTruthy();
+    const toggleButton = getByLabelText('Показать координаты мест');
+    fireEvent.press(toggleButton);
 
-    const urlText = getByTestId('popup-article-url');
-    expect((urlText as any).props.children).toBe(baseUrl);
-
-    expect(popupMock).toHaveBeenCalledWith(
+    expect(mockPopup).toHaveBeenCalledWith(
       expect.objectContaining({
         travel: expect.objectContaining({ articleUrl: baseUrl, urlTravel: baseUrl }),
       }),
