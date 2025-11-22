@@ -139,4 +139,63 @@ describe('useListTravelData with infinite query', () => {
     unmount();
     queryClient.clear();
   });
+
+  it('sets isEmpty when enabled and no items returned', async () => {
+    (fetchTravels as jest.Mock).mockResolvedValueOnce({
+      total: 0,
+      data: [],
+    });
+
+    const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+
+    await waitFor(() => expect(ref.current?.isInitialLoading).toBe(false));
+
+    expect(ref.current?.data).toHaveLength(0);
+    expect(ref.current?.isEmpty).toBe(true);
+
+    unmount();
+    queryClient.clear();
+  });
+
+  it('handleRefresh invalidates query and refetches data', async () => {
+    (fetchTravels as jest.Mock)
+      .mockResolvedValueOnce({
+        total: 12,
+        data: createTravels('initial', 12),
+      })
+      .mockResolvedValueOnce({
+        total: 1,
+        data: createTravels('refetched', 1),
+      })
+      .mockResolvedValueOnce({
+        total: 1,
+        data: createTravels('refetched', 1),
+      });
+
+    const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+
+    await waitFor(() => expect(ref.current?.data).toHaveLength(12));
+
+    await act(async () => {
+      await ref.current?.handleRefresh();
+    });
+
+    await waitFor(() => expect(ref.current?.data).toHaveLength(1));
+    expect(fetchTravels).toHaveBeenCalledTimes(3);
+
+    unmount();
+    queryClient.clear();
+  });
+
+  it('marks isError when fetchTravels rejects', async () => {
+    (fetchTravels as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+
+    const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+
+    await waitFor(() => expect(ref.current?.status).toBe('error'));
+    expect(ref.current?.isError).toBe(true);
+
+    unmount();
+    queryClient.clear();
+  });
 });
