@@ -135,15 +135,23 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
                             {...(Platform.OS === "web" ? { loading: "lazy" as any } : {})}
                         />
                     )}
-                </View>
 
-                <View style={styles.textContainer}>
-                    <Text numberOfLines={2} ellipsizeMode="tail" style={styles.title}>
-                        {name}
-                    </Text>
-                    <Text numberOfLines={1} ellipsizeMode="tail" style={styles.subtitle}>
-                        {countryName}
-                    </Text>
+                    <View style={styles.overlayBottom}>
+                        <Text
+                            numberOfLines={2}
+                            ellipsizeMode="tail"
+                            style={styles.overlayTitle}
+                        >
+                            {name}
+                        </Text>
+                        <Text
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                            style={styles.overlaySubtitle}
+                        >
+                            {countryName}
+                        </Text>
+                    </View>
                 </View>
             </Pressable>
         </View>
@@ -211,7 +219,6 @@ const styles = StyleSheet.create({
         width: '100%',
         overflow: "hidden",
         backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-        marginBottom: 12,
         ...Platform.select({
             web: {
                 aspectRatio: '1',
@@ -265,25 +272,27 @@ const styles = StyleSheet.create({
         textShadow: '0 1px 2px rgba(255,255,255,0.9)',
     },
 
-    // ✅ УЛУЧШЕНИЕ: Улучшенная типографика
-    textContainer: {
-        width: '100%',
-        paddingHorizontal: 4,
-        gap: 6,
+    // ✅ Нижний оверлей как в попапе
+    overlayBottom: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        backgroundColor: 'rgba(15,23,42,0.78)',
+        flexDirection: 'column',
+        gap: 4,
     },
-    title: {
-        color: "#1f2937",
-        fontSize: 15,
-        fontWeight: "700",
-        textAlign: "center",
-        lineHeight: 20,
-        letterSpacing: -0.2,
-    },
-    subtitle: {
+    overlayTitle: {
+        color: '#f9fafb',
         fontSize: 13,
-        color: "#6b7280",
-        textAlign: "center",
-        fontWeight: "500",
-        letterSpacing: 0.1,
+        fontWeight: '700',
+        lineHeight: 18,
+    },
+    overlaySubtitle: {
+        color: '#e5e7eb',
+        fontSize: 11,
+        fontWeight: '500',
     },
 });

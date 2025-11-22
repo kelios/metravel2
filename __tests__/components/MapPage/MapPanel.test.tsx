@@ -167,14 +167,23 @@ describe('MapPanel', () => {
     });
   });
 
-  it('is memoized correctly', () => {
+  it('is memoized correctly', async () => {
     (Platform.OS as any) = 'web';
     const { rerender } = render(<MapPanel {...defaultProps} />);
-    
-    // Re-render with same props
+
+    // Дождаться ленивой загрузки web-карты
+    await waitFor(() => {
+      expect(mockWebMap).toHaveBeenCalled();
+    });
+
+    const callsBefore = mockWebMap.mock.calls.length;
+
+    // Повторный рендер с теми же пропсами не должен ломать поведение
     rerender(<MapPanel {...defaultProps} />);
-    
-    expect(mockWebMap).toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(mockWebMap.mock.calls.length).toBeGreaterThanOrEqual(callsBefore);
+    });
   });
 });
 

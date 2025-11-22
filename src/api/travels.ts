@@ -342,17 +342,33 @@ export const fetchTravels = async (
     try {
         // ✅ Нормализуем фильтры: убеждаемся, что массивы содержат числа, а не строки
         const whereObject: Record<string, any> = {};
-        
-        // ✅ ИСПРАВЛЕНИЕ: Сначала устанавливаем moderation и publish
-        if (urlParams?.moderation !== undefined) {
-            whereObject.moderation = urlParams.moderation;
-        } else if (urlParams?.publish === undefined) {
-            whereObject.moderation = 1;
-        }
-        if (urlParams?.publish !== undefined) {
-            whereObject.publish = urlParams.publish;
-        } else if (urlParams?.moderation === undefined) {
-            whereObject.publish = 1;
+
+        // ✅ ВАЖНО: Если запрос ограничен конкретным пользователем (user_id),
+        //           НЕ подставляем значения publish/moderation по умолчанию.
+        //           На странице "Мои путешествия" нужно видеть все статьи
+        //           (черновики, на модерации, опубликованные).
+        const isUserScoped = urlParams?.user_id !== undefined && urlParams?.user_id !== null;
+
+        if (isUserScoped) {
+            // Используем только явно переданные значения
+            if (urlParams?.moderation !== undefined) {
+                whereObject.moderation = urlParams.moderation;
+            }
+            if (urlParams?.publish !== undefined) {
+                whereObject.publish = urlParams.publish;
+            }
+        } else {
+            // Глобальные списки: сохраняем прежнее поведение с дефолтами
+            if (urlParams?.moderation !== undefined) {
+                whereObject.moderation = urlParams.moderation;
+            } else if (urlParams?.publish === undefined) {
+                whereObject.moderation = 1;
+            }
+            if (urlParams?.publish !== undefined) {
+                whereObject.publish = urlParams.publish;
+            } else if (urlParams?.moderation === undefined) {
+                whereObject.publish = 1;
+            }
         }
         
         // ✅ ИСПРАВЛЕНИЕ: Улучшенная нормализация для стран и других числовых полей

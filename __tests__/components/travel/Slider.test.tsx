@@ -47,13 +47,12 @@ describe('Slider', () => {
     expect(queryByTestId('slider-loading-overlay-0')).toBeNull()
   })
 
-  it('applies blur background for portrait images and flat background for landscape', async () => {
+  it('applies blurred background for both portrait and landscape images when blurBackground is enabled', async () => {
     const portraitRender = await renderSlider([portraitImage])
     expect(portraitRender.getByTestId('slider-blur-bg-0')).toBeTruthy()
 
     const landscapeRender = await renderSlider([landscapeImage])
-    expect(landscapeRender.queryByTestId('slider-blur-bg-0')).toBeNull()
-    expect(landscapeRender.getByTestId('slider-flat-bg-0')).toBeTruthy()
+    expect(landscapeRender.getByTestId('slider-blur-bg-0')).toBeTruthy()
   })
 
   it('shows placeholder when image fails to load', async () => {

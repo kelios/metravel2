@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import ScrollToTopButton from '@/components/ScrollToTopButton';
-import { Animated } from 'react-native';
+import { Animated, Platform } from 'react-native';
 
 // Mock Feather icons
 jest.mock('@expo/vector-icons', () => ({
@@ -135,6 +135,7 @@ describe('ScrollToTopButton', () => {
   });
 
   it('should scroll window to top on web when no ref provided', () => {
+    (Platform.OS as any) = 'web';
     const { getByTestId } = render(
       <ScrollToTopButton forceVisible={true} />
     );

@@ -28,6 +28,7 @@ const parseLatLng = (coord: string): { lat: number; lng: number } | null => {
 const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose }) => {
   const { address, coord, travelImageThumbUrl, categoryName, description, articleUrl, urlTravel } = travel;
   const [copied, setCopied] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const mounted = useRef(false);
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -77,6 +78,7 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
   }, [openPrimary, onClose]);
 
   const cats = (categoryName || '').split(',').map(c => c.trim()).filter(Boolean);
+  const shortAddress = address && address.length > 200 ? `${address.slice(0, 200)}…` : address;
 
   return (
     <div
@@ -101,7 +103,13 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
         </button>
 
         <div className="popup-content">
-          <div className="popup-photo">
+          <div
+            className="popup-photo"
+            style={travelImageThumbUrl ? ({
+              // Пробрасываем URL фото в CSS-переменную для размытого фона
+              ['--popup-photo-url' as any]: `url(${travelImageThumbUrl})`,
+            } as React.CSSProperties) : undefined}
+          >
             {travelImageThumbUrl ? (
               <img
                 src={travelImageThumbUrl}
@@ -131,103 +139,110 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
               <span>Нет фотографии</span>
             </div>
 
-            <div className="popup-icons-top" aria-label="Действия с точкой">
-              <div className="popup-icons-group">
-                <button
-                  className="popup-icon-btn popup-icon-btn-with-label"
-                  onClick={(e) => handleAction(e, copyCoord)}
-                  title="Скопировать координаты в буфер обмена"
-                  aria-label="Скопировать координаты"
-                >
-                  <CopyIcon />
-                  <span className="popup-icon-label">Копировать</span>
-                </button>
-                <button
-                  className="popup-icon-btn popup-icon-btn-with-label"
-                  onClick={(e) => handleAction(e, shareTelegram)}
-                  title="Поделиться в Telegram"
-                  aria-label="Поделиться в Telegram"
-                >
-                  <SendIcon />
-                  <span className="popup-icon-label">Telegram</span>
-                </button>
-                <button
-                  className="popup-icon-btn popup-icon-btn-with-label"
-                  onClick={(e) => handleAction(e, openMap)}
-                  title="Открыть это место в Google Maps"
-                  aria-label="Открыть на карте"
-                >
-                  <MapPinIcon />
-                  <span className="popup-icon-label">Карта</span>
-                </button>
-              </div>
-            </div>
-
             {cats[0] && (
               <div className="popup-photo-badge" aria-label="Категория локации">
                 {cats[0]}
               </div>
             )}
-          </div>
-
-          <div className="popup-info">
-            <div className="popup-info-header">
-              <p className="popup-title" title={address}>{address}</p>
-              <div
-                className="popup-click-hint"
-                title="Кликните на карточку, чтобы открыть подробную информацию"
+            <div className="popup-bottom-bar" onClick={(e) => { e.stopPropagation(); setExpanded(prev => !prev); }}>
+              <div className="popup-bottom-title" title={address}>{address}</div>
+              <button
+                type="button"
+                className={"popup-expand-handle" + (expanded ? " popup-expand-handle-active" : "")}
+                aria-label={expanded ? "Свернуть информацию" : "Развернуть информацию"}
               >
-                👆 Открыть
-              </div>
+                <span className="popup-expand-dot" />
+              </button>
             </div>
 
-            {coord && (
-              <div className="popup-coord">
-                <span className="popup-coord-label">Координаты</span>
-                <button
-                  type="button"
-                  className="popup-coord-text"
-                  aria-label="Скопировать координаты"
-                  title="Нажмите, чтобы скопировать координаты"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    copyCoord();
-                  }}
-                >
-                  {coord}
-                </button>
-                {copied && <em className="popup-copied" aria-live="polite">✓ скопировано</em>}
+            {expanded && (
+              <div
+                className="popup-expanded-card"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="popup-expanded-header">
+                  <p className="popup-title" title={address}>{shortAddress}</p>
+                  <button
+                    type="button"
+                    className="popup-expanded-close"
+                    aria-label="Свернуть информацию"
+                    onClick={() => setExpanded(false)}
+                  >
+                    <CloseIcon />
+                  </button>
+                </div>
+
+                {coord && (
+                  <div className="popup-coord">
+                    <span className="popup-coord-label">Координаты</span>
+                    <div className="popup-coord-inline">
+                      <span className="popup-coord-text" title={coord}>{coord}</span>
+                      <button
+                        type="button"
+                        className="popup-coord-copy-btn"
+                        aria-label="Скопировать координаты"
+                        title="Скопировать координаты"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyCoord();
+                        }}
+                      >
+                        <CopyIcon />
+                      </button>
+                    </div>
+                    {copied && <em className="popup-copied" aria-live="polite">✓ скопировано</em>}
+                  </div>
+                )}
+
+                <div className="popup-expanded-actions" aria-label="Действия с точкой">
+                  <div className="popup-icons-group">
+                    <button
+                      className="popup-icon-btn popup-icon-btn-with-label"
+                      onClick={(e) => handleAction(e, shareTelegram)}
+                      title="Поделиться в Telegram"
+                      aria-label="Поделиться в Telegram"
+                    >
+                      <SendIcon />
+                      <span className="popup-icon-label">Telegram</span>
+                    </button>
+                    <button
+                      className="popup-icon-btn popup-icon-btn-with-label"
+                      onClick={(e) => handleAction(e, openMap)}
+                      title="Открыть это место в Google Maps"
+                      aria-label="Открыть на карте"
+                    >
+                      <MapPinIcon />
+                      <span className="popup-icon-label">Карта</span>
+                    </button>
+                    {(urlTravel || articleUrl) && (
+                      <button
+                        className="popup-icon-btn popup-icon-btn-with-label"
+                        onClick={(e) => { e.stopPropagation(); openPrimary(); }}
+                        title="Открыть статью или квест"
+                        aria-label="Открыть подробную статью"
+                      >
+                        <LinkIcon />
+                        <span className="popup-icon-label">Открыть</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {description ? (
+                  <div className="popup-description-wrapper">
+                    <p className="popup-description" title={description}>{description}</p>
+                  </div>
+                ) : null}
+
+                {cats.length > 0 ? (
+                  <div className="popup-category-container">
+                    {cats.map((cat, i) => (
+                      <span key={`${cat}-${i}`} className="popup-category">{cat}</span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             )}
-
-            {description ? (
-              <div className="popup-description-wrapper">
-                <p className="popup-description" title={description}>{description}</p>
-                {description.length > 150 && (
-                  <button 
-                    className="popup-read-more"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const desc = e.currentTarget.previousElementSibling as HTMLElement;
-                      if (desc) {
-                        desc.style.webkitLineClamp = desc.style.webkitLineClamp === '4' ? 'unset' : '4';
-                        e.currentTarget.textContent = desc.style.webkitLineClamp === '4' ? 'Читать далее' : 'Свернуть';
-                      }
-                    }}
-                  >
-                    Читать далее
-                  </button>
-                )}
-              </div>
-            ) : null}
-
-            {cats.length > 0 ? (
-              <div className="popup-category-container">
-                {cats.map((cat, i) => (
-                  <span key={`${cat}-${i}`} className="popup-category">{cat}</span>
-                ))}
-              </div>
-            ) : null}
           </div>
         </div>
       </div>
@@ -265,9 +280,9 @@ const styles = `
 
 .popup-card {
   position: relative;
-  width: min(560px, calc(100vw - 40px));
-  min-width: 300px;
-  border-radius: 20px;
+  width: min(320px, calc(100vw - 14px));
+  min-width: 210px;
+  border-radius: 18px;
   overflow: hidden;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
   cursor: pointer;
@@ -291,24 +306,25 @@ const styles = `
 
 .popup-content {
   display: flex;
-  flex-direction: row;
-  min-height: 240px;
-}
-
-.popup-content > * {
-  min-height: 240px;
 }
 
 .popup-photo {
   position: relative;
+  overflow: hidden;
+  width: 100%;
+  min-height: 170px;
+  background-color: #020617;
+}
+
+.popup-photo::before {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  background-image: var(--popup-photo-url);
   background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
-  overflow: hidden;
-  border-right: 1px solid #e2e8f0;
-  flex: 0 0 45%;
-  min-width: 220px;
-  background-color: #f1f5f9;
+  filter: blur(18px);
+  transform: scale(1.05);
 }
 
 .popup-photo::after {
@@ -363,12 +379,12 @@ const styles = `
 
 .popup-icons-group {
   display: flex;
-  gap: 6px;
-  background: rgba(0,0,0,0.55);
+  gap: 4px;
+  background: rgba(15,23,42,0.92);
   border-radius: 12px;
-  padding: 8px;
+  padding: 8px 10px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 6px 18px rgba(15,23,42,0.45);
 }
 
 .popup-icon-btn {
@@ -391,13 +407,13 @@ const styles = `
 
 .popup-icon-btn-with-label {
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 10px;
-  min-width: 60px;
+  gap: 2px;
+  padding: 6px 8px;
+  min-width: 56px;
 }
 
 .popup-icon-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   color: #fff;
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);
@@ -426,10 +442,14 @@ const styles = `
 .popup-title {
   font-weight: 700;
   margin: 0;
-  font-size: 19px;
-  line-height: 1.35;
+  font-size: 11px;
+  line-height: 1.25;
   color: #0f172a;
   flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .popup-click-hint {
@@ -450,13 +470,13 @@ const styles = `
 
 .popup-coord {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 .popup-coord-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
@@ -468,11 +488,11 @@ const styles = `
   background: #f8fafc;
   color: #0f172a;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 8px;
-  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: default;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
@@ -480,6 +500,30 @@ const styles = `
   text-decoration: none;
   appearance: none;
   -webkit-appearance: none;
+}
+
+.popup-coord-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.popup-coord-copy-btn {
+  border: none;
+  background: rgba(15,23,42,0.85);
+  padding: 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.popup-coord-copy-btn:hover {
+  background: rgba(15,23,42,1);
+  transform: translateY(-1px) scale(1.03);
 }
 
 .popup-coord-text:hover {
@@ -500,18 +544,202 @@ const styles = `
   font-weight: 600;
 }
 
-/* description and category styles stay unchanged */
+.popup-description-wrapper {
+  position: relative;
+}
+
+.popup-description {
+  color: #475467;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.popup-read-more {
+  margin-top: 8px;
+  background: transparent;
+  border: none;
+  color: #0ea5e9;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.2s ease;
+}
+
+.popup-read-more:hover {
+  color: #0284c7;
+}
+
+.popup-photo-img {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.popup-photo:hover .popup-photo-img {
+  transform: scale(1.05);
+}
+
+.popup-bottom-bar {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 10px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(15,23,42,0.9);
+  color: #f9fafb;
+  backdrop-filter: blur(10px);
+}
+
+.popup-bottom-title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.popup-expand-handle {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: none;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.popup-expand-handle-active {
+  transform: rotate(180deg);
+}
+
+.popup-expand-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #0f172a;
+}
+
+.popup-expanded-card {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 16px;
+  top: 40%;
+  z-index: 4;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 18px 55px rgba(0,0,0,0.35);
+  padding: 8px 10px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+}
+
+.popup-expanded-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.popup-expanded-close {
+  border: none;
+  background: rgba(15,23,42,0.9);
+  padding: 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.popup-expanded-close:hover {
+  background: rgba(15,23,42,1);
+  transform: scale(1.05);
+}
+
+.popup-primary-btn {
+  margin-top: 8px;
+  align-self: flex-start;
+  border-radius: 999px;
+  border: none;
+  background: #0ea5e9;
+  color: #f9fafb;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.popup-primary-btn:hover {
+  background: #0284c7;
+  box-shadow: 0 4px 12px rgba(14,165,233,0.4);
+}
+
+.popup-expanded-actions {
+  margin-top: 4px;
+}
+
+.popup-category-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.popup-category {
+  background: #eef2ff;
+  color: #312e81;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
 
 .popup-close-btn {
   position: absolute;
   top: 12px;
   right: 12px;
   z-index: 10;
-  background: rgba(0,0,0,0.5);
+  background: rgba(15,23,42,0.9);
   border: none;
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -521,8 +749,8 @@ const styles = `
 }
 
 .popup-close-btn:hover {
-  background: rgba(0,0,0,0.7);
-  transform: scale(1.1);
+  background: rgba(15,23,42,1);
+  transform: scale(1.08);
 }
 
 .popup-close-btn .popup-svg {
@@ -565,17 +793,12 @@ const styles = `
 
 @media (max-width: 700px) {
   .popup-card {
-    max-width: min(420px, calc(100vw - 24px));
+    max-width: min(320px, calc(100vw - 6px));
   }
 
-  .popup-content {
-    flex-direction: column;
-  }
-
-  .popup-photo {
-    min-height: 220px;
-    border-right: none;
-    border-bottom: 1px solid #e2e8f0;
+  .popup-expanded-card {
+    top: 45%;
+    border-radius: 16px;
   }
 
   .popup-info {
@@ -583,60 +806,12 @@ const styles = `
   }
 
   .popup-close-btn {
-    top: 8px;
-    right: 8px;
+    top: 10px;
+    right: 10px;
     width: 28px;
     height: 28px;
   }
 }
-
-.popup-description-wrapper {
-  position: relative;
-}
-
-.popup-description {
-  color: #475467;
-  font-size: 14px;
-  line-height: 1.6;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.popup-read-more {
-  margin-top: 8px;
-  background: transparent;
-  border: none;
-  color: #0ea5e9;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 4px 0;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  transition: color 0.2s ease;
-}
-
-.popup-read-more:hover {
-  color: #0284c7;
-}
-
-.popup-photo-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform 0.3s ease;
-}
-
-.popup-photo:hover .popup-photo-img {
-  transform: scale(1.05);
-}
-
-.popup-category-container {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;

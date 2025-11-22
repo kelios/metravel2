@@ -88,21 +88,23 @@ const GLASS_CARD = "rgba(255,255,255,0.92)";
 
 const buildUri = (img: SliderImage, containerWidth?: number, containerHeight?: number, isFirst: boolean = false) => {
   const versionedUrl = buildVersionedImageUrl(img.url, img.updated_at, img.id);
-  
+
   // ✅ УЛУЧШЕНИЕ: Оптимизация размера изображения для контейнера
   if (containerWidth && img.width && img.height) {
     const aspectRatio = img.width / img.height;
     const optimalSize = getOptimalImageSize(containerWidth, containerHeight, aspectRatio);
-    
-    return optimizeImageUrl(versionedUrl, {
-      width: optimalSize.width,
-      height: optimalSize.height,
-      format: 'webp',
-      quality: isFirst ? 90 : 85, // Выше качество для первого изображения
-      fit: 'cover',
-    }) || versionedUrl;
+
+    // Не обрезаем изображение по высоте: сохраняем исходные пропорции, подстраиваясь только по ширине
+    return (
+      optimizeImageUrl(versionedUrl, {
+        width: optimalSize.width,
+        format: "webp",
+        quality: isFirst ? 90 : 85, // Выше качество для первого изображения
+        fit: "inside",
+      }) || versionedUrl
+    );
   }
-  
+
   return versionedUrl;
 };
 const clamp = (v: number, min: number, max: number) =>
@@ -454,7 +456,8 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
         item.width && item.height ? item.width / item.height : aspectRatio;
       const isPortrait = ratio < 0.95;
       const isSquareish = ratio >= 0.95 && ratio <= 1.1;
-      const shouldBlur = blurBackground && (isPortrait || isSquareish);
+      // Фон всегда та же фотография, растянутая и заблюренная, если blurBackground включен
+      const shouldBlur = blurBackground;
       const slideHeight = containerH ?? computeHeight(containerW);
       const status = loadStatuses[index] ?? "loading";
 
@@ -471,7 +474,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
                 contentFit="cover"
                 cachePolicy="disk"
                 priority={index === 0 ? "high" : "low"}
-                blurRadius={30}
+                blurRadius={12}
               />
               <View style={styles.blurOverlay} />
             </>
@@ -499,6 +502,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
                   testID={`slider-image-${index}`}
                   source={{ uri }}
                   style={styles.img}
+                  // Сохраняем оригинальные пропорции без обрезки, пустые области заполняет размытый фон
                   contentFit="contain"
                   cachePolicy="disk"
                   priority={index === 0 ? "high" : "low"}
@@ -687,81 +691,55 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
         viewabilityConfig={viewabilityConfig}
         extraData={containerW}
         />
-
         {showArrows && images.length > 1 && (
-        <>
-          <Arrow dir="left" onPress={prev} />
-          <Arrow dir="right" onPress={next} />
-        </>
-      )}
+          <>
+            <Arrow dir="left" onPress={prev} />
+            <Arrow dir="right" onPress={next} />
+          </>
+        )}
 
-      {/* ✅ УЛУЧШЕНИЕ: Счетчик изображений */}
-      {images.length > 1 && (
-        <View
-          style={[styles.counter, isMobile && styles.counterMobile]}
-          pointerEvents="box-none"
-          accessibilityRole="text"
-          accessibilityLabel={`Изображение ${currentIndex + 1} из ${images.length}`}
-        >
-          <View style={styles.counterContainer}>
-            <Text style={styles.counterText}>
-              {currentIndex + 1} / {images.length}
-            </Text>
+        {/* Instagram-style 1/N counter */}
+        {images.length > 1 && (
+          <View
+            style={[
+              styles.counter,
+              isMobile && styles.counterMobile,
+            ]}
+            pointerEvents="none"
+          >
+            <View style={styles.counterContainer}>
+              <Text style={styles.counterText}>
+                {currentIndex + 1}/{images.length}
+              </Text>
+            </View>
           </View>
-        </View>
-      )}
+        )}
 
-      {showDots && images.length > 1 && (
-        <View
-          style={[styles.dots, isMobile && styles.dotsMobile]}
-          pointerEvents="box-none"
-          accessibilityRole="tablist"
-        >
-          <View style={styles.dotsContainer}>
-            {images.map((_, i) => (
-              <TouchableOpacity
-                key={`dot-${i}`}
-                style={styles.dotWrap}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: indexRef.current === i }}
-                accessibilityLabel={`Go to slide ${i + 1}`}
-                onPress={() => {
-                  dismissSwipeHint();
-                  scrollTo(i);
-                }}
-                hitSlop={8}
-                activeOpacity={0.7}
-              >
-                <Dot
-                  i={i}
-                  x={x}
-                  containerW={containerW}
-                  total={images.length}
-                  reduceMotion={reduceMotion}
-                />
-              </TouchableOpacity>
-            ))}
+        {/* Instagram-style pagination dots */}
+        {showDots && images.length > 1 && (
+          <View
+            style={[
+              styles.dots,
+              isMobile && styles.dotsMobile,
+            ]}
+            pointerEvents="none"
+          >
+            <View style={styles.dotsContainer}>
+              {images.map((_, i) => (
+                <View key={i} style={styles.dotWrap}>
+                  <Dot
+                    i={i}
+                    x={x}
+                    containerW={containerW}
+                    total={images.length}
+                    reduceMotion={reduceMotion}
+                  />
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
-      )}
+        )}
       </View>
-
-      {images.length > 1 && showSwipeHint && (
-        <View style={[styles.metaRow, isMobile && styles.metaRowMobile]}>
-          <View style={[styles.swipeHint, isMobile && styles.swipeHintMobile]}>
-            <Feather
-              name={isMobile ? "smartphone" : "arrow-right"}
-              size={12}
-              color="#0f172a"
-            />
-            <Text style={styles.swipeHintText}>
-              {isMobile
-                ? "Свайпайте, чтобы увидеть больше"
-                : "Используйте стрелки или клавиши ← →"}
-            </Text>
-          </View>
-        </View>
-      )}
     </View>
   );
 });
@@ -776,12 +754,12 @@ const styles = StyleSheet.create({
   },
   wrapper: {
     width: "100%",
-    backgroundColor: GLASS_BG,
+    backgroundColor: "transparent",
     position: "relative",
     overflow: "hidden",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
+    borderRadius: 12,
+    borderWidth: 0,
+    borderColor: "transparent",
     ...Platform.select({
       web: {
         boxShadow: "0 25px 60px rgba(15,23,42,0.12)",
@@ -813,7 +791,8 @@ const styles = StyleSheet.create({
   },
   blurOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    // Более лёгкая вуаль, чтобы был виден реальный блюр фото, а не плоский белый фон
+    backgroundColor: "rgba(255,255,255,0.18)",
   },
   flatBackground: {
     ...StyleSheet.absoluteFillObject,
@@ -829,8 +808,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 24,
+    // Без внутренних отступов: фото идёт от края до края внутри слайдера
+    paddingHorizontal: 0,
+    paddingVertical: 0,
     alignSelf: "stretch",
     maxWidth: 1280,
     width: "100%",
@@ -855,23 +835,18 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     alignSelf: "center",
-    borderRadius: 28,
+    borderRadius: 0,
     overflow: "hidden",
-    backgroundColor: GLASS_CARD,
-    borderWidth: 1,
-    borderColor: GLASS_BORDER,
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    borderColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    ...Platform.select({
-      web: {
-        backdropFilter: "blur(18px)",
-      },
-    }),
   },
   img: {
     width: "100%",
     height: "100%",
-    borderRadius: 24,
+    borderRadius: 0,
   },
   placeholder: {
     width: "100%",

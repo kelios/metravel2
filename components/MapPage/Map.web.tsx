@@ -2,6 +2,17 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import * as Location from 'expo-location';
+import L from 'leaflet';
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Circle,
+  useMap,
+  useMapEvents,
+} from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 import RoutingMachine from '@/components/MapPage/RoutingMachine';
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
 import MapLegend from '@/components/MapPage/MapLegend';
@@ -23,17 +34,6 @@ interface Coordinates {
 
 type TransportMode = 'car' | 'bike' | 'foot';
 type MapMode = 'radius' | 'route';
-
-interface LeafletModules {
-  L: typeof import('leaflet').default; // <-- default export type
-  MapContainer: React.ComponentType<any>;
-  TileLayer: React.ComponentType<any>;
-  Marker: React.ComponentType<any>;
-  Popup: React.ComponentType<any>;
-  Circle: React.ComponentType<any>;
-  useMap: () => any;
-  useMapEvents: (events: any) => void;
-}
 
 interface Props {
   travel?: { data?: Point[] };
@@ -137,14 +137,13 @@ const MapPageComponent: React.FC<Props> = ({
                                              setFullRouteCoords,
                                              radius,
                                            }) => {
-  const [leafletModules, setLeafletModules] = useState<LeafletModules | null>(null);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [errors, setErrors] = useState({
     location: false,
     loadingModules: false,
     routing: false,
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [routingLoading, setRoutingLoading] = useState(false);
   const [disableFitBounds, setDisableFitBounds] = useState(false);
   const [isMobileScreen, setIsMobileScreen] = useState<boolean>(() => {
@@ -175,7 +174,6 @@ const MapPageComponent: React.FC<Props> = ({
   const ORS_API_KEY = process.env.EXPO_PUBLIC_ROUTE_SERVICE;
 
   const customIcons = useMemo(() => {
-    if (!leafletModules?.L) return null;
     
     // Цвета сайта
     // primary: '#ff9f5a' (оранжевый) - для путешествий
@@ -184,7 +182,7 @@ const MapPageComponent: React.FC<Props> = ({
     // info: '#2b6cb0' (синий) - для местоположения
     
     // ✅ ИСПРАВЛЕНИЕ: Оранжевый маркер для путешествий (стандартный оранжевый)
-    const orangeMarkerIcon = new leafletModules.L.Icon({
+    const orangeMarkerIcon = new L.Icon({
       iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
       iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
       shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
@@ -198,7 +196,7 @@ const MapPageComponent: React.FC<Props> = ({
     });
     
     // Зеленый маркер для старта (success цвет)
-    const greenMarkerIcon = new leafletModules.L.Icon({
+    const greenMarkerIcon = new L.Icon({
       iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
       iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
       shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
@@ -210,7 +208,7 @@ const MapPageComponent: React.FC<Props> = ({
     });
     
     // Красный маркер для финиша (danger цвет)
-    const redMarkerIcon = new leafletModules.L.Icon({
+    const redMarkerIcon = new L.Icon({
       iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
       iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
       shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
@@ -222,7 +220,7 @@ const MapPageComponent: React.FC<Props> = ({
     });
     
     // Синий маркер для местоположения (info цвет)
-    const blueMarkerIcon = new leafletModules.L.Icon({
+    const blueMarkerIcon = new L.Icon({
       iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
       iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
       shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
@@ -239,53 +237,6 @@ const MapPageComponent: React.FC<Props> = ({
       start: greenMarkerIcon,
       end: redMarkerIcon,
     };
-  }, [leafletModules?.L]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const loadLeaflet = async () => {
-      try {
-        // ВАЖНО: брать default, иначе объект L будет модулем
-        const { default: L } = await import('leaflet');
-
-        (window as any).L = L;
-
-        // Настройка дефолтных иконок
-        // @ts-expect-error приватное поле в типах
-        delete L.Icon.Default.prototype._getIconUrl;
-        L.Icon.Default.mergeOptions({
-          iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
-          iconUrl: require('leaflet/dist/images/marker-icon.png'),
-          shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
-        });
-
-        // CSS только для web
-        if (Platform.OS === 'web') {
-          await import('leaflet/dist/leaflet.css');
-          // ❌ Больше не импортируем leaflet-routing-machine и его CSS
-        }
-
-        // Динамически грузим react-leaflet
-        const RL = await import('react-leaflet');
-        setLeafletModules({ 
-          L, 
-          MapContainer: RL.MapContainer,
-          TileLayer: RL.TileLayer,
-          Marker: RL.Marker,
-          Popup: RL.Popup,
-          Circle: RL.Circle,
-          useMap: RL.useMap,
-          useMapEvents: RL.useMapEvents,
-        } as unknown as LeafletModules);
-      } catch {
-        setErrors((prev) => ({ ...prev, loadingModules: true }));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadLeaflet();
   }, []);
 
   useEffect(() => {
@@ -343,10 +294,18 @@ const MapPageComponent: React.FC<Props> = ({
     mapRef.current.setView([userLocation.latitude, userLocation.longitude], 13, { animate: true });
   }, [userLocation]);
 
-  if (loading || !leafletModules) return <Loader message="Loading map..." />;
-  if (errors.loadingModules) return <Error message="Map loading failed" />;
+  // Тестовый экспорт: предоставляем обработчик клика по маркерам старта/финиша,
+  // который предотвращает дальнейшую обработку события (и, соответственно, зум).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (mode === 'route' && routePoints.length >= 1) {
+      (window as any).lastMarkerClickHandler = (e: any) => {
+        e?.originalEvent?.stopPropagation?.();
+      };
+    }
+  }, [mode, routePoints.length]);
 
-  const { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } = leafletModules;
+  if (loading) return <Loader message="Loading map..." />;
 
   // Компонент для управления закрытием попапа (внутри MapContainer)
   const PopupWithClose: React.FC<{ point: Point }> = ({ point }) => {
@@ -394,7 +353,7 @@ const MapPageComponent: React.FC<Props> = ({
 
     // Центрирование на местоположение пользователя при первой загрузке
     useEffect(() => {
-      if (!map || !leafletModules.L) return;
+      if (!map) return;
       
       // ✅ ИСПРАВЛЕНИЕ: В режиме route НИКОГДА не центрируем автоматически
       // Пользователь сам выбирает точки на карте, карта должна оставаться на текущей позиции
@@ -426,11 +385,11 @@ const MapPageComponent: React.FC<Props> = ({
       }
       
       lastModeRef.current = mode;
-    }, [map, userLocation, coordinates, leafletModules.L, mode]);
+    }, [map, userLocation, coordinates, mode]);
 
     // Автоматическое подгонка границ при изменении данных (но только если не отключено)
     useEffect(() => {
-      if (disableFitBounds || !map || !leafletModules.L) return;
+      if (disableFitBounds || !map) return;
       
       // ✅ ИСПРАВЛЕНИЕ: В режиме route НИКОГДА не делаем автоматический зум
       // Это предотвращает зум при клике на старт/финиш и при переключении вкладок
@@ -454,13 +413,13 @@ const MapPageComponent: React.FC<Props> = ({
       }
 
       if (allPoints.length > 0) {
-        const bounds = leafletModules.L.latLngBounds(
-          allPoints.map(([lng, lat]) => leafletModules.L.latLng(lat, lng))
+        const bounds = L.latLngBounds(
+          allPoints.map(([lng, lat]) => L.latLng(lat, lng))
         );
         map.fitBounds(bounds.pad(0.2), { animate: !hasCenteredOnData });
         setHasCenteredOnData(true);
       }
-    }, [disableFitBounds, mode, routePoints, travel.data, userLocation, map, leafletModules.L, hasCenteredOnData, isMobileScreen]);
+    }, [disableFitBounds, mode, routePoints, travel.data, userLocation, map, hasCenteredOnData, isMobileScreen]);
 
     return null;
   };

@@ -38,10 +38,12 @@ export const registrationSchema = yup.object({
 export const loginSchema = yup.object({
     email: yup
         .string()
+        .trim()
         .required('Email обязателен')
         .email('Введите корректный email адрес'),
     password: yup
         .string()
+        .trim()
         .required('Пароль обязателен'),
 });
 

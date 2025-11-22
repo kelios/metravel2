@@ -94,10 +94,11 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
   const iconColor = palette.primary;
 
   const primary: NavItem[] = [
-    { key: "home",   label: "Путешествия", route: "/",          icon: <Feather name="home"  size={20} color={iconColor} /> },
-    { key: "by",     label: "Беларусь",    route: "/travelsby", icon: <Feather name="globe" size={20} color={iconColor} /> },
-    { key: "map",    label: "Карта",       route: "/map",       icon: <Feather name="map"   size={20} color={iconColor} /> },
-    { key: "quests", label: "Квесты",      route: "/quests",    icon: <Feather name="flag"  size={20} color={iconColor} /> },
+    { key: "home",     label: "Путешествия", route: "/",          icon: <Feather name="home"   size={20} color={iconColor} /> },
+    { key: "by",       label: "Беларусь",    route: "/travelsby", icon: <Feather name="globe"  size={20} color={iconColor} /> },
+    { key: "map",      label: "Карта",       route: "/map",       icon: <Feather name="map"    size={20} color={iconColor} /> },
+    { key: "roulette", label: "Случайный маршрут", route: "/roulette",  icon: <Feather name="shuffle" size={20} color={iconColor} /> },
+    { key: "quests",   label: "Квесты",      route: "/quests",    icon: <Feather name="flag"   size={20} color={iconColor} /> },
     { key: "about",  label: "О сайте",     route: "/about",     icon: <Feather name="info"  size={20} color={iconColor} /> },
     { key: "blogby", label: "Пишут о BY",  route: "/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi", icon: <Feather name="list" size={20} color={iconColor} /> },
   ];

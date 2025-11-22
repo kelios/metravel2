@@ -17,8 +17,15 @@ describe('PaginationComponent', () => {
   })
 
   it('renders minimal layout with current page info', () => {
-    const { getByText } = render(<PaginationComponent {...defaultProps} />)
-    expect(getByText('1/10')).toBeTruthy()
+    const { getByText, toJSON } = render(<PaginationComponent {...defaultProps} />)
+
+    // Проверяем текущую десктопную разметку: "Стр." и "из 10" + значение инпута "1"
+    expect(getByText('Стр.')).toBeTruthy()
+    expect(getByText('из 10')).toBeTruthy()
+
+    const tree = toJSON()
+    const treeStr = JSON.stringify(tree)
+    expect(treeStr).toContain('"value":"1"')
   })
 
   it('calls onPageChange when next is pressed', () => {

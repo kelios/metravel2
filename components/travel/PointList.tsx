@@ -207,22 +207,18 @@ const PointCard = React.memo(function PointCard({
               </View>
             </View>
           )}
-        </View>
 
-        {/* ✅ РЕДИЗАЙН: Информационная панель - под изображением, без перекрытия */}
-        <View style={styles.infoPanel}>
-          <View style={styles.infoContent}>
-            {/* Заголовок */}
-            <Text 
-              style={[styles.addressText, { fontSize: responsive.titleSize }]} 
+          {/* Нижний оверлей в том же стиле, что и попап */}
+          <View style={styles.overlayBottom}>
+            <Text
+              style={[styles.overlayTitle, { fontSize: responsive.titleSize }]}
               numberOfLines={2}
             >
               {point.address}
             </Text>
 
-            {/* Координаты */}
-            <Pressable 
-              style={[styles.coordButton, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+            <Pressable
+              style={[styles.overlayCoordRow, globalFocusStyles.focusable]}
               onPress={(e) => {
                 e.stopPropagation();
                 openMapFromLink();
@@ -230,19 +226,22 @@ const PointCard = React.memo(function PointCard({
               accessibilityLabel={`Координаты: ${point.coord}`}
               accessibilityRole="button"
             >
-              {/* ✅ ИСПРАВЛЕНИЕ: Используем единый цвет */}
-              <MapPinned size={14} color={DESIGN_TOKENS.colors.text} />
-              <Text style={[styles.coordText, { fontSize: responsive.coordSize }]} numberOfLines={1}>
+              <MapPinned size={14} color="#e5e7eb" />
+              <Text
+                style={[styles.overlayCoordText, { fontSize: responsive.coordSize }]}
+                numberOfLines={1}
+              >
                 {point.coord}
               </Text>
             </Pressable>
 
-            {/* Категория */}
             {!!point.categoryName && (
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryText} numberOfLines={1}>
-                  {point.categoryName.split(',')[0]?.trim()}
-                </Text>
+              <View style={styles.overlayCategoryRow}>
+                <View style={styles.overlayCategoryChip}>
+                  <Text style={styles.overlayCategoryText} numberOfLines={1}>
+                    {point.categoryName.split(',')[0]?.trim()}
+                  </Text>
+                </View>
               </View>
             )}
           </View>
@@ -700,80 +699,60 @@ const styles = StyleSheet.create({
     }),
   },
 
-  // ✅ РЕДИЗАЙН: Информационная панель под изображением, без перекрытия
-  infoPanel: {
-    paddingTop: 16,
-    paddingBottom: 16,
-    paddingHorizontal: 18,
-    backgroundColor: '#fff',
+  // Нижний оверлей в том же стиле, что и попап/TravelTmlRound
+  overlayBottom: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(15,23,42,0.82)',
+    flexDirection: 'column',
+    gap: 6,
   },
-  infoContent: {
-    gap: 12,
+  overlayTitle: {
+    color: '#f9fafb',
+    fontWeight: '700',
+    lineHeight: 20,
+    letterSpacing: -0.3,
   },
-  addressText: { 
-    color: '#1f2937', 
-    fontWeight: '700', 
-    lineHeight: 24,
-    letterSpacing: -0.4,
-  },
-  coordButton: {
+  overlayCoordRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    gap: 6,
     alignSelf: 'flex-start',
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    ...Platform.select({
-      web: {
-        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-        cursor: 'pointer' as any,
-        ':hover': {
-          backgroundColor: '#ffb380',
-          borderColor: '#ff9f5a',
-          transform: 'translateY(-1px)',
-          boxShadow: '0 4px 12px rgba(255,159,90,0.3)',
-        } as any,
-      },
-    }),
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(15,23,42,0.7)',
   },
-  coordText: {
-    color: '#374151',
+  overlayCoordText: {
+    color: '#e5e7eb',
     fontWeight: '600',
     fontFamily: Platform.select({
       web: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
       default: undefined,
     }),
-    letterSpacing: 0.4,
-    fontSize: 13,
-  },
-  // ✅ РЕДИЗАЙН: Современный бейдж категории
-  categoryBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#ff9f5a',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#ff9f5a',
-    ...Platform.select({
-      web: {
-        boxShadow: '0 2px 8px rgba(255,159,90,0.4)',
-        transition: 'all 0.2s ease',
-        ':hover': {
-          transform: 'scale(1.05)',
-          boxShadow: '0 4px 12px rgba(255,159,90,0.5)',
-        } as any,
-      },
-    }),
-  },
-  categoryText: { 
-    color: '#fff', 
-    fontWeight: '700', 
-    fontSize: 12,
     letterSpacing: 0.3,
+  },
+  overlayCategoryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 2,
+  },
+  overlayCategoryChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(249,250,251,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(248,250,252,0.35)',
+  },
+  overlayCategoryText: {
+    color: '#e5e7eb',
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

@@ -354,11 +354,13 @@ export class PdfExportService {
     // ✅ ИСПРАВЛЕНИЕ: Безопасная проверка margins с fallback
     const margins = settings.margins || 'standard';
     return {
-      margin: margins === 'narrow' 
-        ? [5, 5, 7, 5] 
-        : margins === 'wide' 
-        ? [15, 15, 20, 15] 
-        : [10, 10, 14, 10],
+      // Порядок: [top, left, bottom, right]
+      // Чуть увеличиваем нижнее поле, чтобы полосы и футеры не "прилипали" к краю листа
+      margin: margins === 'narrow'
+        ? [8, 10, 14, 10]
+        : margins === 'wide'
+        ? [20, 18, 26, 18]
+        : [12, 14, 18, 14],
       image: {
         type: 'jpeg',
         quality: settings.imageQuality === 'high' 

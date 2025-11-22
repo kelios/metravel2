@@ -11,12 +11,7 @@ jest.mock('@expo/vector-icons', () => ({
   },
 }));
 
-// Mock expo-router
-jest.mock('expo-router', () => ({
-  useRouter: () => ({
-    push: jest.fn(),
-  }),
-}));
+// expo-router мокается глобально в __tests__/setup.ts
 
 // Mock design system
 jest.mock('@/constants/designSystem', () => ({
@@ -87,9 +82,8 @@ describe('WelcomeBanner', () => {
   });
 
   it('should navigate to new travel page when create button is pressed', () => {
-    const { useRouter } = require('expo-router');
-    const mockPush = jest.fn();
-    useRouter.mockReturnValue({ push: mockPush });
+    const { router } = require('expo-router');
+    router.push.mockClear();
 
     const { UNSAFE_getAllByType } = render(<WelcomeBanner />);
     const { Pressable } = require('react-native');
@@ -108,14 +102,13 @@ describe('WelcomeBanner', () => {
 
     if (createButton) {
       fireEvent.press(createButton);
-      expect(mockPush).toHaveBeenCalledWith('/travel/new');
+      expect(router.push).toHaveBeenCalledWith('/travel/new');
     }
   });
 
   it('should navigate to map page when map button is pressed', () => {
-    const { useRouter } = require('expo-router');
-    const mockPush = jest.fn();
-    useRouter.mockReturnValue({ push: mockPush });
+    const { router } = require('expo-router');
+    router.push.mockClear();
 
     const { UNSAFE_getAllByType } = render(<WelcomeBanner />);
     const { Pressable } = require('react-native');
@@ -134,7 +127,7 @@ describe('WelcomeBanner', () => {
 
     if (mapButton) {
       fireEvent.press(mapButton);
-      expect(mockPush).toHaveBeenCalledWith('/map');
+      expect(router.push).toHaveBeenCalledWith('/map');
     }
   });
 

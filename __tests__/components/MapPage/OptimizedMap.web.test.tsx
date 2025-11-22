@@ -45,7 +45,7 @@ describe('OptimizedMap.web', () => {
   it('passes coordinates to Map component', () => {
     const { getByTestId } = render(<OptimizedMap {...defaultProps} />);
     const coords = getByTestId('map-coordinates');
-    expect(coords.props.children).toBe('53.9, 27.5667');
+    expect(coords.props.children).toEqual([53.9, ', ', 27.5667]);
   });
 
   it('passes mode to Map component', () => {
@@ -70,8 +70,8 @@ describe('OptimizedMap.web', () => {
   it('passes travel data to Map component', () => {
     const travelData = {
       data: [
-        { id: 1, coord: '53.9,27.5667', address: 'Test Address 1' },
-        { id: 2, coord: '53.95,27.6', address: 'Test Address 2' },
+        { id: 1, coord: '53.9,27.5667', address: 'Test Address 1', travelImageThumbUrl: '', categoryName: '' },
+        { id: 2, coord: '53.95,27.6', address: 'Test Address 2', travelImageThumbUrl: '', categoryName: '' },
       ],
     };
     const { getByTestId } = render(<OptimizedMap {...defaultProps} travel={travelData} />);

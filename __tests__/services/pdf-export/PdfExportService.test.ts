@@ -99,7 +99,7 @@ describe('PdfExportService', () => {
       title: 'Test Book',
       subtitle: '',
       coverType: 'auto',
-      template: 'minimal',
+      template: 'classic' as any,
       format: 'A4',
       orientation: 'portrait',
       margins: 'standard',
@@ -174,7 +174,7 @@ describe('PdfExportService', () => {
       title: 'Test Book',
       subtitle: '',
       coverType: 'auto',
-      template: 'minimal',
+      template: 'classic' as any,
       format: 'A4',
       orientation: 'portrait',
       margins: 'standard',
@@ -183,6 +183,12 @@ describe('PdfExportService', () => {
       includeToc: true,
       includeGallery: true,
       includeMap: true,
+      colorTheme: 'blue',
+      fontFamily: 'sans',
+      photoMode: 'gallery',
+      mapMode: 'full-page',
+      includeChecklists: false,
+      checklistSections: ['clothing', 'food', 'electronics'],
     };
 
     it('должен успешно создать превью', async () => {

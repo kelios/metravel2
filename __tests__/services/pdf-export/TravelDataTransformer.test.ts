@@ -37,7 +37,7 @@ describe('TravelDataTransformer', () => {
 
     it('должен пройти валидацию для валидных данных', () => {
       const travels: Travel[] = [
-        { id: 1, name: 'Test Travel', slug: 'test', url: 'test', youtube_link: '', userName: 'user', description: '', recommendation: '', plus: '', minus: '', cityName: '', countryName: '', countUnicIpView: '', gallery: [], travelAddress: [], userIds: '', year: '2024', monthName: 'Январь', number_days: 5, companions: [], countryCode: '' },
+        { id: 1, name: 'Test Travel', slug: 'test', url: 'test', youtube_link: '', userName: 'user', description: '', recommendation: '', plus: '', minus: '', cityName: '', countryName: '', countUnicIpView: '', gallery: [], travelAddress: [], userIds: '', year: '2024', monthName: 'Январь', number_days: 5, companions: [], countryCode: '', travel_image_thumb_url: '', travel_image_thumb_small_url: '' },
       ];
       expect(() => transformer.validate(travels)).not.toThrow();
     });
@@ -68,6 +68,8 @@ describe('TravelDataTransformer', () => {
           number_days: 5,
           companions: [],
           countryCode: '',
+          travel_image_thumb_url: '',
+          travel_image_thumb_small_url: '',
         },
       ];
 
@@ -78,10 +80,11 @@ describe('TravelDataTransformer', () => {
         id: 1,
         name: 'Test Travel',
         slug: 'test',
-        description: 'Test description',
-        recommendation: 'Test recommendation',
-        plus: 'Test plus',
-        minus: 'Test minus',
+        // normalizeRichText оборачивает простой текст в <p>
+        description: '<p>Test description</p>',
+        recommendation: '<p>Test recommendation</p>',
+        plus: '<p>Test plus</p>',
+        minus: '<p>Test minus</p>',
         countryName: 'Belarus',
         cityName: 'Minsk',
         year: '2024',
@@ -114,6 +117,8 @@ describe('TravelDataTransformer', () => {
           number_days: 0,
           companions: [],
           countryCode: '',
+          travel_image_thumb_url: '',
+          travel_image_thumb_small_url: '',
         },
       ];
 
@@ -155,6 +160,8 @@ describe('TravelDataTransformer', () => {
           number_days: 0,
           companions: [],
           countryCode: '',
+          travel_image_thumb_url: '',
+          travel_image_thumb_small_url: '',
         },
       ];
 
@@ -191,6 +198,8 @@ describe('TravelDataTransformer', () => {
           number_days: 0,
           companions: [],
           countryCode: '',
+          travel_image_thumb_url: '',
+          travel_image_thumb_small_url: '',
         },
       ];
 
@@ -227,6 +236,8 @@ describe('TravelDataTransformer', () => {
           number_days: 0,
           companions: [],
           countryCode: '',
+          travel_image_thumb_url: '',
+          travel_image_thumb_small_url: '',
         },
       ];
 
@@ -265,6 +276,8 @@ describe('TravelDataTransformer', () => {
           number_days: 0,
           companions: [],
           countryCode: '',
+          travel_image_thumb_url: '',
+          travel_image_thumb_small_url: '',
         },
       ];
 
@@ -300,6 +313,8 @@ describe('TravelDataTransformer', () => {
           number_days: 0,
           companions: [],
           countryCode: '',
+          travel_image_thumb_url: '',
+          travel_image_thumb_small_url: '',
         },
       ];
 
@@ -336,6 +351,8 @@ describe('TravelDataTransformer', () => {
           number_days: 0,
           companions: [],
           countryCode: '',
+          travel_image_thumb_url: '',
+          travel_image_thumb_small_url: '',
         },
       ];
 
@@ -377,7 +394,9 @@ describe('TravelDataTransformer', () => {
 
       const result = transformer.transform(travels);
 
-      expect(result[0].description).toContain('style="background:currentColor;"');
+      // var(--bg/--fg) заменяются на SAFE_COLOR_FALLBACK (#1f2937),
+      // inline-стили санитизируются до явных color/background значений
+      expect(result[0].description).toContain('style="color:#1f2937; background:#1f2937;"');
       expect(result[0].description).not.toContain('--bg');
       expect(result[0].description).not.toContain(':root');
     });

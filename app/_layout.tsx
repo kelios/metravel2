@@ -1,6 +1,6 @@
 import "@expo/metro-runtime";
 import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Platform, StyleSheet, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Image, Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 import { MD3LightTheme as DefaultTheme, PaperProvider } from "react-native-paper";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
@@ -190,6 +190,9 @@ function RootLayoutNav() {
       );
     }
 
+    // Фоновая карта для бумажного стиля
+    const mapBackground = require("../assets/travel/roulette-map-bg.jpg");
+
     return (
       <ErrorBoundary>
         <PaperProvider theme={theme}>
@@ -198,6 +201,13 @@ function RootLayoutNav() {
                     <QueryClientProvider client={queryClient}>
                         <FiltersProvider>
                             <View style={styles.container}>
+                            {Platform.OS === 'web' && (
+                              <Image
+                                source={mapBackground}
+                                style={styles.backgroundImage}
+                                resizeMode="cover"
+                              />
+                            )}
                             <Head>
                                 <link rel="icon" href="/favicon.ico" />
                                 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
@@ -262,7 +272,19 @@ function RootLayoutNav() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#f6f7fb" },
+    container: {
+        flex: 1,
+        position: 'relative',
+        // Прозрачный корневой контейнер: даём фоновой карте реально просвечивать
+        backgroundColor: 'transparent',
+    },
+    backgroundImage: {
+        ...StyleSheet.absoluteFillObject,
+        width: '100%',
+        height: '100%',
+        // Мягкая текстура: заметна, но не кричащая
+        opacity: 0.45,
+    },
     content: { flex: 1 },
     footerFallback: {
         padding: 12,
@@ -274,6 +296,7 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#f6f7fb",
+        // Оставляем мягкий светлый фон для экрана загрузки шрифтов
+        backgroundColor: DESIGN_TOKENS.colors.background,
     },
 });

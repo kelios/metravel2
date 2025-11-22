@@ -6,6 +6,15 @@ import Login from '@/app/(tabs)/login';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Polyfill for Formik / DOM usage in Jest + React Native environment
+// Formik references HTMLButtonElement in its internals, which is not defined in jsdom for RN tests.
+// Определяем минимальный класс, достаточный для проверок внутри Formik.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+if (typeof (global as any).HTMLButtonElement === 'undefined') {
+  (global as any).HTMLButtonElement = class {};
+}
+
 // Mock dependencies
 jest.mock('@/context/AuthContext');
 jest.mock('expo-router', () => ({
@@ -109,7 +118,7 @@ describe('Login Component', () => {
       fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
-        expect(getByText('Введите email и пароль.')).toBeTruthy();
+        expect(getByText('Введите корректный email адрес')).toBeTruthy();
       });
 
       expect(mockLogin).not.toHaveBeenCalled();
@@ -161,7 +170,7 @@ describe('Login Component', () => {
       fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
-        expect(getByText('Введите email и пароль.')).toBeTruthy();
+        expect(getByText('Пароль обязателен')).toBeTruthy();
       });
 
       expect(mockLogin).not.toHaveBeenCalled();
@@ -278,7 +287,7 @@ describe('Login Component', () => {
       fireEvent.press(getByText('Забыли пароль?'));
 
       await waitFor(() => {
-        expect(getByText('Введите корректный email.')).toBeTruthy();
+        expect(getByText('Введите корректный email адрес')).toBeTruthy();
       });
 
       expect(mockSendPassword).not.toHaveBeenCalled();
@@ -423,7 +432,7 @@ describe('Login Component', () => {
       fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
-        expect(getByText('Введите email и пароль.')).toBeTruthy();
+        expect(getByText('Введите корректный email адрес')).toBeTruthy();
       });
 
       expect(mockLogin).not.toHaveBeenCalled();
@@ -441,7 +450,7 @@ describe('Login Component', () => {
       fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
-        expect(getByText('Введите email и пароль.')).toBeTruthy();
+        expect(getByText('Введите корректный email адрес')).toBeTruthy();
       });
 
       expect(mockLogin).not.toHaveBeenCalled();
@@ -459,7 +468,7 @@ describe('Login Component', () => {
       fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
-        expect(getByText('Введите email и пароль.')).toBeTruthy();
+        expect(getByText('Введите корректный email адрес')).toBeTruthy();
       });
 
       expect(mockLogin).not.toHaveBeenCalled();

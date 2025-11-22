@@ -50,11 +50,11 @@ describe('ListTravel', () => {
 
   it('renders the search input', async () => {
     renderComponent();
-    expect(await screen.findByPlaceholderText(/Найти путешествия/)).toBeTruthy();
+    expect(await screen.findByPlaceholderText(/Найти путешествие/)).toBeTruthy();
   });
 
   it('renders an empty state message when there are no items', async () => {
     renderComponent();
-    expect(await screen.findByText(/Ничего не найдено/i)).toBeTruthy();
+    expect(await screen.findByText(/Пока нет путешествий/i)).toBeTruthy();
   });
 });

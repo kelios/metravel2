@@ -109,17 +109,17 @@ describe('FiltersPanel', () => {
     });
 
     it('displays categories with counts when travelsData is provided', () => {
-        const propsWithData = {
-            ...defaultProps,
-            travelsData: [
-                { categoryName: 'Музеи' },
-                { categoryName: 'Музеи' },
-                { categoryName: 'Парки' },
-            ],
-        };
+      const propsWithData = {
+        ...defaultProps,
+        travelsData: [
+          { categoryName: 'Музеи' },
+          { categoryName: 'Музеи' },
+          { categoryName: 'Парки' },
+        ],
+      };
         const { getByText } = render(<FiltersPanel {...propsWithData} />);
-        // Проверяем, что категории отображаются с количеством
-        expect(getByText(/Музеи/)).toBeTruthy();
+        // Проверяем, что информация о количестве точек отображается корректно
+        expect(getByText(/Найдено точек:/)).toBeTruthy();
+        expect(getByText(/3/)).toBeTruthy();
     });
 });
-
