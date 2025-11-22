@@ -2,7 +2,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { Platform, View, Text } from 'react-native';
 
-const popupMock = jest.fn((props: any) => (
+const mockPopup = jest.fn((props: any) => (
   <View testID="popup-content-mock">
     <Text testID="popup-address">{props.travel.address}</Text>
   </View>
@@ -12,7 +12,7 @@ const popupMock = jest.fn((props: any) => (
 jest.mock('@/components/MapPage/PopupContentComponent', () => {
   return {
     __esModule: true,
-    default: (props: any) => popupMock(props),
+    default: (props: any) => mockPopup(props),
   };
 });
 
@@ -44,8 +44,8 @@ describe('AddressListItem (web right panel)', () => {
     const address = getByTestId('popup-address');
     expect((address as any).props.children).toContain('Kraków');
 
-    expect(popupMock).toHaveBeenCalledTimes(1);
-    expect(popupMock).toHaveBeenCalledWith(
+    expect(mockPopup).toHaveBeenCalledTimes(1);
+    expect(mockPopup).toHaveBeenCalledWith(
       expect.objectContaining({
         travel: expect.objectContaining({ address: baseTravel.address }),
       }),
