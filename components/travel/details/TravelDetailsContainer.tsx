@@ -1435,7 +1435,7 @@ const TravelVisualSections: React.FC<{
         <View style={{ marginTop: 12 }}>
           {travel.travelAddress && (
             <Suspense fallback={<PointListFallback />}>
-              <PointList points={travel.travelAddress} />
+              <PointList points={travel.travelAddress} baseUrl={travel.url} />
             </Suspense>
           )}
         </View>

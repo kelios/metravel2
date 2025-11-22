@@ -14,6 +14,7 @@ import { Text, IconButton } from 'react-native-paper';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 import { TravelCoords } from '@/src/types/types';
+import PopupContentComponent from './PopupContentComponent';
 
 type Props = {
     travel: TravelCoords;
@@ -162,6 +163,22 @@ const AddressListItem: React.FC<Props> = ({
         return 360;                         // Большие экраны
     };
     const height = getCardHeight();
+
+    if (Platform.OS === 'web') {
+        return (
+          <div style={{ padding: 8 }}>
+            <PopupContentComponent travel={{
+              address,
+              coord,
+              travelImageThumbUrl,
+              categoryName,
+              description: undefined,
+              articleUrl,
+              urlTravel,
+            }} />
+          </div>
+        );
+    }
 
     return (
       <View
