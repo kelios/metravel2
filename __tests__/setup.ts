@@ -245,6 +245,26 @@ jest.mock('react-native-toast-message', () => ({
 }))
 
 // Mock native modules before mocking react-native
+jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter', () => {
+  class MockNativeEventEmitter {
+    addListener() {
+      return { remove: jest.fn() }
+    }
+    removeAllListeners() {}
+    removeSubscription() {}
+  }
+  return MockNativeEventEmitter
+})
+
+jest.mock('react-native/Libraries/PushNotificationIOS/PushNotificationIOS', () => ({
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+  requestPermissions: jest.fn(),
+  abandonPermissions: jest.fn(),
+  checkPermissions: jest.fn((cb: any) => cb({ alert: true, badge: true, sound: true })),
+  getInitialNotification: jest.fn(() => Promise.resolve(null)),
+}))
+
 jest.mock('react-native/Libraries/Settings/NativeSettingsManager', () => ({
   __esModule: true,
   default: {
