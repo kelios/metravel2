@@ -34,6 +34,7 @@ interface Props {
     hasFilters?: boolean;
     activeFiltersCount?: number;
     onClearAll?: () => void;
+    placeholderOverride?: string;
 }
 
 function SearchAndFilterBar({ 
@@ -47,6 +48,7 @@ function SearchAndFilterBar({
     hasFilters = false,
     activeFiltersCount = 0,
     onClearAll,
+    placeholderOverride,
 }: Props) {
     const { width } = useWindowDimensions();
     const isMobile = width <= 768;
@@ -216,7 +218,13 @@ function SearchAndFilterBar({
                             value={text}
                             onChangeText={handleChange}
                             onFocus={() => setShowAutocomplete(text.length >= 2 || text.length === 0)}
-                            placeholder={isMobile ? "Найти путешествия…" : "Найти путешествие…"}
+                            placeholder={
+                                placeholderOverride !== undefined
+                                    ? placeholderOverride
+                                    : isMobile
+                                    ? "Найти путешествия…"
+                                    : "Найти путешествие…"
+                            }
                             placeholderTextColor={palette.textSubtle}
                             style={[styles.input, isMobile && styles.inputMobile]}
                             returnKeyType="search"

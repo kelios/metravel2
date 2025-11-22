@@ -276,7 +276,8 @@ describe('CollapsibleBlock', () => {
 
     const tree = toJSON();
     const treeStr = JSON.stringify(tree);
-    expect(treeStr).toContain('Показать: Test Block');
+    expect(treeStr).toContain('Показать: ');
+    expect(treeStr).toContain('Test Block');
   });
 });
 

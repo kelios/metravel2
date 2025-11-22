@@ -1,0 +1,765 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Easing, Modal, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions, Pressable, FlatList, Image } from 'react-native';
+import { usePathname } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
+
+import InstantSEO from '@/components/seo/InstantSEO';
+import FiltersComponent from '@/components/listTravel/FiltersComponent';
+import SearchAndFilterBar from '@/components/listTravel/SearchAndFilterBar';
+import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
+import UIButton from '@/components/ui/Button';
+
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useListTravelFilters } from '@/components/listTravel/hooks/useListTravelFilters';
+import { useListTravelData } from '@/components/listTravel/hooks/useListTravelData';
+import { fetchAllCountries, fetchFilters, fetchFiltersCountry } from '@/src/api/travels';
+import type { Travel } from '@/src/types/types';
+import type { FilterOptions } from '@/components/listTravel/utils/listTravelTypes';
+
+const palette = DESIGN_TOKENS.colors;
+
+function shuffleTravels(items: Travel[]): Travel[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+export default function RouletteScreen() {
+  const pathname = usePathname();
+  const isFocused = useIsFocused();
+  const { width } = useWindowDimensions();
+  const isMobile = width <= 768;
+
+  const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
+  const canonical = useMemo(() => `${SITE}${pathname || '/roulette'}`, [SITE, pathname]);
+
+  const title = 'Случайный маршрут | Metravel';
+  const description = 'Не знаешь, куда поехать? Подбери фильтры — и мы случайно предложим три маршрута под твои пожелания.';
+
+  // Фоновые изображения (карта и компас) из корневого assets/travel
+  // Относительный путь: from app/(tabs)/roulette.tsx -> ../../assets/travel/
+  const mapBackground = require('../../assets/travel/roulette-map-bg.jpg');
+  const compassBackground = require('../../assets/travel/roulette-compass-bg.jpg');
+
+  const { data: rawOptions, isLoading: filtersLoading } = useQuery({
+    queryKey: ['roulette-filter-options'],
+    queryFn: async () => {
+      const [base, countries] = await Promise.all([
+        fetchFilters(),
+        fetchFiltersCountry(),
+      ]);
+      return { ...base, countries } as any;
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const options: FilterOptions | undefined = useMemo(() => {
+    if (!rawOptions) return undefined;
+    const transformed: FilterOptions = {
+      countries: rawOptions.countries || [],
+    } as FilterOptions;
+
+    const stringArrayFields = [
+      'categories',
+      'categoryTravelAddress',
+      'transports',
+      'companions',
+      'complexity',
+      'month',
+      'over_nights_stay',
+    ] as const;
+
+    stringArrayFields.forEach((field) => {
+      const value = (rawOptions as any)[field];
+      if (Array.isArray(value)) {
+        (transformed as any)[field] = value.map((item: any) => {
+          if (item && typeof item === 'object' && 'id' in item && 'name' in item) {
+            return item;
+          }
+          return {
+            id: String(item),
+            name: String(item),
+          };
+        });
+      }
+    });
+
+    return transformed;
+  }, [rawOptions]);
+
+  const [defaultCountries, setDefaultCountries] = useState<number[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadDefaultCountries = async () => {
+      try {
+        const all = await fetchAllCountries();
+        if (!Array.isArray(all)) return;
+        let belarusId: number | null = null;
+        let polandId: number | null = null;
+        all.forEach((country: any) => {
+          const name = String(country?.name || country?.title || '').toLowerCase();
+          const idRaw = country?.id ?? country?.pk;
+          const id = typeof idRaw === 'number' ? idRaw : Number(String(idRaw).trim());
+          if (!Number.isFinite(id)) return;
+          if (!belarusId && (name.includes('беларус') || name.includes('belarus'))) {
+            belarusId = id;
+          }
+          if (!polandId && (name.includes('польш') || name.includes('poland'))) {
+            polandId = id;
+          }
+        });
+        const result: number[] = [];
+        if (belarusId != null) result.push(belarusId);
+        if (polandId != null && polandId !== belarusId) result.push(polandId);
+        if (!cancelled && result.length > 0) {
+          setDefaultCountries(result);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setDefaultCountries(null);
+        }
+      }
+    };
+    loadDefaultCountries();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const [search, setSearch] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+
+  const {
+    filter,
+    queryParams,
+    resetFilters,
+    onSelect,
+    applyFilter,
+  } = useListTravelFilters({
+    options,
+    isMeTravel: false,
+    isExport: false,
+    isTravelBy: false,
+    userId: null,
+  });
+
+  const rouletteQueryParams = useMemo(() => {
+    const base = { ...queryParams };
+    if (!base.countries || !Array.isArray(base.countries) || base.countries.length === 0) {
+      if (defaultCountries && defaultCountries.length > 0) {
+        base.countries = defaultCountries;
+      }
+    }
+    return base;
+  }, [queryParams, defaultCountries]);
+
+  const {
+    data: travels,
+    isLoading,
+    isFetching,
+    isEmpty,
+    refetch,
+  } = useListTravelData({
+    queryParams: rouletteQueryParams,
+    search,
+    isQueryEnabled: true,
+  });
+
+  const [spinning, setSpinning] = useState(false);
+  const [result, setResult] = useState<Travel[]>([]);
+  const spinAnim = useRef(new Animated.Value(0)).current;
+
+  const handleSpin = useCallback(() => {
+    if (!travels || travels.length === 0) {
+      setResult([]);
+      return;
+    }
+    setSpinning(true);
+    spinAnim.setValue(0);
+    const next = shuffleTravels(travels).slice(0, 3);
+
+    Animated.timing(spinAnim, {
+      toValue: 1,
+      duration: 900,
+      easing: Easing.inOut(Easing.quad),
+      useNativeDriver: true,
+    }).start(() => {
+      setResult(next);
+      setSpinning(false);
+    });
+  }, [spinAnim, travels]);
+
+  const handleClearAll = useCallback(() => {
+    setSearch('');
+    resetFilters();
+    setResult([]);
+  }, [resetFilters]);
+
+  const showLoading = isLoading || isFetching || filtersLoading;
+
+  // Анимации карты и маркера маршрута
+  const mapScale = useMemo(
+    () =>
+      spinAnim.interpolate({
+        inputRange: [0, 0.4, 1],
+        outputRange: [0.6, 1.05, 1],
+      }),
+    [spinAnim],
+  );
+
+  const mapBorderRadius = useMemo(
+    () =>
+      spinAnim.interpolate({
+        inputRange: [0, 0.4, 1],
+        outputRange: [40, 20, 16],
+      }),
+    [spinAnim],
+  );
+
+  const routeProgress = useMemo(
+    () =>
+      spinAnim.interpolate({
+        inputRange: [0, 0.3, 1],
+        outputRange: [0, 0, 1],
+      }),
+    [spinAnim],
+  );
+
+  return (
+    <View style={styles.root}>
+      {Platform.OS === 'web' && (
+        <Image
+          source={mapBackground}
+          style={styles.rootBackgroundImage}
+          resizeMode="cover"
+        />
+      )}
+      {isFocused && Platform.OS === 'web' && (
+        <InstantSEO
+          headKey="roulette"
+          title={title}
+          description={description}
+          canonical={canonical}
+          image={`${SITE}/og-preview.jpg`}
+          ogType="website"
+        />
+      )}
+      <View style={styles.container}>
+        {!isMobile && (
+          <View style={styles.sidebar}>
+            <FiltersComponent
+              filters={options || {}}
+              filterValue={filter}
+              onSelectedItemsChange={onSelect}
+              handleApplyFilters={applyFilter}
+              resetFilters={resetFilters}
+              isSuperuser={false}
+              closeMenu={undefined}
+              search={undefined}
+              setSearch={undefined}
+              onToggleRecommendations={undefined}
+              isRecommendationsVisible={undefined}
+              hasFilters={Object.keys(queryParams).length > 0}
+              resultsCount={travels.length}
+              onClearAll={handleClearAll}
+            />
+          </View>
+        )}
+
+        <View style={styles.main}>
+          <View style={styles.heroRow}>
+            <View style={styles.heroTextBlock}>
+              <Text style={styles.heroTitle}>Не знаешь, куда поехать?</Text>
+              <Text style={styles.heroSubtitle}>
+                Подбери фильтры — и мы случайно предложим три маршрута под твои пожелания.
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.topBar}>
+            {isMobile && (
+              <View style={styles.spinButtonWrapperMobile}>
+                <UIButton
+                  label={spinning ? 'Подбираем маршруты…' : (result.length > 0 ? 'Подобрать ещё варианты' : 'Подобрать маршруты')}
+                  onPress={handleSpin}
+                  disabled={showLoading || (!travels || travels.length === 0)}
+                />
+              </View>
+            )}
+          </View>
+
+          <View style={styles.resultsContainer}>
+            {showLoading && (
+              <View style={styles.loaderBox}>
+                <ActivityIndicator size="large" color={palette.primary} />
+                <Text style={styles.loaderText}>Подбираем маршруты…</Text>
+              </View>
+            )}
+
+            {!showLoading && isEmpty && (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyTitle}>Ничего не нашли</Text>
+                <Text style={styles.emptyText}>
+                  Попробуй убрать часть фильтров или измени запрос.
+                </Text>
+              </View>
+            )}
+
+            {!showLoading && !isEmpty && result.length === 0 && travels.length > 0 && (
+              <View style={styles.hintBox}>
+                <Text style={styles.hintTitle}>Готов к случайному путешествию?</Text>
+                <Text style={styles.hintText}>
+                  Настрой фильтры слева и нажми «Подобрать маршруты», чтобы получить три идеи поездок.
+                </Text>
+              </View>
+            )}
+
+            {!showLoading && !isEmpty && (
+              <View style={styles.cardsContainer}>
+                {spinning && (
+                  <View style={styles.overlaySpinner}>
+                    <View style={styles.spinnerCircle}>
+                      <ActivityIndicator size="large" color={palette.primary} />
+                      <Text style={styles.spinnerText}>Подбираем маршруты…</Text>
+                    </View>
+                  </View>
+                )}
+                {Platform.OS === 'web' && !isMobile ? (
+                  <View style={styles.rouletteWrapper}>
+                    <View style={styles.rouletteCircle}>
+                      {/* Фон-компас внутри круга на web */}
+                      <Image
+                        source={compassBackground}
+                        style={styles.rouletteCompassImage}
+                        resizeMode="cover"
+                      />
+                      {result.slice(0, 3).map((item, index) => (
+                        <View
+                          key={String(item.id)}
+                          style={[
+                            styles.rouletteCard,
+                            index === 0 && styles.rouletteCardTop,
+                            index === 1 && styles.rouletteCardLeft,
+                            index === 2 && styles.rouletteCardRight,
+                          ]}
+                        >
+                          <RenderTravelItem
+                            item={item}
+                            index={index}
+                            isMobile={false}
+                            isSuperuser={false}
+                            isMetravel={false}
+                            onDeletePress={undefined}
+                            onEditPress={undefined}
+                            isFirst={index === 0}
+                            isSingle
+                            selectable={false}
+                            isSelected={false}
+                            onToggle={undefined}
+                          />
+                        </View>
+                      ))}
+
+                      <View style={styles.rouletteCenter}>
+                        <Text style={styles.rouletteCenterTitle}>Случайный маршрут</Text>
+                        <Text style={styles.rouletteCenterSubtitle}>
+                          {result.length > 0
+                            ? `Выбрано ${result.length} маршрута`
+                            : 'Нажми, чтобы подобрать маршруты'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.rouletteButtonDesktop}>
+                      <UIButton
+                        label={spinning ? 'Подбираем маршруты…' : (result.length > 0 ? 'Подобрать ещё варианты' : 'Подобрать маршруты')}
+                        onPress={handleSpin}
+                        disabled={showLoading || (!travels || travels.length === 0)}
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={result}
+                    keyExtractor={(item) => String(item.id)}
+                    key="cols-1"
+                    numColumns={1}
+                    contentContainerStyle={styles.cardsGrid}
+                    renderItem={({ item, index }) => (
+                      <View style={styles.cardWrapper}>
+                        <RenderTravelItem
+                          item={item}
+                          index={index}
+                          isMobile={isMobile}
+                          isSuperuser={false}
+                          isMetravel={false}
+                          onDeletePress={undefined}
+                          onEditPress={undefined}
+                          isFirst={index === 0}
+                          selectable={false}
+                          isSelected={false}
+                          onToggle={undefined}
+                        />
+                      </View>
+                    )}
+                  />
+                )}
+              </View>
+            )}
+          </View>
+        </View>
+      </View>
+
+      {isMobile && (
+        <Modal
+          visible={showFilters}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowFilters(false)}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setShowFilters(false)}>
+            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+              <FiltersComponent
+                filters={options || {}}
+                filterValue={filter}
+                onSelectedItemsChange={onSelect}
+                handleApplyFilters={applyFilter}
+                resetFilters={resetFilters}
+                isSuperuser={false}
+                closeMenu={() => setShowFilters(false)}
+                search={undefined}
+                setSearch={undefined}
+                onToggleRecommendations={undefined}
+                isRecommendationsVisible={undefined}
+                hasFilters={Object.keys(queryParams).length > 0}
+                resultsCount={travels.length}
+                onClearAll={handleClearAll}
+              />
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: palette.background,
+  },
+  rootBackgroundImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    opacity: 0.9,
+  },
+  container: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 16,
+  },
+  sidebar: {
+    width: 320,
+    maxWidth: 360,
+    backgroundColor: 'rgba(252,248,240,0.96)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,128,94,0.22)',
+    borderRadius: 18,
+    padding: 8,
+  },
+  main: {
+    flex: 1,
+    borderRadius: 18,
+    // Лёгкий полупрозрачный слой, чтобы текст читался, но карта просвечивала
+    backgroundColor: Platform.select({
+      web: 'rgba(255, 255, 255, 0.75)',
+      default: 'rgba(255, 255, 255, 0.9)',
+    }) as string,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 8,
+    padding: 16,
+  },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    gap: 16,
+  },
+  heroTextBlock: {
+    flex: 1,
+    maxWidth: 480,
+  },
+  heroTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: palette.text,
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    color: palette.textMuted,
+  },
+  heroButtonBlock: {
+    minWidth: 200,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  spinButtonWrapper: {
+    minWidth: 160,
+  },
+  spinButtonWrapperMobile: {
+    marginTop: 12,
+  },
+  resultsContainer: {
+    flex: 1,
+    paddingBottom: 32,
+  },
+  loaderBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loaderText: {
+    marginTop: 12,
+    color: palette.textMuted,
+    fontSize: 14,
+  },
+  emptyBox: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: palette.text,
+    marginBottom: 6,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: palette.textMuted,
+    textAlign: 'center',
+    maxWidth: 360,
+  },
+  hintBox: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  hintTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: palette.text,
+    marginBottom: 8,
+  },
+  hintText: {
+    fontSize: 14,
+    color: palette.textMuted,
+    textAlign: 'center',
+    maxWidth: 380,
+  },
+  cardsGrid: {
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  cardsContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  cardsRow: {
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  cardWrapper: {
+    flex: 1,
+    marginHorizontal: 8,
+    marginBottom: 12,
+  },
+  rouletteWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
+  rouletteCircle: {
+    width: 440,
+    height: 440,
+    borderRadius: 220,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(148,128,94,0.35)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.08,
+    shadowRadius: 32,
+    elevation: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rouletteCard: {
+    position: 'absolute',
+    width: 260,
+    maxWidth: '78%',
+  },
+  rouletteCardTop: {
+    top: -40,
+    left: '50%',
+    transform: [{ translateX: -130 }, { rotate: '-6deg' }],
+  },
+  rouletteCardLeft: {
+    bottom: 10,
+    left: -10,
+    transform: [{ rotate: '-14deg' }],
+  },
+  rouletteCardRight: {
+    bottom: 10,
+    right: -10,
+    transform: [{ rotate: '10deg' }],
+  },
+  rouletteCenter: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 2,
+    borderColor: 'rgba(148,128,94,0.45)',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  rouletteCenterTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1f2933',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  rouletteCenterSubtitle: {
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  rouletteButtonDesktop: {
+    marginTop: 24,
+  },
+  rouletteCompassImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    opacity: 0.85,
+    borderRadius: 220,
+  },
+  overlaySpinner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(248,248,248,0.45)',
+    zIndex: 1,
+  },
+  spinnerCircle: {
+    minWidth: 220,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 25,
+  },
+  spinnerText: {
+    fontSize: 14,
+    color: palette.textMuted,
+  },
+  mapCard: {
+    width: 220,
+    height: 150,
+    backgroundColor: '#f7f5f0',
+    borderWidth: 1,
+    borderColor: '#e0d4b8',
+    alignItems: 'stretch',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 8,
+    padding: 12,
+  },
+  mapInner: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  mapTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4a4a4a',
+  },
+  routeLineContainer: {
+    flex: 1,
+    marginTop: 12,
+    borderRadius: 10,
+    paddingHorizontal: 4,
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  routeLine: {
+    height: 3,
+    borderRadius: 3,
+    backgroundColor: '#2f9e8d',
+    transformOrigin: 'left center' as any,
+  },
+  routeMarker: {
+    position: 'absolute',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#2f9e8d',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  routeMarkerIcon: {
+    fontSize: 14,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: palette.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 12,
+    maxHeight: '80%',
+  },
+});

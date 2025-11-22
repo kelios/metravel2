@@ -4,7 +4,7 @@
 import QRCode from 'qrcode'
 import { sanitizeRichTextForPdf } from './sanitizeRichText'
 
-type Travel = {
+export type Travel = {
     id: number | string
     name: string
     slug?: string
@@ -35,8 +35,8 @@ async function makeQR(url: string) {
 
 function coverImage(travel: Travel) {
     const first =
-        travel?.gallery?.[0]?.url ||
         travel?.travel_image_thumb_url ||
+        travel?.gallery?.[0]?.url ||
         ''
 
     if (!first) return ''

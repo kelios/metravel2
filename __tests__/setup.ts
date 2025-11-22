@@ -8,11 +8,6 @@ if (typeof window === 'undefined') {
   ;(global as any).window = {
     addEventListener: jest.fn(),
     removeEventListener: jest.fn(),
-    matchMedia: jest.fn(() => ({
-      matches: false,
-      addListener: jest.fn(),
-      removeListener: jest.fn(),
-    })),
     requestAnimationFrame: (cb: any) => setTimeout(cb, 0),
     cancelAnimationFrame: (id: number) => clearTimeout(id),
     requestIdleCallback: jest.fn((cb: any) => setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 16 }), 0)),
@@ -88,12 +83,15 @@ if (typeof (window as any).Image === 'undefined') {
 jest.mock('expo-router', () => {
   const React = require('react')
   const RN = require('react-native')
+
+  const router = {
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+  }
+
   return {
-    router: {
-      push: jest.fn(),
-      replace: jest.fn(),
-      back: jest.fn(),
-    },
+    router,
     Link: ({ children, href, ...props }: any) => {
       const content = React.Children.map(children, (child: any) =>
         typeof child === 'string'
@@ -102,11 +100,7 @@ jest.mock('expo-router', () => {
       )
       return React.createElement(RN.TouchableOpacity, props, content)
     },
-    useRouter: () => ({
-      push: jest.fn(),
-      replace: jest.fn(),
-      back: jest.fn(),
-    }),
+    useRouter: () => router,
     usePathname: () => '/',
     useSegments: () => [],
     Href: {} as any,
@@ -265,7 +259,8 @@ jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native')
   return {
     ...RN,
-    useWindowDimensions: () => ({ width: 375, height: 667 }),
+    // Desktop-like default; individual tests can override via their own mocks
+    useWindowDimensions: () => ({ width: 1024, height: 768 }),
     Settings: {
       get: jest.fn(),
       set: jest.fn(),

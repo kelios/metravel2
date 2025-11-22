@@ -46,6 +46,7 @@ const TravelListComponent: React.FC<TravelListComponentProps> = ({
                 </View>
             )}
             keyExtractor={(item) => item.id.toString()}
+            key={`cols-${numColumns}`}
             numColumns={numColumns}
             columnWrapperStyle={numColumns > 1 ? { justifyContent: 'center', gap: 16 } : undefined}
             style={styles.list}

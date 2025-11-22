@@ -17,6 +17,7 @@ const NAV_ITEMS = [
     { path: '/', label: 'Путешествия', icon: 'home' },
     { path: '/travelsby', label: 'Беларусь', icon: 'globe' },
     { path: '/map', label: 'Карта', icon: 'map' },
+    { path: '/roulette', label: 'Случайный маршрут', icon: 'shuffle' },
     { path: '/quests', label: 'Квесты', icon: 'flag' },
 ];
 

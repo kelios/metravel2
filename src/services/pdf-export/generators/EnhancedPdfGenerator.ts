@@ -295,8 +295,9 @@ export class EnhancedPdfGenerator {
       ">
         <div style="
           text-align: center;
-          margin-bottom: 22mm;
-          padding-bottom: 16mm;
+          margin-top: 10mm;
+          margin-bottom: 14mm;
+          padding-bottom: 10mm;
           border-bottom: 3px solid ${colors.accent};
         ">
           <h2 style="
@@ -371,7 +372,7 @@ export class EnhancedPdfGenerator {
               right: 0;
               bottom: 0;
               background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.85) 100%);
-              padding: 28mm 22mm;
+              padding: 22mm 22mm 18mm 22mm;
             ">
               <h1 style="
                 color: #ffffff;

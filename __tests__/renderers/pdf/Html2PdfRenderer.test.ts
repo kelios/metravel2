@@ -59,19 +59,25 @@ global.document = {
   } as any,
 } as any;
 
-global.DOMParser = jest.fn().mockImplementation(() => ({
-  parseFromString: jest.fn((html: string) => {
-    const doc: any = {
-      body: {
-        innerHTML: html.replace(/<View[^>]*>/gi, '').replace(/<\/View>/gi, '').replace(/<Text[^>]*>/gi, '').replace(/<\/Text>/gi, ''),
-      },
-      head: {
-        querySelectorAll: jest.fn(() => []),
-      },
-    };
-    return doc;
-  }),
-})) as any;
+global.DOMParser = jest.fn().mockImplementation(() => {
+  const instance: any = {
+    body: { innerHTML: '' },
+    head: {
+      querySelectorAll: jest.fn(() => []),
+    },
+  };
+
+  instance.parseFromString = jest.fn((html: string) => {
+    instance.body.innerHTML = html
+      .replace(/<View[^>]*>/gi, '')
+      .replace(/<\/View>/gi, '')
+      .replace(/<Text[^>]*>/gi, '')
+      .replace(/<\/Text>/gi, '');
+    return instance;
+  });
+
+  return instance;
+}) as any;
 
 global.URL = {
   createObjectURL: jest.fn(() => 'blob:mock-url'),

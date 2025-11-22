@@ -26,6 +26,51 @@ import SearchAndFilterBar from "./SearchAndFilterBar";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
+interface FiltersData {
+  countries?: any[];
+  categories?: any[];
+  categoryTravelAddress?: any[];
+  transports?: any[];
+  companions?: any[];
+  complexity?: any[];
+  month?: any[];
+  over_nights_stay?: any[];
+}
+
+interface FiltersValue {
+  year?: string;
+  moderation?: number | undefined;
+  countries?: any;
+  categories?: any[];
+  categoryTravelAddress?: any[];
+  transports?: any[];
+  companions?: any[];
+  complexity?: any[];
+  month?: any[];
+  over_nights_stay?: any[];
+  [key: string]: any;
+}
+
+interface FiltersComponentProps {
+  filters?: FiltersData;
+  filterValue?: FiltersValue;
+  onSelectedItemsChange: (field: string, value: any) => void;
+  handleApplyFilters: (filters: FiltersValue) => void;
+  resetFilters: () => void;
+  closeMenu?: () => void;
+  isSuperuser: boolean;
+  isCompact?: boolean;
+  disableApplyOnMobileClose?: boolean;
+  initialOpenState?: Record<string, boolean>;
+  search?: string;
+  setSearch?: (value: string) => void;
+  onToggleRecommendations?: () => void;
+  isRecommendationsVisible?: boolean;
+  resultsCount?: number;
+  hasFilters?: boolean;
+  onClearAll?: () => void;
+}
+
 /* ===================== */
 /*   Служебные элементы  */
 /* ===================== */
@@ -142,25 +187,25 @@ const GroupBox = memo(function GroupBox({
 /*     Основной блок     */
 /* ===================== */
 
-const FiltersComponent = ({
-                            filters = {},
-                            filterValue = {},
-                            onSelectedItemsChange,
-                            handleApplyFilters,
-                            resetFilters,
-                            closeMenu,
-                            isSuperuser,
-                            isCompact = false,
-                            disableApplyOnMobileClose = false,
-                            initialOpenState = {},
-                            search,
-                            setSearch,
-                            onToggleRecommendations,
-                            isRecommendationsVisible,
-                            resultsCount,
-                            hasFilters,
-                            onClearAll,
-                          }) => {
+const FiltersComponent: React.FC<FiltersComponentProps> = ({
+  filters = {},
+  filterValue = {},
+  onSelectedItemsChange,
+  handleApplyFilters,
+  resetFilters,
+  closeMenu,
+  isSuperuser,
+  isCompact = false,
+  disableApplyOnMobileClose = false,
+  initialOpenState = {},
+  search,
+  setSearch,
+  onToggleRecommendations,
+  isRecommendationsVisible,
+  resultsCount,
+  hasFilters,
+  onClearAll,
+}) => {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { name } = useRoute() as any;
@@ -178,9 +223,16 @@ const FiltersComponent = ({
 
   const scrollRef = useRef<ScrollView>(null);
   const yearInputRef = useRef<TextInput>(null);
+  const latestFiltersRef = useRef<Record<string, any>>(filterValue);
+
+  // Всегда держим в ref последнее известное состояние фильтров
+  useEffect(() => {
+    latestFiltersRef.current = filterValue;
+  }, [filterValue]);
 
   const groups = useMemo(
     () => [
+      // Страны скрываем только на спец.странице travelsby, на остальных страницах фильтр доступен
       { label: "Страны", field: "countries", items: filters.countries ?? [], valKey: "country_id", labelKey: "title_ru", hidden: isTravelsByPage },
       { label: "Категории", field: "categories", items: filters.categories ?? [], valKey: "id", labelKey: "name" },
       { label: "Объекты", field: "categoryTravelAddress", items: filters.categoryTravelAddress ?? [], valKey: "id", labelKey: "name" },
@@ -198,13 +250,15 @@ const FiltersComponent = ({
 
     // ✅ ИСПРАВЛЕНИЕ: Год всегда берем из локального состояния year, а не из filterValue
     // Это гарантирует, что актуальное значение года попадет в запрос
-    const yearValue = year && typeof year === 'string' && year.trim() !== '' 
-      ? year.trim() 
+    const yearValue = year && typeof year === 'string' && year.trim() !== ''
+      ? year.trim()
       : undefined;
-    
-    // ✅ ИСПРАВЛЕНИЕ: Обновляем год в filterValue перед применением
+
+    // ✅ ИСПРАВЛЕНИЕ: Берем базовое состояние фильтров из latestFiltersRef,
+    // чтобы учитывать только что измененные значения (категории, транспорт и т.д.)
+    const baseFilters = latestFiltersRef.current || filterValue;
     const updatedFilterValue = {
-      ...filterValue,
+      ...baseFilters,
       year: yearValue,
     };
 
@@ -272,7 +326,7 @@ const FiltersComponent = ({
   // чекбоксы: обновляем и авто-применяем всегда (без кнопок)
   const handleCheckForField = useCallback(
     (field: string) => (id: any) => {
-      const selected = filterValue[field] ?? [];
+      const selected = (latestFiltersRef.current?.[field] ?? filterValue[field] ?? []);
       // ✅ ИСПРАВЛЕНИЕ: Нормализуем типы для корректного сравнения (строки и числа)
       const normalizedId = String(id);
       const normalizedSelected = selected.map((v: any) => String(v));
@@ -280,6 +334,11 @@ const FiltersComponent = ({
       const next = isSelected 
         ? selected.filter((v: any) => String(v) !== normalizedId)
         : [...selected, id];
+      // Обновляем локальное представление фильтров, чтобы apply знал о свежем состоянии
+      latestFiltersRef.current = {
+        ...(latestFiltersRef.current || filterValue),
+        [field]: next,
+      };
       onSelectedItemsChange(field, next);
       debouncedApply(); // ✅ КОМПАКТНОСТЬ: Авто-применение всегда
     },
@@ -293,6 +352,10 @@ const FiltersComponent = ({
       setYearApplied(false); // ✅ UX: Сбрасываем индикатор при изменении
       // ✅ ИСПРАВЛЕНИЕ: Немедленно обновляем год в фильтрах при изменении
       const yearValue = cleaned && cleaned.length > 0 ? cleaned : undefined;
+      latestFiltersRef.current = {
+        ...(latestFiltersRef.current || filterValue),
+        year: yearValue,
+      };
       onSelectedItemsChange('year', yearValue);
       // ✅ UX: Авто-применение при вводе 4 цифр
       if (cleaned.length === 4) {

@@ -1057,7 +1057,7 @@ function renderTravelTextPage(options: {
             ? `<div style="margin-top: 28px; display: flex; gap: 18px; align-items: flex-start; border-top: 2px solid ${theme.border}; padding-top: 20px;">
                 ${
                   qr
-                    ? `<img src="${qr}" alt="QR" style="width: 50mm; height: 50mm; border-radius: 10px; border: 3px solid ${theme.surfaceAlt}; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />`
+                    ? `<img src="${qr}" alt="QR" style="width: 50mm; height: 50mm; border-radius: 10px; border: 3px solid ${theme.surfaceAlt}; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" crossorigin="anonymous" />`
                     : ''
                 }
                 <div style="font-size: 10.5pt; color: ${theme.muted}; flex: 1;">

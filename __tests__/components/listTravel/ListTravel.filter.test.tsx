@@ -2,7 +2,25 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListTravel from '@/components/listTravel/ListTravel';
+import { FavoritesProvider } from '@/context/FavoritesContext';
 import { fetchTravels } from '@/src/api/travels';
+
+jest.mock('@/context/AuthContext', () => ({
+    useAuth: () => ({
+        isAuthenticated: false,
+        username: '',
+        isSuperuser: false,
+        userId: null,
+        setIsAuthenticated: jest.fn(),
+        setUsername: jest.fn(),
+        setIsSuperuser: jest.fn(),
+        setUserId: jest.fn(),
+        login: jest.fn(),
+        logout: jest.fn(),
+        sendPassword: jest.fn(),
+        setNewPassword: jest.fn(),
+    }),
+}));
 
 jest.mock('@react-navigation/native', () => ({
     useRoute: () => ({ params: {} }),
@@ -39,7 +57,9 @@ describe('ListTravel - Filter Management', () => {
     const renderComponent = () => {
         return render(
             <QueryClientProvider client={queryClient}>
-                <ListTravel />
+                <FavoritesProvider>
+                    <ListTravel />
+                </FavoritesProvider>
             </QueryClientProvider>
         );
     };
@@ -76,7 +96,8 @@ describe('ListTravel - Filter Management', () => {
                     expect.objectContaining({
                         publish: 1,
                         moderation: 1,
-                    })
+                    }),
+                    expect.any(Object)
                 );
             });
         });
@@ -183,7 +204,8 @@ describe('ListTravel - Filter Management', () => {
                     expect.objectContaining({
                         publish: 1,
                         moderation: 1,
-                    })
+                    }),
+                    expect.any(Object)
                 );
             });
         });
@@ -216,7 +238,7 @@ describe('ListTravel - Filter Management', () => {
             const { getByText } = renderComponent();
 
             await waitFor(() => {
-                expect(getByText('Ничего не найдено')).toBeTruthy();
+                expect(getByText('Пока нет путешествий')).toBeTruthy();
             });
         });
 

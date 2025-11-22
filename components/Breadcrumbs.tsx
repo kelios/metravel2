@@ -128,6 +128,7 @@ export default function Breadcrumbs({ items, showHome = true, travelName }: Brea
           'travelsby': 'Беларусь',
           'map': 'Карта',
           'quests': 'Квесты',
+          'roulette': 'Случайный маршрут',
           'article': 'Статья',
           'travel': 'Путешествие',
           'profile': 'Профиль',

@@ -17,7 +17,7 @@ interface PersonalizedRecommendationsProps {
 }
 
 function PersonalizedRecommendations({ forceVisible, onVisibilityChange }: PersonalizedRecommendationsProps) {
-    const { viewHistory, getRecommendations } = useFavorites();
+    const { favorites, viewHistory, getRecommendations } = useFavorites();
     const { isAuthenticated } = useAuth();
     const router = useRouter();
     const { width } = useWindowDimensions();
@@ -67,16 +67,14 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange }: Perso
         }
     }, [onVisibilityChange]);
 
-    // ✅ ИСПРАВЛЕНИЕ: Показываем только алгоритмические рекомендации (не избранное и не историю)
+    // ✅ ИСПРАВЛЕНИЕ: Показываем только алгоритмические рекомендации (не дублируем избранное и историю)
     const recommendations = useMemo(() => {
         if (!isAuthenticated) return [];
         // getRecommendations возвращает избранное, отсортированное по дате
-        // Для настоящих рекомендаций нужно использовать другой алгоритм
-        // Пока возвращаем пустой массив, так как нет отдельного алгоритма рекомендаций
-        // Примечание: Алгоритм персонализированных рекомендаций будет реализован в будущих версиях
-        // См. issue #XXX для отслеживания прогресса
-        return [];
-    }, [viewHistory, isAuthenticated, getRecommendations]);
+        // Здесь исключаем элементы, которые уже отображаются в «Избранном», чтобы не дублировать карточки
+        const raw = getRecommendations();
+        return raw.filter(item => !favorites.some(f => f.id === item.id && f.type === item.type));
+    }, [favorites, viewHistory, isAuthenticated, getRecommendations]);
 
     // ВАЖНО: все хуки должны быть вызваны до условных возвратов
     const handleItemPress = useCallback((url: string) => {
@@ -111,7 +109,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange }: Perso
                     </View>
                 )}
                 <View style={styles.itemContent}>
-                    <Text style={styles.itemTitle} numberOfLines={2}>
+                    <Text style={styles.itemTitle} numberOfLines={2} onPress={() => handleItemPress(item.url)}>
                         {item.title}
                     </Text>
                     {(item.country || item.city) && (
@@ -126,6 +124,9 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange }: Perso
             </TouchableOpacity>
         );
     }, [handleItemPress, isMobile]);
+
+    const hasFavorites = favorites && favorites.length > 0;
+    const hasHistory = viewHistory && viewHistory.length > 0;
 
     // Условные возвраты после всех хуков
     if (!isInitialized) return null;
@@ -194,8 +195,8 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange }: Perso
         );
     }
 
-    // ✅ ИСПРАВЛЕНИЕ: Показываем пустое состояние, если нет рекомендаций
-    if (recommendations.length === 0) {
+    // ✅ ИСПРАВЛЕНИЕ: Показываем пустое состояние, только если нет избранного, истории и рекомендаций
+    if (!hasFavorites && !hasHistory && recommendations.length === 0) {
         return (
             <View style={styles.container}>
                 <View style={styles.header}>
@@ -230,7 +231,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange }: Perso
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <View style={[styles.iconContainer, { backgroundColor: '#fff5eb' }]}>
+                <View style={[styles.iconContainer, { backgroundColor: '#fff5eb' }]}> 
                     <MaterialIcons name="star" size={24} color={AIRY_COLORS.primary} />
                 </View>
                 <View style={styles.titleContainer}>
@@ -242,16 +243,50 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange }: Perso
                 {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
             </View>
             <Text style={styles.subtitle}>Рекомендации на основе ваших интересов</Text>
+
+            {hasFavorites && (
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Избранное</Text>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.scrollContent}
+                        removeClippedSubviews={Platform.OS !== "web"}
+                        decelerationRate="fast"
+                    >
+                        {favorites.map(item => renderItem(item as any))}
+                    </ScrollView>
+                </View>
+            )}
+
+            {hasHistory && (
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Недавно просмотрено</Text>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.scrollContent}
+                        removeClippedSubviews={Platform.OS !== "web"}
+                        decelerationRate="fast"
+                    >
+                        {viewHistory.map(item => renderItem(item as any))}
+                    </ScrollView>
+                </View>
+            )}
+
             {recommendations.length > 0 && (
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollContent}
-                    removeClippedSubviews={Platform.OS !== "web"}
-                    decelerationRate="fast"
-                >
-                    {recommendations.map(item => renderItem(item))}
-                </ScrollView>
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Рекомендации</Text>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.scrollContent}
+                        removeClippedSubviews={Platform.OS !== "web"}
+                        decelerationRate="fast"
+                    >
+                        {recommendations.map(item => renderItem(item))}
+                    </ScrollView>
+                </View>
             )}
         </View>
     );
@@ -317,6 +352,12 @@ const styles = StyleSheet.create({
         color: '#4a5568',
         marginLeft: 0,
         marginBottom: 12,
+    },
+    sectionTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#1a202c',
+        marginBottom: 8,
     },
     countBadge: {
         backgroundColor: '#fee2e2',

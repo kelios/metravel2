@@ -322,23 +322,27 @@ function ListTravel({
         saveVisibility();
     }, []);
 
-    // ✅ УЛУЧШЕНИЕ: Уменьшен timeout для более быстрой загрузки рекомендаций
+    // ✅ УЛУЧШЕНИЕ: Для PageSpeed на web сильнее откладываем загрузку тяжёлого блока рекомендаций
     useEffect(() => {
         if (recommendationsReady) return;
         if (typeof window === 'undefined') {
             setRecommendationsReady(true);
             return;
         }
+
         let idleHandle: number | null = null;
         let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
         const markReady = () => setRecommendationsReady(true);
 
-        if ('requestIdleCallback' in window) {
-            // ✅ УЛУЧШЕНИЕ: Уменьшен timeout с 1200ms до 500ms
-            idleHandle = (window as any).requestIdleCallback(markReady, { timeout: 500 });
+        // На web избегаем слишком раннего requestIdleCallback, чтобы RecommendationsTabs
+        // не попадал в начальный LCP/TBT. Даём странице возможность сначала отрисовать
+        // список путешествий, затем уже подгружаем рекомендации.
+        if (Platform.OS === 'web') {
+            timeoutHandle = setTimeout(markReady, 2500);
+        } else if ('requestIdleCallback' in window) {
+            idleHandle = (window as any).requestIdleCallback(markReady, { timeout: 1000 });
         } else {
-            // ✅ УЛУЧШЕНИЕ: Уменьшен timeout с 400ms до 200ms
-            timeoutHandle = setTimeout(markReady, 200);
+            timeoutHandle = setTimeout(markReady, 800);
         }
 
         return () => {
@@ -1011,10 +1015,11 @@ function ListTravel({
 
 /* ===== Styles ===== */
 const styles = StyleSheet.create({
-    root: { 
-        flex: 1, 
-        backgroundColor: '#ffffff', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Чистый белый фон вместо кремового
-    },
+	root: { 
+		flex: 1, 
+		// Прозрачный фон: даём глобальной карте из RootLayout мягко просвечивать
+		backgroundColor: 'transparent',
+	},
     container: {
         flex: 1,
         ...(Platform.OS === "web" && { alignItems: "stretch" }),

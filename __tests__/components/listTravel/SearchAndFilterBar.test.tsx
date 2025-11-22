@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import SearchAndFilterBar from '@/components/listTravel/SearchAndFilterBar';
 
 describe('SearchAndFilterBar', () => {
@@ -29,16 +29,15 @@ describe('SearchAndFilterBar', () => {
     expect(getByPlaceholderText(/найти путешествие/i)).toBeTruthy();
   });
 
-  it('calls setSearch when typing', () => {
+  it('calls setSearch when typing', async () => {
     const { getByPlaceholderText } = render(<SearchAndFilterBar {...defaultProps} />);
     const input = getByPlaceholderText(/найти путешествие/i);
-    
+
     fireEvent.changeText(input, 'test');
-    
-    // Debounced, so wait a bit
-    setTimeout(() => {
+
+    await waitFor(() => {
       expect(mockSetSearch).toHaveBeenCalled();
-    }, 300);
+    });
   });
 
   it('shows clear button when search has value', () => {
