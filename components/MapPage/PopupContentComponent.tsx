@@ -832,17 +832,22 @@ const styles = `
 
 // Безопасное добавление стилей
 if (typeof document !== 'undefined') {
-  const id = 'popup-content-web-style';
-  let styleTag = document.getElementById(id) as HTMLStyleElement;
+  const doc: any = document as any;
+  const hasDomApi = typeof doc.getElementById === 'function' && typeof doc.createElement === 'function' && doc.head;
 
-  if (!styleTag) {
-    styleTag = document.createElement('style');
-    styleTag.id = id;
-    document.head.appendChild(styleTag);
-  }
+  if (hasDomApi) {
+    const id = 'popup-content-web-style';
+    let styleTag = doc.getElementById(id) as HTMLStyleElement | null;
 
-  if (styleTag.innerHTML !== styles) {
-    styleTag.innerHTML = styles;
+    if (!styleTag) {
+      styleTag = doc.createElement('style');
+      styleTag.id = id;
+      doc.head.appendChild(styleTag);
+    }
+
+    if (styleTag && styleTag.innerHTML !== styles) {
+      styleTag.innerHTML = styles;
+    }
   }
 }
 

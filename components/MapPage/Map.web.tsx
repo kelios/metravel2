@@ -174,7 +174,16 @@ const MapPageComponent: React.FC<Props> = ({
   const ORS_API_KEY = process.env.EXPO_PUBLIC_ROUTE_SERVICE;
 
   const customIcons = useMemo(() => {
-    
+    // Защита от отсутствия Leaflet в тестовой/серверной среде
+    if (!L || typeof (L as any).Icon !== 'function') {
+      return {
+        meTravel: undefined,
+        userLocation: undefined,
+        start: undefined,
+        end: undefined,
+      } as any;
+    }
+
     // Цвета сайта
     // primary: '#ff9f5a' (оранжевый) - для путешествий
     // success: '#25a562' (зеленый) - для старта
@@ -242,6 +251,7 @@ const MapPageComponent: React.FC<Props> = ({
   useEffect(() => {
     const requestLocation = async () => {
       try {
+        setLoading(true);
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') throw new Error();
         const loc = await Location.getCurrentPositionAsync({
@@ -253,6 +263,8 @@ const MapPageComponent: React.FC<Props> = ({
         });
       } catch {
         setErrors((prev) => ({ ...prev, location: true }));
+      } finally {
+        setLoading(false);
       }
     };
     requestLocation();
@@ -394,6 +406,11 @@ const MapPageComponent: React.FC<Props> = ({
       // ✅ ИСПРАВЛЕНИЕ: В режиме route НИКОГДА не делаем автоматический зум
       // Это предотвращает зум при клике на старт/финиш и при переключении вкладок
       if (mode === 'route') return;
+
+      // Защита от отсутствия Leaflet в тестовой/серверной среде
+      if (!L || typeof (L as any).latLngBounds !== 'function' || typeof (L as any).latLng !== 'function') {
+        return;
+      }
 
       const allPoints: [number, number][] = [];
       
