@@ -660,6 +660,10 @@ function buildStyles(theme: TemplateTheme): string {
       position: relative;
       overflow: hidden;
     }
+    /* Разрыв страницы ПЕРЕД каждой следующей .pdf-page (кроме первой) */
+    .pdf-page + .pdf-page {
+      page-break-before: always;
+    }
     img { 
       max-width: 100%; 
       display: block; 
@@ -722,7 +726,7 @@ function renderCoverPage(options: {
   return `
     <section class="pdf-page cover-page" style="
       padding: 0;
-      height: 297mm;
+      height: 285mm;
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
@@ -861,7 +865,7 @@ function renderTravelPhotoPage(options: { travel: TravelForBook; pageNumber: num
     <section class="pdf-page travel-photo-page" style="padding: 18mm;">
       ${
         safeCoverImage
-          ? `<div style="border-radius: 16px; overflow: hidden; position: relative; box-shadow: 0 12px 32px rgba(15,23,42,0.2); height: 100%; min-height: 260mm;">
+          ? `<div style="border-radius: 16px; overflow: hidden; position: relative; box-shadow: 0 12px 32px rgba(15,23,42,0.2); height: 100%; min-height: 235mm;">
               <img src="${escapeHtml(safeCoverImage)}" alt="${escapeHtml(travel.name)}"
                 style="width: 100%; height: 100%; object-fit: cover; display: block;" crossorigin="anonymous" 
                 onerror="this.style.display='none'; this.parentElement.style.background='${theme.accentSoft}';" />
@@ -878,7 +882,7 @@ function renderTravelPhotoPage(options: { travel: TravelForBook; pageNumber: num
                 }
               </div>
             </div>`
-          : `<div style="border-radius: 16px; background: linear-gradient(135deg, ${theme.accentSoft} 0%, ${theme.highlight} 100%); height: 260mm;
+          : `<div style="border-radius: 16px; background: linear-gradient(135deg, ${theme.accentSoft} 0%, ${theme.highlight} 100%); height: 235mm;
               display: flex; align-items: center; justify-content: center; color: ${theme.accentStrong}; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
               <h1 style="font-size: 32pt; font-weight: 800; text-align: center; padding: 20mm;">${escapeHtml(travel.name)}</h1>
             </div>`

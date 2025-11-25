@@ -103,7 +103,13 @@ export function useListTravelExport(
   const handleSaveWithSettings = useCallback(
     async (settings: BookSettings) => {
       setLastSettings(settings);
-      await pdfExport.exportPdf(settings);
+      // Для сохранения книги предпочитаем новый HTML-поток (openPrintBook),
+      // старый exportPdf оставляем только как запасной вариант.
+      if (pdfExport.openPrintBook) {
+        await pdfExport.openPrintBook(settings);
+      } else {
+        await pdfExport.exportPdf(settings);
+      }
     },
     [pdfExport]
   );
@@ -111,7 +117,13 @@ export function useListTravelExport(
   const handlePreviewWithSettings = useCallback(
     async (settings: BookSettings) => {
       setLastSettings(settings);
-      await pdfExport.previewPdf(settings);
+      // Для превью также используем HTML-книгу, при отсутствии нового метода
+      // fallback на старое превью.
+      if (pdfExport.openPrintBook) {
+        await pdfExport.openPrintBook(settings);
+      } else {
+        await pdfExport.previewPdf(settings);
+      }
     },
     [pdfExport]
   );

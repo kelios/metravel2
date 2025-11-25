@@ -163,8 +163,8 @@ export const minimalTheme: PdfThemeConfig = {
   },
   
   typography: {
-    headingFont: "'Inter', 'Segoe UI', sans-serif",
-    bodyFont: "'Inter', 'Segoe UI', sans-serif",
+    headingFont: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif",
+    bodyFont: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif",
     monoFont: "'JetBrains Mono', 'Courier New', monospace",
     
     h1: { size: '32pt', weight: 700, lineHeight: 1.2, marginBottom: '16pt' },
@@ -251,8 +251,8 @@ export const lightTheme: PdfThemeConfig = {
   },
   
   typography: {
-    headingFont: "'Poppins', 'Inter', sans-serif",
-    bodyFont: "'Inter', 'Helvetica Neue', sans-serif",
+    headingFont: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif",
+    bodyFont: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif",
     monoFont: "'JetBrains Mono', 'Courier New', monospace",
     
     h1: { size: '36pt', weight: 700, lineHeight: 1.2, marginBottom: '20pt' },
@@ -427,8 +427,8 @@ export const travelMagazineTheme: PdfThemeConfig = {
   },
   
   typography: {
-    headingFont: "'Oswald', 'Montserrat', sans-serif",
-    bodyFont: "'Lato', 'Helvetica Neue', sans-serif",
+    headingFont: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif",
+    bodyFont: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans', 'Arial', sans-serif",
     monoFont: "'Courier New', monospace",
     
     h1: { size: '42pt', weight: 800, lineHeight: 1.1, marginBottom: '24pt' },
