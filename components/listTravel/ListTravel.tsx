@@ -123,7 +123,7 @@ const pluralizeTravels = (count: number) => {
 };
 
 /* ===== Small local component: Export bar ===== */
-const ExportBar = memo(function ExportBar({
+export const ExportBar = memo(function ExportBar({
                        isMobile,
                        selectedCount,
                        allCount,

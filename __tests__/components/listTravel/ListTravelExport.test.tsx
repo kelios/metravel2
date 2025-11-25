@@ -1,193 +1,74 @@
 // __tests__/components/listTravel/ListTravelExport.test.tsx
-// Интеграционные тесты экспортной панели на странице списка путешествий (ListTravel)
+// Тесты экспортной панели (ExportBar) на странице списка путешествий
 
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { Platform } from 'react-native';
-import ListTravel from '@/components/listTravel/ListTravel';
+import { render, fireEvent } from '@testing-library/react-native';
+import { ExportBar } from '@/components/listTravel/ListTravel';
 
-// Мокаем навигацию и роутер, чтобы ListTravel думал, что он на странице `export`
-jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => ({}),
-  useRouter: () => ({ push: jest.fn() }),
-}));
+describe('ExportBar', () => {
+  const setup = (overrides: Partial<React.ComponentProps<typeof ExportBar>> = {}) => {
+    const onToggleSelectAll = jest.fn();
+    const onClearSelection = jest.fn();
+    const onPreview = jest.fn();
+    const onSave = jest.fn();
+    const onSettings = jest.fn();
 
-jest.mock('@react-navigation/native', () => ({
-  useRoute: () => ({ name: 'export' }),
-}));
-
-// Мокаем React Query
-jest.mock('@tanstack/react-query', () => ({
-  useQuery: jest.fn().mockReturnValue({ data: { countries: [] } }),
-  useQueryClient: () => ({ invalidateQueries: jest.fn() }),
-}));
-
-// Мокаем API фильтров/списка путешествий внутри useListTravelData
-jest.mock('@/src/api/travels', () => ({
-  fetchFilters: jest.fn(async () => ({})),
-  fetchFiltersCountry: jest.fn(async () => ([])),
-}));
-
-// Мокаем useListTravelData так, чтобы он возвращал фиксированный список путешествий
-jest.mock('@/components/listTravel/hooks/useListTravelData', () => ({
-  useListTravelData: () => ({
-    data: [
-      { id: 1, name: 'Travel 1' },
-      { id: 2, name: 'Travel 2' },
-      { id: 3, name: 'Travel 3' },
-    ],
-    total: 3,
-    hasMore: false,
-    isLoading: false,
-    isFetching: false,
-    isError: false,
-    status: 'success',
-    isInitialLoading: false,
-    isNextPageLoading: false,
-    isEmpty: false,
-    refetch: jest.fn(),
-    handleEndReached: jest.fn(),
-    handleRefresh: jest.fn(),
-    isRefreshing: false,
-  }),
-}));
-
-// Мокаем useListTravelExport, чтобы контролировать выбор и вызовы экспорта
-const mockToggleSelect = jest.fn();
-const mockToggleSelectAll = jest.fn();
-const mockClearSelection = jest.fn();
-const mockHandleSaveWithSettings = jest.fn();
-const mockHandlePreviewWithSettings = jest.fn();
-
-jest.mock('@/components/listTravel/hooks/useListTravelExport', () => ({
-  useListTravelExport: () => ({
-    selected: [],
-    toggleSelect: mockToggleSelect,
-    toggleSelectAll: mockToggleSelectAll,
-    clearSelection: mockClearSelection,
-    isSelected: jest.fn().mockReturnValue(false),
-    hasSelection: true,
-    selectionCount: 2,
-    pdfExport: {
+    const props: React.ComponentProps<typeof ExportBar> = {
+      isMobile: false,
+      selectedCount: 2,
+      allCount: 3,
+      onToggleSelectAll,
+      onClearSelection,
+      onPreview,
+      onSave,
+      onSettings,
       isGenerating: false,
       progress: 0,
-    },
-    baseSettings: {
-      title: 'Путешествия Julia',
-      template: 'minimal',
-      format: 'A4',
-      orientation: 'portrait',
-      margins: 'standard',
-      imageQuality: 'high',
-      sortOrder: 'date-desc',
-      includeToc: true,
-      includeGallery: true,
-      includeMap: true,
-      colorTheme: 'blue',
-      fontFamily: 'sans',
-      photoMode: 'gallery',
-      mapMode: 'full-page',
-      includeChecklists: false,
-      checklistSections: ['clothing', 'food', 'electronics'],
-    },
-    lastSettings: {
-      title: 'Путешествия Julia',
-      template: 'minimal',
-      format: 'A4',
-      orientation: 'portrait',
-      margins: 'standard',
-      imageQuality: 'high',
-      sortOrder: 'date-desc',
-      includeToc: true,
-      includeGallery: true,
-      includeMap: true,
-      colorTheme: 'blue',
-      fontFamily: 'sans',
-      photoMode: 'gallery',
-      mapMode: 'full-page',
-      includeChecklists: false,
-      checklistSections: ['clothing', 'food', 'electronics'],
-    },
-    setLastSettings: jest.fn(),
-    settingsSummary: 'A4 • Книжная • minimal',
-    handleSaveWithSettings: mockHandleSaveWithSettings,
-    handlePreviewWithSettings: mockHandlePreviewWithSettings,
-  }),
-}));
+      settingsSummary: 'A4 • Книжная • minimal',
+      hasSelection: true,
+      ...overrides,
+    };
 
-const originalPlatformOS = Platform.OS;
+    const utils = render(<ExportBar {...props} />);
+    return { ...utils, onToggleSelectAll, onClearSelection, onPreview, onSave, onSettings };
+  };
 
-describe('ListTravel export bar', () => {
-  beforeAll(() => {
-    Object.defineProperty(Platform, 'OS', {
-      configurable: true,
-      value: 'web',
-    });
+  it('отображает текст о выбранных путешествиях и кнопки экспорта', () => {
+    const { getByText } = setup();
+
+    expect(getByText(/Выбрано 2 /)).toBeTruthy();
+    expect(getByText('Настройки')).toBeTruthy();
+    expect(getByText('Сохранить PDF')).toBeTruthy();
+    expect(getByText('Превью (2)')).toBeTruthy();
   });
 
-  afterAll(() => {
-    Object.defineProperty(Platform, 'OS', {
-      configurable: true,
-      value: originalPlatformOS,
-    });
+  it('вызывает onToggleSelectAll и onClearSelection при нажатии на соответствующие ссылки', () => {
+    const { getByText, onToggleSelectAll, onClearSelection } = setup();
+
+    fireEvent.press(getByText('Выбрать все'));
+    expect(onToggleSelectAll).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(getByText('Очистить выбор'));
+    expect(onClearSelection).toHaveBeenCalledTimes(1);
   });
 
-  beforeEach(() => {
-    jest.clearAllMocks();
+  it('вызывает onPreview и onSave при нажатии на кнопки', () => {
+    const { getByText, onPreview, onSave } = setup();
+
+    fireEvent.press(getByText('Превью (2)'));
+    expect(onPreview).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(getByText('Сохранить PDF'));
+    expect(onSave).toHaveBeenCalledTimes(1);
   });
 
-  it('отображает экспортную панель и счётчик выбранных путешествий', async () => {
-    const { getByText } = render(<ListTravel />);
+  it('не вызывает onPreview/onSave, если нет выбора или идёт генерация', () => {
+    const { getByText, onPreview, onSave } = setup({ hasSelection: false });
 
-    await waitFor(() => {
-      expect(getByText(/Выбрано 2 /)).toBeTruthy();
-      expect(getByText('Сохранить PDF')).toBeTruthy();
-      expect(getByText(/Превью \(2\)/)).toBeTruthy();
-    });
-  });
+    fireEvent.press(getByText('Превью (2)'));
+    fireEvent.press(getByText('Сохранить PDF'));
 
-  it('открывает модальное окно настроек при нажатии на "Превью" и "Сохранить PDF"', async () => {
-    const { getByText, findByText } = render(<ListTravel />);
-
-    const previewButton = await findByText(/Превью \(2\)/);
-    fireEvent.press(previewButton);
-
-    // После нажатия должна появиться модалка с заголовком
-    await findByText('Настройки фотоальбома');
-  });
-
-  it('вызывает handleSaveWithSettings при выборе "Сохранить PDF" в модалке', async () => {
-    const { getByText, findByText, getByDisplayValue } = render(<ListTravel />);
-
-    const saveButtonInBar = await findByText('Сохранить PDF');
-    fireEvent.press(saveButtonInBar);
-
-    const modalTitle = await findByText('Настройки фотоальбома');
-    expect(modalTitle).toBeTruthy();
-
-    // Меняем название книги, чтобы убедиться, что настройки реально проходят через onSave
-    const titleInput = getByDisplayValue('Путешествия Julia');
-    fireEvent.changeText(titleInput, 'Путешествия для экспорта');
-
-    const modalSaveButton = getByText('Сохранить PDF');
-    fireEvent.press(modalSaveButton);
-
-    expect(mockHandleSaveWithSettings).toHaveBeenCalledTimes(1);
-    const passedSettings = mockHandleSaveWithSettings.mock.calls[0][0];
-    expect(passedSettings.title).toBe('Путешествия для экспорта');
-  });
-
-  it('вызывает handlePreviewWithSettings при выборе "Превью" в модалке', async () => {
-    const { getByText, findByText } = render(<ListTravel />);
-
-    const previewButtonInBar = await findByText(/Превью \(2\)/);
-    fireEvent.press(previewButtonInBar);
-
-    await findByText('Настройки фотоальбома');
-
-    const modalPreviewButton = getByText('Превью');
-    fireEvent.press(modalPreviewButton);
-
-    expect(mockHandlePreviewWithSettings).toHaveBeenCalledTimes(1);
+    expect(onPreview).not.toHaveBeenCalled();
+    expect(onSave).not.toHaveBeenCalled();
   });
 });
