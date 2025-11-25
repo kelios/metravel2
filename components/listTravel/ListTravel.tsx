@@ -959,7 +959,7 @@ function ListTravel({
             message="Удалить это путешествие?"
           />
 
-          {isExport && (
+          {isExport && Platform.OS === 'web' && (
             <ExportBar
               isMobile={isMobile}
               selectedCount={selectionCount}
@@ -985,7 +985,7 @@ function ListTravel({
             />
           )}
 
-          {/* Модальное окно настроек фотоальбома */}
+          {/* Модальное окно настроек фотоальбома (только web) */}
           {isExport && Platform.OS === "web" && (
             <Suspense fallback={null}>
               <BookSettingsModalLazy

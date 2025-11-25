@@ -70,11 +70,24 @@ export function useSingleTravelExport(travel?: Travel) {
     [pdfExport]
   )
 
+  const handleOpenPrintBookWithSettings = useCallback(
+    async (settings: BookSettings) => {
+      setLastSettings(settings)
+      if (pdfExport.openPrintBook) {
+        await pdfExport.openPrintBook(settings)
+      } else {
+        await pdfExport.previewPdf(settings)
+      }
+    },
+    [pdfExport]
+  )
+
   return {
     pdfExport,
     lastSettings,
     settingsSummary,
     handleSaveWithSettings,
     handlePreviewWithSettings,
+    handleOpenPrintBookWithSettings,
   }
 }

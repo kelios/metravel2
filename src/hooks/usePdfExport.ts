@@ -5,10 +5,10 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Platform, Alert } from 'react-native';
 import type { Travel } from '@/src/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
-import { PdfExportService } from '@/src/services/pdf-export/PdfExportService';
-import { Html2PdfRenderer } from '@/src/renderers/pdf/Html2PdfRenderer';
 import { ExportProgress, ExportStage, ExportConfig } from '@/src/types/pdf-export';
 import { fetchTravel, fetchTravelBySlug } from '@/src/api/travels';
+import { BookHtmlExportService } from '@/src/services/book/BookHtmlExportService';
+import { openBookPreviewWindow } from '@/src/utils/openBookPreviewWindow';
 
 /**
  * React hook для экспорта путешествий в PDF
@@ -20,20 +20,19 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
   const [error, setError] = useState<Error | null>(null);
   const [currentStage, setCurrentStage] = useState<ExportStage>(ExportStage.VALIDATING);
 
-  const serviceRef = useRef<PdfExportService | null>(null);
+  const htmlServiceRef = useRef<BookHtmlExportService | null>(null);
   const travelCacheRef = useRef<Record<string | number, Travel>>({});
 
-  // Инициализируем сервис один раз
+  // Инициализируем HTML-сервис один раз (старый PdfExportService/html2pdf больше не используется)
   useEffect(() => {
     const canUseDom = typeof document !== 'undefined';
-    if ((Platform.OS === 'web' || canUseDom) && !serviceRef.current) {
-      const renderer = new Html2PdfRenderer();
-      serviceRef.current = new PdfExportService(renderer, config);
+    if ((Platform.OS === 'web' || canUseDom) && !htmlServiceRef.current) {
+      htmlServiceRef.current = new BookHtmlExportService();
     }
 
     return () => {
       // Cleanup при размонтировании
-      serviceRef.current = null;
+      htmlServiceRef.current = null;
     };
   }, [config]);
 
@@ -131,155 +130,96 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
    * Экспортирует путешествия в PDF
    */
   const exportPdf = useCallback(async (settings: BookSettings): Promise<void> => {
-    if (!serviceRef.current) {
-      Alert.alert('Ошибка', 'PDF экспорт недоступен');
+    // Экспорт PDF для книги теперь выполняется через HTML-поток (openPrintBook).
+    if (Platform.OS !== 'web') {
+      Alert.alert('Недоступно', 'Экспорт PDF доступен только в веб-версии MeTravel');
       return;
     }
 
-    // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
-    if (!isMountedRef.current) return;
-
-    setIsGenerating(true);
-    setError(null);
-    setProgress(0);
-
-    try {
-      const travelsForExport = await loadDetailedTravels();
-      if (!travelsForExport.length) {
-        Alert.alert('Внимание', 'Выберите хотя бы одно путешествие для экспорта');
-        return;
-      }
-      const result = await serviceRef.current.export(
-        travelsForExport,
-        settings,
-        handleProgress
-      );
-
-      // Скачиваем файл
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(result.blob);
-      link.download = result.filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-
-      // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
-      if (isMountedRef.current) {
-        Alert.alert('Успешно!', `PDF-фотоальбом "${settings.title}" успешно создан и сохранен`);
-      }
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
-      if (isMountedRef.current) {
-        setError(error);
-        Alert.alert('Ошибка', error.message);
-      }
-    } finally {
-      // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
-      if (isMountedRef.current) {
-        setIsGenerating(false);
-        setProgress(0);
-      }
-    }
-  }, [selected, handleProgress, loadDetailedTravels]);
+    Alert.alert(
+      'Экспорт книги',
+      'Старый режим экспорта PDF отключён. Пожалуйста, используйте предпросмотр книги и сохранение через диалог печати браузера.',
+    );
+  }, []);
 
   /**
    * Создает превью PDF
    */
   const previewPdf = useCallback(async (settings: BookSettings): Promise<string | null> => {
-    if (!serviceRef.current) {
-      Alert.alert('Ошибка', 'PDF превью недоступно');
+    // Старое превью PDF через html2pdf отключено.
+    if (Platform.OS !== 'web') {
+      Alert.alert('Недоступно', 'Превью PDF доступно только в веб-версии MeTravel');
       return null;
     }
 
-    // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
-    if (!isMountedRef.current) return null;
+    Alert.alert(
+      'Превью PDF отключено',
+      'Для просмотра и сохранения книги используйте новый HTML-предпросмотр с печатью браузера.',
+    );
+    return null;
+  }, []);
 
-    setIsGenerating(true);
-    setError(null);
-    setProgress(0);
-
-    let container: HTMLElement | null = null;
-    let iframe: HTMLIFrameElement | null = null;
-    let closeBtn: HTMLButtonElement | null = null;
-
-    try {
-      const travelsForExport = await loadDetailedTravels();
-      if (!travelsForExport.length) {
-        Alert.alert('Внимание', 'Выберите хотя бы одно путешествие для экспорта');
-        return null;
+  /**
+   * Открывает HTML-книгу в новом окне для печати (window.print)
+   */
+  const openPrintBook = useCallback(
+    async (settings: BookSettings): Promise<void> => {
+      if (Platform.OS !== 'web') {
+        Alert.alert(
+          'Недоступно',
+          'Просмотр книги и печать доступны только в веб-версии MeTravel'
+        );
+        return;
       }
-      const result = await serviceRef.current.preview(
-        travelsForExport,
-        settings,
-        handleProgress
-      );
 
-      // Контейнер будет удален сервисом при закрытии превью
-      // Находим контейнер для удаления при закрытии
-      const containers = document.querySelectorAll('div[style*="210mm"]');
-      container = Array.from(containers)
-        .filter(el => {
-          const style = (el as HTMLElement).style;
-          return style.width === '210mm' || style.width.includes('210mm');
-        })
-        .pop() as HTMLElement || null;
-
-      // Создаем iframe для превью
-      iframe = document.createElement('iframe');
-      iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:9998;background:#fff;';
-      iframe.src = result.blobUrl;
-
-      // Создаем кнопку закрытия
-      closeBtn = document.createElement('button');
-      closeBtn.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;padding:12px 24px;background:#ff9f5a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
-      closeBtn.textContent = 'Закрыть';
-
-      const cleanup = () => {
-        if (iframe && iframe.parentNode) {
-          iframe.parentNode.removeChild(iframe);
-        }
-        if (closeBtn && closeBtn.parentNode) {
-          closeBtn.parentNode.removeChild(closeBtn);
-        }
-        if (container && container.parentNode) {
-          container.parentNode.removeChild(container);
-        }
-        if (result.blobUrl) {
-          URL.revokeObjectURL(result.blobUrl);
-        }
-        iframe = null;
-        closeBtn = null;
-        container = null;
-      };
-
-      closeBtn.onclick = cleanup;
-
-      document.body.appendChild(iframe);
-      document.body.appendChild(closeBtn);
-
-      return result.blobUrl;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
-      if (isMountedRef.current) {
-        setError(error);
-        Alert.alert('Ошибка', error.message);
+      if (!htmlServiceRef.current) {
+        Alert.alert('Ошибка', 'Предпросмотр книги недоступен');
+        return;
       }
-      return null;
-    } finally {
-      // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
-      if (isMountedRef.current) {
-        setIsGenerating(false);
-        setProgress(0);
+
+      if (!isMountedRef.current) return;
+
+      setIsGenerating(true);
+      setError(null);
+      setProgress(0);
+      setCurrentStage(ExportStage.GENERATING_HTML);
+
+      try {
+        const travelsForExport = await loadDetailedTravels();
+        if (!travelsForExport.length) {
+          Alert.alert('Внимание', 'Выберите хотя бы одно путешествие для экспорта');
+          return;
+        }
+
+        const html = await htmlServiceRef.current.generateTravelsHtml(
+          travelsForExport,
+          settings
+        );
+
+        openBookPreviewWindow(html);
+
+        if (isMountedRef.current) {
+          setProgress(100);
+          setCurrentStage(ExportStage.COMPLETE);
+        }
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        if (isMountedRef.current) {
+          setError(error);
+          Alert.alert('Ошибка', error.message);
+          setCurrentStage(ExportStage.ERROR);
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setIsGenerating(false);
+        }
       }
-    }
-  }, [selected, handleProgress, loadDetailedTravels]);
+    }, [loadDetailedTravels]);
 
   return {
     exportPdf,
     previewPdf,
+    openPrintBook,
     isGenerating,
     progress,
     error,

@@ -31,6 +31,7 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
     lastSettings,
     handleSaveWithSettings,
     handlePreviewWithSettings,
+    handleOpenPrintBookWithSettings,
   } = useSingleTravelExport(travel);
   const { isGenerating, progress, currentStage } = pdfExport;
 
@@ -139,21 +140,33 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
     }
   }, [shareUrl, shareTitle, shareText]);
 
-  // Обработчик экспорта в PDF
+  // Обработчик "Сохранить PDF" — переводим на новый HTML-поток печати
   const handleExport = useCallback(
     async (settings: BookSettings) => {
-      await handleSaveWithSettings(settings);
+      if (handleOpenPrintBookWithSettings) {
+        // Новый поток: открываем HTML-книгу, дальше пользователь сохраняет через печать браузера
+        await handleOpenPrintBookWithSettings(settings);
+      } else {
+        // Fallback: старый поток экспорта в PDF
+        await handleSaveWithSettings(settings);
+      }
       setShowExportModal(false);
     },
-    [handleSaveWithSettings]
+    [handleOpenPrintBookWithSettings, handleSaveWithSettings]
   );
 
   const handlePreview = useCallback(
     async (settings: BookSettings) => {
-      await handlePreviewWithSettings(settings);
+      // Для превью по-прежнему используем HTML-книгу с печатью, при отсутствии нового метода
+      // fallback на старое PDF-превью
+      if (handleOpenPrintBookWithSettings) {
+        await handleOpenPrintBookWithSettings(settings);
+      } else {
+        await handlePreviewWithSettings(settings);
+      }
       setShowExportModal(false);
     },
-    [handlePreviewWithSettings]
+    [handleOpenPrintBookWithSettings, handlePreviewWithSettings]
   );
 
   const shareButtons = [
@@ -164,14 +177,17 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
       onPress: handleCopyLink,
       color: '#667085',
     },
-    {
-      key: 'export',
-      label: isGenerating ? `Экспорт... ${progress}%` : 'Экспорт в PDF',
-      icon: 'picture-as-pdf',
-      onPress: () => setShowExportModal(true),
-      color: '#ff9f5a',
-      disabled: isGenerating,
-    },
+    // Экспорт в PDF доступен только в веб-версии
+    ...(Platform.OS === 'web'
+      ? [{
+          key: 'export' as const,
+          label: isGenerating ? `Экспорт... ${progress}%` : 'Экспорт в PDF',
+          icon: 'picture-as-pdf' as const,
+          onPress: () => setShowExportModal(true),
+          color: '#ff9f5a',
+          disabled: isGenerating,
+        }]
+      : []),
     {
       key: 'telegram',
       label: 'Telegram',
@@ -249,16 +265,18 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
           </View>
         )}
       </View>
-      <BookSettingsModal
-        visible={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        onSave={handleExport}
-        onPreview={handlePreview}
-        travelCount={1}
-        defaultSettings={lastSettings}
-        userName={travel.userName || undefined}
-        mode="preview"
-      />
+      {Platform.OS === 'web' && (
+        <BookSettingsModal
+          visible={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          onSave={handleExport}
+          onPreview={handlePreview}
+          travelCount={1}
+          defaultSettings={lastSettings}
+          userName={travel.userName || undefined}
+          mode="preview"
+        />
+      )}
     </>
   );
 }
@@ -363,7 +381,6 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
     borderRadius: 2,
-    transition: 'width 0.3s ease',
   },
   progressText: {
     marginTop: 8,

@@ -95,7 +95,7 @@ export class ArticlePdfGenerator {
     return `
     @page {
       size: ${format.width} ${format.height};
-      margin: ${spacing.pagePadding};
+      margin: 0;
     }
 
     * {
@@ -119,9 +119,7 @@ export class ArticlePdfGenerator {
 
     .pdf-page {
       width: 100%;
-      min-height: 100vh;
       page-break-after: always;
-      page-break-inside: avoid;
       padding: ${spacing.pagePadding};
       background: ${colors.background};
       display: block;
@@ -261,7 +259,6 @@ export class ArticlePdfGenerator {
     /* Контент */
     .content-section {
       margin-bottom: ${spacing.sectionSpacing};
-      page-break-inside: avoid;
     }
 
     h2 {
@@ -381,7 +378,6 @@ export class ArticlePdfGenerator {
       margin: ${spacing.blockSpacing} 0;
       font-style: italic;
       color: ${colors.textSecondary};
-      page-break-inside: avoid;
     }
 
     /* Карта */

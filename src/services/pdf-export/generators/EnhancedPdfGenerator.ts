@@ -135,7 +135,7 @@ export class EnhancedPdfGenerator {
     return `
       <section class="pdf-page cover-page" style="
         padding: 0;
-        height: 297mm;
+        height: 285mm;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
@@ -355,7 +355,7 @@ export class EnhancedPdfGenerator {
             position: relative;
             box-shadow: ${this.theme.blocks.shadow};
             height: 100%;
-            min-height: 260mm;
+            min-height: 235mm;
           ">
             <img src="${this.escapeHtml(coverImage)}" alt="${this.escapeHtml(travel.name)}"
               style="
@@ -400,7 +400,7 @@ export class EnhancedPdfGenerator {
           <div style="
             border-radius: ${this.theme.blocks.borderRadius};
             background: linear-gradient(135deg, ${colors.accentSoft} 0%, ${colors.accentLight} 100%);
-            height: 260mm;
+            height: 235mm;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -964,7 +964,10 @@ export class EnhancedPdfGenerator {
         box-shadow: ${this.theme.blocks.shadow};
         position: relative;
         overflow: visible;
-        page-break-after: always;
+      }
+      /* Разрыв страницы ПЕРЕД каждой следующей .pdf-page (кроме первой) */
+      .pdf-page + .pdf-page {
+        page-break-before: always;
       }
       img {
         max-width: 100%;

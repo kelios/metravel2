@@ -8,6 +8,9 @@ import { usePdfExport } from '@/src/hooks/usePdfExport';
 import type { Travel } from '@/src/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 
+const mockGenerateTravelsHtml = jest.fn(async () => '<html><body><section class="pdf-page">Test</section></body></html>');
+const mockOpenBookPreviewWindow = jest.fn();
+
 jest.mock('@/src/api/travels', () => ({
   fetchTravel: jest.fn(async () => ({
     id: 99,
@@ -31,23 +34,14 @@ jest.mock('@/src/api/travels', () => ({
   }) as unknown as Travel),
 }));
 
-// Mock PdfExportService
-const mockExport = jest.fn();
-const mockPreview = jest.fn();
-
-jest.mock('@/src/services/pdf-export/PdfExportService', () => ({
-  PdfExportService: jest.fn().mockImplementation(() => ({
-    export: mockExport,
-    preview: mockPreview,
+jest.mock('@/src/services/book/BookHtmlExportService', () => ({
+  BookHtmlExportService: jest.fn().mockImplementation(() => ({
+    generateTravelsHtml: mockGenerateTravelsHtml,
   })),
 }));
 
-// Mock Html2PdfRenderer
-jest.mock('@/src/renderers/pdf/Html2PdfRenderer', () => ({
-  Html2PdfRenderer: jest.fn().mockImplementation(() => ({
-    initialize: jest.fn(() => Promise.resolve()),
-    isAvailable: jest.fn(() => true),
-  })),
+jest.mock('@/src/utils/openBookPreviewWindow', () => ({
+  openBookPreviewWindow: (...args: any[]) => mockOpenBookPreviewWindow(...args),
 }));
 
 global.URL = {
@@ -117,7 +111,9 @@ describe('usePdfExport', () => {
       number_days: 5,
       companions: [],
       countryCode: '',
-    },
+      travel_image_thumb_url: '',
+      travel_image_thumb_small_url: '',
+    } as unknown as Travel,
   ];
 
   const mockSettings: BookSettings = {
@@ -143,15 +139,6 @@ describe('usePdfExport', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockExport.mockResolvedValue({
-      blob: new Blob(['mock pdf'], { type: 'application/pdf' }),
-      filename: 'Test_Book_2024-01-01.pdf',
-      size: 1000,
-    });
-    mockPreview.mockResolvedValue({
-      blobUrl: 'blob:mock-url',
-      size: 1000,
-    });
   });
 
   describe('Инициализация', () => {
@@ -163,149 +150,12 @@ describe('usePdfExport', () => {
       expect(result.current.error).toBeNull();
       expect(typeof result.current.exportPdf).toBe('function');
       expect(typeof result.current.previewPdf).toBe('function');
+      expect(typeof result.current.openPrintBook).toBe('function');
     });
   });
 
-  describe('exportPdf', () => {
-    it('должен успешно экспортировать PDF', async () => {
-      const { result } = renderHook(() => usePdfExport(mockTravels));
-
-      await act(async () => {
-        await result.current.exportPdf(mockSettings);
-      });
-
-      expect(mockExport).toHaveBeenCalledWith(
-        mockTravels,
-        mockSettings,
-        expect.any(Function)
-      );
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Успешно!',
-        expect.stringContaining('Test Book')
-      );
-    });
-
-    it('должен обновлять isGenerating во время экспорта', async () => {
-      let resolveExport: any;
-      const exportPromise = new Promise((resolve) => {
-        resolveExport = resolve;
-      });
-      mockExport.mockReturnValue(exportPromise);
-
-      const { result } = renderHook(() => usePdfExport(mockTravels));
-
-      act(() => {
-        result.current.exportPdf(mockSettings);
-      });
-
-      await waitFor(() => {
-        expect(result.current.isGenerating).toBe(true);
-      });
-
-      await act(async () => {
-        resolveExport({
-          blob: new Blob(['mock'], { type: 'application/pdf' }),
-          filename: 'test.pdf',
-          size: 100,
-        });
-        await exportPromise;
-      });
-
-      await waitFor(() => {
-        expect(result.current.isGenerating).toBe(false);
-      });
-    });
-
-    it('должен обновлять прогресс', async () => {
-      const { result } = renderHook(() => usePdfExport(mockTravels));
-
-      let progressCallback: any;
-      mockExport.mockImplementation((travels, settings, callback) => {
-        progressCallback = callback;
-        return Promise.resolve({
-          blob: new Blob(['mock'], { type: 'application/pdf' }),
-          filename: 'test.pdf',
-          size: 100,
-        });
-      });
-
-      await act(async () => {
-        const promise = result.current.exportPdf(mockSettings);
-        
-        // Симулируем обновление прогресса
-        if (progressCallback) {
-          progressCallback({ stage: 'rendering', progress: 50, message: 'Test' });
-        }
-        
-        await promise;
-      });
-
-      // Прогресс должен был обновиться
-      expect(result.current.progress).toBeGreaterThanOrEqual(0);
-    });
-
-    it('должен обрабатывать ошибки', async () => {
-      const error = new Error('Test error');
-      mockExport.mockRejectedValue(error);
-
-      const { result } = renderHook(() => usePdfExport(mockTravels));
-
-      await act(async () => {
-        await result.current.exportPdf(mockSettings);
-      });
-
-      expect(result.current.error).toBeDefined();
-      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', expect.any(String));
-    });
-  });
-
-  describe('previewPdf', () => {
-    it('должен успешно создать превью', async () => {
-      const { result } = renderHook(() => usePdfExport(mockTravels));
-
-      await act(async () => {
-        await result.current.previewPdf(mockSettings);
-      });
-
-      expect(mockPreview).toHaveBeenCalledWith(
-        mockTravels,
-        mockSettings,
-        expect.any(Function)
-      );
-    });
-
-    it('должен создать iframe и кнопку закрытия для превью', async () => {
-      const createElementSpy = mockDocument.createElement;
-      const appendChildSpy = mockDocument.body.appendChild;
-      createElementSpy.mockClear();
-      appendChildSpy.mockClear();
-
-      const { result } = renderHook(() => usePdfExport(mockTravels));
-
-      await act(async () => {
-        await result.current.previewPdf(mockSettings);
-      });
-
-      expect(createElementSpy).toHaveBeenCalledWith('iframe');
-      expect(createElementSpy).toHaveBeenCalledWith('button');
-      expect(appendChildSpy).toHaveBeenCalledTimes(2); // iframe + button
-    });
-
-    it('должен обрабатывать ошибки при создании превью', async () => {
-      const error = new Error('Preview error');
-      mockPreview.mockRejectedValue(error);
-
-      const { result } = renderHook(() => usePdfExport(mockTravels));
-
-      await act(async () => {
-        const previewResult = await result.current.previewPdf(mockSettings);
-        expect(previewResult).toBeNull();
-      });
-
-      expect(result.current.error).toBeDefined();
-      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', expect.any(String));
-    });
-  });
+  // exportPdf и previewPdf теперь являются заглушками (старый html2pdf-поток отключен),
+  // поэтому отдельные тесты на взаимодействие с PdfExportService больше не нужны.
 
   describe('Конфигурация', () => {
     it('должен использовать переданную конфигурацию', () => {

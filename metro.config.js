@@ -17,7 +17,7 @@ if (!config.resolver.blockList) {
   config.resolver.blockList = [config.resolver.blockList];
 }
 // Блокируем jsPDF (используем только pdf-lib из-за проблем с html2canvas)
-config.resolver.blockList.push(/node_modules\/jspdf\/.*/);
+//config.resolver.blockList.push(/node_modules\/jspdf\/.*/);
 // Добавляем react-native-maps в blockList только для веб (через resolver)
 
 // Настройка resolver для исключения react-native-maps на веб

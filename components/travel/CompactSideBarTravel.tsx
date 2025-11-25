@@ -80,6 +80,7 @@ function CompactSideBarTravel({
     settingsSummary,
     handleSaveWithSettings,
     handlePreviewWithSettings,
+    handleOpenPrintBookWithSettings,
   } = useSingleTravelExport(travel);
 
   // ✅ УЛУЧШЕНИЕ: Используем внешнюю активную секцию, если она передана, иначе локальную
@@ -204,18 +205,29 @@ function CompactSideBarTravel({
 
   const handleSaveSettings = useCallback(
     async (settings: BookSettings) => {
-      await handleSaveWithSettings(settings);
+      // "Сохранить PDF" переводим на новый HTML-поток печати (книга в новой вкладке + печать браузера)
+      if (handleOpenPrintBookWithSettings) {
+        await handleOpenPrintBookWithSettings(settings);
+      } else {
+        // Fallback: старый html2pdf-поток сохранения
+        await handleSaveWithSettings(settings);
+      }
       setShowSettingsModal(false);
     },
-    [handleSaveWithSettings]
+    [handleOpenPrintBookWithSettings, handleSaveWithSettings]
   );
 
   const handlePreviewSettings = useCallback(
     async (settings: BookSettings) => {
-      await handlePreviewWithSettings(settings);
+      // Превью так же идёт через HTML-книгу; при отсутствии нового метода используем старое превью
+      if (handleOpenPrintBookWithSettings) {
+        await handleOpenPrintBookWithSettings(settings);
+      } else {
+        await handlePreviewWithSettings(settings);
+      }
       setShowSettingsModal(false);
     },
-    [handlePreviewWithSettings]
+    [handleOpenPrintBookWithSettings, handlePreviewWithSettings]
   );
   
   return (
@@ -285,23 +297,25 @@ function CompactSideBarTravel({
                       <MaterialIcons name="edit" size={18} color="#2F332E" />
                     </Pressable>
                   )}
-                  <Pressable
-                    onPress={handleOpenExport}
-                    hitSlop={6}
-                    disabled={Platform.OS !== 'web' || pdfExport.isGenerating}
-                    accessibilityRole="button"
-                    accessibilityLabel="Экспорт в PDF"
-                  >
-                    {pdfExport.isGenerating ? (
-                      <ActivityIndicator size="small" color="#b83a3a" />
-                    ) : (
-                      <MaterialIcons
-                        name="picture-as-pdf"
-                        size={18}
-                        color={Platform.OS === 'web' ? "#b83a3a" : "#a1a1a1"}
-                      />
-                    )}
-                  </Pressable>
+                  {Platform.OS === 'web' && (
+                    <Pressable
+                      onPress={handleOpenExport}
+                      hitSlop={6}
+                      disabled={pdfExport.isGenerating}
+                      accessibilityRole="button"
+                      accessibilityLabel="Экспорт в PDF"
+                    >
+                      {pdfExport.isGenerating ? (
+                        <ActivityIndicator size="small" color="#b83a3a" />
+                      ) : (
+                        <MaterialIcons
+                          name="picture-as-pdf"
+                          size={18}
+                          color="#b83a3a"
+                        />
+                      )}
+                    </Pressable>
+                  )}
                 </View>
               </View>
               {Platform.OS === 'web' && (
