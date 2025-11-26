@@ -7,6 +7,7 @@ import { Platform, Alert } from 'react-native';
 import { usePdfExport } from '@/src/hooks/usePdfExport';
 import type { Travel } from '@/src/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
+import { ExportStage } from '@/src/types/pdf-export';
 
 const mockGenerateTravelsHtml = jest.fn(async () => '<html><body><section class="pdf-page">Test</section></body></html>');
 const mockOpenBookPreviewWindow = jest.fn();
@@ -170,6 +171,117 @@ describe('usePdfExport', () => {
       // Конфигурация должна быть передана в сервис
       // (проверка через мок)
       expect(true).toBe(true); // Placeholder - реальная проверка требует доступа к внутренностям
+    });
+  });
+
+  describe('openPrintBook', () => {
+    it('должен показывать алерт, если платформа не web', async () => {
+      Object.defineProperty(Platform, 'OS', {
+        configurable: true,
+        value: 'ios',
+      });
+
+      const { result } = renderHook(() => usePdfExport(mockTravels));
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Недоступно',
+        'Просмотр книги и печать доступны только в веб-версии MeTravel'
+      );
+
+      Object.defineProperty(Platform, 'OS', {
+        configurable: true,
+        value: 'web',
+      });
+    });
+
+    it('должен показывать предупреждение, если не выбрано ни одного путешествия', async () => {
+      const { result } = renderHook(() => usePdfExport([]));
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Внимание',
+        'Выберите хотя бы одно путешествие для экспорта'
+      );
+
+      expect(mockGenerateTravelsHtml).not.toHaveBeenCalled();
+      expect(mockOpenBookPreviewWindow).not.toHaveBeenCalled();
+    });
+
+    it('должен генерировать HTML и открывать окно предпросмотра при успешном сценарии', async () => {
+      const detailedTravels: Travel[] = [
+        {
+          ...(mockTravels[0] as Travel),
+          id: 1,
+        } as Travel,
+        {
+          ...(mockTravels[0] as Travel),
+          id: undefined as any,
+          slug: 'slug-travel',
+          description: undefined as any,
+          recommendation: undefined as any,
+          plus: undefined as any,
+          minus: undefined as any,
+          gallery: undefined as any,
+          travelAddress: undefined as any,
+        } as Travel,
+      ];
+
+      const { result } = renderHook(() => usePdfExport(detailedTravels));
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(mockGenerateTravelsHtml).toHaveBeenCalledTimes(1);
+      expect(mockOpenBookPreviewWindow).toHaveBeenCalledTimes(1);
+
+      await waitFor(() => {
+        expect(result.current.progress).toBe(100);
+        expect(result.current.currentStage).toBe(ExportStage.COMPLETE);
+        expect(result.current.isGenerating).toBe(false);
+        expect(result.current.error).toBeNull();
+      });
+    });
+
+    it('должен обрабатывать ошибки генерации HTML и устанавливать статус ошибки', async () => {
+      const error = new Error('Generation failed');
+      mockGenerateTravelsHtml.mockRejectedValueOnce(error);
+
+      const { result } = renderHook(() => usePdfExport(mockTravels));
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', error.message);
+
+      await waitFor(() => {
+        expect(result.current.error).toEqual(error);
+        expect(result.current.currentStage).toBe(ExportStage.ERROR);
+        expect(result.current.isGenerating).toBe(false);
+      });
+    });
+
+    it('не должен изменять состояние, если хук размонтирован до завершения', async () => {
+      const { result, unmount } = renderHook(() => usePdfExport(mockTravels));
+
+      unmount();
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Ошибка',
+        'Предпросмотр книги недоступен'
+      );
     });
   });
 });
