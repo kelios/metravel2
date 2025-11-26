@@ -32,12 +32,24 @@ jest.mock('@/providers/FiltersProvider', () => ({
 }));
 
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => 'Icon');
-jest.mock('react-native-paper', () => ({
-  Menu: ({ visible, onDismiss, anchor, children }: any) => (
-    visible ? <div data-testid="menu">{children}</div> : null
-  ),
-  Divider: () => <div data-testid="divider" />,
-}));
+jest.mock('react-native-paper', () => {
+  const React = require('react');
+  const { View, Text, TouchableOpacity } = require('react-native');
+
+  const Menu: any = ({ children }: any) => (
+    <View testID="menu">{children}</View>
+  );
+
+  Menu.Item = ({ title, onPress }: any) => (
+    <TouchableOpacity onPress={onPress}>
+      <Text>{title}</Text>
+    </TouchableOpacity>
+  );
+
+  const Divider = () => <View testID="divider" />;
+
+  return { Menu, Divider };
+});
 
 // Mock image
 jest.mock('../assets/icons/logo_yellow_60x60.png', () => 'logo.png', { virtual: true });
@@ -58,12 +70,18 @@ describe('RenderRightMenu', () => {
     jest.clearAllMocks();
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
-      username: null,
+      username: '',
       logout: mockLogout,
-      user: null,
+      userId: null,
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      isSuperuser: false,
       login: jest.fn(),
-      register: jest.fn(),
-    });
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn(),
+    } as any);
     mockUseFavorites.mockReturnValue({
       favorites: [],
       viewHistory: [],
@@ -73,23 +91,18 @@ describe('RenderRightMenu', () => {
       addToHistory: jest.fn(),
       clearHistory: jest.fn(),
       getRecommendations: jest.fn(),
-    });
+    } as any);
     mockUseFilters.mockReturnValue({
       updateFilters: mockUpdateFilters,
-      filters: {},
-    });
-  });
-
-  it('renders logo and menu button', () => {
-    const { getByTestId } = render(<RenderRightMenu />);
-    // Menu button should be rendered
-    expect(getByTestId).toBeDefined();
+      filters: {} as any,
+    } as any);
   });
 
   it('shows login and registration options when not authenticated', () => {
     const { getByText } = render(<RenderRightMenu />);
-    // Note: Menu visibility is controlled by state, so we need to check the component structure
-    expect(getByText).toBeDefined();
+
+    expect(getByText('Войти')).toBeTruthy();
+    expect(getByText('Зарегистрироваться')).toBeTruthy();
   });
 
   it('shows user menu when authenticated', () => {
@@ -97,13 +110,19 @@ describe('RenderRightMenu', () => {
       isAuthenticated: true,
       username: 'testuser',
       logout: mockLogout,
-      user: { id: '1' },
+      userId: '1',
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      isSuperuser: false,
       login: jest.fn(),
-      register: jest.fn(),
-    });
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn(),
+    } as any);
 
     const { getByText } = render(<RenderRightMenu />);
-    expect(getByText).toBeDefined();
+    expect(getByText('Добавить путешествие')).toBeTruthy();
   });
 
   it('displays username when authenticated', () => {
@@ -111,14 +130,39 @@ describe('RenderRightMenu', () => {
       isAuthenticated: true,
       username: 'testuser',
       logout: mockLogout,
-      user: { id: '1' },
+      userId: '1',
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      isSuperuser: false,
       login: jest.fn(),
-      register: jest.fn(),
-    });
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn(),
+    } as any);
 
     const { getByText } = render(<RenderRightMenu />);
-    // Username should be displayed
-    expect(getByText).toBeDefined();
+    expect(getByText('testuser')).toBeTruthy();
+  });
+
+  it('does not display username when not authenticated even if username exists', () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      username: 'ghost-user',
+      logout: mockLogout,
+      userId: null,
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      isSuperuser: false,
+      login: jest.fn(),
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn(),
+    } as any);
+
+    const { queryByText } = render(<RenderRightMenu />);
+    expect(queryByText('ghost-user')).toBeNull();
   });
 
   it('shows favorites count in profile menu item', () => {
@@ -126,10 +170,16 @@ describe('RenderRightMenu', () => {
       isAuthenticated: true,
       username: 'testuser',
       logout: mockLogout,
-      user: { id: '1' },
+      userId: '1',
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      isSuperuser: false,
       login: jest.fn(),
-      register: jest.fn(),
-    });
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn(),
+    } as any);
 
     mockUseFavorites.mockReturnValue({
       favorites: [
@@ -146,8 +196,7 @@ describe('RenderRightMenu', () => {
     });
 
     const { getByText } = render(<RenderRightMenu />);
-    // Should show count in profile menu
-    expect(getByText).toBeDefined();
+    expect(getByText('Личный кабинет (2)')).toBeTruthy();
   });
 
   it('navigates to home when logo is pressed', () => {
@@ -161,40 +210,57 @@ describe('RenderRightMenu', () => {
       isAuthenticated: true,
       username: 'testuser',
       logout: mockLogout,
-      user: { id: '1' },
+      userId: '1',
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      isSuperuser: false,
       login: jest.fn(),
-      register: jest.fn(),
-    });
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn(),
+    } as any);
 
-    render(<RenderRightMenu />);
-    
-    // In a real test, we would fire the logout event
-    // For now, we verify the logout function exists
-    expect(mockLogout).toBeDefined();
+    const { getByText } = render(<RenderRightMenu />);
+
+    // Нажимаем на пункт меню "Выход"
+    fireEvent.press(getByText('Выход'));
+
+    await waitFor(() => {
+      expect(mockLogout).toHaveBeenCalledTimes(1);
+      expect(router.push).toHaveBeenCalledWith('/');
+    });
   });
 
-  it('updates filters when navigating to my travels', () => {
+  it('updates filters when navigating to my travels', async () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       username: 'testuser',
       logout: mockLogout,
-      user: { id: '1' },
+      userId: '1',
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      isSuperuser: false,
       login: jest.fn(),
-      register: jest.fn(),
-    });
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn(),
+    } as any);
 
-    render(<RenderRightMenu />);
-    
-    // When navigating to my travels, filters should be updated
-    expect(mockUpdateFilters).toBeDefined();
+    const { getByText } = render(<RenderRightMenu />);
+
+    fireEvent.press(getByText('Мои путешествия'));
+
+    await waitFor(() => {
+      expect(mockUpdateFilters).toHaveBeenCalledWith({ user_id: 1 });
+    });
   });
 
   it('handles window resize for mobile/desktop layout', () => {
     const { rerender } = render(<RenderRightMenu />);
-    
-    // Component should handle window resize
+
     rerender(<RenderRightMenu />);
     expect(rerender).toBeDefined();
   });
 });
-

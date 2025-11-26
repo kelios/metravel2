@@ -39,6 +39,7 @@ import ConfirmDialog from "../ConfirmDialog";
 import UIButton from '@/components/ui/Button';
 import HeroSection from "./HeroSection";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useAuth } from '@/context/AuthContext';
 
 // Ленивая загрузка объединенного компонента с табами
 // @ts-ignore - Dynamic imports are supported in runtime
@@ -355,16 +356,8 @@ function ListTravel({
 
     const queryClient = useQueryClient();
 
-    /* Auth flags */
-    const [userId, setUserId] = useState<string | null>(null);
-    const [isSuper, setSuper] = useState(false);
-
-    useEffect(() => {
-        AsyncStorage.multiGet(["userId", "isSuperuser"]).then(([[, id], [, su]]) => {
-            setUserId(id || null);
-            setSuper(su === "true");
-        });
-    }, []);
+    /* Auth flags: используем AuthContext, который уже учитывает наличие токена */
+    const { userId, isSuperuser: isSuper } = useAuth();
 
     /* Top-bar state */
     const [search, setSearch] = useState("");
@@ -447,8 +440,10 @@ function ListTravel({
       () => (isMeTravel || isExport ? !!userId : true),
       [isMeTravel, isExport, userId]
     );
-    
-    const isUserIdLoading = (isMeTravel || isExport) && userId === null;
+
+    // Если для страницы требуется конкретный пользователь ("Мои путешествия" или экспорт),
+    // то до загрузки userId блокируем основной запрос.
+    const isUserIdLoading = (isMeTravel || isExport) && !userId;
     
     const {
         data: travels,

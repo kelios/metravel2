@@ -114,7 +114,10 @@ export default function Breadcrumbs({ items, showHome = true, travelName }: Brea
       }
 
       // Формируем правильный path для навигации (включая travels в пути, если он был)
-      const path = '/' + parts.slice(0, index + 1).join('/');
+      // Специальный случай: сегмент "travel" должен вести на страницу "Мои путешествия"
+      const path = part === 'travel'
+        ? '/metravel'
+        : '/' + parts.slice(0, index + 1).join('/');
       
       // ✅ ИСПРАВЛЕНИЕ: Для страницы статьи используем название из travelName (русское)
       let label = part;
@@ -130,7 +133,7 @@ export default function Breadcrumbs({ items, showHome = true, travelName }: Brea
           'quests': 'Квесты',
           'roulette': 'Случайный маршрут',
           'article': 'Статья',
-          'travel': 'Путешествие',
+          'travel': 'Мои путешествия',
           'profile': 'Профиль',
           'login': 'Вход',
           'registration': 'Регистрация',
@@ -144,6 +147,7 @@ export default function Breadcrumbs({ items, showHome = true, travelName }: Brea
           'accountconfirmation': 'Подтверждение аккаунта',
           'set-password': 'Установка пароля',
           'articles': 'Статьи',
+          'new': 'Новое путешествие',
         };
 
         if (pageTranslations[part]) {

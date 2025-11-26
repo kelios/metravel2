@@ -172,6 +172,40 @@ describe('CompactSideBarTravel', () => {
     expect(getByLabelText('Редактировать путешествие')).toBeTruthy();
   });
 
+  it('should not render edit button for guest (no user and no superuser)', () => {
+    const travel = createMockTravel({
+      userId: '123',
+    } as any);
+
+    const { queryByLabelText } = render(
+      <CompactSideBarTravel
+        {...defaultProps}
+        travel={travel}
+        isSuperuser={false}
+        storedUserId={null}
+      />
+    );
+
+    expect(queryByLabelText('Редактировать путешествие')).toBeNull();
+  });
+
+  it('should render edit button for superuser even if not owner', () => {
+    const travel = createMockTravel({
+      userId: '999',
+    } as any);
+
+    const { getByLabelText } = render(
+      <CompactSideBarTravel
+        {...defaultProps}
+        travel={travel}
+        isSuperuser={true}
+        storedUserId={null}
+      />
+    );
+
+    expect(getByLabelText('Редактировать путешествие')).toBeTruthy();
+  });
+
   it('should render close button on mobile', () => {
     const { getByText, getByLabelText } = render(
       <CompactSideBarTravel {...defaultProps} isMobile={true} />

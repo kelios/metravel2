@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View, Dimensions } from 'react-native';
+import { StyleSheet, View, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Snackbar } from 'react-native-paper';
+import { Button } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 
 import {
@@ -14,19 +13,27 @@ import {
 } from '@/src/api/travels';
 import { TravelFormData, MarkerData, Travel } from '@/src/types/types';
 import { useAuth } from '@/context/AuthContext';
+import { validateStep, type ValidationError } from '@/utils/formValidation';
+import { trackWizardEvent } from '@/src/utils/analytics';
 
-import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
-import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
-import GallerySection from '@/components/travel/GallerySection';
+import TravelWizardStepBasic from '@/components/travel/TravelWizardStepBasic';
+import TravelWizardStepRoute from '@/components/travel/TravelWizardStepRoute';
+import TravelWizardStepMedia from '@/components/travel/TravelWizardStepMedia';
+import TravelWizardStepDetails from '@/components/travel/TravelWizardStepDetails';
+import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
 import { useAutoSaveForm } from '@/hooks/useAutoSaveForm';
 
 export default function UpsertTravel() {
     const router = useRouter();
     const { id } = useLocalSearchParams();
-    const { userId, isAuthenticated } = useAuth();
+    const { userId, isAuthenticated, isSuperuser } = useAuth();
+    const isSuperAdmin = isSuperuser;
     const isNew = !id;
     const windowWidth = Dimensions.get('window').width;
     const isMobile = windowWidth <= 768;
+
+    const [currentStep, setCurrentStep] = useState(1);
+    const totalSteps = 5; // 1 — Основное, 2 — Маршрут, 3 — Медиа, 4 — Детали и советы, 5 — Публикация
 
     const [menuVisible, setMenuVisible] = useState(!isMobile);
     const [markers, setMarkers] = useState<MarkerData[]>([]);
@@ -35,9 +42,11 @@ export default function UpsertTravel() {
     const [formData, setFormData] = useState<TravelFormData>(getEmptyFormData(isNew ? null : String(id)));
     const [snackbarVisible, setSnackbarVisible] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
-    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const [isLoading, setIsLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
+    const [step1Errors, setStep1Errors] = useState<string[]>([]);
+    const [step1FirstErrorField, setStep1FirstErrorField] = useState<string | null>(null);
 
     const saveFormDataWithId = async (data: TravelFormData) => {
         const cleanedData = cleanEmptyFields({ ...data, id: data.id || null });
@@ -45,24 +54,38 @@ export default function UpsertTravel() {
     };
 
     const applySavedData = (savedData: TravelFormData) => {
-        setFormData(savedData);
-        setMarkers(savedData.coordsMeTravel || []);
-        resetOriginalData(savedData);
+        const markersFromData = (savedData.coordsMeTravel as any) || [];
+        const syncedCountries = syncCountriesFromMarkers(markersFromData, savedData.countries || []);
+
+        setFormData({
+            ...savedData,
+            countries: syncedCountries,
+        });
+        setMarkers(markersFromData);
+        resetOriginalData({
+            ...savedData,
+            countries: syncedCountries,
+        });
     };
 
     const { resetOriginalData } = useAutoSaveForm(formData, {
         debounce: 5000,
         onSave: saveFormDataWithId,
-        onSuccess: applySavedData,
-        onError: () => showSnackbar('Ошибка автосохранения'),
+        onStart: () => setAutosaveStatus('saving'),
+        onSuccess: savedData => {
+            applySavedData(savedData);
+            setAutosaveStatus('saved');
+        },
+        onError: () => {
+            setAutosaveStatus('error');
+            showSnackbar('Ошибка автосохранения');
+        },
     });
 
     useEffect(() => {
         let isMounted = true;
         (async () => {
             try {
-                const flag = await AsyncStorage.getItem('isSuperuser');
-                if (isMounted) setIsSuperAdmin(flag === 'true');
                 const [filtersData, countryData] = await Promise.all([
                     fetchFilters(),
                     fetchAllCountries(),
@@ -93,10 +116,17 @@ export default function UpsertTravel() {
         return () => {
             isMounted = false;
         };
-    }, [id, isNew, isAuthenticated, userId, isSuperAdmin, router]);
+    }, [id, isNew, isAuthenticated, userId, router]);
 
     const handleManualSave = async () => {
         try {
+            await trackWizardEvent('wizard_manual_save', {
+                step: currentStep,
+                is_new: isNew,
+                is_edit: !isNew,
+                status: formData.moderation ? 'moderation' : 'draft',
+            });
+
             const savedData = await saveFormDataWithId(formData);
             applySavedData(savedData);
             if (isNew && savedData.id) router.replace(`/travel/${savedData.id}`);
@@ -106,20 +136,24 @@ export default function UpsertTravel() {
         }
     };
 
+    const handleFinishWizard = async () => {
+        await handleManualSave();
+    };
+
     const loadTravelData = async (travelId: string) => {
         try {
             setIsLoading(true);
-        const travelData = await fetchTravel(Number(travelId));
-            
+            const travelData = await fetchTravel(Number(travelId));
+
             // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Проверка прав доступа при редактировании
             if (!isNew && travelData) {
                 const travelUserId = travelData.userIds || travelData.user?.id?.toString() || '';
                 const currentUserIdStr = userId?.toString() || '';
-                
+
                 // Проверяем, что пользователь является владельцем или супер-админом
                 const isOwner = travelUserId === currentUserIdStr;
                 const canEdit = isOwner || isSuperAdmin;
-                
+
                 if (!canEdit) {
                     Toast.show({
                         type: 'error',
@@ -129,7 +163,7 @@ export default function UpsertTravel() {
                     router.replace('/');
                     return;
                 }
-                
+
                 setHasAccess(true);
             } else if (isNew) {
                 // Для нового путешествия проверяем авторизацию
@@ -144,12 +178,21 @@ export default function UpsertTravel() {
                 }
                 setHasAccess(true);
             }
-            
-        const transformed = transformTravelToFormData(travelData);
-        setTravelDataOld(travelData);
-        setFormData(transformed);
-        setMarkers(transformed.coordsMeTravel || []);
-        resetOriginalData(transformed);
+
+            const transformed = transformTravelToFormData(travelData);
+            const markersFromData = (transformed.coordsMeTravel as any) || [];
+            const syncedCountries = syncCountriesFromMarkers(markersFromData, transformed.countries || []);
+
+            setTravelDataOld(travelData);
+            setFormData({
+                ...transformed,
+                countries: syncedCountries,
+            });
+            setMarkers(markersFromData);
+            resetOriginalData({
+                ...transformed,
+                countries: syncedCountries,
+            });
         } catch (error) {
             console.error('Ошибка загрузки путешествия:', error);
             Toast.show({
@@ -185,6 +228,35 @@ export default function UpsertTravel() {
         setSnackbarVisible(true);
     };
 
+    const handleNextFromBasic = () => {
+        const result = validateStep(1, {
+            name: formData.name ?? '',
+            description: formData.description ?? '',
+            countries: formData.countries ?? [],
+        } as any);
+
+        const hadErrors = !result.isValid;
+        const errorFields = result.errors.map((e: ValidationError) => e.field);
+        trackWizardEvent('wizard_step_next_click', {
+            step_from: 1,
+            step_to: 2,
+            had_errors: hadErrors,
+            error_fields: errorFields,
+        });
+
+        if (!result.isValid) {
+            const requiredMessages = result.errors.map((e: ValidationError) => e.message);
+            setStep1Errors(requiredMessages);
+            setStep1FirstErrorField(result.errors[0]?.field ?? null);
+            showSnackbar('Заполните обязательные поля на шаге "Основное", чтобы перейти дальше.');
+            return;
+        }
+
+        setStep1Errors([]);
+        setStep1FirstErrorField(null);
+        setCurrentStep(2);
+    };
+
     // Показываем загрузку или блокируем доступ
     if (isLoading) {
         return (
@@ -200,75 +272,157 @@ export default function UpsertTravel() {
         return null; // Редирект уже произошел
     }
 
+    if (currentStep === 1) {
+        trackWizardEvent('wizard_step_view', {
+            step: 1,
+        });
+        return (
+            <TravelWizardStepBasic
+                currentStep={currentStep}
+                totalSteps={totalSteps}
+                formData={formData}
+                setFormData={setFormData}
+                filters={filters}
+                travelDataOld={travelDataOld}
+                isSuperAdmin={isSuperAdmin}
+                isMobile={isMobile}
+                menuVisible={menuVisible}
+                setMenuVisible={setMenuVisible}
+                onManualSave={handleManualSave}
+                snackbarVisible={snackbarVisible}
+                snackbarMessage={snackbarMessage}
+                onDismissSnackbar={() => setSnackbarVisible(false)}
+                onGoNext={handleNextFromBasic}
+                stepErrors={step1Errors}
+                firstErrorField={step1FirstErrorField}
+                autosaveStatus={autosaveStatus}
+            />
+        );
+    }
+
+    if (currentStep === 2) {
+        trackWizardEvent('wizard_step_view', {
+            step: 2,
+        });
+        return (
+            <TravelWizardStepRoute
+                currentStep={currentStep}
+                totalSteps={totalSteps}
+                markers={markers}
+                setMarkers={(updatedMarkers) => {
+                    setMarkers(updatedMarkers);
+                    setFormData(prev => ({
+                        ...prev,
+                        coordsMeTravel: updatedMarkers as any,
+                    }));
+                }}
+                categoryTravelAddress={filters.categoryTravelAddress}
+                countries={filters.countries}
+                selectedCountryIds={formData.countries}
+                onCountrySelect={handleCountrySelect}
+                onCountryDeselect={handleCountryDeselect}
+                onBack={() => {
+                    trackWizardEvent('wizard_step_back_click', {
+                        step_from: 2,
+                        step_to: 1,
+                    });
+                    setCurrentStep(1);
+                }}
+                onNext={() => {
+                    const validation = validateStep(2, { coordsMeTravel: (formData as any).coordsMeTravel } as any, markers);
+                    const hadErrors = !validation.isValid;
+                    trackWizardEvent('wizard_step_next_click', {
+                        step_from: 2,
+                        step_to: 3,
+                        had_errors: hadErrors,
+                        // На шаге 2 ошибок по полям нет, только общий маркер маршрута
+                        error_fields: validation.errors.map((e: ValidationError) => e.field),
+                    });
+                    if (!validation.isValid) {
+                        showSnackbar('Добавьте хотя бы одну точку маршрута, чтобы перейти к медиа');
+                        return;
+                    }
+                    setCurrentStep(3);
+                }}
+            />
+        );
+    }
+
+    if (currentStep === 3) {
+        trackWizardEvent('wizard_step_view', {
+            step: 3,
+        });
+        return (
+            <TravelWizardStepMedia
+                currentStep={currentStep}
+                totalSteps={totalSteps}
+                formData={formData}
+                setFormData={setFormData}
+                travelDataOld={travelDataOld}
+                onManualSave={handleManualSave}
+                onBack={() => {
+                    trackWizardEvent('wizard_step_back_click', {
+                        step_from: 3,
+                        step_to: 2,
+                    });
+                    setCurrentStep(2);
+                }}
+                onNext={() => {
+                    trackWizardEvent('wizard_step_next_click', {
+                        step_from: 3,
+                        step_to: 4,
+                        had_errors: false,
+                        error_fields: [],
+                    });
+                    setCurrentStep(4);
+                }}
+            />
+        );
+    }
+
+    if (currentStep === 4) {
+        trackWizardEvent('wizard_step_view', {
+            step: 4,
+        });
+        return (
+            <TravelWizardStepDetails
+                currentStep={currentStep}
+                totalSteps={totalSteps}
+                formData={formData}
+                setFormData={setFormData}
+                onBack={() => {
+                    trackWizardEvent('wizard_step_back_click', {
+                        step_from: 4,
+                        step_to: 3,
+                    });
+                    setCurrentStep(3);
+                }}
+                onNext={() => {
+                    trackWizardEvent('wizard_step_next_click', {
+                        step_from: 4,
+                        step_to: 5,
+                        had_errors: false,
+                        error_fields: [],
+                    });
+                    setCurrentStep(5);
+                }}
+            />
+        );
+    }
+
     return (
-        <SafeAreaView style={styles.safeContainer}>
-            <View style={[styles.mainWrapper, isMobile && styles.mainWrapperMobile]}>
-                <ScrollView style={styles.contentColumn}>
-                    <ContentUpsertSection
-                        formData={formData}
-                        setFormData={setFormData}
-                        markers={markers}
-                        setMarkers={setMarkers}
-                        filters={filters}
-                        handleCountrySelect={handleCountrySelect}
-                        handleCountryDeselect={handleCountryDeselect}
-                    />
-                    <GallerySection formData={formData} travelDataOld={travelDataOld} />
-                </ScrollView>
-                {isMobile ? (
-                    <View style={styles.mobileFiltersWrapper}>
-                        {menuVisible && (
-                            <ScrollView style={styles.filtersScroll}>
-                                <FiltersUpsertComponent
-                                    filters={filters}
-                                    formData={formData}
-                                    setFormData={setFormData}
-                                    travelDataOld={travelDataOld}
-                                    onClose={() => setMenuVisible(false)}
-                                    isSuperAdmin={isSuperAdmin}
-                                    onSave={handleManualSave}
-                                />
-                            </ScrollView>
-                        )}
-                    </View>
-                ) : (
-                    <View style={styles.filtersColumn}>
-                        <FiltersUpsertComponent
-                            filters={filters}
-                            formData={formData}
-                            setFormData={setFormData}
-                            travelDataOld={travelDataOld}
-                            onClose={() => setMenuVisible(false)}
-                            isSuperAdmin={isSuperAdmin}
-                            onSave={handleManualSave}
-                        />
-                    </View>
-                )}
-            </View>
-            {isMobile && (
-                <View style={styles.mobileActionBar}>
-                    <Button
-                        mode="contained"
-                        icon="content-save"
-                        onPress={handleManualSave}
-                        style={styles.saveButtonMobile}
-                    >
-                        Сохранить
-                    </Button>
-                    <Button
-                        mode="outlined"
-                        icon="filter-outline"
-                        onPress={() => setMenuVisible(!menuVisible)}
-                        style={styles.filterButton}
-                    >
-                        Боковая панель
-                    </Button>
-                </View>
-            )}
-            <Snackbar visible={snackbarVisible} onDismiss={() => setSnackbarVisible(false)}>
-                {snackbarMessage}
-            </Snackbar>
-        </SafeAreaView>
+        <TravelWizardStepPublish
+            currentStep={currentStep}
+            totalSteps={totalSteps}
+            formData={formData}
+            setFormData={setFormData}
+            filters={filters}
+            travelDataOld={travelDataOld}
+            isSuperAdmin={isSuperAdmin}
+            onManualSave={handleManualSave}
+            onGoBack={() => setCurrentStep(4)}
+            onFinish={handleFinishWizard}
+        />
     );
 }
 
@@ -354,13 +508,35 @@ function getEmptyFormData(id: string | null): TravelFormData {
     };
 }
 
+// Синхронизация списка стран путешествия с выбранными на карте точками
+function syncCountriesFromMarkers(markers: MarkerData[], existingCountries: string[]): string[] {
+    const markerCountryIds = Array.from(
+        new Set(
+            (markers || [])
+                .map(m => (m.country != null ? String(m.country) : null))
+                .filter((id): id is string => !!id),
+        ),
+    );
+
+    const result = new Set<string>([...existingCountries, ...markerCountryIds]);
+    return Array.from(result);
+}
+
 function transformTravelToFormData(travel: Travel): TravelFormData {
+    const yearStr = travel.year != null ? String(travel.year) : '';
+    const daysStr = (travel as any).number_days != null ? String((travel as any).number_days) : '';
+    const peoplesStr = (travel as any).number_peoples != null ? String((travel as any).number_peoples) : '';
+
     return {
         ...getEmptyFormData(String(travel.id)),
         ...travel,
-        moderation: travel.moderation ?? false,
-        publish: travel.publish ?? false,
-        visa: travel.visa ?? false,
+        // Нормализуем числовые поля к строкам для формы
+        year: yearStr,
+        number_days: daysStr,
+        number_peoples: peoplesStr,
+        moderation: (travel as any).moderation ?? false,
+        publish: (travel as any).publish ?? false,
+        visa: (travel as any).visa ?? false,
     };
 }
 

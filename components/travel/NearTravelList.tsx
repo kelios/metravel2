@@ -105,15 +105,7 @@ const MapContainer = memo(({
   height?: number;
   showRoute?: boolean;
 }) => {
-  const [mapHeight, setMapHeight] = useState(height);
   const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
-  
-  // ✅ УЛУЧШЕНИЕ: Ленивая загрузка карты
-  const { shouldLoad, setElementRef } = useLazyMap({
-    rootMargin: '200px',
-    threshold: 0.1,
-    enabled: isWeb,
-  });
 
   const canRenderMap = useMemo(
     () => typeof window !== 'undefined' && points.length > 0,
@@ -122,29 +114,9 @@ const MapContainer = memo(({
 
   if (!canRenderMap) {
     return (
-      <View style={[styles.mapPlaceholder, { height }]}>
+      <View style={[styles.mapPlaceholder, { height }]}> 
         <Text style={styles.placeholderIcon}>🌍</Text>
         <Text style={styles.placeholderText}>Загрузка карты...</Text>
-      </View>
-    );
-  }
-
-  // Если карта еще не должна загружаться
-  if (!shouldLoad) {
-    return (
-      <View 
-        style={[styles.mapContainer, { height }]}
-        ref={setElementRef as any}
-      >
-        <View style={styles.mapHeader}>
-          <Text style={styles.mapTitle}>
-            🗺️ {points.length} {points.length === 1 ? 'точка' :
-            points.length < 5 ? 'точки' : 'точек'} на карте
-          </Text>
-        </View>
-        <View style={styles.mapWrapper}>
-          <Text style={styles.placeholderText}>Карта загрузится при прокрутке…</Text>
-        </View>
       </View>
     );
   }
@@ -152,7 +124,6 @@ const MapContainer = memo(({
   return (
     <View 
       style={[styles.mapContainer, { height }]}
-      ref={setElementRef as any}
     >
       <View style={styles.mapHeader}>
         <Text style={styles.mapTitle}>
@@ -165,7 +136,6 @@ const MapContainer = memo(({
         <MapClientSideComponent
           showRoute={showRoute}
           travel={{ data: points }}
-          style={StyleSheet.absoluteFillObject}
         />
       </View>
 

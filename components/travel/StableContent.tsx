@@ -187,13 +187,23 @@ const WEB_RICH_TEXT_STYLES = `
   display: block;
   width: 100%;
   max-width: 100%;
-  max-height: 70vh;
+  max-height: 55vh;
   object-fit: cover;
   border-radius: 22px;
-  margin: 20px 0 24px;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
-  border: 8px solid rgba(255, 255, 255, 0.12);
+  margin: 22px 0 26px;
+  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.16);
+  border: 6px solid rgba(255, 255, 255, 0.14);
   background: #fafafa;
+}
+.${WEB_RICH_TEXT_CLASS} img + img,
+.${WEB_RICH_TEXT_CLASS} figure + figure {
+  margin-top: 28px;
+}
+.${WEB_RICH_TEXT_CLASS} img + p,
+.${WEB_RICH_TEXT_CLASS} p + img,
+.${WEB_RICH_TEXT_CLASS} figure + p,
+.${WEB_RICH_TEXT_CLASS} p + figure {
+  margin-top: 24px;
 }
 .${WEB_RICH_TEXT_CLASS} figure {
   margin: 30px auto;
@@ -220,8 +230,10 @@ const WEB_RICH_TEXT_STYLES = `
 .${WEB_RICH_TEXT_CLASS} figcaption {
   text-align: center;
   font-size: 0.9rem;
-  color: rgba(15, 23, 42, 0.7);
-  margin-top: 6px;
+  color: rgba(15, 23, 42, 0.8);
+  margin-top: 8px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 .${WEB_RICH_TEXT_CLASS} iframe,
 .${WEB_RICH_TEXT_CLASS} .yt-lite {
@@ -293,15 +305,14 @@ const WEB_RICH_TEXT_STYLES = `
 
 /* Дополнительные стили для мобильных устройств */
 @media (max-width: 900px) {
-  .${WEB_RICH_TEXT_CLASS} .instagram-wrapper,
-  .${WEB_RICH_TEXT_CLASS} .instagram-media {
-    margin: 20px auto !important;
-    border-radius: 12px !important;
+  .${WEB_RICH_TEXT_CLASS} {
+    text-align: left;
+    hyphens: unset;
   }
-  .${WEB_RICH_TEXT_CLASS} .instagram-wrapper iframe,
-  .${WEB_RICH_TEXT_CLASS} .instagram-embed,
-  .${WEB_RICH_TEXT_CLASS} .instagram-media iframe {
-    border-radius: 12px !important;
+  .${WEB_RICH_TEXT_CLASS} img {
+    border-width: 4px;
+    margin: 18px 0 22px;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.14);
   }
 }
 
@@ -316,16 +327,6 @@ const WEB_RICH_TEXT_STYLES = `
 }
 .${WEB_RICH_TEXT_CLASS} .instagram-caption-text {
   display: inline;
-}
-@media (max-width: 900px) {
-  .${WEB_RICH_TEXT_CLASS} {
-    text-align: left;
-    hyphens: unset;
-  }
-  .${WEB_RICH_TEXT_CLASS} img {
-    border-width: 6px;
-    margin: 18px 0 22px;
-  }
 }
 `;
 

@@ -22,6 +22,18 @@ export interface TravelFormValidation {
   number_peoples?: string;
 }
 
+// Упрощённый тип данных формы для использования в шаговой валидации
+export interface TravelFormLike {
+  name?: string | null;
+  description?: string | null;
+  countries?: string[] | null;
+  categories?: string[] | null;
+  coordsMeTravel?: any[] | null;
+  // Дополнительные поля, которые могут участвовать в чек-листе модерации
+  gallery?: any[] | null;
+  travel_image_thumb_small_url?: string | null;
+}
+
 /**
  * Валидация названия путешествия
  */
@@ -48,6 +60,110 @@ export function validateName(name: string | undefined | null): ValidationError |
 }
 
 /**
+ * Централизованная валидация шагов мастера
+ *
+ * Требования по ТЗ:
+ *  - Шаг 1: блокируем переход без name/description/countries
+ *  - Шаг 2: блокируем переход без хотя бы одной точки маршрута
+ *  - Шаги 3–4: рекомендательные поля, переходы не блокируются
+ *  - Шаг 5: валидация на уровне модерации (см. getModerationErrors)
+ */
+export function validateStep(
+  step: number,
+  formData: TravelFormLike,
+  markers?: any[] | null,
+): ValidationResult {
+  const errors: ValidationError[] = [];
+
+  if (step === 1) {
+    const nameError = validateName(formData.name ?? undefined);
+    if (nameError) errors.push(nameError);
+
+    const descriptionError = validateDescription(formData.description ?? undefined);
+    if (descriptionError) errors.push(descriptionError);
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+
+  if (step === 2) {
+    const markersToValidate = (
+      Array.isArray(markers) && markers.length > 0
+        ? markers
+        : (formData.coordsMeTravel ?? [])
+    ) as any[];
+    const markersError = validateMarkers(markersToValidate);
+    if (markersError) errors.push(markersError);
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+
+  // Для шагов 3 и 4 по ТЗ валидация рекомендательная и не должна блокировать переход
+  return {
+    isValid: true,
+    errors: [],
+  };
+}
+
+/**
+ * Получить ошибки для модерации (шаг публикации)
+ *
+ * Критичные поля по ТЗ:
+ *  - Название (name)
+ *  - Описание (description)
+ *  - Страны (countries)
+ *  - Маршрут (минимум одна точка: coordsMeTravel или markers)
+ *  - Фото (обложка или ≥1 фото в галерее)
+ */
+export function getModerationErrors(
+  formData: TravelFormLike,
+  markers?: any[] | null,
+): string[] {
+  const missing: string[] = [];
+
+  const nameError = validateName(formData.name ?? undefined);
+  if (nameError) {
+    missing.push('Название');
+  }
+
+  const descriptionError = validateDescription(formData.description ?? undefined);
+  if (descriptionError) {
+    missing.push('Описание');
+  }
+
+  const countriesError = validateCountries((formData.countries ?? []) as string[]);
+  if (countriesError) {
+    missing.push('Страны (минимум одна)');
+  }
+
+  // Если markers передан и не пустой — используем его.
+  // Если это пустой массив или undefined/null — используем coordsMeTravel из формы.
+  const markersSource = Array.isArray(markers) && markers.length > 0
+    ? markers
+    : (formData.coordsMeTravel ?? []);
+
+  const markersToValidate = markersSource as any[];
+  const markersError = validateMarkers(markersToValidate);
+  if (markersError) {
+    missing.push('Маршрут (минимум одна точка)');
+  }
+
+  const gallery = (formData.gallery ?? []) as any[];
+  const hasCover = !!(formData.travel_image_thumb_small_url && formData.travel_image_thumb_small_url.trim().length > 0);
+  const hasPhotos = hasCover || gallery.length > 0;
+  if (!hasPhotos) {
+    missing.push('Фото или обложка');
+  }
+
+  return missing;
+}
+
+/**
  * Валидация описания
  */
 export function validateDescription(description: string | undefined | null): ValidationError | null {
@@ -60,7 +176,7 @@ export function validateDescription(description: string | undefined | null): Val
   if (description.trim().length < 50) {
     return {
       field: 'description',
-      message: 'Описание должно содержать минимум 50 символов',
+      message: 'Опишите маршрут чуть подробнее (минимум 50 символов), чтобы путешественникам было понятно, чего ожидать.',
     };
   }
   return null;
@@ -108,11 +224,17 @@ export function validateMarkers(markers: any[] | undefined | null): ValidationEr
 /**
  * Валидация года
  */
-export function validateYear(year: string | undefined | null): ValidationError | null {
-  if (!year || year.trim().length === 0) {
+export function validateYear(year: string | number | undefined | null): ValidationError | null {
+  if (year === undefined || year === null) {
     return null; // Год не обязателен
   }
-  const yearNum = parseInt(year, 10);
+
+  const yearStr = typeof year === 'number' ? String(year) : String(year ?? '').trim();
+  if (yearStr.length === 0) {
+    return null; // Пустое значение игнорируем
+  }
+
+  const yearNum = parseInt(yearStr, 10);
   const currentYear = new Date().getFullYear();
   if (isNaN(yearNum) || yearNum < 1900 || yearNum > currentYear + 1) {
     return {
@@ -126,11 +248,17 @@ export function validateYear(year: string | undefined | null): ValidationError |
 /**
  * Валидация количества дней
  */
-export function validateDays(days: string | undefined | null): ValidationError | null {
-  if (!days || days.trim().length === 0) {
+export function validateDays(days: string | number | undefined | null): ValidationError | null {
+  if (days === undefined || days === null) {
     return null; // Количество дней не обязательно
   }
-  const daysNum = parseInt(days, 10);
+
+  const daysStr = typeof days === 'number' ? String(days) : String(days ?? '').trim();
+  if (daysStr.length === 0) {
+    return null; // Пустое значение игнорируем
+  }
+
+  const daysNum = parseInt(daysStr, 10);
   if (isNaN(daysNum) || daysNum < 1 || daysNum > 365) {
     return {
       field: 'number_days',
@@ -143,11 +271,17 @@ export function validateDays(days: string | undefined | null): ValidationError |
 /**
  * Валидация количества людей
  */
-export function validatePeople(people: string | undefined | null): ValidationError | null {
-  if (!people || people.trim().length === 0) {
+export function validatePeople(people: string | number | undefined | null): ValidationError | null {
+  if (people === undefined || people === null) {
     return null; // Количество людей не обязательно
   }
-  const peopleNum = parseInt(people, 10);
+
+  const peopleStr = typeof people === 'number' ? String(people) : String(people ?? '').trim();
+  if (peopleStr.length === 0) {
+    return null; // Пустое значение игнорируем
+  }
+
+  const peopleNum = parseInt(peopleStr, 10);
   if (isNaN(peopleNum) || peopleNum < 1 || peopleNum > 100) {
     return {
       field: 'number_peoples',

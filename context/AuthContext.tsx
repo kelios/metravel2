@@ -47,7 +47,17 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
                 getStorageBatch(['userId', 'userName', 'isSuperuser']),
             ]);
 
-            setIsAuthenticated(!!token);
+            // Если токена нет, считаем пользователя полностью разлогиненным,
+            // даже если в AsyncStorage остались имя / userId.
+            if (!token) {
+                setIsAuthenticated(false);
+                setUserId(null);
+                setUsername('');
+                setIsSuperuser(false);
+                return;
+            }
+
+            setIsAuthenticated(true);
             setUserId(storageData.userId);
             setUsername(storageData.userName || '');
             setIsSuperuser(storageData.isSuperuser === 'true');

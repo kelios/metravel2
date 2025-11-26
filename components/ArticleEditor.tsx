@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { uploadImage } from '@/src/api/travels';
+import { useAuth } from '@/context/AuthContext';
 
 const isWeb = Platform.OS === 'web';
 const win = isWeb && typeof window !== 'undefined' ? window : undefined;
@@ -32,6 +33,18 @@ function useDebounce<T extends unknown[]>(fn: (...args: T) => void, ms = 300) {
         if (timeout.current) clearTimeout(timeout.current);
         timeout.current = setTimeout(() => fnRef.current(...args), ms);
     }, [ms]);
+}
+
+function sanitizeHtml(html: string): string {
+    if (!html) return '';
+    let result = String(html);
+    // Удаляем инлайн-стили и лишние презентационные атрибуты из Word/Google Docs
+    result = result.replace(/ style="[^"]*"/gi, '');
+    result = result.replace(/ (color|face|size)="[^"]*"/gi, '');
+    result = result.replace(/ class="[^"]*"/gi, '');
+    // Убираем HTML-комментарии
+    result = result.replace(/<!--[\s\S]*?-->/g, '');
+    return result;
 }
 
 // Важно: грузим ТОЛЬКО default-экспорт — это гарантирует отдельный чанк
@@ -51,12 +64,23 @@ if (isWeb && win) {
     }
 }
 
-const quillModules = {
+const quillModulesDefault = {
     toolbar: [
         ['bold', 'italic', 'underline', 'strike'],
         [{ header: [1, 2, 3, false] }],
         [{ list: 'ordered' }, { list: 'bullet' }],
         ['link', 'image'],
+        ['clean'],
+    ],
+    history: { delay: 2000, maxStack: 100, userOnly: true },
+    clipboard: { matchVisual: false },
+} as const;
+
+const quillModulesCompact = {
+    toolbar: [
+        ['bold', 'italic', 'underline'],
+        [{ list: 'bullet' }],
+        ['link'],
         ['clean'],
     ],
     history: { delay: 2000, maxStack: 100, userOnly: true },
@@ -72,6 +96,7 @@ export interface ArticleEditorProps {
     autosaveDelay?: number;
     idTravel?: string;
     editorRef?: Ref<any>;
+    variant?: 'default' | 'compact';
 }
 
 const WebEditor: React.FC<ArticleEditorProps> = ({
@@ -83,6 +108,7 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
                                                      autosaveDelay = 5000,
                                                      idTravel,
                                                      editorRef,
+                                                     variant = 'default',
                                                  }) => {
     const [html, setHtml] = useState(content);
     const [fullscreen, setFullscreen] = useState(false);
@@ -90,6 +116,7 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
 
     const quillRef = useRef<any>(null);
     const tmpStoredRange = useRef<{ index: number; length: number } | null>(null);
+    const { isAuthenticated } = useAuth();
 
     useEffect(() => {
         if (!editorRef) return;
@@ -111,6 +138,7 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
       @media(prefers-color-scheme:dark){:root{--bg:#1e1e1e;--fg:#e0e0e0;--bar:#2a2a2a}}
       .ql-editor{background:var(--bg);color:var(--fg)}
       .ql-toolbar{background:var(--bar);position:sticky;top:0;z-index:10}
+      .ql-editor img{max-width:100%;height:auto;max-height:60vh;display:block;margin:12px auto;object-fit:contain}
     `;
         win.document.head.appendChild(style);
         return () => { win.document.head.removeChild(style); };
@@ -123,8 +151,9 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
     }, [html, onAutosave, autosaveDelay]);
 
     const fireChange = useCallback((val: string) => {
-        setHtml(val);
-        debouncedParentChange(val);
+        const clean = sanitizeHtml(val);
+        setHtml(clean);
+        debouncedParentChange(clean);
     }, [debouncedParentChange]);
 
     const insertImage = useCallback((url: string) => {
@@ -137,6 +166,10 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
     }, [fireChange]);
 
     const uploadAndInsert = useCallback(async (file: File) => {
+        if (!isAuthenticated) {
+            Alert.alert('Авторизация', 'Войдите, чтобы загружать изображения');
+            return;
+        }
         try {
             const form = new FormData();
             form.append('file', file);
@@ -148,7 +181,7 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
         } catch {
             Alert.alert('Ошибка', 'Не удалось загрузить изображение');
         }
-    }, [idTravel, insertImage]);
+    }, [idTravel, insertImage, isAuthenticated]);
 
     useEffect(() => {
         if (!quillRef.current) return;
@@ -171,10 +204,17 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
     }, [uploadAndInsert]);
 
     const IconButton = React.memo(function IconButton({
-                                                          name, onPress,
-                                                      }: { name: keyof typeof MaterialIcons.glyphMap; onPress: () => void }) {
+                                                          name,
+                                                          onPress,
+                                                          label,
+                                                      }: { name: keyof typeof MaterialIcons.glyphMap; onPress: () => void; label: string }) {
         return (
-            <TouchableOpacity onPress={onPress} style={styles.btn}>
+            <TouchableOpacity
+                onPress={onPress}
+                style={styles.btn}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+            >
                 <MaterialIcons name={name} size={20} color="#555" />
             </TouchableOpacity>
         );
@@ -184,14 +224,23 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
         <View style={styles.bar}>
             <Text style={styles.label}>{label}</Text>
             <View style={styles.row}>
-                <IconButton name="undo" onPress={() => quillRef.current?.getEditor().history.undo()} />
-                <IconButton name="redo" onPress={() => quillRef.current?.getEditor().history.redo()} />
+                <IconButton
+                    name="undo"
+                    onPress={() => quillRef.current?.getEditor().history.undo()}
+                    label="Отменить последнее действие"
+                />
+                <IconButton
+                    name="redo"
+                    onPress={() => quillRef.current?.getEditor().history.redo()}
+                    label="Повторить действие"
+                />
                 <IconButton
                     name="code"
                     onPress={() => {
                         tmpStoredRange.current = quillRef.current?.getEditor().getSelection() ?? null;
                         setShowHtml(v => !v);
                     }}
+                    label={showHtml ? 'Скрыть HTML-код' : 'Показать HTML-код'}
                 />
                 <IconButton
                     name={fullscreen ? 'fullscreen-exit' : 'fullscreen'}
@@ -199,6 +248,18 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
                         tmpStoredRange.current = quillRef.current?.getEditor().getSelection() ?? null;
                         setFullscreen(v => !v);
                     }}
+                    label={fullscreen ? 'Выйти из полноэкранного режима' : 'Перейти в полноэкранный режим'}
+                />
+                <IconButton
+                    name="format-clear"
+                    onPress={() => {
+                        if (!quillRef.current) return;
+                        const editor = quillRef.current.getEditor();
+                        const sel = editor.getSelection() || { index: 0, length: editor.getLength() };
+                        editor.removeFormat(sel.index, sel.length);
+                        fireChange(editor.root.innerHTML);
+                    }}
+                    label="Очистить форматирование"
                 />
                 <IconButton
                     name="image"
@@ -213,6 +274,7 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
                         };
                         input.click();
                     }}
+                    label="Вставить изображение"
                 />
             </View>
         </View>
@@ -232,12 +294,14 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
 
     if (!QuillEditor) return <Loader />;
 
+    const modules = variant === 'compact' ? quillModulesCompact : quillModulesDefault;
+
     const editorArea = showHtml ? (
         <TextInput
             style={styles.html}
             multiline
             value={html}
-            onChangeText={fireChange}
+            onChangeText={text => fireChange(text)}
             placeholder={placeholder}
             placeholderTextColor="#999"
         />
@@ -248,7 +312,7 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
                 theme="snow"
                 value={html}
                 onChange={(val: string) => fireChange(val)}
-                modules={quillModules}
+                modules={modules}
                 placeholder={placeholder}
                 style={styles.editor}
             />

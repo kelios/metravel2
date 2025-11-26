@@ -39,3 +39,10 @@ export const sendAnalyticsEvent = async (
         console.error('GA4 Fetch Error:', error);
     }
 };
+
+export const trackWizardEvent = async (
+    eventName: string,
+    params: Record<string, unknown> = {}
+) => {
+    return sendAnalyticsEvent(eventName, params);
+};
