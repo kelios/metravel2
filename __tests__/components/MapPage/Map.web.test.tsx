@@ -598,5 +598,80 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       }
     })
   })
-})
 
+  describe('Radius mode and markers rendering', () => {
+    it('renders search radius circle with default radius when radius prop is not provided', async () => {
+      const props = {
+        ...defaultProps,
+        mode: 'radius' as const,
+        // radius не передаем, должен использоваться дефолт 60км -> 60000м
+      }
+
+      const { getByTestId } = render(<MapPageComponent {...props} />)
+      await act(async () => {})
+
+      const circle = getByTestId('circle') as any
+      // radiusInMeters должен быть 60000
+      expect(circle.props.radius).toBe(60000)
+    })
+
+    it('uses provided radius prop (in km) and converts it to meters', async () => {
+      const props = {
+        ...defaultProps,
+        mode: 'radius' as const,
+        radius: '10',
+      }
+
+      const { getByTestId } = render(<MapPageComponent {...props} />)
+      await act(async () => {})
+
+      const circle = getByTestId('circle') as any
+      expect(circle.props.radius).toBe(10000)
+    })
+
+    it('renders travel markers when travel data is provided', async () => {
+      const travel = {
+        data: [
+          {
+            id: 1,
+            coord: '53.9,27.5667',
+            address: 'Test Address',
+            travelImageThumbUrl: 'thumb.jpg',
+            categoryName: 'Test',
+          },
+        ],
+      }
+
+      const { getAllByTestId } = render(
+        <MapPageComponent
+          {...defaultProps}
+          mode="radius"
+          travel={travel as any}
+        />
+      )
+
+      await act(async () => {})
+
+      // Маркеры мокаются через data-testid="marker" в react-leaflet моке
+      const markers = getAllByTestId('marker')
+      expect(markers.length).toBeGreaterThan(0)
+    })
+
+    it('shows "no points" message in route mode when routePoints >= 2 and no travel data', async () => {
+      const { Platform } = require('react-native')
+      ;(Platform as any).OS = 'web'
+
+      const props = {
+        ...defaultProps,
+        mode: 'route' as const,
+        routePoints: [[27.5667, 53.9], [27.5767, 53.91]] as [number, number][],
+        travel: { data: [] } as any,
+      }
+
+      const { getByText } = render(<MapPageComponent {...props} />)
+      await act(async () => {})
+
+      expect(getByText('Точки не найдены')).toBeTruthy()
+    })
+  })
+})
