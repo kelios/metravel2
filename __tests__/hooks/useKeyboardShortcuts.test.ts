@@ -11,7 +11,8 @@ function TestComponent({ onSearch }: { onSearch: () => void }) {
     },
   ])
 
-  return <Text>test</Text>
+  // Избегаем JSX в .ts файле, чтобы не ломать парсер Babel
+  return React.createElement(Text, null, 'test')
 }
 
 describe('useKeyboardShortcuts', () => {
@@ -25,8 +26,7 @@ describe('useKeyboardShortcuts', () => {
   it('invokes shortcut action and prevents default when combo matches', () => {
     const onSearch = jest.fn()
     const preventDefault = jest.fn()
-
-    render(<TestComponent onSearch={onSearch} />)
+    render(React.createElement(TestComponent, { onSearch }))
 
     const event = new KeyboardEvent('keydown', {
       key: 'k',
@@ -46,8 +46,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('does not call action when modifiers do not match', () => {
     const onSearch = jest.fn()
-
-    render(<TestComponent onSearch={onSearch} />)
+    render(React.createElement(TestComponent, { onSearch }))
 
     const event = new KeyboardEvent('keydown', {
       key: 'k',
