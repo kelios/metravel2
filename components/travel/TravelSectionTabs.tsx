@@ -115,9 +115,10 @@ const styles = StyleSheet.create({
   },
   tabActive: {
     borderColor: "#1f2937", // ✅ УЛУЧШЕНИЕ: Нейтральный темно-серый
-    backgroundColor: "rgba(0, 0, 0, 0.04)", // ✅ УЛУЧШЕНИЕ: Нейтральный фон
+    backgroundColor: "rgba(0, 0, 0, 0.07)", // Более заметный фон для активного таба
     shadowColor: "#000",
-    shadowOpacity: 0.03, // ✅ УЛУЧШЕНИЕ: Упрощенная тень
+    shadowOpacity: 0.05, // Чуть более заметная тень
+    shadowRadius: 4,
   },
   tabPressed: {
     transform: [{ scale: 0.97 }],
@@ -133,7 +134,6 @@ const styles = StyleSheet.create({
   },
   tabLabelActive: {
     color: "#1f2937", // ✅ УЛУЧШЕНИЕ: Нейтральный темно-серый
+    fontWeight: "700",
   },
 })
-
-

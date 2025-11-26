@@ -104,6 +104,7 @@ const CountriesList = memo(function CountriesList({ countries }: { countries: st
 
 type Props = {
     travel: Travel;
+    currentUserId?: string | null;
     isSuperuser?: boolean;
     isMetravel?: boolean;
     onDeletePress?: (id: number) => void;
@@ -117,6 +118,7 @@ type Props = {
 
 function TravelListItem({
                             travel,
+                            currentUserId,
                             isSuperuser,
                             isMetravel,
                             onDeletePress,
@@ -216,7 +218,22 @@ function TravelListItem({
         return result;
     }, [countUnicIpView, travel]);
 
-    const canEdit = !!(isSuperuser || isMetravel);
+    // Право редактирования:
+    //  - суперпользователь может управлять всеми путешествиями
+    //  - обычный пользователь — только своими (по userIds / user.id)
+    const canEdit = React.useMemo(() => {
+        if (isSuperuser) return true;
+        if (!currentUserId) return false;
+
+        const ownerId = String(
+            (travel as any).userIds ??
+            (travel as any).userId ??
+            (travel as any).user?.id ??
+            ''
+        );
+
+        return !!ownerId && String(currentUserId) === ownerId;
+    }, [isSuperuser, currentUserId, travel]);
     const queryClient = useQueryClient();
 
     // ✅ ИСПРАВЛЕНИЕ: Предзагрузка данных только при клике (с небольшой задержкой)
@@ -452,7 +469,9 @@ function TravelListItem({
                             styles.hoverOverlay,
                             isHovered && styles.hoverOverlayVisible
                         ]}
-                        pointerEvents={isHovered ? 'auto' : 'none'}
+                        // Важно: не меняем pointerEvents по hover, чтобы зона наведения
+                        // не "прыгала" и не вызывала бесконечные onHoverIn/onHoverOut
+                        pointerEvents="box-none"
                     >
                         <TravelCardHoverActions
                             travel={travel}

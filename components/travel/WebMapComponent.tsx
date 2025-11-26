@@ -56,6 +56,7 @@ const WebMapComponent = ({
                              onCountryDeselect,
                          }) => {
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
 
     const isValidCoordinates = ({ lat, lng }) =>
@@ -87,15 +88,13 @@ const WebMapComponent = ({
         }
 
         onMarkersChange([...markers, newMarker]);
+        setActiveIndex(markers.length);
     };
 
     const handleEditMarker = (index: number) => {
         setEditingIndex(index);
+        setActiveIndex(index);
         setIsExpanded(true);
-        setTimeout(() => {
-            const element = document.getElementById(`marker-${index}`);
-            if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
     };
 
     const handleMarkerChange = (index: number, field: string, value: any) => {
@@ -130,7 +129,17 @@ const WebMapComponent = ({
                 <MapClickHandler addMarker={addMarker} />
                 <FitBounds markers={markers} />
                 {markers.map((marker, idx) => (
-                    <Marker key={idx} position={[marker.lat, marker.lng]} icon={markerIcon}>
+                    <Marker
+                        key={idx}
+                        position={[marker.lat, marker.lng]}
+                        icon={markerIcon}
+                        eventHandlers={{
+                            click: () => {
+                                setActiveIndex(idx);
+                                setIsExpanded(true);
+                            },
+                        }}
+                    >
                         <Popup>
                             <div style={styles.popupContent}>
                                 {marker.image && (
@@ -195,8 +204,8 @@ const WebMapComponent = ({
                             handleMarkerRemove={handleMarkerRemove}
                             editingIndex={editingIndex}
                             setEditingIndex={setEditingIndex}
-                            isExpanded={isExpanded}
-                            setIsExpanded={setIsExpanded}
+                            activeIndex={activeIndex}
+                            setActiveIndex={setActiveIndex}
                         />
                     )}
                 </div>

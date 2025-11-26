@@ -48,26 +48,37 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
 
   const shareTitle = travel.name || 'Путешествие на MeTravel';
   const shareText = `Посмотрите это путешествие: ${shareTitle}`;
+  const sharePostText = `${shareText} ${shareUrl}`;
 
-  // Копирование ссылки
-  const handleCopyLink = useCallback(async () => {
+  // Базовая функция копирования в буфер обмена
+  const copyToClipboard = useCallback(async (text: string, showSuccessAlert: boolean) => {
     try {
       if (Platform.OS === 'web' && (navigator as any)?.clipboard) {
-        await (navigator as any).clipboard.writeText(shareUrl);
+        await (navigator as any).clipboard.writeText(text);
       } else {
-        await Clipboard.setStringAsync(shareUrl);
+        await Clipboard.setStringAsync(text);
       }
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      
-      if (Platform.OS !== 'web') {
+
+      if (showSuccessAlert && Platform.OS !== 'web') {
         Alert.alert('Скопировано', 'Ссылка скопирована в буфер обмена');
       }
     } catch (error) {
       console.error('Error copying link:', error);
       Alert.alert('Ошибка', 'Не удалось скопировать ссылку');
     }
-  }, [shareUrl]);
+  }, []);
+
+  // Копирование чистой ссылки
+  const handleCopyLink = useCallback(async () => {
+    await copyToClipboard(shareUrl, true);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [copyToClipboard, shareUrl]);
+
+  // Копирование готового текста поста (текст + ссылка)
+  const handleCopyPostText = useCallback(async () => {
+    await copyToClipboard(sharePostText, true);
+  }, [copyToClipboard, sharePostText]);
 
   // Поделиться в Telegram
   const handleShareTelegram = useCallback(async () => {
@@ -175,6 +186,13 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
       label: 'Копировать ссылку',
       icon: 'content-copy',
       onPress: handleCopyLink,
+      color: '#667085',
+    },
+    {
+      key: 'copyPost',
+      label: 'Текст для поста',
+      icon: 'article',
+      onPress: handleCopyPostText,
       color: '#667085',
     },
     // Экспорт в PDF доступен только в веб-версии

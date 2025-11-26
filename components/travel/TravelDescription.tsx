@@ -38,7 +38,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
     // ---- размеры контейнера ----
     const pageHeight = useMemo(() => Math.round(height * 0.7), [height]);
     const contentWidth = useMemo(() => {
-        const maxContent = Math.min(width, 900);
+        const maxContent = Math.min(width, 760);
         return Math.max(maxContent - 60, 220);
     }, [width]);
 
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     wrapper: {
         alignSelf: "center",
         width: "100%",
-        maxWidth: 900,
+        maxWidth: 760,
         paddingHorizontal: Platform.select({ web: 32, default: 20 }),
         paddingTop: 32,
         paddingBottom: 48,

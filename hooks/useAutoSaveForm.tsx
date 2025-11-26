@@ -6,10 +6,11 @@ interface Options<T> {
     onSave: (data: T) => Promise<T>;
     onSuccess?: (savedData: T) => void;
     onError?: (error: any) => void;
+    onStart?: () => void;
 }
 
 export function useAutoSaveForm<T>(formData: T, options: Options<T>) {
-    const { debounce = 5000, onSave, onSuccess, onError } = options;
+    const { debounce = 5000, onSave, onSuccess, onError, onStart } = options;
 
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const originalDataRef = useRef<T>(formData); // Тут храним исходник
@@ -19,8 +20,10 @@ export function useAutoSaveForm<T>(formData: T, options: Options<T>) {
 
         let isMounted = true; // ✅ ИСПРАВЛЕНИЕ: Флаг для проверки монтирования
 
-        timeoutRef.current = setTimeout(async () => {
-            if (!deepEqual(formData, originalDataRef.current)) {
+        if (!deepEqual(formData, originalDataRef.current)) {
+            onStart?.();
+
+            timeoutRef.current = setTimeout(async () => {
                 try {
                     const savedData = await onSave(formData);
                     // ✅ ИСПРАВЛЕНИЕ: Проверяем, что компонент еще смонтирован
@@ -34,8 +37,8 @@ export function useAutoSaveForm<T>(formData: T, options: Options<T>) {
                         onError?.(err);
                     }
                 }
-            }
-        }, debounce);
+            }, debounce);
+        }
 
         return () => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);

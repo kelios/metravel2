@@ -29,6 +29,9 @@ interface FiltersComponentProps {
     onClose?: () => void;
     isSuperAdmin?: boolean;
     onSave: () => void;
+    showSaveButton?: boolean;
+    showPreviewButton?: boolean;
+    showPublishControls?: boolean;
 }
 
 const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
@@ -39,6 +42,9 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                                                                      onClose,
                                                                      isSuperAdmin = false,
                                                                      onSave,
+                                                                     showSaveButton = true,
+                                                                     showPreviewButton = true,
+                                                                     showPublishControls = true,
                                                                  }) => {
     if (!formData || !filters) {
         return (
@@ -102,18 +108,20 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                 </TouchableOpacity>
             )}
 
-            <Button
-                mode="contained"
-                icon="content-save"
-                onPress={onSave}
-                style={styles.saveButton}
-                accessibilityRole="button"
-                accessibilityLabel="Сохранить изменения"
-            >
-                Сохранить сейчас
-            </Button>
+            {showSaveButton && (
+                <Button
+                    mode="contained"
+                    icon="content-save"
+                    onPress={onSave}
+                    style={styles.saveButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Сохранить изменения"
+                >
+                    Сохранить сейчас
+                </Button>
+            )}
 
-            {formData.slug ? (
+            {showPreviewButton && formData.slug ? (
                 <Button
                     mode="outlined"
                     icon="open-in-new"
@@ -127,18 +135,22 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             ) : null}
 
 
-            <CheckboxComponent
-                label="Сохранить как черновик"
-                value={!formData.publish}
-                onChange={(value) => setFormData({ ...formData, publish: !value })}
-            />
+            {showPublishControls && (
+                <>
+                    <CheckboxComponent
+                        label="Сохранить как черновик"
+                        value={!formData.publish}
+                        onChange={(value) => setFormData({ ...formData, publish: !value })}
+                    />
 
-            {isSuperAdmin && (
-                <CheckboxComponent
-                    label="Прошел модерацию"
-                    value={formData.moderation ?? false}
-                    onChange={(value) => setFormData({ ...formData, moderation: value })}
-                />
+                    {isSuperAdmin && (
+                        <CheckboxComponent
+                            label="Прошел модерацию"
+                            value={formData.moderation ?? false}
+                            onChange={(value) => setFormData({ ...formData, moderation: value })}
+                        />
+                    )}
+                </>
             )}
 
             {formData.id && (
@@ -152,6 +164,9 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                                 : travelDataOld?.travel_image_thumb_small_url ?? null
                         }
                     />
+                    <Text style={styles.coverHint}>
+                        Рекомендуем горизонтальное изображение (соотношение сторон 16:9), без коллажей и текста на картинке.
+                    </Text>
                 </View>
             )}
 
@@ -264,6 +279,12 @@ const styles = StyleSheet.create({
     },
     loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
     imageUploadWrapper: { alignItems: 'center', marginVertical: 12 },
+    coverHint: {
+        marginTop: 8,
+        fontSize: 12,
+        color: '#6b7280',
+        textAlign: 'center',
+    },
 
     inputGroup: { marginBottom: 12 },
     input: { borderWidth: 1, borderColor: '#d1d1d1', padding: 8, borderRadius: 6 },

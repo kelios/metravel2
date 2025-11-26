@@ -1,7 +1,6 @@
 // app/Map.tsx (бывш. MapClientSideComponent) — ультралёгкая web-карта
 import React, { lazy, Suspense, useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { useLazyMap } from '@/hooks/useLazyMap';
 
 export type Point = {
   id: number;
@@ -63,17 +62,8 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   const [L, setL] = useState<LeafletNS | null>(null);
   const [rl, setRl] = useState<RL | null>(null);
 
-  // ✅ УЛУЧШЕНИЕ: Используем useLazyMap для оптимизации загрузки
-  const { shouldLoad, setElementRef } = useLazyMap({
-    rootMargin: '200px',
-    threshold: 0.1,
-    enabled: isWeb,
-  });
-
-  // очень лёгкая инициализация: грузим libs на idle, только когда нужно
+  // очень лёгкая инициализация: грузим libs на idle, как только компонент смонтирован
   useEffect(() => {
-    if (!shouldLoad) return;
-    
     let cancelled = false;
 
     const load = async () => {
@@ -100,7 +90,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     }
 
     return () => { cancelled = true; };
-  }, [shouldLoad]);
+  }, []);
 
   const travelData = useMemo(() => travel.data || [], [travel.data]);
   const initialCenter: [number, number] = [
@@ -124,18 +114,14 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     });
   }, [L]);
 
-  const renderPlaceholder = (message: string) => (
-    <View style={styles.mapContainer} ref={setElementRef as any}>
-      <Text style={styles.placeholderText}>{message}</Text>
+  const renderPlaceholder = () => (
+    <View style={styles.mapContainer}>
+      <Text style={styles.placeholderText}>Загружаем карту…</Text>
     </View>
   );
 
-  if (!shouldLoad) {
-    return renderPlaceholder('Карта загрузится при прокрутке…');
-  }
-
   if (!L || !rl || !meTravelIcon) {
-    return renderPlaceholder('Загружаем карту…');
+    return renderPlaceholder();
   }
 
   const { MapContainer, TileLayer, Marker, Popup, useMap } = rl;
@@ -202,7 +188,6 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   return (
     <View 
       style={styles.mapContainer}
-      ref={setElementRef as any}
     >
       <MapContainer
         center={initialCenter}

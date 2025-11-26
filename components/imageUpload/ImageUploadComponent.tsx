@@ -175,7 +175,7 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop: async (acceptedFiles, rejectedFiles) => {
-            // ✅ УЛУЧШЕНИЕ: Обработка отклоненных файлов
+            // Обработка отклоненных файлов
             if (rejectedFiles.length > 0) {
                 const rejection = rejectedFiles[0];
                 if (rejection.errors.some(e => e.code === 'file-too-large')) {
@@ -190,13 +190,14 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
 
             const file = acceptedFiles[0];
             if (file) {
-                // ✅ УЛУЧШЕНИЕ: Валидация и показ превью вместо немедленной загрузки
+                // Валидация и немедленная загрузка файла, чтобы изображение
+                // сразу сохранилось и продолжало отображаться после закрытия блока точек
                 const validationError = validateFile(file);
                 if (validationError) {
                     setError(validationError);
                     return;
                 }
-                createPreview(file);
+                await handleUploadImage(file);
             }
         },
         accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp', '.heic', '.heif'] },
@@ -235,7 +236,7 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
                     ) : previewUrl ? (
                         // ✅ УЛУЧШЕНИЕ: Превью перед загрузкой
                         <View style={styles.previewContainer}>
-                            <Image source={{ uri: previewUrl }} style={styles.previewImage} />
+                            <Image source={{ uri: previewUrl }} style={styles.previewImage} resizeMode="contain" />
                             <Pressable
                                 style={styles.removePreviewButton}
                                 onPress={handleRemovePreview}
@@ -253,7 +254,7 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
                         </View>
                     ) : imageUri ? (
                         <View style={styles.imageContainer}>
-                            <Image source={{ uri: imageUri }} style={styles.image} />
+                            <Image source={{ uri: imageUri }} style={styles.image} resizeMode="contain" />
                             <Pressable
                                 style={styles.replaceButton}
                                 onPress={() => {
@@ -326,7 +327,7 @@ const styles = StyleSheet.create({
     },
     dropzone: {
         width: '100%',
-        height: 200,
+        height: 220,
         borderWidth: 2,
         borderColor: palette.primary,
         borderStyle: 'dashed',
@@ -415,7 +416,7 @@ const styles = StyleSheet.create({
     image: {
         width: '100%',
         height: '100%',
-        objectFit: 'cover',
+        objectFit: 'contain',
     },
     replaceButton: {
         position: 'absolute',

@@ -33,11 +33,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import { useIsFocused } from "@react-navigation/native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useAuth } from '@/context/AuthContext';
 
 
 /* ✅ УЛУЧШЕНИЕ: Импорт компонентов навигации и поделиться */
 import NavigationArrows from "@/components/travel/NavigationArrows";
 import ShareButtons from "@/components/travel/ShareButtons";
+import TelegramDiscussionSection from "@/components/travel/TelegramDiscussionSection";
 import type { Travel } from "@/src/types/types";
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
 import { useTravelDetails } from "@/hooks/useTravelDetails";
@@ -597,22 +599,7 @@ export default function TravelDetails() {
   }, [showFabHint, dismissFabHint]);
 
   /* ---- user flags ---- */
-  const [isSuperuser, setIsSuperuser] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  useEffect(() => {
-    let mounted = true;
-    AsyncStorage.multiGet(["isSuperuser", "userId"])
-      .then(([[, su], [, uid]]) => {
-        if (mounted) {
-          setIsSuperuser(su === "true");
-          setUserId(uid);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const { isSuperuser, userId } = useAuth();
 
   /* ---- open-section bridge ---- */
   const [forceOpenKey, setForceOpenKey] = useState<string | null>(null);
@@ -1235,7 +1222,29 @@ const TravelContentSections: React.FC<{
               highlight="info"
             >
               <View style={styles.descriptionContainer}>
+                <View style={styles.descriptionIntroWrapper}>
+                  <Text style={styles.descriptionIntroTitle}>Описание маршрута</Text>
+                  <Text style={styles.descriptionIntroText}>
+                    {`${travel.number_days || 0} ${travel.number_days === 1 ? "день" : travel.number_days < 5 ? "дня" : "дней"}`}
+                    {travel.countryName ? ` · ${travel.countryName}` : ""}
+                    {travel.monthName ? ` · лучший сезон: ${travel.monthName.toLowerCase()}` : ""}
+                  </Text>
+                </View>
                 <TravelDescription title={travel.name} htmlContent={travel.description} noBox />
+                {Platform.OS === "web" && (
+                  <Pressable
+                    onPress={() => {
+                      if (typeof window !== "undefined") {
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }}
+                    style={styles.backToTopWrapper}
+                    accessibilityRole="button"
+                    accessibilityLabel="Назад к началу страницы"
+                  >
+                    <Text style={styles.backToTopText}>Назад к началу</Text>
+                  </Pressable>
+                )}
               </View>
             </CollapsibleSection>
           </View>
@@ -1514,6 +1523,10 @@ const TravelRelatedContent: React.FC<{
 
 const TravelEngagementSection: React.FC<{ travel: Travel }> = ({ travel }) => (
   <>
+    <View style={[styles.sectionContainer, styles.authorCardContainer]}>
+      <TelegramDiscussionSection travel={travel} />
+    </View>
+
     <View style={[styles.sectionContainer, styles.shareButtonsContainer]}>
       <ShareButtons travel={travel} />
     </View>
@@ -1649,77 +1662,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 4,
   },
-
-  // ✅ РЕДИЗАЙН: Улучшенный фон и отступы
-  scrollView: { 
-    flex: 1, 
-    backgroundColor: "transparent",
-  },
-  scrollContent: {
-    paddingBottom: 48,
-    paddingTop: 8,
-    minHeight: Platform.OS === "web" ? ("100vh" as any) : undefined,
-  },
-  contentOuter: { width: "100%", alignItems: "center" },
-  // ✅ РЕДИЗАЙН: Адаптивные горизонтальные отступы контента
-  contentWrapper: {
-    flex: 1,
-    width: "100%",
-    maxWidth: 1200, // ✅ Максимальная ширина контента: 1200px
-    paddingHorizontal: Platform.select({ 
-      default: 20, // ✅ Мобильные: 20px
-      web: 32, // ✅ По умолчанию для web (планшеты): 32px
-    }),
-    // ✅ Для десктопа (>1200px) используем динамический отступ через inline style
-  },
-
-  // ✅ РЕДИЗАЙН: Адаптивные отступы между секциями согласно ТЗ
-  sectionContainer: {
-    width: "100%",
-    maxWidth: MAX_CONTENT_WIDTH,
-    alignSelf: "center",
-    marginBottom: Platform.select({
-      default: 32, // Мобильные: 32px по умолчанию
-      web: 32, // Десктоп: 32px по умолчанию
-    }),
-  },
-  // ✅ РЕДИЗАЙН: Специальные отступы для QuickFacts (после Slider)
-  quickFactsContainer: {
-    marginTop: Platform.select({
-      default: 32, // Мобильные: 32px
-      web: 48, // Десктоп: 48px
-    }),
-    marginBottom: Platform.select({
-      default: 24, // Мобильные: 24px до ShareButtons
-      web: 32, // Десктоп: 32px
-    }),
-  },
-  sectionTabsContainer: {
-    marginBottom: 24,
-  },
-  // ✅ БИЗНЕС-ОПТИМИЗАЦИЯ: Специальные отступы для NavigationArrows
-  navigationArrowsContainer: {
-    marginTop: Platform.select({
-      default: 32, // Мобильные: 32px
-      web: 40, // Десктоп: 40px
-    }),
-    marginBottom: Platform.select({
-      default: 32, // Мобильные: 32px
-      web: 40, // Десктоп: 40px
-    }),
-  },
-  // ✅ БИЗНЕС-ОПТИМИЗАЦИЯ: ShareButtons теперь в конце страницы
-  shareButtonsContainer: {
-    marginTop: Platform.select({
-      default: 32, // Мобильные: 32px
-      web: 40, // Десктоп: 40px
-    }),
-    marginBottom: Platform.select({
-      default: 32, // Мобильные: 32px
-      web: 40, // Десктоп: 40px
-    }),
-  },
-
   contentStable: {
     contain: "layout style paint" as any,
   },
@@ -1739,7 +1681,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08, // ✅ Уровень 1 теней
-    shadowRadius: 8, // ✅ Уровень 1 теней
+    shadowRadius: 8, // ✅ Уровень 1 теней (было 12)
     elevation: ANDROID_ELEVATION_CARD,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.06)",

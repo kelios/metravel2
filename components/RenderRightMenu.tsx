@@ -14,7 +14,7 @@ import { useFavorites } from '@/context/FavoritesContext';
 import { router } from 'expo-router';
 
 function RenderRightMenu() {
-    const { isAuthenticated, username, logout, user } = useAuth();
+    const { isAuthenticated, username, logout, userId } = useAuth();
     const { favorites } = useFavorites();
     const { updateFilters } = useFilters();
     const [visible, setVisible] = useState(false);
@@ -28,7 +28,7 @@ function RenderRightMenu() {
         (path: string, extraAction?: () => void) => {
             requestAnimationFrame(() => {
                 extraAction?.();
-                router.push(path);
+                router.push(path as any);
                 closeMenu();
             });
         },
@@ -38,12 +38,12 @@ function RenderRightMenu() {
     const handleLogout = useCallback(async () => {
         await logout();
         closeMenu();
-        router.push('/');
+        router.push('/' as any);
     }, [logout, closeMenu]);
 
     return (
         <View style={styles.container}>
-            {username && !isMobile && (
+            {isAuthenticated && username && !isMobile && (
                 <View style={styles.userContainer}>
                     <Icon name="account-circle" size={24} color="#333" />
                     <Text style={styles.username} numberOfLines={1}>
@@ -87,9 +87,10 @@ function RenderRightMenu() {
                         <Divider />
                         <Menu.Item
                             onPress={() =>
-                                handleNavigate('/metravel', () =>
-                                    updateFilters({ user_id: user?.id })
-                                )
+                                handleNavigate('/metravel', () => {
+                                    const numericUserId = userId ? Number(userId) : undefined;
+                                    updateFilters({ user_id: numericUserId });
+                                })
                             }
                             title="Мои путешествия"
                             leadingIcon={({ size }) => (

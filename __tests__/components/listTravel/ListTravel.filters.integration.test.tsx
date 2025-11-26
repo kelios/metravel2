@@ -8,6 +8,24 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListTravel from '@/components/listTravel/ListTravel';
 import { fetchTravels, fetchFilters, fetchFiltersCountry } from '@/src/api/travels';
 
+// Мокаем AuthContext, чтобы ListTravel не требовал реальный AuthProvider
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({
+    isAuthenticated: false,
+    username: '',
+    isSuperuser: false,
+    userId: null,
+    setIsAuthenticated: jest.fn(),
+    setUsername: jest.fn(),
+    setIsSuperuser: jest.fn(),
+    setUserId: jest.fn(),
+    login: jest.fn(),
+    logout: jest.fn(),
+    sendPassword: jest.fn(),
+    setNewPassword: jest.fn(),
+  }),
+}));
+
 jest.mock('@/components/listTravel/RecommendationsTabs', () => ({
   __esModule: true,
   default: () => null,
