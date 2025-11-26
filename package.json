@@ -12,6 +12,7 @@
     "web": "npx expo start --web",
     "web:prod": "NODE_ENV=production npx expo start --web",
     "test": "jest --watchAll",
+    "test:coverage": "jest --coverage",
     "format": "npx prettier --write .",
     "build:web": "npx expo export --web",
     "clean": "npx expo start --clear",
@@ -177,6 +178,7 @@
     ]
   },
   "optionalDependencies": {
+    "lightningcss-darwin-arm64": "^1.30.2",
     "lightningcss-darwin-x64": "^1.30.2"
   }
 }
