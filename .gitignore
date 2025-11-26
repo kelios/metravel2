@@ -15,3 +15,10 @@ settings.json
 .idea
 env.sh
 /assets/quests/
+
+# Test / coverage artifacts
+coverage/
+coverage-*/
+.nyc_output/
+*.lcov
+junit.xml
