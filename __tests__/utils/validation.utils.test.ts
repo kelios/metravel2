@@ -103,7 +103,7 @@ describe('utils/validation - yup schemas', () => {
     })
 
     it('rejects missing email and password', async () => {
-      await expectValidationError(loginSchema, { email: '', password: '' }, 'email', 'Email обязателен')
+      await expectValidationError(loginSchema, { email: '', password: 'secret' }, 'email', 'Email обязателен')
       await expectValidationError(loginSchema, { email: 'user@example.com', password: '' }, 'password', 'Пароль обязателен')
     })
   })

@@ -414,9 +414,15 @@ describe('FavoritesContext', () => {
       configurable: true,
     });
 
-    // имитируем web-платформу для показа Toast
+    // имитируем web-платформу
     const RN = require('react-native');
     RN.Platform.OS = 'web';
+
+    // подготавливаем window для addEventListener/removeEventListener
+    const win: any = (global as any).window || {};
+    win.addEventListener = win.addEventListener || jest.fn();
+    win.removeEventListener = win.removeEventListener || jest.fn();
+    (global as any).window = win;
 
     mockAuthContext.isAuthenticated = true;
     mockAuthContext.userId = 'user-sync' as any;
