@@ -13,6 +13,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
 import SkipLinks from "@/components/SkipLinks";
 import { NetworkStatus } from "@/components/NetworkStatus";
+import ConsentBanner from "@/components/ConsentBanner";
 import { useFonts } from "expo-font";
 import { DESIGN_TOKENS } from "@/constants/designSystem"; // ✅ ИСПРАВЛЕНИЕ: Импорт единой палитры
 
@@ -239,6 +240,9 @@ function RootLayoutNav() {
                                 {/* Прокладка: только высота док-строки футера */}
                                 <BottomGutter />
                             </View>
+
+                            {/* Баннер согласия с компактным интерфейсом (web only) */}
+                            <ConsentBanner />
 
                             {showFooter && (
                               <Suspense

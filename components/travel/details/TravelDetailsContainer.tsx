@@ -51,6 +51,7 @@ import ScrollToTopButton from "@/components/ScrollToTopButton";
 import ReadingProgressBar from "@/components/ReadingProgressBar";
 import TravelSectionTabs from "@/components/travel/TravelSectionTabs";
 import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/travel/sectionLinks";
+import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl as buildVersionedImageUrlLCP } from "@/utils/imageOptimization";
 
 /* ---------- LCP-компонент грузим СИНХРОННО ---------- */
 import Slider from "@/components/travel/Slider";
@@ -294,14 +295,27 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
                                                                                            alt,
                                                                                            onLoad,
                                                                                          }) => {
-  const src = buildVersioned(img.url, img.updated_at ?? null, img.id);
+  const baseSrc = buildVersionedImageUrlLCP(
+    buildVersioned(img.url, img.updated_at ?? null, img.id),
+    img.updated_at ?? null,
+    img.id
+  );
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9;
+  const targetWidth = typeof window !== "undefined" ? Math.min(window.innerWidth || 1200, 1440) : 1200;
+
+  const optimizedSrc =
+    optimizeImageUrl(baseSrc, {
+      width: targetWidth,
+      format: "webp",
+      quality: 85,
+      fit: "contain",
+    }) || baseSrc;
 
   if (Platform.OS !== "web") {
     return (
       <View style={styles.sliderContainer}>
         <ExpoImage
-          source={{ uri: src }}
+          source={{ uri: optimizedSrc }}
           style={{ width: "100%", aspectRatio: ratio, borderRadius: 12 }}
           contentFit="cover"
           cachePolicy="memory-disk"
@@ -315,7 +329,7 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
   return (
     <div style={{ width: "100%", contain: "layout style paint" as any }}>
       <img
-        src={src}
+        src={optimizedSrc}
         alt={alt || ""}
         width={img.width || 1200}
         height={img.height || Math.round(1200 / ratio)}
@@ -332,6 +346,7 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
         // @ts-ignore
         fetchpriority="high"
         referrerPolicy="no-referrer"
+        data-lcp
         onLoad={onLoad as any}
       />
     </div>
@@ -568,7 +583,7 @@ export default function TravelDetails() {
         import("@/components/Map"),
         import("@expo/vector-icons/MaterialIcons"),
       ]);
-    }, 800);
+    }, 2600);
   }, []);
 
   useEffect(() => {
@@ -1037,7 +1052,7 @@ const TravelDeferredSections: React.FC<{
   relatedTravels: Travel[];
   setRelatedTravels: React.Dispatch<React.SetStateAction<Travel[]>>;
 }> = ({ travel, isMobile, forceOpenKey, anchors, relatedTravels, setRelatedTravels }) => {
-  const [canRenderHeavy, setCanRenderHeavy] = useState(Platform.OS === "web");
+  const [canRenderHeavy, setCanRenderHeavy] = useState(false);
   const [showMap, setShowMap] = useState(Platform.OS !== "web");
   const [showExcursions] = useState(true);
 
@@ -1050,7 +1065,10 @@ const TravelDeferredSections: React.FC<{
 
   useEffect(() => {
     if (Platform.OS === "web") {
-      setShowMap(true);
+      rIC(() => {
+        setCanRenderHeavy(true);
+        setShowMap(true);
+      }, 3500);
     }
   }, []);
 
