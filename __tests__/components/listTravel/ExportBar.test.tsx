@@ -59,9 +59,6 @@ describe('ExportBar', () => {
     fireEvent.press(getByText('Очистить выбор'));
     expect(props.onClearSelection).toHaveBeenCalled();
 
-    fireEvent.press(getByText('Превью (1)'));
-    expect(props.onPreview).toHaveBeenCalled();
-
     fireEvent.press(getByText('Сохранить PDF'));
     expect(props.onSave).toHaveBeenCalled();
   });
@@ -69,7 +66,6 @@ describe('ExportBar', () => {
   it('disables actions when there is no selection', () => {
     const { getByText } = render(<ExportBar {...baseProps} />);
 
-    expect(getByText('Превью (0)')).toBeDisabled();
     expect(getByText('Сохранить PDF')).toBeDisabled();
   });
 
@@ -86,8 +82,7 @@ describe('ExportBar', () => {
       />
     );
 
-    expect(getByText('Превью (3)')).toBeTruthy();
-    expect(getByText('PDF')).toBeTruthy();
+    expect(getByText('Сохранить PDF')).toBeTruthy();
 
     (Platform as any).OS = originalOS;
   });

@@ -917,7 +917,7 @@ export default function BookSettingsModal({
             >
               Отмена
             </button>
-            {onPreview && mode === 'preview' && (
+            {onPreview && (
               <button
                 onClick={handlePreview}
                 style={{
@@ -996,7 +996,7 @@ export default function BookSettingsModal({
                 target.style.transform = 'translateY(0)';
               }}
             >
-              {mode === 'preview' ? 'Сохранить PDF' : 'Применить'}
+              Сохранить PDF
             </button>
           </div>
         </div>

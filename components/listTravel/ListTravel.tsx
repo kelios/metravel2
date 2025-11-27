@@ -177,24 +177,8 @@ export const ExportBar = memo(function ExportBar({
           </View>
 
           <View style={[styles.exportBarButtons, isMobile && styles.exportBarButtonsMobile]}>
-            {!isMobile && (
-              <UIButton
-                label="Настройки"
-                onPress={onSettings}
-                disabled={!hasSelection}
-                variant="secondary"
-              />
-            )}
-
             <UIButton
-              label={isMobile ? `Превью (${selectedCount})` : `Превью (${selectedCount})`}
-              onPress={onPreview}
-              disabled={!hasSelection || isGenerating}
-              variant="ghost"
-            />
-
-            <UIButton
-              label={isGenerating ? `Генерация... ${progress || 0}%` : (isMobile ? "PDF" : "Сохранить PDF")}
+              label={isGenerating ? `Генерация... ${progress || 0}%` : (isMobile ? "Сохранить PDF" : "Сохранить PDF")}
               onPress={onSave}
               disabled={!hasSelection || isGenerating}
             />

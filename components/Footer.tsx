@@ -100,6 +100,8 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
     { key: "roulette", label: "Случайный маршрут", route: "/roulette",  icon: <Feather name="shuffle" size={20} color={iconColor} /> },
     { key: "quests",   label: "Квесты",      route: "/quests",    icon: <Feather name="flag"   size={20} color={iconColor} /> },
     { key: "about",  label: "О сайте",     route: "/about",     icon: <Feather name="info"  size={20} color={iconColor} /> },
+    { key: "privacy", label: "Политика конфиденциальности", route: "/privacy", icon: <Feather name="shield" size={20} color={iconColor} /> },
+    { key: "cookies", label: "Настройки cookies", route: "/cookies", icon: <Feather name="sliders" size={20} color={iconColor} /> },
     { key: "blogby", label: "Пишут о BY",  route: "/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi", icon: <Feather name="list" size={20} color={iconColor} /> },
   ];
 

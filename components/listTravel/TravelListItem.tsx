@@ -521,12 +521,13 @@ const styles = StyleSheet.create({
         bottom: 0,
         opacity: 0,
         transition: "opacity 0.2s ease",
-        pointerEvents: "none",
+        // Важно: оставляем box-none, чтобы overlay не перехватывал hover у карточки
+        // и не вызывал мигание при перемещении курсора по иконкам действий
+        pointerEvents: "box-none",
         borderRadius: Platform.select({ default: 10, web: 12 }),
     },
     hoverOverlayVisible: {
         opacity: 1,
-        pointerEvents: "auto",
     },
 
     androidOptimized: {

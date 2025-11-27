@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
         transition: 'all 0.2s ease',
         // @ts-ignore
         ':hover': {
-          transform: 'scale(1.1)',
+          // Убираем масштабирование, чтобы избежать дрожания при ховере
           backgroundColor: '#fff',
         },
       },

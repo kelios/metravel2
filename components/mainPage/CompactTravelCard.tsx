@@ -346,8 +346,8 @@ const styles = StyleSheet.create({
         transition: 'all 0.2s ease',
         // @ts-ignore
         ':hover': {
+          // Убираем масштабирование, чтобы избежать мигания и дрожания при наведении
           backgroundColor: '#fff',
-          transform: 'scale(1.1)',
         },
       },
     }),

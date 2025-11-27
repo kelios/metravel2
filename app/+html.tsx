@@ -75,7 +75,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
       }}
     />
 
-    {/* ===== Analytics (отложенная загрузка, только на metravel.by) ===== */}
+    {/* ===== Analytics (отложенная загрузка, только на metravel.by и только при согласии) ===== */}
     <script
       dangerouslySetInnerHTML={{
         __html: `
@@ -83,71 +83,92 @@ export default function Root({ children }: { children: React.ReactNode }) {
   var host = window.location.hostname;
   var isProdHost = host === 'metravel.by' || host === 'www.metravel.by';
   if (!isProdHost) return;
-  
+
+  var CONSENT_KEY = 'metravel_consent_v1';
+
+  function hasAnalyticsConsent(){
+    try {
+      var raw = window.localStorage.getItem(CONSENT_KEY);
+      if (!raw) return false;
+      var data = JSON.parse(raw);
+      if (!data || typeof data !== 'object') return false;
+      if (!data.necessary) return false;
+      return !!data.analytics;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // Отложенная загрузка аналитики после idle
   function loadAnalytics() {
+    if (window.__metravelAnalyticsLoaded) return;
+    window.__metravelAnalyticsLoaded = true;
 
-  // ---------- Yandex Metrika (официальный сниппет) ----------
-  (function(m,e,t,r,i,k,a){
-      m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-      m[i].l=1*new Date();
-      k=e.createElement(t),a=e.getElementsByTagName(t)[0],
-      k.async=1;k.src=r;a.parentNode.insertBefore(k,a)
-  })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+    // ---------- Yandex Metrika (официальный сниппет) ----------
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],
+        k.async=1;k.src=r;a.parentNode.insertBefore(k,a)
+    })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
 
-  ym(${METRIKA_ID}, "init", {
-      clickmap:true,
-      trackLinks:true,
-      accurateTrackBounce:true,
-      webvisor:true,
-      defer:true
-  });
+    ym(${METRIKA_ID}, "init", {
+        clickmap:true,
+        trackLinks:true,
+        accurateTrackBounce:true,
+        webvisor:true,
+        defer:true
+    });
 
-  // SPA-хиты для Метрики и GA
-  function trackPage(){
-    try {
-      ym(${METRIKA_ID}, 'hit', window.location.href, {
-        title: document.title,
-        referer: document.referrer
-      });
-      if (window.gtag) {
-        gtag('event', 'page_view', {
-          page_title: document.title,
-          page_location: window.location.href
+    // SPA-хиты для Метрики и GA
+    function trackPage(){
+      try {
+        ym(${METRIKA_ID}, 'hit', window.location.href, {
+          title: document.title,
+          referer: document.referrer
         });
-      }
-    } catch(_){}
+        if (window.gtag) {
+          gtag('event', 'page_view', {
+            page_title: document.title,
+            page_location: window.location.href
+          });
+        }
+      } catch(_){}}
+
+    // Патчим history
+    var _ps = history.pushState;
+    var _rs = history.replaceState;
+    history.pushState = function(){ var r=_ps.apply(this, arguments); setTimeout(trackPage, 10); return r; };
+    history.replaceState = function(){ var r=_rs.apply(this, arguments); setTimeout(trackPage, 10); return r; };
+    window.addEventListener('popstate', trackPage);
+
+    // Первичный хит после загрузки
+    if (document.readyState === 'complete') setTimeout(trackPage, 0);
+    else window.addEventListener('load', function(){ setTimeout(trackPage, 0); }, { once:true });
+
+    // ---------- Google Analytics (GA4) ----------
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function(){ dataLayer.push(arguments); };
+    gtag('js', new Date());
+    gtag('config', '${GA_ID}', { transport_type: 'beacon' });
+
+    var ga = document.createElement('script');
+    ga.async = true;
+    ga.defer = true;
+    ga.src = 'https://www.googletagmanager.com/gtag/js?id=${GA_ID}';
+    document.head.appendChild(ga);
   }
 
-  // Патчим history
-  var _ps = history.pushState;
-  var _rs = history.replaceState;
-  history.pushState = function(){ var r=_ps.apply(this, arguments); setTimeout(trackPage, 10); return r; }
-  history.replaceState = function(){ var r=_rs.apply(this, arguments); setTimeout(trackPage, 10); return r; }
-  window.addEventListener('popstate', trackPage);
+  // Делаем функцию доступной глобально для React-баннера
+  window.metravelLoadAnalytics = loadAnalytics;
 
-  // Первичный хит после загрузки
-  if (document.readyState === 'complete') setTimeout(trackPage, 0);
-  else window.addEventListener('load', function(){ setTimeout(trackPage, 0); }, { once:true });
-
-  // ---------- Google Analytics (GA4) ----------
-  window.dataLayer = window.dataLayer || [];
-  window.gtag = function(){ dataLayer.push(arguments); };
-  gtag('js', new Date());
-  gtag('config', '${GA_ID}', { transport_type: 'beacon' });
-
-  var ga = document.createElement('script');
-  ga.async = true;
-  ga.defer = true;
-  ga.src = 'https://www.googletagmanager.com/gtag/js?id=${GA_ID}';
-  document.head.appendChild(ga);
-  }
-  
-  // Загружаем аналитику после idle или через 2 секунды
-  if (window.requestIdleCallback) {
-    window.requestIdleCallback(loadAnalytics, { timeout: 2000 });
-  } else {
-    setTimeout(loadAnalytics, 2000);
+  // Если согласие уже дано ранее, автоматически загружаем аналитику
+  if (hasAnalyticsConsent()) {
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(loadAnalytics, { timeout: 2000 });
+    } else {
+      setTimeout(loadAnalytics, 2000);
+    }
   }
 })();
 `,

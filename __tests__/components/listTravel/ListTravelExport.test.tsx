@@ -37,9 +37,8 @@ describe('ExportBar', () => {
     const { getByText } = setup();
 
     expect(getByText(/Выбрано 2 /)).toBeTruthy();
-    expect(getByText('Настройки')).toBeTruthy();
+    expect(getByText(/Настройки:/)).toBeTruthy();
     expect(getByText('Сохранить PDF')).toBeTruthy();
-    expect(getByText('Превью (2)')).toBeTruthy();
   });
 
   it('вызывает onToggleSelectAll и onClearSelection при нажатии на соответствующие ссылки', () => {
@@ -52,23 +51,20 @@ describe('ExportBar', () => {
     expect(onClearSelection).toHaveBeenCalledTimes(1);
   });
 
-  it('вызывает onPreview и onSave при нажатии на кнопки', () => {
-    const { getByText, onPreview, onSave } = setup();
-
-    fireEvent.press(getByText('Превью (2)'));
-    expect(onPreview).toHaveBeenCalledTimes(1);
+  it('вызывает onSave при нажатии на кнопку', () => {
+    const { getByText, onSave } = setup();
 
     fireEvent.press(getByText('Сохранить PDF'));
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
-  it('не вызывает onPreview/onSave, если нет выбора или идёт генерация', () => {
-    const { getByText, onPreview, onSave } = setup({ hasSelection: false });
+  it('не вызывает onSave, если нет выбора или идёт генерация', () => {
+    const { getByText, onSave } = setup({ hasSelection: false });
 
-    fireEvent.press(getByText('Превью (2)'));
-    fireEvent.press(getByText('Сохранить PDF'));
+    const button = getByText('Сохранить PDF');
+    expect(button).toBeDisabled();
 
-    expect(onPreview).not.toHaveBeenCalled();
+    fireEvent.press(button);
     expect(onSave).not.toHaveBeenCalled();
   });
 });
