@@ -406,6 +406,8 @@ export default function MapScreen() {
                         <Pressable
                             style={styles.togglePanelButton}
                             onPress={() => setRightPanelVisible(true)}
+                            accessibilityRole="button"
+                            accessibilityLabel="Показать панель"
                         >
                             <IconMaterial name="menu" size={24} color="#fff" />
                         </Pressable>

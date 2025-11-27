@@ -4,6 +4,25 @@ import { FavoritesProvider, useFavorites, FavoriteItem, ViewHistoryItem } from '
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '@/context/AuthContext';
 
+// Mocks for server API и Toast
+const mockPost = jest.fn();
+const mockDelete = jest.fn();
+
+jest.mock('@/src/api/client', () => ({
+  apiClient: {
+    post: (...args: any[]) => mockPost(...args),
+    delete: (...args: any[]) => mockDelete(...args),
+  },
+}));
+
+const mockToastShow = jest.fn();
+jest.mock('react-native-toast-message', () => ({
+  __esModule: true,
+  default: {
+    show: (...args: any[]) => mockToastShow(...args),
+  },
+}));
+
 // Mock AuthContext
 const mockAuthContext = {
   isAuthenticated: false,
@@ -367,7 +386,7 @@ describe('FavoritesContext', () => {
 
   it('uses user-specific storage key when authenticated', async () => {
     mockAuthContext.isAuthenticated = true;
-    mockAuthContext.userId = 'user123';
+    mockAuthContext.userId = 'user123' as any;
 
     render(
       <AuthProvider>
@@ -386,5 +405,103 @@ describe('FavoritesContext', () => {
 
     mockAuthContext.isAuthenticated = false;
     mockAuthContext.userId = null;
+  });
+
+  it('syncs added favorite to server when authenticated and online', async () => {
+    // Имитируем web-окружение online
+    Object.defineProperty(global, 'navigator', {
+      value: { onLine: true },
+      configurable: true,
+    });
+
+    // имитируем web-платформу для показа Toast
+    const RN = require('react-native');
+    RN.Platform.OS = 'web';
+
+    mockAuthContext.isAuthenticated = true;
+    mockAuthContext.userId = 'user-sync' as any;
+
+    let contextValue: any;
+
+    render(
+      <AuthProvider>
+        <FavoritesProvider>
+          <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
+        </FavoritesProvider>
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(contextValue).toBeDefined();
+    });
+
+    await act(async () => {
+      await contextValue.addFavorite({
+        id: 'sync-1',
+        type: 'travel',
+        title: 'Sync Travel',
+        url: '/travels/sync-1',
+      });
+    });
+
+    await waitFor(() => {
+      // Локальное сохранение
+      expect(contextValue.favorites.some((f: FavoriteItem) => f.id === 'sync-1')).toBe(true);
+      expect(mockPost).toHaveBeenCalledWith('/api/favorites/', {
+        item_id: 'sync-1',
+        item_type: 'travel',
+      });
+    });
+  });
+
+  it('queues favorite for sync and shows info Toast on network error', async () => {
+    // web online, чтобы isOnline() вернул true и синхронизация реально попыталась выполниться
+    Object.defineProperty(global, 'navigator', {
+      value: { onLine: true },
+      configurable: true,
+    });
+
+    mockAuthContext.isAuthenticated = true;
+    mockAuthContext.userId = 'user-queue' as any;
+
+    // Имитируем сетевую ошибку
+    mockPost.mockRejectedValueOnce(new Error('Network error'));
+
+    let contextValue: any;
+
+    render(
+      <AuthProvider>
+        <FavoritesProvider>
+          <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
+        </FavoritesProvider>
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(contextValue).toBeDefined();
+    });
+
+    await act(async () => {
+      await contextValue.addFavorite({
+        id: 'offline-1',
+        type: 'travel',
+        title: 'Offline Travel',
+        url: '/travels/offline-1',
+      });
+    });
+
+    // Должен создаться элемент избранного
+    expect(contextValue.favorites.some((f: FavoriteItem) => f.id === 'offline-1')).toBe(true);
+
+    // И добавлена запись в очередь синхронизации в AsyncStorage
+    const queueKey = 'metravel_sync_queue_user-queue';
+    const storedQueue = await AsyncStorage.getItem(queueKey);
+    expect(storedQueue).not.toBeNull();
+    const parsed = JSON.parse(storedQueue as string);
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed[0].item.id).toBe('offline-1');
+
+    // И показан информационный Toast
+    expect(mockToastShow).toHaveBeenCalled();
   });
 });
