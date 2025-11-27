@@ -15,12 +15,25 @@ function TestComponent({ onSearch }: { onSearch: () => void }) {
   return React.createElement(Text, null, 'test')
 }
 
+let lastKeydownHandler: ((e: any) => void) | null = null
+
 describe('useKeyboardShortcuts', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     // Гарантируем web-платформу
     const RN = require('react-native')
     RN.Platform.OS = 'web'
+
+    // Перехватываем обработчик keydown, который вешает хук
+    lastKeydownHandler = null
+    // @ts-expect-error - тестовая заглушка
+    document.addEventListener = jest.fn((type: string, handler: any) => {
+      if (type === 'keydown') {
+        lastKeydownHandler = handler
+      }
+    })
+    // @ts-expect-error - тестовая заглушка
+    document.removeEventListener = jest.fn()
   })
 
   it('invokes shortcut action and prevents default when combo matches', () => {
@@ -28,16 +41,15 @@ describe('useKeyboardShortcuts', () => {
     const preventDefault = jest.fn()
     render(React.createElement(TestComponent, { onSearch }))
 
-    const event = new KeyboardEvent('keydown', {
-      key: 'k',
-      ctrlKey: true,
-    })
+    const event = new Event('keydown') as any
+    event.key = 'k'
+    event.ctrlKey = true
     Object.defineProperty(event, 'preventDefault', {
       value: preventDefault,
     })
 
     act(() => {
-      document.dispatchEvent(event)
+      lastKeydownHandler?.(event)
     })
 
     expect(onSearch).toHaveBeenCalledTimes(1)
@@ -48,13 +60,12 @@ describe('useKeyboardShortcuts', () => {
     const onSearch = jest.fn()
     render(React.createElement(TestComponent, { onSearch }))
 
-    const event = new KeyboardEvent('keydown', {
-      key: 'k',
-      ctrlKey: false,
-    })
+    const event = new Event('keydown') as any
+    event.key = 'k'
+    event.ctrlKey = false
 
     act(() => {
-      document.dispatchEvent(event)
+      lastKeydownHandler?.(event)
     })
 
     expect(onSearch).not.toHaveBeenCalled()

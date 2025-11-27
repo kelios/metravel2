@@ -60,7 +60,7 @@ describe('CustomHeader', () => {
         mockFavoritesContext.isFavorite.mockClear();
         mockFiltersContext.updateFilters.mockClear();
         (useRouter as jest.Mock).mockReturnValue(mockRouter);
-        dimensionsSpy.mockReturnValue({ width: 1024, height: 768 });
+        dimensionsSpy.mockReturnValue({ width: 1024, height: 768, scale: 1, fontScale: 1 } as ReactNative.ScaledSize);
     });
 
     const renderHeader = () => render(<CustomHeader />);
@@ -114,47 +114,6 @@ describe('CustomHeader', () => {
             
             const questsItem = utils.getByLabelText('Квесты');
             expect(questsItem.props.accessibilityState?.selected).toBe(true);
-        });
-    });
-
-    describe.skip('Mobile navigation', () => {
-        beforeEach(() => {
-            dimensionsSpy.mockReturnValue({ width: 375, height: 667 });
-        });
-
-        it('renders mobile menu button on mobile', () => {
-            (usePathname as jest.Mock).mockReturnValue('/');
-            const { getByLabelText } = renderHeader();
-            expect(getByLabelText('Открыть меню')).toBeTruthy();
-        });
-
-        it('shows mobile menu when button is pressed', () => {
-            (usePathname as jest.Mock).mockReturnValue('/');
-            const { getByLabelText, getByText } = renderHeader();
-            const menuButton = getByLabelText('Открыть меню');
-            fireEvent.press(menuButton);
-            expect(getByText('Меню')).toBeTruthy();
-        });
-
-        it('navigates when mobile menu item is pressed', () => {
-            (usePathname as jest.Mock).mockReturnValue('/');
-            const { getByLabelText, getByText } = renderHeader();
-            const menuButton = getByLabelText('Открыть меню');
-            fireEvent.press(menuButton);
-            const mapItem = getByText('Карта');
-            fireEvent.press(mapItem);
-            expect(mockPush).toHaveBeenCalledWith('/map');
-        });
-
-        it('closes menu when close button is pressed', () => {
-            (usePathname as jest.Mock).mockReturnValue('/');
-            const { getByLabelText, queryByText } = renderHeader();
-            const menuButton = getByLabelText('Открыть меню');
-            fireEvent.press(menuButton);
-            expect(queryByText('Меню')).toBeTruthy();
-            const closeButton = getByLabelText('Закрыть меню');
-            fireEvent.press(closeButton);
-            expect(queryByText('Меню')).toBeNull();
         });
     });
 });

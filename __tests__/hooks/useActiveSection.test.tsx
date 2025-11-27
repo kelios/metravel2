@@ -2,30 +2,24 @@ import React, { createRef } from 'react'
 import { act, renderHook } from '@testing-library/react-native'
 import { useActiveSection } from '@/hooks/useActiveSection'
 
-// Простая заглушка для IntersectionObserver
-class MockIntersectionObserver {
-  callback: IntersectionObserverCallback
-  elements: Element[] = []
-
-  constructor(callback: IntersectionObserverCallback) {
-    this.callback = callback
-  }
-
-  observe = (element: Element) => {
-    this.elements.push(element)
-  }
-
-  unobserve = () => {}
-
-  disconnect = () => {}
-}
+let lastObserverCallback: IntersectionObserverCallback | null = null
 
 describe('useActiveSection', () => {
   beforeEach(() => {
     const RN = require('react-native')
     RN.Platform.OS = 'web'
 
-    ;(global as any).IntersectionObserver = MockIntersectionObserver as any
+    lastObserverCallback = null
+    ;(global as any).IntersectionObserver = jest.fn(
+      (callback: IntersectionObserverCallback) => {
+        lastObserverCallback = callback
+        return {
+          observe: jest.fn(),
+          unobserve: jest.fn(),
+          disconnect: jest.fn(),
+        }
+      }
+    ) as any
 
     // Простейшая разметка секций
     document.body.innerHTML = `
@@ -42,26 +36,26 @@ describe('useActiveSection', () => {
 
     const { result } = renderHook(() => useActiveSection(anchors, 0))
 
-    // Находим инстанс мокового observer
-    const observerInstance = (IntersectionObserver as unknown as jest.Mock).
-      mock.instances[0] as unknown as MockIntersectionObserver
-
-    const targets = Array.from(document.querySelectorAll('[data-section-key]'))
+    // Простая заглушка элемента с data-section-key="section-1"
+    const mockTarget = {
+      getAttribute: (name: string) => (name === 'data-section-key' ? 'section-1' : null),
+      boundingClientRect: {
+        top: 0,
+        bottom: 200,
+      },
+    } as any
 
     act(() => {
-      observerInstance.callback(
+      lastObserverCallback?.(
         [
           {
-            target: targets[0],
+            target: mockTarget,
             isIntersecting: true,
-            boundingClientRect: {
-              top: 0,
-              bottom: 200,
-            },
+            boundingClientRect: mockTarget.boundingClientRect,
             intersectionRatio: 0.8,
           } as any,
         ],
-        observerInstance as any
+        null as any
       )
     })
 

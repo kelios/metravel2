@@ -7,7 +7,7 @@ jest.mock('react-native-element-dropdown', () => ({
   MultiSelect: ({ onChange, value, data, ...rest }: any) => {
     return (
       <div
-        data-testid="multi-select-mock"
+        testID="multi-select-mock"
         data-value={JSON.stringify(value)}
         data-items={JSON.stringify(data)}
         onClick={() => {
@@ -120,8 +120,8 @@ describe('MultiSelectField', () => {
       />
     )
 
-    const element = getByTestId('multi-select-mock') as HTMLElement
-    expect(element.getAttribute('data-value')).toBe(JSON.stringify([]))
+    const element = getByTestId('multi-select-mock') as any
+    expect(element.props['data-value']).toBe(JSON.stringify([]))
 
     rerender(
       <MultiSelectField
@@ -135,7 +135,7 @@ describe('MultiSelectField', () => {
       />
     )
 
-    const updated = getByTestId('multi-select-mock') as HTMLElement
-    expect(updated.getAttribute('data-value')).toBe(JSON.stringify(['a']))
+    const updated = getByTestId('multi-select-mock') as any
+    expect(updated.props['data-value']).toBe(JSON.stringify(['a']))
   })
 })
