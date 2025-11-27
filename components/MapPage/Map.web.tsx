@@ -594,32 +594,36 @@ const MapPageComponent: React.FC<Props> = ({
               PopupContent={PopupWithClose}
             />
           )}
-          
-          {/* ✅ ИСПРАВЛЕНИЕ: Индикатор количества точек убран - теперь в боковом меню */}
-          
+
           {/* Сообщение, если точек нет */}
           {Platform.OS === 'web' && mode === 'route' && routePoints.length >= 2 && travel.data && travel.data.length === 0 && (
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              padding: '20px 24px',
-              borderRadius: 12,
-              fontSize: '14px',
-              zIndex: 1000,
-              boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-              textAlign: 'center',
-              maxWidth: '300px',
-            }}>
-              <div style={{ marginBottom: 8, fontSize: '16px', fontWeight: '600' }}>
+            <View
+              testID="no-points-message"
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: [{ translateX: -150 }, { translateY: -60 }],
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                paddingVertical: 20,
+                paddingHorizontal: 24,
+                borderRadius: 12,
+                zIndex: 1000,
+                shadowColor: '#000',
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+                elevation: 4,
+                maxWidth: 300,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ marginBottom: 8, fontSize: 16, fontWeight: '600', textAlign: 'center' }}>
                 Точки не найдены
-              </div>
-              <div style={{ color: '#666', fontSize: '13px' }}>
+              </Text>
+              <Text style={{ color: '#666', fontSize: 13, textAlign: 'center' }}>
                 В радиусе 2 км от маршрута нет доступных точек
-              </div>
-            </div>
+              </Text>
+            </View>
           )}
 
           {routingLoading && (
