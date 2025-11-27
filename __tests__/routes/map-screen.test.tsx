@@ -143,6 +143,32 @@ describe('MapScreen (map tab)', () => {
     })
   })
 
+  it('toggles right panel visibility using close and open buttons', async () => {
+    const { getByText, queryByText, getByLabelText } = renderWithClient()
+
+    // Дождаться появления панели
+    await waitFor(() => {
+      expect(getByText('Фильтры')).toBeTruthy()
+    })
+
+    // Закрываем панель кнопкой "Скрыть панель"
+    const closeButton = getByLabelText('Скрыть панель')
+    fireEvent.press(closeButton)
+
+    // Текст вкладок больше не отображается
+    expect(queryByText('Фильтры')).toBeNull()
+    expect(queryByText('Список')).toBeNull()
+
+    // Открываем панель снова кнопкой-гамбургером
+    const openButton = getByLabelText('Показать панель')
+    fireEvent.press(openButton)
+
+    await waitFor(() => {
+      expect(getByText('Фильтры')).toBeTruthy()
+      expect(getByText('Список')).toBeTruthy()
+    })
+  })
+
   it('shows loader in travels list tab while data is loading', async () => {
     // Возвращаем промис, который разрешится после проверки лоадера
     let resolveRequest: (value: any) => void;
@@ -163,6 +189,23 @@ describe('MapScreen (map tab)', () => {
 
     // Завершаем запрос, чтобы избежать зависаний
     resolveRequest!({});
+  });
+
+  it('shows correct travels count in list tab after data is loaded', async () => {
+    const { getByText, getByTestId } = renderWithClient();
+
+    // Переключаемся на вкладку "Список"
+    const listTab = getByText('Список');
+    fireEvent.press(listTab);
+
+    // Ждём, пока данные загрузятся и попадут в моки панели списка
+    await waitFor(() => {
+      expect(getByTestId('list-count').props.children).toBe(2);
+    });
+
+    // В тексте вкладки также отображается количество мест
+    const travelsCountLabel = getByText('2 мест');
+    expect(travelsCountLabel).toBeTruthy();
   });
 
   it('shows error display when map data loading fails', async () => {

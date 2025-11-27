@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, act } from '@testing-library/react-native'
+import { render, act, fireEvent, waitFor } from '@testing-library/react-native'
 import MapPageComponent from '@/components/MapPage/Map.web'
 
 // Mock leaflet modules
@@ -684,6 +684,62 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
       const message = getByTestId('no-points-message')
       expect(message).toBeTruthy()
+    })
+  })
+
+  describe('My location button and location permissions', () => {
+    it('renders "Мое местоположение" button and centers map on user location when clicked', async () => {
+      const { useMap } = require('react-leaflet')
+      const mockSetView = jest.fn()
+
+      // Переопределяем мок useMap для отслеживания setView
+      useMap.mockReturnValue({
+        fitBounds: jest.fn(),
+        setView: mockSetView,
+        closePopup: jest.fn(),
+        getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.5667 })),
+        getZoom: jest.fn(() => 11),
+        on: jest.fn(),
+        off: jest.fn(),
+      })
+
+      const { Platform } = require('react-native')
+      ;(Platform as any).OS = 'web'
+
+      const props = {
+        ...defaultProps,
+        mode: 'radius' as const,
+      }
+
+      const { getByLabelText } = render(<MapPageComponent {...props} />)
+
+      // Ждём, пока будет получена геолокация и появится кнопка (aria-label на кнопке)
+      const myLocationButton = await waitFor(() => getByLabelText('Вернуться к моему местоположению'))
+      expect(myLocationButton).toBeTruthy()
+
+      // Кликаем по кнопке и проверяем, что setView был вызван
+      fireEvent(myLocationButton as any, 'click' as any)
+      expect(mockSetView).toHaveBeenCalled()
+    })
+
+    it('handles denied location permission without crashing', async () => {
+      const ExpoLocation = require('expo-location')
+
+      // Следующий вызов запроса прав вернёт статус denied
+      ;(ExpoLocation.requestForegroundPermissionsAsync as jest.Mock).mockResolvedValueOnce({
+        status: 'denied',
+      })
+
+      const props = {
+        ...defaultProps,
+        mode: 'radius' as const,
+      }
+
+      const result = render(<MapPageComponent {...props} />)
+      await act(async () => {})
+
+      // Достаточно того, что компонент отрендерился без ошибок
+      expect(result).toBeTruthy()
     })
   })
 })
