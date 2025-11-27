@@ -9,7 +9,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/src/types/types";
 import FavoriteButton from "@/components/FavoriteButton";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travels";
-import TravelCardHoverActions from "./TravelCardHoverActions";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize, generateSrcSet } from "@/utils/imageOptimization";
 // ✅ ДИЗАЙН: Импорт максимально легкой и воздушной палитры
@@ -275,15 +274,10 @@ function TravelListItem({
         onDeletePress?.(id);
     }, [id, onDeletePress]);
 
-    // ✅ УЛУЧШЕНИЕ: Состояние hover для десктопа
-    const [isHovered, setIsHovered] = React.useState(false);
-
     return (
         <View style={styles.wrap}>
             <Pressable
                 onPress={handlePress}
-                onHoverIn={Platform.OS === 'web' ? () => setIsHovered(true) : undefined}
-                onHoverOut={Platform.OS === 'web' ? () => setIsHovered(false) : undefined}
                 android_ripple={
                     Platform.OS === "android" ? { color: "rgba(17,24,39,0.06)" } : undefined
                 }
@@ -462,23 +456,6 @@ function TravelListItem({
                     </View>
                 )}
 
-                {/* ✅ УЛУЧШЕНИЕ: Hover действия на десктопе */}
-                {Platform.OS === 'web' && !isMobile && !selectable && !canEdit && (
-                    <View 
-                        style={[
-                            styles.hoverOverlay,
-                            isHovered && styles.hoverOverlayVisible
-                        ]}
-                        // Важно: не меняем pointerEvents по hover, чтобы зона наведения
-                        // не "прыгала" и не вызывала бесконечные onHoverIn/onHoverOut
-                        pointerEvents="box-none"
-                    >
-                        <TravelCardHoverActions
-                            travel={travel}
-                            visible={isHovered}
-                        />
-                    </View>
-                )}
             </Pressable>
         </View>
     );
@@ -512,22 +489,6 @@ const styles = StyleSheet.create({
                 },
             },
         }),
-    },
-    hoverOverlay: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        opacity: 0,
-        transition: "opacity 0.2s ease",
-        // Важно: оставляем box-none, чтобы overlay не перехватывал hover у карточки
-        // и не вызывал мигание при перемещении курсора по иконкам действий
-        pointerEvents: "box-none",
-        borderRadius: Platform.select({ default: 10, web: 12 }),
-    },
-    hoverOverlayVisible: {
-        opacity: 1,
     },
 
     androidOptimized: {
