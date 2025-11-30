@@ -400,4 +400,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default TravelWizardStepPublish;
+export default React.memo(TravelWizardStepPublish);

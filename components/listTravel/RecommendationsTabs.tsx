@@ -108,7 +108,8 @@ function FavoritesTab({ favorites, isAuthenticated, router }: { favorites: any[]
 }
 
 function RecommendationsTabs({ forceVisible, onVisibilityChange }: RecommendationsTabsProps) {
-    const [activeTab, setActiveTab] = useState<TabType>('recommendations');
+    // По умолчанию показываем "Подборка месяца"
+    const [activeTab, setActiveTab] = useState<TabType>('highlights');
     const [isCollapsed, setIsCollapsed] = useState(false);
     const { width } = useWindowDimensions();
     const isMobile = width <= 768;
@@ -133,8 +134,8 @@ function RecommendationsTabs({ forceVisible, onVisibilityChange }: Recommendatio
 
     const tabs = useMemo(() => {
         const tabsList = [
+            { id: 'highlights' as TabType, label: 'Подборка месяца', icon: 'auto-awesome' },
             { id: 'recommendations' as TabType, label: 'Рекомендации', icon: 'star' },
-            { id: 'highlights' as TabType, label: 'Подборка недели', icon: 'auto-awesome' },
             { id: 'favorites' as TabType, label: 'Избранное', icon: 'favorite' },
             { id: 'history' as TabType, label: 'История', icon: 'history' },
         ];

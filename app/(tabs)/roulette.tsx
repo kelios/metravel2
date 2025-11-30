@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, Modal, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions, Pressable, FlatList, Image } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
@@ -12,7 +13,8 @@ import UIButton from '@/components/ui/Button';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useListTravelFilters } from '@/components/listTravel/hooks/useListTravelFilters';
-import { useListTravelData } from '@/components/listTravel/hooks/useListTravelData';
+import { useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
+import { normalizeApiResponse, deduplicateTravels } from '@/components/listTravel/utils/listTravelHelpers';
 import { fetchAllCountries, fetchFilters, fetchFiltersCountry } from '@/src/api/travels';
 import type { Travel } from '@/src/types/types';
 import type { FilterOptions } from '@/components/listTravel/utils/listTravelTypes';
@@ -158,13 +160,37 @@ export default function RouletteScreen() {
     return base;
   }, [queryParams, defaultCountries]);
 
+  const activeFiltersCount = useMemo(() => {
+    const technicalKeys = new Set(['publish', 'moderation']);
+    return Object.keys(rouletteQueryParams).filter((key) => !technicalKeys.has(key)).length;
+  }, [rouletteQueryParams]);
+
+  const filtersSummary = useMemo(() => {
+    const count = activeFiltersCount;
+    const countryIds = (rouletteQueryParams.countries as number[] | undefined) || [];
+
+    if (options && Array.isArray((options as any).countries) && countryIds.length > 0) {
+      const list = (options as any).countries as any[];
+      const first = list.find((c) => String(c.id) === String(countryIds[0]));
+      if (first) {
+        if (countryIds.length > 1) {
+          return `${first.name} и ещё ${countryIds.length - 1}`;
+        }
+        return String(first.name);
+      }
+    }
+
+    if (count > 0) return `Выбрано: ${count}`;
+    return 'Без фильтров';
+  }, [rouletteQueryParams, options, activeFiltersCount]);
+
   const {
     data: travels,
     isLoading,
     isFetching,
     isEmpty,
     refetch,
-  } = useListTravelData({
+  } = useRandomTravelData({
     queryParams: rouletteQueryParams,
     search,
     isQueryEnabled: true,
@@ -174,14 +200,31 @@ export default function RouletteScreen() {
   const [result, setResult] = useState<Travel[]>([]);
   const spinAnim = useRef(new Animated.Value(0)).current;
 
-  const handleSpin = useCallback(() => {
-    if (!travels || travels.length === 0) {
-      setResult([]);
-      return;
-    }
+  const handleSpin = useCallback(async () => {
     setSpinning(true);
     spinAnim.setValue(0);
-    const next = shuffleTravels(travels).slice(0, 3);
+
+    let freshTravels: Travel[] = travels || [];
+
+    try {
+      const refetchResult = await refetch();
+      const pages = (refetchResult.data as any)?.pages || [];
+      if (Array.isArray(pages) && pages.length > 0) {
+        const normalized = pages.map((page: any) => normalizeApiResponse(page));
+        const flattened = normalized.flatMap((page: any) => page.items || []);
+        freshTravels = deduplicateTravels(flattened as Travel[]);
+      }
+    } catch (e) {
+      // В случае ошибки используем уже загруженные travels
+    }
+
+    if (!freshTravels || freshTravels.length === 0) {
+      setResult([]);
+      setSpinning(false);
+      return;
+    }
+
+    const next = shuffleTravels(freshTravels).slice(0, 3);
 
     Animated.timing(spinAnim, {
       toValue: 1,
@@ -192,7 +235,7 @@ export default function RouletteScreen() {
       setResult(next);
       setSpinning(false);
     });
-  }, [spinAnim, travels]);
+  }, [spinAnim, travels, refetch]);
 
   const handleClearAll = useCallback(() => {
     setSearch('');
@@ -264,26 +307,25 @@ export default function RouletteScreen() {
               setSearch={undefined}
               onToggleRecommendations={undefined}
               isRecommendationsVisible={undefined}
-              hasFilters={Object.keys(queryParams).length > 0}
+              hasFilters={activeFiltersCount > 0}
               resultsCount={travels.length}
               onClearAll={handleClearAll}
             />
           </View>
         )}
 
-        <View style={styles.main}>
-          <View style={styles.heroRow}>
+        <View style={[styles.main, isMobile && styles.mainMobile]}>
+          <View style={[styles.heroRow, isMobile && styles.heroRowMobile]}>
             <View style={styles.heroTextBlock}>
               <Text style={styles.heroTitle}>Не знаешь, куда поехать?</Text>
               <Text style={styles.heroSubtitle}>
-                Подбери фильтры — и мы случайно предложим три маршрута под твои пожелания.
+                {isMobile
+                  ? 'Выбери фильтры и нажми «Подобрать» — покажем 3 маршрута.'
+                  : 'Подбери фильтры — и мы случайно предложим три маршрута под твои пожелания.'}
               </Text>
             </View>
-          </View>
-
-          <View style={styles.topBar}>
-            {isMobile && (
-              <View style={styles.spinButtonWrapperMobile}>
+            {!isMobile && (
+              <View style={styles.heroButtonBlock}>
                 <UIButton
                   label={spinning ? 'Подбираем маршруты…' : (result.length > 0 ? 'Подобрать ещё варианты' : 'Подобрать маршруты')}
                   onPress={handleSpin}
@@ -293,7 +335,47 @@ export default function RouletteScreen() {
             )}
           </View>
 
-          <View style={styles.resultsContainer}>
+          <View style={[styles.topBar, isMobile && styles.topBarMobile]}>
+            {isMobile && (
+              <View style={styles.mobileTopRow}>
+                <View style={styles.mobileFiltersBar}>
+                  <Pressable
+                    testID="mobile-filters-button"
+                    style={styles.mobileFiltersButton}
+                    onPress={() => setShowFilters((prev) => !prev)}
+                  >
+                    <View style={styles.mobileFiltersHeaderRow}>
+                      <Feather name="filter" size={14} color={palette.primary} />
+                      <Text style={styles.mobileFiltersLabel} numberOfLines={1}>
+                        {`Фильтры: ${filtersSummary}`}
+                      </Text>
+                    </View>
+                  </Pressable>
+                  {activeFiltersCount > 0 && (
+                    <Pressable
+                      testID="mobile-reset-filters"
+                      style={styles.mobileFiltersResetButton}
+                      onPress={handleClearAll}
+                    >
+                      <Feather name="x-circle" size={16} color={palette.primary} />
+                    </Pressable>
+                  )}
+                </View>
+
+                <View style={styles.mobileSpinButton}>
+                  <UIButton
+                    label={spinning
+                      ? 'Подбираем…'
+                      : (result.length > 0 ? 'Ещё' : 'Подобрать')}
+                    onPress={handleSpin}
+                    disabled={showLoading || (!travels || travels.length === 0)}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+
+          <View style={[styles.resultsContainer, isMobile && styles.resultsContainerMobile]}>
             {showLoading && (
               <View style={styles.loaderBox}>
                 <ActivityIndicator size="large" color={palette.primary} />
@@ -338,6 +420,7 @@ export default function RouletteScreen() {
                         style={styles.rouletteCompassImage}
                         resizeMode="cover"
                       />
+
                       {result.slice(0, 3).map((item, index) => (
                         <View
                           key={String(item.id)}
@@ -365,22 +448,14 @@ export default function RouletteScreen() {
                         </View>
                       ))}
 
-                      <View style={styles.rouletteCenter}>
+                      <Pressable style={styles.rouletteCenter} onPress={handleSpin}>
                         <Text style={styles.rouletteCenterTitle}>Случайный маршрут</Text>
                         <Text style={styles.rouletteCenterSubtitle}>
                           {result.length > 0
                             ? `Выбрано ${result.length} маршрута`
                             : 'Нажми, чтобы подобрать маршруты'}
                         </Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.rouletteButtonDesktop}>
-                      <UIButton
-                        label={spinning ? 'Подбираем маршруты…' : (result.length > 0 ? 'Подобрать ещё варианты' : 'Подобрать маршруты')}
-                        onPress={handleSpin}
-                        disabled={showLoading || (!travels || travels.length === 0)}
-                      />
+                      </Pressable>
                     </View>
                   </View>
                 ) : (
@@ -389,7 +464,7 @@ export default function RouletteScreen() {
                     keyExtractor={(item) => String(item.id)}
                     key="cols-1"
                     numColumns={1}
-                    contentContainerStyle={styles.cardsGrid}
+                    contentContainerStyle={[styles.cardsGrid, isMobile && styles.cardsGridMobile]}
                     renderItem={({ item, index }) => (
                       <View style={styles.cardWrapper}>
                         <RenderTravelItem
@@ -418,30 +493,25 @@ export default function RouletteScreen() {
       {isMobile && (
         <Modal
           visible={showFilters}
-          transparent
           animationType="slide"
           onRequestClose={() => setShowFilters(false)}
         >
-          <Pressable style={styles.modalOverlay} onPress={() => setShowFilters(false)}>
-            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-              <FiltersComponent
-                filters={options || {}}
-                filterValue={filter}
-                onSelectedItemsChange={onSelect}
-                handleApplyFilters={applyFilter}
-                resetFilters={resetFilters}
-                isSuperuser={false}
-                closeMenu={() => setShowFilters(false)}
-                search={undefined}
-                setSearch={undefined}
-                onToggleRecommendations={undefined}
-                isRecommendationsVisible={undefined}
-                hasFilters={Object.keys(queryParams).length > 0}
-                resultsCount={travels.length}
-                onClearAll={handleClearAll}
-              />
-            </Pressable>
-          </Pressable>
+          <FiltersComponent
+            filters={options || {}}
+            filterValue={filter}
+            onSelectedItemsChange={onSelect}
+            handleApplyFilters={applyFilter}
+            resetFilters={resetFilters}
+            isSuperuser={false}
+            closeMenu={() => setShowFilters(false)}
+            search={undefined}
+            setSearch={undefined}
+            onToggleRecommendations={undefined}
+            isRecommendationsVisible={undefined}
+            hasFilters={activeFiltersCount > 0}
+            resultsCount={travels.length}
+            onClearAll={handleClearAll}
+          />
         </Modal>
       )}
     </View>
@@ -465,6 +535,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 16,
+  },
+  containerMobile: {
+    flexDirection: 'column',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    gap: 12,
   },
   sidebar: {
     width: 320,
@@ -490,12 +566,22 @@ const styles = StyleSheet.create({
     elevation: 8,
     padding: 16,
   },
+  mainMobile: {
+    padding: 12,
+    borderRadius: 16,
+    marginTop: 4,
+  },
   heroRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     marginBottom: 12,
     gap: 16,
+  },
+  heroRowMobile: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 8,
   },
   heroTextBlock: {
     flex: 1,
@@ -522,15 +608,73 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 12,
   },
+  topBarMobile: {
+    alignItems: 'stretch',
+    flexDirection: 'column',
+  },
   spinButtonWrapper: {
     minWidth: 160,
   },
   spinButtonWrapperMobile: {
     marginTop: 12,
   },
+  mobileTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  mobileFiltersBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  mobileFiltersButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,128,94,0.35)',
+  },
+  mobileFiltersHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  mobileFiltersLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: palette.text,
+  },
+  mobileFiltersValue: {
+    fontSize: 10,
+    color: palette.textMuted,
+  },
+  mobileFiltersResetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  mobileFiltersReset: {
+    fontSize: 11,
+    color: palette.primary,
+    fontWeight: '600',
+  },
+  mobileSpinButton: {
+    marginLeft: 8,
+    flexShrink: 1,
+  },
   resultsContainer: {
     flex: 1,
     paddingBottom: 32,
+  },
+  resultsContainerMobile: {
+    paddingBottom: 16,
   },
   loaderBox: {
     alignItems: 'center',
@@ -574,9 +718,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 380,
   },
+  inlineFiltersMobile: {
+    marginTop: 12,
+    marginBottom: 4,
+  },
   cardsGrid: {
     paddingVertical: 12,
     paddingHorizontal: 4,
+  },
+  cardsGridMobile: {
+    paddingVertical: 8,
+    paddingHorizontal: 0,
   },
   cardsContainer: {
     flex: 1,
@@ -591,15 +743,31 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     marginBottom: 12,
   },
+  selectedListContainer: {
+    marginTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(148,128,94,0.25)',
+    paddingTop: 16,
+    gap: 12,
+  },
+  selectedListTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: palette.text,
+    marginBottom: 4,
+  },
+  selectedCardWrapper: {
+    marginBottom: 12,
+  },
   rouletteWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 24,
+    paddingVertical: 32,
   },
   rouletteCircle: {
-    width: 440,
-    height: 440,
-    borderRadius: 220,
+    width: 520,
+    height: 520,
+    borderRadius: 260,
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: 'rgba(148,128,94,0.35)',
@@ -613,34 +781,39 @@ const styles = StyleSheet.create({
   },
   rouletteCard: {
     position: 'absolute',
-    width: 260,
-    maxWidth: '78%',
+    width: 340,
+    maxWidth: '86%',
   },
   rouletteCardTop: {
-    top: -40,
+    top: -50,
     left: '50%',
-    transform: [{ translateX: -130 }, { rotate: '-6deg' }],
+    transform: [{ translateX: -170 }, { rotate: '-3deg' }, { scale: 1.1 }],
   },
   rouletteCardLeft: {
-    bottom: 10,
-    left: -10,
-    transform: [{ rotate: '-14deg' }],
+    bottom: 70,
+    left: -14,
+    transform: [{ rotate: '-10deg' }],
   },
   rouletteCardRight: {
-    bottom: 10,
-    right: -10,
+    bottom: 70,
+    right: -14,
     transform: [{ rotate: '10deg' }],
   },
   rouletteCenter: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
     borderWidth: 2,
     borderColor: 'rgba(148,128,94,0.45)',
     backgroundColor: 'rgba(255,255,255,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   rouletteCenterTitle: {
     fontSize: 14,
@@ -666,7 +839,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     opacity: 0.85,
-    borderRadius: 220,
+    borderRadius: 260,
   },
   overlaySpinner: {
     position: 'absolute',
@@ -754,6 +927,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
+    ...(Platform.OS === 'web'
+      ? {
+          position: 'fixed' as any,
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          zIndex: 1000,
+        }
+      : {}),
   },
   modalContent: {
     backgroundColor: palette.surface,
@@ -761,5 +944,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     padding: 12,
     maxHeight: '80%',
+    width: '100%',
+    alignSelf: 'stretch',
   },
 });

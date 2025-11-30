@@ -6,6 +6,9 @@ import type { TravelForBook } from '@/src/types/pdf-export';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { JSDOM } from 'jsdom';
 
+// Увеличиваем таймаут для тяжёлых HTML/PDF-тестов
+jest.setTimeout(20000);
+
 const ensureDomGlobals = () => {
   const globalObj = global as any;
   const dom = new JSDOM('<!doctype html><html><body></body></html>');

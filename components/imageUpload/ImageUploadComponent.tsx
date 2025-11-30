@@ -190,14 +190,17 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
 
             const file = acceptedFiles[0];
             if (file) {
-                // Валидация и немедленная загрузка файла, чтобы изображение
-                // сразу сохранилось и продолжало отображаться после закрытия блока точек
                 const validationError = validateFile(file);
                 if (validationError) {
                     setError(validationError);
                     return;
                 }
-                await handleUploadImage(file);
+
+                setError(null);
+                setUploadMessage(null);
+                setUploadProgress(0);
+                setPreviewFile(file);
+                createPreview(file);
             }
         },
         accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp', '.heic', '.heif'] },

@@ -183,8 +183,9 @@ export interface TravelFormData {
     description?: string | null;
     plus?: string | null;
     minus?: string | null;
-    recommendation?: | null;
+    recommendation?: string | null;
     youtube_link?: string | null;
+    gallery?: GalleryItem[];
     categories: string[];
     countryIds: string[];
     travelAddressIds: string[];

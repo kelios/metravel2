@@ -20,10 +20,12 @@ interface TravelWizardStepRouteProps {
     onCountryDeselect: (countryId: string) => void;
     onBack: () => void;
     onNext: () => void;
+    isFiltersLoading?: boolean;
 }
 
 const windowWidth = Dimensions.get('window').width;
 const isMobileDefault = windowWidth <= 768;
+const MultiSelectFieldAny: any = MultiSelectField;
 
 const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     currentStep,
@@ -37,6 +39,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     onCountryDeselect,
     onBack,
     onNext,
+    isFiltersLoading,
 }) => {
     const isMobile = isMobileDefault;
 
@@ -103,14 +106,21 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
 
                 <View style={styles.filtersRow}>
                     <View style={styles.filterItem}>
-                        <MultiSelectField
-                            label="Страны маршрута"
-                            items={countries}
-                            value={selectedCountryIds}
-                            onChange={handleCountriesFilterChange}
-                            labelField="title_ru"
-                            valueField="country_id"
-                        />
+                        {isFiltersLoading ? (
+                            <View style={styles.filtersSkeleton}>
+                                <View style={styles.filtersSkeletonLabel} />
+                                <View style={styles.filtersSkeletonInput} />
+                            </View>
+                        ) : (
+                            <MultiSelectFieldAny
+                                label="Страны маршрута"
+                                items={countries}
+                                value={selectedCountryIds}
+                                onChange={handleCountriesFilterChange}
+                                labelField="title_ru"
+                                valueField="country_id"
+                            />
+                        )}
                     </View>
                 </View>
 
@@ -155,6 +165,11 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#6b7280',
     },
+    headerActions: {
+        marginTop: 8,
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+    },
     content: {
         flex: 1,
         paddingHorizontal: 8,
@@ -190,6 +205,30 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         paddingBottom: 16,
     },
+    filtersRow: {
+        paddingHorizontal: 8,
+        paddingBottom: 8,
+    },
+    filterItem: {
+        flex: 1,
+    },
+    filtersSkeleton: {
+        marginTop: 4,
+        paddingVertical: 4,
+    },
+    filtersSkeletonLabel: {
+        width: 120,
+        height: 12,
+        borderRadius: 4,
+        backgroundColor: '#e5e7eb',
+        marginBottom: 8,
+    },
+    filtersSkeletonInput: {
+        width: '100%',
+        height: 40,
+        borderRadius: 8,
+        backgroundColor: '#e5e7eb',
+    },
 });
 
-export default TravelWizardStepRoute;
+export default React.memo(TravelWizardStepRoute);

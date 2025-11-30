@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensio
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
-import { fetchTravelsPopular } from '@/src/api/travels';
+import { fetchTravelsOfMonth } from '@/src/api/travels';
 import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AIRY_COLORS } from '@/constants/airyColors'; // ✅ ИСПРАВЛЕНИЕ: Добавлен импорт AIRY_COLORS
@@ -84,10 +84,10 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
         }
     }, [onVisibilityChange]);
 
-    // Получаем популярные путешествия
+    // Получаем популярные путешествия месяца
     const { data: popularTravels } = useQuery({
-        queryKey: ['popularTravels'],
-        queryFn: fetchTravelsPopular,
+        queryKey: ['travelsOfMonth'],
+        queryFn: fetchTravelsOfMonth,
         staleTime: 3600000, // 1 час
     });
 
@@ -142,7 +142,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
                         <MaterialIcons name="expand-more" size={20} color="#6b8e7f" />
-                        <Text style={styles.expandButtonText}>Подборка недели</Text>
+                        <Text style={styles.expandButtonText}>Подборка месяца</Text>
                     </Pressable>
                 </View>
             );
@@ -158,14 +158,14 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
                     <MaterialIcons name="auto-awesome" size={20} color={AIRY_COLORS.primary} />
                 </View>
                 <View style={styles.titleContainer}>
-                    <Text style={styles.title}>Подборка недели</Text>
+                    <Text style={styles.title}>Подборка месяца</Text>
                     <View style={styles.badgeContainer}>
-                        <Text style={styles.badgeText}>Выбор недели</Text>
+                        <Text style={styles.badgeText}>Выбор месяца</Text>
                     </View>
                 </View>
                 {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
             </View>
-            <Text style={styles.subtitle}>Популярные маршруты, которые вы еще не видели</Text>
+            <Text style={styles.subtitle}>Самые популярные маршруты этого месяца</Text>
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -217,7 +217,8 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
 const styles = StyleSheet.create({
     container: {
         marginVertical: 8, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше отступов
-        padding: 12, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше padding
+        paddingHorizontal: 0,
+        paddingVertical: 8, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше padding
         backgroundColor: 'transparent', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Прозрачный фон
         borderRadius: 12, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше радиус
         borderWidth: 0, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Без границы
@@ -275,9 +276,9 @@ const styles = StyleSheet.create({
     subtitle: {
         fontSize: 13,
         color: '#4a5568',
-        paddingHorizontal: 0,
+        paddingHorizontal: 12,
         marginLeft: 0,
-        marginBottom: 10,
+        marginBottom: 12,
     },
     collapseButton: {
         padding: 4,
@@ -316,15 +317,15 @@ const styles = StyleSheet.create({
         marginLeft: 6,
     },
     scrollContent: {
-        paddingHorizontal: 4,
-        paddingVertical: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
     },
     item: {
-        width: 150,
+        width: 220,
         backgroundColor: '#ffffff',
         borderRadius: 12,
         overflow: 'hidden',
-        marginRight: 10,
+        marginRight: 12,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.08,
@@ -334,13 +335,18 @@ const styles = StyleSheet.create({
         borderColor: '#e5e7eb',
         position: 'relative',
         transform: [{ scale: 1 }],
+        ...Platform.select({
+            web: {
+                cursor: 'pointer',
+            },
+        }),
     },
     itemMobile: {
-        width: 136,
+        width: 180,
     },
     itemImage: {
         width: '100%',
-        height: 88,
+        height: 140,
         backgroundColor: '#f3f4f6',
     },
     itemImagePlaceholder: {

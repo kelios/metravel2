@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { Alert, Platform } from 'react-native';
 import ShareButtons from '@/components/travel/ShareButtons';
 import * as Clipboard from 'expo-clipboard';
@@ -145,23 +145,26 @@ describe('ShareButtons', () => {
   });
 
   it('should show copied state temporarily', async () => {
-    jest.useFakeTimers();
     (Platform.OS as any) = 'web';
+
+    // Используем fake timers ДО рендера, чтобы setTimeout компонента был управляемым
+    jest.useFakeTimers();
 
     const { getByLabelText, queryByText, getByText } = render(<ShareButtons travel={mockTravel} />);
 
     const copyButton = getByLabelText('Копировать ссылку');
     fireEvent.press(copyButton);
 
+    // Ждём, когда появится индикатор "скопировано"
     await waitFor(() => {
       expect(getByText('✓')).toBeTruthy();
     });
 
-    jest.advanceTimersByTime(2000);
-
-    await waitFor(() => {
-      expect(queryByText('✓')).toBeNull();
+    await act(async () => {
+      jest.advanceTimersByTime(2100);
     });
+
+    expect(queryByText('✓')).toBeNull();
 
     jest.useRealTimers();
   });

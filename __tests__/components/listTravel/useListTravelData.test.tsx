@@ -2,11 +2,12 @@ import React, { forwardRef, useImperativeHandle } from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { useListTravelData } from '@/components/listTravel/hooks/useListTravelData';
-import { fetchTravels } from '@/src/api/travels';
+import { useListTravelData, useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
+import { fetchTravels, fetchRandomTravels } from '@/src/api/travels';
 
 jest.mock('@/src/api/travels', () => ({
   fetchTravels: jest.fn(),
+  fetchRandomTravels: jest.fn(),
 }));
 
 const createTravels = (prefix: string, count: number) =>
@@ -35,6 +36,21 @@ const TestHarness = forwardRef<any, HarnessProps>(
 );
 
 TestHarness.displayName = 'UseListTravelDataHarness';
+
+const RandomHarness = forwardRef<any, HarnessProps>(
+  ({ queryParams, search = '', isQueryEnabled = true }, ref) => {
+    const hook = useRandomTravelData({
+      queryParams,
+      search,
+      isQueryEnabled,
+    });
+
+    useImperativeHandle(ref, () => hook);
+    return null;
+  },
+);
+
+RandomHarness.displayName = 'UseRandomTravelDataHarness';
 
 const renderWithClient = (props: HarnessProps) => {
   const queryClient = new QueryClient({
@@ -72,6 +88,7 @@ const renderWithClient = (props: HarnessProps) => {
 describe('useListTravelData with infinite query', () => {
   beforeEach(() => {
     (fetchTravels as jest.Mock).mockReset();
+    (fetchRandomTravels as jest.Mock).mockReset();
   });
 
   it('loads the first page on mount', async () => {
@@ -194,6 +211,70 @@ describe('useListTravelData with infinite query', () => {
 
     await waitFor(() => expect(ref.current?.status).toBe('error'));
     expect(ref.current?.isError).toBe(true);
+
+    unmount();
+    queryClient.clear();
+  });
+});
+
+const renderRandomWithClient = (props: HarnessProps) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+      },
+    },
+  });
+
+  const ref = React.createRef<any>();
+  const ui = (
+    <QueryClientProvider client={queryClient}>
+      <RandomHarness ref={ref} {...props} />
+    </QueryClientProvider>
+  );
+
+  const utils = render(ui);
+
+  return {
+    ref,
+    queryClient,
+    ...utils,
+  };
+};
+
+describe('useRandomTravelData', () => {
+  beforeEach(() => {
+    (fetchRandomTravels as jest.Mock).mockReset();
+  });
+
+  it('loads the first random page on mount', async () => {
+    (fetchRandomTravels as jest.Mock).mockResolvedValueOnce({
+      total: 3,
+      data: createTravels('rnd', 3),
+    });
+
+    const { ref, queryClient, unmount } = renderRandomWithClient({ queryParams: {} });
+
+    await waitFor(() => expect(ref.current?.isInitialLoading).toBe(false));
+    expect(ref.current?.data).toHaveLength(3);
+    expect(fetchRandomTravels).toHaveBeenCalledTimes(1);
+
+    unmount();
+    queryClient.clear();
+  });
+
+  it('sets isEmpty when backend returns no random items', async () => {
+    (fetchRandomTravels as jest.Mock).mockResolvedValueOnce({
+      total: 0,
+      data: [],
+    });
+
+    const { ref, queryClient, unmount } = renderRandomWithClient({ queryParams: {} });
+
+    await waitFor(() => expect(ref.current?.isInitialLoading).toBe(false));
+    expect(ref.current?.data).toHaveLength(0);
+    expect(ref.current?.isEmpty).toBe(true);
 
     unmount();
     queryClient.clear();

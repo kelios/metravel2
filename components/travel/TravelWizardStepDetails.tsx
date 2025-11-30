@@ -235,4 +235,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default TravelWizardStepDetails;
+export default React.memo(TravelWizardStepDetails);

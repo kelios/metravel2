@@ -38,12 +38,12 @@ export default function UpsertTravel() {
     const [menuVisible, setMenuVisible] = useState(!isMobile);
     const [markers, setMarkers] = useState<MarkerData[]>([]);
     const [travelDataOld, setTravelDataOld] = useState<Travel | null>(null);
-    const [filters, setFilters] = useState(initFilters());
+    const [filters, setFilters] = useState<ReturnType<typeof initFilters> | null>(null);
     const [formData, setFormData] = useState<TravelFormData>(getEmptyFormData(isNew ? null : String(id)));
     const [snackbarVisible, setSnackbarVisible] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-    const [isLoading, setIsLoading] = useState(true);
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
     const [step1Errors, setStep1Errors] = useState<string[]>([]);
     const [step1FirstErrorField, setStep1FirstErrorField] = useState<string | null>(null);
@@ -91,7 +91,7 @@ export default function UpsertTravel() {
                     fetchAllCountries(),
                 ]);
                 if (isMounted) {
-                    setFilters({ ...filtersData, countries: countryData });
+                    setFilters({ ...filtersData, countries: countryData } as any);
                 }
             } catch (error) {
                 console.error('Ошибка загрузки фильтров:', error);
@@ -110,7 +110,7 @@ export default function UpsertTravel() {
                 router.replace('/login');
             } else {
                 setHasAccess(true);
-                setIsLoading(false);
+                setIsInitialLoading(false);
             }
         }
         return () => {
@@ -142,7 +142,6 @@ export default function UpsertTravel() {
 
     const loadTravelData = async (travelId: string) => {
         try {
-            setIsLoading(true);
             const travelData = await fetchTravel(Number(travelId));
 
             // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Проверка прав доступа при редактировании
@@ -202,7 +201,7 @@ export default function UpsertTravel() {
             });
             router.replace('/');
         } finally {
-            setIsLoading(false);
+            setIsInitialLoading(false);
         }
     };
 
@@ -258,11 +257,13 @@ export default function UpsertTravel() {
     };
 
     // Показываем загрузку или блокируем доступ
-    if (isLoading) {
+    if (isInitialLoading) {
         return (
             <SafeAreaView style={styles.safeContainer}>
                 <View style={styles.loadingContainer}>
-                    <Button loading mode="text">Загрузка...</Button>
+                    <View style={styles.loadingSkeletonHeader} />
+                    <View style={styles.loadingSkeletonSubheader} />
+                    <View style={styles.loadingSkeletonBlock} />
                 </View>
             </SafeAreaView>
         );
@@ -316,8 +317,9 @@ export default function UpsertTravel() {
                         coordsMeTravel: updatedMarkers as any,
                     }));
                 }}
-                categoryTravelAddress={filters.categoryTravelAddress}
-                countries={filters.countries}
+                categoryTravelAddress={filters?.categoryTravelAddress || []}
+                countries={filters?.countries || []}
+                isFiltersLoading={!filters}
                 selectedCountryIds={formData.countries}
                 onCountrySelect={handleCountrySelect}
                 onCountryDeselect={handleCountryDeselect}
@@ -459,7 +461,27 @@ const styles = StyleSheet.create({
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: 'stretch',
+        paddingHorizontal: 16,
+        gap: 12,
+    },
+    loadingSkeletonHeader: {
+        height: 20,
+        borderRadius: 6,
+        backgroundColor: '#e5e7eb',
+        marginBottom: 4,
+    },
+    loadingSkeletonSubheader: {
+        height: 14,
+        borderRadius: 6,
+        backgroundColor: '#e5e7eb',
+        width: '70%',
+        marginBottom: 12,
+    },
+    loadingSkeletonBlock: {
+        height: 160,
+        borderRadius: 10,
+        backgroundColor: '#e5e7eb',
     },
 });
 

@@ -3,17 +3,19 @@
  * Позволяет поделиться путешествием через различные платформы
  */
 
-import React, { useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo, lazy, Suspense } from 'react';
 import { View, Text, StyleSheet, Pressable, useWindowDimensions, Platform, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 import type { Travel } from '@/src/types/types';
-import BookSettingsModal, { type BookSettings } from '@/components/export/BookSettingsModal';
+import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { useSingleTravelExport } from '@/components/travel/hooks/useSingleTravelExport';
 import { ExportStage } from '@/src/types/pdf-export';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+
+const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
 
 interface ShareButtonsProps {
   travel: Travel;
@@ -284,16 +286,18 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
         )}
       </View>
       {Platform.OS === 'web' && (
-        <BookSettingsModal
-          visible={showExportModal}
-          onClose={() => setShowExportModal(false)}
-          onSave={handleExport}
-          onPreview={handlePreview}
-          travelCount={1}
-          defaultSettings={lastSettings}
-          userName={travel.userName || undefined}
-          mode="preview"
-        />
+        <Suspense fallback={null}>
+          <BookSettingsModalLazy
+            visible={showExportModal}
+            onClose={() => setShowExportModal(false)}
+            onSave={handleExport}
+            onPreview={handlePreview}
+            travelCount={1}
+            defaultSettings={lastSettings}
+            userName={travel.userName || undefined}
+            mode="preview"
+          />
+        </Suspense>
       )}
     </>
   );

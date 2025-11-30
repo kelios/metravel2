@@ -237,6 +237,8 @@ function TravelListItem({
 
     // ✅ ИСПРАВЛЕНИЕ: Предзагрузка данных только при клике (с небольшой задержкой)
     // Не делаем запрос при наведении - это вызывает множественные ненужные запросы
+    const travelUrl = `/travels/${slug ?? id}`;
+
     const handlePress = useCallback(() => {
         if (selectable) {
             onToggle?.();
@@ -274,8 +276,40 @@ function TravelListItem({
         onDeletePress?.(id);
     }, [id, onDeletePress]);
 
-    return (
-        <View style={styles.wrap}>
+    const actions = (canEdit && !selectable) && (
+        <View style={styles.actions} pointerEvents="box-none">
+            <Pressable 
+                onPress={handleEdit} 
+                hitSlop={10} 
+                {...(Platform.OS === 'web' && {
+                    onClick: (e: any) => e.stopPropagation(),
+                    onMouseDown: (e: any) => e.stopPropagation(),
+                })}
+                style={[styles.btn, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                accessibilityRole="button"
+                accessibilityLabel="Редактировать"
+            >
+                {/* ✅ ИСПРАВЛЕНИЕ: Увеличен размер иконки */}
+                <Feather name="edit-2" size={18} color={ICON_COLOR} />
+            </Pressable>
+            <Pressable 
+                onPress={handleDelete} 
+                hitSlop={10} 
+                {...(Platform.OS === 'web' && {
+                    onClick: (e: any) => e.stopPropagation(),
+                    onMouseDown: (e: any) => e.stopPropagation(),
+                })}
+                style={[styles.btn, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                accessibilityRole="button"
+                accessibilityLabel="Удалить"
+            >
+                {/* ✅ ИСПРАВЛЕНИЕ: Увеличен размер иконки */}
+                <Feather name="trash-2" size={18} color={ICON_COLOR} />
+            </Pressable>
+        </View>
+    );
+
+    const card = (
             <Pressable
                 onPress={handlePress}
                 android_ripple={
@@ -430,33 +464,62 @@ function TravelListItem({
                     </View>
                 )}
 
-                {/* Кнопки действий (редактирование/удаление) */}
-                {canEdit && !selectable && (
-                    <View style={styles.actions} pointerEvents="box-none">
-                        <Pressable 
-                            onPress={handleEdit} 
-                            hitSlop={10} 
-                            style={[styles.btn, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                            accessibilityRole="button"
-                            accessibilityLabel="Редактировать"
-                        >
-                            {/* ✅ ИСПРАВЛЕНИЕ: Увеличен размер иконки */}
-                            <Feather name="edit-2" size={18} color={ICON_COLOR} />
-                        </Pressable>
-                        <Pressable 
-                            onPress={handleDelete} 
-                            hitSlop={10} 
-                            style={[styles.btn, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                            accessibilityRole="button"
-                            accessibilityLabel="Удалить"
-                        >
-                            {/* ✅ ИСПРАВЛЕНИЕ: Увеличен размер иконки */}
-                            <Feather name="trash-2" size={18} color={ICON_COLOR} />
-                        </Pressable>
-                    </View>
-                )}
+            {/* Кнопки действий (редактирование/удаление) на native */}
+            {Platform.OS !== 'web' && actions}
 
-            </Pressable>
+        </Pressable>
+);
+
+return (
+    <View style={styles.wrap}>
+        {Platform.OS === 'web' ? (
+            <>
+                <a
+                    href={travelUrl}
+                    style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+                    onClick={(e: any) => {
+                        // Не даём событию дойти до внутренних Pressable
+                        e.stopPropagation();
+
+                        const hasModifier =
+                            e.metaKey ||
+                            e.ctrlKey ||
+                            e.shiftKey ||
+                            e.altKey ||
+                            e.button === 1;
+                                e.ctrlKey ||
+                                e.shiftKey ||
+                                e.altKey ||
+                                e.button === 1;
+
+                            if (selectable) {
+                                // В режиме выбора ведём себя как обычная карта: обрабатываем Pressable, без открытия новой вкладки
+                                e.preventDefault();
+                                handlePress();
+                                return;
+                            }
+
+                            if (hasModifier) {
+                                // Открываем ТОЛЬКО в новой вкладке, текущую не трогаем
+                                e.preventDefault();
+                                if (typeof window !== 'undefined') {
+                                    window.open(travelUrl, '_blank', 'noopener,noreferrer');
+                                }
+                                return;
+                            }
+
+                            // Обычный клик: SPA-навигация в текущей вкладке
+                            e.preventDefault();
+                            handlePress();
+                        }}
+                    >
+                        {card}
+                    </a>
+                    {actions}
+                </>
+            ) : (
+                card
+            )}
         </View>
     );
 }

@@ -80,9 +80,9 @@ describe('WeeklyHighlights', () => {
     })
 
     const { getByText } = render(<WeeklyHighlights />)
-    
-    expect(getByText('Подборка недели')).toBeTruthy()
-    expect(getByText('Популярные маршруты, которые вы еще не видели')).toBeTruthy()
+
+    expect(getByText('Подборка месяца')).toBeTruthy()
+    expect(getByText('Самые популярные маршруты этого месяца')).toBeTruthy()
     expect(getByText('Test Travel 1')).toBeTruthy()
     expect(getByText('Test Travel 2')).toBeTruthy()
   })
