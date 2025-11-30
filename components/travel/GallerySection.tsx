@@ -68,4 +68,4 @@ const styles = StyleSheet.create({
     darkText: { color: '#ddd' },
 });
 
-export default GallerySection;
+export default React.memo(GallerySection);

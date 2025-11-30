@@ -48,10 +48,10 @@ function simpleDecrypt(encrypted: string, key: string): string {
 export async function setSecureItem(key: string, value: string): Promise<void> {
   try {
     if (Platform.OS === 'web') {
-      // Для web используем sessionStorage (очищается при закрытии браузера) с шифрованием
-      if (typeof window !== 'undefined' && window.sessionStorage) {
+      // Для web используем localStorage с шифрованием (доступно во всех вкладках текущего домена)
+      if (typeof window !== 'undefined' && window.localStorage) {
         const encrypted = simpleEncrypt(value, ENCRYPTION_KEY);
-        window.sessionStorage.setItem(`${STORAGE_PREFIX}${key}`, encrypted);
+        window.localStorage.setItem(`${STORAGE_PREFIX}${key}`, encrypted);
       } else {
         // Fallback на AsyncStorage с шифрованием
         const encrypted = simpleEncrypt(value, ENCRYPTION_KEY);
@@ -84,8 +84,8 @@ export async function setSecureItem(key: string, value: string): Promise<void> {
 export async function getSecureItem(key: string): Promise<string | null> {
   try {
     if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        const encrypted = window.sessionStorage.getItem(`${STORAGE_PREFIX}${key}`);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const encrypted = window.localStorage.getItem(`${STORAGE_PREFIX}${key}`);
         if (!encrypted) return null;
         return simpleDecrypt(encrypted, ENCRYPTION_KEY);
       } else {

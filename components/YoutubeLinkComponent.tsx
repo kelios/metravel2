@@ -44,6 +44,19 @@ const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({
         return youtubeRegex.test(text.trim()) ? null : 'Неверная ссылка на YouTube';
     };
 
+    useEffect(() => {
+        if (!inputValue || !inputValue.trim()) {
+            setLocalError(null);
+            return;
+        }
+
+        const timeout = setTimeout(() => {
+            setLocalError(validateLink(inputValue));
+        }, 400);
+
+        return () => clearTimeout(timeout);
+    }, [inputValue]);
+
     const handleBlur = () => {
         setLocalError(validateLink(inputValue));
     };

@@ -36,15 +36,25 @@ describe('secureStorage (web)', () => {
       value: 'web',
     })
 
-    const storage: Record<string, string> = {}
+    const local: Record<string, string> = {}
+    const session: Record<string, string> = {}
     global.window = {
-      sessionStorage: {
-        getItem: jest.fn((key: string) => storage[key] ?? null),
+      localStorage: {
+        getItem: jest.fn((key: string) => local[key] ?? null),
         setItem: jest.fn((key: string, value: string) => {
-          storage[key] = value
+          local[key] = value
         }),
         removeItem: jest.fn((key: string) => {
-          delete storage[key]
+          delete local[key]
+        }),
+      },
+      sessionStorage: {
+        getItem: jest.fn((key: string) => session[key] ?? null),
+        setItem: jest.fn((key: string, value: string) => {
+          session[key] = value
+        }),
+        removeItem: jest.fn((key: string) => {
+          delete session[key]
         }),
       },
     } as any
@@ -62,10 +72,10 @@ describe('secureStorage (web)', () => {
     global.window = originalWindow as any
   })
 
-  it('stores and retrieves value via sessionStorage with encryption', async () => {
+  it('stores and retrieves value via localStorage with encryption', async () => {
     await setSecureItem('token', 'secret-value')
 
-    const raw = (global.window as any).sessionStorage.getItem('secure_token')
+    const raw = (global.window as any).localStorage.getItem('secure_token')
     expect(raw).not.toBeNull()
     expect(raw).not.toBe('secret-value')
 
@@ -76,8 +86,8 @@ describe('secureStorage (web)', () => {
     expect(AsyncStorage.getItem).not.toHaveBeenCalled()
   })
 
-  it('falls back to AsyncStorage when sessionStorage is not available', async () => {
-    ;(global.window as any).sessionStorage = undefined
+  it('falls back to AsyncStorage when localStorage is not available', async () => {
+    ;(global.window as any).localStorage = undefined
 
     await setSecureItem('token', 'value')
 

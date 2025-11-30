@@ -41,14 +41,14 @@ export const GRID_COLUMNS = {
 // ✅ АРХИТЕКТУРА: Время кеширования для React Query (staleTime)
 export const STALE_TIME = {
   FILTERS: 10 * 60 * 1000, // 10 минут
-  TRAVELS: 60 * 1000, // 1 минута
+  TRAVELS: 5 * 60 * 1000, // 5 минут — главная лента путешествий может дольше использовать кэш
   POPULAR: 3600000, // 1 час
 } as const;
 
 // ✅ АРХИТЕКТУРА: Время хранения в кеше (gcTime, бывший cacheTime)
 export const GC_TIME = {
   FILTERS: 10 * 60 * 1000, // 10 минут
-  TRAVELS: 5 * 60 * 1000, // 5 минут
+  TRAVELS: 15 * 60 * 1000, // 15 минут — дольше храним страницы ленты в памяти
   POPULAR: 10 * 60 * 1000, // 10 минут
 } as const;
 

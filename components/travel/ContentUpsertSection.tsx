@@ -37,7 +37,16 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             youtube_link: formData.youtube_link,
         } as any);
         setValidationErrors(result.errors);
-    }, [formData]);
+    }, [
+        formData.name,
+        formData.description,
+        formData.countries,
+        formData.categories,
+        formData.year,
+        formData.number_days,
+        formData.number_peoples,
+        formData.youtube_link,
+    ]);
 
     const descriptionPlainLength = useMemo(() => {
         const raw = formData.description ?? '';

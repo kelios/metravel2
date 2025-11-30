@@ -28,6 +28,10 @@ if (!URLAPI) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }
 
+let filtersCache: Filters | null = null;
+let allCountriesCache: any[] | null = null;
+const travelCache = new Map<number, Travel>();
+
 // ===== ТАЙМАУТЫ =====
 const DEFAULT_TIMEOUT = 10000; // 10 секунд
 const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запросов
@@ -53,6 +57,7 @@ const SEND_AI_QUESTION = `${URLAPI}/api/chat`;
 export const UPLOAD_IMAGE = `${URLAPI}/api/upload`;
 const GALLERY = `${URLAPI}/api/gallery`;
 const GET_TRAVELS = `${URLAPI}/api/travels`;
+const GET_RANDOM_TRAVELS = `${URLAPI}/api/travels/random`;
 const GET_TRAVELS_BY_SLUG = `${URLAPI}/api/travels/by-slug`;
 const GET_TRAVEL = `${URLAPI}/api/travel`;
 const GET_FILTERS_TRAVEL = `${URLAPI}/api/searchextended`;
@@ -63,6 +68,7 @@ const GET_FILTERS_COUNTRY = `${URLAPI}/api/countriesforsearch`;
 const SEND_FEEDBACK = `${URLAPI}/api/feedback/`;
 const GET_ARTICLES = `${URLAPI}/api/articles`;
 const GET_ALL_COUNTRY = `${URLAPI}/api/countries/`;
+const GET_TRAVELS_OF_MONTH = `${URLAPI}/api/travels/of-month/`;
 
 // ===== ЗАГЛУШКА =====
 const travelDef: Travel = {
@@ -500,6 +506,128 @@ export const fetchTravels = async (
     }
 };
 
+export const fetchRandomTravels = async (
+    page: number,
+    itemsPerPage: number,
+    search: string,
+    urlParams: Record<string, any>,
+    options?: { signal?: AbortSignal }
+) => {
+    try {
+        const whereObject: Record<string, any> = {};
+
+        const arrayFields = ['countries', 'categories', 'transports', 'companions', 'complexity', 'month', 'over_nights_stay', 'categoryTravelAddress'];
+        arrayFields.forEach(field => {
+            if (urlParams[field] && Array.isArray(urlParams[field])) {
+                const normalized = urlParams[field]
+                    .filter((val: any) => {
+                        if (val === undefined || val === null || val === '') return false;
+                        if (typeof val === 'string') {
+                            const num = Number(val);
+                            return !isNaN(num) && isFinite(num) && val.trim() !== '';
+                        }
+                        if (typeof val === 'number') {
+                            return !isNaN(val) && isFinite(val);
+                        }
+                        return false;
+                    })
+                    .map((val: any) => {
+                        if (typeof val === 'string') {
+                            const num = Number(val);
+                            return !isNaN(num) && isFinite(num) ? num : null;
+                        }
+                        if (typeof val === 'number') {
+                            return !isNaN(val) && isFinite(val) ? val : null;
+                        }
+                        return null;
+                    })
+                    .filter((val: any) => val !== null && val !== undefined);
+
+                if (normalized.length > 0) {
+                    whereObject[field] = normalized;
+                }
+            }
+        });
+
+        if (urlParams?.year !== undefined && urlParams?.year !== null) {
+            const yearStr = String(urlParams.year).trim();
+            if (yearStr !== '') {
+                whereObject.year = yearStr;
+            }
+        }
+
+        whereObject.moderation = 1;
+        whereObject.publish = 1;
+
+        const params = new URLSearchParams({
+            query: search || '',
+            where: JSON.stringify(whereObject),
+        }).toString();
+
+        const baseUrl = GET_RANDOM_TRAVELS.endsWith('/') ? GET_RANDOM_TRAVELS : `${GET_RANDOM_TRAVELS}/`;
+        const urlTravel = `${baseUrl}?${params}`;
+
+        const res = options?.signal
+            ? await fetchWithTimeout(urlTravel, { signal: options.signal }, LONG_TIMEOUT)
+            : await retry(
+                async () => {
+                    return await fetchWithTimeout(urlTravel, {}, LONG_TIMEOUT);
+                },
+                {
+                    maxAttempts: 2,
+                    delay: 1000,
+                    shouldRetry: (error) => {
+                        return isRetryableError(error);
+                    }
+                }
+            );
+
+        const result = await safeJsonParse<{
+            data?: Travel[];
+            total?: number;
+            detail?: string;
+        } | Travel[]>(res, []);
+
+        if (!res.ok) {
+            if (typeof result === 'object' && !Array.isArray(result) && result?.detail === "Invalid page.") {
+                devError('Invalid random page requested:', page + 1);
+                return { data: [], total: 0 };
+            }
+            devError('Error fetching Random Travels: HTTP', res.status, res.statusText);
+            return { data: [], total: 0 };
+        }
+
+        if (Array.isArray(result)) {
+            return { data: result, total: result.length };
+        }
+
+        if (result && typeof result === 'object' && !Array.isArray(result)) {
+            if (result.detail === "Invalid page.") {
+                devError('Invalid random page in response:', page + 1);
+                return { data: [], total: result.total || 0 };
+            }
+            if (!Array.isArray(result.data)) {
+                if (__DEV__) {
+                    console.warn('API returned unexpected random structure:', result);
+                }
+                return { data: [], total: result.total || 0 };
+            }
+            return {
+                data: result.data || [],
+                total: result.total || 0,
+            };
+        }
+
+        if (__DEV__) {
+            console.warn('Unexpected random API response format:', result);
+        }
+        return { data: [], total: 0 };
+    } catch (e) {
+        devError('Error fetching Random Travels:', e);
+        return { data: [], total: 0 };
+    }
+};
+
 export const fetchArticles = async (
     page: number,
     itemsPerPage: number,
@@ -574,9 +702,15 @@ export const fetchTravelsby = async (
 };
 
 export const fetchTravel = async (id: number): Promise<Travel> => {
+    if (travelCache.has(id)) {
+        return travelCache.get(id) as Travel;
+    }
+
     try {
         const res = await fetchWithTimeout(`${GET_TRAVELS}/${id}`, {}, DEFAULT_TIMEOUT);
-        return await safeJsonParse<Travel>(res, travelDef);
+        const travel = await safeJsonParse<Travel>(res, travelDef);
+        travelCache.set(id, travel);
+        return travel;
     } catch (e: any) {
         devError('Error fetching Travel:', e);
         return travelDef;
@@ -604,9 +738,15 @@ export const fetchArticle = async (id: number): Promise<Article> => {
 };
 
 export const fetchFilters = async (): Promise<Filters> => {
+    if (filtersCache) {
+        return filtersCache;
+    }
+
     try {
         const res = await fetchWithTimeout(GET_FILTERS, {}, DEFAULT_TIMEOUT);
-        return await safeJsonParse<Filters>(res, [] as unknown as Filters);
+        const parsed = await safeJsonParse<Filters>(res, [] as unknown as Filters);
+        filtersCache = parsed;
+        return parsed;
     } catch (e: any) {
         devError('Error fetching filters:', e);
         return [] as unknown as Filters;
@@ -624,9 +764,15 @@ export const fetchFiltersCountry = async () => {
 };
 
 export const fetchAllCountries = async () => {
+    if (allCountriesCache) {
+        return allCountriesCache;
+    }
+
     try {
         const res = await fetchWithTimeout(GET_ALL_COUNTRY, {}, DEFAULT_TIMEOUT);
-        return await safeJsonParse<any[]>(res, []);
+        const parsed = await safeJsonParse<any[]>(res, []);
+        allCountriesCache = parsed;
+        return parsed;
     } catch (e: any) {
         devError('Error fetching all countries:', e);
         return [];
@@ -728,6 +874,19 @@ export const fetchTravelsPopular = async (): Promise<TravelsMap> => {
     } catch (e) {
         if (__DEV__) {
             console.log('Error fetching fetchTravelsPopular:', e);
+        }
+        return {} as TravelsMap;
+    }
+};
+
+export const fetchTravelsOfMonth = async (): Promise<TravelsMap> => {
+    try {
+        const urlTravel = GET_TRAVELS_OF_MONTH;
+        const res = await fetchWithTimeout(urlTravel, {}, DEFAULT_TIMEOUT);
+        return await safeJsonParse<TravelsMap>(res, {} as TravelsMap);
+    } catch (e) {
+        if (__DEV__) {
+            console.log('Error fetching fetchTravelsOfMonth:', e);
         }
         return {} as TravelsMap;
     }

@@ -171,19 +171,25 @@ function RootLayoutNav() {
     const BottomGutter = () =>
       showFooter && isMobile && dockHeight > 0 ? <View style={{ height: dockHeight}} /> : null;
 
-    const [fontsLoaded, fontError] = useFonts({
-      SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
-      "Roboto-Regular": require("../assets/fonts/Roboto-Regular.ttf"),
-      "Roboto-Medium": require("../assets/fonts/Roboto-Medium.ttf"),
-    });
+    // На web шрифты подгружаются через link + font-display: swap, поэтому
+    // не блокируем рендер и не дергаем fontfaceobserver (во избежание timeout).
+    const [fontsLoaded, fontError] = useFonts(
+      isWeb
+        ? {}
+        : {
+            SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+            "Roboto-Regular": require("../assets/fonts/Roboto-Regular.ttf"),
+            "Roboto-Medium": require("../assets/fonts/Roboto-Medium.ttf"),
+          }
+    );
 
     useEffect(() => {
-      if (fontError) {
+      if (fontError && !isWeb) {
         console.error("Font loading error:", fontError);
       }
     }, [fontError]);
 
-    if (!fontsLoaded) {
+    if (!fontsLoaded && !isWeb) {
       return (
         <View style={styles.fontLoader}>
           <ActivityIndicator size="small" color="#ff9f5a" />

@@ -153,4 +153,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default TravelWizardStepMedia;
+export default React.memo(TravelWizardStepMedia);

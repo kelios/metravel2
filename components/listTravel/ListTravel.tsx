@@ -79,8 +79,6 @@ const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
 
 // @ts-ignore - Dynamic imports are supported in runtime
-const TravelPdfTemplate = lazy(() => import('@/components/export/TravelPdfTemplate'));
-// @ts-ignore - Dynamic imports are supported in runtime
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
 
 // ✅ АРХИТЕКТУРА: Импорт констант, типов, утилит и хуков
@@ -90,6 +88,7 @@ import {
   WEEKLY_HIGHLIGHTS_VISIBLE_KEY,
   RECOMMENDATIONS_VISIBLE_KEY,
   MAX_VISIBLE_CATEGORIES,
+  FLATLIST_CONFIG,
 } from "./utils/listTravelConstants";
 import { useListTravelVisibility } from "./hooks/useListTravelVisibility";
 import { useListTravelFilters } from "./hooks/useListTravelFilters";
@@ -255,7 +254,7 @@ function ListTravel({
     const listKey = useMemo(() => `grid-${columns}`, [columns]);
 
     const [recommendationsReady, setRecommendationsReady] = useState(Platform.OS !== 'web');
-    const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(true);
+    const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(false);
     const [recommendationsVisibilityInitialized, setRecommendationsVisibilityInitialized] = useState(false);
 
     // ✅ ИСПРАВЛЕНИЕ: Загружаем сохраненное состояние видимости рекомендаций
@@ -264,10 +263,23 @@ function ListTravel({
             try {
                 if (Platform.OS === 'web') {
                     const saved = sessionStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
-                    setIsRecommendationsVisible(saved !== 'false'); // По умолчанию true, если не сохранено 'false'
+                    // По умолчанию на web не показываем блок рекомендаций, пока пользователь явно не включит его.
+                    // Если сохранено 'true' или любой другой непустой флаг, считаем, что пользователь уже включал блок.
+                    if (saved === 'true') {
+                        setIsRecommendationsVisible(true);
+                        setRecommendationsReady(true);
+                    } else {
+                        setIsRecommendationsVisible(false);
+                    }
                 } else {
                     const saved = await AsyncStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
-                    setIsRecommendationsVisible(saved !== 'false'); // По умолчанию true, если не сохранено 'false'
+                    // На native оставляем прежний дефолт: если явно не выключено, считаем видимым.
+                    if (saved === 'false') {
+                        setIsRecommendationsVisible(false);
+                    } else {
+                        setIsRecommendationsVisible(true);
+                        setRecommendationsReady(true);
+                    }
                 }
             } catch (error) {
                 console.error('Error loading recommendations visibility:', error);
@@ -279,19 +291,21 @@ function ListTravel({
         loadRecommendationsVisibility();
     }, []);
 
-    // ✅ ИСПРАВЛЕНИЕ: Сохраняем состояние видимости рекомендаций при изменении
+    // ✅ ИСПРАВЛЕНИЕ: Сохраняем состояние видимости рекомендаций при изменении и запускаем ленивую загрузку блока
     const handleRecommendationsVisibilityChange = useCallback((visible: boolean) => {
         setIsRecommendationsVisible(visible);
+
+        // При первом включении рекомендаций инициируем загрузку тяжёлого блока
+        if (visible && !recommendationsReady) {
+            setRecommendationsReady(true);
+        }
         
         // Сохраняем в storage
         const saveVisibility = async () => {
             try {
                 if (Platform.OS === 'web') {
-                    if (visible) {
-                        sessionStorage.removeItem(RECOMMENDATIONS_VISIBLE_KEY);
-                    } else {
-                        sessionStorage.setItem(RECOMMENDATIONS_VISIBLE_KEY, 'false');
-                    }
+                    // На web явно сохраняем "true" / "false", чтобы различать включенный и выключенный блок.
+                    sessionStorage.setItem(RECOMMENDATIONS_VISIBLE_KEY, visible ? 'true' : 'false');
                 } else {
                     if (visible) {
                         await AsyncStorage.removeItem(RECOMMENDATIONS_VISIBLE_KEY);
@@ -305,37 +319,6 @@ function ListTravel({
         };
         
         saveVisibility();
-    }, []);
-
-    // ✅ УЛУЧШЕНИЕ: Для PageSpeed на web сильнее откладываем загрузку тяжёлого блока рекомендаций
-    useEffect(() => {
-        if (recommendationsReady) return;
-        if (typeof window === 'undefined') {
-            setRecommendationsReady(true);
-            return;
-        }
-
-        let idleHandle: number | null = null;
-        let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
-        const markReady = () => setRecommendationsReady(true);
-
-        // На web избегаем слишком раннего requestIdleCallback, чтобы RecommendationsTabs
-        // не попадал в начальный LCP/TBT. Даём странице возможность сначала отрисовать
-        // список путешествий, затем уже подгружаем рекомендации.
-        if (Platform.OS === 'web') {
-            timeoutHandle = setTimeout(markReady, 2500);
-        } else if ('requestIdleCallback' in window) {
-            idleHandle = (window as any).requestIdleCallback(markReady, { timeout: 1000 });
-        } else {
-            timeoutHandle = setTimeout(markReady, 800);
-        }
-
-        return () => {
-            if (idleHandle && 'cancelIdleCallback' in window) {
-                (window as any).cancelIdleCallback(idleHandle);
-            }
-            if (timeoutHandle) clearTimeout(timeoutHandle);
-        };
     }, [recommendationsReady]);
 
     const queryClient = useQueryClient();
@@ -348,7 +331,9 @@ function ListTravel({
     const debSearch = useDebouncedValue(search, 400);
 
     const onMomentumRef = useRef(false);
+    const lastEndReachedAtRef = useRef<number>(0);
     const scrollY = useRef(new Animated.Value(0)).current;
+    const lastScrollOffsetRef = useRef<number>(0);
 
     /* UI / dialogs */
     const [deleteId, setDelete] = useState<number | null>(null);
@@ -566,6 +551,14 @@ function ListTravel({
     const handleListEndReached = useCallback(() => {
         if (onMomentumRef.current) return;
         if (!hasAnyItems) return; // ✅ FIX: Без элементов не запускаем пагинацию, чтобы не пропускать первую страницу фильтра
+
+        const now = Date.now();
+        // Простая защита от слишком частых вызовов onEndReached на web/мобильных
+        if (now - lastEndReachedAtRef.current < 800) {
+            return;
+        }
+        lastEndReachedAtRef.current = now;
+
         handleEndReached();
     }, [handleEndReached, hasAnyItems]);
 
@@ -573,16 +566,33 @@ function ListTravel({
         onMomentumRef.current = false;
     }, []);
     const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-        // если контента мало, RN web может сразу дёрнуть onEndReached — защитимся
         const { contentSize, layoutMeasurement, contentOffset } = e.nativeEvent;
         if (contentSize.height <= layoutMeasurement.height * 1.05) {
             onMomentumRef.current = true;
         }
-        // ✅ УЛУЧШЕНИЕ: Обновляем scrollY для кнопки "Наверх"
         if (Platform.OS === 'web') {
-            scrollY.setValue(contentOffset.y);
+            const offsetY = contentOffset.y;
+            scrollY.setValue(offsetY);
+            lastScrollOffsetRef.current = offsetY;
+            try {
+                window.sessionStorage.setItem('travel-list-scroll', String(offsetY));
+            } catch (error) {}
         }
     }, [scrollY]);
+
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        if (!flatListRef.current) return;
+        try {
+            const stored = window.sessionStorage.getItem('travel-list-scroll');
+            if (!stored) return;
+            const value = Number(stored);
+            if (!Number.isFinite(value) || value <= 0) return;
+            requestAnimationFrame(() => {
+                flatListRef.current?.scrollToOffset({ offset: value, animated: false });
+            });
+        } catch (error) {}
+    }, [flatListRef]);
 
     const displayData = travels;
 
@@ -820,7 +830,6 @@ function ListTravel({
                 extraData={displayData.length}
                 renderItem={renderItem}
                 keyExtractor={keyExtractor}
-                key={listKey}
                 numColumns={columns}
                 columnWrapperStyle={columns > 1 ? { 
                     gap: spacing.md,
@@ -828,7 +837,7 @@ function ListTravel({
                 } : undefined}
                 contentContainerStyle={styles.listContent}
                 onEndReached={handleListEndReached}
-                onEndReachedThreshold={0.5}
+                onEndReachedThreshold={FLATLIST_CONFIG.ON_END_REACHED_THRESHOLD}
                 onScroll={onScroll}
                 scrollEventThrottle={16}
                 onMomentumScrollBegin={onMomentumBegin}

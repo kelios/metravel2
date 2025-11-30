@@ -1,5 +1,5 @@
 // components/travel/CompactSideBarTravel.tsx
-import React, { memo, Suspense, useCallback, useMemo, useState } from "react";
+import React, { memo, Suspense, useCallback, useMemo, useState, lazy } from "react";
 import {
   View,
   StyleSheet,
@@ -20,7 +20,7 @@ import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/tr
 import WeatherWidget from "@/components/WeatherWidget";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from "@/utils/imageOptimization";
-import BookSettingsModal, { type BookSettings } from "@/components/export/BookSettingsModal";
+import type { BookSettings } from "@/components/export/BookSettingsModal";
 import { useSingleTravelExport } from "@/components/travel/hooks/useSingleTravelExport";
 
 const Fallback = () => (
@@ -28,6 +28,8 @@ const Fallback = () => (
     <ActivityIndicator size="small" color="#6B4F4F" />
   </View>
 );
+
+const BookSettingsModalLazy = lazy(() => import("@/components/export/BookSettingsModal"));
 
 const openUrl = (url: string) => {
   if (Platform.OS === "web") {
@@ -458,16 +460,18 @@ function CompactSideBarTravel({
       </ScrollView>
 
       {Platform.OS === "web" && (
-        <BookSettingsModal
-          visible={showSettingsModal}
-          onClose={() => setShowSettingsModal(false)}
-          onSave={handleSaveSettings}
-          onPreview={handlePreviewSettings}
-          defaultSettings={lastSettings}
-          travelCount={1}
-          userName={travel.userName || undefined}
-          mode="preview"
-        />
+        <Suspense fallback={<Fallback />}>
+          <BookSettingsModalLazy
+            visible={showSettingsModal}
+            onClose={() => setShowSettingsModal(false)}
+            onSave={handleSaveSettings}
+            onPreview={handlePreviewSettings}
+            defaultSettings={lastSettings}
+            travelCount={1}
+            userName={travel.userName || undefined}
+            mode="preview"
+          />
+        </Suspense>
       )}
 
       {isMobile && (

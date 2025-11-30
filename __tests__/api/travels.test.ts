@@ -1,6 +1,7 @@
 import { Alert } from 'react-native';
 import {
   fetchTravels,
+  fetchRandomTravels,
   fetchTravel,
   fetchTravelBySlug,
   fetchArticles,
@@ -138,6 +139,44 @@ describe('src/api/travels.ts', () => {
 
       expect(where.countries).toEqual([1, 2]);
       expect(where.categories).toEqual([1, 2]);
+    });
+  });
+
+  describe('fetchRandomTravels', () => {
+    it('использует endpoint /api/travels/random и всегда проставляет moderation=1,publish=1 без page/perPage', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ data: [], total: 0 } as any);
+
+      await fetchRandomTravels(0, 12, '', { countries: [1, 2] }, {} as any);
+
+      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
+      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      const urlObj = new URL(url);
+      expect(urlObj.pathname).toContain('/api/travels/random');
+
+      const where = JSON.parse(urlObj.searchParams.get('where') || '{}');
+      expect(where.moderation).toBe(1);
+      expect(where.publish).toBe(1);
+      expect(where.countries).toEqual([1, 2]);
+    });
+
+    it('возвращает массив и total при объектном ответе', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ data: [{ id: 1 }], total: 3 } as any);
+
+      const result = await fetchRandomTravels(1, 12, 'q', {}, {} as any);
+
+      expect(result.total).toBe(3);
+      expect(result.data).toEqual([{ id: 1 }]);
+    });
+
+    it('корректно обрабатывает Invalid page', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 400 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ detail: 'Invalid page.' } as any);
+
+      const result = await fetchRandomTravels(10, 12, '', {}, {} as any);
+
+      expect(result).toEqual({ data: [], total: 0 });
     });
   });
 
