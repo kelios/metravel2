@@ -424,6 +424,21 @@ export const fetchTravels = async (
             }
         }
 
+        // ✅ ИСПРАВЛЕНИЕ: Протягиваем скалярные фильтры (включая user_id) в whereObject
+        const handledKeys = new Set<string>([...arrayFields, 'year', 'moderation', 'publish']);
+        Object.entries(urlParams || {}).forEach(([key, value]) => {
+            if (handledKeys.has(key)) {
+                return;
+            }
+            if (value === undefined || value === null || value === '') {
+                return;
+            }
+            if (Array.isArray(value) && value.length === 0) {
+                return;
+            }
+            whereObject[key] = value;
+        });
+
         const params = new URLSearchParams({
             page: (page + 1).toString(),
             perPage: itemsPerPage.toString(),
