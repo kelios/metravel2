@@ -14,10 +14,6 @@ export function buildDefaultSettingsForTravel(travel?: Travel): BookSettings {
     subtitle: travel?.countryName || travel?.cityName || '',
     coverType: 'auto',
     template: 'minimal',
-    format: 'A4',
-    orientation: 'portrait',
-    margins: 'standard',
-    imageQuality: 'high',
     sortOrder: 'date-desc',
     includeToc: true,
     includeGallery: true,
@@ -49,35 +45,13 @@ export function useSingleTravelExport(travel?: Travel) {
   }, [baseSettings])
 
   const settingsSummary = useMemo(() => {
-    const orientation = lastSettings.orientation === 'landscape' ? 'Альбомная' : 'Книжная'
-    const format = lastSettings.format?.toUpperCase?.() || 'A4'
-    return `${format} • ${orientation} • ${lastSettings.template}`
+    return `${lastSettings.template}`
   }, [lastSettings])
-
-  const handleSaveWithSettings = useCallback(
-    async (settings: BookSettings) => {
-      setLastSettings(settings)
-      await pdfExport.exportPdf(settings)
-    },
-    [pdfExport]
-  )
-
-  const handlePreviewWithSettings = useCallback(
-    async (settings: BookSettings) => {
-      setLastSettings(settings)
-      await pdfExport.previewPdf(settings)
-    },
-    [pdfExport]
-  )
 
   const handleOpenPrintBookWithSettings = useCallback(
     async (settings: BookSettings) => {
       setLastSettings(settings)
-      if (pdfExport.openPrintBook) {
-        await pdfExport.openPrintBook(settings)
-      } else {
-        await pdfExport.previewPdf(settings)
-      }
+      await pdfExport.openPrintBook(settings)
     },
     [pdfExport]
   )
@@ -86,8 +60,6 @@ export function useSingleTravelExport(travel?: Travel) {
     pdfExport,
     lastSettings,
     settingsSummary,
-    handleSaveWithSettings,
-    handlePreviewWithSettings,
     handleOpenPrintBookWithSettings,
   }
 }

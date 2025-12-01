@@ -149,8 +149,6 @@ describe('usePdfExport', () => {
       expect(result.current.isGenerating).toBe(false);
       expect(result.current.progress).toBe(0);
       expect(result.current.error).toBeNull();
-      expect(typeof result.current.exportPdf).toBe('function');
-      expect(typeof result.current.previewPdf).toBe('function');
       expect(typeof result.current.openPrintBook).toBe('function');
     });
   });

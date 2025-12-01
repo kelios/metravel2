@@ -5,13 +5,11 @@ import type { Travel } from '@/src/types/types'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
 import { useSingleTravelExport, buildDefaultSettingsForTravel } from '@/components/travel/hooks/useSingleTravelExport'
 
-const mockExport = jest.fn(() => Promise.resolve())
-const mockPreview = jest.fn(() => Promise.resolve('blob:preview'))
+const mockOpenPrintBook = jest.fn(() => Promise.resolve())
 
 jest.mock('@/src/hooks/usePdfExport', () => ({
   usePdfExport: () => ({
-    exportPdf: mockExport,
-    previewPdf: mockPreview,
+    openPrintBook: mockOpenPrintBook,
     isGenerating: false,
     progress: 0,
     error: null,
@@ -28,8 +26,7 @@ const baseTravel = {
 
 describe('useSingleTravelExport', () => {
   beforeEach(() => {
-    mockExport.mockClear()
-    mockPreview.mockClear()
+    mockOpenPrintBook.mockClear()
   })
 
   it('buildDefaultSettingsForTravel uses travel meta', () => {
@@ -49,22 +46,20 @@ describe('useSingleTravelExport', () => {
     }
 
     await act(async () => {
-      await result.current.handleSaveWithSettings(customSettings)
+      await result.current.handleOpenPrintBookWithSettings(customSettings)
     })
-    expect(mockExport).toHaveBeenCalledWith(customSettings)
+    expect(mockOpenPrintBook).toHaveBeenCalledWith(customSettings)
     expect(result.current.settingsSummary).toContain('minimal')
-
-    await act(async () => {
-      await result.current.handlePreviewWithSettings(customSettings)
-    })
-    expect(mockPreview).toHaveBeenCalledWith(customSettings)
   })
 
   it('resets settings when travel changes', () => {
     const updatedTravel = { ...baseTravel, name: 'Новый маршрут' } as Travel
-    const { result, rerender } = renderHook(({ travel }) => useSingleTravelExport(travel), {
-      initialProps: { travel: baseTravel },
-    })
+    const { result, rerender } = renderHook(
+      ({ travel }: { travel: Travel }) => useSingleTravelExport(travel),
+      {
+        initialProps: { travel: baseTravel },
+      }
+    )
 
     expect(result.current.lastSettings.title).toContain('Маршрут по Карпатам')
 

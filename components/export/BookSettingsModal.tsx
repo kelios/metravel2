@@ -26,10 +26,6 @@ export interface BookSettings {
   coverType: 'auto' | 'first-photo' | 'gradient' | 'custom';
   coverImage?: string;
   template: 'minimal' | 'light' | 'dark' | 'travel-magazine' | 'classic' | 'modern' | 'romantic' | 'adventure';
-  format: 'A4' | 'Letter';
-  orientation: 'portrait' | 'landscape';
-  margins: 'standard' | 'narrow' | 'wide';
-  imageQuality: 'high' | 'medium' | 'low';
   sortOrder: 'date-desc' | 'date-asc' | 'country' | 'alphabetical';
   includeToc: boolean;
   includeGallery: boolean;
@@ -45,20 +41,8 @@ export interface BookSettings {
 
 const DEFAULT_CHECKLIST_SELECTION: ChecklistSection[] = ['clothing', 'food', 'electronics'];
 
-const COLOR_THEME_OPTIONS = [
-  { value: 'blue', label: 'Голубой океан', accent: '#3b82f6', description: 'Свежий и универсальный акцент', gradient: ['#dbeafe', '#1d4ed8'] },
-  { value: 'green', label: 'Зелёный лес', accent: '#10b981', description: 'Натуральный спокойный стиль', gradient: ['#d1fae5', '#047857'] },
-  { value: 'orange', label: 'Оранжевый закат', accent: '#fb923c', description: 'Тёплые журнальные развороты', gradient: ['#ffedd5', '#c2410c'] },
-  { value: 'gray', label: 'Графитовый', accent: '#6b7280', description: 'Современный монохром', gradient: ['#f3f4f6', '#374151'] },
-  { value: 'pastel', label: 'Пастель', accent: '#f472b6', description: 'Мягкие открытки и дневники', gradient: ['#fde4cf', '#f472b6'] },
-  { value: 'mono', label: 'Монохром', accent: '#111827', description: 'Контрастная типографика', gradient: ['#f8fafc', '#111827'] },
-] as const;
-
-const FONT_OPTIONS = [
-  { value: 'sans', label: 'Sans', description: 'Inter / Roboto — современно' },
-  { value: 'serif', label: 'Serif', description: 'Playfair / Georgia — книжно' },
-  { value: 'rounded', label: 'Rounded', description: 'Nunito / Quicksand — дружелюбно' },
-] as const;
+// Цветовые темы и шрифты теперь фиксированы через defaultBookSettings,
+// поэтому отдельные массивы опций для UI не нужны.
 
 const PHOTO_MODE_OPTIONS = [
   { value: 'full', label: 'Большие фото', description: 'Каждое фото занимает всю страницу' },
@@ -101,10 +85,6 @@ const defaultBookSettings: BookSettings = {
   subtitle: '',
   coverType: 'auto',
   template: 'minimal',
-  format: 'A4',
-  orientation: 'portrait',
-  margins: 'standard',
-  imageQuality: 'high',
   sortOrder: 'date-desc',
   includeToc: true,
   includeGallery: true,
@@ -423,230 +403,8 @@ export default function BookSettingsModal({
             </div>
           )}
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
-              Шаблон оформления
-            </label>
-            <select
-              value={settings.template}
-              onChange={(e) => setSettings({ ...settings, template: e.target.value as any })}
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                border: '1.5px solid rgba(31, 31, 31, 0.08)',
-                borderRadius: '12px',
-                fontSize: '15px',
-                minHeight: '44px',
-                backgroundColor: '#ffffff',
-                color: '#1f1f1f',
-                outline: 'none',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                cursor: 'pointer',
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#5b8a7a';
-                e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(31, 31, 31, 0.08)';
-                e.target.style.boxShadow = 'none';
-              }}
-            >
-              <option value="minimal">Минималистичная</option>
-              <option value="light">Светлая</option>
-              <option value="dark">Темная</option>
-              <option value="travel-magazine">Travel Magazine</option>
-              <option value="classic">Классический</option>
-              <option value="modern">Современный</option>
-              <option value="romantic">Романтический</option>
-              <option value="adventure">Приключенческий</option>
-            </select>
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
-              Цветовая тема
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
-              {COLOR_THEME_OPTIONS.map((theme) => {
-                const isActive = settings.colorTheme === theme.value;
-                return (
-                  <button
-                    key={theme.value}
-                    onClick={() => setSettings({ ...settings, colorTheme: theme.value })}
-                    style={{
-                      borderRadius: '14px',
-                      padding: '12px',
-                      border: isActive ? '2px solid #5b8a7a' : '1.5px solid rgba(31, 31, 31, 0.08)',
-                      backgroundColor: '#fff',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      minHeight: '80px',
-                      boxShadow: isActive ? '0 6px 18px rgba(91, 138, 122, 0.15)' : '0 2px 6px rgba(31, 31, 31, 0.04)',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '32px',
-                        borderRadius: '10px',
-                        marginBottom: '10px',
-                        background: `linear-gradient(135deg, ${theme.gradient[0]}, ${theme.gradient[1]})`,
-                      }}
-                    />
-                    <div style={{ fontWeight: 600, color: '#1f1f1f', marginBottom: '4px' }}>{theme.label}</div>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{theme.description}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
-              Шрифты
-            </label>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {FONT_OPTIONS.map((font) => {
-                const isActive = settings.fontFamily === font.value;
-                return (
-                  <button
-                    key={font.value}
-                    onClick={() => setSettings({ ...settings, fontFamily: font.value })}
-                    style={{
-                      flex: '1 1 160px',
-                      borderRadius: '12px',
-                      border: isActive ? '2px solid #5b8a7a' : '1.5px solid rgba(31, 31, 31, 0.08)',
-                      padding: '12px 14px',
-                      backgroundColor: '#fff',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      boxShadow: isActive ? '0 6px 18px rgba(91, 138, 122, 0.12)' : '0 2px 6px rgba(31,31,31,0.04)',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, color: '#1f1f1f', marginBottom: '4px' }}>{font.label}</div>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{font.description}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#374151' }}>
-                Формат
-              </label>
-              <select
-                value={settings.format}
-                onChange={(e) => setSettings({ ...settings, format: e.target.value as any })}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                }}
-              >
-                <option value="A4">A4</option>
-                <option value="Letter">Letter</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#374151' }}>
-                Ориентация
-              </label>
-              <select
-                value={settings.orientation}
-                onChange={(e) => setSettings({ ...settings, orientation: e.target.value as any })}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                }}
-              >
-                <option value="portrait">Книжная</option>
-                <option value="landscape">Альбомная</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
-                Поля страницы
-              </label>
-              <select
-                value={settings.margins}
-                onChange={(e) => setSettings({ ...settings, margins: e.target.value as any })}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  border: '1.5px solid rgba(31, 31, 31, 0.08)',
-                  borderRadius: '12px',
-                  fontSize: '15px',
-                  minHeight: '44px',
-                  backgroundColor: '#ffffff',
-                  color: '#1f1f1f',
-                  outline: 'none',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  cursor: 'pointer',
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#5b8a7a';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(31, 31, 31, 0.08)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              >
-                <option value="standard">Стандартные</option>
-                <option value="narrow">Узкие</option>
-                <option value="wide">Широкие</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
-                Качество изображений
-              </label>
-              <select
-                value={settings.imageQuality}
-                onChange={(e) => setSettings({ ...settings, imageQuality: e.target.value as any })}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  border: '1.5px solid rgba(31, 31, 31, 0.08)',
-                  borderRadius: '12px',
-                  fontSize: '15px',
-                  minHeight: '44px',
-                  backgroundColor: '#ffffff',
-                  color: '#1f1f1f',
-                  outline: 'none',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  cursor: 'pointer',
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#5b8a7a';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(31, 31, 31, 0.08)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              >
-                <option value="high">Высокое (больше памяти)</option>
-                <option value="medium">Среднее</option>
-                <option value="low">Низкое (меньше памяти)</option>
-              </select>
-            </div>
-          </div>
+          {/* Шаблон, цветовая тема и шрифты сейчас фиксированы (minimal + базовая тема),
+              поэтому отдельные переключатели в UI скрыты. */}
 
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>

@@ -80,8 +80,6 @@ function CompactSideBarTravel({
     pdfExport,
     lastSettings,
     settingsSummary,
-    handleSaveWithSettings,
-    handlePreviewWithSettings,
     handleOpenPrintBookWithSettings,
   } = useSingleTravelExport(travel);
 
@@ -208,28 +206,19 @@ function CompactSideBarTravel({
   const handleSaveSettings = useCallback(
     async (settings: BookSettings) => {
       // "Сохранить PDF" переводим на новый HTML-поток печати (книга в новой вкладке + печать браузера)
-      if (handleOpenPrintBookWithSettings) {
-        await handleOpenPrintBookWithSettings(settings);
-      } else {
-        // Fallback: старый html2pdf-поток сохранения
-        await handleSaveWithSettings(settings);
-      }
+      await handleOpenPrintBookWithSettings(settings);
       setShowSettingsModal(false);
     },
-    [handleOpenPrintBookWithSettings, handleSaveWithSettings]
+    [handleOpenPrintBookWithSettings]
   );
 
   const handlePreviewSettings = useCallback(
     async (settings: BookSettings) => {
-      // Превью так же идёт через HTML-книгу; при отсутствии нового метода используем старое превью
-      if (handleOpenPrintBookWithSettings) {
-        await handleOpenPrintBookWithSettings(settings);
-      } else {
-        await handlePreviewWithSettings(settings);
-      }
+      // Превью так же идёт через HTML-книгу
+      await handleOpenPrintBookWithSettings(settings);
       setShowSettingsModal(false);
     },
-    [handleOpenPrintBookWithSettings, handlePreviewWithSettings]
+    [handleOpenPrintBookWithSettings]
   );
   
   return (

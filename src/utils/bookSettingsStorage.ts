@@ -22,10 +22,6 @@ const TEMPLATE_VALUES: BookSettings['template'][] = [
 ];
 
 const COVER_TYPES: BookSettings['coverType'][] = ['auto', 'first-photo', 'gradient', 'custom'];
-const FORMATS: BookSettings['format'][] = ['A4', 'Letter'];
-const ORIENTATIONS: BookSettings['orientation'][] = ['portrait', 'landscape'];
-const MARGINS: BookSettings['margins'][] = ['standard', 'narrow', 'wide'];
-const IMAGE_QUALITY: BookSettings['imageQuality'][] = ['high', 'medium', 'low'];
 const SORT_ORDERS: BookSettings['sortOrder'][] = ['date-desc', 'date-asc', 'country', 'alphabetical'];
 const PHOTO_MODES: BookSettings['photoMode'][] = ['full', 'gallery', 'inline', 'none'];
 const MAP_MODES: BookSettings['mapMode'][] = ['full-page', 'inline', 'none'];
@@ -69,10 +65,6 @@ function normalizeBookSettings(
     subtitle: base.subtitle,
     template: ensureValue(TEMPLATE_VALUES, stored.template, base.template),
     coverType: ensureValue(COVER_TYPES, stored.coverType, base.coverType),
-    format: ensureValue(FORMATS, stored.format, base.format),
-    orientation: ensureValue(ORIENTATIONS, stored.orientation, base.orientation),
-    margins: ensureValue(MARGINS, stored.margins, base.margins),
-    imageQuality: ensureValue(IMAGE_QUALITY, stored.imageQuality, base.imageQuality),
     sortOrder: ensureValue(SORT_ORDERS, stored.sortOrder, base.sortOrder),
     photoMode: ensureValue(PHOTO_MODES, stored.photoMode, base.photoMode),
     mapMode: ensureValue(MAP_MODES, stored.mapMode, base.mapMode),
