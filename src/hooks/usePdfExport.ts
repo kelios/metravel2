@@ -127,39 +127,6 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
   }, [selected, mergeTravelData, needsDetails]);
 
   /**
-   * Экспортирует путешествия в PDF
-   */
-  const exportPdf = useCallback(async (settings: BookSettings): Promise<void> => {
-    // Экспорт PDF для книги теперь выполняется через HTML-поток (openPrintBook).
-    if (Platform.OS !== 'web') {
-      Alert.alert('Недоступно', 'Экспорт PDF доступен только в веб-версии MeTravel');
-      return;
-    }
-
-    Alert.alert(
-      'Экспорт книги',
-      'Старый режим экспорта PDF отключён. Пожалуйста, используйте предпросмотр книги и сохранение через диалог печати браузера.',
-    );
-  }, []);
-
-  /**
-   * Создает превью PDF
-   */
-  const previewPdf = useCallback(async (settings: BookSettings): Promise<string | null> => {
-    // Старое превью PDF через html2pdf отключено.
-    if (Platform.OS !== 'web') {
-      Alert.alert('Недоступно', 'Превью PDF доступно только в веб-версии MeTravel');
-      return null;
-    }
-
-    Alert.alert(
-      'Превью PDF отключено',
-      'Для просмотра и сохранения книги используйте новый HTML-предпросмотр с печатью браузера.',
-    );
-    return null;
-  }, []);
-
-  /**
    * Открывает HTML-книгу в новом окне для печати (window.print)
    */
   const openPrintBook = useCallback(
@@ -217,8 +184,6 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
     }, [loadDetailedTravels]);
 
   return {
-    exportPdf,
-    previewPdf,
     openPrintBook,
     isGenerating,
     progress,
@@ -226,4 +191,3 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
     currentStage,
   };
 }
-

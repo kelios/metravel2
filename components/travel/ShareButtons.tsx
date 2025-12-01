@@ -31,8 +31,6 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
   const {
     pdfExport,
     lastSettings,
-    handleSaveWithSettings,
-    handlePreviewWithSettings,
     handleOpenPrintBookWithSettings,
   } = useSingleTravelExport(travel);
   const { isGenerating, progress, currentStage } = pdfExport;
@@ -156,30 +154,20 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
   // Обработчик "Сохранить PDF" — переводим на новый HTML-поток печати
   const handleExport = useCallback(
     async (settings: BookSettings) => {
-      if (handleOpenPrintBookWithSettings) {
-        // Новый поток: открываем HTML-книгу, дальше пользователь сохраняет через печать браузера
-        await handleOpenPrintBookWithSettings(settings);
-      } else {
-        // Fallback: старый поток экспорта в PDF
-        await handleSaveWithSettings(settings);
-      }
+      // Открываем HTML-книгу, дальше пользователь сохраняет через печать браузера
+      await handleOpenPrintBookWithSettings(settings);
       setShowExportModal(false);
     },
-    [handleOpenPrintBookWithSettings, handleSaveWithSettings]
+    [handleOpenPrintBookWithSettings]
   );
 
   const handlePreview = useCallback(
     async (settings: BookSettings) => {
-      // Для превью по-прежнему используем HTML-книгу с печатью, при отсутствии нового метода
-      // fallback на старое PDF-превью
-      if (handleOpenPrintBookWithSettings) {
-        await handleOpenPrintBookWithSettings(settings);
-      } else {
-        await handlePreviewWithSettings(settings);
-      }
+      // Для превью используем ту же HTML-книгу с печатью
+      await handleOpenPrintBookWithSettings(settings);
       setShowExportModal(false);
     },
-    [handleOpenPrintBookWithSettings, handlePreviewWithSettings]
+    [handleOpenPrintBookWithSettings]
   );
 
   const shareButtons = [
@@ -201,7 +189,7 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
     ...(Platform.OS === 'web'
       ? [{
           key: 'export' as const,
-          label: isGenerating ? `Экспорт... ${progress}%` : 'Экспорт в PDF',
+          label: isGenerating ? `Создание книги... ${progress}%` : 'Книга / PDF',
           icon: 'picture-as-pdf' as const,
           onPress: () => setShowExportModal(true),
           color: '#ff9f5a',
@@ -276,11 +264,11 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
             <View style={[styles.progressBar, { width: `${progress}%` }]} />
             <Text style={styles.progressText}>
               {currentStage === ExportStage.VALIDATING && 'Проверка данных...'}
-              {currentStage === ExportStage.TRANSFORMING && 'Преобразование данных...'}
-              {currentStage === ExportStage.GENERATING_HTML && 'Генерация содержимого...'}
-              {currentStage === ExportStage.LOADING_IMAGES && 'Загрузка изображений...'}
-              {currentStage === ExportStage.RENDERING && 'Создание PDF...'}
-              {currentStage === ExportStage.COMPLETE && 'Готово!'}
+              {currentStage === ExportStage.TRANSFORMING && 'Подготовка путешествия...'}
+              {currentStage === ExportStage.GENERATING_HTML && 'Генерация страниц книги...'}
+              {currentStage === ExportStage.LOADING_IMAGES && 'Загрузка фотографий...'}
+              {currentStage === ExportStage.RENDERING && 'Подготовка к печати...'}
+              {currentStage === ExportStage.COMPLETE && 'Готово! Открываем книгу...'}
             </Text>
           </View>
         )}

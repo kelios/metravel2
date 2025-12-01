@@ -40,55 +40,6 @@ export interface TravelForBook {
 }
 
 /**
- * Опции для рендеринга PDF
- */
-export interface PdfRenderOptions {
-  margin?: number | number[];
-  image?: {
-    type?: 'jpeg' | 'png' | 'webp';
-    quality?: number;
-  };
-  html2canvas?: {
-    useCORS?: boolean;
-    allowTaint?: boolean;
-    scale?: number;
-    backgroundColor?: string | null;
-    width?: number;
-    height?: number;
-    windowWidth?: number;
-    windowHeight?: number;
-    x?: number;
-    y?: number;
-    scrollX?: number;
-    scrollY?: number;
-    logging?: boolean;
-    removeContainer?: boolean;
-  };
-  jsPDF?: {
-    unit?: 'mm' | 'pt' | 'cm' | 'in';
-    format?: string | any[];
-    orientation?: 'p' | 'portrait' | 'l' | 'landscape';
-  };
-}
-
-/**
- * Результат экспорта
- */
-export interface ExportResult {
-  blob: Blob;
-  filename: string;
-  size: number;
-}
-
-/**
- * Результат превью
- */
-export interface PreviewResult {
-  blobUrl: string;
-  size: number;
-}
-
-/**
  * Прогресс экспорта
  */
 export interface ExportProgress {

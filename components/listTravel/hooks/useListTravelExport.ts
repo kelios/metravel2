@@ -69,10 +69,6 @@ export function useListTravelExport(
       subtitle: '',
       coverType: 'auto',
       template: 'minimal',
-      format: 'A4',
-      orientation: 'portrait',
-      margins: 'standard',
-      imageQuality: 'high',
       sortOrder: 'date-desc',
       includeToc: true,
       includeGallery: true,
@@ -94,22 +90,16 @@ export function useListTravelExport(
   }, [baseSettings]);
 
   const settingsSummary = useMemo(() => {
-    const orientation = lastSettings.orientation === 'landscape' ? 'Альбомная' : 'Книжная';
-    const format = lastSettings.format?.toUpperCase?.() || 'A4';
     const template = lastSettings.template || 'minimal';
-    return `${format} • ${orientation} • ${template}`;
+    const colorTheme = lastSettings.colorTheme || 'blue';
+    return `${template} • тема: ${colorTheme}`;
   }, [lastSettings]);
 
   const handleSaveWithSettings = useCallback(
     async (settings: BookSettings) => {
       setLastSettings(settings);
-      // Для сохранения книги предпочитаем новый HTML-поток (openPrintBook),
-      // старый exportPdf оставляем только как запасной вариант.
-      if (pdfExport.openPrintBook) {
-        await pdfExport.openPrintBook(settings);
-      } else {
-        await pdfExport.exportPdf(settings);
-      }
+      // Для сохранения книги используем HTML-поток (openPrintBook)
+      await pdfExport.openPrintBook(settings);
     },
     [pdfExport]
   );
@@ -117,13 +107,8 @@ export function useListTravelExport(
   const handlePreviewWithSettings = useCallback(
     async (settings: BookSettings) => {
       setLastSettings(settings);
-      // Для превью также используем HTML-книгу, при отсутствии нового метода
-      // fallback на старое превью.
-      if (pdfExport.openPrintBook) {
-        await pdfExport.openPrintBook(settings);
-      } else {
-        await pdfExport.previewPdf(settings);
-      }
+      // Для превью также используем HTML-книгу
+      await pdfExport.openPrintBook(settings);
     },
     [pdfExport]
   );
