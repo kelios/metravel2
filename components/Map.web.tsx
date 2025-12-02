@@ -129,6 +129,9 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   const FitBoundsOnData: React.FC<{ data: Point[] }> = ({ data }) => {
     const map = useMap();
     useEffect(() => {
+      if (typeof window !== 'undefined') {
+        (window as any).__metravelLeafletMap = map;
+      }
       const coords = data.map((p) => getLatLng(p.coord)).filter(Boolean) as [number, number][];
       if (!coords.length) return;
       const bounds = L.latLngBounds(coords);
@@ -197,7 +200,11 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         // чутка экономим на анимациях
         preferCanvas
       >
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          attribution="© OpenStreetMap © CartoDB"
+          crossOrigin="anonymous"
+        />
         <FitBoundsOnData data={travelData} />
         {travelData.map((point) => {
           const latLng = getLatLng(point.coord);

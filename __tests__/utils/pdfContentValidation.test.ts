@@ -4,6 +4,19 @@
 import { buildPhotoBookHTML } from '@/src/utils/pdfBookGenerator';
 import type { TravelForBook } from '@/src/types/pdf-export';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
+import { JSDOM } from 'jsdom';
+
+// Инициализируем простое DOM-окружение для ContentParser / EnhancedPdfGenerator
+const ensureDomGlobals = () => {
+  const globalObj = global as any;
+  const dom = new JSDOM('<!doctype html><html><body></body></html>');
+  globalObj.window = dom.window;
+  globalObj.document = dom.window.document;
+  globalObj.DOMParser = dom.window.DOMParser;
+  globalObj.Node = dom.window.Node;
+};
+
+ensureDomGlobals();
 
 // Mock QRCode
 jest.mock('qrcode', () => ({
@@ -44,7 +57,7 @@ function parseHTML(html: string): {
   return {
     hasCover: /class="pdf-page cover-page"/.test(html) || /cover-page/.test(html),
     hasToc: /class="pdf-page toc-page"/.test(html) || /Содержание/.test(html),
-    hasTravelPages: /travel-photo-page|travel-text-page/.test(html),
+    hasTravelPages: /travel-photo-page|travel-content-page/.test(html),
     hasGallery: /class="pdf-page gallery-page"/.test(html) || /Фотогалерея/.test(html),
     hasFinalPage: /class="pdf-page final-page"/.test(html) || /Спасибо за путешествие/.test(html),
     travelCount: (html.match(/travel-photo-page/g) || []).length,
@@ -89,18 +102,10 @@ describe('PDF Content Validation - Проверка всех элементов'
     subtitle: 'Тестовый альбом',
     coverType: 'auto',
     template: 'minimal',
-    format: 'A4',
-    orientation: 'portrait',
-    margins: 'standard',
-    imageQuality: 'high',
     sortOrder: 'date-desc',
     includeToc: true,
     includeGallery: true,
     includeMap: true,
-    colorTheme: 'blue',
-    fontFamily: 'sans',
-    photoMode: 'gallery',
-    mapMode: 'full-page',
     includeChecklists: false,
     checklistSections: ['clothing', 'food', 'electronics'],
   };
@@ -122,11 +127,11 @@ describe('PDF Content Validation - Проверка всех элементов'
       expect(parsed.hasTravelPages).toBe(true);
       expect(parsed.travelCount).toBeGreaterThan(0);
       expect(html).toContain('travel-photo-page');
-      expect(html).toContain('travel-text-page');
+      expect(html).toContain('travel-content-page');
 
-      // Галерея
-      expect(parsed.hasGallery).toBe(true);
-      expect(html).toContain('Фотогалерея');
+      // Галерея (inline-фото внутри контента)
+      expect(html).toContain('gallery1.jpg');
+      expect(html).toContain('gallery2.jpg');
 
       // Заключительная страница
       expect(parsed.hasFinalPage).toBe(true);
@@ -157,9 +162,6 @@ describe('PDF Content Validation - Проверка всех элементов'
 
       // Должно быть по 2 страницы на каждое путешествие (фото + текст)
       expect(parsed.travelCount).toBe(travels.length);
-
-      // Должно быть по одной галерее на каждое путешествие
-      expect(parsed.galleryCount).toBe(travels.length);
 
       // Должна быть одна заключительная страница
       expect(html.match(/final-page/g)?.length).toBe(1);
@@ -222,22 +224,19 @@ describe('PDF Content Validation - Проверка всех элементов'
     it('должен содержать все фотографии из галереи', async () => {
       const html = await buildPhotoBookHTML([completeTravel], defaultSettings);
 
-      expect(html).toContain('Фотогалерея');
-      expect(html).toContain('Полное путешествие'); // Название в галерее
+      // Картинки галереи должны быть встроены в контент (inline), проверяем наличие URL
       expect(html).toContain(proxiedHtml('https://example.com/gallery1.jpg'));
       expect(html).toContain(proxiedHtml('https://example.com/gallery2.jpg'));
       expect(html).toContain(proxiedHtml('https://example.com/gallery3.jpg'));
       expect(html).toContain(proxiedHtml('https://example.com/gallery4.jpg'));
-      expect(html).toContain('4'); // Количество фотографий
-      expect(html).toContain('фотографии');
     });
 
     it('не должен содержать галерею когда includeGallery = false', async () => {
       const settings = { ...defaultSettings, includeGallery: false };
       const html = await buildPhotoBookHTML([completeTravel], settings);
 
-      expect(html).not.toContain('Фотогалерея');
-      expect(html).not.toContain('gallery-page');
+      expect(html).not.toContain(proxiedHtml('https://example.com/gallery1.jpg'));
+      expect(html).not.toContain(proxiedHtml('https://example.com/gallery2.jpg'));
     });
   });
 
@@ -296,9 +295,9 @@ describe('PDF Content Validation - Проверка всех элементов'
     it('должен содержать правильные цвета и стили', async () => {
       const html = await buildPhotoBookHTML([completeTravel], defaultSettings);
 
-      // Accent-цвет из текущей темы (colorTheme = blue)
-      expect(html).toContain('#3b82f6');
+      // Проверяем базовые стили без жёсткой привязки к конкретному accent-цвету
       expect(html).toContain('font-weight');
+      expect(html).toContain('border-radius');
       expect(html).toContain('border-radius');
     });
   });
@@ -332,6 +331,27 @@ describe('PDF Content Validation - Проверка всех элементов'
   });
 
   describe('Полная проверка структуры', () => {
+    it('должен содержать все изображения с правильными атрибутами', async () => {
+      const html = await buildPhotoBookHTML([completeTravel], defaultSettings);
+
+      const imgTags = html.match(/<img[^>]*>/g) || [];
+      expect(imgTags.length).toBeGreaterThan(0);
+
+      imgTags.forEach((img) => {
+        expect(img).toMatch(/alt="[^"]*"/);
+        expect(img).toMatch(/style="[^"]*"/);
+        expect(img).toMatch(/width:/);
+        expect(img).toMatch(/height:/);
+
+        const isDataImage = /src="data:image/i.test(img);
+        if (!isDataImage) {
+          // Для обычных картинок (обложка, галерея, карта) ожидаем object-fit и crossorigin
+          expect(img).toMatch(/object-fit:/);
+          expect(img).toMatch(/crossorigin="anonymous"/i);
+        }
+      });
+    });
+
     it('должен содержать правильную структуру HTML документа', async () => {
       const html = await buildPhotoBookHTML([completeTravel], defaultSettings);
 
@@ -347,15 +367,6 @@ describe('PDF Content Validation - Проверка всех элементов'
       const sections = html.match(/<section[^>]*class="pdf-page[^"]*"/g);
       expect(sections?.length).toBeGreaterThanOrEqual(5); // cover + toc + 2 travel pages + gallery + final
     });
-
-    it('должен содержать все изображения с правильными атрибутами', async () => {
-      const html = await buildPhotoBookHTML([completeTravel], defaultSettings);
-
-      // Все изображения должны иметь crossorigin
-      const imgTags = html.match(/<img[^>]*>/g) || [];
-      imgTags.forEach(img => {
-        expect(img).toMatch(/crossorigin="anonymous"/i);
-      });
-    });
   });
 });
+

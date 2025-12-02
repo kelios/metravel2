@@ -4,9 +4,12 @@
 import QRCode from 'qrcode';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import type { TravelForBook } from '@/src/types/pdf-export';
+import { generateLeafletRouteSnapshot } from '@/src/utils/mapImageGenerator';
 import { getThemeConfig, type PdfThemeName } from '../themes/PdfThemeConfig';
 import { ContentParser } from '../parsers/ContentParser';
 import { BlockRenderer } from '../renderers/BlockRenderer';
+import type { TravelQuote } from '../quotes/travelQuotes';
+import { pickRandomQuote } from '../quotes/travelQuotes';
 
 const CHECKLIST_LIBRARY: Record<BookSettings['checklistSections'][number], string[]> = {
   clothing: ['Термобельё', 'Тёплый слой/флис', 'Дождевик/пончо', 'Треккинговая обувь', 'Шапка, перчатки, бафф'],
@@ -31,6 +34,8 @@ export class EnhancedPdfGenerator {
   private parser: ContentParser;
   private blockRenderer: BlockRenderer | null = null;
   private theme: ReturnType<typeof getThemeConfig>;
+  private selectedQuotes?: { cover?: TravelQuote; final?: TravelQuote };
+  private currentSettings?: BookSettings;
 
   constructor(themeName: PdfThemeName | string) {
     this.theme = getThemeConfig(themeName);
@@ -48,10 +53,18 @@ export class EnhancedPdfGenerator {
     travels: TravelForBook[],
     settings: BookSettings
   ): Promise<string> {
+    this.currentSettings = settings;
+
     const sortedTravels = this.sortTravels(travels, settings.sortOrder);
     const coverImage = this.resolveCoverImage(sortedTravels, settings);
     const yearRange = this.getYearRange(sortedTravels);
     const userName = sortedTravels[0]?.userName || 'Путешественник';
+
+    if (!this.selectedQuotes) {
+      const coverQuote = pickRandomQuote();
+      const finalQuote = pickRandomQuote(coverQuote);
+      this.selectedQuotes = { cover: coverQuote, final: finalQuote };
+    }
 
     // Генерируем QR коды
     const qrCodes = await this.generateQRCodes(sortedTravels);
@@ -75,29 +88,25 @@ export class EnhancedPdfGenerator {
     }
 
     // Страницы путешествий
-    meta.forEach((item, index) => {
+    for (let index = 0; index < meta.length; index++) {
+      const item = meta[index];
       const travel = item.travel;
-      
-      // Страница с фото
+
+      // Страница с большим обложечным фото
       pages.push(this.renderTravelPhotoPage(travel, currentPage));
       currentPage++;
 
-      // Страница с текстом
+      // Страница с текстом и inline-галереями (фото «внутри» статьи)
       pages.push(this.renderTravelContentPage(travel, qrCodes[index], currentPage));
       currentPage++;
 
-      // Галерея
-      if (item.hasGallery) {
-        pages.push(this.renderGalleryPage(travel, currentPage));
-        currentPage++;
-      }
-
-      // Карта
+      // Карта (DOM-скриншот Leaflet, только в браузере)
       if (item.hasMap) {
-        pages.push(this.renderMapPage(travel, item.locations, currentPage));
+        const mapPage = await this.renderMapPage(travel, item.locations, currentPage);
+        pages.push(mapPage);
         currentPage++;
       }
-    });
+    }
 
     if (settings.includeChecklists) {
       const checklistPage = this.renderChecklistPage(settings, currentPage);
@@ -127,6 +136,7 @@ export class EnhancedPdfGenerator {
     const { colors, typography } = this.theme;
     const travelLabel = this.getTravelLabel(travelCount);
     const safeCoverImage = this.buildSafeImageUrl(coverImage);
+    const coverQuote = this.selectedQuotes?.cover;
     
     const background = safeCoverImage
       ? `linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.75) 100%), url('${this.escapeHtml(safeCoverImage)}')`
@@ -193,6 +203,30 @@ export class EnhancedPdfGenerator {
               year: 'numeric',
             })}
           </div>
+          ${coverQuote ? `
+            <div style="
+              margin-top: 10mm;
+              max-width: 110mm;
+              font-size: 11pt;
+              line-height: 1.6;
+              color: rgba(255,255,255,0.9);
+              font-style: italic;
+              font-family: ${typography.bodyFont};
+            ">
+              «${this.escapeHtml(coverQuote.text)}»
+              ${coverQuote.author ? `
+                <div style="
+                  margin-top: 3mm;
+                  font-size: 9pt;
+                  letter-spacing: 0.08em;
+                  text-transform: uppercase;
+                  opacity: 0.9;
+                ">
+                  ${this.escapeHtml(coverQuote.author)}
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
         </div>
         <div style="position: absolute; bottom: 20mm; right: 25mm; font-weight: 600; letter-spacing: 0.12em; font-family: ${typography.bodyFont};">
           MeTravel
@@ -202,79 +236,145 @@ export class EnhancedPdfGenerator {
   }
 
   /**
+   * Строит inline-галерею для текстовой страницы (1 большое фото или 2–4 в сетке)
+   */
+  private buildInlineGallerySection(
+    travel: TravelForBook,
+    colors: ReturnType<typeof getThemeConfig>['colors'],
+    typography: ReturnType<typeof getThemeConfig>['typography'],
+    spacing: ReturnType<typeof getThemeConfig>['spacing']
+  ): string {
+    const rawPhotos = travel.gallery || [];
+    const photos = rawPhotos
+      .map((item) => {
+        const url = typeof item === 'string' ? item : item?.url;
+        return this.buildSafeImageUrl(url);
+      })
+      .filter((url): url is string => !!url && url.trim().length > 0);
+
+    if (!photos.length) return '';
+
+    // Журнальная раскладка: используем повторяющийся шаблон групп [1,3,4]
+    const pattern = [1, 3, 4];
+    let patternIndex = 0;
+    let cursor = 0;
+    const blocks: string[] = [];
+
+    while (cursor < photos.length) {
+      let groupSize = pattern[patternIndex % pattern.length];
+      const remaining = photos.length - cursor;
+
+      // Если оставшихся фото меньше, чем запланированный размер группы,
+      // используем оставшееся количество, но не даём группе быть пустой.
+      if (remaining < groupSize) {
+        groupSize = remaining;
+      }
+
+      const group = photos.slice(cursor, cursor + groupSize);
+      cursor += groupSize;
+      patternIndex++;
+
+      if (group.length === 1) {
+        const photo = this.escapeHtml(group[0]);
+        blocks.push(`
+          <div style="
+            margin-bottom: ${spacing.sectionSpacing};
+          ">
+            <div style="
+              border-radius: ${this.theme.blocks.borderRadius};
+              overflow: hidden;
+              box-shadow: ${this.theme.blocks.shadow};
+              background: ${colors.surfaceAlt};
+            ">
+              <img src="${photo}" alt="Фото путешествия"
+                style="width: 100%; height: 90mm; object-fit: cover; display: block;"
+                crossorigin="anonymous"
+                onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+            </div>
+          </div>
+        `);
+        continue;
+      }
+
+      const gridColumns = group.length === 2 ? 2 : group.length === 3 ? 3 : 4;
+      const imageHeight = group.length === 2 ? '70mm' : group.length === 3 ? '65mm' : '55mm';
+
+      const itemsHtml = group
+        .map((photo) => `
+          <div style="
+            border-radius: ${this.theme.blocks.borderRadius};
+            overflow: hidden;
+            background: ${colors.surfaceAlt};
+            box-shadow: ${this.theme.blocks.shadow};
+          ">
+            <img src="${this.escapeHtml(photo)}" alt="Фото путешествия"
+              style="width: 100%; height: ${imageHeight}; object-fit: cover; display: block;"
+              crossorigin="anonymous"
+              onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+          </div>
+        `)
+        .join('');
+
+      blocks.push(`
+        <div style="margin-bottom: ${spacing.sectionSpacing};">
+          <div style="
+            display: grid;
+            grid-template-columns: repeat(${gridColumns}, 1fr);
+            gap: 6mm;
+          ">
+            ${itemsHtml}
+          </div>
+        </div>
+      `);
+    }
+
+    return blocks.join('');
+  }
+
+  /**
    * Рендерит оглавление
    */
   private renderTocPage(meta: TravelSectionMeta[], pageNumber: number): string {
     const { colors, typography, spacing } = this.theme;
-
     const tocItems = meta
       .map((item, index) => {
         const travel = item.travel;
-        const thumb = this.buildSafeImageUrl(
-          travel.travel_image_thumb_url || travel.travel_image_url
-        );
+
+        const country = travel.countryName ? this.escapeHtml(travel.countryName) : '';
+        const year = travel.year ? this.escapeHtml(String(travel.year)) : '';
+        const metaLineParts = [country, year].filter(Boolean);
+        const metaLine = metaLineParts.join(' • ');
 
         return `
           <div style="
-            display: grid;
-            grid-template-columns: auto 1fr auto;
-            gap: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             padding: 14px 18px;
             background: ${colors.surface};
             border-radius: ${this.theme.blocks.borderRadius};
             border: ${this.theme.blocks.borderWidth} solid ${colors.border};
             box-shadow: ${this.theme.blocks.shadow};
-            margin-bottom: 12px;
           ">
-            ${thumb ? `
-              <div style="
-                width: 56px;
-                height: 56px;
-                border-radius: 10px;
-                overflow: hidden;
-                flex-shrink: 0;
-                box-shadow: ${this.theme.blocks.shadow};
-              ">
-                <img src="${this.escapeHtml(thumb)}" alt="${this.escapeHtml(travel.name)}"
-                  style="width: 100%; height: 100%; object-fit: cover; display: block;"
-                  crossorigin="anonymous" />
-              </div>
-            ` : `
-              <div style="
-                width: 56px;
-                height: 56px;
-                border-radius: 10px;
-                background: ${colors.accentSoft};
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 20pt;
-                flex-shrink: 0;
-              ">🧭</div>
-            `}
             <div style="flex: 1; min-width: 0;">
               <div style="
-                font-weight: 700;
-                font-size: 15pt;
+                font-weight: 600;
+                font-size: 14pt;
                 margin-bottom: 4px;
                 color: ${colors.text};
                 line-height: 1.3;
                 font-family: ${typography.headingFont};
               ">${index + 1}. ${this.escapeHtml(travel.name)}</div>
-              <div style="
-                font-size: 10.5pt;
-                color: ${colors.textMuted};
-                display: flex;
-                gap: 14px;
-                flex-wrap: wrap;
-                font-weight: 500;
-                font-family: ${typography.bodyFont};
-              ">
-                ${travel.countryName ? `<span>📍 ${this.escapeHtml(travel.countryName)}</span>` : ''}
-                ${travel.year ? `<span>📅 ${this.escapeHtml(String(travel.year))}</span>` : ''}
-              </div>
+              ${metaLine ? `
+                <div style="
+                  font-size: 10.5pt;
+                  color: ${colors.textMuted};
+                  font-family: ${typography.bodyFont};
+                ">${metaLine}</div>
+              ` : ''}
             </div>
             <div style="
+              margin-left: 18px;
               font-weight: 700;
               color: ${colors.accent};
               font-size: 18pt;
@@ -291,18 +391,16 @@ export class EnhancedPdfGenerator {
     return `
       <section class="pdf-page toc-page" style="
         padding: ${spacing.pagePadding};
-        background: linear-gradient(180deg, ${colors.surfaceAlt}, ${colors.surface});
+        background: ${colors.background};
       ">
         <div style="
           text-align: center;
-          margin-top: 10mm;
-          margin-bottom: 14mm;
-          padding-bottom: 10mm;
-          border-bottom: 3px solid ${colors.accent};
+          margin-top: 24mm;
+          margin-bottom: 16mm;
         ">
           <h2 style="
             font-size: ${typography.h1.size};
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             font-weight: ${typography.h1.weight};
             color: ${colors.text};
             letter-spacing: -0.02em;
@@ -311,11 +409,18 @@ export class EnhancedPdfGenerator {
           <p style="
             color: ${colors.textMuted};
             font-size: ${typography.body.size};
-            font-weight: 500;
             font-family: ${typography.bodyFont};
+            margin: 0 0 10px 0;
           ">${meta.length} ${this.getTravelLabel(meta.length)}</p>
+          <div style="
+            width: 60mm;
+            height: 2px;
+            margin: 0 auto;
+            background-color: ${colors.accent};
+            border-radius: 999px;
+          "></div>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
           ${tocItems}
         </div>
         <div style="
@@ -324,7 +429,6 @@ export class EnhancedPdfGenerator {
           right: 25mm;
           font-size: ${typography.caption.size};
           color: ${colors.textMuted};
-          font-weight: 500;
           font-family: ${typography.bodyFont};
         ">${pageNumber}</div>
       </section>
@@ -341,8 +445,8 @@ export class EnhancedPdfGenerator {
     );
     
     const metaPieces = [
-      travel.countryName ? `📍 ${this.escapeHtml(travel.countryName)}` : null,
-      travel.year ? `📅 ${this.escapeHtml(String(travel.year))}` : null,
+      travel.countryName ? this.escapeHtml(travel.countryName) : null,
+      travel.year ? this.escapeHtml(String(travel.year)) : null,
       this.formatDays(travel.number_days),
     ].filter(Boolean);
 
@@ -392,7 +496,46 @@ export class EnhancedPdfGenerator {
                   flex-wrap: wrap;
                   font-weight: 500;
                   font-family: ${typography.bodyFont};
-                ">${metaPieces.join('<span style="opacity: 0.7;">•</span>')}</div>
+                ">
+                  ${travel.countryName ? `
+                    <span style="display: inline-flex; align-items: center; gap: 6px;">
+                      <span style="
+                        width: 14px;
+                        height: 14px;
+                        border-radius: 999px;
+                        border: 1px solid rgba(255,255,255,0.8);
+                        opacity: 0.9;
+                        display: inline-block;
+                      "></span>
+                      <span>${this.escapeHtml(travel.countryName)}</span>
+                    </span>
+                  ` : ''}
+                  ${travel.year ? `
+                    <span style="display: inline-flex; align-items: center; gap: 6px;">
+                      <span style="
+                        width: 14px;
+                        height: 14px;
+                        border-radius: 4px;
+                        border: 1px solid rgba(255,255,255,0.8);
+                        opacity: 0.9;
+                        display: inline-block;
+                      "></span>
+                      <span>${this.escapeHtml(String(travel.year))}</span>
+                    </span>
+                  ` : ''}
+                  ${this.formatDays(travel.number_days) ? `
+                    <span style="display: inline-flex; align-items: center; gap: 6px;">
+                      <span style="
+                        width: 14px;
+                        height: 2px;
+                        border-radius: 999px;
+                        background-color: rgba(255,255,255,0.8);
+                        display: inline-block;
+                      "></span>
+                      <span>${this.formatDays(travel.number_days)}</span>
+                    </span>
+                  ` : ''}
+                </div>
               ` : ''}
             </div>
           </div>
@@ -453,6 +596,11 @@ export class EnhancedPdfGenerator {
       ? `https://metravel.by/travels/${travel.slug}`
       : travel.url;
 
+    const inlineGallery =
+      this.currentSettings?.includeGallery === false
+        ? ''
+        : this.buildInlineGallerySection(travel, colors, typography, spacing);
+
     return `
       <section class="pdf-page travel-content-page" style="padding: ${spacing.pagePadding};">
         <style>
@@ -509,6 +657,8 @@ export class EnhancedPdfGenerator {
             ">Описание путешествия отсутствует</p>
           </div>
         `}
+
+        ${inlineGallery}
 
         ${recommendationBlocks.length > 0 ? `
           <div style="margin-bottom: ${spacing.sectionSpacing};">
@@ -747,41 +897,72 @@ export class EnhancedPdfGenerator {
   /**
    * Рендерит страницу с картой
    */
-  private renderMapPage(
+  private async renderMapPage(
     travel: TravelForBook,
     locations: NormalizedLocation[],
     pageNumber: number
-  ): string {
+  ): Promise<string> {
     const { colors, typography, spacing } = this.theme;
     if (!locations.length) return '';
 
     const mapSvg = this.buildRouteSvg(locations);
+    const pointsWithCoords = locations.filter(
+      (location) => typeof location.lat === 'number' && typeof location.lng === 'number'
+    );
+
+    let snapshotDataUrl: string | null = null;
+    if (pointsWithCoords.length) {
+      try {
+        snapshotDataUrl = await generateLeafletRouteSnapshot(
+          pointsWithCoords.map((location) => ({
+            lat: location.lat as number,
+            lng: location.lng as number,
+          })),
+          { width: 800, height: 480, zoom: 11 }
+        );
+      } catch {
+        snapshotDataUrl = null;
+      }
+    }
+
     const locationList = this.buildLocationList(locations);
 
     return `
       <section class="pdf-page map-page" style="padding: ${spacing.pagePadding};">
-        <div style="display: grid; grid-template-columns: 2fr 3fr; gap: 20mm;">
+        <div style="margin-bottom: ${spacing.sectionSpacing};">
           <div style="
-            background: ${colors.surfaceAlt};
+            background: linear-gradient(135deg, ${colors.surfaceAlt} 0%, ${colors.surface} 100%);
             border-radius: ${this.theme.blocks.borderRadius};
-            padding: 12px 12px 4px 12px;
+            padding: 10px;
             border: ${this.theme.blocks.borderWidth} solid ${colors.border};
+            box-shadow: ${this.theme.blocks.shadow};
           ">
-            ${mapSvg}
+            <div style="
+              border-radius: ${this.theme.blocks.borderRadius};
+              overflow: hidden;
+              height: 115mm;
+            ">
+              ${snapshotDataUrl ? `
+                <img src="${this.escapeHtml(snapshotDataUrl)}" alt="Карта маршрута"
+                  style="width: 100%; height: 100%; display: block; object-fit: cover;" />
+              ` : `
+                ${mapSvg}
+              `}
+            </div>
           </div>
-          <div>
-            <h2 style="
-              font-size: ${typography.h2.size};
-              margin-bottom: ${spacing.elementSpacing};
-              font-family: ${typography.headingFont};
-            ">Маршрут</h2>
-            <p style="
-              color: ${colors.textMuted};
-              margin-bottom: ${spacing.blockSpacing};
-              font-family: ${typography.bodyFont};
-            ">${this.escapeHtml(travel.name)}</p>
-            <div>${locationList}</div>
-          </div>
+        </div>
+        <div>
+          <h2 style="
+            font-size: ${typography.h2.size};
+            margin-bottom: 4mm;
+            font-family: ${typography.headingFont};
+          ">Маршрут</h2>
+          <p style="
+            color: ${colors.textMuted};
+            margin-bottom: ${spacing.elementSpacing};
+            font-family: ${typography.bodyFont};
+          ">${this.escapeHtml(travel.name)}</p>
+          <div>${locationList}</div>
         </div>
         <div style="
           position: absolute;
@@ -900,33 +1081,87 @@ export class EnhancedPdfGenerator {
    */
   private renderFinalPage(pageNumber: number): string {
     const { colors, typography } = this.theme;
+    const finalQuote = this.selectedQuotes?.final;
 
     return `
       <section class="pdf-page final-page" style="
-        padding: 40mm 32mm;
+        padding: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
-        text-align: center;
         justify-content: center;
+        height: 285mm;
+        text-align: center;
+        color: ${colors.text};
+        background: #ffffff;
       ">
-        <div style="font-size: 60pt; margin-bottom: 24mm;">✨</div>
         <h2 style="
           font-size: ${typography.h1.size};
-          margin-bottom: ${typography.h1.marginBottom};
+          margin-bottom: 6mm;
+          letter-spacing: -0.02em;
           font-family: ${typography.headingFont};
         ">Спасибо за путешествие!</h2>
         <p style="
+          max-width: 120mm;
+          margin: 0 auto 10mm auto;
+          font-size: ${typography.body.size};
+          line-height: ${typography.body.lineHeight};
           color: ${colors.textMuted};
-          max-width: 110mm;
           font-family: ${typography.bodyFont};
-        ">Пусть эта книга напоминает о самых теплых эмоциях и помогает планировать новые приключения.</p>
+        ">
+          Пусть эта книга напоминает о самых тёплых эмоциях
+          и помогает планировать новые приключения.
+        </p>
+        ${finalQuote ? `
+          <p style="
+            max-width: 120mm;
+            margin: 0 auto 4mm auto;
+            font-size: 10.5pt;
+            line-height: 1.6;
+            color: ${colors.textMuted};
+            font-style: italic;
+            font-family: ${typography.bodyFont};
+          ">
+            «${this.escapeHtml(finalQuote.text)}»
+          </p>
+          ${finalQuote.author ? `
+            <p style="
+              max-width: 120mm;
+              margin: 0 auto;
+              font-size: 8.5pt;
+              line-height: 1.4;
+              color: ${colors.textMuted};
+              letter-spacing: 0.06em;
+              text-transform: uppercase;
+              font-family: ${typography.bodyFont};
+            ">
+              ${this.escapeHtml(finalQuote.author)}
+            </p>
+          ` : ''}
+        ` : ''}
         <div style="
-          margin-top: 28mm;
+          position: absolute;
+          bottom: 22mm;
+          width: 100%;
+          left: 0;
+          text-align: center;
           font-size: ${typography.caption.size};
           color: ${colors.textMuted};
           font-family: ${typography.bodyFont};
-        ">© MeTravel ${new Date().getFullYear()}</div>
+        ">
+          <div style="
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 2mm;
+            font-size: ${typography.caption.size};
+          ">
+            <span style="font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">
+              MeTravel.by
+            </span>
+          </div>
+          <div>© ${new Date().getFullYear()}</div>
+        </div>
         <div style="
           position: absolute;
           bottom: 15mm;
@@ -1149,7 +1384,7 @@ export class EnhancedPdfGenerator {
           address: point.address || `Точка ${index + 1}`,
           categoryName: point.categoryName,
           coord: point.coord,
-          travelImageThumbUrl: point.travelImageThumbUrl,
+          thumbnailUrl: point.travelImageThumbUrl,
           lat: coords?.lat,
           lng: coords?.lng,
         };
@@ -1210,10 +1445,22 @@ export class EnhancedPdfGenerator {
       .map(
         (point) => `
       <g>
-        <circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="2"
-          fill="${this.theme.colors.accent}" stroke="${this.theme.colors.surface}" stroke-width="0.8" />
-        <text x="${point.x.toFixed(2)}" y="${(point.y - 3).toFixed(2)}"
-          font-size="4" text-anchor="middle" fill="${this.theme.colors.cover.text}" font-weight="700">
+        <circle
+          cx="${point.x.toFixed(2)}"
+          cy="${point.y.toFixed(2)}"
+          r="2.6"
+          fill="${this.theme.colors.surface}"
+          stroke="${this.theme.colors.accentStrong}"
+          stroke-width="0.7"
+        />
+        <text
+          x="${point.x.toFixed(2)}"
+          y="${(point.y + 0.55).toFixed(2)}"
+          font-size="3.4"
+          text-anchor="middle"
+          fill="${this.theme.colors.text}"
+          font-weight="700"
+        >
           ${point.index + 1}
         </text>
       </g>
@@ -1256,60 +1503,96 @@ export class EnhancedPdfGenerator {
     const { colors, typography, spacing } = this.theme;
     return locations
       .map(
-        (location, index) => `
+        (location, index) => {
+          const rawAddress = location.address || '';
+          const [titlePart, ...rest] = rawAddress.split(',');
+          const title = titlePart.trim();
+          const subtitle = rest.join(',').trim();
+
+          const showCoordinates = this.currentSettings?.showCoordinatesOnMapPage !== false;
+
+          return `
         <div style="
           display: flex;
-          gap: 12px;
+          gap: 10px;
           align-items: flex-start;
-          padding: 10px 12px;
-          border-bottom: 1px solid ${colors.border};
-          background: ${index % 2 === 0 ? colors.surface : colors.surfaceAlt};
+          padding: 8px 10px;
+          border: 1px solid ${colors.border};
+          background: ${colors.surface};
           border-radius: ${this.theme.blocks.borderRadius};
-          margin-bottom: 4px;
+          margin-bottom: 6px;
         ">
-          <div style="
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: ${colors.accent};
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 12pt;
-            flex-shrink: 0;
-            box-shadow: ${this.theme.blocks.shadow};
-            font-family: ${typography.headingFont};
-          ">${index + 1}</div>
-          <div style="flex: 1;">
+          ${location.thumbnailUrl ? `
             <div style="
-              font-weight: 600;
-              color: ${colors.text};
+              width: 170px;
+              border-radius: 12px;
+              overflow: hidden;
+              flex-shrink: 0;
+              box-shadow: ${this.theme.blocks.shadow};
+              background: ${colors.surfaceAlt};
+            ">
+              <img src="${this.escapeHtml(location.thumbnailUrl)}" alt="Точка ${index + 1}"
+                style="width: 100%; height: auto; object-fit: cover; display: block;" />
+            </div>
+          ` : ''}
+          <div style="flex: 1; min-width: 0;">
+            <div style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
               margin-bottom: 4px;
-              font-size: 11pt;
-              line-height: 1.4;
-              font-family: ${typography.bodyFont};
-            ">${this.escapeHtml(location.address)}</div>
+            ">
+              <div style="
+                min-width: 20px;
+                height: 20px;
+                border-radius: 999px;
+                background: ${colors.surfaceAlt};
+                color: ${colors.text};
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 600;
+                font-size: 9pt;
+                flex-shrink: 0;
+                border: 1px solid ${colors.border};
+                font-family: ${typography.headingFont};
+              ">${index + 1}</div>
+              <div style="
+                font-weight: 600;
+                color: ${colors.text};
+                font-size: 11pt;
+                line-height: 1.35;
+                font-family: ${typography.bodyFont};
+              ">${this.escapeHtml(title || location.address)}</div>
+            </div>
+            ${subtitle ? `
+              <div style="
+                font-size: 9.5pt;
+                color: ${colors.textMuted};
+                margin-bottom: 1px;
+                font-family: ${typography.bodyFont};
+              ">${this.escapeHtml(subtitle)}</div>
+            ` : ''}
             ${location.categoryName ? `
               <div style="
-                font-size: 10pt;
+                font-size: 9.5pt;
                 color: ${colors.textMuted};
-                margin-bottom: 2px;
-                font-weight: 500;
+                margin-bottom: 1px;
                 font-family: ${typography.bodyFont};
               ">${this.escapeHtml(location.categoryName)}</div>
             ` : ''}
-            ${location.coord ? `
+            ${location.coord && showCoordinates ? `
               <div style="
-                font-size: 9pt;
+                font-size: 8.5pt;
                 color: ${colors.textMuted};
+                opacity: 0.7;
                 font-family: ${typography.monoFont};
               ">${this.escapeHtml(location.coord)}</div>
             ` : ''}
           </div>
         </div>
-      `
+      `;
+        }
       )
       .join('');
   }
@@ -1342,7 +1625,13 @@ export class EnhancedPdfGenerator {
     const trimmed = String(url).trim();
     if (!trimmed) return undefined;
     if (trimmed.startsWith('data:')) return trimmed;
-    if (this.isLocalResource(trimmed)) return undefined;
+    // Разрешаем относительные пути: дополняем текущим origin
+    if (trimmed.startsWith('/')) {
+      if (typeof window !== 'undefined' && (window as any).location?.origin) {
+        return `${(window as any).location.origin}${trimmed}`;
+      }
+      return trimmed;
+    }
 
     try {
       const normalized = trimmed.replace(/^https?:\/\//i, '');
@@ -1355,13 +1644,8 @@ export class EnhancedPdfGenerator {
 
   private isLocalResource(url: string): boolean {
     const lower = url.toLowerCase();
-    return (
-      lower.includes('localhost') ||
-      lower.includes('127.0.0.1') ||
-      lower.includes('192.168.') ||
-      lower.startsWith('/') ||
-      lower.startsWith('blob:')
-    );
+    // Считаем по-настоящему "локальными" только blob:-URL, которые нельзя надёжно проксировать
+    return lower.startsWith('blob:');
   }
 
   private escapeHtml(value: string | null | undefined): string {
@@ -1389,14 +1673,19 @@ export class EnhancedPdfGenerator {
             return `<h${block.level}>${this.escapeHtml(block.text)}</h${block.level}>`;
           case 'paragraph':
             return `<p>${this.escapeHtml(block.text)}</p>`;
-          case 'list':
+          case 'list': {
             const tag = block.ordered ? 'ol' : 'ul';
             const items = block.items.map((item) => `<li>${this.escapeHtml(item)}</li>`).join('');
             return `<${tag}>${items}</${tag}>`;
+          }
           case 'quote':
-            return `<blockquote>${this.escapeHtml(block.text)}${block.author ? `<cite>— ${this.escapeHtml(block.author)}</cite>` : ''}</blockquote>`;
+            return `<blockquote>${this.escapeHtml(block.text)}${
+              block.author ? `<cite>— ${this.escapeHtml(block.author)}</cite>` : ''
+            }</blockquote>`;
           case 'image':
-            return `<img src="${this.escapeHtml(block.src)}" alt="${this.escapeHtml(block.alt || '')}" />${block.caption ? `<figcaption>${this.escapeHtml(block.caption)}</figcaption>` : ''}`;
+            return `<img src="${this.escapeHtml(block.src)}" alt="${this.escapeHtml(
+              block.alt || ''
+            )}" />${block.caption ? `<figcaption>${this.escapeHtml(block.caption)}</figcaption>` : ''}`;
           default:
             return '';
         }
@@ -1418,7 +1707,7 @@ interface NormalizedLocation {
   address: string;
   categoryName?: string;
   coord?: string;
-  travelImageThumbUrl?: string;
+  thumbnailUrl?: string;
   lat?: number;
   lng?: number;
 }

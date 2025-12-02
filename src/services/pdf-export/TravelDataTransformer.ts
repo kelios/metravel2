@@ -310,7 +310,13 @@ export class TravelDataTransformer {
     const trimmed = String(url).trim();
     if (!trimmed) return PLACEHOLDER_IMAGE;
     if (trimmed.startsWith('data:')) return trimmed;
-    if (this.isLocalUrl(trimmed)) return PLACEHOLDER_IMAGE;
+    // Относительные пути ("/storage/...") и ресурсы текущего домена считаем безопасными
+    if (trimmed.startsWith('/')) {
+      if (typeof window !== 'undefined' && window.location?.origin) {
+        return `${window.location.origin}${trimmed}`;
+      }
+      return trimmed;
+    }
 
     try {
       const normalized = trimmed.replace(/^https?:\/\//i, '');
@@ -323,13 +329,8 @@ export class TravelDataTransformer {
 
   private isLocalUrl(url: string): boolean {
     const lower = url.toLowerCase();
-    return (
-      lower.includes('localhost') ||
-      lower.includes('127.0.0.1') ||
-      lower.includes('192.168.') ||
-      lower.startsWith('/') ||
-      lower.startsWith('blob:')
-    );
+    // Оставляем только blob:-URL как локальные (их нельзя безопасно проксировать)
+    return lower.startsWith('blob:');
   }
 
   private sanitizeInlineStyles(html: string): string {

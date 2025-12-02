@@ -5,6 +5,7 @@ import { EnhancedPdfGenerator } from '@/src/services/pdf-export/generators/Enhan
 import type { TravelForBook } from '@/src/types/pdf-export';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { JSDOM } from 'jsdom';
+import { TRAVEL_QUOTES } from '@/src/services/pdf-export/quotes/travelQuotes';
 
 // Увеличиваем таймаут для тяжёлых HTML/PDF-тестов
 jest.setTimeout(20000);
@@ -53,18 +54,10 @@ describe('EnhancedPdfGenerator', () => {
     subtitle: 'Тестовый подзаголовок',
     coverType: 'auto',
     template: 'minimal',
-    format: 'A4',
-    orientation: 'portrait',
-    margins: 'standard',
-    imageQuality: 'high',
     sortOrder: 'date-desc',
     includeToc: true,
     includeGallery: true,
     includeMap: true,
-    colorTheme: 'blue',
-    fontFamily: 'sans',
-    photoMode: 'gallery',
-    mapMode: 'full-page',
     includeChecklists: false,
     checklistSections: ['clothing', 'food', 'electronics'],
   };
@@ -127,6 +120,14 @@ describe('EnhancedPdfGenerator', () => {
       expect(html).toBeTruthy();
       expect(html).toContain('Длинный текст');
     });
+
+    it('должен подставлять одну из travel-цитат в книгу', async () => {
+      const generator = new EnhancedPdfGenerator('minimal');
+      const html = await generator.generate([mockTravel], defaultSettings);
+
+      const hasQuote = TRAVEL_QUOTES.some((q) => html.includes(q.text));
+      expect(hasQuote).toBe(true);
+    });
   });
 
   describe('Темы оформления', () => {
@@ -168,29 +169,33 @@ describe('EnhancedPdfGenerator', () => {
   });
 
   describe('Галерея', () => {
-    it('должен включать галерею когда includeGallery = true и есть фото', async () => {
+    it('должен включать inline-галерею когда includeGallery = true и есть фото', async () => {
       const generator = new EnhancedPdfGenerator('minimal');
       const settings = { ...defaultSettings, includeGallery: true };
       const html = await generator.generate([mockTravel], settings);
 
-      expect(html).toContain('Фотогалерея');
+      // Все URL из gallery должны присутствовать в HTML
+      expect(html).toContain('photo1.jpg');
+      expect(html).toContain('photo2.jpg');
     });
 
-    it('не должен включать галерею когда includeGallery = false', async () => {
+    it('не должен включать inline-галерею когда includeGallery = false', async () => {
       const generator = new EnhancedPdfGenerator('minimal');
       const settings = { ...defaultSettings, includeGallery: false };
       const html = await generator.generate([mockTravel], settings);
 
-      expect(html).not.toContain('Фотогалерея');
+      expect(html).not.toContain('photo1.jpg');
+      expect(html).not.toContain('photo2.jpg');
     });
 
-    it('не должен включать галерею когда нет фотографий', async () => {
+    it('должен корректно обрабатывать отсутствие фотографий', async () => {
       const generator = new EnhancedPdfGenerator('minimal');
       const travelWithoutGallery = { ...mockTravel, gallery: undefined };
       const settings = { ...defaultSettings, includeGallery: true };
       const html = await generator.generate([travelWithoutGallery], settings);
 
-      expect(html).not.toContain('Фотогалерея');
+      // В HTML не должно быть grid-блока галереи, так как фотографий нет
+      expect(html).not.toMatch(/grid-template-columns:\s*repeat\(\d+, 1fr\)/);
     });
   });
 
@@ -240,6 +245,33 @@ describe('EnhancedPdfGenerator', () => {
       const html = await generator.generate([mockTravel], settings);
 
       expect(html).not.toContain('Маршрут');
+    });
+
+    it('должен разбивать адрес точки на заголовок и подзаголовок', async () => {
+      const generator = new EnhancedPdfGenerator('minimal');
+      const travelWithAddress = {
+        ...mockTravel,
+        travelAddress: [
+          {
+            id: '1',
+            address: 'Москва, Красная площадь, Россия',
+            coord: '55.7558,37.6173',
+          },
+        ],
+      } as TravelForBook;
+
+      const html = await generator.generate([travelWithAddress], defaultSettings);
+
+      expect(html).toContain('Москва');
+      expect(html).toContain('Красная площадь');
+    });
+
+    it('должен скрывать координаты когда showCoordinatesOnMapPage = false', async () => {
+      const generator = new EnhancedPdfGenerator('minimal');
+      const settings = { ...defaultSettings, showCoordinatesOnMapPage: false } as BookSettings;
+      const html = await generator.generate([mockTravel], settings);
+
+      expect(html).not.toContain('55.7558,37.6173');
     });
   });
 
