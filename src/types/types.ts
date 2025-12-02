@@ -47,6 +47,9 @@ export type Travel = {
         coord?: string
     }>
 
+    // Опциональный скрин карты для PDF (data URL или абсолютный URL)
+    mapImageUrl?: string
+
     countryCode: string
     // Дополнительные поля, которые могут приходить из API
     user?: {

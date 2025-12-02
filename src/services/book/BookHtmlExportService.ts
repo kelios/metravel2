@@ -3,15 +3,7 @@ import type { Travel } from '@/src/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { TravelDataTransformer } from '@/src/services/pdf-export/TravelDataTransformer';
 import { EnhancedPdfGenerator } from '@/src/services/pdf-export/generators/EnhancedPdfGenerator';
-import { buildPhotoBookHTML } from '@/src/utils/pdfBookGenerator';
 import type { TravelForBook } from '@/src/types/pdf-export';
-
-const MODERN_TEMPLATES: ReadonlySet<BookSettings['template']> = new Set([
-  'minimal',
-  'light',
-  'dark',
-  'travel-magazine',
-]);
 
 export class BookHtmlExportService {
   private dataTransformer: TravelDataTransformer;
@@ -54,19 +46,8 @@ export class BookHtmlExportService {
     travelsForBook: TravelForBook[],
     settings: BookSettings
   ): Promise<string> {
-    if (settings.layout) {
-      const { LayoutHtmlGenerator } = await import('@/src/services/pdf-export/generators/LayoutHtmlGenerator');
-      const layoutGenerator = new LayoutHtmlGenerator();
-      return await layoutGenerator.generate(settings.layout, travelsForBook, settings);
-    }
-
-    const isNewTheme = MODERN_TEMPLATES.has(settings.template);
-    if (isNewTheme) {
-      const generator = new EnhancedPdfGenerator(settings.template);
-      return await generator.generate(travelsForBook, settings);
-    }
-
-    return await buildPhotoBookHTML(travelsForBook, settings);
+    const generator = new EnhancedPdfGenerator(settings.template);
+    return await generator.generate(travelsForBook, settings);
   }
 
   private enhanceHtmlForPrintPreview(html: string): string {

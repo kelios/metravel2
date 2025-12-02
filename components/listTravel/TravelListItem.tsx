@@ -468,55 +468,51 @@ function TravelListItem({
             {Platform.OS !== 'web' && actions}
 
         </Pressable>
-);
+    );
 
-return (
-    <View style={styles.wrap}>
-        {Platform.OS === 'web' ? (
-            <>
-                <a
-                    href={travelUrl}
-                    style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-                    onClick={(e: any) => {
-                        // Не даём событию дойти до внутренних Pressable
-                        e.stopPropagation();
+    return (
+        <View style={styles.wrap}>
+            {Platform.OS === 'web' ? (
+                // На вебе различаем два режима:
+                // 1) selectable === true (страница экспорта) — карточка только выбирает, без перехода по ссылке
+                // 2) selectable === false — поведение как раньше, с <a href> и SPA-навигацией
+                selectable ? (
+                    card
+                ) : (
+                    <>
+                        <a
+                            href={travelUrl}
+                            style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+                            onClick={(e: any) => {
+                                // Не даём событию дойти до внутренних Pressable
+                                e.stopPropagation();
 
-                        const hasModifier =
-                            e.metaKey ||
-                            e.ctrlKey ||
-                            e.shiftKey ||
-                            e.altKey ||
-                            e.button === 1;
-                                e.ctrlKey ||
-                                e.shiftKey ||
-                                e.altKey ||
-                                e.button === 1;
+                                const hasModifier =
+                                    e.metaKey ||
+                                    e.ctrlKey ||
+                                    e.shiftKey ||
+                                    e.altKey ||
+                                    e.button === 1;
 
-                            if (selectable) {
-                                // В режиме выбора ведём себя как обычная карта: обрабатываем Pressable, без открытия новой вкладки
+                                if (hasModifier) {
+                                    // Открываем ТОЛЬКО в новой вкладке, текущую не трогаем
+                                    e.preventDefault();
+                                    if (typeof window !== 'undefined') {
+                                        window.open(travelUrl, '_blank', 'noopener,noreferrer');
+                                    }
+                                    return;
+                                }
+
+                                // Обычный клик: SPA-навигация в текущей вкладке
                                 e.preventDefault();
                                 handlePress();
-                                return;
-                            }
-
-                            if (hasModifier) {
-                                // Открываем ТОЛЬКО в новой вкладке, текущую не трогаем
-                                e.preventDefault();
-                                if (typeof window !== 'undefined') {
-                                    window.open(travelUrl, '_blank', 'noopener,noreferrer');
-                                }
-                                return;
-                            }
-
-                            // Обычный клик: SPA-навигация в текущей вкладке
-                            e.preventDefault();
-                            handlePress();
-                        }}
-                    >
-                        {card}
-                    </a>
-                    {actions}
-                </>
+                            }}
+                        >
+                            {card}
+                        </a>
+                        {actions}
+                    </>
+                )
             ) : (
                 card
             )}

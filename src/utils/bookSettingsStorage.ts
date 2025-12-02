@@ -23,10 +23,6 @@ const TEMPLATE_VALUES: BookSettings['template'][] = [
 
 const COVER_TYPES: BookSettings['coverType'][] = ['auto', 'first-photo', 'gradient', 'custom'];
 const SORT_ORDERS: BookSettings['sortOrder'][] = ['date-desc', 'date-asc', 'country', 'alphabetical'];
-const PHOTO_MODES: BookSettings['photoMode'][] = ['full', 'gallery', 'inline', 'none'];
-const MAP_MODES: BookSettings['mapMode'][] = ['full-page', 'inline', 'none'];
-const FONT_OPTIONS: BookSettings['fontFamily'][] = ['sans', 'serif', 'rounded'];
-const COLOR_THEMES: BookSettings['colorTheme'][] = ['blue', 'green', 'orange', 'gray', 'pastel', 'mono'];
 const CHECKLIST_OPTIONS: BookSettings['checklistSections'][number][] = [
   'clothing',
   'food',
@@ -54,7 +50,7 @@ function normalizeBookSettings(
   base: BookSettings,
   stored: Partial<BookSettings> | null
 ): BookSettings {
-  if (!stored || typeof stored !== 'object') {
+  if (!stored) {
     return base;
   }
 
@@ -66,10 +62,6 @@ function normalizeBookSettings(
     template: ensureValue(TEMPLATE_VALUES, stored.template, base.template),
     coverType: ensureValue(COVER_TYPES, stored.coverType, base.coverType),
     sortOrder: ensureValue(SORT_ORDERS, stored.sortOrder, base.sortOrder),
-    photoMode: ensureValue(PHOTO_MODES, stored.photoMode, base.photoMode),
-    mapMode: ensureValue(MAP_MODES, stored.mapMode, base.mapMode),
-    fontFamily: ensureValue(FONT_OPTIONS, stored.fontFamily, base.fontFamily),
-    colorTheme: ensureValue(COLOR_THEMES, stored.colorTheme, base.colorTheme),
     includeToc: typeof stored.includeToc === 'boolean' ? stored.includeToc : base.includeToc,
     includeGallery: typeof stored.includeGallery === 'boolean' ? stored.includeGallery : base.includeGallery,
     includeMap: typeof stored.includeMap === 'boolean' ? stored.includeMap : base.includeMap,

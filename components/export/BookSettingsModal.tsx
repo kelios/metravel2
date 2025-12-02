@@ -5,13 +5,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, TextInput, Platform } from 'react-native';
 // ✅ ИСПРАВЛЕНИЕ: Picker не используется в веб-версии модального окна
 // import { Picker } from '@react-native-picker/picker';
-import PdfLayoutBuilder from './PdfLayoutBuilder';
-import type { PdfLayout } from '@/src/types/pdf-layout';
 
 export type ColorThemeOption = 'blue' | 'green' | 'orange' | 'gray' | 'pastel' | 'mono';
 export type FontOption = 'sans' | 'serif' | 'rounded';
-export type PhotoModeOption = 'full' | 'gallery' | 'inline' | 'none';
-export type MapModeOption = 'full-page' | 'inline' | 'none';
 export type ChecklistSection =
   | 'clothing'
   | 'food'
@@ -30,32 +26,15 @@ export interface BookSettings {
   includeToc: boolean;
   includeGallery: boolean;
   includeMap: boolean;
-  colorTheme: ColorThemeOption;
-  fontFamily: FontOption;
-  photoMode: PhotoModeOption;
-  mapMode: MapModeOption;
+  showCoordinatesOnMapPage?: boolean;
   includeChecklists: boolean;
   checklistSections: ChecklistSection[];
-  layout?: PdfLayout; // Пользовательский макет
 }
 
 const DEFAULT_CHECKLIST_SELECTION: ChecklistSection[] = ['clothing', 'food', 'electronics'];
 
 // Цветовые темы и шрифты теперь фиксированы через defaultBookSettings,
 // поэтому отдельные массивы опций для UI не нужны.
-
-const PHOTO_MODE_OPTIONS = [
-  { value: 'full', label: 'Большие фото', description: 'Каждое фото занимает всю страницу' },
-  { value: 'gallery', label: 'Галерея', description: '3–6 фото на страницу в сетке' },
-  { value: 'inline', label: 'Фото в тексте', description: 'Мини-галерея прямо в описании' },
-  { value: 'none', label: 'Без фото', description: 'Отключить фотоблоки' },
-] as const;
-
-const MAP_MODE_OPTIONS = [
-  { value: 'full-page', label: 'Большая карта', description: 'Отдельная страница с маршрутом' },
-  { value: 'inline', label: 'Мини-карта', description: 'Компактный блок рядом с текстом' },
-  { value: 'none', label: 'Без карты', description: 'В книге не будет карт' },
-] as const;
 
 const CHECKLIST_OPTIONS: Array<{
   value: ChecklistSection;
@@ -89,10 +68,7 @@ const defaultBookSettings: BookSettings = {
   includeToc: true,
   includeGallery: true,
   includeMap: true,
-  colorTheme: 'blue',
-  fontFamily: 'sans',
-  photoMode: 'gallery',
-  mapMode: 'full-page',
+  showCoordinatesOnMapPage: true,
   includeChecklists: false,
   checklistSections: DEFAULT_CHECKLIST_SELECTION,
 };
@@ -109,15 +85,8 @@ const buildInitialSettings = (
   merged.title =
     overrides?.title || (userName ? `Путешествия ${userName}` : defaultBookSettings.title);
 
-  merged.photoMode =
-    overrides?.photoMode ??
-    (merged.includeGallery === false ? 'none' : merged.photoMode || 'gallery');
-  merged.includeGallery = merged.photoMode !== 'none';
-
-  merged.mapMode =
-    overrides?.mapMode ??
-    (merged.includeMap === false ? 'none' : merged.mapMode || 'full-page');
-  merged.includeMap = merged.mapMode !== 'none';
+  // Флаги includeGallery/includeMap теперь управляются только логикой экспорта,
+  // без дополнительных режимов photoMode/mapMode.
 
   merged.checklistSections =
     overrides?.checklistSections && overrides.checklistSections.length > 0
@@ -127,9 +96,6 @@ const buildInitialSettings = (
   if (typeof merged.includeChecklists === 'undefined') {
     merged.includeChecklists = defaultBookSettings.includeChecklists;
   }
-
-  merged.colorTheme = overrides?.colorTheme ?? merged.colorTheme;
-  merged.fontFamily = overrides?.fontFamily ?? merged.fontFamily;
 
   return merged;
 };
@@ -147,29 +113,12 @@ export default function BookSettingsModal({
   const [settings, setSettings] = useState<BookSettings>(() =>
     buildInitialSettings(defaultSettings, userName)
   );
-  const [showLayoutBuilder, setShowLayoutBuilder] = useState(false);
 
   useEffect(() => {
     setSettings(buildInitialSettings(defaultSettings, userName));
   }, [defaultSettings, userName]);
 
   const checklistSections = settings.checklistSections || [];
-
-  const handlePhotoModeChange = (mode: PhotoModeOption) => {
-    setSettings((prev) => ({
-      ...prev,
-      photoMode: mode,
-      includeGallery: mode !== 'none',
-    }));
-  };
-
-  const handleMapModeChange = (mode: MapModeOption) => {
-    setSettings((prev) => ({
-      ...prev,
-      mapMode: mode,
-      includeMap: mode !== 'none',
-    }));
-  };
 
   const toggleChecklistSection = (section: ChecklistSection) => {
     setSettings((prev) => {
@@ -404,69 +353,7 @@ export default function BookSettingsModal({
           )}
 
           {/* Шаблон, цветовая тема и шрифты сейчас фиксированы (minimal + базовая тема),
-              поэтому отдельные переключатели в UI скрыты. */}
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
-              Фото-режим
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-              {PHOTO_MODE_OPTIONS.map((option) => {
-                const isActive = settings.photoMode === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    onClick={() => handlePhotoModeChange(option.value)}
-                    style={{
-                      borderRadius: '14px',
-                      border: isActive ? '2px solid #5b8a7a' : '1.5px solid rgba(31, 31, 31, 0.08)',
-                      padding: '14px',
-                      backgroundColor: '#fff',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      minHeight: '90px',
-                      boxShadow: isActive ? '0 6px 18px rgba(91, 138, 122, 0.12)' : '0 2px 6px rgba(31,31,31,0.04)',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, color: '#1f1f1f', marginBottom: '6px' }}>{option.label}</div>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{option.description}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
-              Карты и география
-            </label>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {MAP_MODE_OPTIONS.map((option) => {
-                const isActive = settings.mapMode === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    onClick={() => handleMapModeChange(option.value)}
-                    style={{
-                      flex: '1 1 200px',
-                      borderRadius: '12px',
-                      border: isActive ? '2px solid #5b8a7a' : '1.5px solid rgba(31, 31, 31, 0.08)',
-                      padding: '14px',
-                      backgroundColor: '#fff',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      boxShadow: isActive ? '0 6px 18px rgba(91, 138, 122, 0.12)' : '0 2px 6px rgba(31,31,31,0.04)',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, color: '#1f1f1f', marginBottom: '6px' }}>{option.label}</div>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{option.description}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+              поэтому дополнительные режимы отображения фото и карт убраны из настроек. */}
 
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
@@ -578,61 +465,6 @@ export default function BookSettingsModal({
             )}
           </div>
 
-          {/* Кнопка конструктора макета */}
-          <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f5f4f2', borderRadius: '12px', border: '1px solid rgba(31, 31, 31, 0.08)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <label style={{ fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
-                Конструктор макета
-              </label>
-              {settings.layout && (
-                <span style={{ fontSize: '13px', color: '#4a4946' }}>
-                  {settings.layout.blocks.filter(b => b.enabled).length} блоков
-                </span>
-              )}
-            </div>
-            <button
-              onClick={() => setShowLayoutBuilder(true)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: '#ffffff',
-                border: '2px dashed #5b8a7a',
-                borderRadius: '12px',
-                color: '#5b8a7a',
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontSize: '15px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                minHeight: '44px',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                outline: 'none',
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#5b8a7a';
-                e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#5b8a7a';
-                e.target.style.boxShadow = 'none';
-              }}
-              onMouseEnter={(e) => {
-                const target = e.target as HTMLButtonElement;
-                target.style.backgroundColor = '#e8f0ed';
-                target.style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={(e) => {
-                const target = e.target as HTMLButtonElement;
-                target.style.backgroundColor = '#ffffff';
-                target.style.transform = 'translateY(0)';
-              }}
-            >
-              <span>📐</span>
-              <span>{settings.layout ? 'Изменить макет' : 'Создать макет'}</span>
-            </button>
-          </div>
 
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '30px' }}>
             <button
@@ -760,17 +592,6 @@ export default function BookSettingsModal({
         </div>
       </div>
 
-      {/* Конструктор макета */}
-      <PdfLayoutBuilder
-        visible={showLayoutBuilder}
-        onClose={() => setShowLayoutBuilder(false)}
-        onSave={(layout) => {
-          setSettings({ ...settings, layout });
-          setShowLayoutBuilder(false);
-        }}
-        initialLayout={settings.layout}
-        travelCount={travelCount}
-      />
     </Modal>
   );
 }

@@ -47,7 +47,7 @@ export function generateStaticMapUrl(
 
 /**
  * Генерирует URL для статичной карты через OpenStreetMap
- * Использует сервис staticmapmaker.com
+ * Использует публичный сервис staticmap.openstreetmap.de (без API-ключа)
  */
 function generateOSMStaticMapUrl(
   points: MapPoint[],
@@ -59,17 +59,24 @@ function generateOSMStaticMapUrl(
   const centerLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
   const centerLng = points.reduce((sum, p) => sum + p.lng, 0) / points.length;
 
-  // Формируем маркеры
+  // Формируем маркеры (упрощённо: одинаковый стиль для всех точек)
   const markers = points
-    .map((point, index) => {
-      const color = index === 0 ? 'green' : index === points.length - 1 ? 'red' : 'blue';
-      return `${point.lat},${point.lng},${color}pin${index + 1}`;
-    })
+    .map((point) => `${point.lat},${point.lng},lightblue1`)
     .join('|');
 
-  // Используем OpenStreetMap через staticmapmaker
-  // Альтернатива: можно использовать другие бесплатные сервисы
-  return `https://api.mapbox.com/styles/v1/mapbox/outdoors-v11/static/path-5+ff9f5a-0.8(${points.map((p) => `${p.lng},${p.lat}`).join(';')})/auto/${width}x${height}@2x?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw`;
+  // Стандартный статичный OSM без ключа
+  // Используем французский зеркальный сервер staticmap.openstreetmap.fr
+  const size = `${Math.round(width)}x${Math.round(height)}`;
+
+  const url =
+    `https://staticmap.openstreetmap.fr/staticmap.php?` +
+    `center=${centerLat},${centerLng}` +
+    `&zoom=${zoom}` +
+    `&size=${size}` +
+    `&markers=${markers}` +
+    `&maptype=mapnik&format=png`;
+
+  return url;
 }
 
 /**
@@ -81,18 +88,213 @@ export async function generateMapImageFromDOM(
   width: number = 800,
   height: number = 600
 ): Promise<string> {
-  // Динамически импортируем html2canvas только при необходимости
-  const html2canvas = await import('html2canvas').then((m) => m.default);
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    throw new Error('generateMapImageFromDOM can only be used in a browser environment');
+  }
 
-  const canvas = await html2canvas(container, {
-    width,
-    height,
-    useCORS: true,
-    allowTaint: false,
-    backgroundColor: '#ffffff',
-    scale: 2,
-  });
+  // Загружаем html2canvas через CDN, обходя metro-stub
+  const ensureHtml2Canvas = async (): Promise<any> => {
+    const w = window as any;
+    if (w.html2canvas) {
+      return w.html2canvas;
+    }
 
-  return canvas.toDataURL('image/png');
+    await new Promise<void>((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = (err) => reject(err);
+      document.body.appendChild(script);
+    });
+
+    if (!w.html2canvas) {
+      throw new Error('html2canvas failed to load from CDN');
+    }
+
+    return w.html2canvas;
+  };
+
+  const html2canvas = await ensureHtml2Canvas();
+
+  try {
+    const canvas = await html2canvas(container, {
+      width,
+      height,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: '#ffffff',
+      scale: 2,
+    });
+
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    // Логируем реальную ошибку html2canvas для диагностики
+    if (typeof console !== 'undefined') {
+      // eslint-disable-next-line no-console
+      console.error('[MAP_SNAPSHOT_DOM] generateMapImageFromDOM error', error);
+    }
+
+    // Fallback: если карта не может быть экспортирована (CORS/DOM-ошибка),
+    // возвращаем простую заглушку, чтобы PDF всё равно содержал валидное изображение
+    const fallbackCanvas = document.createElement('canvas');
+    fallbackCanvas.width = width;
+    fallbackCanvas.height = height;
+    const ctx = fallbackCanvas.getContext('2d');
+
+    if (ctx) {
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = '#666666';
+      ctx.font = '20px Arial, sans-serif';
+      const message = 'Карта не доступна для экспорта';
+      const textWidth = ctx.measureText(message).width;
+      ctx.fillText(message, Math.max(10, (width - textWidth) / 2), height / 2);
+    }
+
+    return fallbackCanvas.toDataURL('image/png');
+  }
 }
 
+/**
+ * Генерирует снимок маршрута с помощью Leaflet + html2canvas
+ * Использует скрытый off-screen контейнер, поэтому не влияет на основную верстку
+ */
+export async function generateLeafletRouteSnapshot(
+  points: { lat: number; lng: number }[],
+  options: { width?: number; height?: number; zoom?: number } = {}
+): Promise<string | null> {
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    return null;
+  }
+
+  if (!points.length) return null;
+
+  const width = options.width ?? 800;
+  const height = options.height ?? 480;
+  const zoom = options.zoom ?? 10;
+
+  // Динамически импортируем Leaflet только в браузере
+  const leafletMod: any = await import('leaflet');
+  const L = leafletMod.default || leafletMod;
+
+  // Создаем off-screen контейнер
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.left = '-10000px';
+  container.style.top = '-10000px';
+  container.style.width = `${width}px`;
+  container.style.height = `${height}px`;
+  container.style.zIndex = '-1';
+  container.id = 'metravel-map-snapshot';
+  document.body.appendChild(container);
+
+  // Минимальная инициализация карты (без анимаций, чтобы избежать багов в off-screen режиме)
+  const centerLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
+  const centerLng = points.reduce((sum, p) => sum + p.lng, 0) / points.length;
+
+  let map: any | null = null;
+
+  try {
+    map = L.map(container, {
+      center: [centerLat, centerLng],
+      zoom,
+      zoomControl: false,
+      attributionControl: false,
+      zoomAnimation: false,
+      fadeAnimation: false,
+      markerZoomAnimation: false,
+    });
+
+    const tileLayer = L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      {
+        attribution: ' OpenStreetMap  CartoDB',
+        crossOrigin: true,
+      }
+    ).addTo(map);
+
+    // Маркеры как в веб-карте + аккуратный номер точки поверх пина
+    const latLngs = points.map((p) => L.latLng(p.lat, p.lng));
+
+    latLngs.forEach((latLng, index) => {
+      const number = index + 1;
+
+      const iconHtml = `
+        <div style="position: relative; width: 25px; height: 41px;">
+          <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png"
+            style="width: 25px; height: 41px; display: block;" />
+          <div style="
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 17px;
+            height: 17px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.96);
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+          ">${number}</div>
+        </div>
+      `;
+
+      const icon = L.divIcon({
+        className: 'metravel-map-marker',
+        html: iconHtml,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+      });
+
+      L.marker(latLng, { icon }).addTo(map);
+    });
+
+    // Подгоняем границы под маршрут (без плавной анимации)
+    if (latLngs.length > 0) {
+      const bounds = L.latLngBounds(latLngs);
+      map.fitBounds(bounds, { padding: [16, 16], animate: false });
+    }
+
+    // Ждем загрузки тайлов (или таймаут как fallback)
+    await new Promise<void>((resolve) => {
+      let resolved = false;
+      const timeout = window.setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          resolve();
+        }
+      }, 1500);
+
+      tileLayer.on('load', () => {
+        if (!resolved) {
+          resolved = true;
+          window.clearTimeout(timeout);
+          resolve();
+        }
+      });
+    });
+
+    // Скриншот контейнера
+    const dataUrl = await generateMapImageFromDOM(container, width, height);
+    return dataUrl;
+  } catch (error) {
+    // В случае ошибки вернем null, чтобы генератор PDF мог использовать SVG как fallback
+    if (typeof console !== 'undefined') {
+      // eslint-disable-next-line no-console
+      console.error('[MAP_SNAPSHOT] generateLeafletRouteSnapshot error', error);
+    }
+    return null;
+  } finally {
+    if (map && typeof map.remove === 'function') {
+      map.remove();
+    }
+    if (container.parentNode) {
+      container.parentNode.removeChild(container);
+    }
+  }
+}

@@ -764,13 +764,6 @@ export default function TravelDetails() {
       description: readyDesc,
     } as const);
 
-  const handleFabPress = useCallback(() => {
-    if (showFabHint) {
-      dismissFabHint();
-    }
-    toggleMenu();
-  }, [dismissFabHint, showFabHint, toggleMenu]);
-
   /* -------------------- LOADING -------------------- */
   if (isLoading) {
     return (
@@ -869,162 +862,162 @@ export default function TravelDetails() {
         />
       )}
 
-      <View style={[
-        styles.wrapper,
-        Platform.OS === "web" && {
-          // @ts-ignore - web-specific CSS property
-          background: "linear-gradient(180deg, #ffffff 0%, #f9f8f2 100%)",
-        },
-      ]}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
-            {/* ✅ РЕДИЗАЙН: Адаптивный spacer под меню */}
-            {!isMobile && <View style={{ width: menuWidthNum }} />}
+    <View style={[
+      styles.wrapper,
+      Platform.OS === "web" && {
+        // @ts-ignore - web-specific CSS property
+        background: "linear-gradient(180deg, #ffffff 0%, #f9f8f2 100%)",
+      },
+    ]}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
+          {/* ✅ РЕДИЗАЙН: Адаптивный spacer под меню */}
+          {!isMobile && <View style={{ width: menuWidthNum }} />}
 
-            {/* ✅ РЕДИЗАЙН: Адаптивное боковое меню */}
+          {/* ✅ РЕДИЗАЙН: Адаптивное боковое меню */}
+          <Defer when={deferAllowed}>
+            <Animated.View
+              style={[
+                styles.sideMenuBase,
+                sideMenuPlatformStyles,
+                {
+                  transform: [{ translateX: animatedX }],
+                  width: menuWidth,
+                  zIndex: 1000,
+                },
+              ]}
+            >
+              <Suspense fallback={<SectionSkeleton lines={8} />}>
+                <CompactSideBarTravel
+                  travel={travel}
+                  isSuperuser={isSuperuser}
+                  storedUserId={userId}
+                  isMobile={isMobile}
+                  refs={anchors}
+                  links={sectionLinks}
+                  closeMenu={closeMenu}
+                  onNavigate={scrollToWithMenuClose}
+                  activeSection={activeSection}
+                />
+              </Suspense>
+            </Animated.View>
+          </Defer>
+
+          {/* ✅ РЕДИЗАЙН: Оптимизированная FAB кнопка (отступ от низа 80px) */}
+          {isMobile && (
             <Defer when={deferAllowed}>
-              <Animated.View
-                style={[
-                  styles.sideMenuBase,
-                  sideMenuPlatformStyles,
-                  {
-                    transform: [{ translateX: animatedX }],
-                    width: menuWidth,
-                    zIndex: 1000,
-                  },
-                ]}
-              >
-                <Suspense fallback={<SectionSkeleton lines={8} />}>
-                  <CompactSideBarTravel
-                    travel={travel}
-                    isSuperuser={isSuperuser}
-                    storedUserId={userId}
-                    isMobile={isMobile}
-                    refs={anchors}
-                    links={sectionLinks}
-                    closeMenu={closeMenu}
-                    onNavigate={scrollToWithMenuClose}
-                    activeSection={activeSection}
-                  />
-                </Suspense>
-              </Animated.View>
-            </Defer>
+              <>
+                {showFabHint && (
+                  <Pressable
+                    onPress={dismissFabHint}
+                    style={[
+                      styles.fabHintBubble,
+                      { top: Math.max(16, fabTop - 64) },
+                      Platform.OS === "web" && styles.fabHintBubbleWeb,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Подсказка: меню разделов"
+                  >
+                    <Text style={styles.fabHintTitle}>Меню разделов</Text>
+                    <Text style={styles.fabHintText}>Нажмите, чтобы увидеть содержание страницы</Text>
+                  </Pressable>
+                )}
 
-            {/* ✅ РЕДИЗАЙН: Оптимизированная FAB кнопка (отступ от низа 80px) */}
-            {isMobile && (
-              <Defer when={deferAllowed}>
-                <>
-                  {showFabHint && (
-                    <Pressable
-                      onPress={dismissFabHint}
-                      style={[
-                        styles.fabHintBubble,
-                        { top: Math.max(16, fabTop - 64) },
-                        Platform.OS === "web" && styles.fabHintBubbleWeb,
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel="Подсказка: меню разделов"
-                    >
-                      <Text style={styles.fabHintTitle}>Меню разделов</Text>
-                      <Text style={styles.fabHintText}>Нажмите, чтобы увидеть содержание страницы</Text>
-                    </Pressable>
+                <TouchableOpacity
+                  onPress={handleFabPress}
+                  style={[
+                    styles.fab,
+                    { top: fabTop },
+                    Platform.OS === "web" && styles.fabWeb,
+                  ]}
+                  hitSlop={16}
+                  accessibilityRole="button"
+                  accessibilityLabel="Открыть меню разделов"
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.fabInner}>
+                    <Icon name={menuOpen ? "close" : "menu"} size={26} color="#fff" />
+                  </View>
+                </TouchableOpacity>
+              </>
+            </Defer>
+          )}
+
+          {/* Прогресс-бар чтения */}
+          {contentHeight > viewportHeight && (
+            <ReadingProgressBar
+              scrollY={scrollY}
+              contentHeight={contentHeight}
+              viewportHeight={viewportHeight}
+            />
+          )}
+
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: false }
+            )}
+            scrollEventThrottle={16}
+            style={styles.scrollView}
+            nestedScrollEnabled
+            onContentSizeChange={handleContentSizeChange}
+            onLayout={handleLayout}
+          >
+            <View style={styles.contentOuter} collapsable={false}>
+              <View
+                style={[
+                  styles.contentWrapper,
+                  { paddingHorizontal: contentHorizontalPadding },
+                ]}
+                collapsable={false}
+              >
+                <SList revealOrder="forwards" tail="collapsed">
+                  <TravelHeroSection
+                    travel={travel}
+                    anchors={anchors}
+                    isMobile={isMobile}
+                    onFirstImageLoad={() => setLcpLoaded(true)}
+                  />
+
+                  {isMobile && sectionLinks.length > 0 && (
+                    <View style={styles.sectionTabsContainer}>
+                      <TravelSectionTabs
+                        links={sectionLinks}
+                        activeSection={activeSection}
+                        onNavigate={scrollToWithMenuClose}
+                        stickyOffset={headerOffset + 8}
+                      />
+                    </View>
                   )}
 
-                  <TouchableOpacity
-                    onPress={handleFabPress}
-                    style={[
-                      styles.fab,
-                      { top: fabTop },
-                      Platform.OS === "web" && styles.fabWeb,
-                    ]}
-                    hitSlop={16}
-                    accessibilityRole="button"
-                    accessibilityLabel="Открыть меню разделов"
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.fabInner}>
-                      <Icon name={menuOpen ? "close" : "menu"} size={26} color="#fff" />
-                    </View>
-                  </TouchableOpacity>
-                </>
-              </Defer>
-            )}
-
-            {/* Прогресс-бар чтения */}
-            {contentHeight > viewportHeight && (
-              <ReadingProgressBar
-                scrollY={scrollY}
-                contentHeight={contentHeight}
-                viewportHeight={viewportHeight}
-              />
-            )}
-
-            <ScrollView
-              ref={scrollRef}
-              contentContainerStyle={styles.scrollContent}
-              keyboardShouldPersistTaps="handled"
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                { useNativeDriver: false }
-              )}
-              scrollEventThrottle={16}
-              style={styles.scrollView}
-              nestedScrollEnabled
-              onContentSizeChange={handleContentSizeChange}
-              onLayout={handleLayout}
-            >
-              <View style={styles.contentOuter} collapsable={false}>
-                <View
-                  style={[
-                    styles.contentWrapper,
-                    { paddingHorizontal: contentHorizontalPadding },
-                  ]}
-                  collapsable={false}
-                >
-                  <SList revealOrder="forwards" tail="collapsed">
-                    <TravelHeroSection
+                  {/* -------- deferred heavy content -------- */}
+                  <Defer when={deferAllowed}>
+                    <TravelDeferredSections
                       travel={travel}
-                      anchors={anchors}
                       isMobile={isMobile}
-                      onFirstImageLoad={() => setLcpLoaded(true)}
+                      forceOpenKey={forceOpenKey}
+                      anchors={anchors}
+                      relatedTravels={relatedTravels}
+                      setRelatedTravels={setRelatedTravels}
                     />
-
-                    {isMobile && sectionLinks.length > 0 && (
-                      <View style={styles.sectionTabsContainer}>
-                        <TravelSectionTabs
-                          links={sectionLinks}
-                          activeSection={activeSection}
-                          onNavigate={scrollToWithMenuClose}
-                          stickyOffset={headerOffset + 8}
-                        />
-                      </View>
-                    )}
-
-                    {/* -------- deferred heavy content -------- */}
-                    <Defer when={deferAllowed}>
-                      <TravelDeferredSections
-                        travel={travel}
-                        isMobile={isMobile}
-                        forceOpenKey={forceOpenKey}
-                        anchors={anchors}
-                        relatedTravels={relatedTravels}
-                        setRelatedTravels={setRelatedTravels}
-                      />
-                    </Defer>
-                  </SList>
-                </View>
+                  </Defer>
+                </SList>
               </View>
-            </ScrollView>
+            </View>
+          </ScrollView>
             
-            {/* ✅ Кнопка "Наверх" */}
-            <ScrollToTopButton
-              scrollViewRef={scrollRef}
-              scrollY={scrollY}
-              threshold={300}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+          {/* ✅ Кнопка "Наверх" */}
+          <ScrollToTopButton
+            scrollViewRef={scrollRef}
+            scrollY={scrollY}
+            threshold={300}
+          />
+        </View>
+      </SafeAreaView>
+    </View>
     </>
   );
 }
@@ -1427,7 +1420,7 @@ const TravelVisualSections: React.FC<{
         ref={anchors.map}
         style={[styles.sectionContainer, styles.contentStable]}
         collapsable={false}
-        {...(Platform.OS === "web" ? { "data-section-key": "map" } : {})}
+        {...(Platform.OS === "web" ? { "data-section-key": "map", "data-map-for-pdf": "1" } : {})}
       >
         <Text style={styles.sectionHeaderText}>Карта маршрута</Text>
         <Text style={styles.sectionSubtitle}>Посмотрите последовательность точек на живой карте</Text>
@@ -1682,6 +1675,29 @@ const styles = StyleSheet.create({
   },
   contentStable: {
     contain: "layout style paint" as any,
+  },
+
+  pdfButtonContainer: {
+    position: "absolute",
+    right: 16,
+    bottom: 32,
+    zIndex: 900,
+  },
+  pdfButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: "#111827",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+  },
+  pdfButtonText: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.3,
   },
 
   // ✅ РЕДИЗАЙН: Современные карточки с улучшенными тенями

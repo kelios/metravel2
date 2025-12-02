@@ -18,10 +18,6 @@ export function buildDefaultSettingsForTravel(travel?: Travel): BookSettings {
     includeToc: true,
     includeGallery: true,
     includeMap: true,
-    colorTheme: 'blue',
-    fontFamily: 'sans',
-    photoMode: 'gallery',
-    mapMode: 'full-page',
     includeChecklists: false,
     checklistSections: DEFAULT_CHECKLISTS,
   }
