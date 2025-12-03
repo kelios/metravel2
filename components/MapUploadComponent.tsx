@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { useDropzone } from 'react-dropzone';
-import { uploadImage } from "@/src/api/travels";
+import { uploadImage } from "@/src/api/misc";
 
 // Условный импорт для DocumentPicker, только если платформа не является вебом
 let DocumentPicker: any;
@@ -32,7 +32,9 @@ const MapUploadComponent: React.FC<MapUploadComponentProps> = ({ collection, idT
 
             await handleUploadFile(file); // Загружаем файл на сервер
         },
-        accept: supportedFormats.map((format) => `.${format.split('.').pop()}`).join(','),
+        // Тип Accept в react-dropzone ожидает объект, но нам достаточно строкового списка расширений.
+        // Для совместимости с типами приводим к any.
+        accept: supportedFormats.map((format) => `.${format.split('.').pop()}`).join(',') as any,
     });
 
     // Функция для выбора файла для мобильных устройств
@@ -132,13 +134,19 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         backgroundColor: '#4b7c6f',
         borderRadius: 10,
-        display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         paddingVertical: 10,
         paddingHorizontal: 20,
-        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-        transition: 'background-color 0.3s ease',
+        // Web-специфичные стили выносим отдельно и приводим к any, чтобы не мешать типам RN
+        ...(Platform.select({
+            web: {
+                display: 'flex',
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                transition: 'background-color 0.3s ease',
+            },
+            default: {},
+        }) as any),
     },
     fileName: {
         color: '#fff',

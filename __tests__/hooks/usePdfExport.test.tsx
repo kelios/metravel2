@@ -5,14 +5,12 @@ import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { Platform, Alert } from 'react-native';
 import { usePdfExport } from '@/src/hooks/usePdfExport';
-import type { Travel } from '@/src/types/types';
-import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { ExportStage } from '@/src/types/pdf-export';
 
 const mockGenerateTravelsHtml = jest.fn(async () => '<html><body><section class="pdf-page">Test</section></body></html>');
 const mockOpenBookPreviewWindow = jest.fn();
 
-jest.mock('@/src/api/travels', () => ({
+jest.mock('@/src/api/travelsApi', () => ({
   fetchTravel: jest.fn(async () => ({
     id: 99,
     name: 'Detailed Travel',
@@ -22,7 +20,7 @@ jest.mock('@/src/api/travels', () => ({
     minus: 'Cons',
     gallery: [],
     travelAddress: [],
-  }) as unknown as Travel),
+  })),
   fetchTravelBySlug: jest.fn(async () => ({
     id: 100,
     name: 'Slug Travel',
@@ -32,7 +30,7 @@ jest.mock('@/src/api/travels', () => ({
     minus: 'Cons',
     gallery: [],
     travelAddress: [],
-  }) as unknown as Travel),
+  })),
 }));
 
 jest.mock('@/src/services/book/BookHtmlExportService', () => ({
@@ -42,17 +40,17 @@ jest.mock('@/src/services/book/BookHtmlExportService', () => ({
 }));
 
 jest.mock('@/src/utils/openBookPreviewWindow', () => ({
-  openBookPreviewWindow: (...args: any[]) => mockOpenBookPreviewWindow(...args),
+  openBookPreviewWindow: (...args) => mockOpenBookPreviewWindow(...args),
 }));
 
 global.URL = {
   createObjectURL: jest.fn(() => 'blob:mock-url'),
   revokeObjectURL: jest.fn(),
-} as any;
+};
 
 const mockDocument = {
-  createElement: jest.fn((tag: string) => {
-    const element: any = {
+  createElement: jest.fn((tag) => {
+    const element = {
       tagName: tag.toUpperCase(),
       style: { cssText: '' },
       appendChild: jest.fn(),
@@ -76,7 +74,7 @@ const mockDocument = {
   querySelectorAll: jest.fn(() => []),
 };
 
-global.document = mockDocument as any;
+global.document = mockDocument;
 
 const originalPlatformOS = Platform.OS;
 const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
@@ -89,7 +87,7 @@ beforeAll(() => {
 });
 
 describe('usePdfExport', () => {
-  const mockTravels: Travel[] = [
+  const mockTravels = [
     {
       id: 1,
       name: 'Test Travel',
@@ -114,10 +112,10 @@ describe('usePdfExport', () => {
       countryCode: '',
       travel_image_thumb_url: '',
       travel_image_thumb_small_url: '',
-    } as unknown as Travel,
+    },
   ];
 
-  const mockSettings: BookSettings = {
+  const mockSettings = {
     title: 'Test Book',
     subtitle: '',
     coverType: 'auto',
@@ -152,9 +150,6 @@ describe('usePdfExport', () => {
       expect(typeof result.current.openPrintBook).toBe('function');
     });
   });
-
-  // exportPdf и previewPdf теперь являются заглушками (старый html2pdf-поток отключен),
-  // поэтому отдельные тесты на взаимодействие с PdfExportService больше не нужны.
 
   describe('Конфигурация', () => {
     it('должен использовать переданную конфигурацию', () => {
@@ -213,22 +208,22 @@ describe('usePdfExport', () => {
     });
 
     it('должен генерировать HTML и открывать окно предпросмотра при успешном сценарии', async () => {
-      const detailedTravels: Travel[] = [
+      const detailedTravels = [
         {
-          ...(mockTravels[0] as Travel),
+          ...mockTravels[0],
           id: 1,
-        } as Travel,
+        },
         {
-          ...(mockTravels[0] as Travel),
-          id: undefined as any,
+          ...mockTravels[0],
+          id: undefined,
           slug: 'slug-travel',
-          description: undefined as any,
-          recommendation: undefined as any,
-          plus: undefined as any,
-          minus: undefined as any,
-          gallery: undefined as any,
-          travelAddress: undefined as any,
-        } as Travel,
+          description: undefined,
+          recommendation: undefined,
+          plus: undefined,
+          minus: undefined,
+          gallery: undefined,
+          travelAddress: undefined,
+        },
       ];
 
       const { result } = renderHook(() => usePdfExport(detailedTravels));

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'react-native-image-picker';
 import { useDropzone } from 'react-dropzone';
-import { uploadImage } from '@/src/api/travels';
+import { uploadImage } from '@/src/api/misc';
 import { FontAwesome, Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 

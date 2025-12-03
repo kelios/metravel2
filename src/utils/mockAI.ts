@@ -1,4 +1,5 @@
-import { fetchTravels, fetchArticles } from '@/src/api/travels';
+import { fetchTravels } from '@/src/api/travelsApi';
+import { fetchArticles } from '@/src/api/articles';
 
 // Словари для распознавания намерений
 const COUNTRIES = {

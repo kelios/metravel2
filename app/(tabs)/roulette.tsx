@@ -15,7 +15,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useListTravelFilters } from '@/components/listTravel/hooks/useListTravelFilters';
 import { useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
 import { normalizeApiResponse, deduplicateTravels } from '@/components/listTravel/utils/listTravelHelpers';
-import { fetchAllCountries, fetchFilters, fetchFiltersCountry } from '@/src/api/travels';
+import { fetchAllCountries, fetchFilters, fetchFiltersCountry } from '@/src/api/misc';
 import type { Travel } from '@/src/types/types';
 import type { FilterOptions } from '@/components/listTravel/utils/listTravelTypes';
 

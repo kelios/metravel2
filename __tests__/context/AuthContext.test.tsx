@@ -2,12 +2,12 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi } from '@/src/api/travels';
+import { loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi } from '@/src/api/auth';
 import { getSecureItem, setSecureItem, removeSecureItems } from '@/src/utils/secureStorage';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/src/utils/storageBatch';
 
 jest.mock('@react-native-async-storage/async-storage');
-jest.mock('@/src/api/travels', () => ({
+jest.mock('@/src/api/auth', () => ({
   loginApi: jest.fn(),
   logoutApi: jest.fn(),
   resetPasswordLinkApi: jest.fn(),

@@ -17,7 +17,7 @@ jest.mock('expo-router', () => ({
   }),
 }));
 
-jest.mock('@/src/api/travels', () => ({
+jest.mock('@/src/api/travelsApi', () => ({
   fetchTravels: jest.fn().mockResolvedValue({ data: [], total: 3 }),
 }));
 

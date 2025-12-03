@@ -126,6 +126,67 @@ const BelkrajWidgetComponent =
     ? withLazy(() => import("@/components/belkraj/BelkrajWidget"))
     : (() => null) as React.ComponentType<any>;
 
+// Обёртка для ленивой загрузки секции "Экскурсии" (Belkraj) по скроллу на web
+const ExcursionsLazySection: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // На native просто рендерим сразу
+  if (Platform.OS !== "web") {
+    return <>{children}</>;
+  }
+
+  const containerRef = useRef<any>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (visible) return; // уже показали
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      setVisible(true);
+      return;
+    }
+
+    // Если IntersectionObserver недоступен, показываем сразу
+    if (!("IntersectionObserver" in window)) {
+      setVisible(true);
+      return;
+    }
+
+    // Получаем DOM-узел из ref React Native Web
+    const rawNode = containerRef.current as any;
+    const targetNode = rawNode?._nativeNode || rawNode?._domNode || rawNode || null;
+    if (!targetNode) {
+      setVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry && entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      {
+        // Подгружаем чуть заранее, когда секция приближается к нижней границе экрана
+        root: null,
+        rootMargin: "200px 0px 0px 0px",
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(targetNode as Element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [visible]);
+
+  return (
+    <View ref={containerRef} collapsable={false}>
+      {visible ? children : null}
+    </View>
+  );
+};
+
 /* -------------------- SuspenseList shim -------------------- */
 const SList: React.FC<{
   children: React.ReactNode;
@@ -645,7 +706,9 @@ export default function TravelDetails() {
   
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
-    setActiveSection(""); // Сбрасываем при изменении путешествия
+    // По умолчанию считаем активной секцию галереи, чтобы в меню
+    // всегда был выделен хотя бы один пункт при первом рендере
+    setActiveSection("gallery");
   }, [slug, setActiveSection]);
 
   // Измеряем высоту контента для прогресс-бара
@@ -696,10 +759,13 @@ export default function TravelDetails() {
   // Расширяем scrollTo для добавления логики закрытия меню на мобильных
   const scrollToWithMenuClose = useCallback(
     (key: string) => {
+      // Немедленно обновляем активную секцию при клике по меню,
+      // чтобы подсветка в боковом меню менялась сразу (например, на "Видео").
+      setActiveSection(key);
       scrollTo(key);
       if (isMobile) closeMenu();
     },
-    [scrollTo, isMobile, closeMenu]
+    [scrollTo, isMobile, closeMenu, setActiveSection]
   );
 
   /* ---- prefetch near travels ---- */
@@ -1397,22 +1463,24 @@ const TravelVisualSections: React.FC<{
         showExcursions &&
         (travel.travelAddress?.length ?? 0) > 0 && (
           <Suspense fallback={<Fallback />}>
-            <View
-              ref={anchors.excursions}
-              style={[styles.sectionContainer, styles.contentStable]}
-              collapsable={false}
-              {...(Platform.OS === "web" ? { "data-section-key": "excursions" } : {})}
-            >
-              <Text style={styles.sectionHeaderText}>Экскурсии</Text>
-              <View style={{ marginTop: 12 }}>
-                <BelkrajWidgetComponent
-                  countryCode={travel.countryCode}
-                  points={travel.travelAddress}
-                  collapsedHeight={600}
-                  expandedHeight={1000}
-                />
+            <ExcursionsLazySection>
+              <View
+                ref={anchors.excursions}
+                style={[styles.sectionContainer, styles.contentStable]}
+                collapsable={false}
+                {...(Platform.OS === "web" ? { "data-section-key": "excursions" } : {})}
+              >
+                <Text style={styles.sectionHeaderText}>Экскурсии</Text>
+                <View style={{ marginTop: 12 }}>
+                  <BelkrajWidgetComponent
+                    countryCode={travel.countryCode}
+                    points={travel.travelAddress}
+                    collapsedHeight={600}
+                    expandedHeight={1000}
+                  />
+                </View>
               </View>
-            </View>
+            </ExcursionsLazySection>
           </Suspense>
         )}
 

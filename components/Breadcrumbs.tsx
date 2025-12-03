@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-na
 import { usePathname, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { fetchTravelBySlug, fetchTravel } from '@/src/api/travels';
+import { fetchTravelBySlug, fetchTravel } from '@/src/api/travelsApi';
 import { getQuestById } from '@/components/quests/registry';
 
 const MAX_BREADCRUMB_LENGTH = 50;
@@ -36,7 +36,9 @@ export default function Breadcrumbs({ items, showHome = true, travelName }: Brea
   }, [pathname, isTravelPage]);
 
   const { data: travelData } = useQuery({
-    queryKey: ['travelForBreadcrumbs', travelSlug],
+    // ВАЖНО: используем тот же ключ, что и useTravelDetails (['travel', slug]),
+    // чтобы React Query переиспользовал один и тот же кэш и не делал второй запрос
+    queryKey: ['travel', travelSlug],
     queryFn: () => {
       if (!travelSlug) return null;
       const idNum = Number(travelSlug);

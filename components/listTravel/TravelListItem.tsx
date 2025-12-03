@@ -8,7 +8,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/src/types/types";
 import FavoriteButton from "@/components/FavoriteButton";
-import { fetchTravel, fetchTravelBySlug } from "@/src/api/travels";
+import { fetchTravel, fetchTravelBySlug } from "@/src/api/travelsApi";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize, generateSrcSet } from "@/utils/imageOptimization";
 // ✅ ДИЗАЙН: Импорт максимально легкой и воздушной палитры

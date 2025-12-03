@@ -5,12 +5,8 @@ import { Button } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Toast from 'react-native-toast-message';
 
-import {
-    fetchAllCountries,
-    fetchFilters,
-    fetchTravel,
-    saveFormData,
-} from '@/src/api/travels';
+import { fetchTravel } from '@/src/api/travelsApi';
+import { fetchFilters, saveFormData } from '@/src/api/misc';
 import { TravelFormData, MarkerData, Travel } from '@/src/types/types';
 import { useAuth } from '@/context/AuthContext';
 import { validateStep, type ValidationError } from '@/utils/formValidation';

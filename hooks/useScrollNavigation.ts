@@ -4,7 +4,7 @@
  */
 
 import { useMemo, useRef, useCallback } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, Platform } from 'react-native';
 import React from 'react';
 
 export interface UseScrollNavigationReturn {
@@ -41,6 +41,15 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
 
   const scrollTo = useCallback(
     (key: string) => {
+      // Веб: пытаемся использовать DOM и data-section-key для более стабильной прокрутки
+      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        const el = document.querySelector<HTMLElement>(`[data-section-key="${key}"]`);
+        if (el && typeof el.scrollIntoView === 'function') {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+          return;
+        }
+      }
+
       const anchor = anchors[key];
       if (anchor?.current && scrollRef.current) {
         anchor.current.measureLayout(
@@ -49,7 +58,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
             scrollRef.current?.scrollTo({ y, animated: true });
           },
           () => {
-            // Fallback: если measureLayout не сработал, пытаемся найти элемент через ref
+            // Fallback: если measureLayout не сработал, логируем предупреждение
             console.warn(`Could not measure layout for section: ${key}`);
           }
         );

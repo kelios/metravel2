@@ -58,12 +58,8 @@ const RecommendationsTabs = lazy(() => {
     return import('./RecommendationsTabs');
 });
 
-import {
-    deleteTravel,
-    fetchFilters,
-    fetchFiltersCountry,
-    fetchTravels,
-} from "@/src/api/travels";
+import { deleteTravel, fetchTravels } from "@/src/api/travelsApi";
+import { fetchFilters, fetchFiltersCountry } from "@/src/api/misc";
 import { Travel } from "@/src/types/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { TravelListSkeleton } from "@/components/SkeletonLoader";

@@ -20,7 +20,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { usePathname } from 'expo-router';
 
 import InstantSEO from '@/components/seo/InstantSEO';
-import { registration } from '@/src/api/travels';
+import { registration } from '@/src/api/auth';
 import type { FormValues } from '@/src/types/types';
 import { registrationSchema } from '@/utils/validation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';

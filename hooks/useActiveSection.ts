@@ -62,7 +62,17 @@ export function useActiveSection(
             return a.top - b.top;
           });
 
-          const mostVisible = visibleSections[0];
+          let mostVisible = visibleSections[0];
+
+          // Небольшой приоритет: если одновременно видны описание и видео,
+          // и секция видео находится недалеко от верха, считаем активным именно видео.
+          if (mostVisible.key === 'description') {
+            const videoCandidate = visibleSections.find((s) => s.key === 'video');
+            if (videoCandidate && videoCandidate.top - mostVisible.top < 150) {
+              mostVisible = videoCandidate;
+            }
+          }
+
           if (mostVisible && mostVisible.key !== activeSection) {
             setActiveSection(mostVisible.key);
           }

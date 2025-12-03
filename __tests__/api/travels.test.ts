@@ -1,21 +1,26 @@
 import { Alert } from 'react-native';
-import {
-  fetchTravels,
-  fetchRandomTravels,
-  fetchTravel,
-  fetchTravelBySlug,
-  fetchArticles,
-  fetchTravelsNear,
-  fetchTravelsPopular,
-  fetchTravelsForMap,
-  fetchTravelsby,
-  fetchFiltersTravel,
-  fetchTravelsNearRoute,
-  fetchArticle,
-  fetchFilters,
-  fetchFiltersCountry,
-  fetchAllCountries,
-} from '@/src/api/travels';
+import { 
+  fetchTravel, 
+  fetchTravelBySlug, 
+  fetchTravels, 
+  fetchRandomTravels, 
+  fetchMyTravels 
+} from '@/src/api/travelsApi';
+import { 
+  fetchTravelsNear, 
+  fetchTravelsPopular, 
+  fetchTravelsForMap, 
+  fetchTravelsNearRoute 
+} from '@/src/api/map';
+import { 
+  fetchArticles, 
+  fetchArticle 
+} from '@/src/api/articles';
+import { 
+  fetchFilters, 
+  fetchFiltersCountry, 
+  fetchAllCountries 
+} from '@/src/api/misc';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { devError } from '@/src/utils/logger';
@@ -47,7 +52,7 @@ jest.mock('@/src/utils/retry', () => ({
 const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>;
 const mockedSafeJsonParse = safeJsonParse as jest.MockedFunction<typeof safeJsonParse>;
 
-describe('src/api/travels.ts', () => {
+describe('src/api/travelsApi.ts', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -308,40 +313,5 @@ describe('src/api/travels.ts', () => {
       expect(where.moderation).toBe(1);
     });
 
-    it('fetchTravelsby использует publish/moderation из urlParams', async () => {
-      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce([] as any);
-
-      await fetchTravelsby(0, 10, '', { publish: 0, moderation: 0 });
-
-      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
-      const urlObj = new URL(url);
-      const where = JSON.parse(urlObj.searchParams.get('where') || '{}');
-
-      expect(where.publish).toBe(0);
-      expect(where.moderation).toBe(0);
-      expect(where.countries).toEqual([3]);
-    });
-
-    it('fetchFiltersTravel собирает whereObject только из непустых фильтров', async () => {
-      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce([] as any);
-
-      await fetchFiltersTravel(0, 10, 'q', {
-        publish: 1,
-        countries: [1, 2],
-        categories: [],
-        year: '2024',
-      });
-
-      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
-      const urlObj = new URL(url);
-      const where = JSON.parse(urlObj.searchParams.get('where') || '{}');
-
-      expect(where.publish).toBe(1);
-      expect(where.countries).toEqual([1, 2]);
-      expect(where.categories).toBeUndefined();
-      expect(where.year).toBe('2024');
-    });
   });
 });

@@ -22,7 +22,7 @@ import {
 import { Title } from 'react-native-paper';
 
 import { Travel } from '@/src/types/types';
-import { fetchTravelsNear } from '@/src/api/travels';
+import { fetchTravelsNear } from '@/src/api/map';
 import TravelTmlRound from '@/components/travel/TravelTmlRound';
 import MapClientSideComponent from '@/components/Map';
 import { useLazyMap } from '@/hooks/useLazyMap';

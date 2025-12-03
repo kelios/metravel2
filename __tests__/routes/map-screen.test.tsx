@@ -84,7 +84,7 @@ const mockFetchTravelsForMap = jest.fn().mockResolvedValue({
   b: { id: 2, categoryName: 'Категория 2' },
 });
 
-jest.mock('@/src/api/travels', () => ({
+jest.mock('@/src/api/map', () => ({
   fetchTravelsForMap: (...args: any[]) => mockFetchTravelsForMap(...args),
   fetchTravelsNearRoute: jest.fn().mockResolvedValue([]),
   fetchFiltersMap: jest.fn().mockResolvedValue({

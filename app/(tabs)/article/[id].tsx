@@ -13,7 +13,7 @@ import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'
 import RenderHTML from 'react-native-render-html'
 import { WebView } from 'react-native-webview'
 import { Card, Title } from 'react-native-paper'
-import { fetchArticle } from '@/src/api/travels'
+import { fetchArticle } from '@/src/api/articles'
 import { SafeHtml } from '@/components/SafeHtml'
 
 export default function ArticleDetails() {

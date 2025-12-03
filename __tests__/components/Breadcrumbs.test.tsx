@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'expo-router';
 import { getQuestById } from '@/components/quests/registry';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
-jest.mock('@/src/api/travels', () => ({
+jest.mock('@/src/api/travelsApi', () => ({
   fetchTravel: jest.fn(() => Promise.resolve({ name: 'Mock Travel' })),
   fetchTravelBySlug: jest.fn(() => Promise.resolve({ name: 'Mock Travel' })),
 }));
@@ -27,6 +27,12 @@ jest.mock('@/components/quests/registry', () => ({
   getQuestById: jest.fn(),
 }));
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false, gcTime: 0 },
+  },
+});
+
 describe('Breadcrumbs', () => {
   const mockPush = jest.fn();
   const mockRouter = {
@@ -34,17 +40,12 @@ describe('Breadcrumbs', () => {
   };
 
   const renderWithClient = (ui: React.ReactElement) => {
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false, cacheTime: 0 },
-      },
-    });
-
     return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    queryClient.clear();
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
     (getQuestById as jest.Mock).mockReset();
     (getQuestById as jest.Mock).mockReturnValue(null);

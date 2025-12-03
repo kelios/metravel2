@@ -5,7 +5,7 @@ import {
   resetPasswordLinkApi,
   setNewPasswordApi,
   sendPasswordApi,
-} from '@/src/api/travels';
+} from '@/src/api/auth';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { validatePassword } from '@/src/utils/validation';
 import { sanitizeInput } from '@/src/utils/security';
@@ -50,7 +50,7 @@ const mockedValidatePassword = validatePassword as jest.MockedFunction<typeof va
 const mockedSanitizeInput = sanitizeInput as jest.MockedFunction<typeof sanitizeInput>;
 const mockedGetSecureItem = getSecureItem as jest.MockedFunction<typeof getSecureItem>;
 
-describe('src/api/travels.ts auth/password API', () => {
+describe('src/api/auth.ts auth/password API', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });

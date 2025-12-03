@@ -66,7 +66,7 @@ jest.mock('@/components/listTravel/RenderTravelItem', () => {
 });
 jest.mock('@/components/seo/InstantSEO', () => 'InstantSEO');
 
-jest.mock('@/src/api/travels', () => ({
+jest.mock('@/src/api/misc', () => ({
   fetchFilters: jest.fn().mockResolvedValue({}),
   fetchFiltersCountry: jest.fn().mockResolvedValue([]),
   fetchAllCountries: jest.fn().mockResolvedValue([]),
