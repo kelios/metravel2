@@ -674,6 +674,16 @@ export default function TravelDetails() {
     return () => clearTimeout(t);
   }, [showFabHint, dismissFabHint]);
 
+  // Обработчик плавающей кнопки меню (FAB) на мобильных
+  const handleFabPress = useCallback(() => {
+    // При нажатии всегда скрываем подсказку
+    if (showFabHint) {
+      dismissFabHint();
+    }
+    // Переключаем состояние бокового меню
+    toggleMenu();
+  }, [showFabHint, dismissFabHint, toggleMenu]);
+
   /* ---- user flags ---- */
   const { isSuperuser, userId } = useAuth();
 
