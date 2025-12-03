@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import ChatScreen from '@/app/(tabs)/chat'
 
 // Mock the API
-jest.mock('@/src/api/travels', () => ({
+jest.mock('@/src/api/misc', () => ({
   sendAIMessage: jest.fn(),
 }))
 
@@ -19,7 +19,7 @@ global.window = {
   open: jest.fn(),
 } as any
 
-import { sendAIMessage } from '@/src/api/travels'
+import { sendAIMessage } from '@/src/api/misc'
 
 describe('ChatScreen', () => {
   beforeEach(async () => {

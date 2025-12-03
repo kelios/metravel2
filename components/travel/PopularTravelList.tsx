@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import { Title } from "react-native-paper";
 import TravelTmlRound from "@/components/travel/TravelTmlRound";
-import { fetchTravelsPopular } from "@/src/api/travels";
+import { fetchTravelsPopular } from "@/src/api/map";
 import type { Travel, TravelsMap } from "@/src/types/types";
 
 type PopularTravelListProps = {
@@ -86,23 +86,22 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
     }, [fetchPopularTravels]);
 
     const popularList = useMemo(() => {
-      const list = Object.values(travelsPopular);
+      const list = Object.values(travelsPopular) as any[];
       // Ограничиваем количество элементов для первоначального рендера
       return list.slice(0, Platform.OS === 'web' ? 8 : list.length);
     }, [travelsPopular]);
 
     // Оптимизированный рендер элемента с предотвращением лишних ререндеров
     const renderItem = useCallback(
-      ({ item, index }: { item: Travel; index: number }) => (
+      ({ item }: { item: any; index: number }) => (
         <TravelTmlRound
-          travel={item}
-          priority={index < 4 ? 'high' : 'low'} // Приоритетная загрузка первых изображений
+          travel={item as any}
         />
       ),
       []
     );
 
-    const keyExtractor = useCallback((item: Travel) => `${item.id}-${item.updated_at || ''}`, []);
+    const keyExtractor = useCallback((item: any) => `${item.id}-${item.updated_at || ''}`, []);
 
     const handleContentChange = useCallback(() => {
       scrollToAnchor?.();
@@ -135,7 +134,7 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
     );
 
     // ✅ УЛУЧШЕНИЕ: Улучшенное выравнивание с одинаковой высотой карточек
-    const columnWrapperStyle = useMemo(
+    const columnWrapperStyle: any = useMemo(
       () =>
         numColumns > 1
           ? {
@@ -188,7 +187,7 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
         <Animated.View style={{ opacity: fadeAnim }}>
           <Animated.FlatList
             key={`cols-${numColumns}`}
-            data={popularList}
+            data={popularList as any[]}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
             numColumns={numColumns}

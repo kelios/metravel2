@@ -20,7 +20,7 @@ import { Title, Paragraph } from 'react-native-paper';
 import { usePathname } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import InstantSEO from '@/components/seo/InstantSEO';
-import { sendFeedback } from '@/src/api/travels';
+import { sendFeedback } from '@/src/api/misc';
 import { useIsFocused } from '@react-navigation/native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей

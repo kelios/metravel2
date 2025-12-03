@@ -14,7 +14,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { sendAIMessage } from '@/src/api/travels';
+import { sendAIMessage } from '@/src/api/misc';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CHAT_HISTORY_KEY = 'chat_history';

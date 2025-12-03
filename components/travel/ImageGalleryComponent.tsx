@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useDropzone } from 'react-dropzone';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { uploadImage, deleteImage } from '@/src/api/travels';
+import { uploadImage, deleteImage } from '@/src/api/misc';
 
 interface GalleryItem {
     id: string;

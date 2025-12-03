@@ -33,7 +33,7 @@ import FiltersPanel from '@/components/MapPage/FiltersPanel';
 import TravelListPanel from '@/components/MapPage/TravelListPanel';
 import RouteStats from '@/components/MapPage/RouteStats';
 import RouteHint from '@/components/MapPage/RouteHint';
-import { fetchFiltersMap, fetchTravelsForMap, fetchTravelsNearRoute } from '@/src/api/travels';
+import { fetchFiltersMap, fetchTravelsForMap, fetchTravelsNearRoute } from '@/src/api/map';
 import InstantSEO from '@/components/seo/InstantSEO';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/src/utils/filterQuery';

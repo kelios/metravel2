@@ -1,4 +1,4 @@
-import { fetchTravels } from '@/src/api/travels';
+import { fetchTravels } from '@/src/api/travelsApi';
 
 // Мокаем fetchWithTimeout, чтобы не делать реальные запросы, и анализируем URL
 jest.mock('@/src/utils/fetchWithTimeout', () => ({

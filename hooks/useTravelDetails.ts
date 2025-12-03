@@ -3,9 +3,9 @@
  * Изолирует логику загрузки данных от UI-компонентов
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { fetchTravel, fetchTravelBySlug } from '@/src/api/travels';
+import { fetchTravel, fetchTravelBySlug } from '@/src/api/travelsApi';
 import type { Travel } from '@/src/types/types';
 
 export interface UseTravelDetailsReturn {
@@ -27,8 +27,13 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   const { data: travel, isLoading, isError, error, refetch } = useQuery<Travel>({
     queryKey: ['travel', slug],
     queryFn: () => (isId ? fetchTravel(idNum) : fetchTravelBySlug(slug)),
-    staleTime: 600_000, // 10 минут
+    staleTime: 600_000, // 10 минут — пока данные "свежие", повторный заход не покажет сплэш-лоадер
     gcTime: 10 * 60 * 1000,
+    // Не дергаем лишние перезапросы при маунте/фокусе окна, чтобы страница не мигала
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    // Держим предыдущие данные во время фонового refetch, чтобы UI не уходил в isLoading
+    placeholderData: keepPreviousData,
   });
 
   return {

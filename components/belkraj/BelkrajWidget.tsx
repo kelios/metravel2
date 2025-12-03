@@ -46,6 +46,17 @@ export default function BelkrajWidget({
         const el = containerRef.current;
         if (!el || !firstCoord) return;
 
+        // В dev-режиме не подгружаем внешний скрипт Belkraj, чтобы не тормозить
+        // локальную разработку. На проде (NODE_ENV === 'production') всё работает как раньше.
+        const isProd =
+            typeof process !== 'undefined' &&
+            process.env &&
+            process.env.NODE_ENV === 'production';
+
+        if (!isProd) {
+            return;
+        }
+
         // чистим перед монтированием/сменой
         el.innerHTML = '';
 
@@ -69,7 +80,7 @@ export default function BelkrajWidget({
             `https://belkraj.by/sites/all/modules/_custom/modules/affiliate/js/widget.js` +
             `?country=${encodeURIComponent(ctry)}` +
             `&lat=${lat}&lng=${lng}` +
-            `&term=place&theme=cards&partner=u180793&size=6&debug=1`;
+            `&term=place&theme=cards&partner=u180793&size=6`;
 
         el.appendChild(script);
 
@@ -79,6 +90,7 @@ export default function BelkrajWidget({
         };
     }, [firstCoord, countryCode, targetHeight]);
 
+    // Не рендерим ничего, если нет координат
     if (!firstCoord) return null;
 
     return (

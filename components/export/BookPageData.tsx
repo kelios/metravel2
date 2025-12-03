@@ -1,17 +1,29 @@
 import React from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { fetchTravel } from "@/src/api/travels";
+import { fetchTravel } from "@/src/api/travelsApi";
+import type { Travel } from "@/src/types/types";
 import BookPageView from "./BookPageView";
 
-export default function BookPageData({ id }: { id: number }) {
-    const { data, isLoading, isError } = useQuery({
-        queryKey: ["travel", String(id)],
+type BookPageDataProps = {
+    id: number;
+    pageNumber?: number;
+};
+
+const STALE_TIME_MS = 10 * 60_000; // 10 минут
+
+export default function BookPageData({ id, pageNumber = 1 }: BookPageDataProps) {
+    const {
+        data: travel,
+        isLoading,
+        isError,
+    } = useQuery<Travel>({
+        queryKey: ["travel", id],
         queryFn: () => fetchTravel(id),
-        staleTime: 10 * 60_000,
+        staleTime: STALE_TIME_MS,
         placeholderData: keepPreviousData,
     });
 
-    if (isLoading) {
+    if (isLoading && !travel) {
         return (
             <div className="book-page">
                 <div className="hero skeleton" />
@@ -32,7 +44,7 @@ export default function BookPageData({ id }: { id: number }) {
         );
     }
 
-    if (isError || !data) {
+    if (isError || !travel) {
         return (
             <div className="book-page">
                 <div style={{ padding: 16, color: "#a00" }}>
@@ -42,5 +54,9 @@ export default function BookPageData({ id }: { id: number }) {
         );
     }
 
-    return <BookPageView travel={data} />;
+    const viewTravel = travel as unknown as React.ComponentProps<
+        typeof BookPageView
+    >["travel"];
+
+    return <BookPageView travel={viewTravel} pageNumber={pageNumber} />;
 }

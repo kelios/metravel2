@@ -19,7 +19,7 @@ import {
     Platform,
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { uploadImage } from '@/src/api/travels';
+import { uploadImage } from '@/src/api/misc';
 import { useAuth } from '@/context/AuthContext';
 
 const isWeb = Platform.OS === 'web';

@@ -6,7 +6,7 @@ import { Platform, Alert } from 'react-native';
 import type { Travel } from '@/src/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { ExportProgress, ExportStage, ExportConfig } from '@/src/types/pdf-export';
-import { fetchTravel, fetchTravelBySlug } from '@/src/api/travels';
+import { fetchTravel, fetchTravelBySlug } from '@/src/api/travelsApi';
 import { BookHtmlExportService } from '@/src/services/book/BookHtmlExportService';
 import { openBookPreviewWindow } from '@/src/utils/openBookPreviewWindow';
 

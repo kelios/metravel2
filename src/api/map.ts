@@ -1,0 +1,171 @@
+import { Filters, TravelsForMap, TravelsMap } from '@/src/types/types';
+import { normalizeNumericArray } from '@/src/utils/filterQuery';
+import { devError } from '@/src/utils/logger';
+import { safeJsonParse } from '@/src/utils/safeJsonParse';
+import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
+
+const URLAPI: string =
+  process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
+if (!URLAPI) {
+  throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
+}
+
+const DEFAULT_TIMEOUT = 10000; // 10 секунд
+const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запросов
+
+const SEARCH_TRAVELS_FOR_MAP = `${URLAPI}/api/travels/search_travels_for_map`;
+const GET_FILTER_FOR_MAP = `${URLAPI}/api/filterformap`;
+const GET_TRAVELS = `${URLAPI}/api/travels`;
+const GET_TRAVELS_POPULAR = `${URLAPI}/api/travelsPopular`;
+const GET_TRAVELS_OF_MONTH = `${URLAPI}/api/travels/of-month/`;
+const SEARCH_TRAVELS_NEAR_ROUTE = `${URLAPI}/api/travels/near-route/`;
+
+export const fetchTravelsNear = async (travel_id: number, signal?: AbortSignal) => {
+  try {
+    const params = new URLSearchParams({ travel_id: travel_id.toString() }).toString();
+    const urlTravel = `${GET_TRAVELS}/${travel_id}/near?${params}`;
+    const res = await fetchWithTimeout(urlTravel, { signal }, DEFAULT_TIMEOUT);
+    if (!res.ok) {
+      if (__DEV__) {
+        console.error('Error fetching travels near: HTTP', res.status, res.statusText);
+      }
+      return [];
+    }
+    return await safeJsonParse<any[]>(res, []);
+  } catch (e: any) {
+    if (e.name === 'AbortError') {
+      throw e;
+    }
+    if (__DEV__) {
+      console.log('Error fetching travels near:', e);
+    }
+    return [];
+  }
+};
+
+export const fetchTravelsPopular = async (): Promise<TravelsMap> => {
+  try {
+    const urlTravel = `${GET_TRAVELS}/popular`;
+    const res = await fetchWithTimeout(urlTravel, {}, DEFAULT_TIMEOUT);
+    return await safeJsonParse<TravelsMap>(res, {} as TravelsMap);
+  } catch (e) {
+    if (__DEV__) {
+      console.log('Error fetching fetchTravelsPopular:', e);
+    }
+    return {} as TravelsMap;
+  }
+};
+
+export const fetchTravelsOfMonth = async (): Promise<TravelsMap> => {
+  try {
+    const urlTravel = GET_TRAVELS_OF_MONTH;
+    const res = await fetchWithTimeout(urlTravel, {}, DEFAULT_TIMEOUT);
+    return await safeJsonParse<TravelsMap>(res, {} as TravelsMap);
+  } catch (e) {
+    if (__DEV__) {
+      console.log('Error fetching fetchTravelsOfMonth:', e);
+    }
+    return {} as TravelsMap;
+  }
+};
+
+export const fetchTravelsForMap = async (
+  page: number,
+  itemsPerPage: number,
+  filter: Record<string, any>,
+): Promise<TravelsForMap> => {
+  try {
+    const radius = parseInt(filter?.radius ?? '60', 10);
+    const lat = filter?.lat ?? '53.9006';
+    const lng = filter?.lng ?? '27.5590';
+
+    const whereObject: Record<string, any> = {
+      lat,
+      lng,
+      radius,
+    };
+
+    if (filter?.moderation === undefined && filter?.publish === undefined) {
+      whereObject.publish = 1;
+      whereObject.moderation = 1;
+    }
+    if (filter?.publish !== undefined) {
+      whereObject.publish = filter.publish;
+    }
+    if (filter?.moderation !== undefined) {
+      whereObject.moderation = filter.moderation;
+    }
+
+    if (filter?.categories && Array.isArray(filter.categories) && filter.categories.length > 0) {
+      const normalizedCategories = normalizeNumericArray(filter.categories);
+      if (normalizedCategories.length > 0) {
+        whereObject.categories = normalizedCategories;
+      }
+    }
+
+    const paramsObj = {
+      page: (page + 1).toString(),
+      perPage: itemsPerPage.toString(),
+      where: JSON.stringify(whereObject),
+    };
+    const params = new URLSearchParams(paramsObj).toString();
+
+    const urlTravel = `${SEARCH_TRAVELS_FOR_MAP}?${params}`;
+    const res = await fetchWithTimeout(urlTravel, {}, LONG_TIMEOUT);
+    return await safeJsonParse<TravelsForMap>(res, [] as unknown as TravelsForMap);
+  } catch (e) {
+    if (__DEV__) {
+      console.log('Error fetching fetchTravelsForMap:', e);
+    }
+    return [] as unknown as TravelsForMap;
+  }
+};
+
+export const fetchTravelsNearRoute = async (
+  routeCoords: [number, number][],
+  toleranceKm: number = 2,
+): Promise<TravelsForMap> => {
+  try {
+    const toleranceMeters = toleranceKm * 1000;
+    const body = {
+      route: {
+        type: 'LineString',
+        coordinates: routeCoords,
+      },
+      tolerance: toleranceMeters,
+    };
+
+    const res = await fetchWithTimeout(SEARCH_TRAVELS_NEAR_ROUTE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }, LONG_TIMEOUT);
+
+    if (!res.ok) {
+      if (__DEV__) {
+        const errorText = await res.text().catch(() => 'Unknown error');
+        console.log('Ошибка при загрузке маршрута:', errorText);
+      }
+      return [] as unknown as TravelsForMap;
+    }
+
+    return await safeJsonParse<TravelsForMap>(res, [] as unknown as TravelsForMap);
+  } catch (e) {
+    if (__DEV__) {
+      console.log('Error fetching fetchTravelsNearRoute:', e);
+    }
+    return [] as unknown as TravelsForMap;
+  }
+};
+
+export const fetchFiltersMap = async (): Promise<Filters> => {
+  try {
+    const res = await fetchWithTimeout(GET_FILTER_FOR_MAP, {}, DEFAULT_TIMEOUT);
+    return await safeJsonParse<Filters>(res, [] as unknown as Filters);
+  } catch (e) {
+    if (__DEV__) {
+      console.log('Error fetching filters:', e);
+    }
+    return [] as unknown as Filters;
+  }
+};

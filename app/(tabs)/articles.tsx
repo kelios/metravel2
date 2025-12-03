@@ -2,7 +2,7 @@ import {ActivityIndicator, Dimensions, FlatList, SafeAreaView, StyleSheet,} from
 import ArticleListItem from '@/components/ArticleListItem'
 import React, {useEffect, useState} from 'react'
 import {Articles} from '@/src/types/types'
-import {fetchArticles} from '@/src/api/travels'
+import {fetchArticles} from '@/src/api/articles'
 import {View} from '@/components/Themed'
 import {DataTable} from 'react-native-paper'
 import {useLocalSearchParams} from 'expo-router'

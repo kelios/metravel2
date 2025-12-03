@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListTravel from '@/components/listTravel/ListTravel';
 
 // Базовый мок для AuthContext и маршрута, который можно перенастраивать в тестах
-const mockUseAuth = jest.fn(() => ({
+const mockUseAuth: jest.Mock<any, any> = jest.fn(() => ({
   isAuthenticated: false,
   username: '',
   isSuperuser: false,
@@ -92,11 +92,14 @@ jest.mock('@react-navigation/native', () => ({
   useRoute: () => mockUseRoute(),
 }));
 
-jest.mock('@/src/api/travels', () => ({
+jest.mock('@/src/api/travelsApi', () => ({
   fetchTravels: jest.fn(() => Promise.resolve({ data: [], total: 0, hasMore: false })),
+  deleteTravel: (...args: any[]) => mockDeleteTravel(...args),
+}));
+
+jest.mock('@/src/api/misc', () => ({
   fetchFilters: jest.fn(() => Promise.resolve({})),
   fetchFiltersCountry: jest.fn(() => Promise.resolve([])),
-  deleteTravel: (...args: any[]) => mockDeleteTravel(...args),
 }));
 
 const createTestQueryClient = () => new QueryClient({
@@ -110,6 +113,8 @@ describe('ListTravel', () => {
 
   beforeEach(() => {
     queryClient = createTestQueryClient();
+
+    mockDeleteTravel.mockReset();
 
     // значения по умолчанию для большинства тестов
     mockUseAuth.mockReset();
@@ -200,7 +205,7 @@ describe('ListTravel', () => {
   });
 
   it('shows timeout error message when deleteTravel fails with timeout on web', async () => {
-    const travelsApi: any = require('@/src/api/travels');
+    const travelsApi: any = require('@/src/api/travelsApi');
     travelsApi.fetchTravels.mockResolvedValueOnce({
       data: [{ id: 1, title: 'Test travel' }],
       total: 1,
@@ -231,7 +236,7 @@ describe('ListTravel', () => {
   });
 
   it('shows access denied error message when deleteTravel fails with 403 on web', async () => {
-    const travelsApi: any = require('@/src/api/travels');
+    const travelsApi: any = require('@/src/api/travelsApi');
     travelsApi.fetchTravels.mockResolvedValueOnce({
       data: [{ id: 2, title: 'Another travel' }],
       total: 1,

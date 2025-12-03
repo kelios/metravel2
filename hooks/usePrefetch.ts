@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { fetchTravel, fetchTravelBySlug } from '@/src/api/travels';
+import { fetchTravel, fetchTravelBySlug } from '@/src/api/travelsApi';
 
 /**
  * Хук для предзагрузки данных путешествий

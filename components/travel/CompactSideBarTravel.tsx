@@ -309,11 +309,6 @@ function CompactSideBarTravel({
                   )}
                 </View>
               </View>
-              {Platform.OS === 'web' && (
-                <Text style={styles.exportSummary} numberOfLines={1}>
-                  PDF: {settingsSummary}
-                </Text>
-              )}
 
               {/* ✅ РЕДИЗАЙН: Компактная ключевая информация */}
               {whenLine && (
