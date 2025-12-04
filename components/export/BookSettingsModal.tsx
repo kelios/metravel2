@@ -3,6 +3,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, TextInput, Platform } from 'react-native';
+import ThemePreview from './ThemePreview';
+import PresetSelector from './PresetSelector';
+import GalleryLayoutSelector from './GalleryLayoutSelector';
+import type { BookPreset } from '@/src/types/pdf-presets';
+import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
 // ✅ ИСПРАВЛЕНИЕ: Picker не используется в веб-версии модального окна
 // import { Picker } from '@react-native-picker/picker';
 
@@ -29,6 +34,12 @@ export interface BookSettings {
   showCoordinatesOnMapPage?: boolean;
   includeChecklists: boolean;
   checklistSections: ChecklistSection[];
+  // Настройки галереи
+  galleryLayout?: GalleryLayout;
+  galleryColumns?: number;
+  showCaptions?: boolean;
+  captionPosition?: CaptionPosition;
+  gallerySpacing?: 'compact' | 'normal' | 'spacious';
 }
 
 const DEFAULT_CHECKLIST_SELECTION: ChecklistSection[] = ['clothing', 'food', 'electronics'];
@@ -71,6 +82,12 @@ const defaultBookSettings: BookSettings = {
   showCoordinatesOnMapPage: true,
   includeChecklists: false,
   checklistSections: DEFAULT_CHECKLIST_SELECTION,
+  // Настройки галереи по умолчанию
+  galleryLayout: 'grid',
+  galleryColumns: 3,
+  showCaptions: true,
+  captionPosition: 'bottom',
+  gallerySpacing: 'normal',
 };
 
 const buildInitialSettings = (
@@ -113,10 +130,25 @@ export default function BookSettingsModal({
   const [settings, setSettings] = useState<BookSettings>(() =>
     buildInitialSettings(defaultSettings, userName)
   );
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [selectedPresetId, setSelectedPresetId] = useState<string | undefined>();
 
   useEffect(() => {
     setSettings(buildInitialSettings(defaultSettings, userName));
   }, [defaultSettings, userName]);
+
+  const handlePresetSelect = (preset: BookPreset) => {
+    setSettings({
+      ...preset.settings,
+      title: settings.title, // Сохраняем пользовательский заголовок
+      subtitle: settings.subtitle,
+    });
+    setSelectedPresetId(preset.id);
+  };
+
+  const handleThemeSelect = (theme: any) => {
+    setSettings({ ...settings, template: theme });
+  };
 
   const checklistSections = settings.checklistSections || [];
 
@@ -189,9 +221,9 @@ export default function BookSettingsModal({
             backgroundColor: '#ffffff',
             borderRadius: '20px',
             padding: window.innerWidth <= 768 ? '20px' : '28px',
-            maxWidth: '600px',
-            width: '90%',
-            maxHeight: '90vh',
+            maxWidth: '800px',
+            width: '95%',
+            maxHeight: '92vh',
             overflow: 'auto',
             boxShadow: '0 8px 24px rgba(31, 31, 31, 0.12), 0 2px 4px rgba(31, 31, 31, 0.08)',
             border: '1px solid rgba(31, 31, 31, 0.08)',
@@ -219,10 +251,98 @@ export default function BookSettingsModal({
           <span style={{ fontWeight: 600, color: '#1f1f1f' }}>{travelCount}</span>
         </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
-              Название книги
-            </label>
+          {/* Пресеты настроек */}
+          <PresetSelector
+            onPresetSelect={handlePresetSelect}
+            selectedPresetId={selectedPresetId}
+            showCategories={true}
+          />
+
+          {/* Разделитель */}
+          <div style={{ 
+            margin: '24px 0', 
+            height: '1px', 
+            backgroundColor: '#e5e7eb',
+          }} />
+
+          {/* Выбор темы */}
+          <ThemePreview
+            selectedTheme={settings.template}
+            onThemeSelect={handleThemeSelect}
+            compact={false}
+          />
+
+          {/* Разделитель */}
+          <div style={{ 
+            margin: '24px 0', 
+            height: '1px', 
+            backgroundColor: '#e5e7eb',
+          }} />
+
+          {/* Настройки галереи */}
+          {settings.includeGallery && (
+            <>
+              <GalleryLayoutSelector
+                selectedLayout={settings.galleryLayout || 'grid'}
+                onLayoutSelect={(layout) => setSettings({ ...settings, galleryLayout: layout })}
+                columns={settings.galleryColumns}
+                onColumnsChange={(cols) => setSettings({ ...settings, galleryColumns: cols })}
+                showCaptions={settings.showCaptions}
+                onShowCaptionsChange={(show) => setSettings({ ...settings, showCaptions: show })}
+                captionPosition={settings.captionPosition}
+                onCaptionPositionChange={(pos) => setSettings({ ...settings, captionPosition: pos })}
+                spacing={settings.gallerySpacing}
+                onSpacingChange={(sp) => setSettings({ ...settings, gallerySpacing: sp })}
+              />
+
+              {/* Разделитель */}
+              <div style={{ 
+                margin: '24px 0', 
+                height: '1px', 
+                backgroundColor: '#e5e7eb',
+              }} />
+            </>
+          )}
+
+          {/* Кнопка для расширенных настроек */}
+          <div 
+            style={{ 
+              marginBottom: '20px',
+              textAlign: 'center',
+            }}
+          >
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: 'transparent',
+                border: '1.5px solid #e5e7eb',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#6b7280',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#2563eb';
+                e.currentTarget.style.color = '#2563eb';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#e5e7eb';
+                e.currentTarget.style.color = '#6b7280';
+              }}
+            >
+              {showAdvanced ? '▲ Скрыть детальные настройки' : '▼ Показать детальные настройки'}
+            </button>
+          </div>
+
+          {showAdvanced && (
+            <>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
+                  Название книги
+                </label>
             <input
               type="text"
               value={settings.title}
@@ -352,8 +472,55 @@ export default function BookSettingsModal({
             </div>
           )}
 
-          {/* Шаблон, цветовая тема и шрифты сейчас фиксированы (minimal + базовая тема),
-              поэтому дополнительные режимы отображения фото и карт убраны из настроек. */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
+              Тема оформления
+            </label>
+            <select
+              value={settings.template}
+              onChange={(e) => setSettings({ ...settings, template: e.target.value as any })}
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                border: '1.5px solid rgba(31, 31, 31, 0.08)',
+                borderRadius: '12px',
+                fontSize: '15px',
+                minHeight: '44px',
+                backgroundColor: '#ffffff',
+                color: '#1f1f1f',
+                outline: 'none',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer',
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#5b8a7a';
+                e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'rgba(31, 31, 31, 0.08)';
+                e.target.style.boxShadow = 'none';
+              }}
+            >
+              <option value="minimal">Минималистичная - чистое оформление</option>
+              <option value="light">Светлая - много воздуха, мягкие цвета</option>
+              <option value="dark">Темная - элегантное темное оформление</option>
+              <option value="travel-magazine">Travel Magazine - журнальная вёрстка</option>
+              <option value="classic">Классическая - традиционная типографика</option>
+              <option value="modern">Современная - геометрические формы</option>
+              <option value="romantic">Романтическая - пастельные цвета</option>
+              <option value="adventure">Приключенческая - динамичная типографика</option>
+            </select>
+            <div style={{ marginTop: '6px', fontSize: '12px', color: '#6b6b6b', lineHeight: '1.4' }}>
+              {settings.template === 'minimal' && 'Чистое и простое оформление с акцентом на контент'}
+              {settings.template === 'light' && 'Светлые тона, много воздуха, подходит для пляжного отдыха'}
+              {settings.template === 'dark' && 'Элегантное темное оформление, подходит для вечерних фото'}
+              {settings.template === 'travel-magazine' && 'Яркие акценты, подходит для городских путешествий'}
+              {settings.template === 'classic' && 'Традиционная типографика, подходит для исторических мест'}
+              {settings.template === 'modern' && 'Яркие градиенты, подходит для современных городов и tech-туризма'}
+              {settings.template === 'romantic' && 'Мягкие формы, подходит для свадебных путешествий и медового месяца'}
+              {settings.template === 'adventure' && 'Жирные заголовки, подходит для активного отдыха и экстремальных путешествий'}
+            </div>
+          </div>
 
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
@@ -464,7 +631,8 @@ export default function BookSettingsModal({
               </div>
             )}
           </div>
-
+            </>
+          )}
 
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '30px' }}>
             <button

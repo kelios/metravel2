@@ -19,6 +19,9 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<Error | null>(null);
   const [currentStage, setCurrentStage] = useState<ExportStage>(ExportStage.VALIDATING);
+  const [message, setMessage] = useState<string>('');
+  const [substeps, setSubsteps] = useState<string[]>([]);
+  const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | undefined>();
 
   const htmlServiceRef = useRef<BookHtmlExportService | null>(null);
   const travelCacheRef = useRef<Record<string | number, Travel>>({});
@@ -54,6 +57,28 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
     if (isMountedRef.current) {
       setProgress(progress.progress);
       setCurrentStage(progress.stage);
+      if (progress.message) {
+        setMessage(progress.message);
+      }
+    }
+  }, []);
+
+  /**
+   * Обновить прогресс с подэтапами
+   */
+  const updateProgress = useCallback((
+    stage: ExportStage,
+    progressValue: number,
+    messageText?: string,
+    substepsList?: string[],
+    timeRemaining?: number
+  ) => {
+    if (isMountedRef.current) {
+      setCurrentStage(stage);
+      setProgress(progressValue);
+      if (messageText) setMessage(messageText);
+      if (substepsList) setSubsteps(substepsList);
+      if (timeRemaining !== undefined) setEstimatedTimeRemaining(timeRemaining);
     }
   }, []);
 
@@ -148,26 +173,62 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
 
       setIsGenerating(true);
       setError(null);
-      setProgress(0);
-      setCurrentStage(ExportStage.GENERATING_HTML);
+      
+      const startTime = Date.now();
 
       try {
+        // Этап 1: Валидация (0-5%)
+        updateProgress(ExportStage.VALIDATING, 2, 'Проверка данных...', ['Проверка путешествий']);
+        
         const travelsForExport = await loadDetailedTravels();
         if (!travelsForExport.length) {
           Alert.alert('Внимание', 'Выберите хотя бы одно путешествие для экспорта');
           return;
         }
 
+        updateProgress(ExportStage.VALIDATING, 5, 'Данные проверены', ['Проверка путешествий ✓']);
+
+        // Этап 2: Трансформация (5-10%)
+        updateProgress(ExportStage.TRANSFORMING, 7, 'Подготовка контента...', [
+          'Нормализация данных',
+          'Сортировка путешествий',
+        ]);
+
+        // Этап 3: Генерация HTML (10-30%)
+        updateProgress(ExportStage.GENERATING_HTML, 15, 'Генерация страниц...', [
+          'Обложка',
+          'Оглавление',
+          `Путешествия (0/${travelsForExport.length})`,
+        ]);
+
         const html = await htmlServiceRef.current.generateTravelsHtml(
           travelsForExport,
           settings
         );
 
+        updateProgress(ExportStage.GENERATING_HTML, 30, 'Страницы сгенерированы', [
+          'Обложка ✓',
+          'Оглавление ✓',
+          `Путешествия (${travelsForExport.length}/${travelsForExport.length}) ✓`,
+        ]);
+
+        // Этап 4: Загрузка изображений (30-70%)
+        updateProgress(ExportStage.LOADING_IMAGES, 50, 'Загрузка изображений...', [
+          'Обработка фотографий',
+        ]);
+
+        // Этап 5: Рендеринг (70-95%)
+        updateProgress(ExportStage.RENDERING, 85, 'Создание PDF...', [
+          'Финализация документа',
+        ]);
+
         openBookPreviewWindow(html);
 
+        // Вычисляем затраченное время
+        const elapsedTime = Math.round((Date.now() - startTime) / 1000);
+
         if (isMountedRef.current) {
-          setProgress(100);
-          setCurrentStage(ExportStage.COMPLETE);
+          updateProgress(ExportStage.COMPLETE, 100, `Готово! (${elapsedTime} сек)`, ['Документ создан ✓']);
         }
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
@@ -189,5 +250,8 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
     progress,
     error,
     currentStage,
+    message,
+    substeps,
+    estimatedTimeRemaining,
   };
 }
