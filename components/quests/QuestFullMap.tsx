@@ -123,9 +123,7 @@ export default function QuestFullMap({
                     shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
                 });
 
-                if (Platform.OS === 'web') {
-                    await import('leaflet/dist/leaflet.css');
-                }
+                // CSS загружается через CDN в других компонентах
 
                 setMods({
                     L,

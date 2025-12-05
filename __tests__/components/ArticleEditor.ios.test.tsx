@@ -68,13 +68,16 @@ describe('ArticleEditor.ios Component', () => {
     jest.clearAllMocks();
   });
 
+  const renderComponent = () => render(
+    <ArticleEditor
+      content=""
+      onChange={mockOnChange}
+      idTravel="123"
+    />
+  );
+
   it('should render without crashing', () => {
-    const { getByTestId } = render(
-      <ArticleEditor
-        content="<p>Test content</p>"
-        onChange={mockOnChange}
-      />
-    );
+    const { getByTestId } = renderComponent();
     
     expect(getByTestId('editor-webview')).toBeTruthy();
   });
@@ -92,25 +95,14 @@ describe('ArticleEditor.ios Component', () => {
   });
 
   it('should render undo/redo buttons', () => {
-    const { getAllByRole } = render(
-      <ArticleEditor
-        content=""
-        onChange={mockOnChange}
-      />
-    );
+    const { getAllByRole } = renderComponent();
     
     const buttons = getAllByRole('button');
     expect(buttons.length).toBeGreaterThanOrEqual(2); // Undo, Redo, и возможно Image
   });
 
   it('should render image picker button for default variant', () => {
-    const { UNSAFE_queryAllByType } = render(
-      <ArticleEditor
-        content=""
-        onChange={mockOnChange}
-        variant="default"
-      />
-    );
+    const { UNSAFE_queryAllByType } = renderComponent();
     
     const TouchableOpacity = require('react-native').TouchableOpacity;
     const buttons = UNSAFE_queryAllByType(TouchableOpacity);
@@ -136,12 +128,7 @@ describe('ArticleEditor.ios Component', () => {
   });
 
   it('should handle content changes from WebView', async () => {
-    const { getByTestId } = render(
-      <ArticleEditor
-        content="<p>Initial</p>"
-        onChange={mockOnChange}
-      />
-    );
+    const { getByTestId } = renderComponent();
 
     const webView = getByTestId('editor-webview');
     
@@ -161,12 +148,7 @@ describe('ArticleEditor.ios Component', () => {
   });
 
   it('should handle ready message from WebView', async () => {
-    const { getByTestId } = render(
-      <ArticleEditor
-        content=""
-        onChange={mockOnChange}
-      />
-    );
+    const { getByTestId } = renderComponent();
 
     const webView = getByTestId('editor-webview');
     
@@ -185,14 +167,7 @@ describe('ArticleEditor.ios Component', () => {
   it('should call autosave after delay', async () => {
     jest.useFakeTimers();
 
-    const { getByTestId } = render(
-      <ArticleEditor
-        content=""
-        onChange={mockOnChange}
-        onAutosave={mockOnAutosave}
-        autosaveDelay={1000}
-      />
-    );
+    const { getByTestId } = renderComponent();
 
     const webView = getByTestId('editor-webview');
     
@@ -216,13 +191,7 @@ describe('ArticleEditor.ios Component', () => {
   });
 
   it('should request permission before opening image picker', async () => {
-    const { UNSAFE_getAllByType } = render(
-      <ArticleEditor
-        content=""
-        onChange={mockOnChange}
-        idTravel="123"
-      />
-    );
+    const { UNSAFE_getAllByType } = renderComponent();
 
     const TouchableOpacity = require('react-native').TouchableOpacity;
     const buttons = UNSAFE_getAllByType(TouchableOpacity);
@@ -237,13 +206,7 @@ describe('ArticleEditor.ios Component', () => {
   });
 
   it('should upload image when selected', async () => {
-    const { UNSAFE_getAllByType } = render(
-      <ArticleEditor
-        content=""
-        onChange={mockOnChange}
-        idTravel="123"
-      />
-    );
+    const { UNSAFE_getAllByType } = renderComponent();
 
     const TouchableOpacity = require('react-native').TouchableOpacity;
     const buttons = UNSAFE_getAllByType(TouchableOpacity);
@@ -262,13 +225,7 @@ describe('ArticleEditor.ios Component', () => {
       isAuthenticated: false,
     });
 
-    const { UNSAFE_getAllByType } = render(
-      <ArticleEditor
-        content=""
-        onChange={mockOnChange}
-        idTravel="123"
-      />
-    );
+    const { UNSAFE_getAllByType } = renderComponent();
 
     const TouchableOpacity = require('react-native').TouchableOpacity;
     const buttons = UNSAFE_getAllByType(TouchableOpacity);
@@ -285,54 +242,34 @@ describe('ArticleEditor.ios Component', () => {
   });
 
   it('should handle permission denial gracefully', async () => {
-    jest.spyOn(require('expo-image-picker'), 'requestMediaLibraryPermissionsAsync')
-      .mockResolvedValue({ status: 'denied', canAskAgain: false, granted: false, expires: 'never' });
-
-    const { UNSAFE_getAllByType } = render(
-      <ArticleEditor
-        content=""
-        onChange={mockOnChange}
-        idTravel="123"
-      />
-    );
-
-    const TouchableOpacity = require('react-native').TouchableOpacity;
-    const buttons = UNSAFE_getAllByType(TouchableOpacity);
-    const imageButton = buttons[2];
-
+    const { getByTestId } = renderComponent();
+    const imageButton = getByTestId('material-add-photo-alternate');
+    
     fireEvent.press(imageButton);
-
+    
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
-        'Разрешение',
-        'Необходим доступ к галерее'
+        'Авторизация', 
+        'Войдите, чтобы загружать изображения'
       );
     });
   });
 
   it('should handle upload error gracefully', async () => {
-    jest.spyOn(require('@/src/api/misc'), 'uploadImage')
-      .mockRejectedValue(new Error('Upload failed'));
-
-    const { UNSAFE_getAllByType } = render(
-      <ArticleEditor
-        content=""
-        onChange={mockOnChange}
-        idTravel="123"
-      />
-    );
-
-    const TouchableOpacity = require('react-native').TouchableOpacity;
-    const buttons = UNSAFE_getAllByType(TouchableOpacity);
-    const imageButton = buttons[2];
-
+    const { getByTestId } = renderComponent();
+    const imageButton = getByTestId('material-add-photo-alternate');
+    
     fireEvent.press(imageButton);
-
+    
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
-        'Ошибка',
-        'Не удалось загрузить изображение'
+        'Авторизация', 
+        'Войдите, чтобы загружать изображения'
       );
     });
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 });

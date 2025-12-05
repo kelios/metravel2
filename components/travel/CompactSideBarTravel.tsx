@@ -228,10 +228,9 @@ function CompactSideBarTravel({
         style={[
           styles.menu,
           { 
-            width: Platform.select({
-              default: "100%", // Мобильные - полная ширина
-              web: isTablet ? 220 : 260, // Планшеты и десктоп
-            }),
+            width: Platform.OS === 'web' 
+              ? (isTablet ? 320 : 380) // ✅ UX: Увеличено для полного устранения скролла
+              : '100%', // Мобильные - полная ширина
           },
         ]}
         contentContainerStyle={{ paddingBottom: isMobile ? 80 : 32 }}
@@ -494,18 +493,17 @@ const styles = StyleSheet.create({
   // ✅ РЕДИЗАЙН: Компактное меню с уменьшенными отступами
   menu: { 
     paddingTop: Platform.select({
-      default: 10, // Мобильные
-      web: 12, // Десктоп
+      ios: 10,
+      android: 10,
+      web: 12,
     }),
     alignSelf: "center", 
     paddingHorizontal: Platform.select({
-      default: 10, // Мобильные
-      web: 12, // Десктоп
+      ios: 10,
+      android: 10,
+      web: 12,
     }),
-    maxWidth: Platform.select({
-      default: '100%', // Мобильные - полная ширина
-      web: 300, // Десктоп
-    }),
+    ...(Platform.OS === 'web' ? { maxWidth: 400, overflowX: 'hidden' as any } : {}), // ✅ UX: Увеличено + overflow hidden
   },
 
   // ✅ РЕДИЗАЙН: Компактная карточка автора
@@ -764,7 +762,7 @@ const styles = StyleSheet.create({
   },
 
   allTravels: {
-    marginTop: DESIGN_TOKENS.spacing.xxs0,
+    marginTop: DESIGN_TOKENS.spacing.md,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     textAlign: "center",
     fontWeight: "500",

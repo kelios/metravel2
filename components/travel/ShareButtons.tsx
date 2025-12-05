@@ -294,16 +294,15 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
 const styles = StyleSheet.create({
   // ✅ РЕДИЗАЙН: Современная карточка с glassmorphism
   container: {
-    paddingVertical: DESIGN_TOKENS.spacing.xxs4,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs8,
+    paddingVertical: 20, // ✅ UX: Увеличено для лучшей читаемости
+    paddingHorizontal: 24,
     backgroundColor: Platform.OS === 'web' ? 'rgba(255, 255, 255, 0.9)' : '#fff',
     ...(Platform.OS === 'web' ? {
       backdropFilter: 'blur(20px)' as any,
       WebkitBackdropFilter: 'blur(20px)' as any,
     } : {}),
     borderRadius: 20,
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-    marginBottom: DESIGN_TOKENS.spacing.xxs4,
+    marginBottom: 20,
     shadowColor: '#1f1f1f',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
@@ -311,77 +310,71 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   containerMobile: {
-    paddingVertical: DESIGN_TOKENS.spacing.xxs0,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     borderRadius: 16,
   },
   title: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
+    fontSize: 20, // ✅ UX: Увеличено для лучшей иерархии
     fontWeight: '700',
     color: '#1a202c',
-    marginBottom: DESIGN_TOKENS.spacing.lg,
+    marginBottom: 16,
     fontFamily: 'Georgia',
     letterSpacing: -0.3,
   },
   buttonsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.md,
+    gap: 12, // ✅ UX: Фиксированный отступ
+    rowGap: 12,
   },
   buttonsContainerMobile: {
-    gap: DESIGN_TOKENS.spacing.sm,
+    gap: 10,
+    rowGap: 10,
   },
   // ✅ РЕДИЗАЙН: Современные кнопки с улучшенными стилями
   button: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.sm,
+    gap: 8,
     paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
-    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#f3f4f6',
+    minHeight: 44,
     minWidth: 44,
     justifyContent: 'center',
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' as any,
-        ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.surface,
-          borderColor: DESIGN_TOKENS.colors.borderStrong,
-          transform: 'translateY(-2px) scale(1.02)' as any,
-          boxShadow: DESIGN_TOKENS.shadows.medium as any,
-        } as any,
+        transition: 'all 0.2s ease' as any,
       },
     }),
   },
   buttonPressed: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#e5e7eb',
     transform: [{ scale: 0.98 }],
   },
   buttonCopied: {
-    backgroundColor: DESIGN_TOKENS.colors.successSoft, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    borderColor: DESIGN_TOKENS.colors.success,
+    backgroundColor: '#d1fae5',
   },
   buttonText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontSize: 14,
     fontWeight: '600',
     color: '#374151',
     letterSpacing: -0.1,
   },
   copiedText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontSize: 14,
     fontWeight: '700',
     color: '#16a34a',
-    marginLeft: DESIGN_TOKENS.spacing.xs,
+    marginLeft: 4,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   progressContainer: {
-    marginTop: DESIGN_TOKENS.spacing.lg,
+    marginTop: 16,
     height: 4,
     backgroundColor: '#f3f4f6',
     borderRadius: 2,
@@ -389,12 +382,12 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
+    backgroundColor: '#ff9f5a',
     borderRadius: 2,
   },
   progressText: {
     marginTop: 8,
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    fontSize: 12,
     color: '#6b7280',
     textAlign: 'center',
   },

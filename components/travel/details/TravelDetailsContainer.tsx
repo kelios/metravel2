@@ -240,14 +240,14 @@ const Icon: React.FC<{ name: string; size?: number; color?: string }> = ({
 );
 
 /* -------------------- consts -------------------- */
-// ✅ РЕДИЗАЙН: Адаптивная ширина меню согласно ТЗ
+// ✅ UX УЛУЧШЕНИЕ: Адаптивная ширина меню (увеличено для полного устранения скролла)
 const getMenuWidth = (width: number) => {
-  if (width >= 1200) return 280; // Десктоп (>1200px): 280px
-  if (width >= 768) return 240; // Планшеты (768-1200px): 240px
+  if (width >= 1200) return 380; // Десктоп (>1200px): 380px (было 360)
+  if (width >= 768) return 320; // Планшеты (768-1200px): 320px (было 300)
   return '100%'; // Мобильные: 100% (fullscreen overlay)
 };
-const MENU_WIDTH_DESKTOP = 280;
-const MENU_WIDTH_TABLET = 240;
+const MENU_WIDTH_DESKTOP = 380; // ✅ UX: Увеличено с 360 для длинных названий погоды
+const MENU_WIDTH_TABLET = 320;  // ✅ UX: Увеличено с 300 для полного устранения скролла
 const HEADER_OFFSET_DESKTOP = 72;
 const HEADER_OFFSET_MOBILE = 56;
 const MAX_CONTENT_WIDTH = 1200;
@@ -401,7 +401,7 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
           aspectRatio: String(ratio),
           borderRadius: 12,
           display: "block",
-          background: "#e9e7df",
+          backgroundColor: "#e9e7df",
         }}
         loading="eager"
         decoding="async"
@@ -548,7 +548,7 @@ const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
         aspectRatio: "16 / 9",
         borderRadius: 12,
         overflow: "hidden",
-        background: DESIGN_TOKENS.colors.text,
+        backgroundColor: DESIGN_TOKENS.colors.text,
         contain: "layout style paint" as any,
       }}
     >
@@ -943,7 +943,7 @@ export default function TravelDetails() {
       styles.wrapper,
       Platform.OS === "web" && {
         // @ts-ignore - web-specific CSS property
-        background: "linear-gradient(180deg, #ffffff 0%, #f9f8f2 100%)",
+        backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f9f8f2 100%)",
       },
     ]}>
       <SafeAreaView style={styles.safeArea}>
@@ -1208,6 +1208,13 @@ const TravelHeroSection: React.FC<{
               aspectRatio={aspectRatio as number}
               mobileHeightPercent={0.7}
               onFirstImageLoad={onFirstImageLoad}
+              lazyLoading={true}
+              responsiveSizes={{
+                mobile: { width: 640, height: Math.round(640 / aspectRatio) },
+                tablet: { width: 1024, height: Math.round(1024 / aspectRatio) },
+                desktop: { width: 1600, height: Math.round(1600 / aspectRatio) }
+              }}
+              preferredFormats={['webp', 'jpeg']}
             />
           </View>
         </View>
@@ -1652,15 +1659,49 @@ const styles = StyleSheet.create({
   sideMenuBase: {
     backgroundColor: DESIGN_TOKENS.colors.surface,
     shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: ANDROID_ELEVATION_MENU,
-    borderRightWidth: Platform.select({
-      default: 0, // Мобильные: без границы (fullscreen)
-      web: 1, // Десктоп: с границей
-    }),
     borderRightColor: "rgba(0, 0, 0, 0.06)",
+  },
+  
+  root: {
+    flex: 1,
+    backgroundColor: DESIGN_TOKENS.colors.background,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: Platform.select({
+      default: DESIGN_TOKENS.spacing.xxl,
+      web: DESIGN_TOKENS.spacing.xl,
+    }),
+  },
+  
+  contentContainer: {
+    maxWidth: MAX_CONTENT_WIDTH,
+    width: "100%",
+    alignSelf: "center",
+    paddingHorizontal: Platform.select({
+      default: DESIGN_TOKENS.spacing.md,
+      web: DESIGN_TOKENS.spacing.xl,
+    }),
+    paddingTop: Platform.select({
+      default: DESIGN_TOKENS.spacing.sm,
+      web: DESIGN_TOKENS.spacing.lg,
+    }),
+  },
+  
+  sectionContainer: {
+    marginBottom: Platform.select({
+      default: DESIGN_TOKENS.spacing.lg,
+      web: DESIGN_TOKENS.spacing.xl,
+    }),
+  },
+  
+  contentStable: {
+    marginBottom: Platform.select({
+      default: DESIGN_TOKENS.spacing.md,
+      web: DESIGN_TOKENS.spacing.lg,
+    }),
   },
   sideMenuNative: {
     position: "absolute",
@@ -1711,7 +1752,7 @@ const styles = StyleSheet.create({
     cursor: "pointer" as any,
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)" as any,
     // @ts-ignore
-    background: "linear-gradient(135deg, #ff9f5a 0%, #ff6b35 100%)",
+    backgroundImage: "linear-gradient(135deg, #ff9f5a 0%, #ff6b35 100%)",
     ":hover": {
       transform: "scale(1.1) translateY(-2px)" as any,
       shadowOpacity: 0.5 as any,
@@ -1729,7 +1770,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: DESIGN_TOKENS.spacing.sm,
     borderRadius: 16,
-    backgroundColor: "rgba(15, 23, 42, 0.95)",
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
     maxWidth: 240,
     zIndex: 1002,
     shadowColor: "#0f172a",
@@ -1751,9 +1792,6 @@ const styles = StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     lineHeight: 18,
     marginTop: 4,
-  },
-  contentStable: {
-    contain: "layout style paint" as any,
   },
 
   pdfButtonContainer: {
@@ -1782,22 +1820,27 @@ const styles = StyleSheet.create({
   // ✅ РЕДИЗАЙН: Современные карточки с улучшенными тенями
   // ✅ РЕДИЗАЙН: Унифицированные карточки с единой системой радиусов (12px)
   sectionHeaderBtn: {
-    width: "100%",
-    minHeight: 48,
-    paddingVertical: 14,
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    borderRadius: 12, // ✅ Унифицировано: средние элементы = 12px
-    backgroundColor: DESIGN_TOKENS.colors.surface,
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: Platform.select({
+      default: DESIGN_TOKENS.spacing.md,
+      web: DESIGN_TOKENS.spacing.lg,
+    }),
+    paddingHorizontal: Platform.select({
+      default: DESIGN_TOKENS.spacing.md,
+      web: DESIGN_TOKENS.spacing.lg,
+    }),
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.md,
     justifyContent: "space-between",
     shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, // ✅ Уровень 1 теней
-    shadowRadius: 8, // ✅ Уровень 1 теней (было 12)
-    elevation: ANDROID_ELEVATION_CARD,
-    borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.06)",
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
+    minHeight: 56,
   },
   sectionHeaderPositive: {
     backgroundColor: "rgba(16, 185, 129, 0.12)",
@@ -1812,9 +1855,10 @@ const styles = StyleSheet.create({
     borderColor: "rgba(96, 165, 250, 0.4)",
   },
   sectionHeaderActive: {
-    shadowOpacity: 0.16,
-    shadowRadius: 14,
-    borderColor: "rgba(255, 159, 90, 0.6)",
+    shadowOpacity: 0.10,
+    shadowRadius: 10,
+    borderColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
   },
   sectionHeaderTitleWrap: {
     flexDirection: "row",
@@ -1822,11 +1866,12 @@ const styles = StyleSheet.create({
     gap: DESIGN_TOKENS.spacing.sm,
     flex: 1,
   },
+  
   sectionHeaderIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(255, 159, 90, 0.15)",
+    width: Platform.select({ default: 32, web: 36 }),
+    height: Platform.select({ default: 32, web: 36 }),
+    borderRadius: Platform.select({ default: 16, web: 18 }),
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1836,60 +1881,62 @@ const styles = StyleSheet.create({
     gap: DESIGN_TOKENS.spacing.sm,
   },
   sectionHeaderBadge: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    fontWeight: "600",
-    color: "#475569",
-    backgroundColor: "rgba(71, 85, 105, 0.15)",
+    fontSize: Platform.select({ default: 11, web: 12 }),
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    color: DESIGN_TOKENS.colors.textMuted,
+    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingVertical: DESIGN_TOKENS.spacing.xxs,
+    borderRadius: DESIGN_TOKENS.radii.pill,
   },
 
-  // ✅ РЕДИЗАЙН: Улучшенная типографика заголовков секций
   sectionHeaderText: { 
     fontSize: Platform.select({
-      default: 20, // Мобильные: 20px
-      web: 22, // Десктоп: 22px (оптимально 24px для больших экранов)
+      default: 18,
+      web: 20,
     }),
-    fontWeight: "600",
-    color: "#1a202c", // ✅ Контраст 7:1
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    color: DESIGN_TOKENS.colors.text,
     letterSpacing: -0.3,
     lineHeight: Platform.select({
-      default: 28, // 1.4 для мобильных
-      web: 30, // 1.36 для десктопа
+      default: 24,
+      web: 28,
     }),
+    flex: 1,
   },
   sectionSubtitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: "#6b7280",
+    fontSize: Platform.select({ default: 13, web: 14 }),
+    color: DESIGN_TOKENS.colors.textMuted,
     marginTop: DESIGN_TOKENS.spacing.xs,
-    lineHeight: 20,
+    lineHeight: Platform.select({ default: 18, web: 20 }),
   },
 
-  // ✅ РЕДИЗАЙН: Слайдер с унифицированным радиусом (20px для очень крупных элементов)
   sliderContainer: { 
     width: "100%",
-    borderRadius: 20, // ✅ Очень крупные элементы = 20px
+    borderRadius: DESIGN_TOKENS.radii.lg,
     overflow: "hidden",
     shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 4 }, // ✅ Унифицированный offset
-    shadowOpacity: 0.12, // ✅ Уровень 2 теней
-    shadowRadius: 16, // ✅ Уровень 2 теней (было 24, уменьшено для консистентности)
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    elevation: 4,
+    marginBottom: Platform.select({
+      default: DESIGN_TOKENS.spacing.md,
+      web: DESIGN_TOKENS.spacing.lg,
+    }),
   },
 
-  // ✅ РЕДИЗАЙН: Видео контейнер с унифицированным радиусом (16px для крупных элементов)
   videoContainer: {
     width: "100%",
     aspectRatio: 16 / 9,
-    borderRadius: 16, // ✅ Крупные элементы = 16px
+    borderRadius: DESIGN_TOKENS.radii.md,
     overflow: "hidden",
     backgroundColor: DESIGN_TOKENS.colors.text,
     shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12, // ✅ Уровень 2 теней (было 0.15)
-    shadowRadius: 16, // ✅ Уровень 2 теней (было 12)
-    elevation: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
 
   playOverlay: {
@@ -1897,30 +1944,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   videoHintText: {
-    color: "#f8fafc",
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    marginTop: 12,
+    color: DESIGN_TOKENS.colors.surface,
+    fontSize: Platform.select({ default: 12, web: 13 }),
+    marginTop: DESIGN_TOKENS.spacing.sm,
     textAlign: "center",
+    fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
   },
 
-  // ✅ РЕДИЗАЙН: Унифицированный контейнер описания с адаптивными отступами
   descriptionContainer: {
     width: "100%",
     backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: 12, // ✅ Унифицировано: средние элементы = 12px (было 16)
+    borderRadius: DESIGN_TOKENS.radii.md,
     padding: Platform.select({
-      default: 20, // Мобильные: 20px
-      web: 28, // Десктоп: 28px
+      default: DESIGN_TOKENS.spacing.md,
+      web: DESIGN_TOKENS.spacing.lg,
     }),
     shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, // ✅ Уровень 1 теней
-    shadowRadius: 8, // ✅ Уровень 1 теней (было 12)
-    elevation: ANDROID_ELEVATION_CARD,
-    borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.06)",
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
   },
 
   mobileInsightTabsWrapper: {

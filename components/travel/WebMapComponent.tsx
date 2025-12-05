@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+// CSS загружается через CDN в Map.web.tsx
 import L from 'leaflet';
 import MarkersListComponent from '../MarkersListComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';

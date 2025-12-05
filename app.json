@@ -1,5 +1,6 @@
 {
   "expo": {
+    "owner": "savran.juli",
     "name": "metravel",
     "slug": "metravel",
     "version": "1.0.0",
@@ -54,7 +55,9 @@
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "READ_MEDIA_IMAGES",
-        "READ_MEDIA_VIDEO"
+        "READ_MEDIA_VIDEO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "config": {
         "googleMaps": {
@@ -78,7 +81,6 @@
           ]
         }
       ],
-      "googleServicesFile": "./google-services.json",
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO"
       ]
@@ -95,16 +97,18 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
         }
-      ],
-      "expo-maps"
+      ]
     ],
     "experiments": {
       "tsconfigPaths": true,
       "typedRoutes": true
     },
     "extra": {
+      "router": {
+        "origin": false
+      },
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "472c9f49-998e-43c5-bf37-0478cf259645"
       }
     },
     "runtimeVersion": {

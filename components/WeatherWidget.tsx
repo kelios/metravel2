@@ -125,8 +125,8 @@ const styles = StyleSheet.create({
         width: '100%',
         backgroundColor: '#fff',
         borderRadius: 12,
-        padding: 16,
-        marginBottom: 24,
+        padding: 12, // ✅ UX: Уменьшено с 16 для компактности
+        marginBottom: 16, // ✅ UX: Уменьшено с 24
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
@@ -134,14 +134,14 @@ const styles = StyleSheet.create({
         elevation: 1,
         borderWidth: 1,
         borderColor: '#f0f0f0',
-        marginTop:16,
+        marginTop: 12, // ✅ UX: Уменьшено с 16
     },
     titleContainer: {
         position: 'relative',
-        marginBottom: 16,
+        marginBottom: 12, // ✅ UX: Уменьшено с 16
     },
     title: {
-        fontSize: 16,
+        fontSize: 14, // ✅ UX: Уменьшено с 16 для компактности
         fontWeight: '600',
         fontFamily: 'Roboto-Medium',
         color: '#1a1a1a',
@@ -166,51 +166,51 @@ const styles = StyleSheet.create({
     forecastContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        gap: 12,
+        gap: 8, // ✅ UX: Уменьшено с 12
     },
     forecastItem: {
         flex: 1,
         alignItems: 'center',
-        paddingVertical: 4,
+        paddingVertical: 2, // ✅ UX: Уменьшено с 4
     },
     lastItem: {
         marginRight: 0,
     },
     dateIconContainer: {
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: 6, // ✅ UX: Уменьшено с 8
     },
     date: {
-        fontSize: 13,
+        fontSize: 11, // ✅ UX: Уменьшено с 13
         fontWeight: '500',
         fontFamily: 'Roboto-Medium',
         color: '#666',
-        marginBottom: 6,
+        marginBottom: 4, // ✅ UX: Уменьшено с 6
         textAlign: 'center',
     },
     icon: {
-        width: 36,
-        height: 36,
+        width: 32, // ✅ UX: Уменьшено с 36
+        height: 32, // ✅ UX: Уменьшено с 36
     },
     tempContainer: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        marginBottom: 4,
+        marginBottom: 2, // ✅ UX: Уменьшено с 4
     },
     tempMax: {
-        fontSize: 16,
+        fontSize: 14, // ✅ UX: Уменьшено с 16
         fontWeight: '600',
         fontFamily: 'Roboto-Medium',
         color: '#1a1a1a',
     },
     tempMin: {
-        fontSize: 14,
+        fontSize: 12, // ✅ UX: Уменьшено с 14
         fontWeight: '400',
         fontFamily: 'Roboto-Regular',
         color: '#666',
     },
     desc: {
-        fontSize: 12,
+        fontSize: 10, // ✅ UX: Уменьшено с 12 для компактности
         color: '#888',
         fontFamily: 'Roboto-Regular',
         textAlign: 'center',

@@ -12,7 +12,7 @@ import {
   useMap,
   useMapEvents,
 } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+// CSS загружается через CDN ниже в коде
 import RoutingMachine from '@/components/MapPage/RoutingMachine';
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
 import MapLegend from '@/components/MapPage/MapLegend';
