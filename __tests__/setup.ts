@@ -139,8 +139,7 @@ const createAsyncStorageMock = () => {
   return { getItem, setItem, removeItem, clear, multiGet, multiSet, multiRemove, getAllKeys, __reset: reset }
 }
 
-const asyncStorageMock = createAsyncStorageMock()
-jest.mock('@react-native-async-storage/async-storage', () => asyncStorageMock)
+jest.mock('@react-native-async-storage/async-storage', () => createAsyncStorageMock())
 
 // Mock react-native-vector-icons
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
@@ -294,21 +293,21 @@ declare global {
   }
 }
 
-if (!global.__reanimatedWorkletInit) {
-  global.__reanimatedWorkletInit = jest.fn()
+if (!(global as any).__reanimatedWorkletInit) {
+  (global as any).__reanimatedWorkletInit = jest.fn()
 }
 
 // Setup and teardown
 beforeEach(() => {
   jest.clearAllMocks()
-  asyncStorageMock.__reset()
 })
 
 afterAll(() => {
   // Clean up global polyfills
-  delete global.window
-  delete global.document
-  delete global.navigator
+  const globalAny = global as any
+  if (globalAny.window) delete globalAny.window
+  if (globalAny.document) delete globalAny.document
+  if (globalAny.navigator) delete globalAny.navigator
   
   // Clear all mocks
   jest.restoreAllMocks()

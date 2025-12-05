@@ -12,7 +12,8 @@ export const INITIAL_FILTER: FilterState = {};
 export const BELARUS_ID = 3;
 
 // ✅ АРХИТЕКТУРА: Количество элементов на странице
-export const PER_PAGE = 12;
+// ✅ ОПТИМИЗАЦИЯ: Увеличено для лучшей производительности и меньшего количества запросов
+export const PER_PAGE = 20;
 
 // ✅ АРХИТЕКТУРА: Ключи для хранения состояния видимости
 export const PERSONALIZATION_VISIBLE_KEY = 'personalization_visible';
@@ -29,13 +30,13 @@ export const BREAKPOINTS = {
 } as const;
 
 // ✅ АРХИТЕКТУРА: Количество колонок для разных экранов
-// ✅ ИСПРАВЛЕНИЕ: Оптимизировано для планшетов (2-3 колонки в зависимости от размера)
+// ✅ ОПТИМИЗАЦИЯ: Оптимизировано для лучшей читаемости и производительности
 export const GRID_COLUMNS = {
   MOBILE: 1,
   TABLET: 2,        // 768-1024px: 2 колонки
-  TABLET_LANDSCAPE: 3, // 1024-1280px: 3 колонки
-  DESKTOP: 4,       // 1280-1440px: 4 колонки
-  DESKTOP_LARGE: 5, // >1440px: 5 колонок
+  TABLET_LANDSCAPE: 2, // 1024-1280px: 2 колонки (было 3, уменьшено для лучшей читаемости)
+  DESKTOP: 3,       // 1280-1440px: 3 колонки (было 4, оптимизировано)
+  DESKTOP_LARGE: 3, // >1440px: 3 колонки (было 5, ограничено для лучшего UX)
 } as const;
 
 // ✅ АРХИТЕКТУРА: Время кеширования для React Query (staleTime)
@@ -77,10 +78,20 @@ export const SEARCH_DEBOUNCE = {
 export const MAX_VISIBLE_CATEGORIES = 8;
 
 // ✅ АРХИТЕКТУРА: Настройки FlatList для производительности
+// ✅ ОПТИМИЗАЦИЯ: Динамические настройки для разных устройств
 export const FLATLIST_CONFIG = {
+  INITIAL_NUM_TO_RENDER: 8, // Увеличено с 6 для лучшего первого рендера
+  MAX_TO_RENDER_PER_BATCH: 10, // Увеличено с 6 для более плавной прокрутки
+  WINDOW_SIZE: 7, // Увеличено с 5 для лучшей производительности при быстрой прокрутке
+  UPDATE_CELLS_BATCHING_PERIOD: 50, // Уменьшено с 100 для более отзывчивого UI
+  ON_END_REACHED_THRESHOLD: 0.3, // Уменьшено с 0.5 для более ранней подгрузки
+} as const;
+
+// ✅ ОПТИМИЗАЦИЯ: Специальные настройки для мобильных устройств
+export const FLATLIST_CONFIG_MOBILE = {
   INITIAL_NUM_TO_RENDER: 6,
-  MAX_TO_RENDER_PER_BATCH: 6,
+  MAX_TO_RENDER_PER_BATCH: 8,
   WINDOW_SIZE: 5,
   UPDATE_CELLS_BATCHING_PERIOD: 100,
-  ON_END_REACHED_THRESHOLD: 0.5,
+  ON_END_REACHED_THRESHOLD: 0.4,
 } as const;

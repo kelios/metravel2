@@ -61,7 +61,7 @@ export function deduplicateTravels(travels: Travel[]): Travel[] {
 }
 
 // ✅ АРХИТЕКТУРА: Расчет количества колонок
-// ✅ ИСПРАВЛЕНИЕ: Улучшена адаптивность для планшетов и больших экранов
+// ✅ ОПТИМИЗАЦИЯ: Улучшена адаптивность для всех устройств с учетом читаемости
 export function calculateColumns(width: number): number {
   if (width < BREAKPOINTS.MOBILE) {
     return GRID_COLUMNS.MOBILE; // < 768px: 1 колонка
@@ -70,12 +70,12 @@ export function calculateColumns(width: number): number {
     return GRID_COLUMNS.TABLET; // 768-1024px: 2 колонки
   }
   if (width < BREAKPOINTS.TABLET_LANDSCAPE) {
-    return GRID_COLUMNS.TABLET_LANDSCAPE; // 1024-1280px: 3 колонки
+    return GRID_COLUMNS.TABLET_LANDSCAPE; // 1024-1280px: 2 колонки
   }
   if (width < BREAKPOINTS.DESKTOP) {
-    return GRID_COLUMNS.DESKTOP; // 1280-1440px: 4 колонки
+    return GRID_COLUMNS.DESKTOP; // 1280-1440px: 3 колонки
   }
-  return GRID_COLUMNS.DESKTOP_LARGE; // > 1440px: 5 колонок
+  return GRID_COLUMNS.DESKTOP_LARGE; // > 1440px: 3 колонки (ограничено для лучшего UX)
 }
 
 // ✅ АРХИТЕКТУРА: Определение badges для социального доказательства
