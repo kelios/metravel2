@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import type { Travel } from '@/src/types/types';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface TelegramDiscussionSectionProps {
   travel: Travel;
@@ -64,7 +65,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 20,
+    padding: DESIGN_TOKENS.spacing.xxs0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -72,13 +73,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   title: {
-    fontSize: 18,
+    fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: '700',
     color: '#1a202c',
-    marginBottom: 6,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: '#4b5563',
     lineHeight: 20,
     marginBottom: 14,
@@ -87,9 +88,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
     borderRadius: 999,
     backgroundColor: '#229ED9',
     minHeight: 44,
@@ -102,13 +103,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#e5e7eb',
   },
   buttonText: {
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
     color: '#fff',
   },
   helperText: {
-    marginTop: 10,
-    fontSize: 12,
+    marginTop: DESIGN_TOKENS.spacing.sm,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
     color: '#9ca3af',
   },
 });

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, Pressable, Text, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { ChevronDown, ChevronUp, MapPinned } from 'lucide-react-native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type ToggleableMapSectionProps = {
     children: React.ReactNode;
@@ -32,7 +33,7 @@ const ToggleableMapSection = ({
                     pressed && styles.toggleButtonPressed,
                 ]}
             >
-                <MapPinned size={18} color="#3B2C24" style={{ marginRight: 6 }} />
+                <MapPinned size={18} color="#3B2C24" style={{ marginRight: DESIGN_TOKENS.spacing.xs }} />
                 <Text style={[styles.toggleText, isMobile && styles.toggleTextMobile]}>
                     {hintText}
                 </Text>
@@ -70,7 +71,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 12,
-        paddingHorizontal: 16,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         backgroundColor: '#fff',
         borderRadius: 16,
         shadowColor: '#000',
@@ -78,21 +79,21 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 4,
         elevation: 2,
-        gap: 8,
+        gap: DESIGN_TOKENS.spacing.sm,
     },
     toggleButtonPressed: {
         backgroundColor: '#f0f0f0',
     },
     toggleText: {
-        fontSize: 16,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '600',
         color: '#3B2C24',
     },
     toggleTextMobile: {
-        fontSize: 14,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
     },
     mapContainer: {
-        marginTop: 16,
+        marginTop: DESIGN_TOKENS.spacing.lg,
         width: '100%',
         minHeight: 400,
         borderRadius: 16,
@@ -112,10 +113,10 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 12,
+        gap: DESIGN_TOKENS.spacing.md,
     },
     loadingText: {
-        fontSize: 14,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#475569',
     },
 });

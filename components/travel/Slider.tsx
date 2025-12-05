@@ -37,6 +37,7 @@ import Animated, {
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl } from "@/utils/imageOptimization";
 import { Feather } from "@expo/vector-icons";
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 /* -------------------------------------------------------------------------- */
 /*                                  Types                                     */
@@ -855,19 +856,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.85)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 24,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs4,
+    paddingVertical: DESIGN_TOKENS.spacing.xxs4,
   },
   placeholderTitle: {
     color: "#0f172a",
-    fontSize: 16,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: "600",
     marginTop: 12,
     textAlign: "center",
   },
   placeholderSubtitle: {
     color: "#475569",
-    fontSize: 13,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     marginTop: 4,
     textAlign: "center",
   },
@@ -947,7 +948,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: "center",
-    zIndex: 10,
+    zIndex: DESIGN_TOKENS.zIndex.fixed, // 300 - ниже navBtn
   },
   dotsMobile: {
     bottom: 12,
@@ -969,7 +970,7 @@ const styles = StyleSheet.create({
   },
   dotWrap: {
     paddingHorizontal: 4,
-    paddingVertical: 6,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
   },
   dot: {
     backgroundColor: "rgba(15,23,42,0.6)",
@@ -986,7 +987,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 16,
     right: 16,
-    zIndex: 10,
+    zIndex: DESIGN_TOKENS.zIndex.fixed, // 300
     ...Platform.select({
       web: {
         top: "16px",
@@ -1001,7 +1002,7 @@ const styles = StyleSheet.create({
   counterContainer: {
     backgroundColor: "rgba(255,255,255,0.75)",
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: GLASS_BORDER,
@@ -1013,7 +1014,7 @@ const styles = StyleSheet.create({
   },
   counterText: {
     color: "#0f172a",
-    fontSize: 13,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
     fontFamily: Platform.OS === "web" ? "system-ui, -apple-system" : undefined,
     letterSpacing: 0.5,
@@ -1034,7 +1035,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.7)",
     borderRadius: 999,
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
     borderWidth: 1,
     borderColor: "rgba(148,163,184,0.35)",
   },
@@ -1043,7 +1044,7 @@ const styles = StyleSheet.create({
   },
   swipeHintText: {
     marginLeft: 8,
-    fontSize: 12,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
     color: "#0f172a",
     fontWeight: "500",
   },

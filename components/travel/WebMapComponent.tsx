@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 're
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import MarkersListComponent from '../MarkersListComponent';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 // Используем стандартный оранжевый маркер Leaflet
 const markerIcon = new L.Icon({
@@ -123,7 +124,7 @@ const WebMapComponent = ({
     };
 
     return (
-        <div style={{ padding: 20 }}>
+        <div style={{ padding: DESIGN_TOKENS.spacing.xxs0 }}>
             <MapContainer center={[51.505, -0.09]} zoom={13} style={{ height: 500 }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <MapClickHandler addMarker={addMarker} />
@@ -182,7 +183,7 @@ const WebMapComponent = ({
                 ))}
             </MapContainer>
 
-            <div style={{ marginTop: 16 }}>
+            <div style={{ marginTop: DESIGN_TOKENS.spacing.lg }}>
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
                     style={styles.toggleButton}

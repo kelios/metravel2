@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, Text, ActivityIndicator, useColorScheme } from 'react-native';
 import ImageGalleryComponent from '@/components/travel/ImageGalleryComponent';
 import { TravelFormData, Travel } from '@/src/types/types';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface GallerySectionProps {
     formData: TravelFormData | null;
@@ -50,7 +51,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData }) => {
 
 const styles = StyleSheet.create({
     galleryContainer: {
-        marginTop: 20,
+        marginTop: DESIGN_TOKENS.spacing.xxs0,
         padding: 15,
         backgroundColor: '#fff',
         borderRadius: 10,
@@ -62,9 +63,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     darkBackground: { backgroundColor: '#222' },
-    loadingText: { marginTop: 10, fontSize: 16, color: '#555', textAlign: 'center' },
-    infoText: { fontSize: 16, fontWeight: '500', color: '#666', textAlign: 'center' },
-    emptyText: { fontSize: 16, fontWeight: '500', color: '#888', textAlign: 'center', marginBottom: 8 },
+    loadingText: { marginTop: DESIGN_TOKENS.spacing.sm, fontSize: DESIGN_TOKENS.typography.sizes.md, color: '#555', textAlign: 'center' },
+    infoText: { fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '500', color: '#666', textAlign: 'center' },
+    emptyText: { fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '500', color: '#888', textAlign: 'center', marginBottom: 8 },
     darkText: { color: '#ddd' },
 });
 

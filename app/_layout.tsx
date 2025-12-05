@@ -58,22 +58,8 @@ const queryClient = new QueryClient({
                 return true;
             },
             retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-            // ✅ FIX: keepPreviousData заменен на placeholderData в React Query v5
-            placeholderData: (previousData) => previousData,
-            // ✅ ИСПРАВЛЕНИЕ: Обработка ошибок в запросах
-            onError: (error: any) => {
-                if (__DEV__) {
-                    console.error('[QueryClient] Query error:', error);
-                }
-            },
         },
         mutations: {
-            // ✅ ИСПРАВЛЕНИЕ: Обработка ошибок в мутациях
-            onError: (error: any) => {
-                if (__DEV__) {
-                    console.error('[QueryClient] Mutation error:', error);
-                }
-            },
             retry: false, // Мутации не повторяем автоматически
         },
     },
@@ -144,7 +130,8 @@ export default function RootLayout() {
 function RootLayoutNav() {
     const pathname = usePathname();
     const { width } = useWindowDimensions();
-    const isMobile = width <= 900 || Platform.OS !== "web";
+    // ✅ ИСПРАВЛЕНИЕ: Используем единый breakpoint из DESIGN_TOKENS
+    const isMobile = width < DESIGN_TOKENS.breakpoints.mobile || Platform.OS !== "web";
 
     const SITE = process.env.EXPO_PUBLIC_SITE_URL || "https://metravel.by";
     const canonical = `${SITE}${pathname || "/"}`;
@@ -192,7 +179,7 @@ function RootLayoutNav() {
     if (!fontsLoaded && !isWeb) {
       return (
         <View style={styles.fontLoader}>
-          <ActivityIndicator size="small" color="#ff9f5a" />
+          <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.primary} />
         </View>
       );
     }

@@ -472,10 +472,10 @@ export default NearTravelList;
 
 const styles = StyleSheet.create({
   section: {
-    marginTop: 24,
+    marginTop: DESIGN_TOKENS.spacing.xxs4,
     marginBottom: 40,
     paddingHorizontal: Math.max(16, Platform.OS === 'web' ? '4%' : 16),
-    paddingVertical: 24,
+    paddingVertical: DESIGN_TOKENS.spacing.xxs4,
     backgroundColor: backgroundGray,
     borderRadius: 20,
     width: '100%',
@@ -489,11 +489,11 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: DESIGN_TOKENS.spacing.xxs4,
     paddingHorizontal: 8,
   },
   title: {
-    fontSize: 26,
+    fontSize: DESIGN_TOKENS.typography.sizes.xl,
     fontWeight: '700',
     color: '#2d3748',
     marginBottom: 8,
@@ -502,14 +502,14 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     color: '#718096',
     textAlign: 'center',
     fontWeight: '500',
   },
   desktopContainer: {
     flexDirection: 'row',
-    gap: 24,
+    gap: DESIGN_TOKENS.spacing.xxs4,
     minHeight: 600,
   },
   listColumn: {
@@ -528,50 +528,46 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 16,
+    paddingBottom: DESIGN_TOKENS.spacing.lg,
   },
   travelsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: DESIGN_TOKENS.spacing.lg,
   },
   travelItem: {
     flex: 1,
     minWidth: 280,
     maxWidth: '100%',
-    marginBottom: 16,
+    marginBottom: DESIGN_TOKENS.spacing.lg,
   },
   travelItemOdd: {
     opacity: 0.95,
   },
   mobileListContent: {
-    paddingBottom: 16,
+    paddingBottom: DESIGN_TOKENS.spacing.lg,
   },
 
   // Стили для контейнера карты
   mapContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.md,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    ...DESIGN_TOKENS.shadowsNative.medium,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: DESIGN_TOKENS.colors.borderLight,
   },
   mapHeader: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#f7fafc',
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: DESIGN_TOKENS.colors.borderLight,
   },
   mapTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4a5568',
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    color: DESIGN_TOKENS.colors.textSubtle,
     textAlign: 'center',
   },
   mapWrapper: {
@@ -579,15 +575,15 @@ const styles = StyleSheet.create({
     minHeight: 300,
   },
   mapFooter: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#f7fafc',
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
+    borderTopColor: DESIGN_TOKENS.colors.borderLight,
   },
   mapHint: {
-    fontSize: 12,
-    color: '#718096',
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    color: DESIGN_TOKENS.colors.textMuted,
     textAlign: 'center',
     fontStyle: 'italic',
   },
@@ -595,29 +591,29 @@ const styles = StyleSheet.create({
   mapPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#edf2f7',
-    borderRadius: 16,
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    borderRadius: DESIGN_TOKENS.radii.md,
     borderWidth: 2,
-    borderColor: '#e2e8f0',
+    borderColor: DESIGN_TOKENS.colors.borderLight,
     borderStyle: 'dashed',
   },
   placeholderIcon: {
-    fontSize: 32,
+    fontSize: DESIGN_TOKENS.typography.sizes.xl,
     marginBottom: 8,
   },
   placeholderText: {
-    fontSize: 14,
-    color: '#a0aec0',
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: DESIGN_TOKENS.colors.textMuted,
     textAlign: 'center',
   },
 
   loadMoreContainer: {
-    padding: 16,
+    padding: DESIGN_TOKENS.spacing.lg,
     alignItems: 'center',
   },
   loadMoreButton: {
     backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    paddingHorizontal: 24,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs4,
     paddingVertical: 12,
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     borderWidth: 2,
@@ -642,7 +638,7 @@ const styles = StyleSheet.create({
   },
   loadMoreButtonText: {
     color: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
   },
 
@@ -655,10 +651,10 @@ const styles = StyleSheet.create({
   },
   loadingContent: {
     alignItems: 'center',
-    gap: 16,
+    gap: DESIGN_TOKENS.spacing.lg,
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     color: '#4a5568',
     fontWeight: '500',
   },
@@ -666,25 +662,25 @@ const styles = StyleSheet.create({
   errorContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: DESIGN_TOKENS.spacing.xs0,
     backgroundColor: backgroundGray,
     borderRadius: 20,
-    marginHorizontal: 16,
+    marginHorizontal: DESIGN_TOKENS.spacing.lg,
   },
   errorIcon: {
-    fontSize: 48,
-    marginBottom: 16,
+    fontSize: DESIGN_TOKENS.typography.sizes.xl,
+    marginBottom: DESIGN_TOKENS.spacing.lg,
   },
   errorText: {
-    fontSize: 16,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     color: '#e53e3e',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: DESIGN_TOKENS.spacing.xxs0,
     lineHeight: 22,
   },
   retryButton: {
     backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
-    paddingHorizontal: 24,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs4,
     paddingVertical: 12,
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     shadowColor: '#000',
@@ -707,12 +703,12 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    fontSize: 16,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
   },
 
   skeletonContainer: {
-    gap: 16,
+    gap: DESIGN_TOKENS.spacing.lg,
     paddingHorizontal: 8,
   },
 });
@@ -722,15 +718,15 @@ const segmentStyles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: DESIGN_TOKENS.colors.mutedBackground, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     borderRadius: DESIGN_TOKENS.radii.lg, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    padding: 4,
-    marginBottom: 20,
+    padding: DESIGN_TOKENS.spacing.xs,
+    marginBottom: DESIGN_TOKENS.spacing.xxs0,
     alignSelf: 'center',
     maxWidth: 300,
   },
   button: {
     flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     alignItems: 'center',
     justifyContent: 'center',
@@ -758,7 +754,7 @@ const segmentStyles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   text: {
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
     color: DESIGN_TOKENS.colors.textMuted, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
   },
@@ -771,8 +767,8 @@ const skeletonStyles = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
+    padding: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.lg,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -787,7 +783,7 @@ const skeletonStyles = StyleSheet.create({
     marginBottom: 12,
   },
   content: {
-    gap: 8,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   title: {
     height: 16,

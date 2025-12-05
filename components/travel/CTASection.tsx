@@ -112,7 +112,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
           <MaterialIcons 
             name={isFavorite ? 'favorite' : 'favorite-border'} 
             size={20} 
-            color={isFavorite ? '#fff' : '#ff9f5a'} 
+            color={isFavorite ? DESIGN_TOKENS.colors.surface : DESIGN_TOKENS.colors.primary} 
           />
           <Text style={[
             styles.actionButtonText,
@@ -137,7 +137,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
             accessibilityRole="button"
             accessibilityLabel="Смотреть все путешествия автора"
           >
-            <MaterialIcons name="person" size={20} color="#ff9f5a" />
+            <MaterialIcons name="person" size={20} color={DESIGN_TOKENS.colors.primary} />
             <Text style={[
               styles.actionButtonText,
               isMobile && styles.actionButtonTextMobile,
@@ -160,7 +160,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
           accessibilityRole="button"
           accessibilityLabel="Создать свое путешествие"
         >
-          <MaterialIcons name="add-circle-outline" size={20} color="#ff9f5a" />
+          <MaterialIcons name="add-circle-outline" size={20} color={DESIGN_TOKENS.colors.primary} />
           <Text style={[
             styles.actionButtonText,
             isMobile && styles.actionButtonTextMobile,
@@ -176,11 +176,11 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 16,
-    padding: 24,
+    padding: DESIGN_TOKENS.spacing.xxs4,
     marginBottom: 32,
-    shadowColor: '#000',
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -188,43 +188,43 @@ const styles = StyleSheet.create({
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
   },
   containerMobile: {
-    padding: 20,
-    marginBottom: 24,
+    padding: DESIGN_TOKENS.spacing.xxs0,
+    marginBottom: DESIGN_TOKENS.spacing.xxs4,
     borderRadius: 12,
   },
   content: {
-    gap: 12,
+    gap: DESIGN_TOKENS.spacing.md,
   },
   textSection: {
     marginBottom: 8,
   },
   title: {
-    fontSize: 18,
+    fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: '700',
     color: '#1a202c',
-    marginBottom: 6,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
     fontFamily: 'Georgia',
     letterSpacing: -0.3,
   },
   titleMobile: {
-    fontSize: 16,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: '#4a5568',
     lineHeight: 20,
   },
   subtitleMobile: {
-    fontSize: 13,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     lineHeight: 18,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     backgroundColor: DESIGN_TOKENS.colors.primarySoft, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   },
   actionButtonMobile: {
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
   },
   actionButtonSecondary: {
     backgroundColor: DESIGN_TOKENS.colors.mutedBackground, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
@@ -259,19 +259,19 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   actionButtonText: {
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
     color: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
   },
   actionButtonTextMobile: {
-    fontSize: 14,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
   },
   actionButtonTextActive: {
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.surface,
   },
   primaryButton: {
     paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs4,
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
     alignItems: 'center',
@@ -291,15 +291,15 @@ const styles = StyleSheet.create({
   },
   primaryButtonMobile: {
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
   },
   primaryButtonText: {
-    fontSize: 16,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '700',
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.surface,
   },
   primaryButtonTextMobile: {
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
   },
 });
 

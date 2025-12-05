@@ -3,15 +3,16 @@ import {
     View,
     Text,
     StyleSheet,
-    Image,
     TouchableOpacity,
     ActivityIndicator,
     Platform,
     useColorScheme,
 } from 'react-native';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import { useDropzone } from 'react-dropzone';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { uploadImage, deleteImage } from '@/src/api/misc';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface GalleryItem {
     id: string;
@@ -138,7 +139,13 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                 <ActivityIndicator size="large" color="#ffffff" />
                             ) : (
                                 <>
-                                    <Image source={{ uri: image.url }} style={styles.image} />
+                                    <OptimizedImage
+                                        source={{ uri: image.url }}
+                                        style={styles.image}
+                                        contentFit="cover"
+                                        loading="lazy"
+                                        alt={`Gallery image ${index + 1}`}
+                                    />
                                     <TouchableOpacity
                                         onPress={() => handleDeleteImage(image.id)}
                                         style={styles.deleteButton}
@@ -180,7 +187,7 @@ export default ImageGalleryComponent;
 
 const styles = StyleSheet.create({
     container: {
-        padding: 20,
+        padding: DESIGN_TOKENS.spacing.xl,
         width: '100%',
     },
     darkContainer: {
@@ -190,18 +197,18 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 10,
+        marginBottom: DESIGN_TOKENS.spacing.sm,
         paddingVertical: 8,
         borderBottomWidth: 1,
         borderBottomColor: '#ddd',
     },
     galleryTitle: {
-        fontSize: 24,
+        fontSize: DESIGN_TOKENS.typography.sizes.xl,
         fontWeight: 'bold',
         color: '#333',
     },
     imageCount: {
-        fontSize: 14,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#666',
     },
     highlight: {
@@ -212,7 +219,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
-        gap: 12,
+        gap: DESIGN_TOKENS.spacing.md,
     },
     imageWrapper: {
         width: '30%',
@@ -239,17 +246,17 @@ const styles = StyleSheet.create({
     },
     deleteButtonText: {
         color: '#fff',
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
     },
     dropzone: {
         width: '100%',
-        padding: 16,
+        padding: DESIGN_TOKENS.spacing.lg,
         borderWidth: 2,
         borderRadius: 10,
         borderColor: '#4b7c6f',
         backgroundColor: '#f0f0f0',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: DESIGN_TOKENS.spacing.xl,
     },
     activeDropzone: {
         borderColor: '#2b5c53',
@@ -260,20 +267,20 @@ const styles = StyleSheet.create({
         borderColor: '#888',
     },
     dropzoneText: {
-        fontSize: 14,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#666',
     },
     darkText: {
         color: '#ddd',
     },
     noImagesText: {
-        fontSize: 16,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
         textAlign: 'center',
         color: '#888',
-        marginTop: 20,
+        marginTop: DESIGN_TOKENS.spacing.xl,
     },
     loader: {
-        marginTop: 20,
+        marginTop: DESIGN_TOKENS.spacing.xl,
     },
     uploadingOverlay: {
         position: 'absolute',
@@ -287,6 +294,6 @@ const styles = StyleSheet.create({
     },
     uploadingText: {
         color: '#fff',
-        marginTop: 10,
+        marginTop: DESIGN_TOKENS.spacing.sm,
     },
 });

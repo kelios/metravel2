@@ -18,6 +18,7 @@ import TravelWizardStepMedia from '@/components/travel/TravelWizardStepMedia';
 import TravelWizardStepDetails from '@/components/travel/TravelWizardStepDetails';
 import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
 import { useAutoSaveForm } from '@/hooks/useAutoSaveForm';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 export default function UpsertTravel() {
     const router = useRouter();
@@ -429,16 +430,16 @@ const styles = StyleSheet.create({
     mainWrapper: { flex: 1, flexDirection: 'row' },
     mainWrapperMobile: { flexDirection: 'column' },
     contentColumn: { flex: 1 },
-    filtersColumn: { width: 320, borderLeftWidth: 1, padding: 12, borderColor: '#ddd' },
+    filtersColumn: { width: 320, borderLeftWidth: 1, padding: DESIGN_TOKENS.spacing.md, borderColor: '#ddd' },
     filtersScroll: { maxHeight: '80vh' },
-    mobileFiltersWrapper: { padding: 12 },
+    mobileFiltersWrapper: { padding: DESIGN_TOKENS.spacing.md },
     mobileActionBar: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
         backgroundColor: '#fff',
-        padding: 12,
+        padding: DESIGN_TOKENS.spacing.md,
         borderTopWidth: 1,
         borderColor: '#ddd',
         flexDirection: 'row',
@@ -458,8 +459,8 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'stretch',
-        paddingHorizontal: 16,
-        gap: 12,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+        gap: DESIGN_TOKENS.spacing.md,
     },
     loadingSkeletonHeader: {
         height: 20,

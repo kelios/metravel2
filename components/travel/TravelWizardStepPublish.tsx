@@ -10,6 +10,7 @@ import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { TravelFormData, Travel } from '@/src/types/types';
 import { getModerationErrors } from '@/utils/formValidation';
 import { trackWizardEvent } from '@/src/utils/analytics';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface TravelWizardStepPublishProps {
     currentStep: number;
@@ -259,19 +260,19 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 const styles = StyleSheet.create({
     safeContainer: { flex: 1, backgroundColor: '#f9f9f9' },
     headerWrapper: {
-        paddingHorizontal: 16,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         paddingTop: 12,
         paddingBottom: 8,
         backgroundColor: '#f9f9f9',
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: DESIGN_TOKENS.typography.sizes.lg,
         fontWeight: '700',
         color: '#111827',
         marginBottom: 4,
     },
     headerSubtitle: {
-        fontSize: 13,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#6b7280',
     },
     content: {
@@ -281,29 +282,29 @@ const styles = StyleSheet.create({
     footerButtons: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         paddingVertical: 12,
         borderTopWidth: 1,
         borderColor: '#e5e7eb',
         backgroundColor: '#fff',
     },
     statusCard: {
-        marginTop: 16,
+        marginTop: DESIGN_TOKENS.spacing.lg,
         marginHorizontal: 8,
-        padding: 12,
+        padding: DESIGN_TOKENS.spacing.md,
         backgroundColor: '#fff',
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#e5e7eb',
     },
     statusTitle: {
-        fontSize: 15,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '600',
         color: '#111827',
         marginBottom: 8,
     },
     statusOptions: {
-        gap: 8,
+        gap: DESIGN_TOKENS.spacing.sm,
     },
     statusOption: {
         flexDirection: 'row',
@@ -320,7 +321,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 8,
-        marginTop: 2,
+        marginTop: DESIGN_TOKENS.spacing.xxs,
     },
     radioInner: {
         width: 10,
@@ -329,26 +330,26 @@ const styles = StyleSheet.create({
         backgroundColor: '#2563eb',
     },
     statusLabel: {
-        fontSize: 14,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
         color: '#111827',
     },
     statusHint: {
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: '#6b7280',
-        marginTop: 2,
+        marginTop: DESIGN_TOKENS.spacing.xxs,
     },
     checklistCard: {
-        marginTop: 16,
+        marginTop: DESIGN_TOKENS.spacing.lg,
         marginHorizontal: 8,
-        padding: 12,
+        padding: DESIGN_TOKENS.spacing.md,
         backgroundColor: '#fff',
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#e5e7eb',
     },
     checklistTitle: {
-        fontSize: 15,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '600',
         color: '#111827',
         marginBottom: 8,
@@ -362,7 +363,7 @@ const styles = StyleSheet.create({
         width: 18,
         textAlign: 'center',
         marginRight: 4,
-        fontSize: 13,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
     },
     checkOk: {
         color: '#16a34a',
@@ -371,31 +372,31 @@ const styles = StyleSheet.create({
         color: '#9ca3af',
     },
     checklistLabel: {
-        fontSize: 13,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#111827',
     },
     bannerError: {
-        marginTop: 16,
+        marginTop: DESIGN_TOKENS.spacing.lg,
         marginHorizontal: 8,
-        padding: 12,
+        padding: DESIGN_TOKENS.spacing.md,
         borderRadius: 8,
         backgroundColor: '#fef2f2',
         borderWidth: 1,
         borderColor: '#fecaca',
     },
     bannerTitle: {
-        fontSize: 14,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
         color: '#b91c1c',
         marginBottom: 4,
     },
     bannerDescription: {
-        fontSize: 13,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#7f1d1d',
-        marginBottom: 6,
+        marginBottom: DESIGN_TOKENS.spacing.xs,
     },
     bannerItem: {
-        fontSize: 13,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#7f1d1d',
     },
 });

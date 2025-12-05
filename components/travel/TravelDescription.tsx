@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import StableContent from "@/components/travel/StableContent";
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface TravelDescriptionProps {
     htmlContent: string;
@@ -312,8 +313,8 @@ const styles = StyleSheet.create({
     placeholder: {
         textAlign: "center",
         color: "#718096",
-        fontSize: 16,
-        paddingVertical: 24,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        paddingVertical: DESIGN_TOKENS.spacing.xxs4,
         fontFamily: "Georgia",
     },
 
@@ -333,7 +334,7 @@ const styles = StyleSheet.create({
     scrollArea: {},
 
     scrollContent: {
-        paddingBottom: 16,
+        paddingBottom: DESIGN_TOKENS.spacing.lg,
     },
 
     stamp: {

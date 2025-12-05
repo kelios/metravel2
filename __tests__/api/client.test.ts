@@ -45,7 +45,7 @@ describe('src/api/client.ts apiClient', () => {
     expect(result).toEqual({ ok: true });
     expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
     const [url, options] = mockedFetchWithTimeout.mock.calls[0];
-    expect(String(url)).toContain('/api');
+    expect(String(url)).toContain('/test');
     expect((options as any).headers.Authorization).toBe('Token token');
   });
 

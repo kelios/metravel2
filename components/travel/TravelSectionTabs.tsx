@@ -9,6 +9,7 @@ import {
 } from "react-native"
 import { MaterialIcons } from "@expo/vector-icons"
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 interface TravelSectionTabsProps {
   links: TravelSectionLink[]
@@ -27,7 +28,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
 
   const stickyStyles =
     Platform.OS === "web" && typeof stickyOffset === "number"
-      ? ({ position: "sticky", top: stickyOffset, zIndex: 5 } as const)
+      ? ({ position: "sticky", top: stickyOffset, zIndex: DESIGN_TOKENS.zIndex.sticky } as const)
       : undefined
 
   return (

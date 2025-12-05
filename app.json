@@ -18,9 +18,26 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.yourcompany.metravel",
+      "buildNumber": "1",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "This app uses your location to provide personalized travel recommendations."
-      }
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to provide personalized travel recommendations.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to upload travel photos.",
+        "NSPhotoLibraryAddUsageDescription": "This app needs permission to save photos to your library.",
+        "NSCameraUsageDescription": "This app needs access to your camera to take travel photos.",
+        "NSMicrophoneUsageDescription": "This app needs access to your microphone for video recording.",
+        "UIBackgroundModes": [
+          "location"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "config": {
+        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+      },
+      "usesAppleSignIn": false,
+      "associatedDomains": [
+        "applinks:metravel.by"
+      ]
     },
     "android": {
       "adaptiveIcon": {

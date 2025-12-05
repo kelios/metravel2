@@ -44,8 +44,8 @@ const styles = StyleSheet.create({
   base: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20, // ✅ УЛУЧШЕНИЕ: Увеличен padding для больших чипсов
-    paddingVertical: 10, // ✅ УЛУЧШЕНИЕ: Увеличен padding для высоты 40px
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0, // ✅ УЛУЧШЕНИЕ: Увеличен padding для больших чипсов
+    paddingVertical: DESIGN_TOKENS.spacing.sm, // ✅ УЛУЧШЕНИЕ: Увеличен padding для высоты 40px
     borderRadius: radii.lg,
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
     backgroundColor: palette.surface,
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   },
   label: {
     color: palette.text,
-    fontSize: 14,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: '600',
   },
   labelSelected: {
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   },
   count: {
     color: palette.textMuted,
-    fontSize: 13,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: '500',
   },
   countSelected: {

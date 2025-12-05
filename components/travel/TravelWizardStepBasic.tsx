@@ -7,6 +7,7 @@ import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import { TravelFormData, Travel } from '@/src/types/types';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 const windowWidth = Dimensions.get('window').width;
 const isMobileDefault = windowWidth <= 768;
@@ -165,34 +166,34 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
 const styles = StyleSheet.create({
     safeContainer: { flex: 1, backgroundColor: '#f9f9f9' },
     headerWrapper: {
-        paddingHorizontal: 16,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         paddingTop: 12,
         paddingBottom: 8,
         backgroundColor: '#f9f9f9',
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: DESIGN_TOKENS.typography.sizes.lg,
         fontWeight: '700',
         color: '#111827',
         marginBottom: 4,
     },
     headerSubtitle: {
-        fontSize: 13,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#6b7280',
     },
     mainWrapper: { flex: 1, flexDirection: 'row' },
     mainWrapperMobile: { flexDirection: 'column' },
     contentColumn: { flex: 1 },
-    filtersColumn: { width: 320, borderLeftWidth: 1, padding: 12, borderColor: '#ddd' },
+    filtersColumn: { width: 320, borderLeftWidth: 1, padding: DESIGN_TOKENS.spacing.md, borderColor: '#ddd' },
     filtersScroll: { maxHeight: '80vh' },
-    mobileFiltersWrapper: { padding: 12 },
+    mobileFiltersWrapper: { padding: DESIGN_TOKENS.spacing.md },
     mobileActionBar: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
         backgroundColor: '#fff',
-        padding: 12,
+        padding: DESIGN_TOKENS.spacing.md,
         borderTopWidth: 1,
         borderColor: '#ddd',
         flexDirection: 'row',
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
         minWidth: 100,
     },
     errorSummaryContainer: {
-        paddingHorizontal: 16,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         paddingVertical: 8,
         backgroundColor: '#fef2f2',
         borderTopWidth: 1,
@@ -217,12 +218,12 @@ const styles = StyleSheet.create({
         borderColor: '#fecaca',
     },
     errorSummaryText: {
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: '#b91c1c',
     },
     errorSummaryHelper: {
         marginTop: 4,
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: '#7f1d1d',
     },
     contentContainerMobile: {

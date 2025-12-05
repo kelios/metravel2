@@ -16,6 +16,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/$1',
     '^expo-modules-core(/.*)?$': '<rootDir>/__mocks__/expo-modules-core.js',
     '\\.(svg|png|jpe?g|gif|webp)$': '<rootDir>/__mocks__/fileMock.js',
+    '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
   },
   transformIgnorePatterns: [
     `node_modules/(?!${allowListedModules})`,

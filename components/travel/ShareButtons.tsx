@@ -294,8 +294,8 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
 const styles = StyleSheet.create({
   // ✅ РЕДИЗАЙН: Современная карточка с glassmorphism
   container: {
-    paddingVertical: 24,
-    paddingHorizontal: 28,
+    paddingVertical: DESIGN_TOKENS.spacing.xxs4,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs8,
     backgroundColor: Platform.OS === 'web' ? 'rgba(255, 255, 255, 0.9)' : '#fff',
     ...(Platform.OS === 'web' ? {
       backdropFilter: 'blur(20px)' as any,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     } : {}),
     borderRadius: 20,
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-    marginBottom: 24,
+    marginBottom: DESIGN_TOKENS.spacing.xxs4,
     shadowColor: '#1f1f1f',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
@@ -311,31 +311,31 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   containerMobile: {
-    paddingVertical: 20,
-    paddingHorizontal: 20,
+    paddingVertical: DESIGN_TOKENS.spacing.xxs0,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
     borderRadius: 16,
   },
   title: {
-    fontSize: 18,
+    fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: '700',
     color: '#1a202c',
-    marginBottom: 16,
+    marginBottom: DESIGN_TOKENS.spacing.lg,
     fontFamily: 'Georgia',
     letterSpacing: -0.3,
   },
   buttonsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: DESIGN_TOKENS.spacing.md,
   },
   buttonsContainerMobile: {
-    gap: 10,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   // ✅ РЕДИЗАЙН: Современные кнопки с улучшенными стилями
   button: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
@@ -366,22 +366,22 @@ const styles = StyleSheet.create({
     borderColor: DESIGN_TOKENS.colors.success,
   },
   buttonText: {
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
     color: '#374151',
     letterSpacing: -0.1,
   },
   copiedText: {
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '700',
     color: '#16a34a',
-    marginLeft: 6,
+    marginLeft: DESIGN_TOKENS.spacing.xs,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   progressContainer: {
-    marginTop: 16,
+    marginTop: DESIGN_TOKENS.spacing.lg,
     height: 4,
     backgroundColor: '#f3f4f6',
     borderRadius: 2,
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     marginTop: 8,
-    fontSize: 12,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
     color: '#6b7280',
     textAlign: 'center',
   },

@@ -6,6 +6,7 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 /**
  * Skeleton для текстового описания
@@ -104,27 +105,27 @@ export const SectionSkeleton: React.FC<{ lines?: number }> = ({ lines = 4 }) => 
 
 const styles = StyleSheet.create({
   descriptionContainer: {
-    padding: 16,
+    padding: DESIGN_TOKENS.spacing.lg,
     backgroundColor: '#fff',
     borderRadius: 12,
     width: '100%',
   },
   mapContainer: {
     width: '100%',
-    marginBottom: 16,
+    marginBottom: DESIGN_TOKENS.spacing.lg,
   },
   pointListContainer: {
     width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: DESIGN_TOKENS.spacing.md,
   },
   pointCard: {
     width: '100%',
     maxWidth: 400,
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 12,
+    padding: DESIGN_TOKENS.spacing.md,
     marginBottom: 12,
   },
   pointContent: {
@@ -134,22 +135,22 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: DESIGN_TOKENS.spacing.md,
   },
   travelCard: {
     width: '100%',
     maxWidth: 300,
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 12,
+    padding: DESIGN_TOKENS.spacing.md,
     marginBottom: 12,
   },
   videoContainer: {
     width: '100%',
-    marginBottom: 16,
+    marginBottom: DESIGN_TOKENS.spacing.lg,
   },
   sectionContainer: {
-    padding: 16,
+    padding: DESIGN_TOKENS.spacing.lg,
     backgroundColor: '#fff',
     borderRadius: 12,
     width: '100%',

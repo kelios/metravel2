@@ -11,6 +11,7 @@ const LazyInstagram = React.lazy(() =>
   import("@/components/iframe/InstagramEmbed").then((m: any) => ({ default: m.default }))
 );
 import CustomImageRenderer from "@/components/CustomImageRenderer";
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface StableContentProps {
   html: string;
@@ -162,7 +163,7 @@ const WEB_RICH_TEXT_STYLES = `
   width: 100%;
   max-width: 900px;
   margin: 0 auto;
-  padding: 8px 0 24px;
+  padding: DESIGN_TOKENS.spacing.smpx 0 24px;
 }
 .${WEB_RICH_TEXT_CLASS} p {
   margin: 0 0 1.25em;
@@ -190,7 +191,7 @@ const WEB_RICH_TEXT_STYLES = `
   max-height: 55vh;
   object-fit: cover;
   border-radius: 22px;
-  margin: 22px 0 26px;
+  margin: DESIGN_TOKENS.spacing.xxs2px 0 26px;
   box-shadow: 0 18px 46px rgba(15, 23, 42, 0.16);
   border: 6px solid rgba(255, 255, 255, 0.14);
   background: #fafafa;
@@ -216,8 +217,8 @@ const WEB_RICH_TEXT_STYLES = `
 .${WEB_RICH_TEXT_CLASS} .image-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  margin: 28px 0;
+  gap: DESIGN_TOKENS.spacing.xxs0px;
+  margin: DESIGN_TOKENS.spacing.xxs8px 0;
 }
 .${WEB_RICH_TEXT_CLASS} .image-strip img {
   width: 100%;
@@ -241,7 +242,7 @@ const WEB_RICH_TEXT_STYLES = `
   max-width: 100%;
   border-radius: 18px;
   overflow: hidden;
-  margin: 24px 0;
+  margin: DESIGN_TOKENS.spacing.xxs4px 0;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
 }
 .${WEB_RICH_TEXT_CLASS}::after {
@@ -255,7 +256,7 @@ const WEB_RICH_TEXT_STYLES = `
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
-  margin: 24px auto !important;
+  margin: DESIGN_TOKENS.spacing.xxs4px auto !important;
   border-radius: 18px !important;
   overflow: hidden !important;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
@@ -311,7 +312,7 @@ const WEB_RICH_TEXT_STYLES = `
   }
   .${WEB_RICH_TEXT_CLASS} img {
     border-width: 4px;
-    margin: 18px 0 22px;
+    margin: DESIGN_TOKENS.spacing.lgpx 0 22px;
     box-shadow: 0 10px 26px rgba(15, 23, 42, 0.14);
   }
 }
@@ -472,15 +473,15 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         fontSize: BASE_FONT_SIZE + 12, // ~28-29px
         lineHeight: Math.round((BASE_FONT_SIZE + 12) * 1.3), 
         fontWeight: "700", 
-        marginTop: 24,
-        marginBottom: 16,
+        marginTop: DESIGN_TOKENS.spacing.xxs4,
+        marginBottom: DESIGN_TOKENS.spacing.lg,
         color: "#1a202c", // ✅ Более темный цвет
       },
       h2: { 
         fontSize: BASE_FONT_SIZE + 8, // ~24-25px
         lineHeight: Math.round((BASE_FONT_SIZE + 8) * 1.34), 
         fontWeight: "700", 
-        marginTop: 20,
+        marginTop: DESIGN_TOKENS.spacing.xxs0,
         marginBottom: 12,
         color: "#1a202c",
       },
@@ -489,21 +490,21 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         lineHeight: Math.round((BASE_FONT_SIZE + 4) * 1.38), 
         fontWeight: "700", 
         marginTop: 18,
-        marginBottom: 10,
+        marginBottom: DESIGN_TOKENS.spacing.sm,
         color: "#2d3748",
       },
 
       // ✅ УЛУЧШЕНИЕ: Улучшенные списки
       ul: { 
         marginVertical: 12, 
-        paddingLeft: 24, // ✅ Увеличенный отступ
+        paddingLeft: DESIGN_TOKENS.spacing.xxs4, // ✅ Увеличенный отступ
       },
       ol: {
         marginVertical: 12,
-        paddingLeft: 24,
+        paddingLeft: DESIGN_TOKENS.spacing.xxs4,
       },
       li: { 
-        marginVertical: 6, // ✅ Увеличенный отступ между элементами
+        marginVertical: DESIGN_TOKENS.spacing.xs, // ✅ Увеличенный отступ между элементами
         lineHeight: Math.round(BASE_FONT_SIZE * 1.6),
       },
 
@@ -519,7 +520,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         textAlign: "center",
         fontSize: BASE_FONT_SIZE - 2,
         opacity: 0.75,
-        marginTop: 6,      // НЕ отрицательное значение — не накладывается на фото
+        marginTop: DESIGN_TOKENS.spacing.xs,      // НЕ отрицательное значение — не накладывается на фото
         lineHeight: Math.round((BASE_FONT_SIZE - 2) * 1.4),
       },
 
@@ -727,7 +728,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   ytStub: {
-    marginVertical: 10,
+    marginVertical: DESIGN_TOKENS.spacing.sm,
     aspectRatio: 16 / 9,
     backgroundColor: "#eee",
     borderRadius: 12,
@@ -736,7 +737,7 @@ const styles = StyleSheet.create({
   },
   ytStubText: {
     color: "#111",
-    fontSize: 14,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
   },
   instagramEmbedWrapper: {
     marginVertical: 14,

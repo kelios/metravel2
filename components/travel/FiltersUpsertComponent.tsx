@@ -17,6 +17,7 @@ import MultiSelectField from '@/components/MultiSelectField';
 import CheckboxComponent from '@/components/CheckboxComponent';
 import ImageUploadComponent from '@/components/imageUpload/ImageUploadComponent';
 import { TravelFormData, TravelFilters, Travel } from '@/src/types/types';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 const { width } = Dimensions.get('window');
 const isMobile = width <= 768;
@@ -273,24 +274,24 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
 
 const styles = StyleSheet.create({
     container: {
-        padding: 16,
+        padding: DESIGN_TOKENS.spacing.lg,
         backgroundColor: '#fff',
         flex: 1,
     },
-    loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+    loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: DESIGN_TOKENS.spacing.xxs0 },
     imageUploadWrapper: { alignItems: 'center', marginVertical: 12 },
     coverHint: {
         marginTop: 8,
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: '#6b7280',
         textAlign: 'center',
     },
 
     inputGroup: { marginBottom: 12 },
-    input: { borderWidth: 1, borderColor: '#d1d1d1', padding: 8, borderRadius: 6 },
+    input: { borderWidth: 1, borderColor: '#d1d1d1', padding: DESIGN_TOKENS.spacing.sm, borderRadius: 6 },
     label: { fontWeight: 'bold', marginBottom: 4 },
 
-    resetButton: { marginTop: 16, borderColor: '#f57c00' },
+    resetButton: { marginTop: DESIGN_TOKENS.spacing.lg, borderColor: '#f57c00' },
 
     closeIcon: {
         position: 'absolute',
@@ -306,7 +307,7 @@ const styles = StyleSheet.create({
     },
     closeButtonText: {
         color: '#fff',
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         lineHeight: 12,
     },
 
