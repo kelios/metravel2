@@ -10,6 +10,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import type { Travel } from '@/src/types/types';
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface AuthorCardProps {
   travel: Travel;
@@ -162,14 +163,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 0, 0, 0.06)',
   },
   containerMobile: {
-    padding: 20,
-    marginBottom: 24,
+    padding: DESIGN_TOKENS.spacing.xxs0,
+    marginBottom: DESIGN_TOKENS.spacing.xxs4,
     borderRadius: 12,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: DESIGN_TOKENS.spacing.lg,
   },
   avatarSection: {
     alignItems: 'center',
@@ -223,43 +224,43 @@ const styles = StyleSheet.create({
   },
   infoSection: {
     flex: 1,
-    gap: 8,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   authorName: {
-    fontSize: 20,
+    fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: '700',
     color: '#1a202c',
     fontFamily: 'Georgia',
     letterSpacing: -0.3,
   },
   authorNameMobile: {
-    fontSize: 18,
+    fontSize: DESIGN_TOKENS.typography.sizes.lg,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: DESIGN_TOKENS.spacing.xs,
   },
   locationText: {
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     color: '#4a5568',
     fontWeight: '500',
   },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: DESIGN_TOKENS.spacing.xs,
     marginTop: 4,
   },
   statsText: {
-    fontSize: 14,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: '#718096',
     fontWeight: '600',
   },
   viewButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: DESIGN_TOKENS.spacing.sm,
     paddingVertical: Platform.select({
       default: 10, // Мобильные
       web: 12, // Десктоп
@@ -286,8 +287,8 @@ const styles = StyleSheet.create({
     }),
   },
   viewButtonMobile: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
   },
   viewButtonPressed: {
     backgroundColor: 'rgba(0, 0, 0, 0.04)', // ✅ УЛУЧШЕНИЕ: Нейтральный фон
@@ -302,7 +303,7 @@ const styles = StyleSheet.create({
     color: '#6b7280', // ✅ УЛУЧШЕНИЕ: Нейтральный серый
   },
   viewButtonTextMobile: {
-    fontSize: 14,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
   },
 });
 

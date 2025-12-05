@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 export type SortOption = 'date' | 'popularity' | 'distance' | 'name';
 
@@ -42,7 +43,7 @@ export default function SortSelector({ value, onChange, showDistance = false }: 
               <Feather
                 name={option.icon as any}
                 size={14}
-                color={isActive ? '#ff9f5a' : '#667085'}
+                color={isActive ? DESIGN_TOKENS.colors.primary : '#667085'}
               />
               <Text style={[styles.optionText, isActive && styles.optionTextActive]}>
                 {option.label}
@@ -89,13 +90,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     gap: 6,
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
   optionActive: {
     backgroundColor: '#fff5eb',
-    borderColor: '#ff9f5a',
+    borderColor: DESIGN_TOKENS.colors.primary,
   },
   optionText: {
     fontSize: 12,
@@ -103,7 +104,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   optionTextActive: {
-    color: '#ff9f5a',
+    color: DESIGN_TOKENS.colors.primary,
     fontWeight: '600',
   },
 });

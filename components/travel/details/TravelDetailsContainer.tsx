@@ -70,6 +70,7 @@ import QuickFacts from "@/components/travel/QuickFacts";
 /* ✅ БИЗНЕС-ОПТИМИЗАЦИЯ: Компоненты для engagement */
 import AuthorCard from "@/components/travel/AuthorCard";
 import CTASection from "@/components/travel/CTASection";
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 /* -------------------- helpers -------------------- */
 const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 900): Promise<T> => {
@@ -89,7 +90,7 @@ const withLazy = <T extends React.ComponentType<any>>(f: () => Promise<{ default
     } catch {
       return {
         default: ((props: any) => (
-          <View style={{ padding: 12 }}>
+          <View style={{ padding: DESIGN_TOKENS.spacing.md }}>
             <Text>Component failed to load</Text>
           </View>
         )) as unknown as T,
@@ -477,7 +478,7 @@ const CollapsibleSection: React.FC<{
           <View style={styles.sectionHeaderTitleWrap}>
             {iconName && (
               <View style={styles.sectionHeaderIcon}>
-                <Icon name={iconName} size={18} color="#ff9f5a" />
+                <Icon name={iconName} size={18} color={DESIGN_TOKENS.colors.primary} />
               </View>
             )}
             <Text style={styles.sectionHeaderText}>{title}</Text>
@@ -533,7 +534,7 @@ const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
           cachePolicy="memory-disk"
         />
         <View style={styles.playOverlay}>
-          <Icon name="play-circle-fill" size={64} color="#ffffff" />
+          <Icon name="play-circle-fill" size={64} color={DESIGN_TOKENS.colors.surface} />
           <Text style={styles.videoHintText}>Видео запустится автоматически</Text>
         </View>
       </Pressable>
@@ -547,7 +548,7 @@ const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
         aspectRatio: "16 / 9",
         borderRadius: 12,
         overflow: "hidden",
-        background: "#000",
+        background: DESIGN_TOKENS.colors.text,
         contain: "layout style paint" as any,
       }}
     >
@@ -856,8 +857,8 @@ export default function TravelDetails() {
           />
         )}
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#ff9f5a" />
-          <Text style={{ marginTop: 16, color: "#6b7280", fontSize: 16 }}>
+          <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} />
+          <Text style={{ marginTop: DESIGN_TOKENS.spacing.lg, color: "#6b7280", fontSize: DESIGN_TOKENS.typography.sizes.md }}>
             Загружаем путешествие...
           </Text>
         </View>
@@ -881,7 +882,7 @@ export default function TravelDetails() {
           />
         )}
         <View style={styles.errorContainer}>
-          <MaterialIcons name="error-outline" size={64} color="#ff9f5a" />
+          <MaterialIcons name="error-outline" size={64} color={DESIGN_TOKENS.colors.primary} />
           <Text style={styles.errorTitle}>Не удалось загрузить путешествие</Text>
           <Text style={styles.errorText}>
             Возможно, страница была удалена или временно недоступна.
@@ -1012,7 +1013,7 @@ export default function TravelDetails() {
                   activeOpacity={0.8}
                 >
                   <View style={styles.fabInner}>
-                    <Icon name={menuOpen ? "close" : "menu"} size={26} color="#fff" />
+                    <Icon name={menuOpen ? "close" : "menu"} size={26} color={DESIGN_TOKENS.colors.surface} />
                   </View>
                 </TouchableOpacity>
               </>
@@ -1638,7 +1639,7 @@ const styles = StyleSheet.create({
   // ✅ РЕДИЗАЙН: Современный градиентный фон
   wrapper: { 
     flex: 1, 
-    backgroundColor: "#ffffff",
+    backgroundColor: DESIGN_TOKENS.colors.surface,
   },
   safeArea: { flex: 1 },
   mainContainer: { flex: 1, flexDirection: "row" },
@@ -1649,8 +1650,8 @@ const styles = StyleSheet.create({
 
   // ✅ РЕДИЗАЙН: Адаптивное боковое меню с glassmorphism
   sideMenuBase: {
-    backgroundColor: "#fff",
-    shadowColor: "#000",
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 2, height: 0 },
     shadowOpacity: 0.08,
     shadowRadius: 16,
@@ -1682,7 +1683,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#fff",
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRightWidth: 0,
     maxHeight: "100vh" as any,
     overflowY: "auto" as any,
@@ -1696,11 +1697,11 @@ const styles = StyleSheet.create({
     width: 56, // ✅ Размер 56px × 56px
     height: 56,
     borderRadius: 28, // ✅ Круглая форма (50% от размера)
-    backgroundColor: "#ff9f5a",
+    backgroundColor: DESIGN_TOKENS.colors.primary,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1001, // ✅ Z-index: 1001
-    shadowColor: "#ff9f5a",
+    shadowColor: DESIGN_TOKENS.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 24, // ✅ Уровень 3 теней для FAB
@@ -1726,7 +1727,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 12,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
     borderRadius: 16,
     backgroundColor: "rgba(15, 23, 42, 0.95)",
     maxWidth: 240,
@@ -1741,13 +1742,13 @@ const styles = StyleSheet.create({
     cursor: "pointer" as any,
   },
   fabHintTitle: {
-    color: "#fff",
+    color: DESIGN_TOKENS.colors.surface,
     fontWeight: "600",
-    fontSize: 14,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
   },
   fabHintText: {
     color: "rgba(248, 250, 252, 0.92)",
-    fontSize: 13,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     lineHeight: 18,
     marginTop: 4,
   },
@@ -1762,18 +1763,18 @@ const styles = StyleSheet.create({
     zIndex: 900,
   },
   pdfButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
     borderRadius: 999,
     backgroundColor: "#111827",
-    shadowColor: "#000",
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.16,
     shadowRadius: 8,
   },
   pdfButtonText: {
-    color: "#ffffff",
-    fontSize: 13,
+    color: DESIGN_TOKENS.colors.surface,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
     letterSpacing: 0.3,
   },
@@ -1784,13 +1785,13 @@ const styles = StyleSheet.create({
     width: "100%",
     minHeight: 48,
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
     borderRadius: 12, // ✅ Унифицировано: средние элементы = 12px
-    backgroundColor: "#ffffff",
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    shadowColor: "#000",
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08, // ✅ Уровень 1 теней
     shadowRadius: 8, // ✅ Уровень 1 теней (было 12)
@@ -1818,7 +1819,7 @@ const styles = StyleSheet.create({
   sectionHeaderTitleWrap: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: DESIGN_TOKENS.spacing.sm,
     flex: 1,
   },
   sectionHeaderIcon: {
@@ -1832,14 +1833,14 @@ const styles = StyleSheet.create({
   sectionHeaderRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   sectionHeaderBadge: {
-    fontSize: 12,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
     fontWeight: "600",
     color: "#475569",
     backgroundColor: "rgba(71, 85, 105, 0.15)",
-    paddingHorizontal: 10,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 4,
     borderRadius: 999,
   },
@@ -1859,9 +1860,9 @@ const styles = StyleSheet.create({
     }),
   },
   sectionSubtitle: {
-    fontSize: 14,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: "#6b7280",
-    marginTop: 6,
+    marginTop: DESIGN_TOKENS.spacing.xs,
     lineHeight: 20,
   },
 
@@ -1870,7 +1871,7 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 20, // ✅ Очень крупные элементы = 20px
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 4 }, // ✅ Унифицированный offset
     shadowOpacity: 0.12, // ✅ Уровень 2 теней
     shadowRadius: 16, // ✅ Уровень 2 теней (было 24, уменьшено для консистентности)
@@ -1883,8 +1884,8 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: 16, // ✅ Крупные элементы = 16px
     overflow: "hidden",
-    backgroundColor: "#000",
-    shadowColor: "#000",
+    backgroundColor: DESIGN_TOKENS.colors.text,
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12, // ✅ Уровень 2 теней (было 0.15)
     shadowRadius: 16, // ✅ Уровень 2 теней (было 12)
@@ -1895,11 +1896,11 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
   },
   videoHintText: {
     color: "#f8fafc",
-    fontSize: 13,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     marginTop: 12,
     textAlign: "center",
   },
@@ -1907,13 +1908,13 @@ const styles = StyleSheet.create({
   // ✅ РЕДИЗАЙН: Унифицированный контейнер описания с адаптивными отступами
   descriptionContainer: {
     width: "100%",
-    backgroundColor: "#fff",
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 12, // ✅ Унифицировано: средние элементы = 12px (было 16)
     padding: Platform.select({
       default: 20, // Мобильные: 20px
       web: 28, // Десктоп: 28px
     }),
-    shadowColor: "#000",
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08, // ✅ Уровень 1 теней
     shadowRadius: 8, // ✅ Уровень 1 теней (было 12)
@@ -1924,13 +1925,13 @@ const styles = StyleSheet.create({
 
   mobileInsightTabsWrapper: {
     backgroundColor: "rgba(15, 23, 42, 0.03)",
-    padding: 16,
+    padding: DESIGN_TOKENS.spacing.lg,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(148, 163, 184, 0.3)",
   },
   mobileInsightLabel: {
-    fontSize: 14,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
     color: "#1f2937",
     marginBottom: 8,
@@ -1938,7 +1939,7 @@ const styles = StyleSheet.create({
   mobileInsightTabs: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   mobileInsightChip: {
     paddingVertical: 8,
@@ -1950,7 +1951,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#1f2937",
   },
   mobileInsightChipText: {
-    fontSize: 13,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "500",
     color: "#475569",
   },
@@ -1960,9 +1961,9 @@ const styles = StyleSheet.create({
 
   mapEmptyState: {
     width: "100%",
-    padding: 24,
+    padding: DESIGN_TOKENS.spacing.xxs4,
     borderRadius: 16,
-    backgroundColor: "#fff",
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: "rgba(148, 163, 184, 0.7)",
@@ -1970,7 +1971,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   mapEmptyText: {
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: "600",
     color: "#475569",
   },
@@ -1984,11 +1985,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     marginTop: 12,
-    gap: 8,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   sectionBadgePill: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
     borderRadius: 999,
   },
   sectionBadgeNear: {
@@ -1998,7 +1999,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(249, 115, 22, 0.18)",
   },
   sectionBadgeText: {
-    fontSize: 12,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
     fontWeight: "600",
     color: "#1f2937",
   },
@@ -2014,7 +2015,7 @@ const styles = StyleSheet.create({
     flex: 1, 
     justifyContent: "center", 
     alignItems: "center", 
-    backgroundColor: "transparent",
+    backgroundColor: DESIGN_TOKENS.colors.transparent,
   },
   
   // ✅ УЛУЧШЕНИЕ: Стили для страницы ошибки
@@ -2023,28 +2024,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#f9f8f2",
-    paddingHorizontal: 20,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
     paddingVertical: 40,
   },
   errorTitle: {
-    fontSize: 20,
+    fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: "600",
     color: "#1f2937",
-    marginTop: 16,
+    marginTop: DESIGN_TOKENS.spacing.lg,
     marginBottom: 8,
     textAlign: "center",
     fontFamily: "Georgia",
   },
   errorText: {
-    fontSize: 16,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     color: "#6b7280",
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: DESIGN_TOKENS.spacing.xxs4,
     lineHeight: 24,
   },
   errorButton: {
-    backgroundColor: "#ff9f5a",
-    paddingHorizontal: 24,
+    backgroundColor: DESIGN_TOKENS.colors.primary,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs4,
     paddingVertical: 12,
     borderRadius: 8,
     ...Platform.select({
@@ -2058,8 +2059,8 @@ const styles = StyleSheet.create({
     }),
   },
   errorButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
+    color: DESIGN_TOKENS.colors.surface,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: "600",
   },
 });

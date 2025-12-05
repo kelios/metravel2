@@ -8,6 +8,7 @@ import TextInputComponent from '@/components/TextInputComponent';
 import CheckboxComponent from '@/components/CheckboxComponent';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { TravelFormData } from '@/src/types/types';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface TravelWizardStepDetailsProps {
     currentStep: number;
@@ -147,31 +148,31 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
 const styles = StyleSheet.create({
     safeContainer: { flex: 1, backgroundColor: '#f9f9f9' },
     headerWrapper: {
-        paddingHorizontal: 16,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         paddingTop: 12,
         paddingBottom: 8,
         backgroundColor: '#f9f9f9',
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: DESIGN_TOKENS.typography.sizes.lg,
         fontWeight: '700',
         color: '#111827',
         marginBottom: 4,
     },
     headerSubtitle: {
-        fontSize: 13,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#6b7280',
     },
     content: {
         flex: 1,
     },
     contentContainer: {
-        paddingHorizontal: 16,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         paddingBottom: 80,
     },
     progressCard: {
-        marginTop: 16,
-        padding: 12,
+        marginTop: DESIGN_TOKENS.spacing.lg,
+        padding: DESIGN_TOKENS.spacing.md,
         backgroundColor: '#fff',
         borderRadius: 8,
         borderWidth: 1,
@@ -183,43 +184,43 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     progressLabel: {
-        fontSize: 14,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
         color: '#111827',
     },
     progressValue: {
-        fontSize: 13,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#2563eb',
         fontWeight: '600',
     },
     section: {
-        marginTop: 16,
-        padding: 16,
+        marginTop: DESIGN_TOKENS.spacing.lg,
+        padding: DESIGN_TOKENS.spacing.lg,
         backgroundColor: '#fff',
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#e5e7eb',
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '600',
         color: '#111827',
         marginBottom: 4,
     },
     sectionHint: {
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: '#6b7280',
     },
     sectionEditor: {
-        marginTop: 16,
-        padding: 16,
+        marginTop: DESIGN_TOKENS.spacing.lg,
+        padding: DESIGN_TOKENS.spacing.lg,
         backgroundColor: '#fff',
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#e5e7eb',
     },
     editorLabel: {
-        fontSize: 14,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
         color: '#111827',
         marginBottom: 8,
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
     footerButtons: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         paddingVertical: 12,
         borderTopWidth: 1,
         borderColor: '#e5e7eb',

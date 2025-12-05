@@ -119,6 +119,33 @@ export const DESIGN_TOKENS = {
     tablet: 1024,
     desktop: 1280,
   },
+  zIndex: {
+    base: 0,
+    dropdown: 100,
+    sticky: 200,
+    fixed: 300,
+    overlay: 400,
+    modal: 500,
+    popover: 600,
+    toast: 700,
+  },
+  animations: {
+    duration: {
+      fast: 150,
+      normal: 250,
+      slow: 350,
+    },
+    easing: {
+      default: 'cubic-bezier(0.4, 0, 0.2, 1)',
+      in: 'cubic-bezier(0.4, 0, 1, 1)',
+      out: 'cubic-bezier(0, 0, 0.2, 1)',
+      inOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
+    },
+  },
+  touchTarget: {
+    minHeight: 44,
+    minWidth: 44,
+  },
 };
 
 

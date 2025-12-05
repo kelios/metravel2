@@ -163,7 +163,7 @@ export default memo(TravelTmlRound);
 const styles = StyleSheet.create({
     container: { 
         flex: 1, 
-        padding: 8,
+        padding: DESIGN_TOKENS.spacing.sm,
         ...Platform.select({
             web: {
                 display: 'flex' as any,
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.55)',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 16,
+        padding: DESIGN_TOKENS.spacing.lg,
         overflow: 'hidden',
     },
     placeholderIcon: {
@@ -262,11 +262,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     placeholderIconText: {
-        fontSize: 28,
+        fontSize: DESIGN_TOKENS.typography.sizes.xl,
     },
     placeholderText: {
         color: '#ff8f4c',
-        fontSize: 14,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
         textAlign: 'center',
         textShadow: '0 1px 2px rgba(255,255,255,0.9)',
@@ -278,21 +278,21 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        paddingHorizontal: 10,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
         paddingVertical: 8,
         backgroundColor: 'rgba(15,23,42,0.78)',
         flexDirection: 'column',
-        gap: 4,
+        gap: DESIGN_TOKENS.spacing.xs,
     },
     overlayTitle: {
         color: '#f9fafb',
-        fontSize: 13,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '700',
         lineHeight: 18,
     },
     overlaySubtitle: {
         color: '#e5e7eb',
-        fontSize: 11,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '500',
     },
 });

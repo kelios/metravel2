@@ -376,7 +376,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
         ]}
       >
         {Platform.OS === 'web' ? (
-          <div style={{ padding: 8, width: '100%' }}>
+          <div style={{ padding: DESIGN_TOKENS.spacing.sm, width: '100%' }}>
             <PopupContentComponent
               travel={{
                 address: item.address,
@@ -471,7 +471,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 /* ============================= styles ============================= */
 
 const styles = StyleSheet.create({
-  wrapper: { width: '100%', marginTop: 16 },
+  wrapper: { width: '100%', marginTop: DESIGN_TOKENS.spacing.lg },
 
   // ✅ ИСПРАВЛЕНИЕ: Современная кнопка переключения с улучшенной интерактивностью и единой палитрой
   toggle: {
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     borderWidth: 1.5,
     borderColor: DESIGN_TOKENS.colors.border, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    marginBottom: 20,
+    marginBottom: DESIGN_TOKENS.spacing.xxs0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -512,23 +512,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    gap: DESIGN_TOKENS.spacing.md,
+    paddingVertical: DESIGN_TOKENS.spacing.lg,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
   },
   toggleText: { 
-    fontSize: 16, 
+    fontSize: DESIGN_TOKENS.typography.sizes.md, 
     fontWeight: '600', 
     color: DESIGN_TOKENS.colors.text, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     letterSpacing: -0.3,
   },
   toggleTextSm: { 
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     letterSpacing: -0.2,
   },
 
   listContent: { 
-    paddingBottom: 28,
+    paddingBottom: DESIGN_TOKENS.spacing.xxs8,
     paddingHorizontal: Platform.select({
       web: 0,
       default: 8,
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
   columnWrap: { 
     justifyContent: 'flex-start',
     alignItems: 'stretch',
-    gap: 20,
+    gap: DESIGN_TOKENS.spacing.xxs0,
     ...Platform.select({
       web: {
         paddingHorizontal: 0,
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
 
   // ✅ УЛУЧШЕНИЕ: Адаптивные колонки с одинаковой высотой карточек
   col: { 
-    marginBottom: 20,
+    marginBottom: DESIGN_TOKENS.spacing.xxs0,
     ...Platform.select({
       web: {
         display: 'flex' as any,
@@ -656,16 +656,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
     paddingVertical: 40,
-    paddingHorizontal: 24,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs4,
     minHeight: 240,
   },
   noImageText: {
-    marginTop: 16,
+    marginTop: DESIGN_TOKENS.spacing.lg,
     maxWidth: '85%',
     textAlign: 'center',
     color: '#fff',
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     lineHeight: 22,
     textShadow: '0 2px 8px rgba(0,0,0,0.2)',
     letterSpacing: -0.2,
@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
   },
   actionsRow: { 
     flexDirection: 'row', 
-    gap: 6,
+    gap: DESIGN_TOKENS.spacing.xs,
     backgroundColor: 'rgba(0,0,0,0.65)',
     borderRadius: 14,
     padding: 5,
@@ -722,10 +722,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
     backgroundColor: 'rgba(15,23,42,0.82)',
     flexDirection: 'column',
-    gap: 6,
+    gap: DESIGN_TOKENS.spacing.xs,
   },
   overlayTitle: {
     color: '#f9fafb',
@@ -736,9 +736,9 @@ const styles = StyleSheet.create({
   overlayCoordRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: DESIGN_TOKENS.spacing.xs,
     alignSelf: 'flex-start',
-    paddingHorizontal: 10,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 5,
     borderRadius: 999,
     backgroundColor: 'rgba(15,23,42,0.7)',
@@ -755,11 +755,11 @@ const styles = StyleSheet.create({
   overlayCategoryRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 2,
+    gap: DESIGN_TOKENS.spacing.xs,
+    marginTop: DESIGN_TOKENS.spacing.xxs,
   },
   overlayCategoryChip: {
-    paddingHorizontal: 10,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 4,
     borderRadius: 999,
     backgroundColor: 'rgba(249,250,251,0.12)',
@@ -768,7 +768,7 @@ const styles = StyleSheet.create({
   },
   overlayCategoryText: {
     color: '#e5e7eb',
-    fontSize: 11,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
     fontWeight: '600',
   },
 });

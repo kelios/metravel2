@@ -7,6 +7,7 @@ import WebMapComponent from '@/components/travel/WebMapComponent';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { MarkerData } from '@/src/types/types';
 import MultiSelectField from '@/components/MultiSelectField';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface TravelWizardStepRouteProps {
     currentStep: number;
@@ -150,19 +151,19 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
 const styles = StyleSheet.create({
     safeContainer: { flex: 1, backgroundColor: '#f9f9f9' },
     headerWrapper: {
-        paddingHorizontal: 16,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         paddingTop: 12,
         paddingBottom: 8,
         backgroundColor: '#f9f9f9',
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: DESIGN_TOKENS.typography.sizes.lg,
         fontWeight: '700',
         color: '#111827',
         marginBottom: 4,
     },
     headerSubtitle: {
-        fontSize: 13,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#6b7280',
     },
     headerActions: {
@@ -186,24 +187,24 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     mapTitle: {
-        fontSize: 16,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '600',
         color: '#111827',
-        marginBottom: 2,
+        marginBottom: DESIGN_TOKENS.spacing.xxs,
     },
     mapHint: {
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: '#6b7280',
     },
     mapCount: {
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '600',
         color: '#2563eb',
     },
     mapContainer: {
         marginTop: 4,
         paddingHorizontal: 8,
-        paddingBottom: 16,
+        paddingBottom: DESIGN_TOKENS.spacing.lg,
     },
     filtersRow: {
         paddingHorizontal: 8,

@@ -20,6 +20,7 @@ import { Title } from "react-native-paper";
 import TravelTmlRound from "@/components/travel/TravelTmlRound";
 import { fetchTravelsPopular } from "@/src/api/map";
 import type { Travel, TravelsMap } from "@/src/types/types";
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type PopularTravelListProps = {
   onLayout?: (event: any) => void;
@@ -140,7 +141,7 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
           ? {
             justifyContent: "flex-start",
             alignItems: "stretch",
-            gap: 20,
+            gap: DESIGN_TOKENS.spacing.xxs0,
             ...Platform.select({
               web: {
                 display: 'flex' as any,
@@ -249,19 +250,19 @@ const styles = StyleSheet.create({
   loadingContainer: {
     justifyContent: "center",
     alignItems: "center",
-    padding: 40,
+    padding: DESIGN_TOKENS.spacing.xs0,
     minHeight: 300,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
+    marginTop: DESIGN_TOKENS.spacing.lg,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     color: "#6b7280",
     textAlign: "center",
     fontWeight: "500",
   },
   errorText: {
-    marginTop: 16,
-    fontSize: 16,
+    marginTop: DESIGN_TOKENS.spacing.lg,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     color: "#ef4444",
     textAlign: "center",
     fontWeight: "500",
@@ -274,7 +275,7 @@ const styles = StyleSheet.create({
     }),
     fontWeight: "800",
     color: "#1f2937",
-    marginBottom: 24,
+    marginBottom: DESIGN_TOKENS.spacing.xxs4,
     textAlign: "center",
     letterSpacing: -0.5,
     ...Platform.select({
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
     }),
   },
   flatListContent: {
-    paddingBottom: 24,
+    paddingBottom: DESIGN_TOKENS.spacing.xxs4,
     ...Platform.select({
       web: {
         paddingHorizontal: 0,

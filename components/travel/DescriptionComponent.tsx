@@ -1,5 +1,6 @@
 // DescriptionComponent.tsx
 import React, { useId, useMemo } from 'react';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type Props = {
     /** Текст над полем */
@@ -67,7 +68,7 @@ const DescriptionComponent: React.FC<Props> = ({
         <div className={className}>
             <label
                 htmlFor={inputId}
-                style={{ display: 'block', fontWeight: 600, marginBottom: 6, color: '#1f1f1f', fontSize: '14px' }}
+                style={{ display: 'block', fontWeight: 600, marginBottom: DESIGN_TOKENS.spacing.xs, color: '#1f1f1f', fontSize: '14px' }}
             >
                 {label} {required ? <span aria-hidden="true" style={{ color: '#c47a7a' }}>*</span> : null}
             </label>
@@ -116,8 +117,8 @@ const DescriptionComponent: React.FC<Props> = ({
                     style={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        marginTop: 6,
-                        fontSize: 13,
+                        marginTop: DESIGN_TOKENS.spacing.xs,
+                        fontSize: DESIGN_TOKENS.typography.sizes.sm,
                         color: error ? '#b46a6a' : '#4a4946',
                     }}
                 >

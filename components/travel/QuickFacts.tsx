@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
       WebkitBackdropFilter: 'blur(20px)' as any,
     } : {}),
     borderRadius: DESIGN_TOKENS.radii.lg,
-    marginBottom: 24,
+    marginBottom: DESIGN_TOKENS.spacing.xxs4,
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
     shadowColor: '#1f1f1f',
     shadowOffset: { width: 0, height: 2 },
@@ -160,15 +160,15 @@ const styles = StyleSheet.create({
     }),
   },
   containerMobile: {
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    gap: 16,
+    paddingVertical: DESIGN_TOKENS.spacing.xxs0,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
+    gap: DESIGN_TOKENS.spacing.lg,
     borderRadius: 16,
   },
   factItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 4,
   },
   factText: {
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   categoriesWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: DESIGN_TOKENS.spacing.sm,
     flex: 1,
   },
   // ✅ РЕДИЗАЙН: Улучшенные теги категорий с hover эффектами

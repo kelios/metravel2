@@ -232,10 +232,10 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: '#f9f9f9' },
-    container: { padding: 20, paddingBottom: 40 },
+    container: { padding: DESIGN_TOKENS.spacing.xxs0, paddingBottom: 40 },
     progressSection: {
-        marginBottom: 24,
-        padding: 16,
+        marginBottom: DESIGN_TOKENS.spacing.xxs4,
+        padding: DESIGN_TOKENS.spacing.lg,
         backgroundColor: DESIGN_TOKENS.colors.surface,
         borderRadius: 12,
         borderWidth: 1,
@@ -248,12 +248,12 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     progressLabel: {
-        fontSize: 14,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
         color: DESIGN_TOKENS.colors.text,
     },
     progressPercent: {
-        fontSize: 16,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '700',
         color: DESIGN_TOKENS.colors.primary,
     },
@@ -269,10 +269,10 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     section: {
-        marginBottom: 20,
+        marginBottom: DESIGN_TOKENS.spacing.xxs0,
         backgroundColor: '#fff',
         borderRadius: 8,
-        padding: 16,
+        padding: DESIGN_TOKENS.spacing.lg,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -289,12 +289,12 @@ const styles = StyleSheet.create({
     },
     descriptionStatusText: {
         flex: 1,
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: DESIGN_TOKENS.colors.textMuted,
         marginRight: 8,
     },
     descriptionCounterText: {
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '600',
         color: DESIGN_TOKENS.colors.text,
     },
@@ -302,23 +302,23 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     autosaveText: {
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: DESIGN_TOKENS.colors.textMuted,
     },
     autosaveSuccess: {
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: '#15803d',
     },
     autosaveError: {
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: '#b91c1c',
     },
     sectionEditor: {
-        marginBottom: 20,
-        paddingBottom: 60,
+        marginBottom: DESIGN_TOKENS.spacing.xxs0,
+        paddingBottom: DESIGN_TOKENS.spacing.xs0,
         backgroundColor: '#fff',
         borderRadius: 8,
-        padding: 16,
+        padding: DESIGN_TOKENS.spacing.lg,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     editorLabel: {
-        fontSize: 14,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
         color: DESIGN_TOKENS.colors.text,
         marginBottom: 4,
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
         color: '#ef4444',
     },
     editorHint: {
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: DESIGN_TOKENS.colors.textMuted,
         marginTop: 4,
     },
@@ -348,10 +348,10 @@ const styles = StyleSheet.create({
         marginTop: 8,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: DESIGN_TOKENS.spacing.xs,
     },
     errorText: {
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: '#ef4444',
     },
     mapHeader: {
@@ -361,17 +361,17 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     mapLabel: {
-        fontSize: 14,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
         color: DESIGN_TOKENS.colors.text,
     },
     mapCount: {
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: DESIGN_TOKENS.colors.primary,
         fontWeight: '600',
     },
     mapHint: {
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: DESIGN_TOKENS.colors.textMuted,
         marginBottom: 12,
     },

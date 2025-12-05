@@ -821,6 +821,7 @@ function ListTravel({
 
               {/* Список путешествий */}
               <FlatList
+                key={listKey}
                 ref={flatListRef}
                 data={displayData}
                 extraData={displayData.length}

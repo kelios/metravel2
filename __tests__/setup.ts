@@ -107,53 +107,40 @@ jest.mock('expo-router', () => {
   }
 })
 
-// Mock AsyncStorage with basic in-memory store (multi* helpers included)
-jest.mock('@react-native-async-storage/async-storage', () => {
+// Properly typed AsyncStorage mock
+const createAsyncStorageMock = () => {
   const store = new Map<string, string>()
 
   const getItem = jest.fn(async (key: string) => (store.has(key) ? store.get(key)! : null))
-  const setItem = jest.fn(async (key: string, value: string) => {
-    store.set(key, value)
-  })
-  const removeItem = jest.fn(async (key: string) => {
-    store.delete(key)
-  })
-  const clear = jest.fn(async () => {
-    store.clear()
-  })
-  const multiGet = jest.fn(async (keys: ReadonlyArray<string>) =>
-    keys.map((key) => [key, store.has(key) ? store.get(key)! : null] as [string, string | null])
+  const setItem = jest.fn(async (key: string, value: string) => store.set(key, value))
+  const removeItem = jest.fn(async (key: string) => store.delete(key))
+  const clear = jest.fn(async () => store.clear())
+  const multiGet = jest.fn(async (keys: ReadonlyArray<string>) => 
+    keys.map(key => [key, store.has(key) ? store.get(key)! : null] as [string, string | null])
   )
-  const multiSet = jest.fn(async (entries: ReadonlyArray<[string, string]>) => {
+  const multiSet = jest.fn(async (entries: ReadonlyArray<[string, string]>) => 
     entries.forEach(([key, value]) => store.set(key, value))
-  })
-  const multiRemove = jest.fn(async (keys: ReadonlyArray<string>) => {
-    keys.forEach((key) => store.delete(key))
-  })
+  )
+  const multiRemove = jest.fn(async (keys: ReadonlyArray<string>) => keys.forEach(key => store.delete(key)))
   const getAllKeys = jest.fn(async () => Array.from(store.keys()))
 
-  return {
-    getItem,
-    setItem,
-    removeItem,
-    clear,
-    multiGet,
-    multiSet,
-    multiRemove,
-    getAllKeys,
-    __reset: () => {
-      store.clear()
-      getItem.mockClear()
-      setItem.mockClear()
-      removeItem.mockClear()
-      clear.mockClear()
-      multiGet.mockClear()
-      multiSet.mockClear()
-      multiRemove.mockClear()
-      getAllKeys.mockClear()
-    },
+  const reset = () => {
+    store.clear()
+    getItem.mockClear()
+    setItem.mockClear()
+    removeItem.mockClear()
+    clear.mockClear()
+    multiGet.mockClear()
+    multiSet.mockClear()
+    multiRemove.mockClear()
+    getAllKeys.mockClear()
   }
-})
+
+  return { getItem, setItem, removeItem, clear, multiGet, multiSet, multiRemove, getAllKeys, __reset: reset }
+}
+
+const asyncStorageMock = createAsyncStorageMock()
+jest.mock('@react-native-async-storage/async-storage', () => asyncStorageMock)
 
 // Mock react-native-vector-icons
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
@@ -296,4 +283,33 @@ jest.mock('react-native-reanimated', () => {
   return Reanimated;
 });
 
-global.__reanimatedWorkletInit = global.__reanimatedWorkletInit || jest.fn();
+declare global {
+  namespace NodeJS {
+    interface Global {
+      __reanimatedWorkletInit?: jest.Mock
+      window?: typeof window
+      document?: typeof document
+      navigator?: typeof navigator
+    }
+  }
+}
+
+if (!global.__reanimatedWorkletInit) {
+  global.__reanimatedWorkletInit = jest.fn()
+}
+
+// Setup and teardown
+beforeEach(() => {
+  jest.clearAllMocks()
+  asyncStorageMock.__reset()
+})
+
+afterAll(() => {
+  // Clean up global polyfills
+  delete global.window
+  delete global.document
+  delete global.navigator
+  
+  // Clear all mocks
+  jest.restoreAllMocks()
+})

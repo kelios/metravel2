@@ -179,21 +179,21 @@ export default function NavigationArrows({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    gap: 16,
-    marginTop: 24,
-    marginBottom: 16,
-    paddingHorizontal: 16,
+    gap: DESIGN_TOKENS.spacing.lg,
+    marginTop: DESIGN_TOKENS.spacing.xxs4,
+    marginBottom: DESIGN_TOKENS.spacing.lg,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
   },
   containerMobile: {
     flexDirection: 'column',
-    gap: 12,
+    gap: DESIGN_TOKENS.spacing.md,
     paddingHorizontal: 12,
   },
   navCard: {
     flex: 1,
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    padding: 16,
+    padding: DESIGN_TOKENS.spacing.lg,
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
     shadowColor: '#1f1f1f',
     shadowOffset: { width: 0, height: 2 },
@@ -222,21 +222,21 @@ const styles = StyleSheet.create({
   navContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: DESIGN_TOKENS.spacing.md,
   },
   navInfo: {
     flex: 1,
-    gap: 4,
+    gap: DESIGN_TOKENS.spacing.xs,
   },
   navLabel: {
-    fontSize: 12,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
     color: '#6b7280',
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   navTitle: {
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     color: '#1f2937',
     fontWeight: '600',
     fontFamily: 'Georgia',

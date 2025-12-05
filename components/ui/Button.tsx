@@ -57,14 +57,15 @@ const ButtonComponent = ({
       testID={testID}
       disabled={isDisabled}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={({ pressed, hovered }) => [
         styles.base,
         globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
         sizeStyles[size],
         variantStyles[variant],
         fullWidth && styles.fullWidth,
         isDisabled && styles.disabled,
-        pressed && !isDisabled && styles.pressed,
+        !isDisabled && hovered && Platform.OS === 'web' && variantHoverStyles[variant],
+        !isDisabled && pressed && variantPressedStyles[variant],
         style,
       ]}
     >
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.xs,
   },
   label: {
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
   },
   labelPrimary: {
@@ -133,9 +134,6 @@ const styles = StyleSheet.create({
   },
   labelDanger: {
     color: palette.surface,
-  },
-  pressed: {
-    transform: [{ scale: 0.99 }],
   },
   disabled: {
     opacity: 0.5,
@@ -162,85 +160,112 @@ const sizeStyles: Record<ButtonSize, ViewStyle> = {
 const variantStyles: Record<ButtonVariant, ViewStyle> = {
   primary: {
     backgroundColor: palette.primary,
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-    shadowColor: '#1f1f1f',
+    shadowColor: palette.text,
     shadowOpacity: 0.12,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
     elevation: 3,
-    ...Platform.select({
-      web: {
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: palette.primaryDark,
-          transform: 'translateY(-2px)',
-          boxShadow: '0 4px 12px rgba(31, 31, 31, 0.15), 0 2px 4px rgba(31, 31, 31, 0.1)',
-        },
-        ':active': {
-          transform: 'translateY(0)',
-          boxShadow: '0 2px 6px rgba(31, 31, 31, 0.12)',
-        },
-      },
-    }),
   },
   secondary: {
     backgroundColor: palette.surface,
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-    shadowColor: '#1f1f1f',
+    shadowColor: palette.text,
     shadowOpacity: 0.08,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
     elevation: 2,
-    ...Platform.select({
-      web: {
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: palette.primaryLight,
-          transform: 'translateY(-1px)',
-          boxShadow: '0 3px 10px rgba(31, 31, 31, 0.12), 0 1px 4px rgba(31, 31, 31, 0.08)',
-        },
-        ':active': {
-          transform: 'translateY(0)',
-        },
-      },
-    }),
   },
   ghost: {
     backgroundColor: 'transparent',
     borderColor: 'transparent',
-    ...Platform.select({
-      web: {
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: palette.primarySoft,
-          transform: 'translateY(-1px)',
-        },
-        ':active': {
-          transform: 'translateY(0)',
-        },
-      },
-    }),
   },
   danger: {
     backgroundColor: palette.danger,
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-    shadowColor: '#1f1f1f',
+    shadowColor: palette.text,
     shadowOpacity: 0.12,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
     elevation: 3,
+  },
+};
+
+const variantHoverStyles: Record<ButtonVariant, ViewStyle> = {
+  primary: {
+    backgroundColor: palette.primaryDark,
     ...Platform.select({
       web: {
         // @ts-ignore
-        ':hover': {
-          backgroundColor: palette.dangerDark,
-          transform: 'translateY(-2px)',
-          boxShadow: '0 4px 12px rgba(31, 31, 31, 0.15), 0 2px 4px rgba(31, 31, 31, 0.1)',
-        },
-        ':active': {
-          transform: 'translateY(0)',
-          boxShadow: '0 2px 6px rgba(31, 31, 31, 0.12)',
-        },
+        transform: 'translateY(-2px)',
+        boxShadow: '0 4px 12px rgba(31, 31, 31, 0.15), 0 2px 4px rgba(31, 31, 31, 0.1)',
+      },
+    }),
+  },
+  secondary: {
+    backgroundColor: palette.primaryLight,
+    ...Platform.select({
+      web: {
+        // @ts-ignore
+        transform: 'translateY(-1px)',
+        boxShadow: '0 3px 10px rgba(31, 31, 31, 0.12), 0 1px 4px rgba(31, 31, 31, 0.08)',
+      },
+    }),
+  },
+  ghost: {
+    backgroundColor: palette.primarySoft,
+    ...Platform.select({
+      web: {
+        // @ts-ignore
+        transform: 'translateY(-1px)',
+      },
+    }),
+  },
+  danger: {
+    backgroundColor: palette.dangerDark,
+    ...Platform.select({
+      web: {
+        // @ts-ignore
+        transform: 'translateY(-2px)',
+        boxShadow: '0 4px 12px rgba(31, 31, 31, 0.15), 0 2px 4px rgba(31, 31, 31, 0.1)',
+      },
+    }),
+  },
+};
+
+const variantPressedStyles: Record<ButtonVariant, ViewStyle> = {
+  primary: {
+    transform: [{ scale: 0.99 }],
+    ...Platform.select({
+      web: {
+        // @ts-ignore
+        transform: 'translateY(0)',
+        boxShadow: '0 2px 6px rgba(31, 31, 31, 0.12)',
+      },
+    }),
+  },
+  secondary: {
+    transform: [{ scale: 0.99 }],
+    ...Platform.select({
+      web: {
+        // @ts-ignore
+        transform: 'translateY(0)',
+      },
+    }),
+  },
+  ghost: {
+    transform: [{ scale: 0.99 }],
+    ...Platform.select({
+      web: {
+        // @ts-ignore
+        transform: 'translateY(0)',
+      },
+    }),
+  },
+  danger: {
+    transform: [{ scale: 0.99 }],
+    ...Platform.select({
+      web: {
+        // @ts-ignore
+        transform: 'translateY(0)',
+        boxShadow: '0 2px 6px rgba(31, 31, 31, 0.12)',
       },
     }),
   },

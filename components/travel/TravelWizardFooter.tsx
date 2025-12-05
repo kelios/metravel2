@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import { Button } from 'react-native-paper';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface TravelWizardFooterProps {
     canGoBack?: boolean;
@@ -69,7 +70,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         paddingVertical: 12,
         borderTopWidth: 1,
         borderColor: '#e5e7eb',

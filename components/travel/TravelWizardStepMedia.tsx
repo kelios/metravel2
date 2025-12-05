@@ -8,6 +8,7 @@ import YoutubeLinkComponent from '@/components/YoutubeLinkComponent';
 import ImageUploadComponent from '@/components/imageUpload/ImageUploadComponent';
 import { TravelFormData, Travel } from '@/src/types/types';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface TravelWizardStepMediaProps {
     currentStep: number;
@@ -101,44 +102,44 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
 const styles = StyleSheet.create({
     safeContainer: { flex: 1, backgroundColor: '#f9f9f9' },
     headerWrapper: {
-        paddingHorizontal: 16,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         paddingTop: 12,
         paddingBottom: 8,
         backgroundColor: '#f9f9f9',
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: DESIGN_TOKENS.typography.sizes.lg,
         fontWeight: '700',
         color: '#111827',
         marginBottom: 4,
     },
     headerSubtitle: {
-        fontSize: 13,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#6b7280',
     },
     content: {
         flex: 1,
     },
     contentContainer: {
-        paddingHorizontal: 16,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         paddingBottom: 80,
     },
     section: {
-        marginTop: 16,
-        padding: 16,
+        marginTop: DESIGN_TOKENS.spacing.lg,
+        padding: DESIGN_TOKENS.spacing.lg,
         backgroundColor: '#fff',
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#e5e7eb',
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '600',
         color: '#111827',
         marginBottom: 4,
     },
     sectionHint: {
-        fontSize: 12,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: '#6b7280',
         marginBottom: 8,
     },
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
     },
     infoText: {
         marginTop: 8,
-        fontSize: 14,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#6b7280',
     },
 });

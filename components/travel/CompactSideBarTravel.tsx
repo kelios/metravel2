@@ -22,6 +22,7 @@ import WeatherWidget from "@/components/WeatherWidget";
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from "@/utils/imageOptimization";
 import type { BookSettings } from "@/components/export/BookSettingsModal";
 import { useSingleTravelExport } from "@/components/travel/hooks/useSingleTravelExport";
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 const Fallback = () => (
   <View style={styles.fallback}>
@@ -336,7 +337,7 @@ function CompactSideBarTravel({
               <View style={styles.infoRow}>
                 {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
                 <MaterialIcons name="category" size={14} color="#6b7280" />
-                <View style={[styles.categoriesWrap, { marginLeft: 6, flex: 1 }]}>
+                <View style={[styles.categoriesWrap, { marginLeft: DESIGN_TOKENS.spacing.xs, flex: 1 }]}>
                   {categories.slice(0, 2).map((cat, idx) => (
                     <View key={idx} style={styles.categoryTagWrapper}>
                       <Text style={styles.categoryTag} numberOfLines={1}>
@@ -367,11 +368,11 @@ function CompactSideBarTravel({
               >
                 {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
                 <MaterialIcons name="place" size={14} color="#6b7280" />
-                <Text style={[styles.infoText, { marginLeft: 6, flex: 1 }]} numberOfLines={1}>
+                <Text style={[styles.infoText, { marginLeft: DESIGN_TOKENS.spacing.xs, flex: 1 }]} numberOfLines={1}>
                   {firstCoord}
                 </Text>
                 {Platform.OS === "web" && (
-                  <MaterialIcons name="content-copy" size={12} color="#9ca3af" style={{ marginLeft: 6 }} />
+                  <MaterialIcons name="content-copy" size={12} color="#9ca3af" style={{ marginLeft: DESIGN_TOKENS.spacing.xs }} />
                 )}
               </Pressable>
             )}
@@ -418,7 +419,7 @@ function CompactSideBarTravel({
                 />
                 <Text style={[
                   styles.linkTxt, 
-                  isTablet && { fontSize: 13 }, // Уменьшено с 15
+                  isTablet && { fontSize: DESIGN_TOKENS.typography.sizes.sm }, // Уменьшено с 15
                   currentActive === key && styles.linkTxtActive,
                 ]}>
                   {label}
@@ -530,10 +531,10 @@ const styles = StyleSheet.create({
   cardRow: { 
     flexDirection: "row", 
     alignItems: "flex-start", // Изменено с center для лучшего выравнивания
-    marginBottom: 10, // Уменьшено с 12
+    marginBottom: DESIGN_TOKENS.spacing.sm, // Уменьшено с 12
   },
   avatarWrap: { 
-    marginRight: 10, // Уменьшено с 14
+    marginRight: DESIGN_TOKENS.spacing.sm, // Уменьшено с 14
     alignItems: "center",
   },
   // ✅ РЕДИЗАЙН: Компактная аватарка
@@ -562,7 +563,7 @@ const styles = StyleSheet.create({
   viewsRow: { 
     flexDirection: "row", 
     alignItems: "center", 
-    marginTop: 6,
+    marginTop: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: Platform.select({
       default: 6, // Мобильные
       web: 8, // Десктоп
@@ -612,7 +613,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(0, 0, 0, 0.06)",
   },
   infoText: {
-    fontSize: 13, // Уменьшено с 14
+    fontSize: DESIGN_TOKENS.typography.sizes.sm, // Уменьшено с 14
     color: "#374151",
     fontFamily: "Georgia",
     fontWeight: "500",
@@ -651,7 +652,7 @@ const styles = StyleSheet.create({
     maxWidth: 90,
   },
   categoryMore: {
-    fontSize: 10, // Уменьшено с 11
+    fontSize: DESIGN_TOKENS.typography.sizes.xs, // Уменьшено с 11
     color: "#9ca3af",
     fontFamily: "Georgia",
     fontWeight: "500",
@@ -662,15 +663,15 @@ const styles = StyleSheet.create({
     flexDirection: "row", 
     alignItems: "center", 
     justifyContent: "space-between", 
-    marginBottom: 6, // Уменьшено с 8
+    marginBottom: DESIGN_TOKENS.spacing.xs, // Уменьшено с 8
   },
   actionsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   userName: { 
-    fontSize: 14, // Уменьшено с 16
+    fontSize: DESIGN_TOKENS.typography.sizes.sm, // Уменьшено с 16
     fontWeight: "700", 
     color: "#1f2937", 
     fontFamily: "Georgia", 
@@ -683,24 +684,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 5, // Уменьшено с 6
     marginTop: 4, // Уменьшено с 6
-    paddingVertical: 2, // Уменьшено с 4
+    paddingVertical: DESIGN_TOKENS.spacing.xxs, // Уменьшено с 4
   },
   userYear: { 
-    fontSize: 13, // Уменьшено с 15
+    fontSize: DESIGN_TOKENS.typography.sizes.sm, // Уменьшено с 15
     fontWeight: "600", 
     color: "#1f2937", 
     fontFamily: "Georgia",
     lineHeight: 16,
   },
   userDays: { 
-    fontSize: 12, // Уменьшено с 14
+    fontSize: DESIGN_TOKENS.typography.sizes.xs, // Уменьшено с 14
     fontWeight: "600",
     color: "#374151", 
     fontFamily: "Georgia",
     lineHeight: 15,
   },
   exportSummary: {
-    fontSize: 11,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
     color: "#6b7280",
     marginTop: 4,
   },
@@ -763,8 +764,8 @@ const styles = StyleSheet.create({
   },
 
   allTravels: {
-    marginTop: 20,
-    fontSize: 14,
+    marginTop: DESIGN_TOKENS.spacing.xxs0,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     textAlign: "center",
     fontWeight: "500",
     color: "#B87034",
@@ -777,12 +778,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: "#2F332E",
-    paddingVertical: 16,
+    paddingVertical: DESIGN_TOKENS.spacing.lg,
     alignItems: "center",
   },
   closeBtn: { flexDirection: "row", alignItems: "center" },
   closeBtnPressed: { opacity: 0.7 },
-  closeTxt: { color: "#fff", fontSize: 16, fontFamily: "Georgia", marginLeft: 8 },
+  closeTxt: { color: "#fff", fontSize: DESIGN_TOKENS.typography.sizes.md, fontFamily: "Georgia", marginLeft: 8 },
 
   fallback: { paddingVertical: 40, alignItems: "center" },
 });
