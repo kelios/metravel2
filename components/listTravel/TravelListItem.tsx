@@ -309,12 +309,26 @@ function TravelListItem({
         </View>
     );
 
+    // ✅ FIX: On web (non-selectable), we wrap card in <a>, so use View instead of Pressable to avoid nested buttons
+    const CardWrapper = (Platform.OS === 'web' && !selectable) ? View : Pressable;
+    const cardWrapperProps = (Platform.OS === 'web' && !selectable) 
+        ? {} 
+        : {
+            onPress: handlePress,
+            android_ripple: Platform.OS === "android" ? { color: "rgba(17,24,39,0.06)" } : undefined,
+            accessibilityState: selectable ? { selected: isSelected } : undefined,
+            accessibilityLabel: `Путешествие: ${name}${countries.length > 0 ? `. Страны: ${countries.join(', ')}` : ''}`,
+            accessibilityRole: "button" as const,
+            accessibilityHint: selectable ? 'Нажмите для выбора' : 'Нажмите для просмотра деталей путешествия',
+            // @ts-ignore - aria attributes for web accessibility
+            'aria-label': Platform.OS === 'web' ? `Путешествие: ${name}` : undefined,
+            // @ts-ignore
+            'aria-pressed': selectable ? isSelected : undefined,
+        };
+
     const card = (
-            <Pressable
-                onPress={handlePress}
-                android_ripple={
-                    Platform.OS === "android" ? { color: "rgba(17,24,39,0.06)" } : undefined
-                }
+            <CardWrapper
+                {...cardWrapperProps}
                 style={[
                     styles.card,
                     globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
@@ -322,16 +336,6 @@ function TravelListItem({
                     isSingle && styles.single,
                     selectable && isSelected && styles.selected,
                 ]}
-                accessibilityState={selectable ? { selected: isSelected } : undefined}
-                accessibilityLabel={`Путешествие: ${name}${countries.length > 0 ? `. Страны: ${countries.join(', ')}` : ''}`}
-                accessibilityRole="button"
-                accessibilityHint={selectable ? 'Нажмите для выбора' : 'Нажмите для просмотра деталей путешествия'}
-                // @ts-ignore - для веб доступности
-                aria-label={Platform.OS === 'web' ? `Путешествие: ${name}` : undefined}
-                // @ts-ignore
-                aria-pressed={selectable ? isSelected : undefined}
-                // @ts-ignore
-                tabIndex={Platform.OS === 'web' ? 0 : undefined}
             >
                 {selectable && (
                     <View
@@ -467,7 +471,7 @@ function TravelListItem({
             {/* Кнопки действий (редактирование/удаление) на native */}
             {Platform.OS !== 'web' && actions}
 
-        </Pressable>
+        </CardWrapper>
     );
 
     return (
@@ -521,30 +525,32 @@ function TravelListItem({
 }
 
 const styles = StyleSheet.create({
-    wrap: { padding: 8, width: "100%" },
+    wrap: { 
+        padding: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xs }), 
+        width: "100%",
+    },
 
     card: {
         position: "relative",
         width: "100%",
         aspectRatio: 1,
-        borderRadius: Platform.select({ default: 10, web: 12 }),
+        borderRadius: DESIGN_TOKENS.radii.md,
         backgroundColor: DESIGN_TOKENS.colors.surface,
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
         shadowColor: '#1f1f1f',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        elevation: 2,
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+        elevation: 1,
         overflow: "hidden",
         ...Platform.select({
             web: {
                 boxShadow: DESIGN_TOKENS.shadows.light,
-                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
                 cursor: "pointer",
-                // @ts-ignore - для hover эффектов
+                // @ts-ignore
                 ":hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: DESIGN_TOKENS.shadows.hover,
+                    transform: "translateY(-2px)",
+                    boxShadow: DESIGN_TOKENS.shadows.medium,
                 },
             },
         }),
@@ -631,109 +637,106 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        padding: Platform.select({ default: 12, web: 14 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        padding: Platform.select({ default: DESIGN_TOKENS.spacing.sm, web: DESIGN_TOKENS.spacing.md }),
     },
-    // ✅ UX УЛУЧШЕНИЕ: Badge с ключевой информацией вверху карточки
     topBadges: {
         position: "absolute",
-        top: Platform.select({ default: 10, web: 12 }),
-        left: Platform.select({ default: 10, web: 12 }),
+        top: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
+        left: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
         flexDirection: "row",
-        gap: 6,
+        gap: DESIGN_TOKENS.spacing.xs,
         zIndex: 10,
     },
     infoBadge: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 4,
-        backgroundColor: "rgba(0, 0, 0, 0.65)",
-        borderRadius: Platform.select({ default: 8, web: 10 }),
-        paddingHorizontal: Platform.select({ default: 8, web: 10 }),
-        paddingVertical: Platform.select({ default: 4, web: 5 }),
+        gap: DESIGN_TOKENS.spacing.xxs,
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        paddingHorizontal: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
+        paddingVertical: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xxs }),
         ...Platform.select({
             web: {
-                backdropFilter: "blur(8px)",
+                backdropFilter: "blur(10px)",
             },
         }),
     },
     infoBadgeText: {
         fontSize: Platform.select({ default: 11, web: 12 }),
         color: "#fff",
-        fontWeight: "600",
+        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
     },
-    // ✅ БИЗНЕС: Badges для социального доказательства
     badgesContainer: {
         flexDirection: "row",
         flexWrap: "wrap",
-        gap: 6,
-        marginBottom: 8,
+        gap: DESIGN_TOKENS.spacing.xs,
+        marginBottom: DESIGN_TOKENS.spacing.xs,
         zIndex: 5,
     },
     badge: {
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        paddingVertical: DESIGN_TOKENS.spacing.xxs,
         ...Platform.select({
             web: {
-                boxShadow: AIRY_BOX_SHADOWS.medium,
+                boxShadow: DESIGN_TOKENS.shadows.light,
             },
         }),
     },
     badgeText: {
         fontSize: 11,
-        fontWeight: "700",
+        fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
         letterSpacing: 0.2,
     },
 
     tags: {
         flexDirection: "row",
         flexWrap: "wrap",
-        marginBottom: 8,
+        marginBottom: DESIGN_TOKENS.spacing.xs,
+        gap: DESIGN_TOKENS.spacing.xxs,
     },
 
     tag: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "rgba(255,255,255,0.55)",
-        borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
-        paddingHorizontal: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        paddingVertical: Platform.select({ default: 3, web: 4 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
-        borderColor: "rgba(0, 0, 0, 0.06)", // ✅ ДИЗАЙН: Более светлая граница
-        marginRight: Platform.select({ default: 4, web: 6 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        marginBottom: Platform.select({ default: 4, web: 6 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        backgroundColor: "rgba(255,255,255,0.6)",
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        paddingHorizontal: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
+        paddingVertical: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xxs }),
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: DESIGN_TOKENS.colors.borderLight,
     },
 
     tagTxt: {
-        fontSize: Platform.select({ default: 11, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        color: "#111827",
-        fontWeight: "600",
+        fontSize: Platform.select({ default: 11, web: 12 }),
+        color: DESIGN_TOKENS.colors.text,
+        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
     },
 
     titleBox: {
-        backgroundColor: "rgba(255,255,255,0.95)", // ✅ ДИЗАЙН: Более непрозрачный фон
-        borderRadius: Platform.select({ default: 8, web: 10 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
-        paddingHorizontal: Platform.select({ default: 12, web: 14 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        paddingVertical: Platform.select({ default: 8, web: 10 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
-        borderColor: "rgba(0, 0, 0, 0.06)", // ✅ ДИЗАЙН: Единая граница
-        marginBottom: Platform.select({ default: 8, web: 10 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        backgroundColor: "rgba(255,255,255,0.95)",
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        paddingHorizontal: Platform.select({ default: DESIGN_TOKENS.spacing.sm, web: DESIGN_TOKENS.spacing.md }),
+        paddingVertical: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: DESIGN_TOKENS.colors.borderLight,
+        marginBottom: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
         ...Platform.select({
             web: {
-                backdropFilter: "blur(12px)", // ✅ ДИЗАЙН: Увеличен blur
+                backdropFilter: "blur(12px)",
                 WebkitBackdropFilter: "blur(12px)",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.04)", // ✅ ДИЗАЙН: Более легкая тень
+                boxShadow: DESIGN_TOKENS.shadows.light,
             },
         }),
     },
 
     title: {
-        fontSize: Platform.select({ default: 16, web: 18 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        fontWeight: "700",
-        fontFamily: Platform.select({ web: "Georgia, serif", default: undefined }), // ✅ ДИЗАЙН: Georgia для заголовков
-        color: "#1a202c", // ✅ ДИЗАЙН: Единый цвет текста
-        lineHeight: Platform.select({ default: 22, web: 24 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        letterSpacing: -0.2, // ✅ ДИЗАЙН: Меньше отрицательный letter-spacing
+        fontSize: Platform.select({ default: 15, web: 17 }),
+        fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
+        fontFamily: Platform.select({ web: DESIGN_TOKENS.typography.fontFamily, default: undefined }),
+        color: DESIGN_TOKENS.colors.text,
+        lineHeight: Platform.select({ default: 20, web: 23 }),
+        letterSpacing: -0.3,
     },
 
     metaRow: {
@@ -744,67 +747,62 @@ const styles = StyleSheet.create({
     metaBox: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "rgba(255,255,255,0.5)",
-        borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
-        paddingHorizontal: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        paddingVertical: Platform.select({ default: 3, web: 4 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
-        borderColor: "rgba(0, 0, 0, 0.06)", // ✅ ДИЗАЙН: Более светлая граница
-        marginRight: Platform.select({ default: 6, web: 8 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        marginBottom: Platform.select({ default: 3, web: 4 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        backgroundColor: "rgba(255,255,255,0.6)",
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        paddingHorizontal: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
+        paddingVertical: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xxs }),
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: DESIGN_TOKENS.colors.borderLight,
+        marginRight: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
+        marginBottom: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xxs }),
     },
 
     metaTxt: {
-        fontSize: Platform.select({ default: 12, web: 13 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        color: "#4a5568", // ✅ ДИЗАЙН: Вторичный цвет текста для метаданных
-        fontWeight: "500",
-        lineHeight: Platform.select({ default: 16, web: 18 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        fontSize: Platform.select({ default: 12, web: 13 }),
+        color: DESIGN_TOKENS.colors.textMuted,
+        fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+        lineHeight: Platform.select({ default: 16, web: 18 }),
     },
 
     actions: {
         position: "absolute",
-        top: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        right: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
+        top: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
+        right: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
         flexDirection: "row",
         backgroundColor: "rgba(255,255,255,0.95)",
-        borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
-        padding: Platform.select({ default: 3, web: 4 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        borderWidth: 0.5, // ✅ ДИЗАЙН: Более тонкая граница
-        borderColor: "rgba(0, 0, 0, 0.06)", // ✅ ДИЗАЙН: Более светлая граница
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        padding: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xxs }),
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: DESIGN_TOKENS.colors.borderLight,
         zIndex: 10,
-        gap: Platform.select({ default: 3, web: 4 }), // ✅ АДАПТИВНОСТЬ: Меньше gap на мобильных
+        gap: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xxs }),
         ...Platform.select({
             web: {
-                boxShadow: "0 1px 3px rgba(0,0,0,0.04)", // ✅ ДИЗАЙН: Более легкая тень
-                backdropFilter: "blur(8px)",
-                WebkitBackdropFilter: "blur(8px)",
+                boxShadow: DESIGN_TOKENS.shadows.light,
+                backdropFilter: "blur(10px)",
+                WebkitBackdropFilter: "blur(10px)",
             },
         }),
     },
 
     btn: {
-        // ✅ ИСПРАВЛЕНИЕ: Увеличен размер до минимума 44x44px для touch-целей
-        minWidth: 44,
-        minHeight: 44,
-        width: 44,
-        height: 44,
-        borderRadius: 8,
+        minWidth: 40,
+        minHeight: 40,
+        width: 40,
+        height: 40,
+        borderRadius: DESIGN_TOKENS.radii.sm,
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: "rgba(255,255,255,0.95)",
-        padding: 6, // Добавлен padding для визуального размера
+        padding: DESIGN_TOKENS.spacing.xs,
         ...Platform.select({
             web: {
                 transition: "all 0.2s ease",
                 cursor: "pointer",
-                outlineWidth: 2,
-                outlineColor: DESIGN_TOKENS.colors.primary,
-                outlineStyle: 'solid',
-                outlineOffset: 2,
                 // @ts-ignore
                 ":hover": {
-                    backgroundColor: AIRY_COLORS.primary,
-                    transform: "scale(1.1)",
+                    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+                    transform: "scale(1.05)",
                 },
                 ":focus": {
                     outlineWidth: 2,
@@ -818,24 +816,24 @@ const styles = StyleSheet.create({
 
     checkWrap: {
         position: "absolute",
-        top: 10,
-        left: 10,
+        top: DESIGN_TOKENS.spacing.sm,
+        left: DESIGN_TOKENS.spacing.sm,
     },
 
     checkbox: {
-        width: 22,
-        height: 22,
-        borderRadius: 6,
+        width: 24,
+        height: 24,
+        borderRadius: DESIGN_TOKENS.radii.sm,
         borderWidth: 2,
-        borderColor: "#60a5fa",
-        backgroundColor: "rgba(96,165,250,0.15)",
+        borderColor: DESIGN_TOKENS.colors.primary,
+        backgroundColor: "rgba(96,165,250,0.1)",
         justifyContent: "center",
         alignItems: "center",
     },
 
     checkboxChecked: {
-        backgroundColor: "#60a5fa",
-        borderColor: "#60a5fa",
+        backgroundColor: DESIGN_TOKENS.colors.primary,
+        borderColor: DESIGN_TOKENS.colors.primary,
     },
 });
 

@@ -672,13 +672,11 @@ export default memo(FiltersComponent);
 const styles = StyleSheet.create({
   root: { 
     flex: 1, 
-    backgroundColor: "#fff",
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     ...Platform.select({
       web: {
-        borderRadius: 16, // ✅ ДИЗАЙН: Скругленные углы (сверху)
-        borderTopLeftRadius: 0, // На desktop sidebar не имеет скругления сверху (в ListTravel.tsx)
-        borderTopRightRadius: 0,
-        boxShadow: "2px 0 8px rgba(0,0,0,0.04)", // ✅ ДИЗАЙН: Легкая тень
+        borderRadius: 0,
+        boxShadow: "none",
       },
     }),
   },
@@ -693,34 +691,39 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
-  scroll: { flex: 1 },
+  scroll: { 
+    flex: 1,
+  },
   scrollContent: { 
-    paddingHorizontal: Platform.select({ default: 12, web: 4 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
-    paddingBottom: Platform.select({ default: 16, web: 8 }) // ✅ КОМПАКТНОСТЬ: Меньше отступы
+    paddingHorizontal: Platform.select({ default: DESIGN_TOKENS.spacing.sm, web: DESIGN_TOKENS.spacing.xs }),
+    paddingBottom: Platform.select({ default: DESIGN_TOKENS.spacing.md, web: DESIGN_TOKENS.spacing.sm }),
+    paddingTop: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.xs }),
   },
   content: { 
-    paddingHorizontal: Platform.select({ default: 10, web: 4 }) // ✅ КОМПАКТНОСТЬ: Меньше отступы
+    paddingHorizontal: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: 0 }),
+    gap: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.xs }),
   },
   searchInFilters: {
-    marginBottom: Platform.select({ default: 12, web: 8 }),
-    paddingBottom: Platform.select({ default: 12, web: 8 }),
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
+    marginBottom: Platform.select({ default: DESIGN_TOKENS.spacing.sm, web: DESIGN_TOKENS.spacing.xs }),
+    paddingBottom: Platform.select({ default: DESIGN_TOKENS.spacing.sm, web: DESIGN_TOKENS.spacing.xs }),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: DESIGN_TOKENS.colors.borderLight,
   },
 
   groupBox: { 
-    marginBottom: Platform.select({ default: 8, web: 6 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
-    backgroundColor: "#ffffff", // ✅ ДИЗАЙН: Белый фон
-    borderRadius: Platform.select({ default: 8, web: 8 }), // ✅ КОМПАКТНОСТЬ: Меньше радиус
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    marginBottom: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.xs }),
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
+    overflow: 'hidden',
     ...Platform.select({
       web: {
-        transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-        boxShadow: DESIGN_TOKENS.shadows.light, // ✅ ДИЗАЙН: Используем тень из дизайн-системы
+        transition: "all 0.2s ease",
         // @ts-ignore
         ":hover": {
-          boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-          borderColor: 'rgba(0, 0, 0, 0.1)', // ✅ ДИЗАЙН: Нейтральная граница при hover
+          borderColor: DESIGN_TOKENS.colors.border,
+          backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
         },
       },
     }),
@@ -730,57 +733,60 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: Platform.select({ default: 10, web: 8 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
-    paddingHorizontal: Platform.select({ default: 10, web: 10 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
-    borderRadius: Platform.select({ default: 8, web: 8 }), // ✅ КОМПАКТНОСТЬ: Меньше радиус
+    paddingVertical: Platform.select({ default: DESIGN_TOKENS.spacing.sm, web: DESIGN_TOKENS.spacing.xs }),
+    paddingHorizontal: Platform.select({ default: DESIGN_TOKENS.spacing.sm, web: DESIGN_TOKENS.spacing.sm }),
+    minHeight: 44,
     ...Platform.select({
       web: {
         transition: "all 0.2s ease",
         cursor: "pointer",
         // @ts-ignore
         ":hover": {
-          backgroundColor: 'rgba(0, 0, 0, 0.02)', // ✅ ДИЗАЙН: Нейтральный hover
+          backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
         },
       },
     }),
   },
   groupLabel: { 
-    fontSize: Platform.select({ default: 14, web: 14 }), // ✅ КОМПАКТНОСТЬ: Меньше размер шрифта
-    fontWeight: "600", // ✅ ДИЗАЙН: Уменьшен weight для прозаичности
-    color: DESIGN_TOKENS.colors.text, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    letterSpacing: -0.1, // ✅ ДИЗАЙН: Меньше отрицательный letter-spacing
+    fontSize: Platform.select({ default: 13, web: 14 }),
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    color: DESIGN_TOKENS.colors.text,
+    letterSpacing: -0.2,
+    flex: 1,
   },
 
   itemsBox: { 
-    paddingHorizontal: Platform.select({ default: 10, web: 8 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
-    paddingBottom: Platform.select({ default: 4, web: 6 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
+    paddingHorizontal: Platform.select({ default: DESIGN_TOKENS.spacing.sm, web: DESIGN_TOKENS.spacing.sm }),
+    paddingTop: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xxs }),
+    paddingBottom: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.xs }),
+    gap: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xxs }),
   },
 
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: Platform.select({ default: 6, web: 6 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
-    paddingHorizontal: Platform.select({ default: 4, web: 6 }), // ✅ КОМПАКТНОСТЬ: Меньше отступы
-    gap: Platform.select({ default: 8, web: 8 }), // ✅ КОМПАКТНОСТЬ: Меньше gap
-    borderRadius: Platform.select({ default: 6, web: 6 }), // ✅ КОМПАКТНОСТЬ: Меньше радиус
-    marginBottom: Platform.select({ default: 2, web: 2 }), // ✅ КОМПАКТНОСТЬ: Меньше отступ
+    paddingVertical: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.xs }),
+    paddingHorizontal: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.xs }),
+    gap: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    minHeight: 36,
     ...Platform.select({
       web: {
         transition: "all 0.2s ease",
         cursor: "pointer",
         // @ts-ignore
         ":hover": {
-          backgroundColor: 'rgba(0, 0, 0, 0.02)', // ✅ ДИЗАЙН: Нейтральный hover
+          backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
         },
       },
     }),
   },
   itemText: { 
-    fontSize: Platform.select({ default: 12, web: 13 }), // ✅ КОМПАКТНОСТЬ: Меньше размер шрифта
-    color: DESIGN_TOKENS.colors.text, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    fontSize: Platform.select({ default: 13, web: 14 }),
+    color: DESIGN_TOKENS.colors.text,
     flex: 1,
-    fontWeight: "500",
-    lineHeight: Platform.select({ default: 16, web: 18 }), // ✅ КОМПАКТНОСТЬ: Меньше line-height
+    fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
+    lineHeight: Platform.select({ default: 18, web: 20 }),
   },
 
   yearBox: { 

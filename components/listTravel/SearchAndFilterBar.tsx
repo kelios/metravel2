@@ -352,25 +352,25 @@ const styles = StyleSheet.create({
     wrap: {
         flexDirection: "column",
         marginBottom: 0,
-        gap: Platform.select({ default: 6, web: 8 }),
+        gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
         paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
         paddingVertical: Platform.select({ default: spacing.xs, web: spacing.sm }),
         width: '100%',
         maxWidth: '100%',
-        borderRadius: DESIGN_TOKENS.radii.lg,
+        borderRadius: DESIGN_TOKENS.radii.md,
         backgroundColor: DESIGN_TOKENS.colors.surface,
         ...Platform.select({
             ios: {
                 shadowColor: "#1f1f1f",
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.05,
-                shadowRadius: 16,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.04,
+                shadowRadius: 8,
             },
             android: {
-                elevation: 3,
+                elevation: 2,
             },
             web: {
-                boxShadow: DESIGN_TOKENS.shadows.card,
+                boxShadow: DESIGN_TOKENS.shadows.light,
                 position: 'relative' as any,
                 zIndex: 1,
             },
@@ -381,9 +381,9 @@ const styles = StyleSheet.create({
         alignItems: "center",
         gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
         width: '100%',
-        maxWidth: '100%', // ✅ ИСПРАВЛЕНИЕ: Предотвращаем выход за границы
-        overflow: 'hidden', // ✅ ИСПРАВЛЕНИЕ: Скрываем переполнение
-        flexWrap: 'nowrap', // ✅ ИСПРАВЛЕНИЕ: Не переносим элементы первой строки
+        maxWidth: '100%',
+        overflow: 'visible',
+        flexWrap: 'nowrap',
     },
     topRowMobile: {
         gap: spacing.xs,
@@ -391,19 +391,19 @@ const styles = StyleSheet.create({
     searchContainer: {
         flex: 1,
         position: 'relative',
-        minWidth: 0, // ✅ ИСПРАВЛЕНИЕ: Разрешаем сжатие flex-элемента
-        maxWidth: '100%', // ✅ ИСПРАВЛЕНИЕ: Предотвращаем выход за границы
-        overflow: 'visible', // ✅ ИСПРАВЛЕНИЕ: Разрешаем видимость для автодополнения
+        minWidth: 0,
+        maxWidth: '100%',
+        overflow: 'visible',
         ...Platform.select({
             web: {
-                zIndex: 100, // z-index только для автодополнения
+                zIndex: 100,
             },
         }),
     },
     wrapMobile: { 
         paddingHorizontal: spacing.xs,
         paddingVertical: spacing.xs,
-        marginBottom: spacing.xs,
+        marginBottom: 0,
         marginTop: 0, 
         gap: spacing.xs,
         borderRadius: DESIGN_TOKENS.radii.md,
@@ -412,51 +412,52 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: "row",
         alignItems: "center",
-        gap: Platform.select({ default: 4, web: 6 }),
+        gap: Platform.select({ default: spacing.xs, web: spacing.xs }),
         backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
         borderRadius: DESIGN_TOKENS.radii.pill,
         borderWidth: 1,
         borderColor: DESIGN_TOKENS.colors.borderLight,
-        paddingHorizontal: Platform.select({ default: 12, web: 18 }),
+        paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
         height: Platform.select({
-            default: 52, // Повышена высота для лучшей читаемости
-            web: 60,
+            default: 48,
+            web: 52,
         }),
+        minWidth: 0,
         ...Platform.select({
             ios: {
                 shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.04,
-                shadowRadius: 4,
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.03,
+                shadowRadius: 2,
             },
             android: {
                 elevation: 1,
             },
             web: {
                 boxShadow: DESIGN_TOKENS.shadows.light,
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: 'all 0.2s ease',
             },
         }),
     },
     searchBoxActive: {
-        borderColor: DESIGN_TOKENS.colors.primaryLight,
+        borderColor: DESIGN_TOKENS.colors.primary,
         ...Platform.select({
             ios: {
-                shadowOpacity: 0.12,
-                shadowRadius: 8,
+                shadowOpacity: 0.08,
+                shadowRadius: 6,
             },
             android: {
-                elevation: 3,
+                elevation: 2,
             },
             web: {
-                boxShadow: DESIGN_TOKENS.shadows.medium,
+                boxShadow: `0 0 0 3px ${DESIGN_TOKENS.colors.primarySoft}`,
             },
         }),
     },
     searchBoxMobile: {
-        height: 48,
-        paddingHorizontal: 10,
-        gap: 4,
+        height: 44,
+        paddingHorizontal: spacing.sm,
+        gap: spacing.xxs,
     },
     input: {
         flex: 1,
@@ -464,6 +465,7 @@ const styles = StyleSheet.create({
         color: DESIGN_TOKENS.colors.text,
         paddingVertical: 0,
         lineHeight: Platform.select({ default: 20, web: 22 }),
+        minWidth: 0,
         ...Platform.select({
             web: {
                 outlineWidth: 0,
@@ -474,43 +476,46 @@ const styles = StyleSheet.create({
     inputMobile: {
         fontSize: 14,
         paddingVertical: 0,
-        lineHeight: 20,
+        lineHeight: 18,
     },
     searchIconBadge: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         backgroundColor: DESIGN_TOKENS.colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: DESIGN_TOKENS.colors.borderLight,
+        flexShrink: 0,
     },
     searchIconBadgeMobile: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
     },
     searchDivider: {
         width: StyleSheet.hairlineWidth,
         alignSelf: 'stretch',
         backgroundColor: DESIGN_TOKENS.colors.borderLight,
-        opacity: 0.8,
-        marginHorizontal: 10,
+        opacity: 0.6,
+        marginHorizontal: spacing.xs,
+        flexShrink: 0,
     },
     searchDividerMobile: {
-        marginHorizontal: 8,
+        marginHorizontal: spacing.xxs,
     },
     clearBtn: {
-        padding: 6,
+        padding: spacing.xs,
         borderRadius: radii.pill,
-        minWidth: 36,
-        minHeight: 36,
+        minWidth: 32,
+        minHeight: 32,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: DESIGN_TOKENS.colors.surface,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: DESIGN_TOKENS.colors.borderLight,
+        flexShrink: 0,
         ...Platform.select({
             web: {
                 cursor: "pointer",
@@ -525,8 +530,8 @@ const styles = StyleSheet.create({
     actionIcons: {
         flexDirection: "row",
         alignItems: "center",
-        gap: Platform.select({ default: 6, web: 6 }), // ✅ КОМПАКТНОСТЬ: Уменьшен gap с 8 до 6
-        marginLeft: Platform.select({ default: 4, web: 6 }), // ✅ КОМПАКТНОСТЬ: Уменьшен marginLeft
+        gap: Platform.select({ default: spacing.xxs, web: spacing.xs }),
+        marginLeft: Platform.select({ default: spacing.xxs, web: spacing.xs }),
         flexShrink: 0,
         ...Platform.select({
             web: {
@@ -535,25 +540,28 @@ const styles = StyleSheet.create({
         }),
     },
     actionIconsMobile: {
-        gap: 3, // ✅ КОМПАКТНОСТЬ: Еще уменьшен gap с 4 до 3
-        marginLeft: 2,
+        gap: spacing.xxs,
+        marginLeft: spacing.xxs,
     },
     resultsRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        flexWrap: 'nowrap',
         gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
         marginTop: spacing.xs,
         width: '100%',
         maxWidth: '100%',
+        minWidth: 0,
     },
     resultsRowMobile: {
         marginTop: spacing.xs,
+        flexWrap: 'wrap',
     },
     resultsContent: {
-        flex: 1, // ✅ ИСПРАВЛЕНИЕ: Занимает доступное пространство
-        minWidth: 0, // ✅ ИСПРАВЛЕНИЕ: Разрешаем сжатие
-        maxWidth: '100%', // ✅ ИСПРАВЛЕНИЕ: Ограничиваем ширину
+        flex: 1,
+        minWidth: 0,
+        maxWidth: '100%',
         ...Platform.select({
             web: {
                 overflow: 'hidden' as any,
@@ -563,42 +571,45 @@ const styles = StyleSheet.create({
     resultsBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
+        gap: spacing.xs,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
         borderRadius: radii.pill,
         backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
-        borderWidth: 1,
+        borderWidth: StyleSheet.hairlineWidth,
         borderColor: DESIGN_TOKENS.colors.borderLight,
+        flexShrink: 1,
+        minWidth: 0,
     },
     resultsBadgeMobile: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+        paddingHorizontal: spacing.xs,
+        paddingVertical: spacing.xxs,
     },
     resultsText: {
         fontSize: Platform.select({
-            default: 13,
-            web: 14,
+            default: 12,
+            web: 13,
         }),
         fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
         color: palette.text,
         lineHeight: Platform.select({
-            default: 18,
-            web: 20,
+            default: 16,
+            web: 18,
         }),
+        flexShrink: 1,
     },
     clearAllBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: Platform.select({ default: 14, web: 16 }),
-        paddingVertical: Platform.select({ default: 8, web: 10 }),
+        gap: spacing.xxs,
+        paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
+        paddingVertical: Platform.select({ default: spacing.xs, web: spacing.xs }),
         borderRadius: radii.pill,
         backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
-        borderWidth: 1,
+        borderWidth: StyleSheet.hairlineWidth,
         borderColor: DESIGN_TOKENS.colors.borderLight,
-        minHeight: Platform.select({ default: 38, web: 42 }),
-        minWidth: 36, // ✅ ИСПРАВЛЕНИЕ: Минимальная ширина для touch-целей
+        minHeight: Platform.select({ default: 36, web: 38 }),
+        minWidth: 36,
         flexShrink: 0,
         ...Platform.select({
             web: {
@@ -613,18 +624,20 @@ const styles = StyleSheet.create({
         }),
     },
     clearAllBtnText: {
-        fontSize: Platform.select({ default: 12, web: 13 }),
+        fontSize: Platform.select({ default: 11, web: 12 }),
         fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
         color: palette.text,
+        flexShrink: 1,
     },
     recommendationsToggle: {
-        width: Platform.select({ default: 36, web: 40 }), // ✅ ИСПРАВЛЕНИЕ: Увеличена ширина для touch-целей
-        height: Platform.select({ default: 36, web: 40 }), // ✅ ИСПРАВЛЕНИЕ: Увеличена высота для touch-целей
+        width: Platform.select({ default: 36, web: 38 }),
+        height: Platform.select({ default: 36, web: 38 }),
         borderRadius: radii.sm,
         justifyContent: 'center',
         alignItems: 'center',
-        minWidth: 36, // ✅ ИСПРАВЛЕНИЕ: Минимальная ширина для touch-целей
-        minHeight: 36, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+        minWidth: 36,
+        minHeight: 36,
+        flexShrink: 0,
         ...Platform.select({
             web: {
                 cursor: 'pointer',

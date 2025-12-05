@@ -736,7 +736,6 @@ function ListTravel({
       <SafeAreaView style={styles.root}>
         <View style={styles.container}>
           <View style={styles.content}>
-            {/* Сайдбар с фильтрами (только на десктопе) */}
             {!isMobile && (
               <View style={styles.sidebar}>
                 {/* Фильтры без поиска */}
@@ -762,30 +761,21 @@ function ListTravel({
               </View>
             )}
 
-            {/* Основной контент */}
             <View style={styles.main}>
               {/* Поиск для веб-версии - в основном контенте, как на картинке */}
-              {!isMobile && (
+              {!isMobile ? (
                 <View style={styles.searchSectionMain}>
                   <SearchAndFilterBar
                     search={search}
                     setSearch={setSearch}
-                    onToggleFilters={undefined}
                     onToggleRecommendations={() => handleRecommendationsVisibilityChange(!isRecommendationsVisible)}
                     isRecommendationsVisible={isRecommendationsVisible}
-                    hasFilters={Object.keys(queryParams).length > 0}
+                    hasFilters={activeFiltersCount > 0}
                     resultsCount={total}
                     activeFiltersCount={activeFiltersCount}
-                    onClearAll={() => {
-                      setSearch('');
-                      resetFilters();
-                    }}
                   />
                 </View>
-              )}
-
-              {/* Поиск для мобильной версии */}
-              {isMobile && (
+              ) : (
                 <View style={styles.searchSection}>
                   <SearchAndFilterBar
                     search={search}
@@ -793,13 +783,9 @@ function ListTravel({
                     onToggleFilters={() => setShowFilters(true)}
                     onToggleRecommendations={() => handleRecommendationsVisibilityChange(!isRecommendationsVisible)}
                     isRecommendationsVisible={isRecommendationsVisible}
-                    hasFilters={Object.keys(queryParams).length > 0}
+                    hasFilters={activeFiltersCount > 0}
                     resultsCount={total}
                     activeFiltersCount={activeFiltersCount}
-                    onClearAll={() => {
-                      setSearch('');
-                      resetFilters();
-                    }}
                   />
                 </View>
               )}
@@ -1012,246 +998,224 @@ function ListTravel({
 
 /* ===== Styles ===== */
 const styles = StyleSheet.create({
-	root: { 
-		flex: 1, 
-		// Прозрачный фон: даём глобальной карте из RootLayout мягко просвечивать
-		backgroundColor: 'transparent',
-	},
-    container: {
-        flex: 1,
-        ...(Platform.OS === "web" && { alignItems: "stretch" }),
-    },
-    content: {
-        flex: 1,
-        flexDirection: Platform.select({ 
-            ios: 'column',
-            android: 'column',
-            web: 'row',
-            default: 'column',
-        }),
-    },
-    sidebar: {
-        width: Platform.select({ 
-            ios: '100%',
-            android: '100%',
-            web: '260px', // ✅ ОПТИМИЗАЦИЯ: Уменьшено для большего пространства контента
-            default: '100%',
-        }) as any,
-        backgroundColor: palette.surface,
-        borderRightWidth: Platform.select({ 
-            ios: StyleSheet.hairlineWidth,
-            android: StyleSheet.hairlineWidth,
-            web: 1,
-            default: 0,
-        }),
-        borderColor: palette.border,
-        ...Platform.select({
-            web: {
-                boxShadow: DESIGN_TOKENS.shadows.soft,
-                position: "sticky" as any,
-                top: 0,
-                alignSelf: "flex-start",
-                maxHeight: "100vh" as any,
-                paddingTop: spacing.sm,
-                overflowY: "auto" as any,
-                zIndex: 10,
-            },
-        }),
-    },
-    main: {
-        flex: 1,
-        backgroundColor: 'transparent',
-        ...Platform.select({
-            default: {
-                paddingHorizontal: spacing.xs, // ✅ ОПТИМИЗАЦИЯ: Меньше отступы на мобильных
-                paddingTop: spacing.xs,
-                paddingBottom: 0,
-            },
-            web: {
-                paddingHorizontal: spacing.lg,
-                paddingTop: spacing.lg,
-                paddingBottom: 0,
-            },
-        }),
-        ...(Platform.OS === "web" && {
-            maxWidth: 1200, // ✅ ОПТИМИЗАЦИЯ: Уменьшено для лучшей читаемости (3 колонки)
-            marginHorizontal: "auto" as any,
-            width: "100%",
-        }),
-    },
-    searchSection: {
-        marginTop: Platform.select({
-            ios: 0,
-            android: 0,
-            web: spacing.md,
-            default: 0,
-        }),
-        marginBottom: Platform.select({
-            ios: spacing.xs,
-            android: spacing.xs,
-            web: spacing.lg,
-            default: spacing.xs,
-        }),
-        paddingHorizontal: Platform.select({
-            ios: 0,
-            android: 0,
-            web: 0,
-            default: 0,
-        }),
-    },
-    searchSectionMain: {
-        marginBottom: spacing.md, // ✅ ОПТИМИЗАЦИЯ: Добавлен отступ для лучшего разделения
-        paddingHorizontal: 0,
-    },
-    // ✅ ДИЗАЙН: Секция категорий с улучшенными отступами
-    categoriesSectionMain: {
-        marginTop: Platform.select({
-            default: spacing.xs, // ✅ ОПТИМИЗАЦИЯ: Меньше отступ на мобильных
-            web: spacing.md,
-        }),
-        marginBottom: Platform.select({
-            default: spacing.sm, // ✅ ОПТИМИЗАЦИЯ: Меньше отступ на мобильных
-            web: spacing.lg,
-        }),
-        paddingVertical: Platform.select({
-            default: spacing.xs,
-            web: spacing.sm,
-        }),
-    },
-    categoriesTitle: {
-        fontSize: Platform.select({
-            default: 14,
-            web: 15,
-        }),
-        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-        color: palette.text,
-        marginBottom: Platform.select({
-            default: spacing.sm,
-            web: spacing.md,
-        }),
-        ...Platform.select({
-            web: {
-                fontFamily: DESIGN_TOKENS.typography.fontFamily,
-            },
-        }),
-    },
-    loader: {
-        justifyContent: "center",
-        alignItems: "center",
-        paddingVertical: 40,
-    },
-    footerLoader: {
-        justifyContent: "center",
-        alignItems: "center",
-        paddingVertical: 20,
-    },
-    status: { marginTop: 40, textAlign: "center", fontSize: 16, color: palette.textMuted },
-    list: { gap: spacing.md },
-    listContent: {
-        padding: Platform.select({
-            default: spacing.xs,
-            web: spacing.sm,
-        }),
-        gap: spacing.md,
-        paddingBottom: spacing.xl,
-    },
-    // ✅ АДАПТИВНОСТЬ: Отдельные стили для мобильных устройств
-    listContentMobile: {
-        padding: 4,
-        gap: spacing.sm,
-        paddingBottom: spacing.lg,
-    },
-    columnWrapper: { gap: spacing.md, justifyContent: "space-between" },
-    exportBar: {
-        gap: spacing.sm,
-        padding: spacing.md,
-        borderTopWidth: 1,
-        borderColor: palette.border,
-        backgroundColor: palette.surface,
+  root: {
+    flex: 1,
+    backgroundColor: palette.background,
+  },
+  container: {
+    flex: 1,
+    flexDirection: 'row',
+    maxWidth: 1440,
+    marginHorizontal: 'auto',
+    width: '100%',
+    ...Platform.select({
+      web: {
+        minHeight: '100vh',
+      },
+    }),
+  },
+  content: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingTop: Platform.select({ default: spacing.sm, web: spacing.lg }),
+    gap: Platform.select({ default: 0, web: spacing.lg }),
+  },
+  sidebar: {
+    width: Platform.select({ default: 260, web: 280 }),
+    paddingRight: 0,
+    paddingLeft: Platform.select({ default: spacing.sm, web: spacing.md }),
+    borderRightWidth: 1,
+    borderRightColor: palette.borderLight,
+    ...Platform.select({
+      web: {
+        position: 'sticky' as any,
+        top: 0,
+        alignSelf: 'flex-start',
+        maxHeight: '100vh',
+        overflowY: 'auto' as any,
+      },
+    }),
+  },
+  main: {
+    flex: 1,
+    paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.lg }),
+    paddingRight: Platform.select({ default: spacing.sm, web: spacing.xl }),
+    minWidth: 0,
+  },
+  searchSection: {
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  searchSectionMain: {
+    marginBottom: spacing.md,
+    paddingHorizontal: 0,
+  },
+  categoriesSectionMain: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  categoriesTitle: {
+    fontSize: Platform.select({ default: 14, web: 15 }),
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    color: palette.text,
+    marginBottom: spacing.sm,
+    letterSpacing: -0.2,
+    ...Platform.select({
+      web: {
+        fontFamily: DESIGN_TOKENS.typography.fontFamily,
+      },
+    }),
+  },
+  loader: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: Platform.select({ default: spacing.xl, web: 40 }),
+  },
+  footerLoader: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: Platform.select({ default: spacing.md, web: spacing.lg }),
+  },
+  status: { 
+    marginTop: spacing.xl, 
+    textAlign: "center", 
+    fontSize: Platform.select({ default: 14, web: 16 }), 
+    color: palette.textMuted,
+  },
+  list: { 
+    gap: Platform.select({ default: spacing.sm, web: spacing.md }),
+  },
+  listContent: {
+    padding: Platform.select({ default: spacing.xs, web: spacing.sm }),
+    gap: Platform.select({ default: spacing.sm, web: spacing.md }),
+    paddingBottom: Platform.select({ default: spacing.xl, web: spacing.xxl }),
+  },
+  listContentMobile: {
+    padding: spacing.xs,
+    gap: spacing.xs,
+    paddingBottom: spacing.xl,
+  },
+  columnWrapper: { 
+    gap: Platform.select({ default: spacing.xs, web: spacing.md }), 
+    justifyContent: "flex-start",
+  },
+  exportBar: {
+    gap: spacing.sm,
+    padding: Platform.select({ default: spacing.md, web: spacing.lg }),
+    borderTopWidth: 1,
+    borderColor: palette.borderLight,
+    backgroundColor: palette.surface,
+    ...Platform.select({
+      ios: {
         shadowColor: "#0f172a",
         shadowOpacity: 0.05,
         shadowOffset: { width: 0, height: -2 },
         shadowRadius: 8,
-    },
-    exportBarInfo: {
-        gap: spacing.xs,
-    },
-    exportBarInfoTitle: {
-        fontSize: 16,
-        fontWeight: "700",
-        color: palette.text,
-    },
-    exportBarInfoSubtitle: {
-        fontSize: 13,
-        color: palette.textMuted,
-    },
-    exportBarInfoActions: {
-        flexDirection: "row",
-        gap: spacing.sm,
-        flexWrap: "wrap",
-    },
-    exportBarButtons: {
-        flexDirection: "row",
-        gap: spacing.sm,
-        flexWrap: "wrap",
-    },
-    exportBarButtonsMobile: {
-        flexDirection: "column",
-    },
-    linkButton: {
-        color: palette.primary,
-        fontSize: 13,
-        fontWeight: "600",
-    },
-    progressWrapper: {
-        height: 4,
-        backgroundColor: palette.surfaceMuted,
-        borderRadius: radii.sm,
-        overflow: "hidden",
-    },
-    progressBar: {
-        height: "100%",
-        backgroundColor: palette.accent,
-    },
-    recommendationsLoader: {
-        paddingVertical: spacing.lg,
-        alignItems: "center",
-    },
-    recommendationsSkeleton: {
-        width: "100%",
-        paddingHorizontal: spacing.md,
-        gap: spacing.md,
-    },
-    recommendationsSkeletonHeader: {
-        gap: spacing.sm,
-        marginBottom: spacing.md,
-    },
-    recommendationsSkeletonTitle: {
-        height: 24,
-        width: 200,
-        backgroundColor: palette.surfaceMuted,
-        borderRadius: radii.sm,
-    },
-    recommendationsSkeletonTabs: {
-        height: 32,
-        width: 300,
-        backgroundColor: palette.surfaceMuted,
-        borderRadius: radii.md,
-    },
-    recommendationsSkeletonContent: {
-        flexDirection: "row",
-        gap: spacing.md,
-        flexWrap: "wrap",
-    },
-    recommendationsSkeletonCard: {
-        width: Platform.select({
-            default: "100%",
-            web: "calc(33.333% - 12px)" as any,
-        }),
-        height: 200,
-        backgroundColor: palette.surfaceMuted,
-        borderRadius: radii.md,
-    },
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0 -2px 12px rgba(15, 23, 42, 0.04)',
+      },
+    }),
+  },
+  exportBarInfo: {
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  exportBarInfoTitle: {
+    fontSize: Platform.select({ default: 15, web: 16 }),
+    fontWeight: "700",
+    color: palette.text,
+    letterSpacing: -0.2,
+  },
+  exportBarInfoSubtitle: {
+    fontSize: Platform.select({ default: 12, web: 13 }),
+    color: palette.textMuted,
+    lineHeight: Platform.select({ default: 16, web: 18 }),
+  },
+  exportBarInfoActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    flexWrap: "wrap",
+    marginTop: spacing.xs,
+  },
+  exportBarButtons: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    flexWrap: "wrap",
+    alignItems: 'center',
+  },
+  exportBarButtonsMobile: {
+    flexDirection: "column",
+    width: '100%',
+  },
+  linkButton: {
+    color: palette.primary,
+    fontSize: Platform.select({ default: 12, web: 13 }),
+    fontWeight: "600",
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        textDecorationLine: 'underline',
+      },
+    }),
+  },
+  progressWrapper: {
+    height: 4,
+    backgroundColor: palette.surfaceMuted,
+    borderRadius: radii.sm,
+    overflow: "hidden",
+    marginTop: spacing.sm,
+  },
+  progressBar: {
+    height: "100%",
+    backgroundColor: palette.accent,
+    borderRadius: radii.sm,
+  },
+  recommendationsLoader: {
+    paddingVertical: Platform.select({ default: spacing.md, web: spacing.lg }),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  recommendationsSkeleton: {
+    width: "100%",
+    paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
+    gap: Platform.select({ default: spacing.sm, web: spacing.md }),
+  },
+  recommendationsSkeletonHeader: {
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  recommendationsSkeletonTitle: {
+    height: Platform.select({ default: 20, web: 24 }),
+    width: Platform.select({ default: 160, web: 200 }),
+    backgroundColor: palette.surfaceMuted,
+    borderRadius: radii.sm,
+  },
+  recommendationsSkeletonTabs: {
+    height: Platform.select({ default: 28, web: 32 }),
+    width: Platform.select({ default: 240, web: 300 }),
+    backgroundColor: palette.surfaceMuted,
+    borderRadius: radii.md,
+  },
+  recommendationsSkeletonContent: {
+    flexDirection: "row",
+    gap: Platform.select({ default: spacing.sm, web: spacing.md }),
+    flexWrap: "wrap",
+  },
+  recommendationsSkeletonCard: {
+    width: Platform.select({
+      default: "100%",
+      web: "calc(33.333% - 12px)" as any,
+    }),
+    height: Platform.select({ default: 180, web: 200 }),
+    backgroundColor: palette.surfaceMuted,
+    borderRadius: radii.md,
+  },
 });
 
 export default memo(ListTravel);

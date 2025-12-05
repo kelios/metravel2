@@ -25,6 +25,13 @@ const originalResolveRequest = config.resolver.resolveRequest
 config.resolver = {
   ...config.resolver,
   resolveRequest: (context, moduleName, platform, modulePath) => {
+    // Блокируем импорт всех CSS файлов (Metro не может их обработать из-за lightningcss)
+    if (moduleName.endsWith('.css')) {
+      return {
+        filePath: path.resolve(__dirname, 'metro-stubs/empty.js'),
+        type: 'sourceFile',
+      };
+    }
     // Исключаем html2canvas для jsPDF (не нужен для нашего использования)
     if (moduleName === 'html2canvas' || moduleName.includes('html2canvas')) {
       // Возвращаем пустой stub для html2canvas

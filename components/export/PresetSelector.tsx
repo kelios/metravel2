@@ -1,14 +1,72 @@
 // components/export/PresetSelector.tsx
 // Компонент для выбора пресетов настроек PDF
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import type { BookPreset, PresetCategory } from '@/src/types/pdf-presets';
 import { BOOK_PRESETS, PRESET_CATEGORIES } from '@/src/types/pdf-presets';
 
-// Импортируем CSS для web
-if (Platform.OS === 'web') {
-  require('./PresetSelector.web.css');
+// Добавляем стили для web через style tag
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const styleId = 'preset-selector-styles';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.type = 'text/css';
+    const css = `
+      .presets-scroll-container {
+        display: flex;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 #f1f5f9;
+        padding: 8px 0;
+      }
+      .presets-scroll-container::-webkit-scrollbar { height: 8px; }
+      .presets-scroll-container::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+        margin: 0 16px;
+      }
+      .presets-scroll-container::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      .presets-scroll-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+      .presets-content {
+        display: flex;
+        flex-direction: row;
+        gap: 12px;
+        padding: 0 16px;
+        min-width: min-content;
+      }
+      .categories-scroll-container {
+        display: flex;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .categories-scroll-container::-webkit-scrollbar { display: none; }
+      .categories-content {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        padding: 0 16px;
+        min-width: min-content;
+      }
+    `;
+    if ((style as any).styleSheet) {
+      // IE support
+      (style as any).styleSheet.cssText = css;
+    } else {
+      style.appendChild(document.createTextNode(css));
+    }
+    document.head.appendChild(style);
+  }
 }
 
 interface PresetSelectorProps {

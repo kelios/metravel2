@@ -3,10 +3,17 @@
 /**
  * Fix for lightningcss x64/arm64 compatibility issue on macOS
  * This script patches the lightningcss module to use arm64 binary when x64 is requested
+ * Only runs on macOS - skips on Linux (EAS Build servers)
  */
 
 const fs = require('fs');
 const path = require('path');
+
+// Skip on non-macOS platforms (e.g., EAS Build Linux servers)
+if (process.platform !== 'darwin') {
+  console.log('✓ Skipping lightningcss fix on non-macOS platform');
+  process.exit(0);
+}
 
 // Проверяем несколько возможных путей
 const possiblePaths = [
