@@ -36,11 +36,14 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                                                              }) => {
     const { width, height } = useWindowDimensions();
 
-    // ---- размеры контейнера ----
+    // ✅ ОПТИМИЗАЦИЯ: Адаптивные размеры контейнера
     const pageHeight = useMemo(() => Math.round(height * 0.7), [height]);
     const contentWidth = useMemo(() => {
+        // Адаптивная максимальная ширина
         const maxContent = Math.min(width, 760);
-        return Math.max(maxContent - 60, 220);
+        // Адаптивные отступы в зависимости от ширины
+        const padding = width >= 768 ? 64 : width >= 480 ? 40 : 32;
+        return Math.max(maxContent - padding, 220);
     }, [width]);
 
     // ---- состояние содержимого ----
@@ -299,9 +302,18 @@ const styles = StyleSheet.create({
         alignSelf: "center",
         width: "100%",
         maxWidth: 760,
-        paddingHorizontal: Platform.select({ web: 32, default: 20 }),
-        paddingTop: 32,
-        paddingBottom: 48,
+        paddingHorizontal: Platform.select({ 
+            web: 32, 
+            default: 16  // ✅ ОПТИМИЗАЦИЯ: Меньше отступы на мобильных
+        }),
+        paddingTop: Platform.select({ 
+            web: 32, 
+            default: 24  // ✅ ОПТИМИЗАЦИЯ: Меньше отступ сверху на мобильных
+        }),
+        paddingBottom: Platform.select({ 
+            web: 48, 
+            default: 32  // ✅ ОПТИМИЗАЦИЯ: Меньше отступ снизу на мобильных
+        }),
         backgroundColor: "transparent",
     },
 
@@ -314,19 +326,19 @@ const styles = StyleSheet.create({
         textAlign: "center",
         color: "#718096",
         fontSize: DESIGN_TOKENS.typography.sizes.md,
-        paddingVertical: DESIGN_TOKENS.spacing.xxs4,
+        paddingVertical: DESIGN_TOKENS.spacing.xxs,
         fontFamily: "Georgia",
     },
 
     fixedHeightBlock: {
         borderWidth: 1,
         borderColor: "rgba(0, 0, 0, 0.06)",
-        borderRadius: 16,
+        borderRadius: Platform.select({ web: 16, default: 12 }),  // ✅ ОПТИМИЗАЦИЯ: Меньше радиус на мобильных
         backgroundColor: "#FFF",
         overflow: "hidden",
         shadowColor: "#000",
         shadowOpacity: 0.08,
-        shadowRadius: 12,
+        shadowRadius: Platform.select({ web: 12, default: 8 }),  // ✅ ОПТИМИЗАЦИЯ: Меньше тень на мобильных
         shadowOffset: { width: 0, height: 2 },
         elevation: 2,
     },
@@ -341,8 +353,8 @@ const styles = StyleSheet.create({
         position: "absolute",
         top: 8,
         right: 8,
-        width: 80,
-        height: 80,
+        width: Platform.select({ web: 80, default: 60 }),  // ✅ ОПТИМИЗАЦИЯ: Меньше штамп на мобильных
+        height: Platform.select({ web: 80, default: 60 }),
         opacity: 0.15,
         zIndex: 1,
     },

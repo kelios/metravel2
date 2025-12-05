@@ -1,0 +1,424 @@
+// components/ArticleEditor.ios.tsx
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
+import { WebView } from 'react-native-webview';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadImage } from '@/src/api/misc';
+import { useAuth } from '@/context/AuthContext';
+
+export interface ArticleEditorProps {
+  label?: string;
+  placeholder?: string;
+  content: string;
+  onChange: (html: string) => void;
+  onAutosave?: (html: string) => Promise<void>;
+  autosaveDelay?: number;
+  idTravel?: string;
+  editorRef?: React.Ref<any>;
+  variant?: 'default' | 'compact';
+}
+
+const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
+  label = 'Описание',
+  placeholder = 'Введите описание…',
+  content,
+  onChange,
+  onAutosave,
+  autosaveDelay = 5000,
+  idTravel,
+  variant = 'default',
+}) => {
+  const [html, setHtml] = useState(content);
+  const [isReady, setIsReady] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const webViewRef = useRef<WebView>(null);
+  const autosaveTimer = useRef<NodeJS.Timeout>();
+  const { isAuthenticated } = useAuth();
+
+  // Quill HTML template
+  const quillHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 0;
+      margin: 0;
+      background: #fff;
+    }
+    #editor-container {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #toolbar {
+      background: #f5f5f5;
+      border-bottom: 1px solid #ddd;
+      padding: 8px;
+      flex-shrink: 0;
+    }
+    .ql-container {
+      flex: 1;
+      font-size: 16px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .ql-editor {
+      padding: 16px;
+      min-height: 100%;
+    }
+    .ql-editor img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 12px auto;
+    }
+    .ql-editor.ql-blank::before {
+      color: #999;
+      font-style: normal;
+    }
+    ${variant === 'compact' ? `
+      #toolbar .ql-formats { margin-right: 8px; }
+      .ql-toolbar button { width: 32px; height: 32px; }
+    ` : ''}
+  </style>
+</head>
+<body>
+  <div id="editor-container">
+    <div id="toolbar">
+      ${variant === 'compact' ? `
+        <button class="ql-bold"></button>
+        <button class="ql-italic"></button>
+        <button class="ql-underline"></button>
+        <button class="ql-list" value="bullet"></button>
+        <button class="ql-link"></button>
+      ` : `
+        <button class="ql-bold"></button>
+        <button class="ql-italic"></button>
+        <button class="ql-underline"></button>
+        <button class="ql-strike"></button>
+        <select class="ql-header">
+          <option value="1">H1</option>
+          <option value="2">H2</option>
+          <option value="3">H3</option>
+          <option selected>Normal</option>
+        </select>
+        <button class="ql-list" value="ordered"></button>
+        <button class="ql-list" value="bullet"></button>
+        <button class="ql-link"></button>
+        <button class="ql-image"></button>
+      `}
+    </div>
+    <div id="editor"></div>
+  </div>
+
+  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+  <script>
+    var quill = new Quill('#editor', {
+      theme: 'snow',
+      modules: {
+        toolbar: '#toolbar',
+        history: {
+          delay: 2000,
+          maxStack: 100,
+          userOnly: true
+        }
+      },
+      placeholder: '${placeholder.replace(/'/g, "\\'")}',
+    });
+
+    // Установка начального контента
+    quill.root.innerHTML = \`${content.replace(/`/g, '\\`')}\`;
+
+    // Отправка изменений в React Native
+    quill.on('text-change', function() {
+      var html = quill.root.innerHTML;
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'content-change',
+        html: html
+      }));
+    });
+
+    // Обработка команд от React Native
+    window.addEventListener('message', function(e) {
+      try {
+        var data = JSON.parse(e.data);
+        
+        if (data.type === 'set-content') {
+          quill.root.innerHTML = data.html;
+        }
+        
+        if (data.type === 'insert-image') {
+          var range = quill.getSelection() || { index: quill.getLength(), length: 0 };
+          quill.insertEmbed(range.index, 'image', data.url);
+          quill.setSelection(range.index + 1, 0);
+        }
+
+        if (data.type === 'undo') {
+          quill.history.undo();
+        }
+
+        if (data.type === 'redo') {
+          quill.history.redo();
+        }
+      } catch (err) {
+        console.error('Error processing message:', err);
+      }
+    });
+
+    // Сообщаем React Native что редактор готов
+    window.ReactNativeWebView.postMessage(JSON.stringify({
+      type: 'ready'
+    }));
+  </script>
+</body>
+</html>
+  `;
+
+  // Обработка сообщений от WebView
+  const handleMessage = useCallback((event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      
+      if (data.type === 'ready') {
+        setIsReady(true);
+      }
+      
+      if (data.type === 'content-change') {
+        const newHtml = data.html;
+        setHtml(newHtml);
+        onChange(newHtml);
+        
+        // Автосохранение
+        if (onAutosave) {
+          if (autosaveTimer.current) {
+            clearTimeout(autosaveTimer.current);
+          }
+          autosaveTimer.current = setTimeout(() => {
+            onAutosave(newHtml);
+          }, autosaveDelay);
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing WebView message:', error);
+    }
+  }, [onChange, onAutosave, autosaveDelay]);
+
+  // Обновление контента при изменении prop
+  useEffect(() => {
+    if (isReady && content !== html) {
+      webViewRef.current?.postMessage(JSON.stringify({
+        type: 'set-content',
+        html: content
+      }));
+    }
+  }, [content, isReady]);
+
+  // Очистка таймера при размонтировании
+  useEffect(() => {
+    return () => {
+      if (autosaveTimer.current) {
+        clearTimeout(autosaveTimer.current);
+      }
+    };
+  }, []);
+
+  // Загрузка изображения
+  const handleImagePick = useCallback(async () => {
+    if (!isAuthenticated) {
+      Alert.alert('Авторизация', 'Войдите, чтобы загружать изображения');
+      return;
+    }
+
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Разрешение', 'Необходим доступ к галерее');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setIsUploading(true);
+        
+        const formData = new FormData();
+        const uri = result.assets[0].uri;
+        const filename = uri.split('/').pop() || 'image.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+        formData.append('file', {
+          uri,
+          name: filename,
+          type,
+        } as any);
+        formData.append('collection', 'description');
+        if (idTravel) formData.append('id', idTravel);
+
+        const response = await uploadImage(formData);
+        
+        if (response?.url) {
+          webViewRef.current?.postMessage(JSON.stringify({
+            type: 'insert-image',
+            url: response.url
+          }));
+        } else {
+          throw new Error('No URL in response');
+        }
+      }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      Alert.alert('Ошибка', 'Не удалось загрузить изображение');
+    } finally {
+      setIsUploading(false);
+    }
+  }, [isAuthenticated, idTravel]);
+
+  // Отмена/повтор
+  const handleUndo = () => {
+    webViewRef.current?.postMessage(JSON.stringify({ type: 'undo' }));
+  };
+
+  const handleRedo = () => {
+    webViewRef.current?.postMessage(JSON.stringify({ type: 'redo' }));
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Заголовок и дополнительные кнопки */}
+      <View style={styles.header}>
+        <Text style={styles.label}>{label}</Text>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            onPress={handleUndo}
+            style={styles.headerButton}
+            disabled={!isReady}
+          >
+            <MaterialIcons name="undo" size={20} color={isReady ? "#555" : "#ccc"} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleRedo}
+            style={styles.headerButton}
+            disabled={!isReady}
+          >
+            <MaterialIcons name="redo" size={20} color={isReady ? "#555" : "#ccc"} />
+          </TouchableOpacity>
+          {variant === 'default' && (
+            <TouchableOpacity
+              onPress={handleImagePick}
+              style={styles.headerButton}
+              disabled={!isReady || isUploading}
+            >
+              {isUploading ? (
+                <ActivityIndicator size="small" color="#555" />
+              ) : (
+                <MaterialIcons name="add-photo-alternate" size={20} color={isReady ? "#555" : "#ccc"} />
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* WebView с Quill редактором */}
+      <View style={styles.editorContainer}>
+        <WebView
+          ref={webViewRef}
+          source={{ html: quillHTML }}
+          onMessage={handleMessage}
+          style={styles.webView}
+          scrollEnabled={true}
+          bounces={false}
+          showsVerticalScrollIndicator={true}
+          keyboardDisplayRequiresUserAction={false}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          startInLoadingState={true}
+          renderLoading={() => (
+            <View style={styles.loading}>
+              <ActivityIndicator size="large" color="#ff9f5a" />
+              <Text style={styles.loadingText}>Загрузка редактора...</Text>
+            </View>
+          )}
+        />
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#f9f9f9',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  headerButton: {
+    padding: 8,
+    borderRadius: 4,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  editorContainer: {
+    flex: 1,
+  },
+  webView: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  loading: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+  },
+});
+
+export default ArticleEditorIOS;

@@ -85,6 +85,7 @@ import {
   RECOMMENDATIONS_VISIBLE_KEY,
   MAX_VISIBLE_CATEGORIES,
   FLATLIST_CONFIG,
+  FLATLIST_CONFIG_MOBILE,
 } from "./utils/listTravelConstants";
 import { useListTravelVisibility } from "./hooks/useListTravelVisibility";
 import { useListTravelFilters } from "./hooks/useListTravelFilters";
@@ -242,10 +243,9 @@ function ListTravel({
 
     const isMobile = checkIsMobile(width);
     const columns = useMemo(() => {
-        // На главной ограничиваем сетку максимум тремя колонками
-        const calculatedColumns = calculateColumns(width);
-        return Math.min(calculatedColumns, 3);
-    }, [width, isMeTravel]);
+        // ✅ ОПТИМИЗАЦИЯ: Используем оптимизированную функцию расчета колонок
+        return calculateColumns(width);
+    }, [width]);
 
     const listKey = useMemo(() => `grid-${columns}`, [columns]);
 
@@ -513,29 +513,33 @@ function ListTravel({
           isSuperuser={isSuper}
           isMetravel={isMeTravel}
           onDeletePress={setDelete}
-          onEditPress={router.push}
           isFirst={index === 0}
           selectable={isExport}
           isSelected={isSelected(item.id)}
           onToggle={() => toggleSelect(item)}
         />
       ),
-      [isMobile, isSuper, isMeTravel, isExport, router, isSelected, toggleSelect]
+      [isMobile, isSuper, isMeTravel, isExport, isSelected, toggleSelect]
     );
 
     const keyExtractor = useCallback((item: any) => String(item.id), []);
 
+    // ✅ ОПТИМИЗАЦИЯ: Динамическая конфигурация виртуализации на основе устройства
     const listVirtualization = useMemo(() => {
-      const base = columns <= 1 ? 6 : columns * 2;
-      const initial = Math.min(12, Math.max(4, base));
-      const batch = Math.min(16, initial + columns);
-      const window = Math.max(5, columns * 3);
+      const config = isMobile ? FLATLIST_CONFIG_MOBILE : FLATLIST_CONFIG;
+      
+      // Адаптируем под количество колонок
+      const initial = Math.max(config.INITIAL_NUM_TO_RENDER, columns * 2);
+      const batch = Math.max(config.MAX_TO_RENDER_PER_BATCH, columns * 3);
+      const window = config.WINDOW_SIZE;
+      
       return {
         initial,
         batch,
         window,
+        updateCellsBatchingPeriod: config.UPDATE_CELLS_BATCHING_PERIOD,
       };
-    }, [columns]);
+    }, [columns, isMobile]);
 
     /* Loading helpers */
     const hasAnyItems = travels.length > 0;
@@ -829,12 +833,15 @@ function ListTravel({
                 keyExtractor={keyExtractor}
                 numColumns={columns}
                 columnWrapperStyle={columns > 1 ? { 
-                    gap: spacing.md,
-                    justifyContent: 'flex-start', // ✅ ИСПРАВЛЕНИЕ: Выравнивание карточек по левому краю
+                    gap: isMobile ? spacing.sm : spacing.md, // ✅ АДАПТИВНОСТЬ: Меньше gap на мобильных
+                    justifyContent: 'flex-start',
                 } : undefined}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={[
+                  styles.listContent,
+                  isMobile && styles.listContentMobile, // ✅ АДАПТИВНОСТЬ: Отдельные стили для мобильных
+                ]}
                 onEndReached={handleListEndReached}
-                onEndReachedThreshold={FLATLIST_CONFIG.ON_END_REACHED_THRESHOLD}
+                onEndReachedThreshold={isMobile ? FLATLIST_CONFIG_MOBILE.ON_END_REACHED_THRESHOLD : FLATLIST_CONFIG.ON_END_REACHED_THRESHOLD}
                 onScroll={onScroll}
                 scrollEventThrottle={16}
                 onMomentumScrollBegin={onMomentumBegin}
@@ -867,10 +874,9 @@ function ListTravel({
                   ) : null
                 }
                 ListHeaderComponent={
-                  // ✅ ИСПРАВЛЕНИЕ: Перемещаем рекомендации и категории в ListHeaderComponent, чтобы они скроллились вместе с путешествиями
                   !isMeTravel && !isExport ? (
                     <View>
-                      {/* Рекомендации - показываем только если видимы, при сворачивании полностью скрываем */}
+                      {/* Рекомендации */}
                       {isRecommendationsVisible === true && recommendationsVisibilityInitialized && recommendationsReady && (
                         <Suspense fallback={<RecommendationsPlaceholder />}>
                           <RecommendationsTabs 
@@ -887,8 +893,8 @@ function ListTravel({
                             categories={categoriesWithCount}
                             selectedCategories={filter.categories || []}
                             onToggleCategory={handleToggleCategory}
-                            maxVisible={8}
-                            showIcons={true}
+                            maxVisible={isMobile ? 6 : 8}
+                            showIcons={!isMobile}
                           />
                         </View>
                       )}
@@ -898,7 +904,13 @@ function ListTravel({
                 initialNumToRender={listVirtualization.initial}
                 maxToRenderPerBatch={listVirtualization.batch}
                 windowSize={listVirtualization.window}
+                updateCellsBatchingPeriod={listVirtualization.updateCellsBatchingPeriod}
                 removeClippedSubviews={Platform.OS !== 'web'}
+                getItemLayout={Platform.OS !== 'web' ? undefined : (data, index) => ({
+                  length: isMobile ? 320 : 360,
+                  offset: (isMobile ? 320 : 360) * index,
+                  index,
+                })}
               />
             </View>
           </View>
@@ -1022,90 +1034,89 @@ const styles = StyleSheet.create({
         width: Platform.select({ 
             ios: '100%',
             android: '100%',
-            web: '280px',
-            default: '100%', // Мобильные - полная ширина
-        }) as any, // ✅ ИСПРАВЛЕНИЕ: Для веба используем строку с единицами
+            web: '260px', // ✅ ОПТИМИЗАЦИЯ: Уменьшено для большего пространства контента
+            default: '100%',
+        }) as any,
         backgroundColor: palette.surface,
         borderRightWidth: Platform.select({ 
             ios: StyleSheet.hairlineWidth,
             android: StyleSheet.hairlineWidth,
-            web: StyleSheet.hairlineWidth,
+            web: 1,
             default: 0,
-        }), // ✅ ИСПРАВЛЕНИЕ: Используем hairlineWidth для более тонкой границы
-        borderColor: palette.border, // ✅ ИСПРАВЛЕНИЕ: Используем цвет из дизайн-системы
+        }),
+        borderColor: palette.border,
         ...Platform.select({
             web: {
-                boxShadow: DESIGN_TOKENS.shadows.soft, // ✅ ИСПРАВЛЕНИЕ: Используем тень из дизайн-системы
+                boxShadow: DESIGN_TOKENS.shadows.soft,
                 position: "sticky" as any,
                 top: 0,
                 alignSelf: "flex-start",
-                maxHeight: "100vh" as any, // ✅ ИСПРАВЛЕНИЕ: Используем полную высоту viewport
-                paddingTop: spacing.sm, // ✅ ИСПРАВЛЕНИЕ: Добавляем отступ сверху для лучшего визуального разделения
+                maxHeight: "100vh" as any,
+                paddingTop: spacing.sm,
                 overflowY: "auto" as any,
-                zIndex: 10, // ✅ УЛУЧШЕНИЕ: Добавлен z-index для sticky позиционирования
+                zIndex: 10,
             },
         }),
     },
     main: {
         flex: 1,
-        backgroundColor: 'transparent', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Прозрачный фон для большего белого пространства
+        backgroundColor: 'transparent',
         ...Platform.select({
             default: {
-                paddingHorizontal: spacing.sm, // ✅ ИСПРАВЛЕНИЕ: Разделяем горизонтальные и вертикальные отступы
-                paddingTop: spacing.sm,
-                paddingBottom: 0, // ✅ ИСПРАВЛЕНИЕ: Убираем нижний padding, т.к. listContent уже имеет paddingBottom
+                paddingHorizontal: spacing.xs, // ✅ ОПТИМИЗАЦИЯ: Меньше отступы на мобильных
+                paddingTop: spacing.xs,
+                paddingBottom: 0,
             },
             web: {
-                paddingHorizontal: spacing.lg, // ✅ ИСПРАВЛЕНИЕ: Больше горизонтальных отступов на десктопе
-                paddingTop: spacing.lg, // ✅ РЕДИЗАЙН: Больше отступ сверху для поиска
-                paddingBottom: 0, // ✅ ИСПРАВЛЕНИЕ: Убираем нижний padding, т.к. listContent уже имеет paddingBottom
+                paddingHorizontal: spacing.lg,
+                paddingTop: spacing.lg,
+                paddingBottom: 0,
             },
         }),
         ...(Platform.OS === "web" && {
-            maxWidth: 1400, // ✅ УЛУЧШЕНИЕ: Оптимизировано для больших экранов (было 1440)
+            maxWidth: 1200, // ✅ ОПТИМИЗАЦИЯ: Уменьшено для лучшей читаемости (3 колонки)
             marginHorizontal: "auto" as any,
             width: "100%",
         }),
     },
     searchSection: {
         marginTop: Platform.select({
-            ios: spacing.xs,
-            android: spacing.xs,
+            ios: 0,
+            android: 0,
             web: spacing.md,
-            default: spacing.xs,
+            default: 0,
         }),
         marginBottom: Platform.select({
-            ios: spacing.sm,
-            android: spacing.sm,
+            ios: spacing.xs,
+            android: spacing.xs,
             web: spacing.lg,
-            default: spacing.sm,
+            default: spacing.xs,
         }),
         paddingHorizontal: Platform.select({
-            ios: spacing.sm,
-            android: spacing.sm,
+            ios: 0,
+            android: 0,
             web: 0,
-            default: spacing.sm,
-        }), // ✅ ИСПРАВЛЕНИЕ: Добавляем горизонтальные отступы на мобильных для лучшего выравнивания
-    },
-    // ✅ РЕДИЗАЙН: Поиск в основном контенте для веб-версии (как на картинке)
-    searchSectionMain: {
-        marginBottom: 0, // ✅ ИСПРАВЛЕНИЕ: Убран marginBottom
-        paddingHorizontal: Platform.select({
             default: 0,
-            web: 0,
         }),
+    },
+    searchSectionMain: {
+        marginBottom: spacing.md, // ✅ ОПТИМИЗАЦИЯ: Добавлен отступ для лучшего разделения
+        paddingHorizontal: 0,
     },
     // ✅ ДИЗАЙН: Секция категорий с улучшенными отступами
     categoriesSectionMain: {
         marginTop: Platform.select({
-            default: spacing.sm,
+            default: spacing.xs, // ✅ ОПТИМИЗАЦИЯ: Меньше отступ на мобильных
             web: spacing.md,
         }),
         marginBottom: Platform.select({
-            default: spacing.md,
+            default: spacing.sm, // ✅ ОПТИМИЗАЦИЯ: Меньше отступ на мобильных
             web: spacing.lg,
         }),
-        paddingVertical: spacing.sm,
+        paddingVertical: Platform.select({
+            default: spacing.xs,
+            web: spacing.sm,
+        }),
     },
     categoriesTitle: {
         fontSize: Platform.select({
@@ -1138,11 +1149,17 @@ const styles = StyleSheet.create({
     list: { gap: spacing.md },
     listContent: {
         padding: Platform.select({
-            default: spacing.xs, // ✅ ИСПРАВЛЕНИЕ: Меньше padding на мобильных, т.к. main уже имеет padding
-            web: spacing.sm, // ✅ ИСПРАВЛЕНИЕ: Меньше padding на десктопе, т.к. main уже имеет padding
+            default: spacing.xs,
+            web: spacing.sm,
         }),
         gap: spacing.md,
-        paddingBottom: spacing.xl, // ✅ ИСПРАВЛЕНИЕ: Больше отступ снизу для лучшей прокрутки
+        paddingBottom: spacing.xl,
+    },
+    // ✅ АДАПТИВНОСТЬ: Отдельные стили для мобильных устройств
+    listContentMobile: {
+        padding: 4,
+        gap: spacing.sm,
+        paddingBottom: spacing.lg,
     },
     columnWrapper: { gap: spacing.md, justifyContent: "space-between" },
     exportBar: {

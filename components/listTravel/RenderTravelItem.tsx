@@ -12,7 +12,6 @@ type RenderTravelItemProps = {
     isSuperuser?: boolean;
     isMetravel?: boolean;
     onDeletePress?: (id: number) => void;
-    onEditPress?: (args: any) => void;
     isFirst?: boolean;
     isSingle?: boolean;
     selectable?: boolean;
@@ -27,7 +26,6 @@ function RenderTravelItem({
                               isSuperuser,
                               isMetravel,
                               onDeletePress,
-                              onEditPress,
                               isFirst,
                               isSingle = false,
                               selectable = false,
@@ -41,14 +39,14 @@ function RenderTravelItem({
 
     const containerStyle = useMemo(() => {
         const base = {
-            borderRadius: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
+            borderRadius: Platform.select({ default: 8, web: 10 }), // ✅ ОПТИМИЗАЦИЯ: Уменьшен радиус для более современного вида
             overflow:
                 Platform.OS === "android"
                     ? ("visible" as const)
                     : ("hidden" as const),
             marginBottom: Platform.select({ 
-                default: isMobile ? 10 : 12, // Мобильные и планшеты
-                web: 16 
+                default: isMobile ? 8 : 10, // ✅ ОПТИМИЗАЦИЯ: Уменьшены отступы
+                web: 12 
             }),
         };
 
@@ -56,9 +54,8 @@ function RenderTravelItem({
             return {
                 ...base,
                 width: "100%",
-                maxWidth: Platform.select({ default: '100%', web: 600 }), // ✅ АДАПТИВНОСТЬ: Полная ширина на мобильных
+                maxWidth: Platform.OS === 'web' ? 700 : undefined, // ✅ ОПТИМИЗАЦИЯ: Увеличена максимальная ширина для одиночной карточки
                 alignSelf: "center" as const,
-                paddingHorizontal: Platform.select({ default: 12, web: 16 }), // ✅ АДАПТИВНОСТЬ: Больше на мобильных для лучшей читаемости
             };
         }
 
@@ -69,11 +66,11 @@ function RenderTravelItem({
             };
         }
 
+        // ✅ ОПТИМИЗАЦИЯ: Упрощена логика для планшетов и десктопа
         return {
             ...base,
             flex: 1,
-            flexBasis: isTablet ? "48%" : "31%",
-            maxWidth: isTablet ? "48%" : "31%",
+            minWidth: 0, // ✅ ИСПРАВЛЕНИЕ: Предотвращает переполнение flex-элементов
         };
     }, [isMobile, isTablet, isSingle]);
 
@@ -85,7 +82,6 @@ function RenderTravelItem({
                 isSuperuser={isSuperuser}
                 isMetravel={isMetravel}
                 onDeletePress={onDeletePress}
-                onEditPress={onEditPress}
                 isFirst={!!isFirst}
                 isSingle={!!isSingle}
                 selectable={!!selectable}

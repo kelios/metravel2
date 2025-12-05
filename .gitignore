@@ -23,3 +23,18 @@ coverage-*/
 *.lcov
 junit.xml
 /coverage/
+
+# Android sensitive files
+google-services.json
+google-play-service-account.json
+android-keystore.jks
+*.keystore
+*.jks
+upload-keystore.jks
+
+# Android build files
+android/
+.gradle/
+build/
+*.apk
+*.aab
