@@ -43,8 +43,9 @@ describe('ArticleListItem', () => {
     name: 'Test Article',
     description: '<p>Test description</p>',
     article_image_thumb_url: 'https://example.com/image.jpg',
+    article_image_thumb_small_url: 'https://example.com/image_small.jpg',
     article_type: { name: 'News' },
-  }
+  } as any
 
   beforeEach(() => {
     jest.clearAllMocks()

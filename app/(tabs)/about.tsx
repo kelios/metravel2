@@ -31,7 +31,7 @@ const MAIL_BODY = 'Добрый день!';
 const YT_URL = 'https://www.youtube.com/watch?v=K0oV4Y-i8hY';
 const YT_THUMB = 'https://img.youtube.com/vi/K0oV4Y-i8hY/hqdefault.jpg';
 
-export default function AboutAndContactScreen() {
+function AboutAndContactScreen() {
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
 
@@ -150,7 +150,7 @@ export default function AboutAndContactScreen() {
                 style={styles.backgroundImage}
                 resizeMode="cover"
                 // @ts-ignore RN web поддерживает fetchPriority
-                fetchpriority="high"
+                {...(Platform.OS === 'web' ? { fetchPriority: 'high' } : {})}
             >
               <View style={styles.container}>
                 <StatusBar barStyle="dark-content" />
@@ -250,6 +250,7 @@ export default function AboutAndContactScreen() {
                         >
                           <View style={styles.videoThumbWrap}>
                             {Platform.OS === 'web' ? (
+                              // @ts-ignore
                               <img
                                 src={YT_THUMB}
                                 alt="YouTube видео о MeTravel"
@@ -285,7 +286,7 @@ export default function AboutAndContactScreen() {
                   {/* ===== Функции и возможности ===== */}
                   <View style={styles.featuresSection}>
                     <View style={styles.sectionHeader}>
-                      <Text style={styles.sectionTitle}>Функции и возможности</Text>
+                      <Text style={styles.featuresTitle}>Функции и возможности</Text>
                       <Text style={styles.sectionSubtitle}>Всё, что доступно на платформе MeTravel.by</Text>
                     </View>
 
@@ -554,7 +555,7 @@ export default function AboutAndContactScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles: any = StyleSheet.create({
   container: { flex: 1, width: '100%' },
   backgroundImage: { flex: 1, width: '100%', height: '100%' },
   content: {
@@ -792,7 +793,7 @@ const styles = StyleSheet.create({
     width: '100%', 
     height: '100%', 
     objectFit: 'cover',
-    display: 'block',
+    display: Platform.OS === 'web' ? ('block' as any) : undefined,
   },
   videoThumbImage: { width: '100%', height: '100%' },
   videoCardPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
@@ -857,7 +858,7 @@ const styles = StyleSheet.create({
   },
   contactSubtitle: {
     fontSize: 16,
-    color: DESIGN_TOKENS.colors.textSecondary,
+    color: DESIGN_TOKENS.colors.textMuted,
     textAlign: 'center',
   },
   form: {
@@ -1073,7 +1074,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     alignItems: 'center',
   },
-  sectionTitle: {
+  featuresTitle: {
     fontSize: 28,
     fontWeight: '700',
     color: '#1f2937',

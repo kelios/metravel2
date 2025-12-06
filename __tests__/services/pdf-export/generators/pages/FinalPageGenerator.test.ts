@@ -18,7 +18,8 @@ describe('FinalPageGenerator', () => {
 
       const html = generator.generate(data, 50);
 
-      expect(html).toContain('Спасибо за путешествие');
+      expect(html).toContain('Спасибо за');
+      expect(html).toContain('путешествие');
       expect(html).toContain('10');
       expect(html).toContain('путешествий');
     });

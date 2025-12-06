@@ -51,9 +51,6 @@ jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ isAuthenticated: true }),
 }));
 
-// Mock Alert
-jest.spyOn(Alert, 'alert');
-
 describe('ArticleEditor.ios Component', () => {
   let ArticleEditor: any;
 
@@ -65,14 +62,28 @@ describe('ArticleEditor.ios Component', () => {
   const mockOnAutosave = jest.fn();
 
   beforeEach(() => {
+    jest.restoreAllMocks();
+    jest.spyOn(Alert, 'alert');
     jest.clearAllMocks();
   });
 
-  const renderComponent = () => render(
+  const makeEditorReady = (getByTestId: any) => {
+    const webView = getByTestId('editor-webview');
+    fireEvent(webView, 'message', {
+      nativeEvent: {
+        data: JSON.stringify({ type: 'ready' }),
+      },
+    });
+    return webView;
+  };
+
+  const renderComponent = (props = {}) => render(
     <ArticleEditor
       content=""
       onChange={mockOnChange}
+      onAutosave={mockOnAutosave}
       idTravel="123"
+      {...props}
     />
   );
 
@@ -168,6 +179,7 @@ describe('ArticleEditor.ios Component', () => {
     jest.useFakeTimers();
 
     const { getByTestId } = renderComponent();
+    makeEditorReady(getByTestId);
 
     const webView = getByTestId('editor-webview');
     
@@ -180,8 +192,8 @@ describe('ArticleEditor.ios Component', () => {
       },
     });
 
-    // Fast-forward time
-    jest.advanceTimersByTime(1000);
+    // Fast-forward time to trigger autosave (default delay 5000ms)
+    jest.advanceTimersByTime(6000);
 
     await waitFor(() => {
       expect(mockOnAutosave).toHaveBeenCalledWith('<p>New content</p>');
@@ -243,28 +255,39 @@ describe('ArticleEditor.ios Component', () => {
 
   it('should handle permission denial gracefully', async () => {
     const { getByTestId } = renderComponent();
+    makeEditorReady(getByTestId);
     const imageButton = getByTestId('material-add-photo-alternate');
     
+    // Override permission mock to denied
+    (require('expo-image-picker').requestMediaLibraryPermissionsAsync as jest.Mock).mockResolvedValueOnce({
+      status: 'denied',
+      granted: false
+    });
+
     fireEvent.press(imageButton);
     
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
-        'Авторизация', 
-        'Войдите, чтобы загружать изображения'
+        'Разрешение', 
+        'Необходим доступ к галерее'
       );
     });
   });
 
   it('should handle upload error gracefully', async () => {
     const { getByTestId } = renderComponent();
+    makeEditorReady(getByTestId);
     const imageButton = getByTestId('material-add-photo-alternate');
     
+    // Override upload mock to fail
+    (require('@/src/api/misc').uploadImage as jest.Mock).mockRejectedValueOnce(new Error('Upload failed'));
+
     fireEvent.press(imageButton);
     
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
-        'Авторизация', 
-        'Войдите, чтобы загружать изображения'
+        'Ошибка', 
+        'Не удалось загрузить изображение'
       );
     });
   });

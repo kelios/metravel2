@@ -13,9 +13,9 @@ describe('useListTravelFilters - All Filters', () => {
     userId: null,
     options: {
       categories: [
-        { id: 1, name: 'hiking' },
-        { id: 2, name: 'cycling' },
-        { id: 3, name: 'mountains' },
+        { id: '1', name: 'hiking' },
+        { id: '2', name: 'cycling' },
+        { id: '3', name: 'mountains' },
       ],
     },
   };
@@ -117,9 +117,9 @@ describe('useListTravelFilters - All Filters', () => {
         ...defaultProps,
         options: {
           categories: [
-            { id: 1, name: 'hiking' },
-            { id: 2, name: 'cycling' },
-            { id: 42, name: 'sailing' },
+            { id: '1', name: 'hiking' },
+            { id: '2', name: 'cycling' },
+            { id: '42', name: 'sailing' },
           ],
         },
       };
@@ -157,7 +157,7 @@ describe('useListTravelFilters - All Filters', () => {
       rerender({
         ...initialProps,
         options: {
-          categories: [{ id: 3, name: 'mountains' }],
+          categories: [{ id: '3', name: 'mountains' }],
         },
       });
 

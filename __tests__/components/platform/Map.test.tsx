@@ -4,10 +4,20 @@ import { Platform } from 'react-native';
 
 // Mock react-native-maps
 jest.mock('react-native-maps', () => {
+  const React = require('react');
   const { View } = require('react-native');
+  
+  class MockMapView extends React.Component {
+    fitToCoordinates = jest.fn();
+    
+    render() {
+      return React.createElement(View, this.props, this.props.children);
+    }
+  }
+
   return {
     __esModule: true,
-    default: View,
+    default: MockMapView,
     Marker: View,
     Callout: View,
   };
