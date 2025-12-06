@@ -25,16 +25,17 @@ import {
     RefreshControl,
     Animated,
     Modal,
+    TextInput,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, usePathname } from "expo-router";
 import { useRoute } from "@react-navigation/native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 
-import FiltersComponent from "./FiltersComponent";
 import RenderTravelItem from "./RenderTravelItem";
-import SearchAndFilterBar from "./SearchAndFilterBar";
+import StickySearchBar from "@/components/mainPage/StickySearchBar";
+import ModernFilters from "./ModernFilters";
 import ConfirmDialog from "../ConfirmDialog";
 import UIButton from '@/components/ui/Button';
 import HeroSection from "./HeroSection";
@@ -65,7 +66,6 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { TravelListSkeleton } from "@/components/SkeletonLoader";
 import EmptyState from "@/components/EmptyState";
 import CategoryChips from "@/components/CategoryChips";
-import ActiveFiltersBadge from "./ActiveFiltersBadge";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
 import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
@@ -152,7 +152,7 @@ export const ExportBar = memo(function ExportBar({
       : 'Выберите путешествия для экспорта';
 
     return (
-      <View style={styles.exportBar}>
+      <View style={[styles.exportBar, Platform.OS === 'web' && isMobile && styles.exportBarMobileWeb]}>
           <View style={styles.exportBarInfo}>
             <Text style={styles.exportBarInfoTitle}>{selectionText}</Text>
             <Text style={styles.exportBarInfoSubtitle}>
@@ -200,7 +200,6 @@ export const ExportBar = memo(function ExportBar({
     );
 });
 
-const MemoizedFilters = memo(FiltersComponent);
 const MemoizedTravelItem = memo(RenderTravelItem);
 
 interface ListTravelProps {
@@ -233,13 +232,14 @@ function ListTravel({
     const { width } = useWindowDimensions();
     const route = useRoute();
     const router = useRouter();
+    const pathname = usePathname();
 
     const params = useLocalSearchParams<{ user_id?: string }>();
     const user_id = params.user_id;
 
     const isMeTravel = (route as any).name === "metravel";
     const isTravelBy = (route as any).name === "travelsby";
-    const isExport = (route as any).name === "export";
+    const isExport = (route as any).name === "export" || pathname?.includes('/export');
 
     const isMobile = checkIsMobile(width);
     const columns = useMemo(() => {
@@ -732,63 +732,146 @@ function ListTravel({
       };
     }, [showEmptyState, filter, options, debSearch]);
 
+    // ✅ АРХИТЕКТУРА: Централизованная конфигурация групп фильтров для переиспользования в десктоп и мобильной версии
+    const filterGroups = useMemo(() => [
+      // На странице travelsby страна всегда Беларуси, поэтому отдельный фильтр по странам прячем
+      ...(!isTravelBy ? [
+        {
+          key: 'countries',
+          title: 'Страны',
+          options: (options?.countries || []).map((country: any) => ({
+            id: String(country.country_id ?? country.id),
+            name: country.title_ru || country.name,
+          })),
+          multiSelect: true,
+          icon: 'globe',
+        },
+      ] : []),
+      {
+        key: 'categories',
+        title: 'Категории',
+        options: (options?.categories || []).map((cat: any) => ({
+          id: String(cat.id),
+          name: cat.name,
+          count: undefined,
+        })),
+        multiSelect: true,
+        icon: 'tag',
+      },
+      {
+        key: 'transports',
+        title: 'Транспорт',
+        options: (options?.transports || []).map((t: any) => ({
+          id: String(t.id),
+          name: t.name,
+        })),
+        multiSelect: true,
+        icon: 'truck',
+      },
+      {
+        key: 'categoryTravelAddress',
+        title: 'Объекты',
+        options: (options?.categoryTravelAddress || []).map((obj: any) => ({
+          id: String(obj.id),
+          name: obj.name,
+        })),
+        multiSelect: true,
+        icon: 'map-pin',
+      },
+      {
+        key: 'companions',
+        title: 'Спутники',
+        options: (options?.companions || []).map((c: any) => ({
+          id: String(c.id),
+          name: c.name,
+        })),
+        multiSelect: true,
+        icon: 'users',
+      },
+      {
+        key: 'complexity',
+        title: 'Сложность',
+        options: (options?.complexity || []).map((item: any) => ({
+          id: String(item.id),
+          name: item.name,
+        })),
+        multiSelect: true,
+        icon: 'activity',
+      },
+      {
+        key: 'month',
+        title: 'Месяц',
+        options: (options?.month || []).map((item: any) => ({
+          id: String(item.id),
+          name: item.name,
+        })),
+        multiSelect: true,
+        icon: 'calendar',
+      },
+      {
+        key: 'over_nights_stay',
+        title: 'Ночлег',
+        options: (options?.over_nights_stay || []).map((item: any) => ({
+          id: String(item.id),
+          name: item.name,
+        })),
+        multiSelect: true,
+        icon: 'moon',
+      },
+    ], [options, isTravelBy]);
+
     return (
       <SafeAreaView style={styles.root}>
         <View style={styles.container}>
-          <View style={styles.content}>
+          <View style={[styles.content, Platform.OS === 'web' && isMobile && styles.contentMobile]}>
             {!isMobile && (
               <View style={styles.sidebar}>
-                {/* Фильтры без поиска */}
-                <MemoizedFilters
-                  filters={options || {}}
-                  filterValue={filter}
-                  onSelectedItemsChange={onSelect}
-                  handleApplyFilters={(newFilter: FilterState) => applyFilter(newFilter)}
-                  resetFilters={resetFilters}
-                  isSuperuser={isSuper}
-                  closeMenu={undefined}
-                  search={undefined}
-                  setSearch={undefined}
-                  onToggleRecommendations={undefined}
-                  isRecommendationsVisible={undefined}
-                  hasFilters={Object.keys(queryParams).length > 0}
+                <ModernFilters
+                  filterGroups={filterGroups}
+                  selectedFilters={filter as any}
+                  onFilterChange={(groupKey, optionId) => {
+                    const currentValues: string[] = ((filter as any)[groupKey] || []).map((v: any) => String(v));
+                    const normalizedId = String(optionId);
+                    const newValues = currentValues.includes(normalizedId)
+                      ? currentValues.filter((id) => id !== normalizedId)
+                      : [...currentValues, normalizedId];
+                    onSelect(groupKey, newValues);
+                  }}
+                  onClearAll={() => {
+                    setSearch('');
+                    resetFilters();
+                  }}
                   resultsCount={total}
+                  year={filter.year}
+                  onYearChange={(value) => onSelect('year', value)}
+                  showModeration={isSuper}
+                  moderationValue={filter.moderation}
+                  onToggleModeration={() => {
+                    const next = filter.moderation === 0 ? undefined : 0;
+                    onSelect('moderation', next);
+                  }}
+                />
+              </View>
+            )}
+
+            <View style={[styles.main, Platform.OS === 'web' && isMobile && styles.mainMobile]}>
+              {/* Поиск - StickySearchBar: одинаковый вид для десктопа и мобайла */}
+              <View style={styles.searchSectionMain}>
+                <StickySearchBar
+                  search={search}
+                  onSearchChange={setSearch}
+                  onFiltersPress={() => setShowFilters(true)}
+                  onToggleRecommendations={() => handleRecommendationsVisibilityChange(!isRecommendationsVisible)}
+                  isRecommendationsVisible={isRecommendationsVisible}
+                  hasActiveFilters={activeFiltersCount > 0}
+                  resultsCount={total}
+                  activeFiltersCount={activeFiltersCount}
                   onClearAll={() => {
                     setSearch('');
                     resetFilters();
                   }}
                 />
               </View>
-            )}
-
-            <View style={styles.main}>
-              {/* Поиск для веб-версии - в основном контенте, как на картинке */}
-              {!isMobile ? (
-                <View style={styles.searchSectionMain}>
-                  <SearchAndFilterBar
-                    search={search}
-                    setSearch={setSearch}
-                    onToggleRecommendations={() => handleRecommendationsVisibilityChange(!isRecommendationsVisible)}
-                    isRecommendationsVisible={isRecommendationsVisible}
-                    hasFilters={activeFiltersCount > 0}
-                    resultsCount={total}
-                    activeFiltersCount={activeFiltersCount}
-                  />
-                </View>
-              ) : (
-                <View style={styles.searchSection}>
-                  <SearchAndFilterBar
-                    search={search}
-                    setSearch={setSearch}
-                    onToggleFilters={() => setShowFilters(true)}
-                    onToggleRecommendations={() => handleRecommendationsVisibilityChange(!isRecommendationsVisible)}
-                    isRecommendationsVisible={isRecommendationsVisible}
-                    hasFilters={activeFiltersCount > 0}
-                    resultsCount={total}
-                    activeFiltersCount={activeFiltersCount}
-                  />
-                </View>
-              )}
 
               {/* Скелетон загрузки */}
               {showInitialLoading && (
@@ -819,12 +902,13 @@ function ListTravel({
                 keyExtractor={keyExtractor}
                 numColumns={columns}
                 columnWrapperStyle={columns > 1 ? { 
-                    gap: isMobile ? spacing.sm : spacing.md, // ✅ АДАПТИВНОСТЬ: Меньше gap на мобильных
+                    gap: isMobile ? 20 : 32,
                     justifyContent: 'flex-start',
                 } : undefined}
                 contentContainerStyle={[
                   styles.listContent,
                   isMobile && styles.listContentMobile, // ✅ АДАПТИВНОСТЬ: Отдельные стили для мобильных
+                  isExport && { paddingBottom: isMobile ? 200 : 150 }, // ✅ АДАПТИВНОСТЬ: Отступ для панели экспорта + нижнее меню
                 ]}
                 onEndReached={handleListEndReached}
                 onEndReachedThreshold={isMobile ? FLATLIST_CONFIG_MOBILE.ON_END_REACHED_THRESHOLD : FLATLIST_CONFIG.ON_END_REACHED_THRESHOLD}
@@ -909,28 +993,35 @@ function ListTravel({
             animationType="slide"
             onRequestClose={() => setShowFilters(false)}
           >
-            <MemoizedFilters
-              filters={options || {}}
-              filterValue={filter}
-              onSelectedItemsChange={onSelect}
-              handleApplyFilters={(newFilter: FilterState) => {
-                applyFilter(newFilter);
-                setShowFilters(false);
-              }}
-              resetFilters={resetFilters}
-              isSuperuser={isSuper}
-              closeMenu={() => setShowFilters(false)}
-              search={search}
-              setSearch={setSearch}
-              onToggleRecommendations={() => handleRecommendationsVisibilityChange(!isRecommendationsVisible)}
-              isRecommendationsVisible={isRecommendationsVisible}
-              hasFilters={Object.keys(queryParams).length > 0}
-              resultsCount={total}
-              onClearAll={() => {
-                setSearch('');
-                resetFilters();
-              }}
-            />
+            <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+              <ModernFilters
+                filterGroups={filterGroups}
+                selectedFilters={filter as any}
+                onFilterChange={(groupKey, optionId) => {
+                  const currentValues: string[] = ((filter as any)[groupKey] || []).map((v: any) => String(v));
+                  const normalizedId = String(optionId);
+                  const newValues = currentValues.includes(normalizedId)
+                    ? currentValues.filter((id) => id !== normalizedId)
+                    : [...currentValues, normalizedId];
+                  onSelect(groupKey, newValues);
+                }}
+                onClearAll={() => {
+                  setSearch('');
+                  resetFilters();
+                }}
+                resultsCount={total}
+                year={filter.year}
+                onYearChange={(value) => onSelect('year', value)}
+                showModeration={isSuper}
+                moderationValue={filter.moderation}
+                onToggleModeration={() => {
+                  const next = filter.moderation === 0 ? undefined : 0;
+                  onSelect('moderation', next);
+                }}
+                onClose={() => setShowFilters(false)}
+                onApply={() => setShowFilters(false)}
+              />
+            </SafeAreaView>
           </Modal>
         )}
 
@@ -942,7 +1033,7 @@ function ListTravel({
             message="Удалить это путешествие?"
           />
 
-          {isExport && Platform.OS === 'web' && (
+          {isExport && (
             <ExportBar
               isMobile={isMobile}
               selectedCount={selectionCount}
@@ -1000,12 +1091,12 @@ function ListTravel({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: palette.background,
+    backgroundColor: '#fafbfc',
   },
   container: {
     flex: 1,
     flexDirection: 'row',
-    maxWidth: 1440,
+    maxWidth: 1600,
     marginHorizontal: 'auto',
     width: '100%',
     ...Platform.select({
@@ -1017,15 +1108,19 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     flexDirection: 'row',
-    paddingTop: Platform.select({ default: spacing.sm, web: spacing.lg }),
-    gap: Platform.select({ default: 0, web: spacing.lg }),
+    paddingTop: Platform.select({ default: 16, web: 32 }),
+    gap: Platform.select({ default: 0, web: 40 }),
+  },
+  // Компактный верхний отступ и gap для мобильной ширины на web
+  contentMobile: {
+    paddingTop: 12,
+    gap: 16,
   },
   sidebar: {
-    width: Platform.select({ default: 260, web: 280 }),
+    width: Platform.select({ default: 260, web: 300 }),
     paddingRight: 0,
-    paddingLeft: Platform.select({ default: spacing.sm, web: spacing.md }),
-    borderRightWidth: 1,
-    borderRightColor: palette.borderLight,
+    paddingLeft: Platform.select({ default: spacing.sm, web: 20 }),
+    borderRightWidth: 0,
     ...Platform.select({
       web: {
         position: 'sticky' as any,
@@ -1038,9 +1133,14 @@ const styles = StyleSheet.create({
   },
   main: {
     flex: 1,
-    paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.lg }),
-    paddingRight: Platform.select({ default: spacing.sm, web: spacing.xl }),
+    paddingHorizontal: Platform.select({ default: 12, web: 32 }),
+    paddingRight: Platform.select({ default: 12, web: 40 }),
     minWidth: 0,
+  },
+  // Жёсткое переопределение паддингов для мобильной ширины на web
+  mainMobile: {
+    paddingHorizontal: 12,
+    paddingRight: 12,
   },
   searchSection: {
     paddingHorizontal: spacing.sm,
@@ -1048,20 +1148,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   searchSectionMain: {
-    marginBottom: spacing.md,
-    paddingHorizontal: 0,
+    marginBottom: 16,
+    paddingHorizontal: Platform.select({ default: 12, web: 0 }),
   },
   categoriesSectionMain: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-    paddingVertical: spacing.xs,
+    marginTop: 20,
+    marginBottom: 32,
+    paddingVertical: 16,
   },
   categoriesTitle: {
-    fontSize: Platform.select({ default: 14, web: 15 }),
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    color: palette.text,
-    marginBottom: spacing.sm,
-    letterSpacing: -0.2,
+    fontSize: Platform.select({ default: 15, web: 17 }),
+    fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
+    color: '#0f172a',
+    marginBottom: 16,
+    letterSpacing: -0.3,
     ...Platform.select({
       web: {
         fontFamily: DESIGN_TOKENS.typography.fontFamily,
@@ -1088,9 +1188,9 @@ const styles = StyleSheet.create({
     gap: Platform.select({ default: spacing.sm, web: spacing.md }),
   },
   listContent: {
-    padding: Platform.select({ default: spacing.xs, web: spacing.sm }),
-    gap: Platform.select({ default: spacing.sm, web: spacing.md }),
-    paddingBottom: Platform.select({ default: spacing.xl, web: spacing.xxl }),
+    padding: Platform.select({ default: 12, web: 12 }),
+    gap: Platform.select({ default: 20, web: 28 }),
+    paddingBottom: Platform.select({ default: 56, web: 80 }),
   },
   listContentMobile: {
     padding: spacing.xs,
@@ -1098,15 +1198,21 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   columnWrapper: { 
-    gap: Platform.select({ default: spacing.xs, web: spacing.md }), 
+    gap: 15,
     justifyContent: "flex-start",
   },
   exportBar: {
-    gap: spacing.sm,
-    padding: Platform.select({ default: spacing.md, web: spacing.lg }),
+    gap: spacing.xs,
+    padding: Platform.select({ default: spacing.sm, web: spacing.md }),
+    paddingBottom: Platform.select({ default: 70, web: 24 }), // отступ для нижнего меню/футера
     borderTopWidth: 1,
     borderColor: palette.borderLight,
     backgroundColor: palette.surface,
+    position: Platform.select({ default: 'absolute' as any, web: 'fixed' as any }),
+    bottom: Platform.select({ default: 60, web: 67 }),
+    left: 0,
+    right: 0,
+    zIndex: 999, // ✅ АДАПТИВНОСТЬ: Под нижним меню, но над контентом
     ...Platform.select({
       ios: {
         shadowColor: "#0f172a",
@@ -1118,24 +1224,28 @@ const styles = StyleSheet.create({
         elevation: 4,
       },
       web: {
-        boxShadow: '0 -2px 12px rgba(15, 23, 42, 0.04)',
+        boxShadow: '0 -2px 12px rgba(15, 23, 42, 0.08)',
       },
     }),
   },
+  exportBarMobileWeb: {
+    bottom: 55,
+    paddingBottom: 24,
+  },
   exportBarInfo: {
-    gap: spacing.xs,
-    marginBottom: spacing.xs,
+    gap: spacing.xxs,
+    marginBottom: spacing.xxs,
   },
   exportBarInfoTitle: {
-    fontSize: Platform.select({ default: 15, web: 16 }),
+    fontSize: Platform.select({ default: 14, web: 15 }),
     fontWeight: "700",
     color: palette.text,
     letterSpacing: -0.2,
   },
   exportBarInfoSubtitle: {
-    fontSize: Platform.select({ default: 12, web: 13 }),
+    fontSize: Platform.select({ default: 11, web: 12 }),
     color: palette.textMuted,
-    lineHeight: Platform.select({ default: 16, web: 18 }),
+    lineHeight: Platform.select({ default: 14, web: 16 }),
   },
   exportBarInfoActions: {
     flexDirection: "row",
@@ -1215,6 +1325,46 @@ const styles = StyleSheet.create({
     height: Platform.select({ default: 180, web: 200 }),
     backgroundColor: palette.surfaceMuted,
     borderRadius: radii.md,
+  },
+  sidebarExtraFilters: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: palette.borderLight,
+    gap: spacing.xs,
+  },
+  yearFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.xs,
+  },
+  yearFilterLabel: {
+    fontSize: Platform.select({ default: 12, web: 12 }),
+    color: palette.textMuted,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+  },
+  yearFilterInput: {
+    flexBasis: 78,
+    maxWidth: 78,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderRadius: 999,
+    borderColor: palette.borderLight,
+    backgroundColor: palette.surfaceMuted,
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  moderationRow: {
+    marginTop: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  moderationLabel: {
+    fontSize: 12,
+    color: palette.textMuted,
   },
 });
 

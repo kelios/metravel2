@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     borderWidth: 1.5,
     borderColor: DESIGN_TOKENS.colors.border, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    marginBottom: DESIGN_TOKENS.spacing.xxs0,
+    marginBottom: DESIGN_TOKENS.spacing.md,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: DESIGN_TOKENS.spacing.md,
     paddingVertical: DESIGN_TOKENS.spacing.lg,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
   },
   toggleText: { 
     fontSize: DESIGN_TOKENS.typography.sizes.md, 
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
   },
 
   listContent: { 
-    paddingBottom: DESIGN_TOKENS.spacing.xxs8,
+    paddingBottom: DESIGN_TOKENS.spacing.xxl,
     paddingHorizontal: Platform.select({
       web: 0,
       default: 8,
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
   columnWrap: { 
     justifyContent: 'flex-start',
     alignItems: 'stretch',
-    gap: DESIGN_TOKENS.spacing.xxs0,
+    gap: DESIGN_TOKENS.spacing.md,
     ...Platform.select({
       web: {
         paddingHorizontal: 0,
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
 
   // ✅ УЛУЧШЕНИЕ: Адаптивные колонки с одинаковой высотой карточек
   col: { 
-    marginBottom: DESIGN_TOKENS.spacing.xxs0,
+    marginBottom: DESIGN_TOKENS.spacing.md,
     ...Platform.select({
       web: {
         display: 'flex' as any,
@@ -590,7 +590,6 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        willChange: 'transform, box-shadow',
         height: '100%',
         boxShadow: DESIGN_TOKENS.shadows.card,
         ':hover': {
@@ -630,7 +629,6 @@ const styles = StyleSheet.create({
       web: {
         objectFit: 'contain' as any,
         transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        willChange: 'transform',
       },
       default: {
         resizeMode: 'contain' as any,
@@ -656,7 +654,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
     paddingVertical: 40,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs4,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
     minHeight: 240,
   },
   noImageText: {

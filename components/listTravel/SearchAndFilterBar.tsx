@@ -128,11 +128,18 @@ function SearchAndFilterBar({
             const searchIcon = <Feather name="search" size={isMobile ? 16 : 18} color={palette.primary} />; // ✅ КОМПАКТНОСТЬ: Еще уменьшен размер иконки поиска
             const clearIcon = <Feather name="x" size={isMobile ? 14 : 16} color={palette.textMuted} />; // ✅ КОМПАКТНОСТЬ: Еще уменьшен размер иконки очистки
             const recommendationsIcon = (
-                <MaterialIcons
-                    name="stars"
-                    size={isMobile ? 16 : 18} // ✅ КОМПАКТНОСТЬ: Еще уменьшен размер иконки рекомендаций
-                    color={isRecommendationsVisible ? palette.accent : palette.textSubtle}
-                />
+                <View style={styles.recommendationsContent}>
+                    <MaterialIcons
+                        name="lightbulb-outline"
+                        size={isMobile ? 18 : 20}
+                        color={isRecommendationsVisible ? palette.accent : palette.textSubtle}
+                    />
+                    {!isMobile && (
+                        <Text style={styles.recommendationsLabel} numberOfLines={1}>
+                            Реком.
+                        </Text>
+                    )}
+                </View>
             );
             
             if (Platform.OS === 'web') {
@@ -352,27 +359,27 @@ const styles = StyleSheet.create({
     wrap: {
         flexDirection: "column",
         marginBottom: 0,
-        gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
-        paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
-        paddingVertical: Platform.select({ default: spacing.xs, web: spacing.sm }),
+        gap: Platform.select({ default: 8, web: 10 }),
+        paddingHorizontal: Platform.select({ default: 12, web: 16 }),
+        paddingVertical: Platform.select({ default: 10, web: 12 }),
         width: '100%',
         maxWidth: '100%',
-        borderRadius: DESIGN_TOKENS.radii.md,
+        borderRadius: Platform.select({ default: 16, web: 20 }),
         backgroundColor: DESIGN_TOKENS.colors.surface,
         ...Platform.select({
             ios: {
-                shadowColor: "#1f1f1f",
-                shadowOffset: { width: 0, height: 4 },
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.04,
-                shadowRadius: 8,
+                shadowRadius: 6,
             },
             android: {
-                elevation: 2,
+                elevation: 1,
             },
             web: {
-                boxShadow: DESIGN_TOKENS.shadows.light,
+                boxShadow: '0 2px 10px rgba(15, 23, 42, 0.06)',
                 position: 'relative' as any,
-                zIndex: 1,
+                zIndex: 3000,
             },
         }),
     },
@@ -396,7 +403,7 @@ const styles = StyleSheet.create({
         overflow: 'visible',
         ...Platform.select({
             web: {
-                zIndex: 100,
+                zIndex: 2000,
             },
         }),
     },
@@ -412,59 +419,61 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: "row",
         alignItems: "center",
-        gap: Platform.select({ default: spacing.xs, web: spacing.xs }),
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-        borderRadius: DESIGN_TOKENS.radii.pill,
+        gap: Platform.select({ default: 8, web: 10 }),
+        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+        borderRadius: Platform.select({ default: 999, web: 999 }),
         borderWidth: 1,
         borderColor: DESIGN_TOKENS.colors.borderLight,
-        paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
+        paddingHorizontal: Platform.select({ default: 18, web: 20 }),
         height: Platform.select({
-            default: 48,
-            web: 52,
+            default: 54,
+            web: 56,
         }),
         minWidth: 0,
         ...Platform.select({
             ios: {
                 shadowColor: "#000",
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.03,
-                shadowRadius: 2,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.04,
+                shadowRadius: 4,
             },
             android: {
                 elevation: 1,
             },
             web: {
-                boxShadow: DESIGN_TOKENS.shadows.light,
-                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
             },
         }),
     },
     searchBoxActive: {
         borderColor: DESIGN_TOKENS.colors.primary,
+        backgroundColor: '#ffffff',
         ...Platform.select({
             ios: {
-                shadowOpacity: 0.08,
-                shadowRadius: 6,
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
             },
             android: {
-                elevation: 2,
+                elevation: 3,
             },
             web: {
-                boxShadow: `0 0 0 3px ${DESIGN_TOKENS.colors.primarySoft}`,
+                boxShadow: `0 0 0 4px ${DESIGN_TOKENS.colors.primarySoft}, 0 4px 12px rgba(0, 0, 0, 0.08)`,
             },
         }),
     },
     searchBoxMobile: {
-        height: 44,
-        paddingHorizontal: spacing.sm,
-        gap: spacing.xxs,
+        height: 52,
+        paddingHorizontal: 16,
+        gap: 8,
     },
     input: {
         flex: 1,
-        fontSize: Platform.select({ default: 14, web: 15 }),
-        color: DESIGN_TOKENS.colors.text,
-        paddingVertical: 0,
-        lineHeight: Platform.select({ default: 20, web: 22 }),
+        fontSize: Platform.select({ default: 16, web: 18 }),
+        color: '#0f172a',
+        fontWeight: '500',
+        paddingVertical: 2,
+        lineHeight: Platform.select({ default: 22, web: 26 }),
         minWidth: 0,
         ...Platform.select({
             web: {
@@ -474,47 +483,39 @@ const styles = StyleSheet.create({
         }),
     },
     inputMobile: {
-        fontSize: 14,
-        paddingVertical: 0,
-        lineHeight: 18,
+        fontSize: 15,
+        paddingVertical: 1,
+        lineHeight: 20,
     },
     searchIconBadge: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        paddingRight: 4,
+    },
+    searchIconBadgeMobile: {
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
-        flexShrink: 0,
-    },
-    searchIconBadgeMobile: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
     },
     searchDivider: {
-        width: StyleSheet.hairlineWidth,
-        alignSelf: 'stretch',
-        backgroundColor: DESIGN_TOKENS.colors.borderLight,
-        opacity: 0.6,
-        marginHorizontal: spacing.xs,
+        width: 0,
+        marginHorizontal: 0,
+        opacity: 0,
         flexShrink: 0,
     },
     searchDividerMobile: {
         marginHorizontal: spacing.xxs,
     },
     clearBtn: {
-        padding: spacing.xs,
-        borderRadius: radii.pill,
+        padding: 6,
+        borderRadius: 50,
         minWidth: 32,
         minHeight: 32,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
+        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+        borderWidth: 0,
         flexShrink: 0,
         ...Platform.select({
             web: {
@@ -522,7 +523,8 @@ const styles = StyleSheet.create({
                 transition: 'all 0.2s ease',
                 // @ts-ignore
                 ':hover': {
-                    backgroundColor: palette.primarySoft,
+                    backgroundColor: '#cbd5e1',
+                    transform: 'scale(1.05)',
                 },
             }
         }),
@@ -630,26 +632,49 @@ const styles = StyleSheet.create({
         flexShrink: 1,
     },
     recommendationsToggle: {
-        width: Platform.select({ default: 36, web: 38 }),
-        height: Platform.select({ default: 36, web: 38 }),
-        borderRadius: radii.sm,
+        width: Platform.select({ default: 48, web: 52 }),
+        height: Platform.select({ default: 48, web: 52 }),
+        borderRadius: Platform.select({ default: 14, web: 16 }),
         justifyContent: 'center',
         alignItems: 'center',
-        minWidth: 36,
-        minHeight: 36,
+        minWidth: 48,
+        minHeight: 48,
         flexShrink: 0,
+        backgroundColor: '#f8fafc',
+        borderWidth: 2,
+        borderColor: '#e2e8f0',
         ...Platform.select({
             web: {
                 cursor: 'pointer',
-                transition: 'all 0.2s ease',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                 // @ts-ignore
                 ':hover': {
                     backgroundColor: palette.primarySoft,
+                    borderColor: palette.primary,
+                    transform: 'scale(1.05)',
                 },
             },
         }),
     },
     recommendationsToggleActive: {
         backgroundColor: palette.primarySoft,
+        borderColor: palette.primary,
+        ...Platform.select({
+            web: {
+                boxShadow: `0 0 0 3px ${palette.primarySoft}`,
+            },
+        }),
+    },
+    recommendationsContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.xxs,
+    },
+    recommendationsLabel: {
+        fontSize: 11,
+        color: palette.textSubtle,
+        fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+        maxWidth: 56,
     },
 });

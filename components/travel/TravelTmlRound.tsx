@@ -190,7 +190,6 @@ const styles = StyleSheet.create({
             web: {
                 cursor: "pointer" as any,
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                willChange: 'transform, box-shadow',
                 boxShadow: DESIGN_TOKENS.shadows.card,
                 ':hover': {
                     transform: 'translateY(-4px)',

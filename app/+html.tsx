@@ -37,7 +37,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
         href="/images/hero.avif"
         as="image"
         type="image/avif"
-        fetchpriority="high"
+        fetchPriority="high"
       />
       
       {/* Preload критичных ресурсов */}
@@ -51,6 +51,28 @@ export default function Root({ children }: { children: React.ReactNode }) {
       {/* Выключаем Expo Router Inspector */}
       <script
         dangerouslySetInnerHTML={{ __html: `window.__EXPO_ROUTER_INSPECTOR=false;` }}
+      />
+
+      {/* Suppress known react-native-svg console errors */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+(function() {
+  if (typeof window !== 'undefined') {
+    const originalError = console.error;
+    console.error = function(...args) {
+      // Suppress known react-native-svg CSS error that doesn't affect functionality
+      if (args[0] && typeof args[0] === 'string' && 
+          args[0].includes('CSSStyleDeclaration') && 
+          args[0].includes('Indexed property setter is not supported')) {
+        return;
+      }
+      originalError.apply(console, args);
+    };
+  }
+})();
+`,
+        }}
       />
     </head>
 

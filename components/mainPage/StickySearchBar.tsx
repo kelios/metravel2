@@ -11,19 +11,23 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface StickySearchBarProps {
   search: string;
   onSearchChange: (value: string) => void;
-  onFiltersPress: () => void;
+  onFiltersPress?: () => void;
   hasActiveFilters: boolean;
   resultsCount?: number;
   sortOptions?: Array<{ value: string; label: string }>;
   onSortChange?: (sort: string) => void;
   currentSort?: string;
   placeholder?: string;
+  onToggleRecommendations?: () => void;
+  isRecommendationsVisible?: boolean;
+  onClearAll?: () => void;
+  activeFiltersCount?: number;
 }
 
 const palette = DESIGN_TOKENS.colors;
@@ -40,6 +44,10 @@ function StickySearchBar({
   onSortChange,
   currentSort,
   placeholder = 'Найти путешествия...',
+  onToggleRecommendations,
+  isRecommendationsVisible,
+  onClearAll,
+  activeFiltersCount,
 }: StickySearchBarProps) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -66,92 +74,110 @@ function StickySearchBar({
 
   return (
     <View style={[styles.container, isFocused && styles.containerFocused]}>
-      <View style={styles.searchBox}>
-        <Feather
-          name="search"
-          size={18}
-          color={isFocused ? palette.primary : palette.textMuted}
-        />
-        <TextInput
-          ref={inputRef}
-          value={search}
-          onChangeText={onSearchChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          placeholder={placeholder}
-          placeholderTextColor={palette.textSubtle}
-          style={styles.input}
-          returnKeyType="search"
-          accessibilityLabel="Поиск путешествий"
-          {...Platform.select({
-            web: {
-              // @ts-ignore
-              'aria-label': 'Поиск путешествий. Нажмите Ctrl+K для быстрого доступа',
-            },
-          })}
-        />
-        {search.length > 0 && (
-          <Pressable
-            onPress={() => onSearchChange('')}
-            style={styles.clearButton}
-            accessibilityLabel="Очистить поиск"
-          >
-            <Feather name="x" size={16} color={palette.textMuted} />
-          </Pressable>
-        )}
-        {!isMobile && Platform.OS === 'web' && (
-          <View style={styles.shortcutHint}>
-            <Text style={styles.shortcutText}>Ctrl+K</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Действия - только на десктопе, на мобильных вынесены отдельно */}
-      {!isMobile && (
-        <View style={styles.actions}>
-          {/* Кнопка фильтров */}
-          <Pressable
-            onPress={onFiltersPress}
-            style={[
-              styles.actionButton,
-              hasActiveFilters && styles.actionButtonActive,
-            ]}
-            accessibilityLabel="Открыть фильтры"
-          >
-            <Feather
-              name="filter"
-              size={16}
-              color={hasActiveFilters ? palette.primary : palette.textMuted}
-            />
-            {hasActiveFilters && (
-              <View style={styles.badge}>
-                <View style={styles.badgeDot} />
-              </View>
-            )}
-          </Pressable>
-
-          {/* Сортировка */}
-          {sortOptions.length > 0 && onSortChange && (
-              <Pressable
-              style={styles.actionButton}
-              onPress={() => {
-                // Сортировка будет реализована в будущих версиях
-                // См. issue #XXX для отслеживания прогресса
-              }}
-              accessibilityLabel="Сортировка"
+      <View style={styles.contentRow}>
+        <View style={styles.searchBox}>
+          <Feather
+            name="search"
+            size={18}
+            color={isFocused ? palette.primary : palette.textMuted}
+          />
+          <TextInput
+            ref={inputRef}
+            value={search}
+            onChangeText={onSearchChange}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            placeholder={placeholder}
+            placeholderTextColor={palette.textSubtle}
+            style={styles.input}
+            returnKeyType="search"
+            accessibilityLabel="Поиск путешествий"
+            {...Platform.select({
+              web: {
+                // @ts-ignore
+                'aria-label': 'Поиск путешествий. Нажмите Ctrl+K для быстрого доступа',
+              },
+            })}
+          />
+          {search.length > 0 && (
+            <Pressable
+              onPress={() => onSearchChange('')}
+              style={styles.clearButton}
+              accessibilityLabel="Очистить поиск"
             >
-              <Feather name="arrow-up-down" size={16} color={palette.textMuted} />
+              <Feather name="x" size={16} color={palette.textMuted} />
+            </Pressable>
+          )}
+          {!isMobile && Platform.OS === 'web' && (
+            <View style={styles.shortcutHint}>
+              <Text style={styles.shortcutText}>Ctrl+K</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Действия */}
+        <View style={styles.actions}>
+          {/* Рекомендации */}
+          {onToggleRecommendations && (
+            <Pressable
+              onPress={onToggleRecommendations}
+              style={[
+                styles.actionButton,
+                isRecommendationsVisible && styles.actionButtonActive,
+              ]}
+              accessibilityLabel={isRecommendationsVisible ? "Скрыть рекомендации" : "Показать рекомендации"}
+            >
+              <MaterialIcons
+                name="lightbulb-outline"
+                size={20}
+                color={isRecommendationsVisible ? palette.primary : palette.textMuted}
+              />
             </Pressable>
           )}
 
-          {/* Счетчик результатов */}
-          {showResultsCount && (
-            <View style={styles.resultsCount}>
-              <Text style={styles.resultsText}>
-                {resultsCount} {resultsCount === 1 ? 'результат' : resultsCount < 5 ? 'результата' : 'результатов'}
-              </Text>
-            </View>
+          {/* Кнопка фильтров (только если передан обработчик) */}
+          {onFiltersPress && (
+            <Pressable
+              onPress={onFiltersPress}
+              style={[
+                styles.actionButton,
+                hasActiveFilters && styles.actionButtonActive,
+              ]}
+              accessibilityLabel="Открыть фильтры"
+            >
+              <Feather
+                name="filter"
+                size={16}
+                color={hasActiveFilters ? palette.primary : palette.textMuted}
+              />
+              {hasActiveFilters && (
+                <View style={styles.badge}>
+                  <View style={styles.badgeDot} />
+                </View>
+              )}
+            </Pressable>
           )}
+
+          {/* Сбросить все (если есть активные фильтры или поиск) */}
+          {onClearAll && (hasActiveFilters || search.length > 0) && (
+             <Pressable
+               onPress={onClearAll}
+               style={styles.clearAllButton}
+               accessibilityLabel="Сбросить все"
+             >
+               <Feather name="x-circle" size={14} color={palette.textMuted} />
+               {!isMobile && <Text style={styles.clearAllText}>Сбросить</Text>}
+             </Pressable>
+          )}
+        </View>
+      </View>
+
+      {/* Счетчик результатов (вторая строка на десктопе, если нужно) */}
+      {showResultsCount && (
+        <View style={styles.resultsBar}>
+          <Text style={styles.resultsText}>
+            Найдено: {resultsCount} {resultsCount === 1 ? 'путешествие' : resultsCount < 5 ? 'путешествия' : 'путешествий'}
+          </Text>
         </View>
       )}
     </View>
@@ -163,8 +189,9 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
     borderBottomWidth: 1,
     borderBottomColor: palette.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
+    paddingVertical: Platform.select({ default: spacing.xs, web: spacing.sm }),
+    gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
     ...Platform.select({
       web: {
         position: 'sticky',
@@ -182,30 +209,48 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
+  },
+  contentRowMobile: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    flexWrap: 'wrap',
+  },
   searchBox: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: palette.background,
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: palette.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
+    paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
+    paddingVertical: Platform.select({ default: spacing.xs, web: spacing.sm }),
+    gap: spacing.xs,
+    height: Platform.select({ default: 40, web: 44 }), // Чуть ниже на мобильных
     ...Platform.select({
       web: {
         transition: 'all 0.2s ease',
       },
     }),
   },
+  searchBoxMobile: {
+    width: '100%',
+    marginBottom: spacing.xs,
+  },
   input: {
     flex: 1,
-    fontSize: 15,
+    fontSize: Platform.select({ default: 14, web: 15 }),
     color: palette.text,
     padding: 0,
     ...Platform.select({
       web: {
-        outline: 'none',
+        outlineStyle: 'none',
+        boxShadow: 'none',
+        borderColor: 'transparent',
       },
     }),
   },
@@ -236,14 +281,18 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
+    gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
+  },
+  actionsMobile: {
+    width: '100%',
+    justifyContent: 'flex-start',
   },
   actionButton: {
-    flexDirection: 'row',
+    width: Platform.select({ default: 36, web: 44 }),
+    height: Platform.select({ default: 36, web: 44 }),
     alignItems: 'center',
-    padding: spacing.sm,
-    borderRadius: radii.sm,
+    justifyContent: 'center',
+    borderRadius: radii.md,
     backgroundColor: palette.surface,
     borderWidth: 1,
     borderColor: palette.border,
@@ -279,11 +328,30 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: palette.primary,
   },
-  resultsCount: {
-    marginLeft: 'auto',
+  clearAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    height: Platform.select({ default: 40, web: 44 }),
+    borderRadius: radii.md,
+    backgroundColor: palette.surfaceMuted,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
+  },
+  clearAllText: {
+    fontSize: 13,
+    color: palette.textMuted,
+    fontWeight: '500',
+  },
+  resultsBar: {
+    paddingTop: 4,
   },
   resultsText: {
-    fontSize: 13,
+    fontSize: 12,
     color: palette.textMuted,
     fontWeight: '500',
   },

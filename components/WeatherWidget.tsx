@@ -123,10 +123,11 @@ function formatDateShort(dateStr: string): string {
 const styles = StyleSheet.create({
     wrapper: {
         width: '100%',
+        maxWidth: '100%',
         backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 12, // ✅ UX: Уменьшено с 16 для компактности
-        marginBottom: 16, // ✅ UX: Уменьшено с 24
+        borderRadius: 10,
+        padding: 8, // ✅ UX: Ещё более компактный
+        marginBottom: 12,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
@@ -134,7 +135,8 @@ const styles = StyleSheet.create({
         elevation: 1,
         borderWidth: 1,
         borderColor: '#f0f0f0',
-        marginTop: 12, // ✅ UX: Уменьшено с 16
+        marginTop: 8,
+        overflow: 'hidden',
     },
     titleContainer: {
         position: 'relative',
@@ -146,6 +148,8 @@ const styles = StyleSheet.create({
         fontFamily: 'Roboto-Medium',
         color: '#1a1a1a',
         cursor: 'default',
+        width: '100%',
+        flexWrap: 'wrap',
     },
     tooltip: {
         position: 'absolute',
@@ -166,12 +170,12 @@ const styles = StyleSheet.create({
     forecastContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        gap: 8, // ✅ UX: Уменьшено с 12
+        gap: 4, // ✅ UX: Ещё более компактный
     },
     forecastItem: {
         flex: 1,
         alignItems: 'center',
-        paddingVertical: 2, // ✅ UX: Уменьшено с 4
+        paddingVertical: 1,
     },
     lastItem: {
         marginRight: 0,

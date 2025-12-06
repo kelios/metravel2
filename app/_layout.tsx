@@ -17,6 +17,20 @@ import ConsentBanner from "@/components/ConsentBanner";
 import { useFonts } from "expo-font";
 import { DESIGN_TOKENS } from "@/constants/designSystem"; // ✅ ИСПРАВЛЕНИЕ: Импорт единой палитры
 
+// Подавляем предупреждение useLayoutEffect для React Navigation на вебе
+if (Platform.OS === 'web') {
+  const originalError = console.error;
+  console.error = (...args) => {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('useLayoutEffect does nothing on the server')
+    ) {
+      return;
+    }
+    originalError.apply(console, args);
+  };
+}
+
 const Footer = lazy(() => import("@/components/Footer"));
 
 /** ===== Helpers ===== */
@@ -184,8 +198,12 @@ function RootLayoutNav() {
       );
     }
 
-    // Фоновая карта для бумажного стиля
+    // Фоновая карта для бумажного стиля (используем только на спец-экранах)
     const mapBackground = require("../assets/travel/roulette-map-bg.jpg");
+
+    // Показываем фон-карту только на экранах рулетки, на остальных страницах сохраняем чистый белый фон
+    const showMapBackground =
+      Platform.OS === 'web' && (pathname?.includes('roulette') || pathname?.includes('random'));
 
     return (
       <ErrorBoundary>
@@ -195,7 +213,7 @@ function RootLayoutNav() {
                     <QueryClientProvider client={queryClient}>
                         <FiltersProvider>
                             <View style={styles.container}>
-                            {Platform.OS === 'web' && (
+                            {showMapBackground && (
                               <Image
                                 source={mapBackground}
                                 style={styles.backgroundImage}
@@ -272,8 +290,8 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         position: 'relative',
-        // Прозрачный корневой контейнер: даём фоновой карте реально просвечивать
-        backgroundColor: 'transparent',
+        // Белый корневой фон: отключаем просвечивание фоновой карты
+        backgroundColor: DESIGN_TOKENS.colors.background,
     },
     backgroundImage: {
         ...StyleSheet.absoluteFillObject,

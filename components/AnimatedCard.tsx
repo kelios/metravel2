@@ -56,11 +56,7 @@ export default function AnimatedCard({
 
 const styles = StyleSheet.create({
   container: {
-    ...Platform.select({
-      web: {
-        willChange: 'opacity, transform',
-      },
-    }),
+    // Убираем willChange, так как он вызывает ошибки в React Native Web
   },
 });
 

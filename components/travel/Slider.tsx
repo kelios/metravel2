@@ -938,9 +938,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   arrowIcon: {
-    textShadowColor: "rgba(15,23,42,0.35)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadow: "0 1px 3px rgba(15,23,42,0.35)" as any,
   },
   dots: {
     position: "absolute",

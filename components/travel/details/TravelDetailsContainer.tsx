@@ -980,8 +980,9 @@ export default function TravelDetails() {
             </Animated.View>
           </Defer>
 
-          {/* ✅ РЕДИЗАЙН: Оптимизированная FAB кнопка (отступ от низа 80px) */}
-          {isMobile && (
+          {/* ✅ РЕДИЗАЙН: Оптимизированная FAB кнопка (отступ от низа 80px)
+              На мобильном скрываем FAB, когда открыто боковое меню, чтобы оно не перекрывалось. */}
+          {isMobile && !menuOpen && (
             <Defer when={deferAllowed}>
               <>
                 {showFabHint && (
@@ -1031,7 +1032,10 @@ export default function TravelDetails() {
 
           <ScrollView
             ref={scrollRef}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[
+              styles.scrollContent,
+              Platform.OS === "web" && isMobile && { paddingTop: HEADER_OFFSET_MOBILE },
+            ]}
             keyboardShouldPersistTaps="handled"
             onScroll={Animated.event(
               [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -1649,7 +1653,13 @@ const styles = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.surface,
   },
   safeArea: { flex: 1 },
-  mainContainer: { flex: 1, flexDirection: "row" },
+  mainContainer: { 
+    flex: 1, 
+    flexDirection: "row",
+    maxWidth: 1440,
+    width: "100%",
+    marginHorizontal: "auto" as any,
+  },
   mainContainerMobile: {
     flexDirection: "column",
     alignItems: "stretch",
@@ -1712,8 +1722,6 @@ const styles = StyleSheet.create({
   sideMenuWebDesktop: {
     position: "sticky" as any,
     top: HEADER_OFFSET_DESKTOP as any,
-    maxHeight: `calc(100vh - ${HEADER_OFFSET_DESKTOP}px)` as any,
-    overflowY: "auto" as any,
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     backdropFilter: "blur(20px)" as any,
     WebkitBackdropFilter: "blur(20px)" as any,
@@ -1728,7 +1736,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 0,
     maxHeight: "100vh" as any,
     overflowY: "auto" as any,
-    paddingTop: HEADER_OFFSET_MOBILE + 16,
+    paddingTop: HEADER_OFFSET_MOBILE + 32,
   },
 
   // ✅ РЕДИЗАЙН: Оптимизированная FAB с градиентом (отступ от низа 80px)
@@ -2009,7 +2017,7 @@ const styles = StyleSheet.create({
 
   mapEmptyState: {
     width: "100%",
-    padding: DESIGN_TOKENS.spacing.xxs4,
+    padding: DESIGN_TOKENS.spacing.xl,
     borderRadius: 16,
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderWidth: 1,
@@ -2072,7 +2080,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#f9f8f2",
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
     paddingVertical: 40,
   },
   errorTitle: {
@@ -2088,12 +2096,12 @@ const styles = StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     color: "#6b7280",
     textAlign: "center",
-    marginBottom: DESIGN_TOKENS.spacing.xxs4,
+    marginBottom: DESIGN_TOKENS.spacing.xl,
     lineHeight: 24,
   },
   errorButton: {
     backgroundColor: DESIGN_TOKENS.colors.primary,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs4,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
     paddingVertical: 12,
     borderRadius: 8,
     ...Platform.select({

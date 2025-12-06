@@ -348,7 +348,6 @@ const styles = StyleSheet.create({
             web: {
                 cursor: 'pointer',
                 transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                willChange: 'background-color, transform',
                 // @ts-ignore
                 ':hover': {
                     backgroundColor: DESIGN_TOKENS.colors.primarySoft,
@@ -451,7 +450,6 @@ const styles = StyleSheet.create({
             web: {
                 cursor: 'pointer',
                 transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                willChange: 'transform, box-shadow',
                 boxShadow: DESIGN_TOKENS.shadows.medium,
                 // @ts-ignore
                 ':hover': {
@@ -492,7 +490,6 @@ const styles = StyleSheet.create({
             web: {
                 cursor: 'pointer',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                willChange: 'transform, box-shadow',
                 boxShadow: DESIGN_TOKENS.shadows.medium,
                 // @ts-ignore
                 ':hover': {

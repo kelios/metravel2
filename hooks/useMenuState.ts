@@ -17,8 +17,8 @@ export interface UseMenuStateReturn {
   openMenuOnDesktop: () => void;
 }
 
-const MENU_WIDTH_DESKTOP = 280;
-const MENU_WIDTH_TABLET = 240;
+const MENU_WIDTH_DESKTOP = 280; // Боковое меню как на главной странице (фильтры)
+const MENU_WIDTH_TABLET = 260; // Чуть уже на планшетах
 
 export function useMenuState(isMobile: boolean): UseMenuStateReturn {
   const { width } = useWindowDimensions();
