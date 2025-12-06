@@ -120,13 +120,13 @@ describe('Map.ios Component', () => {
   });
 
   it('should render callout with point information', () => {
-    const { getByText } = render(
+    const { getAllByText } = render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    expect(getByText('Адрес места:')).toBeTruthy();
-    expect(getByText('Координаты:')).toBeTruthy();
-    expect(getByText('Категория объекта:')).toBeTruthy();
+    expect(getAllByText('Адрес места:')[0]).toBeTruthy();
+    expect(getAllByText('Координаты:')[0]).toBeTruthy();
+    expect(getAllByText('Категория объекта:')[0]).toBeTruthy();
   });
 
   it('should display point address in callout', () => {

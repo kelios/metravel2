@@ -60,7 +60,7 @@ const createMockRefs = () => ({
   description: React.createRef(),
   map: React.createRef(),
   points: React.createRef(),
-});
+} as any);
 
 describe('CompactSideBarTravel', () => {
   const defaultProps = {

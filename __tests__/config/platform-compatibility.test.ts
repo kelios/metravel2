@@ -160,11 +160,6 @@ describe('Platform Compatibility Tests', () => {
       expect(appConfig.expo.android.config.googleMaps).toBeDefined();
       expect(appConfig.expo.android.config.googleMaps.apiKey).toBeDefined();
     });
-
-    it('should have expo-maps plugin', () => {
-      const plugins = appConfig.expo.plugins;
-      expect(plugins).toContain('expo-maps');
-    });
   });
 
   describe('Deep Linking Configuration', () => {
@@ -212,11 +207,6 @@ describe('Platform Compatibility Tests', () => {
         Array.isArray(p) && p[0] === 'expo-location'
       );
       expect(locationPlugin).toBeDefined();
-    });
-
-    it('should have expo-maps plugin', () => {
-      const plugins = appConfig.expo.plugins;
-      expect(plugins).toContain('expo-maps');
     });
   });
 

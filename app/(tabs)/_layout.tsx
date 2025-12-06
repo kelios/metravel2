@@ -14,12 +14,12 @@ const HIDDEN = { title: '', href: undefined, lazy: true } as const;
 const HIDDEN_NOHREF = { title: '', href: null, lazy: true } as const;
 
 export default function TabLayout() {
-    const tabBarHiddenStyle = useMemo(() => ({ display: 'none' }), []);
+    const tabBarHiddenStyle = useMemo(() => ({ display: 'none' as const }), []);
     return (
         <Tabs
             initialRouteName="index"
+            tabBar={() => null}
             screenOptions={{
-                tabBar: () => null,       // убираем таббар полностью
                 tabBarStyle: tabBarHiddenStyle,
                 header: () => <Header />, // кастомный заголовок
                 lazy: true,               // экраны создаются по первому фокусу

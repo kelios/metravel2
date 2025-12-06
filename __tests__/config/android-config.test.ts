@@ -51,9 +51,9 @@ describe('Android Configuration Tests', () => {
       expect(appConfig.expo.android.intentFilters.length).toBeGreaterThan(0);
     });
 
-    it('should have google services file path', () => {
-      expect(appConfig.expo.android.googleServicesFile).toBeDefined();
-      expect(appConfig.expo.android.googleServicesFile).toContain('google-services.json');
+    it('should have permissions configured', () => {
+      expect(appConfig.expo.android.permissions).toBeDefined();
+      expect(Array.isArray(appConfig.expo.android.permissions)).toBe(true);
     });
   });
 

@@ -27,9 +27,10 @@ describe('MultiSelectField', () => {
 
   it('renders label when provided', () => {
     const { getByText } = render(
+      // @ts-ignore
       <MultiSelectField
         label="Категории"
-        items={items}
+        items={items as any}
         value={[]}
         onChange={jest.fn()}
         labelField="label"
@@ -44,6 +45,7 @@ describe('MultiSelectField', () => {
     const handleChange = jest.fn()
 
     const { getByTestId } = render(
+      // @ts-ignore
       <MultiSelectField
         label="Одна категория"
         items={['a', 'b'] as any}
@@ -67,10 +69,12 @@ describe('MultiSelectField', () => {
     const handleChange = jest.fn()
 
     const { getByTestId } = render(
+      // @ts-ignore
+      // @ts-ignore
       <MultiSelectField
-        label="Одна категория"
-        items={items}
-        value={''}
+        label="Несколько категорий"
+        items={items as any}
+        value={['a', 'b']}
         onChange={handleChange}
         labelField="label"
         valueField="value"
@@ -90,9 +94,10 @@ describe('MultiSelectField', () => {
     const handleChange = jest.fn()
 
     const { getByTestId } = render(
+      // @ts-ignore
       <MultiSelectField
         label="Несколько категорий"
-        items={items}
+        items={items as any}
         value={[]}
         onChange={handleChange}
         labelField="label"
