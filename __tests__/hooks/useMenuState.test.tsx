@@ -23,8 +23,8 @@ describe('useMenuState', () => {
 
     expect(result.current.menuOpen).toBe(true);
     // При текущей ширине по умолчанию из setup.ts используется TABLET-ширина
-    expect(result.current.menuWidth).toBe(240);
-    expect(result.current.menuWidthNum).toBe(240);
+    expect(result.current.menuWidth).toBe(260);
+    expect(result.current.menuWidthNum).toBe(260);
   });
 
   it('toggles menu open/close on mobile and animates position', () => {

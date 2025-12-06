@@ -325,6 +325,28 @@ function TravelListItem({
             </View>
           )}
 
+          {/* Избранное (сердечко) в правом верхнем углу */}
+          {!selectable && (
+            <View
+              style={styles.favoriteButtonContainer}
+              pointerEvents="box-none"
+              {...(Platform.OS === 'web' && {
+                onClick: (e: any) => e.stopPropagation(),
+                onMouseDown: (e: any) => e.stopPropagation(),
+              })}
+            >
+              <FavoriteButton
+                id={id}
+                type="travel"
+                title={name}
+                imageUrl={travel_image_thumb_url}
+                url={travelUrl}
+                country={countries[0]}
+                size={18}
+              />
+            </View>
+          )}
+
           {/* Кнопки управления (Top Left) - перенесены сюда, чтобы не мешать бейджам внизу */}
           {canEdit && !selectable && (
             <View
@@ -352,7 +374,7 @@ function TravelListItem({
                 accessibilityRole="button"
                 accessibilityLabel="Удалить"
               >
-                <Feather name="trash-2" size={16} color="#ef4444" />
+                <Feather name="trash-2" size={16} color="#1e293b" />
               </Pressable>
             </View>
           )}
@@ -604,6 +626,55 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: "40%", // Чуть выше градиент для лучшей читаемости бейджа
+  },
+
+  adminActionsContainer: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    zIndex: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        boxShadow: '0 4px 6px -1px rgba(15,23,42,0.08)',
+      },
+    }),
+  },
+
+  adminBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 999,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
+  },
+
+  adminDivider: {
+    width: 1,
+    height: 18,
+    marginHorizontal: 6,
+    backgroundColor: 'rgba(148,163,184,0.5)',
   },
 
   favoriteButtonContainer: {

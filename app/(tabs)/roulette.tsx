@@ -6,7 +6,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 
 import InstantSEO from '@/components/seo/InstantSEO';
-import FiltersComponent from '@/components/listTravel/FiltersComponent';
+import ModernFilters from '@/components/listTravel/ModernFilters';
 import SearchAndFilterBar from '@/components/listTravel/SearchAndFilterBar';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import UIButton from '@/components/ui/Button';
@@ -149,6 +149,90 @@ export default function RouletteScreen() {
     isTravelBy: false,
     userId: null,
   });
+
+  const filterGroups = useMemo(() => [
+    {
+      key: 'countries',
+      title: 'Страны',
+      options: (options?.countries || []).map((country: any) => ({
+        id: String(country.country_id ?? country.id),
+        name: country.title_ru || country.name,
+      })),
+      multiSelect: true,
+      icon: 'globe',
+    },
+    {
+      key: 'categories',
+      title: 'Категории',
+      options: (options?.categories || []).map((cat: any) => ({
+        id: String(cat.id),
+        name: cat.name,
+        count: undefined,
+      })),
+      multiSelect: true,
+      icon: 'tag',
+    },
+    {
+      key: 'transports',
+      title: 'Транспорт',
+      options: (options?.transports || []).map((t: any) => ({
+        id: String(t.id),
+        name: t.name,
+      })),
+      multiSelect: true,
+      icon: 'truck',
+    },
+    {
+      key: 'categoryTravelAddress',
+      title: 'Объекты',
+      options: (options?.categoryTravelAddress || []).map((obj: any) => ({
+        id: String(obj.id),
+        name: obj.name,
+      })),
+      multiSelect: true,
+      icon: 'map-pin',
+    },
+    {
+      key: 'companions',
+      title: 'Спутники',
+      options: (options?.companions || []).map((c: any) => ({
+        id: String(c.id),
+        name: c.name,
+      })),
+      multiSelect: true,
+      icon: 'users',
+    },
+    {
+      key: 'complexity',
+      title: 'Сложность',
+      options: (options?.complexity || []).map((item: any) => ({
+        id: String(item.id),
+        name: item.name,
+      })),
+      multiSelect: true,
+      icon: 'activity',
+    },
+    {
+      key: 'month',
+      title: 'Месяц',
+      options: (options?.month || []).map((item: any) => ({
+        id: String(item.id),
+        name: item.name,
+      })),
+      multiSelect: true,
+      icon: 'calendar',
+    },
+    {
+      key: 'over_nights_stay',
+      title: 'Ночлег',
+      options: (options?.over_nights_stay || []).map((item: any) => ({
+        id: String(item.id),
+        name: item.name,
+      })),
+      multiSelect: true,
+      icon: 'moon',
+    },
+  ], [options]);
 
   const rouletteQueryParams = useMemo(() => {
     const base = { ...queryParams };
@@ -295,21 +379,21 @@ export default function RouletteScreen() {
       <View style={styles.container}>
         {!isMobile && (
           <View style={styles.sidebar}>
-            <FiltersComponent
-              filters={options || {}}
-              filterValue={filter}
-              onSelectedItemsChange={onSelect}
-              handleApplyFilters={applyFilter}
-              resetFilters={resetFilters}
-              isSuperuser={false}
-              closeMenu={undefined}
-              search={undefined}
-              setSearch={undefined}
-              onToggleRecommendations={undefined}
-              isRecommendationsVisible={undefined}
-              hasFilters={activeFiltersCount > 0}
-              resultsCount={travels.length}
+            <ModernFilters
+              filterGroups={filterGroups}
+              selectedFilters={filter as any}
+              onFilterChange={(groupKey, optionId) => {
+                const currentValues: string[] = ((filter as any)[groupKey] || []).map((v: any) => String(v));
+                const normalizedId = String(optionId);
+                const newValues = currentValues.includes(normalizedId)
+                  ? currentValues.filter((id) => id !== normalizedId)
+                  : [...currentValues, normalizedId];
+                onSelect(groupKey, newValues);
+              }}
               onClearAll={handleClearAll}
+              resultsCount={travels.length}
+              year={filter.year}
+              onYearChange={(value) => onSelect('year', value)}
             />
           </View>
         )}
@@ -438,7 +522,6 @@ export default function RouletteScreen() {
                             isSuperuser={false}
                             isMetravel={false}
                             onDeletePress={undefined}
-                            onEditPress={undefined}
                             isFirst={index === 0}
                             isSingle
                             selectable={false}
@@ -474,7 +557,6 @@ export default function RouletteScreen() {
                           isSuperuser={false}
                           isMetravel={false}
                           onDeletePress={undefined}
-                          onEditPress={undefined}
                           isFirst={index === 0}
                           selectable={false}
                           isSelected={false}
@@ -496,22 +578,26 @@ export default function RouletteScreen() {
           animationType="slide"
           onRequestClose={() => setShowFilters(false)}
         >
-          <FiltersComponent
-            filters={options || {}}
-            filterValue={filter}
-            onSelectedItemsChange={onSelect}
-            handleApplyFilters={applyFilter}
-            resetFilters={resetFilters}
-            isSuperuser={false}
-            closeMenu={() => setShowFilters(false)}
-            search={undefined}
-            setSearch={undefined}
-            onToggleRecommendations={undefined}
-            isRecommendationsVisible={undefined}
-            hasFilters={activeFiltersCount > 0}
-            resultsCount={travels.length}
-            onClearAll={handleClearAll}
-          />
+          <View style={{ flex: 1, backgroundColor: '#fff' }}>
+            <ModernFilters
+              filterGroups={filterGroups}
+              selectedFilters={filter as any}
+              onFilterChange={(groupKey, optionId) => {
+                const currentValues: string[] = ((filter as any)[groupKey] || []).map((v: any) => String(v));
+                const normalizedId = String(optionId);
+                const newValues = currentValues.includes(normalizedId)
+                  ? currentValues.filter((id) => id !== normalizedId)
+                  : [...currentValues, normalizedId];
+                onSelect(groupKey, newValues);
+              }}
+              onClearAll={handleClearAll}
+              resultsCount={travels.length}
+              year={filter.year}
+              onYearChange={(value) => onSelect('year', value)}
+              onClose={() => setShowFilters(false)}
+              onApply={() => setShowFilters(false)}
+            />
+          </View>
         </Modal>
       )}
     </View>

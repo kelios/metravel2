@@ -154,19 +154,19 @@ export const ExportBar = memo(function ExportBar({
     return (
       <View style={[styles.exportBar, Platform.OS === 'web' && isMobile && styles.exportBarMobileWeb]}>
           <View style={styles.exportBarInfo}>
-            <Text style={styles.exportBarInfoTitle}>{selectionText}</Text>
-            <Text style={styles.exportBarInfoSubtitle}>
+            <Text style={styles.exportBarInfoTitle as any}>{selectionText}</Text>
+            <Text style={styles.exportBarInfoSubtitle as any}>
               {hasSelection ? `Настройки: ${settingsSummary}` : 'Выберите хотя бы одно путешествие, чтобы включить кнопки'}
             </Text>
             <View style={styles.exportBarInfoActions}>
               <Pressable onPress={onToggleSelectAll} accessibilityRole="button">
-                <Text style={styles.linkButton}>
+                <Text style={styles.linkButton as any}>
                   {selectedCount === allCount && allCount > 0 ? "Снять выделение" : "Выбрать все"}
                 </Text>
               </Pressable>
               {hasSelection && (
                 <Pressable onPress={onClearSelection} accessibilityRole="button">
-                  <Text style={styles.linkButton}>Очистить выбор</Text>
+                  <Text style={styles.linkButton as any}>Очистить выбор</Text>
                 </Pressable>
               )}
             </View>

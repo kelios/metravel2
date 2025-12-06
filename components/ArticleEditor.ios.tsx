@@ -311,6 +311,8 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
             onPress={handleUndo}
             style={styles.headerButton}
             disabled={!isReady}
+            accessibilityRole="button"
+            accessibilityLabel="Отменить"
           >
             <MaterialIcons name="undo" size={20} color={isReady ? "#555" : "#ccc"} />
           </TouchableOpacity>
@@ -318,6 +320,8 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
             onPress={handleRedo}
             style={styles.headerButton}
             disabled={!isReady}
+            accessibilityRole="button"
+            accessibilityLabel="Повторить"
           >
             <MaterialIcons name="redo" size={20} color={isReady ? "#555" : "#ccc"} />
           </TouchableOpacity>
@@ -326,6 +330,8 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
               onPress={handleImagePick}
               style={styles.headerButton}
               disabled={!isReady || isUploading}
+              accessibilityRole="button"
+              accessibilityLabel="Добавить изображение"
             >
               {isUploading ? (
                 <ActivityIndicator size="small" color="#555" />

@@ -146,7 +146,7 @@ export default function AboutAndContactScreen() {
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
             <ImageBackground
-                source={require('@/assets/images/media/slider/about.jpg')}
+                source={require('../../assets/travel/roulette-map-bg.jpg')}
                 style={styles.backgroundImage}
                 resizeMode="cover"
                 // @ts-ignore RN web поддерживает fetchPriority

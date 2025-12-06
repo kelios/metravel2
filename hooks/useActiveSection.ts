@@ -28,9 +28,17 @@ export function useActiveSection(
 
   // ✅ АРХИТЕКТУРА: Intersection Observer для отслеживания активной секции (web)
   useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined' || !window.IntersectionObserver) {
+    // В тестовой среде (Jest/node) может не быть window / document / IntersectionObserver
+    if (
+      Platform.OS !== 'web' ||
+      typeof window === 'undefined' ||
+      typeof (window as any).document === 'undefined' ||
+      !window.IntersectionObserver
+    ) {
       return;
     }
+
+    const doc = (window as any).document as Document;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -93,7 +101,7 @@ export function useActiveSection(
       if (registeredSectionsRef.current.has(key)) return;
 
       setTimeout(() => {
-        const element = document.querySelector(`[data-section-key="${key}"]`);
+        const element = doc.querySelector(`[data-section-key="${key}"]`);
         if (element && element instanceof Element) {
           observer.observe(element);
           registeredSectionsRef.current.add(key);

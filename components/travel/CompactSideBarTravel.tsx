@@ -240,6 +240,22 @@ function CompactSideBarTravel({
         }}
         showsHorizontalScrollIndicator={false}
       >
+        {isMobile && (
+          <View style={styles.closeTopBar}>
+            <Pressable
+              onPress={closeMenu}
+              style={({ pressed }) => [
+                styles.closeTopBtn,
+                pressed && styles.closeTopBtnPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть меню"
+              hitSlop={8}
+            >
+              <MaterialIcons name="close" size={20} color="#111827" />
+            </Pressable>
+          </View>
+        )}
         {/* ✅ РЕДИЗАЙН: Компактная карточка автора */}
         <View style={styles.card}>
           <View style={styles.cardRow}>
@@ -792,6 +808,29 @@ const styles = StyleSheet.create({
   closeBtn: { flexDirection: "row", alignItems: "center" },
   closeBtnPressed: { opacity: 0.7 },
   closeTxt: { color: "#fff", fontSize: DESIGN_TOKENS.typography.sizes.md, fontFamily: "Georgia", marginLeft: 8 },
+
+  closeTopBar: {
+    alignItems: "flex-end",
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+    paddingRight: 4,
+  },
+  closeTopBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    backgroundColor: "rgba(15, 23, 42, 0.04)",
+  },
+  closeTopBtnPressed: {
+    opacity: 0.7,
+  },
+  closeTopTxt: {
+    marginLeft: 6,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: "#111827",
+    fontFamily: "Georgia",
+  },
 
   fallback: { paddingVertical: 40, alignItems: "center" },
 });

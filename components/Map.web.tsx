@@ -68,7 +68,6 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
 
     const load = async () => {
       try {
-        ensureLeafletCSS();
         const [leafletMod, rlMod] = await Promise.all([
           import('leaflet'),
           import('react-leaflet'),
