@@ -5,6 +5,7 @@ import TravelListItem from "./TravelListItem";
 import AnimatedCard from "../AnimatedCard";
 import type { Travel } from "@/src/types/types";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { router } from 'expo-router';
 
 const { spacing, radii, shadows } = DESIGN_TOKENS;
 
@@ -51,16 +52,15 @@ function RenderTravelItem({
             overflow: Platform.OS === "android" ? "visible" : "hidden",
             marginBottom: isMobile ? spacing.sm : spacing.md,
             backgroundColor: 'white',
-            ...(shadows.medium as ViewStyle),
+            // Platform-specific shadows
+            ...(Platform.OS === 'web' 
+                ? { boxShadow: shadows.medium } as any
+                : DESIGN_TOKENS.shadowsNative.medium
+            ),
         };
 
-        if (Platform.OS === 'web') {
-            base.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
-            base[':hover'] = {
-                transform: [{ translateY: -2 }],
-                ...(shadows.hover as ViewStyle)
-            };
-        }
+        // Убираем transition и :hover, так как они вызывают ошибки в React Native Web
+        // Анимация уже есть в AnimatedCard компоненте
 
         if (isSingle) {
             return {
@@ -75,7 +75,9 @@ function RenderTravelItem({
             return {
                 ...base,
                 width: "100%",
-                marginHorizontal: spacing.sm,
+                marginBottom: spacing.md,
+                // Убираем боковые отступы, чтобы карточка была на всю ширину
+                marginHorizontal: 0,
             };
         }
 
@@ -92,6 +94,7 @@ function RenderTravelItem({
         borderColor: DESIGN_TOKENS.colors.primary,
     }), []);
 
+    // Всегда используем классическую карточку TravelListItem внутри AnimatedCard
     return (
         <AnimatedCard 
             index={index || 0} 
@@ -99,15 +102,16 @@ function RenderTravelItem({
         >
             <TravelListItem
                 travel={item}
-                isMobile={isMobile}
+                currentUserId={undefined}
                 isSuperuser={isSuperuser}
                 isMetravel={isMetravel}
                 onDeletePress={onDeletePress}
-                isFirst={!!isFirst}
-                isSingle={!!isSingle}
-                selectable={!!selectable}
-                isSelected={!!isSelected}
+                isFirst={isFirst}
+                isSingle={isSingle}
+                selectable={selectable}
+                isSelected={isSelected}
                 onToggle={onToggle}
+                isMobile={isMobile}
             />
         </AnimatedCard>
     );

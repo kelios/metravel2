@@ -78,24 +78,49 @@ export class FinalPageGenerator {
   private renderMainMessage(): string {
     const { typography } = this.theme;
     return `
-      <h1 style="
-        font-size: 36pt;
-        font-weight: 800;
-        margin-bottom: 15mm;
-        text-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        font-family: ${typography.headingFont};
-      ">Спасибо за путешествие!</h1>
+      <div style="
+        background: rgba(255,255,255,0.08);
+        backdrop-filter: blur(20px);
+        border-radius: 24px;
+        padding: 25mm 20mm;
+        margin-bottom: 20mm;
+        border: 1px solid rgba(255,255,255,0.15);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      ">
+        <h1 style="
+          font-size: 42pt;
+          font-weight: 800;
+          margin-bottom: 12mm;
+          text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+          font-family: ${typography.headingFont};
+          letter-spacing: -0.02em;
+          line-height: 1.1;
+        ">Спасибо за<br/>путешествие!</h1>
+        
+        <p style="
+          font-size: 16pt;
+          opacity: 0.95;
+          margin-bottom: 0;
+          font-family: ${typography.bodyFont};
+          line-height: 1.7;
+          font-weight: 400;
+        ">
+          Пусть эта книга напоминает о самых тёплых эмоциях и<br/>
+          помогает планировать новые приключения
+        </p>
+      </div>
       
-      <p style="
-        font-size: 16pt;
-        opacity: 0.9;
-        margin-bottom: 25mm;
+      <div style="
+        font-size: 13pt;
+        font-style: italic;
+        opacity: 0.75;
+        margin-bottom: 20mm;
         font-family: ${typography.bodyFont};
         line-height: 1.6;
       ">
-        Пусть каждое новое путешествие<br/>
-        приносит незабываемые впечатления
-      </p>
+        «Посмотри на мир. Он куда удивительнее, чем сны»<br/>
+        <span style="font-size: 11pt; opacity: 0.6;">— Рэй Брэдбери</span>
+      </div>
     `;
   }
 
@@ -184,19 +209,33 @@ export class FinalPageGenerator {
     return `
       <div style="
         margin-top: auto;
-        padding-top: 20mm;
-        font-size: 14pt;
-        font-weight: 600;
-        letter-spacing: 0.1em;
+        padding-top: 15mm;
+        text-align: center;
       ">
-        MeTravel
-      </div>
-      <div style="
-        font-size: 10pt;
-        opacity: 0.7;
-        margin-top: 3mm;
-      ">
-        Ваши путешествия, ваши истории
+        <div style="
+          display: inline-block;
+          padding: 8mm 15mm;
+          background: rgba(255,255,255,0.06);
+          border-radius: 999px;
+          border: 1px solid rgba(255,255,255,0.12);
+        ">
+          <div style="
+            font-size: 16pt;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            margin-bottom: 2mm;
+          ">
+            METRAVEL.BY
+          </div>
+          <div style="
+            font-size: 10pt;
+            opacity: 0.75;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+          ">
+            © ${new Date().getFullYear()}
+          </div>
+        </div>
       </div>
     `;
   }

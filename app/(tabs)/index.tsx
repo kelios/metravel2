@@ -100,7 +100,7 @@ function TravelScreen() {
 const styles = StyleSheet.create({
     container: { 
         flex: 1,
-        backgroundColor: '#ffffff', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Чистый белый фон
+        backgroundColor: '#fafbfc',
     },
     errorContainer: {
         flex: 1,

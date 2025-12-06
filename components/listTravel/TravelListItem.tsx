@@ -1,5 +1,5 @@
 // src/components/listTravel/TravelListItem.tsx
-import React, { memo, useCallback, useMemo } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import { View, Pressable, Text, StyleSheet, Platform } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { Feather } from "@expo/vector-icons";
@@ -89,12 +89,16 @@ const CountriesList = memo(function CountriesList({ countries }: { countries: st
             {countries.slice(0, 2).map((c) => (
                 <View key={c} style={styles.tag}>
                     <Feather name="map-pin" size={11} color={ICON_COLOR} style={{ marginRight: 4 }} />
-                    <Text style={styles.tagTxt}>{c}</Text>
+                    <Text style={styles.tagTxt} numberOfLines={1} ellipsizeMode="tail">
+                        {c}
+                    </Text>
                 </View>
             ))}
             {countries.length > 2 && (
                 <View style={styles.tag}>
-                    <Text style={styles.tagTxt}>+{countries.length - 2}</Text>
+                    <Text style={styles.tagTxt} numberOfLines={1}>
+                        +{countries.length - 2}
+                    </Text>
                 </View>
             )}
         </View>
@@ -164,57 +168,48 @@ function TravelListItem({
         }) || versionedUrl;
     }, [travel_image_thumb_url, isSingle, travel]);
 
+    const viewsFormatted = useMemo(() => {
+        const views = Number(countUnicIpView) || 0;
+        try {
+            // Компактный формат: 1,2K / 3,4M
+            return new Intl.NumberFormat('ru-RU', {
+                notation: 'compact',
+                compactDisplay: 'short',
+            }).format(views);
+        } catch {
+            return String(views);
+        }
+    }, [countUnicIpView]);
+
     const countries = useMemo(
         () => (countryName || "").split(",").map((c) => c.trim()).filter(Boolean),
         [countryName]
     );
 
     // ✅ БИЗНЕС: Определение badges для социального доказательства
-    const badges = useMemo(() => {
-        const result: Array<{ label: string; color: string; bgColor: string }> = [];
+    const popularityFlags = useMemo(() => {
         const views = Number(countUnicIpView) || 0;
         const updatedAt = (travel as any).updated_at;
         const createdAt = (travel as any).created_at || updatedAt;
-        
-        // ✅ ИСПРАВЛЕНИЕ: Используем тёмный текст для лучшего контраста на светлых badges
-        const badgeTextColor = AIRY_COLORS.badgeText || '#1a1a1a';
-        
-        // "Популярное" - более 1000 просмотров
+
+        let isPopular = false;
+        let isNew = false;
+
         if (views > 1000) {
-            result.push({
-                label: 'Популярное',
-                color: badgeTextColor, // ✅ ИСПРАВЛЕНИЕ: Тёмный текст для контраста
-                bgColor: AIRY_COLORS.badgePopular,
-            });
+            isPopular = true;
         }
-        
-        // "Новое" - создано за последние 7 дней
+
         if (createdAt) {
             const createdDate = new Date(createdAt);
-            const daysSinceCreated = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
-            if (daysSinceCreated <= 7) {
-                result.push({
-                    label: 'Новое',
-                    color: badgeTextColor, // ✅ ИСПРАВЛЕНИЕ: Тёмный текст для контраста
-                    bgColor: AIRY_COLORS.badgeNew,
-                });
+            if (!isNaN(createdDate.getTime())) {
+                const daysSinceCreated = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+                if (daysSinceCreated <= 7 && daysSinceCreated >= 0) {
+                    isNew = true;
+                }
             }
         }
-        
-        // "Тренд" - растущая популярность (более 500 просмотров и обновлено за последние 30 дней)
-        if (updatedAt && views > 500) {
-            const updatedDate = new Date(updatedAt);
-            const daysSinceUpdated = (Date.now() - updatedDate.getTime()) / (1000 * 60 * 60 * 24);
-            if (daysSinceUpdated <= 30 && !result.find(b => b.label === 'Новое')) {
-                result.push({
-                    label: 'Тренд',
-                    color: badgeTextColor, // ✅ ИСПРАВЛЕНИЕ: Тёмный текст для контраста
-                    bgColor: AIRY_COLORS.badgeTrend,
-                });
-            }
-        }
-        
-        return result;
+
+        return { isPopular, isNew };
     }, [countUnicIpView, travel]);
 
     // Право редактирования:
@@ -276,38 +271,7 @@ function TravelListItem({
         onDeletePress?.(id);
     }, [id, onDeletePress]);
 
-    const actions = (canEdit && !selectable) && (
-        <View style={styles.actions} pointerEvents="box-none">
-            <Pressable 
-                onPress={handleEdit} 
-                hitSlop={10} 
-                {...(Platform.OS === 'web' && {
-                    onClick: (e: any) => e.stopPropagation(),
-                    onMouseDown: (e: any) => e.stopPropagation(),
-                })}
-                style={[styles.btn, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                accessibilityRole="button"
-                accessibilityLabel="Редактировать"
-            >
-                {/* ✅ ИСПРАВЛЕНИЕ: Увеличен размер иконки */}
-                <Feather name="edit-2" size={18} color={ICON_COLOR} />
-            </Pressable>
-            <Pressable 
-                onPress={handleDelete} 
-                hitSlop={10} 
-                {...(Platform.OS === 'web' && {
-                    onClick: (e: any) => e.stopPropagation(),
-                    onMouseDown: (e: any) => e.stopPropagation(),
-                })}
-                style={[styles.btn, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                accessibilityRole="button"
-                accessibilityLabel="Удалить"
-            >
-                {/* ✅ ИСПРАВЛЕНИЕ: Увеличен размер иконки */}
-                <Feather name="trash-2" size={18} color={ICON_COLOR} />
-            </Pressable>
-        </View>
-    );
+    const [hovered, setHovered] = useState(false);
 
     // ✅ FIX: On web (non-selectable), we wrap card in <a>, so use View instead of Pressable to avoid nested buttons
     const CardWrapper = (Platform.OS === 'web' && !selectable) ? View : Pressable;
@@ -327,514 +291,568 @@ function TravelListItem({
         };
 
     const card = (
-            <CardWrapper
-                {...cardWrapperProps}
-                style={[
-                    styles.card,
-                    globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                    Platform.OS === "android" && styles.androidOptimized,
-                    isSingle && styles.single,
-                    selectable && isSelected && styles.selected,
-                ]}
-            >
-                {selectable && (
-                    <View
-                        pointerEvents="none"
-                        style={[
-                            styles.selectionOverlay,
-                            isSelected && styles.selectionOverlayActive,
-                        ]}
-                    />
-                )}
-                {/* Изображение */}
-                {imgUrl ? (
-                    Platform.OS === "web" ? (
-                        <WebImageOptimized 
-                            src={imgUrl} 
-                            alt={name} 
-                            priority={isFirst} 
-                        />
-                    ) : (
-                        <NativeImageOptimized uri={imgUrl} />
-                    )
-                ) : (
-                    <View style={styles.imgStub}>
-                        <Feather name="image" size={40} color="#94a3b8" />
-                    </View>
-                )}
+      <CardWrapper
+        {...cardWrapperProps}
+        style={[
+          styles.card,
+          globalFocusStyles.focusable,
+          Platform.OS === "android" && styles.androidOptimized,
+          isSingle && styles.single,
+          selectable && isSelected && styles.selected,
+        ]}
+      >
+        {selectable && (
+          <View
+            pointerEvents="none"
+            style={[
+              styles.selectionOverlay,
+              isSelected && styles.selectionOverlayActive,
+            ]}
+          />
+        )}
 
-                {/* Кнопка избранного */}
-                {!selectable && (
-                    <View 
-                        style={styles.favoriteButtonContainer} 
-                        pointerEvents="box-none"
-                        {...(Platform.OS === 'web' && {
-                            // Prevent clicks on favorite button from triggering parent Pressable on web
-                            onClick: (e: any) => e.stopPropagation(),
-                            onMouseDown: (e: any) => e.stopPropagation(),
-                        })}
-                    >
-                        <FavoriteButton
-                            id={id}
-                            type="travel"
-                            title={name}
-                            imageUrl={travel_image_thumb_url}
-                            url={`/travels/${slug ?? id}`}
-                            country={countries[0]}
-                            size={22}
-                        />
-                    </View>
-                )}
-
-                {/* Градиент для читаемости текста */}
-                <LinearGradient
-                    colors={["transparent", "rgba(0,0,0,0.1)", "rgba(0,0,0,0.4)", "rgba(0,0,0,0.7)"]} // ✅ ДИЗАЙН: Более сильный градиент для читаемости
-                    locations={[0.5, 0.7, 0.85, 1]}
-                    style={styles.grad}
-                    pointerEvents="none"
-                />
-
-                {/* Контент поверх изображения */}
-                <View style={styles.overlay} pointerEvents="none">
-                    {/* ✅ UX УЛУЧШЕНИЕ: Badge с ключевой информацией вверху */}
-                    <View style={styles.topBadges}>
-                        {countries.length > 0 && countries[0] && (
-                            <View style={styles.infoBadge}>
-                                <Feather name="map-pin" size={11} color="#fff" />
-                                <Text style={styles.infoBadgeText} numberOfLines={1}>
-                                    {countries[0]}
-                                </Text>
-                            </View>
-                        )}
-                        {number_days > 0 && (
-                            <View style={styles.infoBadge}>
-                                <Feather name="calendar" size={11} color="#fff" />
-                                <Text style={styles.infoBadgeText}>
-                                    {number_days} {number_days === 1 ? 'день' : number_days < 5 ? 'дня' : 'дней'}
-                                </Text>
-                            </View>
-                        )}
-                    </View>
-                    
-                    <CountriesList countries={countries} />
-
-                    {/* ✅ БИЗНЕС: Badges для социального доказательства */}
-                    {badges.length > 0 && (
-                        <View style={styles.badgesContainer}>
-                            {badges.map((badge, index) => (
-                                <View 
-                                    key={index} 
-                                    style={[
-                                        styles.badge,
-                                        { backgroundColor: badge.bgColor }
-                                    ]}
-                                >
-                                    <Text style={[styles.badgeText, { color: badge.color }]}>
-                                        {badge.label}
-                                    </Text>
-                                </View>
-                            ))}
-                        </View>
-                    )}
-
-                    <View style={styles.titleBox}>
-                        <Text style={styles.title} numberOfLines={2}>
-                            {name}
-                        </Text>
-                    </View>
-
-                    <View style={styles.metaRow}>
-                        {!!userName && (
-                            <View style={styles.metaBox}>
-                                <Feather name="user" size={12} color={ICON_COLOR} style={{ marginRight: 4 }} />
-                                <Text style={styles.metaTxt} numberOfLines={1}>
-                                    {userName}
-                                </Text>
-                            </View>
-                        )}
-                        <View style={styles.metaBox}>
-                            <Feather name="eye" size={12} color={ICON_COLOR} style={{ marginRight: 4 }} />
-                            <Text style={styles.metaTxt}>{countUnicIpView}</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* Индикатор выбора */}
-                {selectable && (
-                    <View style={styles.checkWrap} pointerEvents="none">
-                        <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
-                            {isSelected && <Feather name="check" size={14} color="#fff" />}
-                        </View>
-                    </View>
-                )}
-
-            {/* Кнопки действий (редактирование/удаление) на native */}
-            {Platform.OS !== 'web' && actions}
-
-        </CardWrapper>
-    );
-
-    return (
-        <View style={styles.wrap}>
-            {Platform.OS === 'web' ? (
-                // На вебе различаем два режима:
-                // 1) selectable === true (страница экспорта) — карточка только выбирает, без перехода по ссылке
-                // 2) selectable === false — поведение как раньше, с <a href> и SPA-навигацией
-                selectable ? (
-                    card
-                ) : (
-                    <>
-                        <a
-                            href={travelUrl}
-                            style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-                            onClick={(e: any) => {
-                                // Не даём событию дойти до внутренних Pressable
-                                e.stopPropagation();
-
-                                const hasModifier =
-                                    e.metaKey ||
-                                    e.ctrlKey ||
-                                    e.shiftKey ||
-                                    e.altKey ||
-                                    e.button === 1;
-
-                                if (hasModifier) {
-                                    // Открываем ТОЛЬКО в новой вкладке, текущую не трогаем
-                                    e.preventDefault();
-                                    if (typeof window !== 'undefined') {
-                                        window.open(travelUrl, '_blank', 'noopener,noreferrer');
-                                    }
-                                    return;
-                                }
-
-                                // Обычный клик: SPA-навигация в текущей вкладке
-                                e.preventDefault();
-                                handlePress();
-                            }}
-                        >
-                            {card}
-                        </a>
-                        {actions}
-                    </>
-                )
+        {/* Блок изображения */}
+        <View style={styles.imageContainer}>
+          {imgUrl ? (
+            Platform.OS === "web" ? (
+              <WebImageOptimized src={imgUrl} alt={name} priority={isFirst} />
             ) : (
-                card
-            )}
+              <NativeImageOptimized uri={imgUrl} />
+            )
+          ) : (
+            <View style={styles.imgStub}>
+              <Feather name="image" size={40} color="#94a3b8" />
+            </View>
+          )}
+
+          {/* Кнопки управления (Top Left) - перенесены сюда, чтобы не мешать бейджам внизу */}
+          {canEdit && !selectable && (
+            <View
+              style={styles.adminActionsContainer}
+              pointerEvents="box-none"
+              {...(Platform.OS === "web" && {
+                onClick: (e: any) => e.stopPropagation(),
+                onMouseDown: (e: any) => e.stopPropagation(),
+              })}
+            >
+              <Pressable 
+                onPress={handleEdit} 
+                hitSlop={10} 
+                style={styles.adminBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Редактировать"
+              >
+                <Feather name="edit-2" size={16} color="#1e293b" />
+              </Pressable>
+              <View style={styles.adminDivider} />
+              <Pressable 
+                onPress={handleDelete} 
+                hitSlop={10} 
+                style={styles.adminBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Удалить"
+              >
+                <Feather name="trash-2" size={16} color="#ef4444" />
+              </Pressable>
+            </View>
+          )}
+
+          {/* Минимальный градиент только внизу для читаемости */}
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.02)", "rgba(0,0,0,0.15)", "rgba(0,0,0,0.35)"]}
+            pointerEvents="none"
+            style={styles.grad}
+          />
+
+          {/* Только бейдж локации на фото - полупрозрачный */}
+          {countries.length > 0 && countries[0] && (
+            <View style={styles.topBadges} pointerEvents="none">
+              <View style={styles.infoBadge}>
+                <Feather name="map-pin" size={11} color="#fff" />
+                <Text style={styles.infoBadgeText} numberOfLines={1}>
+                  {countries[0]}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {selectable && (
+            <View style={styles.checkWrap} pointerEvents="none">
+              <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+                {isSelected && <Feather name="check" size={14} color="#fff" />}
+              </View>
+            </View>
+          )}
         </View>
+
+        {/* Контент под изображением */}
+        <View style={styles.contentBelow}>
+          <Text style={styles.title} numberOfLines={2}>
+            {name}
+          </Text>
+
+          <View style={styles.metaRow}>
+            <View style={styles.metaInfoLeft}>
+              {!!userName && (
+                <View style={styles.metaBox}>
+                  <Feather name="user" size={11} color="#64748b" style={{ marginRight: 4 }} />
+                  <Text style={styles.metaTxt} numberOfLines={1}>
+                    {userName}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.metaBox}>
+                <Feather name="eye" size={11} color="#64748b" style={{ marginRight: 4 }} />
+                <Text style={styles.metaTxt}>{viewsFormatted}</Text>
+              </View>
+
+              {(popularityFlags.isPopular || popularityFlags.isNew) && (
+                <View style={styles.metaIcons}>
+                  {popularityFlags.isPopular && (
+                    <View style={[styles.statusBadge, styles.statusBadgePopular]}>
+                      <Feather
+                        name="trending-up"
+                        size={12}
+                        color={DESIGN_TOKENS.colors.primary}
+                      />
+                      <Text style={[styles.statusBadgeText, styles.statusBadgeTextPopular]}>
+                        Популярное
+                      </Text>
+                    </View>
+                  )}
+                  {popularityFlags.isNew && (
+                    <View style={[styles.statusBadge, styles.statusBadgeNew]}>
+                      <Feather
+                        name="star"
+                        size={12}
+                        color={DESIGN_TOKENS.colors.accent || "#f59e0b"}
+                      />
+                      <Text style={[styles.statusBadgeText, styles.statusBadgeTextNew]}>
+                        Новое
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+      </CardWrapper>
     );
+
+  return (
+    <View
+      style={styles.wrap}
+      {...(Platform.OS === 'web'
+        ? {
+            onMouseEnter: () => setHovered(true),
+            onMouseLeave: () => setHovered(false),
+          }
+        : {})}
+    >
+    {Platform.OS === 'web' ? (
+      // На вебе различаем два режима:
+      // 1) selectable === true (страница экспорта) — карточка только выбирает, без перехода по ссылке
+      // 2) selectable === false — поведение как раньше, с <a href> и SPA-навигацией
+      selectable ? (
+        card
+      ) : (
+        <>
+          <a
+            href={travelUrl}
+            style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+            onClick={(e: any) => {
+              // Не даём событию дойти до внутренних Pressable
+              e.stopPropagation();
+
+              const hasModifier =
+                e.metaKey ||
+                e.ctrlKey ||
+                e.shiftKey ||
+                e.altKey ||
+                e.button === 1;
+
+              if (hasModifier) {
+                // Открываем ТОЛЬКО в новой вкладке, текущую не трогаем
+                e.preventDefault();
+                if (typeof window !== 'undefined') {
+                  window.open(travelUrl, '_blank', 'noopener,noreferrer');
+                }
+                return;
+              }
+
+              // Обычный клик: SPA-навигация в текущей вкладке
+              e.preventDefault();
+              handlePress();
+            }}
+          >
+            {card}
+          </a>
+        </>
+      )
+    ) : (
+      card
+    )}
+  </View>
+);
+
 }
 
 const styles = StyleSheet.create({
-    wrap: { 
-        padding: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xs }), 
-        width: "100%",
-    },
+  wrap: { 
+    padding: 0, 
+    width: "100%",
+  },
 
-    card: {
-        position: "relative",
-        width: "100%",
-        aspectRatio: 1,
-        borderRadius: DESIGN_TOKENS.radii.md,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        shadowColor: '#1f1f1f',
+  // ... (rest of the styles remain the same)
+  card: {
+    width: "100%",
+    height: "100%", // Занимаем всю высоту ячейки грида
+    borderRadius: Platform.select({ default: 20, web: 24 }),
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
+    overflow: "hidden",
+    flexDirection: 'column', // Выстраиваем контент вертикально
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02)',
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        cursor: "pointer",
+        // @ts-ignore
+        ":hover": {
+          transform: "translateY(-4px)",
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03)',
+          borderColor: 'rgba(0,0,0,0)',
+        },
+      },
+    }),
+  },
+
+  imageContainer: {
+    position: "relative",
+    width: "100%",
+    aspectRatio: 4/3, // Строгое соотношение сторон
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    overflow: "hidden",
+    flexShrink: 0, // Не сжимать изображение
+  },
+
+  androidOptimized: {
+    shadowColor: undefined,
+    shadowOffset: undefined,
+    shadowOpacity: undefined,
+    shadowRadius: undefined,
+  },
+
+  selected: {
+    ...Platform.select({
+      web: {
+        boxShadow: `0 0 0 2px ${DESIGN_TOKENS.colors.primary}`,
+        borderColor: DESIGN_TOKENS.colors.primary,
+      },
+    }),
+  },
+  selectionOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(96,165,250,0.08)",
+    zIndex: 2,
+    opacity: 0,
+    transitionDuration: "150ms",
+    pointerEvents: "none",
+  } as any,
+  selectionOverlayActive: {
+    opacity: 1,
+    backgroundColor: "rgba(5,150,105,0.12)",
+  },
+
+  single: {
+    maxWidth: 600,
+    alignSelf: "center",
+  },
+
+  img: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover" as any,
+  },
+
+  imgStub: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+  },
+
+  grad: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "40%", // Чуть выше градиент для лучшей читаемости бейджа
+  },
+
+  favoriteButtonContainer: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 50,
+    padding: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
+        shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 1,
-        overflow: "hidden",
-        ...Platform.select({
-            web: {
-                boxShadow: DESIGN_TOKENS.shadows.light,
-                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-                cursor: "pointer",
-                // @ts-ignore
-                ":hover": {
-                    transform: "translateY(-2px)",
-                    boxShadow: DESIGN_TOKENS.shadows.medium,
-                },
-            },
-        }),
-    },
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+        // @ts-ignore
+        ":hover": {
+          transform: "scale(1.05)",
+          backgroundColor: "#ffffff",
+          boxShadow: "0 6px 12px -1px rgba(0, 0, 0, 0.1)",
+        },
+      },
+    }),
+  },
 
-    androidOptimized: {
-        shadowColor: undefined,
-        shadowOffset: undefined,
-        shadowOpacity: undefined,
-        shadowRadius: undefined,
-    },
+  contentBelow: {
+    padding: 16,
+    paddingTop: 12, // Чуть меньше отступ сверху
+    gap: 8,
+    backgroundColor: '#ffffff',
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  
+  topBadges: {
+    position: "absolute",
+    bottom: 12,
+    left: 12,
+    right: 12,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    zIndex: 10,
+  },
+  
+  infoBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 100,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+      },
+    }),
+  },
+  
+  infoBadgeText: {
+    fontSize: 12,
+    color: "#0f172a",
+    fontWeight: "600",
+    letterSpacing: -0.1,
+  },
 
-    selected: {
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень и overlay
-        ...Platform.select({
-            web: {
-                boxShadow: `0 0 0 2px ${DESIGN_TOKENS.colors.primary}`,
-            },
-        }),
-    },
-    selectionOverlay: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(96,165,250,0.08)",
-        borderRadius: 12,
-        opacity: 0,
-        transitionDuration: "150ms",
-        pointerEvents: "none",
-    } as any,
-    selectionOverlayActive: {
-        opacity: 1,
-        backgroundColor: "rgba(5,150,105,0.12)",
-    },
+  // ... (badgesContainer, badge, badgeText - can remove if unused or keep)
+  badgesContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  badge: {
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
 
-    single: {
-        maxWidth: 600,
-        alignSelf: "center",
-    },
+  tags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 8,
+    gap: 4,
+  },
 
-    img: {
-        width: "100%",
-        height: "100%",
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    },
+  tag: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f1f5f9",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
 
-    imgStub: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    },
+  tagTxt: {
+    fontSize: 11,
+    color: "#64748b",
+    fontWeight: "600",
+  },
 
-    grad: {
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: "58%",
-    },
+  title: {
+    fontSize: 17,
+    fontWeight: '700' as any,
+    fontFamily: Platform.select({ web: DESIGN_TOKENS.typography.fontFamily, default: undefined }),
+    color: "#0f172a", // slate-900 - более контрастный
+    lineHeight: 24,
+    letterSpacing: -0.3,
+    marginBottom: 4,
+    minHeight: 48, // Фиксируем высоту под 2 строки (24 * 2)
+  },
 
-    favoriteButtonContainer: {
-        position: "absolute",
-        top: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        right: Platform.select({ default: 10, web: 12 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        zIndex: 10,
-        backgroundColor: "rgba(255,255,255,0.95)",
-        borderRadius: Platform.select({ default: 18, web: 22 }), // ✅ АДАПТИВНОСТЬ: Меньше радиус на мобильных
-        padding: Platform.select({ default: 5, web: 6 }), // ✅ АДАПТИВНОСТЬ: Меньше на мобильных
-        borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
-        ...Platform.select({
-            web: {
-                boxShadow: '0 1px 3px rgba(31, 31, 31, 0.04)',
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-            },
-        }),
-    },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    marginTop: 'auto', // Прижимает футер к низу
+  },
+  
+  metaInfoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    flex: 1,
+  },
+  
+  metaBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
 
-    overlay: {
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        padding: Platform.select({ default: DESIGN_TOKENS.spacing.sm, web: DESIGN_TOKENS.spacing.md }),
-    },
-    topBadges: {
-        position: "absolute",
-        top: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
-        left: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
-        flexDirection: "row",
-        gap: DESIGN_TOKENS.spacing.xs,
-        zIndex: 10,
-    },
-    infoBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: DESIGN_TOKENS.spacing.xxs,
-        backgroundColor: "rgba(0, 0, 0, 0.7)",
-        borderRadius: DESIGN_TOKENS.radii.sm,
-        paddingHorizontal: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
-        paddingVertical: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xxs }),
-        ...Platform.select({
-            web: {
-                backdropFilter: "blur(10px)",
-            },
-        }),
-    },
-    infoBadgeText: {
-        fontSize: Platform.select({ default: 11, web: 12 }),
-        color: "#fff",
-        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    },
-    badgesContainer: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: DESIGN_TOKENS.spacing.xs,
-        marginBottom: DESIGN_TOKENS.spacing.xs,
-        zIndex: 5,
-    },
-    badge: {
-        borderRadius: DESIGN_TOKENS.radii.sm,
-        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-        paddingVertical: DESIGN_TOKENS.spacing.xxs,
-        ...Platform.select({
-            web: {
-                boxShadow: DESIGN_TOKENS.shadows.light,
-            },
-        }),
-    },
-    badgeText: {
-        fontSize: 11,
-        fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-        letterSpacing: 0.2,
-    },
+  metaTxt: {
+    fontSize: 13,
+    color: "#64748b", // slate-500
+    fontWeight: '500' as any,
+  },
 
-    tags: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        marginBottom: DESIGN_TOKENS.spacing.xs,
-        gap: DESIGN_TOKENS.spacing.xxs,
-    },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Platform.select({ default: 6, web: 8 }),
+    paddingVertical: Platform.select({ default: 2, web: 4 }),
+    borderRadius: 999,
+    backgroundColor: '#f1f5f9',
+  },
+  statusBadgeText: {
+    fontSize: Platform.select({ default: 10, web: 11 }),
+    fontWeight: '600' as any,
+    color: '#475569',
+  },
+  statusBadgePopular: {
+    backgroundColor: 'rgba(56, 189, 248, 0.1)', // Light blue/cyan
+  },
+  statusBadgeTextPopular: {
+    color: '#0284c7', // Darker blue
+  },
+  statusBadgeNew: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)', // Light amber
+  },
+  statusBadgeTextNew: {
+    color: '#d97706', // Darker amber
+  },
+  metaIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  
+  actionsHidden: {
+    opacity: 0,
+  },
 
-    tag: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "rgba(255,255,255,0.6)",
-        borderRadius: DESIGN_TOKENS.radii.sm,
-        paddingHorizontal: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
-        paddingVertical: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xxs }),
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
-    },
+  btn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f1f5f9",
+    ...Platform.select({
+      web: {
+        transition: "all 0.2s ease",
+        cursor: "pointer",
+        // @ts-ignore
+        ":hover": {
+          backgroundColor: "#e2e8f0",
+          color: DESIGN_TOKENS.colors.primary,
+        },
+      },
+    }),
+  },
 
-    tagTxt: {
-        fontSize: Platform.select({ default: 11, web: 12 }),
-        color: DESIGN_TOKENS.colors.text,
-        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    },
+  checkWrap: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    zIndex: 20,
+  },
 
-    titleBox: {
-        backgroundColor: "rgba(255,255,255,0.95)",
-        borderRadius: DESIGN_TOKENS.radii.sm,
-        paddingHorizontal: Platform.select({ default: DESIGN_TOKENS.spacing.sm, web: DESIGN_TOKENS.spacing.md }),
-        paddingVertical: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
-        marginBottom: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
-        ...Platform.select({
-            web: {
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                boxShadow: DESIGN_TOKENS.shadows.light,
-            },
-        }),
-    },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#fff',
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    ...Platform.select({
+      web: {
+        backdropFilter: "blur(4px)",
+      }
+    })
+  },
 
-    title: {
-        fontSize: Platform.select({ default: 15, web: 17 }),
-        fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-        fontFamily: Platform.select({ web: DESIGN_TOKENS.typography.fontFamily, default: undefined }),
-        color: DESIGN_TOKENS.colors.text,
-        lineHeight: Platform.select({ default: 20, web: 23 }),
-        letterSpacing: -0.3,
-    },
-
-    metaRow: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-    },
-
-    metaBox: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "rgba(255,255,255,0.6)",
-        borderRadius: DESIGN_TOKENS.radii.sm,
-        paddingHorizontal: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
-        paddingVertical: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xxs }),
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
-        marginRight: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
-        marginBottom: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xxs }),
-    },
-
-    metaTxt: {
-        fontSize: Platform.select({ default: 12, web: 13 }),
-        color: DESIGN_TOKENS.colors.textMuted,
-        fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-        lineHeight: Platform.select({ default: 16, web: 18 }),
-    },
-
-    actions: {
-        position: "absolute",
-        top: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
-        right: Platform.select({ default: DESIGN_TOKENS.spacing.xs, web: DESIGN_TOKENS.spacing.sm }),
-        flexDirection: "row",
-        backgroundColor: "rgba(255,255,255,0.95)",
-        borderRadius: DESIGN_TOKENS.radii.sm,
-        padding: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xxs }),
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
-        zIndex: 10,
-        gap: Platform.select({ default: DESIGN_TOKENS.spacing.xxs, web: DESIGN_TOKENS.spacing.xxs }),
-        ...Platform.select({
-            web: {
-                boxShadow: DESIGN_TOKENS.shadows.light,
-                backdropFilter: "blur(10px)",
-                WebkitBackdropFilter: "blur(10px)",
-            },
-        }),
-    },
-
-    btn: {
-        minWidth: 40,
-        minHeight: 40,
-        width: 40,
-        height: 40,
-        borderRadius: DESIGN_TOKENS.radii.sm,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "rgba(255,255,255,0.95)",
-        padding: DESIGN_TOKENS.spacing.xs,
-        ...Platform.select({
-            web: {
-                transition: "all 0.2s ease",
-                cursor: "pointer",
-                // @ts-ignore
-                ":hover": {
-                    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-                    transform: "scale(1.05)",
-                },
-                ":focus": {
-                    outlineWidth: 2,
-                    outlineColor: DESIGN_TOKENS.colors.primary,
-                    outlineStyle: 'solid',
-                    outlineOffset: 2,
-                },
-            },
-        }),
-    },
-
-    checkWrap: {
-        position: "absolute",
-        top: DESIGN_TOKENS.spacing.sm,
-        left: DESIGN_TOKENS.spacing.sm,
-    },
-
-    checkbox: {
-        width: 24,
-        height: 24,
-        borderRadius: DESIGN_TOKENS.radii.sm,
-        borderWidth: 2,
-        borderColor: DESIGN_TOKENS.colors.primary,
-        backgroundColor: "rgba(96,165,250,0.1)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-
-    checkboxChecked: {
-        backgroundColor: DESIGN_TOKENS.colors.primary,
-        borderColor: DESIGN_TOKENS.colors.primary,
-    },
+  checkboxChecked: {
+    backgroundColor: DESIGN_TOKENS.colors.primary,
+    borderColor: DESIGN_TOKENS.colors.primary,
+  },
 });
 
 /** Компаратор: учитываем все поля, влияющие на рендер */

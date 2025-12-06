@@ -80,11 +80,11 @@ describe('FinalPageGenerator', () => {
       expect(html5).toContain('стран');
     });
 
-    it('должен содержать брендинг MeTravel', () => {
+    it('должен содержать бренд метравел', () => {
       const data = { totalTravels: 10 };
       const html = generator.generate(data, 50);
 
-      expect(html).toContain('MeTravel');
+      expect(html).toContain('METRAVEL.BY');
     });
 
     it('должен отображать номер страницы', () => {

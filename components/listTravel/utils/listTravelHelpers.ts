@@ -73,9 +73,9 @@ export function calculateColumns(width: number): number {
     return GRID_COLUMNS.TABLET_LANDSCAPE; // 1024-1280px: 2 колонки
   }
   if (width < BREAKPOINTS.DESKTOP) {
-    return GRID_COLUMNS.DESKTOP; // 1280-1440px: 3 колонки
+    return GRID_COLUMNS.TABLET_LANDSCAPE; // 1280-1440px: держим 2 колонки для более "воздушной" сетки
   }
-  return GRID_COLUMNS.DESKTOP_LARGE; // > 1440px: 3 колонки (ограничено для лучшего UX)
+  return GRID_COLUMNS.DESKTOP; // > 1440px: максимум 3 колонки на очень широких экранах
 }
 
 // ✅ АРХИТЕКТУРА: Определение badges для социального доказательства

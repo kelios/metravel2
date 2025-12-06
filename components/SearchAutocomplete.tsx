@@ -191,19 +191,21 @@ const styles = StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    // ✅ ИСПРАВЛЕНИЕ: z-index только для перекрытия элементов на том же уровне, но не контента ниже
-    zIndex: 100,
+    // ✅ Максимальный приоритет поверх карточек и других блоков
+    zIndex: 99999,
     marginTop: 4,
     ...Platform.select({
       web: {
         position: 'absolute',
-        zIndex: 100,
+        zIndex: 99999,
       },
       default: {
         // На мобильных используем elevation для Android и shadow для iOS
         elevation: 5,
       },
     }),
+    backgroundColor: palette.surface,
+    borderRadius: 12,
   },
   listContainer: {
     backgroundColor: palette.surface,

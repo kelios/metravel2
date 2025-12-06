@@ -229,11 +229,16 @@ function CompactSideBarTravel({
           styles.menu,
           { 
             width: Platform.OS === 'web' 
-              ? (isTablet ? 320 : 380) // ✅ UX: Увеличено для полного устранения скролла
-              : '100%', // Мобильные - полная ширина
+              ? (isMobile ? '100%' : isTablet ? 260 : 280)
+              : '100%', // Native-платформы — полная ширина
           },
         ]}
-        contentContainerStyle={{ paddingBottom: isMobile ? 80 : 32 }}
+        contentContainerStyle={{ 
+          paddingBottom: isMobile ? 80 : 32,
+          paddingLeft: Platform.OS === 'web' ? 16 : 10, // ✅ UX: Отступ слева
+          paddingRight: Platform.OS === 'web' ? 8 : 10, // ✅ UX: Меньший отступ справа
+        }}
+        showsHorizontalScrollIndicator={false}
       >
         {/* ✅ РЕДИЗАЙН: Компактная карточка автора */}
         <View style={styles.card}>
@@ -485,9 +490,9 @@ const styles = StyleSheet.create({
     flex: 1, 
     backgroundColor: "#fff",
     ...(Platform.OS === "web" ? { 
-      height: "100vh" as any,
-      position: "fixed" as any,
-      overflowY: "auto" as any,
+      // На web прокрутка должна быть общей для страницы,
+      // поэтому убираем собственный scroll/100vh/position: fixed
+      position: "relative" as any,
     } : {}),
   },
   // ✅ РЕДИЗАЙН: Компактное меню с уменьшенными отступами
@@ -497,26 +502,25 @@ const styles = StyleSheet.create({
       android: 10,
       web: 12,
     }),
-    alignSelf: "center", 
-    paddingHorizontal: Platform.select({
-      ios: 10,
-      android: 10,
-      web: 12,
-    }),
-    ...(Platform.OS === 'web' ? { maxWidth: 400, overflowX: 'hidden' as any } : {}), // ✅ UX: Увеличено + overflow hidden
+    alignSelf: "flex-start", // ✅ UX: Прижато к левому краю
+    ...(Platform.OS === 'web' ? { 
+      maxWidth: 400, 
+      overflowX: 'hidden' as any,
+      width: '100%',
+    } : {}), // ✅ UX: Прижато к левому краю
   },
 
   // ✅ РЕДИЗАЙН: Компактная карточка автора
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 16,
+    borderRadius: 12,
     padding: Platform.select({
-      default: 12, // Мобильные
-      web: 14, // Десктоп
+      default: 10, // Мобильные
+      web: 10, // Десктоп - уменьшено
     }),
     marginBottom: Platform.select({
-      default: 12, // Мобильные
-      web: 16, // Десктоп
+      default: 8, // Мобильные
+      web: 10, // Десктоп - уменьшено
     }),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -525,6 +529,8 @@ const styles = StyleSheet.create({
     elevation: 1, // ✅ УЛУЧШЕНИЕ: Уменьшено с 4
     borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 1
     borderColor: "rgba(0, 0, 0, 0.06)",
+    width: '100%',
+    maxWidth: '100%',
   },
   cardRow: { 
     flexDirection: "row", 
@@ -538,16 +544,16 @@ const styles = StyleSheet.create({
   // ✅ РЕДИЗАЙН: Компактная аватарка
   avatar: { 
     width: Platform.select({
-      default: 52, // Мобильные
-      web: 56, // Десктоп
+      default: 48, // Мобильные
+      web: 48, // Десктоп - уменьшено
     }),
     height: Platform.select({
-      default: 52, // Мобильные
-      web: 56, // Десктоп
+      default: 48, // Мобильные
+      web: 48, // Десктоп - уменьшено
     }),
     borderRadius: Platform.select({
-      default: 26, // Мобильные
-      web: 28, // Десктоп
+      default: 24, // Мобильные
+      web: 24, // Десктоп - уменьшено
     }),
     borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 2
     borderColor: "rgba(0, 0, 0, 0.06)",
@@ -587,8 +593,8 @@ const styles = StyleSheet.create({
   },
   
   infoSection: {
-    marginTop: 12, // Уменьшено с 16
-    paddingTop: 12, // Уменьшено с 16
+    marginTop: 8, // Ещё более компактно
+    paddingTop: 8, // Ещё более компактно
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
   },
@@ -597,14 +603,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: Platform.select({
-      default: 6, // Мобильные
-      web: 8, // Десктоп
+      default: 4, // Мобильные
+      web: 5, // Десктоп - уменьшено
     }),
     paddingHorizontal: Platform.select({
-      default: 8, // Мобильные
-      web: 10, // Десктоп
+      default: 6, // Мобильные
+      web: 8, // Десктоп - уменьшено
     }),
-    marginBottom: 8,
+    marginBottom: 6,
     backgroundColor: "rgba(0, 0, 0, 0.02)",
     borderRadius: 10,
     borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 1
@@ -705,22 +711,24 @@ const styles = StyleSheet.create({
   },
 
   // ✅ РЕДИЗАЙН: Компактные пункты меню
-  link: {
-    flexDirection: "row",
-    alignItems: "center",
+  link: { 
+    flexDirection: "row", 
+    alignItems: "center", 
     paddingVertical: Platform.select({
-      default: 8, // Мобильные
-      web: 10, // Десктоп
+      default: 6, // Мобильные
+      web: 7, // Десктоп - уменьшено
     }),
     paddingHorizontal: Platform.select({
-      default: 10, // Мобильные
-      web: 12, // Десктоп
+      default: 8, // Мобильные
+      web: 10, // Десктоп - уменьшено
     }),
-    borderRadius: 10,
-    marginBottom: 4,
+    borderRadius: 8,
+    marginBottom: 2,
+    width: '100%',
+    maxWidth: '100%',
     ...Platform.select({
       web: {
-        transition: "all 0.2s ease" as any,
+        cursor: 'pointer' as any,
       },
       default: {},
     }),
@@ -738,12 +746,12 @@ const styles = StyleSheet.create({
   },
   linkTxt: { 
     marginLeft: Platform.select({
-      default: 8, // Мобильные
-      web: 10, // Десктоп
+      default: 6, // Мобильные
+      web: 8, // Десктоп - уменьшено
     }),
     fontSize: Platform.select({
-      default: 12, // Мобильные
-      web: 13, // Десктоп
+      default: 11, // Мобильные
+      web: 12, // Десктоп - уменьшено
     }),
     fontFamily: "Georgia", 
     color: "#2F332E",
@@ -768,6 +776,8 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#B87034",
     fontFamily: "Georgia",
+    width: '100%',
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
   },
 
   closeBar: {

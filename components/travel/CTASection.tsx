@@ -23,26 +23,35 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
   const { width } = useWindowDimensions();
   const isMobile = width <= 768;
   const { isAuthenticated } = useAuth();
-  const { favorites, toggleFavorite } = useFavorites();
+  const { favorites, addFavorite, removeFavorite, isFavorite: checkIsFavorite } = useFavorites();
 
   // Проверяем, в избранном ли путешествие
-  const isFavorite = favorites.some(f => f.id === travel.id);
+  const isFavorite = checkIsFavorite(travel.id, 'travel');
 
-  const handleFavorite = useCallback(() => {
+  const handleFavorite = useCallback(async () => {
     if (!isAuthenticated) {
       router.push('/login');
       return;
     }
-    toggleFavorite({
-      id: travel.id,
-      type: 'travel',
-      title: travel.name,
-      imageUrl: travel.travel_image_thumb_url,
-      url: `/travels/${travel.slug || travel.id}`,
-      country: (travel as any).countryName,
-    });
-    onFavoriteToggle?.();
-  }, [travel, isAuthenticated, toggleFavorite, onFavoriteToggle, router]);
+    
+    try {
+      if (isFavorite) {
+        await removeFavorite(travel.id, 'travel');
+      } else {
+        await addFavorite({
+          id: travel.id,
+          type: 'travel',
+          title: travel.name,
+          imageUrl: travel.travel_image_thumb_url,
+          url: `/travels/${travel.slug || travel.id}`,
+          country: (travel as any).countryName,
+        });
+      }
+      onFavoriteToggle?.();
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  }, [travel, isAuthenticated, isFavorite, addFavorite, removeFavorite, onFavoriteToggle, router]);
 
   const handleCreateTravel = useCallback(() => {
     if (!isAuthenticated) {
@@ -178,7 +187,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 16,
-    padding: DESIGN_TOKENS.spacing.xxs4,
+    padding: DESIGN_TOKENS.spacing.xl,
     marginBottom: 32,
     shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
@@ -188,8 +197,8 @@ const styles = StyleSheet.create({
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
   },
   containerMobile: {
-    padding: DESIGN_TOKENS.spacing.xxs0,
-    marginBottom: DESIGN_TOKENS.spacing.xxs4,
+    padding: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.xl,
     borderRadius: 12,
   },
   content: {
@@ -224,21 +233,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 14,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
-    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
-    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    minHeight: 44,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
-        transition: 'all 0.2s ease' as any,
-        ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-          borderColor: DESIGN_TOKENS.colors.primary,
-          transform: 'translateY(-2px) scale(1.02)' as any,
-          boxShadow: DESIGN_TOKENS.shadows.medium as any,
-        } as any,
+      },
+      default: {
+        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 1,
       },
     }),
   },
@@ -271,27 +279,28 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     paddingVertical: 14,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs4,
-    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
+    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    backgroundColor: DESIGN_TOKENS.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+    minHeight: 44,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
-        transition: 'all 0.2s ease' as any,
-        ':hover': {
-          backgroundColor: '#3a7a7a', // Темнее primary для hover
-          transform: 'translateY(-2px) scale(1.02)' as any,
-          boxShadow: DESIGN_TOKENS.shadows.medium as any,
-        } as any,
+      },
+      default: {
+        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
       },
     }),
   },
   primaryButtonMobile: {
     paddingVertical: 12,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
   },
   primaryButtonText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,

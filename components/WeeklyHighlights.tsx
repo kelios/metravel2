@@ -168,7 +168,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
             <Text style={styles.subtitle}>Самые популярные маршруты этого месяца</Text>
             <ScrollView
                 horizontal
-                showsHorizontalScrollIndicator={false}
+                showsHorizontalScrollIndicator={Platform.OS === 'web'}
                 contentContainerStyle={styles.scrollContent}
                 removeClippedSubviews={Platform.OS !== "web"}
                 decelerationRate="fast"
