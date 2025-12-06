@@ -9,6 +9,7 @@ import {
   Platform,
   Animated,
   TextInput,
+  Dimensions,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { MODERN_DESIGN_TOKENS } from '@/styles/modernRedesign';
@@ -60,6 +61,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   onApply,
   onClose,
 }) => {
+  const isNarrowWeb = Platform.OS === 'web' && Dimensions.get('window').width <= 768;
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set()
   );
@@ -121,10 +123,29 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   );
 
   return (
-    <View style={[styles.container, isCompact && styles.containerCompact]}>
+    <View
+      style={[
+        styles.container,
+        isCompact && styles.containerCompact,
+        Platform.OS !== 'web' && styles.containerMobile,
+        Platform.OS === 'web' && isNarrowWeb && styles.containerWebFull,
+      ]}
+    >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Фильтры</Text>
+        <View style={styles.headerLeft}>
+          {onClose && (
+            <Pressable
+              onPress={onClose}
+              style={styles.closeButton}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть фильтры"
+            >
+              <Feather name="x" size={18} color={colors.neutral[600]} />
+            </Pressable>
+          )}
+          <Text style={styles.headerTitle}>Фильтры</Text>
+        </View>
         {activeFiltersCount > 0 && (
           <Pressable onPress={onClearAll} style={styles.clearButton}>
             <Text style={styles.clearButtonText}>
@@ -201,7 +222,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
       {/* Filter Groups */}
       <ScrollView 
         style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
         contentContainerStyle={styles.scrollContent}
       >
         {filterGroups.map((group, index) => {
@@ -328,7 +349,12 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
       {/* Apply Button (Mobile) */}
       {Platform.OS !== 'web' && activeFiltersCount > 0 && (
         <View style={styles.applyButtonContainer}>
-          <Pressable style={styles.applyButton}>
+          <Pressable
+            style={styles.applyButton}
+            onPress={onApply}
+            accessibilityRole="button"
+            accessibilityLabel="Применить фильтры"
+          >
             <Text style={styles.applyButtonText}>
               Применить фильтры ({activeFiltersCount})
             </Text>
@@ -341,17 +367,33 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     backgroundColor: colors.surface.default,
     borderRadius: radii['2xl'],
     padding: spacing.lg,
-    ...shadows.sm,
     ...Platform.select({
       web: {
+        ...shadows.sm,
         width: 280,
         position: 'sticky' as any,
         top: spacing.lg,
+        maxHeight: '100%',
       },
+      default: {},
     }),
+  },
+  containerMobile: {
+    flex: 1,
+    borderRadius: 0,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    backgroundColor: colors.surface.default,
+    // Убираем web‑тени/карточный вид на native
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   containerCompact: {
     padding: spacing.md,
@@ -486,7 +528,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacing.md,
+    flexGrow: 1,
+    paddingBottom: spacing.xl,
   },
   filterGroup: {
     marginBottom: spacing.lg,
@@ -626,12 +669,6 @@ const styles = StyleSheet.create({
   applyButtonText: {
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.semibold,
-    color: '#fff',
-  },
-});
-
-export default ModernFilters;
-graphy.fontWeight.semibold,
     color: '#fff',
   },
 });

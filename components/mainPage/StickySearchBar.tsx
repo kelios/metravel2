@@ -189,6 +189,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
     borderBottomWidth: 1,
     borderBottomColor: palette.border,
+    borderRadius: radii.lg,
     paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
     paddingVertical: Platform.select({ default: spacing.xs, web: spacing.sm }),
     gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: palette.background,
-    borderRadius: radii.md,
+    borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: palette.border,
     paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
@@ -334,7 +335,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: spacing.sm,
     height: Platform.select({ default: 40, web: 44 }),
-    borderRadius: radii.md,
+    borderRadius: radii.pill,
     backgroundColor: palette.surfaceMuted,
     ...Platform.select({
       web: {

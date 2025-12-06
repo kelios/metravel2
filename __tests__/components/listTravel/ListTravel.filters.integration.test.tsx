@@ -50,6 +50,7 @@ jest.mock('expo-router', () => ({
     back: jest.fn(),
   }),
   useLocalSearchParams: () => ({}),
+  usePathname: () => '/',
 }));
 
 // Mock API
@@ -105,6 +106,17 @@ describe('ListTravel - Filters Integration', () => {
 
     (fetchFilters as jest.Mock).mockResolvedValue(mockFilters);
     (fetchFiltersCountry as jest.Mock).mockResolvedValue([]);
+
+    // Mock window methods for web environment
+    if (typeof window !== 'undefined') {
+      window.addEventListener = jest.fn();
+      window.removeEventListener = jest.fn();
+    } else {
+      (global as any).window = {
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+      };
+    }
   });
 
   afterEach(() => {

@@ -6,7 +6,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import Toast from 'react-native-toast-message';
 
 import { fetchTravel } from '@/src/api/travelsApi';
-import { fetchFilters, saveFormData } from '@/src/api/misc';
+import { fetchFilters, saveFormData, fetchAllCountries } from '@/src/api/misc';
 import { TravelFormData, MarkerData, Travel } from '@/src/types/types';
 import { useAuth } from '@/context/AuthContext';
 import { validateStep, type ValidationError } from '@/utils/formValidation';
@@ -92,6 +92,9 @@ export default function UpsertTravel() {
                 }
             } catch (error) {
                 console.error('Ошибка загрузки фильтров:', error);
+                if (isMounted) {
+                    setFilters(initFilters());
+                }
             }
         })();
         if (!isNew && id) {
@@ -431,7 +434,7 @@ const styles = StyleSheet.create({
     mainWrapperMobile: { flexDirection: 'column' },
     contentColumn: { flex: 1 },
     filtersColumn: { width: 320, borderLeftWidth: 1, padding: DESIGN_TOKENS.spacing.md, borderColor: '#ddd' },
-    filtersScroll: { maxHeight: '80vh' },
+    filtersScroll: { maxHeight: '80%' },
     mobileFiltersWrapper: { padding: DESIGN_TOKENS.spacing.md },
     mobileActionBar: {
         position: 'absolute',
@@ -524,6 +527,13 @@ function getEmptyFormData(id: string | null): TravelFormData {
         gallery: [],
         youtube_link: '',
         companions: [],
+        countryIds: [],
+        travelAddressIds: [],
+        travelAddressCity: [],
+        travelAddressCountry: [],
+        travelAddressAdress: [],
+        travelAddressCategory: [],
+        categoriesIds: [],
     };
 }
 
@@ -550,12 +560,14 @@ function transformTravelToFormData(travel: Travel): TravelFormData {
         ...getEmptyFormData(String(travel.id)),
         ...travel,
         // Нормализуем числовые поля к строкам для формы
+        id: String(travel.id),
         year: yearStr,
         number_days: daysStr,
         number_peoples: peoplesStr,
         moderation: (travel as any).moderation ?? false,
         publish: (travel as any).publish ?? false,
         visa: (travel as any).visa ?? false,
+        companions: (travel.companions || []).map(c => String(c)),
     };
 }
 

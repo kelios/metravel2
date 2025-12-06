@@ -207,17 +207,17 @@ describe('CompactSideBarTravel', () => {
   });
 
   it('should render close button on mobile', () => {
-    const { getByText, getByLabelText } = render(
+    const { getByText, getAllByLabelText } = render(
       <CompactSideBarTravel {...defaultProps} isMobile={true} />
     );
 
-    expect(getByLabelText('Закрыть меню')).toBeTruthy();
+    expect(getAllByLabelText('Закрыть меню')[0]).toBeTruthy();
     expect(getByText('Закрыть')).toBeTruthy();
   });
 
   it('should call closeMenu when close button is pressed', () => {
     const closeMenu = jest.fn();
-    const { getByLabelText } = render(
+    const { getAllByLabelText } = render(
       <CompactSideBarTravel
         {...defaultProps}
         isMobile={true}
@@ -225,7 +225,7 @@ describe('CompactSideBarTravel', () => {
       />
     );
 
-    const closeButton = getByLabelText('Закрыть меню');
+    const closeButton = getAllByLabelText('Закрыть меню')[0];
     fireEvent.press(closeButton);
 
     expect(closeMenu).toHaveBeenCalled();

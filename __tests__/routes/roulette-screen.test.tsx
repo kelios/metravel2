@@ -37,15 +37,15 @@ jest.mock('react-native', () => {
   };
 });
 
-jest.mock('@/components/listTravel/FiltersComponent', () => {
+jest.mock('@/components/listTravel/ModernFilters', () => {
   const React = require('react');
   const { View, Text } = require('react-native');
   return {
     __esModule: true,
-    default: function MockFiltersComponent() {
+    default: function MockModernFilters() {
       return (
-        <View testID="filters-component">
-          <Text>FiltersComponent</Text>
+        <View testID="modern-filters">
+          <Text>ModernFilters</Text>
         </View>
       );
     },

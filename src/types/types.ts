@@ -38,7 +38,7 @@ export type Travel = {
     year: string
     monthName: string
     number_days: number
-    companions: String[]
+    companions: string[]
     coordsMeTravel?: Array<{
         lat: number
         lng: number
@@ -196,7 +196,7 @@ export interface TravelFormData {
     travelAddressCountry: string[];
     travelAddressAdress: string[];
     travelAddressCategory: string[];
-    coordsMeTravel: string[];
+    coordsMeTravel: any[];
     thumbs200ForCollectionArr: string[];
     travelImageThumbUrlArr: string[];
     travelImageAddress: string[];

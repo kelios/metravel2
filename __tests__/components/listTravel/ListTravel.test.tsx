@@ -86,6 +86,7 @@ jest.mock('@/components/listTravel/RenderTravelItem', () => {
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
   useLocalSearchParams: () => ({}),
+  usePathname: () => '/',
 }));
 
 jest.mock('@react-navigation/native', () => ({
@@ -113,6 +114,17 @@ describe('ListTravel', () => {
 
   beforeEach(() => {
     queryClient = createTestQueryClient();
+
+    // Mock window methods for web environment
+    if (typeof window !== 'undefined') {
+      window.addEventListener = jest.fn();
+      window.removeEventListener = jest.fn();
+    } else {
+      (global as any).window = {
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+      };
+    }
 
     mockDeleteTravel.mockReset();
 
@@ -150,7 +162,7 @@ describe('ListTravel', () => {
 
   it('renders the search input', async () => {
     renderComponent();
-    expect(await screen.findByPlaceholderText(/Найти путешествие/)).toBeTruthy();
+    expect(await screen.findByPlaceholderText('Найти путешествия...')).toBeTruthy();
   });
 
   it('renders an empty state message when there are no items', async () => {

@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import {
     Dimensions,
-    ImageBackground,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -11,6 +10,7 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Image,
 } from 'react-native';
 import { Button, Card } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -72,16 +72,18 @@ export default function RegisterForm() {
             )}
 
             <KeyboardAvoidingView
-                style={{ flex: 1 }}
+                style={{ flex: 1, backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary }}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
-                <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-                    <ImageBackground
-                        source={require('@/assets/images/media/slider/about.jpg')}
-                        style={styles.bg}
+                {Platform.OS === 'web' && (
+                    <Image
+                        source={require('../../assets/travel/roulette-map-bg.jpg')}
+                        style={styles.mapBackground}
                         resizeMode="cover"
-                        blurRadius={3}
-                    >
+                    />
+                )}
+                <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+                    <View style={styles.bg}>
                         <Formik<FormValues>
                             initialValues={{ username: '', email: '', password: '', confirmPassword: '' }}
                             validationSchema={registrationSchema}
@@ -275,7 +277,7 @@ export default function RegisterForm() {
                                 </View>
                             )}
                         </Formik>
-                    </ImageBackground>
+                    </View>
                 </ScrollView>
             </KeyboardAvoidingView>
         </>
@@ -284,13 +286,42 @@ export default function RegisterForm() {
 
 /* ---------- styles ---------- */
 const styles = StyleSheet.create({
-    bg: { flex: 1, justifyContent: 'center', alignItems: 'center', height },
-    center: { width: '85%', maxWidth: 420 },
+    bg: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        height,
+    },
+    mapBackground: {
+        ...StyleSheet.absoluteFillObject,
+        width: '100%',
+        height: '100%',
+        opacity: 0.9,
+    },
+    center: {
+        width: '100%',
+        maxWidth: 440,
+        paddingHorizontal: 16,
+    },
     card: {
-        padding: 20,
-        borderRadius: 8,
-        backgroundColor: 'rgba(255,255,255,0.92)',
-        elevation: 4,
+        padding: 24,
+        borderRadius: DESIGN_TOKENS.radii.xl,
+        backgroundColor: 'rgba(255,255,255,0.96)',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#0f172a',
+                shadowOffset: { width: 0, height: 14 },
+                shadowOpacity: 0.16,
+                shadowRadius: 24,
+            },
+            android: {
+                elevation: 6,
+            },
+            web: {
+                boxShadow:
+                    '0 24px 60px rgba(15, 23, 42, 0.14), 0 8px 24px rgba(15, 23, 42, 0.06)',
+            },
+        }),
     },
     inputWrap: {
         flexDirection: 'row',
@@ -349,6 +380,10 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         fontWeight: '500',
     },
-    btn: { backgroundColor: '#6aaaaa', borderRadius: 6, marginTop: 8 },
-    btnContent: { paddingVertical: 10 },
+    btn: {
+        backgroundColor: DESIGN_TOKENS.colors.primary,
+        borderRadius: DESIGN_TOKENS.radii.lg,
+        marginTop: 8,
+    },
+    btnContent: { paddingVertical: 12 },
 });

@@ -2,7 +2,6 @@
 import React, { useRef, useState } from 'react';
 import {
     Dimensions,
-    ImageBackground,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -11,6 +10,7 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Image,
 } from 'react-native';
 import { Button, Card } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
@@ -116,15 +116,18 @@ export default function Login() {
                 style={styles.container}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
+                {Platform.OS === 'web' && (
+                    <Image
+                        source={require('../../assets/travel/roulette-map-bg.jpg')}
+                        style={styles.mapBackground}
+                        resizeMode="cover"
+                    />
+                )}
                 <ScrollView
                     contentContainerStyle={styles.scrollViewContent}
                     keyboardShouldPersistTaps="handled"
                 >
-                    <ImageBackground
-                        source={require('@/assets/images/media/slider/about.jpg')}
-                        style={styles.bg}
-                        blurRadius={3}
-                    >
+                    <View style={styles.bg}>
                         <View style={styles.inner}>
                             <Card style={styles.card}>
                                 <Card.Content>
@@ -235,7 +238,7 @@ export default function Login() {
                                 </Card.Content>
                             </Card>
                         </View>
-                    </ImageBackground>
+                    </View>
                 </ScrollView>
             </KeyboardAvoidingView>
         </>
@@ -244,40 +247,84 @@ export default function Login() {
 
 /* ---------- styles ---------- */
 const styles = StyleSheet.create({
-    container: { flex: 1 },
-    scrollViewContent: { flexGrow: 1 },
-    bg: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%', height },
-    inner: { width: '80%', maxWidth: 400 },
-    card: {
-        backgroundColor: 'rgba(255,255,255,0.95)',
-        borderRadius: 12,
-        padding: 20,
-        elevation: 5,
+    container: {
+        flex: 1,
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     },
-    input: {
-        marginBottom: 0, // ✅ ИСПРАВЛЕНИЕ: Отступ управляется FormFieldWithValidation
-        borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
-        borderRadius: DESIGN_TOKENS.radii.sm,
-        padding: 12,
-        fontSize: 16,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        color: DESIGN_TOKENS.colors.text,
-        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+    mapBackground: {
+        ...StyleSheet.absoluteFillObject,
+        width: '100%',
+        height: '100%',
+        opacity: 0.9,
+    },
+    scrollViewContent: {
+        flexGrow: 1,
+        justifyContent: 'center',
+    },
+    bg: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%',
+        height,
+        opacity: 0.9,
+    },
+    inner: {
+        width: '100%',
+        maxWidth: 440,
+        paddingHorizontal: 16,
+    },
+    card: {
+        backgroundColor: 'rgba(255,255,255,0.96)',
+        borderRadius: DESIGN_TOKENS.radii.xl,
+        padding: 24,
         ...Platform.select({
+            ios: {
+                shadowColor: '#0f172a',
+                shadowOffset: { width: 0, height: 14 },
+                shadowOpacity: 0.16,
+                shadowRadius: 24,
+            },
+            android: {
+                elevation: 6,
+            },
             web: {
-                transition: 'border-color 0.2s ease',
+                boxShadow:
+                    '0 24px 60px rgba(15, 23, 42, 0.14), 0 8px 24px rgba(15, 23, 42, 0.06)',
             },
         }),
     },
-    btn: { backgroundColor: '#6aaaaa', borderRadius: 8, marginTop: 4 },
-    btnContent: { paddingVertical: 12 },
-    forgot: {
-        color: '#0066ff',
-        textDecorationLine: 'underline',
-        marginTop: 15,
-        textAlign: 'center',
+    input: {
+        marginBottom: 0, // ✅ Отступ управляется FormFieldWithValidation
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
         fontSize: 16,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        color: DESIGN_TOKENS.colors.text,
+        minHeight: 48,
+        ...Platform.select({
+            web: {
+                transition: 'border-color 0.18s ease, box-shadow 0.18s ease',
+            },
+        }),
+    },
+    btn: {
+        backgroundColor: DESIGN_TOKENS.colors.primary,
+        borderRadius: DESIGN_TOKENS.radii.lg,
+        marginTop: 8,
+    },
+    btnContent: {
+        paddingVertical: 12,
+    },
+    forgot: {
+        color: DESIGN_TOKENS.colors.primary,
+        textDecorationLine: 'underline',
+        marginTop: 16,
+        textAlign: 'center',
+        fontSize: 14,
     },
     registerContainer: {
         flexDirection: 'row',
@@ -289,12 +336,12 @@ const styles = StyleSheet.create({
         borderTopColor: '#e0e0e0',
     },
     registerText: {
-        fontSize: 15,
-        color: '#666',
+        fontSize: 14,
+        color: DESIGN_TOKENS.colors.textMuted,
     },
     registerLink: {
-        fontSize: 15,
-        color: '#4a8c8c',
+        fontSize: 14,
+        color: DESIGN_TOKENS.colors.primary,
         fontWeight: '600',
         textDecorationLine: 'underline',
     },

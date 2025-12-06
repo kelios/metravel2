@@ -55,6 +55,21 @@ describe('ShareButtons', () => {
           writeText: jest.fn(() => Promise.resolve()),
         },
       };
+      (global as any).document = {
+        getElementById: jest.fn(),
+        createElement: jest.fn(() => ({
+            appendChild: jest.fn(),
+            style: {},
+        })),
+        createTextNode: jest.fn(() => ({})),
+        body: {
+            appendChild: jest.fn(),
+            removeChild: jest.fn(),
+        },
+        head: {
+            appendChild: jest.fn(),
+        }
+      };
     }
   });
 
