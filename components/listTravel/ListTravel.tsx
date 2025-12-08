@@ -89,14 +89,15 @@ const deleteTravel = async (id: string): Promise<void> => {
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
 
 // ✅ АРХИТЕКТУРА: Импорт констант, типов, утилит и хуков
-import { 
-  PER_PAGE, 
-  PERSONALIZATION_VISIBLE_KEY, 
+import {
+  PER_PAGE,
+  PERSONALIZATION_VISIBLE_KEY,
   WEEKLY_HIGHLIGHTS_VISIBLE_KEY,
   RECOMMENDATIONS_VISIBLE_KEY,
   MAX_VISIBLE_CATEGORIES,
   FLATLIST_CONFIG,
   FLATLIST_CONFIG_MOBILE,
+  BREAKPOINTS,
 } from "./utils/listTravelConstants";
 import { useListTravelVisibility } from "./hooks/useListTravelVisibility";
 import { useListTravelFilters } from "./hooks/useListTravelFilters";
@@ -240,7 +241,7 @@ function ListTravel({
         onToggleWeeklyHighlights,
     });
 
-    const { width } = useWindowDimensions();
+    const { width, height } = useWindowDimensions();
     const route = useRoute();
     const router = useRouter();
     const pathname = usePathname();
@@ -252,11 +253,20 @@ function ListTravel({
     const isTravelBy = (route as any).name === "travelsby";
     const isExport = (route as any).name === "export" || pathname?.includes('/export');
 
+    // ✅ АДАПТИВНОСТЬ: Определяем устройство и ориентацию
     const isMobile = checkIsMobile(width);
+    const isTablet = useMemo(() => width >= BREAKPOINTS.MOBILE && width < BREAKPOINTS.DESKTOP, [width]);
+    const isPortrait = height > width;
+
     const columns = useMemo(() => {
-        // ✅ ОПТИМИЗАЦИЯ: Используем оптимизированную функцию расчета колонок
-        return calculateColumns(width);
-    }, [width]);
+        // ✅ ОПТИМИЗАЦИЯ: Используем оптимизированную функцию расчета колонок с учетом ориентации
+        const baseColumns = calculateColumns(width);
+        // На планшете в портретной ориентации используем меньше колонок для лучшей читаемости
+        if (isTablet && isPortrait && baseColumns > 2) {
+            return 2;
+        }
+        return baseColumns;
+    }, [width, isTablet, isPortrait]);
 
     const listKey = useMemo(() => `grid-${columns}`, [columns]);
 
@@ -437,9 +447,16 @@ function ListTravel({
         isQueryEnabled,
     });
 
+    // ✅ АДАПТИВНОСТЬ: Количество видимых категорий зависит от устройства
+    const maxVisibleCategories = useMemo(() => {
+      if (isMobile) return 6;
+      if (isTablet) return 8;
+      return MAX_VISIBLE_CATEGORIES;
+    }, [isMobile, isTablet]);
+
     const categoriesWithCount = useMemo(
-      () => calculateCategoriesWithCount(travels, options?.categories as any).slice(0, MAX_VISIBLE_CATEGORIES),
-      [travels, options?.categories]
+      () => calculateCategoriesWithCount(travels, options?.categories as any).slice(0, maxVisibleCategories),
+      [travels, options?.categories, maxVisibleCategories]
     );
 
     /* Delete */
@@ -533,12 +550,12 @@ function ListTravel({
     // ✅ ОПТИМИЗАЦИЯ: Динамическая конфигурация виртуализации на основе устройства
     const listVirtualization = useMemo(() => {
       const config = isMobile ? FLATLIST_CONFIG_MOBILE : FLATLIST_CONFIG;
-      
+
       // Адаптируем под количество колонок
       const initial = Math.max(config.INITIAL_NUM_TO_RENDER, columns * 2);
       const batch = Math.max(config.MAX_TO_RENDER_PER_BATCH, columns * 3);
       const window = config.WINDOW_SIZE;
-      
+
       return {
         initial,
         batch,
@@ -546,6 +563,19 @@ function ListTravel({
         updateCellsBatchingPeriod: config.UPDATE_CELLS_BATCHING_PERIOD,
       };
     }, [columns, isMobile]);
+
+    // ✅ АДАПТИВНОСТЬ: Динамические отступы в зависимости от устройства
+    const contentPadding = useMemo(() => {
+      if (isMobile) return spacing.sm;
+      if (isTablet) return spacing.md;
+      return spacing.lg;
+    }, [isMobile, isTablet]);
+
+    const gapSize = useMemo(() => {
+      if (isMobile) return spacing.sm;
+      if (isTablet) return spacing.md;
+      return spacing.md;
+    }, [isMobile, isTablet]);
 
     /* Loading helpers */
     const hasAnyItems = travels.length > 0;
@@ -928,14 +958,20 @@ function ListTravel({
                 renderItem={renderItem}
                 keyExtractor={keyExtractor}
                 numColumns={columns}
-                columnWrapperStyle={columns > 1 ? { 
-                    gap: isMobile ? spacing.sm : spacing.md,
+                columnWrapperStyle={columns > 1 ? {
+                    gap: gapSize,
                     justifyContent: 'flex-start',
                 } : undefined}
                 contentContainerStyle={[
                   styles.listContent,
+                  {
+                    paddingHorizontal: contentPadding,
+                    paddingTop: contentPadding,
+                  },
                   isMobile && styles.listContentMobile, // ✅ АДАПТИВНОСТЬ: Отдельные стили для мобильных
-                  isExport && { paddingBottom: isMobile ? 200 : 150 }, // ✅ АДАПТИВНОСТЬ: Отступ для панели экспорта + нижнее меню
+                  isExport && {
+                    paddingBottom: isMobile ? 200 : isTablet ? 180 : 150
+                  }, // ✅ АДАПТИВНОСТЬ: Отступ для панели экспорта + нижнее меню
                 ]}
                 onEndReached={handleListEndReached}
                 onEndReachedThreshold={isMobile ? FLATLIST_CONFIG_MOBILE.ON_END_REACHED_THRESHOLD : FLATLIST_CONFIG.ON_END_REACHED_THRESHOLD}
@@ -990,7 +1026,7 @@ function ListTravel({
                             categories={categoriesWithCount}
                             selectedCategories={(filter.categories || []).map(String)}
                             onToggleCategory={handleToggleCategory}
-                            maxVisible={isMobile ? 6 : 8}
+                            maxVisible={maxVisibleCategories}
                             showIcons={!isMobile}
                           />
                         </View>
@@ -1176,16 +1212,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: Platform.select({ default: spacing.xs, web: 0 }), // Минимальный padding на мобильных
   },
   categoriesSectionMain: {
-    marginTop: 20,
-    marginBottom: 32,
-    paddingVertical: 16,
+    marginTop: Platform.select({ default: spacing.md, web: 20 }),
+    marginBottom: Platform.select({ default: spacing.lg, web: 32 }),
+    paddingVertical: Platform.select({ default: spacing.sm, web: 16 }),
   },
   categoriesTitle: {
     fontSize: Platform.select({ default: 15, web: 17 }),
     fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
     color: '#0f172a',
-    marginBottom: 16,
+    marginBottom: Platform.select({ default: spacing.sm, web: 16 }),
     letterSpacing: -0.3,
+    paddingHorizontal: Platform.select({ default: spacing.xs, web: 0 }),
     ...Platform.select({
       web: {
         fontFamily: DESIGN_TOKENS.typography.fontFamily as any,
@@ -1212,8 +1249,6 @@ const styles = StyleSheet.create({
     gap: Platform.select({ default: spacing.sm, web: spacing.md }),
   },
   listContent: {
-    paddingLeft: Platform.select({ default: spacing.sm, web: 24 }),
-    paddingRight: Platform.select({ default: spacing.sm, web: 24 }),
     paddingBottom: Platform.select({ default: 100, web: 120 }),
     ...Platform.select({
       web: {
@@ -1223,10 +1258,7 @@ const styles = StyleSheet.create({
     }),
   },
   listContentMobile: {
-    paddingLeft: spacing.sm,
-    paddingRight: spacing.sm,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xl,
+    paddingBottom: Platform.select({ default: spacing.xl, web: 100 }),
   },
   columnWrapper: { 
     gap: 15,
@@ -1236,7 +1268,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     padding: Platform.select({ default: spacing.sm, web: spacing.md }),
     paddingBottom: Platform.select({ default: 70, web: 24 }), // отступ для нижнего меню/футера
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: palette.borderLight,
     backgroundColor: palette.surface,
     position: Platform.select({ default: 'absolute' as any, web: 'fixed' as any }),
@@ -1261,7 +1293,8 @@ const styles = StyleSheet.create({
   },
   exportBarMobileWeb: {
     bottom: 55,
-    paddingBottom: 24,
+    paddingBottom: Platform.select({ default: 20, web: 24 }),
+    padding: spacing.sm,
   },
   exportBarInfo: {
     gap: spacing.xxs,
