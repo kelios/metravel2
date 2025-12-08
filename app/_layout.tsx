@@ -10,12 +10,16 @@ import { AuthProvider } from "@/context/AuthContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import PerformanceMonitor from "@/components/PerformanceMonitor";
 import SkipLinks from "@/components/SkipLinks";
 import { NetworkStatus } from "@/components/NetworkStatus";
 import ConsentBanner from "@/components/ConsentBanner";
 import { useFonts } from "expo-font";
 import { DESIGN_TOKENS } from "@/constants/designSystem"; // ✅ ИСПРАВЛЕНИЕ: Импорт единой палитры
+
+// ✅ ИСПРАВЛЕНИЕ: Глобальный CSS для web (box-sizing fix)
+if (Platform.OS === 'web') {
+  require('./global.css');
+}
 
 // Подавляем предупреждение useLayoutEffect для React Navigation на вебе
 if (Platform.OS === 'web') {
@@ -278,9 +282,6 @@ function RootLayoutNav() {
           </AuthProvider>
           {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
           {isMounted && <Toast />}
-          {/* ✅ УЛУЧШЕНИЕ: Мониторинг производительности для production */}
-          {/* Метрики скрыты, но собираются в фоне. Чтобы показать, установите showUI={true} */}
-          <PerformanceMonitor enabled={true} showUI={false} />
       </PaperProvider>
       </ErrorBoundary>
     );

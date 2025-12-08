@@ -4,7 +4,7 @@
  * Соответствует WCAG 2.1 требованиям для доступности
  */
 
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { MODERN_MATTE_PALETTE } from '@/constants/modernMattePalette'
 
@@ -16,12 +16,8 @@ export const globalFocusStyles = StyleSheet.create({
   focusable: {
     ...Platform.select({
       web: {
-        outlineWidth: 2,
-        outlineColor: DESIGN_TOKENS.colors.transparent,
-        outlineStyle: 'solid',
-        outlineOffset: 2,
-        transition: 'outline 0.2s ease',
-      },
+        // outline стили будут добавлены через CSS классы
+      } as any,
     }),
   },
   /**
@@ -31,13 +27,8 @@ export const globalFocusStyles = StyleSheet.create({
   focusableStrong: {
     ...Platform.select({
       web: {
-        outlineWidth: 3,
-        outlineColor: DESIGN_TOKENS.colors.primary,
-        outlineStyle: 'solid',
-        outlineOffset: 3,
-        transition: 'outline 0.2s ease',
-        boxShadow: `0 0 0 1px ${DESIGN_TOKENS.colors.primary}`,
-      },
+        // outline стили будут добавлены через CSS классы
+      } as any,
     }),
   },
   /**
@@ -47,15 +38,59 @@ export const globalFocusStyles = StyleSheet.create({
   focusableSubtle: {
     ...Platform.select({
       web: {
-        outlineWidth: 1,
-        outlineColor: DESIGN_TOKENS.colors.focus,
-        outlineStyle: 'dashed',
-        outlineOffset: 1,
-        transition: 'outline 0.2s ease',
-      },
+        // outline стили будут добавлены через CSS классы
+      } as any,
     }),
   },
 });
+
+// Web-стили для focus (только на клиенте)
+const addFocusStyles = () => {
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    const style = document.createElement('style');
+    style.textContent = `
+      .focusable {
+        outline-width: 2px;
+        outline-color: transparent;
+        outline-style: solid;
+        outline-offset: 2px;
+        transition: outline 0.2s ease;
+      }
+      
+      .focusable:focus {
+        outline-color: ${DESIGN_TOKENS.colors.primary};
+      }
+      
+      .focusableStrong {
+        outline-width: 3px;
+        outline-color: ${DESIGN_TOKENS.colors.primary};
+        outline-style: solid;
+        outline-offset: 3px;
+        transition: outline 0.2s ease;
+        box-shadow: 0 0 0 1px ${DESIGN_TOKENS.colors.primary};
+      }
+      
+      .focusableSubtle {
+        outline-width: 1px;
+        outline-color: ${DESIGN_TOKENS.colors.focus};
+        outline-style: dashed;
+        outline-offset: 1px;
+        transition: outline 0.2s ease;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+};
+
+// Вызываем только на клиенте
+if (Platform.OS === 'web') {
+  if (typeof window !== 'undefined') {
+    addFocusStyles();
+  } else {
+    // Для SSR откладываем до монтирования
+    setTimeout(addFocusStyles, 0);
+  }
+}
 
 /**
  * Хелпер для применения focus стилей к компонентам

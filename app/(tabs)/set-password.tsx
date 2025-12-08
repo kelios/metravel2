@@ -32,7 +32,7 @@ export default function SetPassword() {
         { setSubmitting }: FormikHelpers<SetPasswordFormValues>
     ) => {
         try {
-            const success = await setNewPassword(password_reset_token, values.password);
+            const success = await setNewPassword(password_reset_token as string, values.password);
             if (success) {
                 setMsg({ text: 'Пароль успешно изменен', error: false });
                 setTimeout(() => {
@@ -123,7 +123,7 @@ export default function SetPassword() {
                                     mode="contained"
                                     style={styles.applyButton}
                                     contentStyle={styles.applyButtonContent}
-                                    onPress={handleSubmit}
+                                    onPress={() => handleSubmit()}
                                     disabled={isSubmitting}
                                     loading={isSubmitting}
                                 >

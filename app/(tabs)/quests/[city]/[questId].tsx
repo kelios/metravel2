@@ -7,7 +7,7 @@ const Ion = React.lazy(() =>
     import('@expo/vector-icons/Ionicons').then((m: any) => ({ default: m.Ionicons || m.default }))
 );
 // ⚡️ мастер-компонент тоже лениво (часто тяжёлый)
-const QuestWizardLazy = React.lazy(() =>
+const QuestWizardLazy = React.lazy<React.ComponentType<any>>(() =>
     import('@/components/quests/QuestWizard').then((m: any) => ({ default: m.QuestWizard || m.default }))
 );
 

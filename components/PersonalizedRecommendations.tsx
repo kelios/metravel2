@@ -14,9 +14,10 @@ const COLLAPSED_KEY = 'personalization_collapsed';
 interface PersonalizedRecommendationsProps {
     forceVisible?: boolean;
     onVisibilityChange?: (visible: boolean) => void;
+    showHeader?: boolean;
 }
 
-function PersonalizedRecommendations({ forceVisible, onVisibilityChange }: PersonalizedRecommendationsProps) {
+function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHeader = true }: PersonalizedRecommendationsProps) {
     const { favorites, viewHistory, getRecommendations } = useFavorites();
     const { isAuthenticated } = useAuth();
     const router = useRouter();
@@ -305,6 +306,12 @@ const styles = StyleSheet.create({
         shadowOpacity: 0,
         shadowRadius: 0,
         elevation: 0,
+    },
+    containerCompact: {
+        marginVertical: 0,
+        padding: 0,
+        paddingTop: 8,
+        paddingBottom: 4,
     },
     section: {
         marginBottom: 16,

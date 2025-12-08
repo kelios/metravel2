@@ -1,6 +1,6 @@
-// Компонент для анимированных карточек с эффектом появления
-import React, { useEffect, useRef } from 'react';
-import { Animated, View, StyleSheet, Platform } from 'react-native';
+// Компонент для карточек (анимации отключены для улучшения производительности скролла)
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
 
 interface AnimatedCardProps {
   children: React.ReactNode;
@@ -11,46 +11,12 @@ interface AnimatedCardProps {
 
 export default function AnimatedCard({ 
   children, 
-  index = 0, 
-  delay = 0,
   style 
 }: AnimatedCardProps) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(20)).current;
-
-  useEffect(() => {
-    const animationDelay = delay + index * 50; // Задержка для каждого элемента
-    
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        delay: animationDelay,
-        useNativeDriver: true,
-      }),
-      Animated.spring(translateY, {
-        toValue: 0,
-        delay: animationDelay,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [fadeAnim, translateY, index, delay]);
-
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        style,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateY }],
-        },
-      ]}
-    >
+    <View style={[styles.container, style]}>
       {children}
-    </Animated.View>
+    </View>
   );
 }
 

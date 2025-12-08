@@ -142,7 +142,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
 export default ConfirmDialog;
 
-const styles = StyleSheet.create({
+const styles: any = StyleSheet.create({
     dialog: {
         alignSelf: 'center',
         backgroundColor: DESIGN_TOKENS.colors.surface,
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     },
     dialogText: {
         fontSize: 16,
-        color: DESIGN_TOKENS.colors.textSecondary,
+        color: DESIGN_TOKENS.colors.textMuted,
         marginBottom: 20,
     },
     actionContainer: {

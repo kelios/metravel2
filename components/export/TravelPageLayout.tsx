@@ -87,7 +87,7 @@ export default function TravelPageLayout({
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)',
+                  backgroundColor: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)',
                   padding: '15mm',
                 }}
               >
@@ -145,7 +145,6 @@ export default function TravelPageLayout({
               alignItems: 'center',
               justifyContent: 'center',
               backgroundColor: 'linear-gradient(135deg, #ff9f5a 0%, #ff6b35 100%)',
-              background: 'linear-gradient(135deg, #ff9f5a 0%, #ff6b35 100%)',
               borderRadius: '12mm',
               padding: '20mm',
               color: '#fff',

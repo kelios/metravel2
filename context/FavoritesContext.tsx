@@ -7,6 +7,7 @@ import { apiClient } from '@/src/api/client';
 import { safeJsonParseString } from '@/src/utils/safeJsonParse';
 import { devError } from '@/src/utils/logger';
 import { getStorageBatch } from '@/src/utils/storageBatch';
+import { cleanupInvalidFavorites, isValidFavoriteId } from '@/src/utils/favoritesCleanup';
 
 const FAVORITES_KEY = 'metravel_favorites';
 const VIEW_HISTORY_KEY = 'metravel_view_history';
@@ -96,7 +97,9 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
             const data = await AsyncStorage.getItem(key);
             if (data) {
                 // ✅ FIX-010: Используем безопасный парсинг JSON
-                setFavorites(safeJsonParseString(data, []));
+                const parsed = safeJsonParseString(data, []);
+                const cleaned = cleanupInvalidFavorites(parsed);
+                setFavorites(cleaned);
             }
         } catch (error) {
             // ✅ FIX-007: Используем централизованный logger
@@ -128,7 +131,9 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
             
             if (storageData[favoritesKey]) {
                 // ✅ FIX-010: Используем безопасный парсинг JSON
-                setFavorites(safeJsonParseString(storageData[favoritesKey]!, []));
+                const parsed = safeJsonParseString(storageData[favoritesKey]!, []);
+                const cleaned = cleanupInvalidFavorites(parsed);
+                setFavorites(cleaned);
             }
             if (storageData[historyKey]) {
                 // ✅ FIX-010: Используем безопасный парсинг JSON
@@ -192,28 +197,11 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
     /**
      * Синхронизирует избранное с сервером
      */
-    const syncFavoriteToServer = useCallback(async (item: FavoriteItem, action: 'add' | 'remove') => {
-        if (!isAuthenticated || !userId) return;
-
-        try {
-            if (action === 'add') {
-                await apiClient.post(`/api/favorites/`, {
-                    item_id: item.id,
-                    item_type: item.type,
-                });
-            } else {
-                await apiClient.delete(`/api/favorites/${item.id}/`);
-            }
-        } catch (error) {
-            // ✅ ИСПРАВЛЕНИЕ: Проверяем, является ли ошибка сетевой
-            // Если это сетевая ошибка, добавляем в очередь для повторной попытки
-            if (isNetworkError(error)) {
-                await addToSyncQueue(item, action);
-            }
-            // Пробрасываем ошибку дальше для обработки в вызывающем коде
-            throw error;
-        }
-    }, [isAuthenticated, userId, addToSyncQueue]);
+    const syncFavoriteToServer = useCallback(async (_item: FavoriteItem, _action: 'add' | 'remove') => {
+        // Серверной части для /api/favorites у нас нет, поэтому полностью отключаем
+        // сетевую синхронизацию избранного. Все операции выполняются только локально.
+        return;
+    }, []);
 
     /**
      * Обрабатывает очередь синхронизации
@@ -296,7 +284,20 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
         }
     }, [isAuthenticated]);
 
-    const addFavorite = useCallback(async (item: Omit<FavoriteItem, 'addedAt'>) => {
+        const addFavorite = useCallback(async (item: Omit<FavoriteItem, 'addedAt'>) => {
+        // Валидация ID с использованием утилиты
+        if (!isValidFavoriteId(item.id)) {
+            // Раньше мы полностью блокировали такие ID, но это мешает реальным путешествиям
+            // с id вроде 503. Теперь только логируем предупреждение и продолжаем.
+            console.warn(`Suspicious favorite ID detected: ${item.id} (looks like HTTP error code), продолжим сохранение`);
+        }
+        
+        const existingFavorite = favorites.find(f => f.id === item.id && f.type === item.type);
+        
+        if (existingFavorite) {
+            return; // Уже в избранном
+        }
+
         const newFavorite: FavoriteItem = {
             ...item,
             addedAt: Date.now(),
@@ -305,35 +306,16 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
         const newFavorites = [...favorites, newFavorite];
         
         try {
-            // Сохраняем локально
+            // Сохраняем только локально
             await saveFavorites(newFavorites);
             
-            // Пробуем синхронизировать с сервером
-            if (isAuthenticated && isOnline()) {
-                try {
-                    await syncFavoriteToServer(newFavorite, 'add');
-                } catch (error) {
-                    // ✅ ИСПРАВЛЕНИЕ: Показываем уведомление только для сетевых ошибок
-                    if (isNetworkError(error)) {
-                        await addToSyncQueue(newFavorite, 'add');
-                        if (Platform.OS === 'web') {
-                            Toast.show({
-                                type: 'info',
-                                text1: 'Сохранено локально',
-                                text2: 'Синхронизация произойдет при восстановлении сети',
-                            });
-                        }
-                    } else {
-                        // Для других ошибок показываем общее сообщение
-                        if (Platform.OS === 'web') {
-                            Toast.show({
-                                type: 'error',
-                                text1: 'Ошибка синхронизации',
-                                text2: 'Не удалось синхронизировать с сервером',
-                            });
-                        }
-                    }
-                }
+            // Показываем уведомление об успешном добавлении
+            if (Platform.OS === 'web') {
+                Toast.show({
+                    type: 'success',
+                    text1: 'Добавлено в избранное',
+                    text2: 'Сохранено на этом устройстве',
+                });
             }
         } catch (error) {
             console.error('Ошибка добавления в избранное:', error);
@@ -346,32 +328,36 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
             }
             throw error;
         }
-    }, [favorites, userId, isAuthenticated, syncFavoriteToServer, addToSyncQueue]);
+    }, [favorites, userId]);
 
-    const removeFavorite = useCallback(async (id: string | number, type: 'travel' | 'article') => {
+        const removeFavorite = useCallback(async (id: string | number, type: 'travel' | 'article') => {
+        // Валидация ID с использованием утилиты
+        if (!isValidFavoriteId(id)) {
+            console.warn(`Suspicious favorite ID detected on remove: ${id} (looks like HTTP error code), продолжим удаление`);
+        }
+        
         const favoriteToRemove = favorites.find(f => f.id === id && f.type === type);
         const newFavorites = favorites.filter(
             f => !(f.id === id && f.type === type)
         );
         
         try {
-            // Сохраняем локально
+            // Сохраняем только локально
             await saveFavorites(newFavorites);
             
-            // Пробуем синхронизировать с сервером
-            if (favoriteToRemove && isAuthenticated && isOnline()) {
-                try {
-                    await syncFavoriteToServer(favoriteToRemove, 'remove');
-                } catch (error) {
-                    // Если синхронизация не удалась, добавляем в очередь
-                    await addToSyncQueue(favoriteToRemove, 'remove');
-                }
+            // Показываем уведомление об успешном удалении
+            if (Platform.OS === 'web') {
+                Toast.show({
+                    type: 'info',
+                    text1: 'Удалено из избранного',
+                    text2: 'Удалено с этого устройства',
+                });
             }
         } catch (error) {
             console.error('Ошибка удаления из избранного:', error);
             throw error;
         }
-    }, [favorites, userId, isAuthenticated, syncFavoriteToServer, addToSyncQueue]);
+    }, [favorites, userId]);
 
     const isFavorite = useCallback((id: string | number, type: 'travel' | 'article') => {
         return favorites.some(f => f.id === id && f.type === type);

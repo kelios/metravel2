@@ -23,6 +23,7 @@ export default function ScrollToTopButton({
   const [isVisible, setIsVisible] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const lastScrollValue = useRef(0);
 
   useEffect(() => {
     if (typeof forceVisible === 'boolean') {
@@ -32,6 +33,12 @@ export default function ScrollToTopButton({
 
     if (scrollY) {
       const listener = scrollY.addListener(({ value }) => {
+        // Debounce scroll events to improve performance
+        if (Math.abs(value - lastScrollValue.current) < 5) {
+          return;
+        }
+        lastScrollValue.current = value;
+        
         const visible = value > threshold;
         if (visible !== isVisible) {
           setIsVisible(visible);

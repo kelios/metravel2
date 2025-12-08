@@ -40,12 +40,24 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
  * Skeleton для карточки путешествия
  */
 export const TravelCardSkeleton: React.FC = () => {
+  // Адаптивная высота изображения
+  const imageHeight = Platform.select({ default: 180, web: 200 });
+  const titleHeight = Platform.select({ default: 14, web: 16 });
+  const metaHeight = Platform.select({ default: 11, web: 12 });
+  
   return (
     <View style={styles.card}>
-      <SkeletonLoader width="100%" height="60%" borderRadius={12} />
+      {/* Изображение с aspectRatio 16/9 */}
+      <SkeletonLoader width="100%" height={imageHeight} borderRadius={12} style={styles.image} />
       <View style={styles.content}>
-        <SkeletonLoader width="80%" height={16} style={styles.marginBottom} />
-        <SkeletonLoader width="60%" height={14} />
+        {/* Заголовок - 2 строки */}
+        <SkeletonLoader width="90%" height={titleHeight} style={styles.marginBottom} />
+        <SkeletonLoader width="75%" height={titleHeight} style={styles.marginBottomLarge} />
+        {/* Метаинформация */}
+        <View style={styles.metaRow}>
+          <SkeletonLoader width="30%" height={metaHeight} />
+          <SkeletonLoader width="25%" height={metaHeight} />
+        </View>
       </View>
     </View>
   );
@@ -54,11 +66,16 @@ export const TravelCardSkeleton: React.FC = () => {
 /**
  * Skeleton для списка путешествий
  */
-export const TravelListSkeleton: React.FC<{ count?: number }> = ({ count = 6 }) => {
+export const TravelListSkeleton: React.FC<{ count?: number; columns?: number }> = ({ count = 6, columns = 1 }) => {
+  // Для одной колонки используем 100%, для нескольких - вычисляем с учетом gap
+  const widthPct = columns > 1 ? `${Math.floor(100 / columns) - 2}%` : '100%';
+
   return (
     <View style={styles.listContainer}>
       {Array.from({ length: count }).map((_, index) => (
-        <TravelCardSkeleton key={index} />
+        <View key={index} style={{ width: widthPct as any }}>
+           <TravelCardSkeleton />
+        </View>
       ))}
     </View>
   );
@@ -71,31 +88,50 @@ const styles = StyleSheet.create({
     // ✅ FIX: Анимация применяется через className, а не через inline стили
   },
   card: {
-    padding: 8,
     width: '100%',
-    aspectRatio: 1,
     borderRadius: DESIGN_TOKENS.radii.lg,
     backgroundColor: DESIGN_TOKENS.colors.surface,
     overflow: 'hidden',
+    marginBottom: 16,
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-    shadowColor: '#1f1f1f',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+      },
+    }),
+  },
+  image: {
+    marginBottom: 0,
   },
   content: {
-    padding: 14,
-    flex: 1,
-    justifyContent: 'flex-end',
+    padding: Platform.select({ default: 14, web: 20 }),
+    gap: 8,
   },
   marginBottom: {
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  marginBottomLarge: {
+    marginBottom: 12,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 8,
   },
   listContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    padding: 8,
+    gap: Platform.select({ default: 16, web: 20 }),
+    padding: Platform.select({ default: 12, web: 16 }),
   },
 });
 
@@ -107,7 +143,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
     style.id = styleId;
     style.textContent = `
       .skeleton-pulse {
-        background: linear-gradient(90deg, ${DESIGN_TOKENS.colors.backgroundSecondary} 0%, ${DESIGN_TOKENS.colors.backgroundTertiary} 50%, ${DESIGN_TOKENS.colors.backgroundSecondary} 100%);
+        background: linear-gradient(90deg, ${DESIGN_TOKENS.colors.backgroundSecondary} 0%, #e8e7e5 50%, ${DESIGN_TOKENS.colors.backgroundSecondary} 100%);
         background-size: 200% 100%;
         animation: skeleton-pulse 1.5s ease-in-out infinite;
       }

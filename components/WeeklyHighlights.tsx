@@ -172,6 +172,15 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
                 contentContainerStyle={styles.scrollContent}
                 removeClippedSubviews={Platform.OS !== "web"}
                 decelerationRate="fast"
+                // Явно включаем горизонтальный скролл на вебе
+                style={Platform.select({
+                    web: {
+                        overflowX: 'auto',
+                        overflowY: 'hidden',
+                        width: '100%',
+                    } as any,
+                    default: {},
+                })}
             >
                 {highlights.map((item) => (
                     <TouchableOpacity
@@ -279,6 +288,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         marginLeft: 0,
         marginBottom: 12,
+    },
+    subtitleCompact: {
+        marginTop: 4,
+        marginBottom: 8,
     },
     collapseButton: {
         padding: 4,

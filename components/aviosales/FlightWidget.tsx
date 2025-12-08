@@ -112,7 +112,7 @@ export default function FlightWidget({ country }: { country?: string }) {
     if (Platform.OS !== 'web' || !mainCountry) return null;
 
     return (
-        <View ref={refInView} style={{ width: '100%', marginBottom: 32, paddingTop: 20, paddingBottom: 10 }}>
+        <View ref={refInView as any} style={{ width: '100%', marginBottom: 32, paddingTop: 20, paddingBottom: 10 }}>
             <Text style={{ fontSize: 20, fontWeight: '600', marginBottom: 8 }}>
                 Поиск авиабилетов
             </Text>

@@ -31,8 +31,9 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isMobile = width <= 768;
-  const { user, isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const { favorites, viewHistory } = useFavorites();
+  const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({ name: '', email: '' });
   const [stats, setStats] = useState<UserStats>({
     travelsCount: 0,
     favoritesCount: 0,
@@ -49,9 +50,12 @@ export default function ProfileScreen() {
     try {
       // ✅ FIX-004: Используем батчинг для загрузки данных
       const { getStorageBatch } = await import('@/src/utils/storageBatch');
-      const storageData = await getStorageBatch(['userName', 'userId']);
-      const userName = storageData.userName;
+      const storageData = await getStorageBatch(['userName', 'userId', 'userEmail']);
+      const userName = storageData.userName || '';
       const userId = storageData.userId;
+      const userEmail = storageData.userEmail || '';
+
+      setUserInfo({ name: userName, email: userEmail });
 
       // ✅ ИСПРАВЛЕНИЕ: Загружаем статистику путешествий из API
       let travelsCount = 0;
@@ -163,8 +167,8 @@ export default function ProfileScreen() {
               <Feather name="user" size={32} color={DESIGN_TOKENS.colors.primary} /> {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
             </View>
           </View>
-          <Text style={styles.userName}>{user?.name || 'Пользователь'}</Text>
-          <Text style={styles.userEmail}>{user?.email || ''}</Text>
+          <Text style={styles.userName}>{userInfo.name || 'Пользователь'}</Text>
+          <Text style={styles.userEmail}>{userInfo.email || ''}</Text>
         </View>
 
         {/* Statistics */}

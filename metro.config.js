@@ -121,6 +121,40 @@ if (process.env.NODE_ENV === 'production') {
         keep_fnames: false,
       },
     },
+    // Enable CSS optimization
+    cssMinifierConfig: {
+      ...config.transformer.cssMinifierConfig,
+      // Remove unused CSS rules
+      unused: {
+        enable: true,
+        remove: true,
+      },
+      // Minify CSS
+      minify: {
+        enable: true,
+        removeWhitespace: true,
+        removeComments: true,
+        shortenIds: true,
+      },
+    },
+  }
+  
+  // Enable bundle splitting for better caching
+  config.resolver.assetExts = [...config.resolver.assetExts, 'webp', 'avif']
+  
+  // Configure for better web performance
+  if (process.env.EXPO_PLATFORM === 'web') {
+    config.server = {
+      ...config.server,
+      // Enable gzip compression
+      enhanceMiddleware: (middleware) => {
+        return (req, res, next) => {
+          res.setHeader('Content-Encoding', 'gzip')
+          res.setHeader('Vary', 'Accept-Encoding')
+          return middleware(req, res, next)
+        }
+      }
+    }
   }
 }
 

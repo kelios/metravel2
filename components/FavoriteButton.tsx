@@ -135,16 +135,16 @@ export default function FavoriteButton({
             aria-label={Platform.OS === 'web' ? (isFav ? 'Удалить из избранного' : 'Добавить в избранное') : undefined}
             // @ts-ignore
             aria-pressed={Platform.OS === 'web' ? isFav : undefined}
-            {...(Platform.OS === 'web' && {
-                // Prevent event propagation on web to avoid triggering parent Pressable
-                onPressIn: (e: any) => {
-                    e.stopPropagation();
-                },
-                onPress: (e: any) => {
-                    e.stopPropagation();
-                    handlePress();
-                },
-            })}
+//             {...(Platform.OS === 'web' && {
+//                 // Prevent event propagation on web to avoid triggering parent Pressable
+//                 onPressIn: (e: any) => {
+//                     e.stopPropagation();
+//                 },
+//                 onPress: (e: any) => {
+//                     e.stopPropagation();
+//                     handlePress();
+//                 },
+//             })}
         >
             <MaterialIcons
                 name={isFav ? 'favorite' : 'favorite-border'}

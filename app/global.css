@@ -1,0 +1,18 @@
+/* Global CSS for web - box-sizing fix */
+
+* {
+  box-sizing: border-box !important;
+}
+
+*::before,
+*::after {
+  box-sizing: border-box !important;
+}
+
+/* Ensure cards don't overflow */
+[data-testid*="travel"],
+[class*="card"],
+[class*="Card"] {
+  box-sizing: border-box !important;
+  max-width: 100% !important;
+}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from 'react-native-paper';
@@ -11,13 +11,15 @@ import { TravelFormData, MarkerData, Travel } from '@/src/types/types';
 import { useAuth } from '@/context/AuthContext';
 import { validateStep, type ValidationError } from '@/utils/formValidation';
 import { trackWizardEvent } from '@/src/utils/analytics';
+import { useOptimizedFormState } from '@/hooks/useOptimizedFormState';
+import { useOptimizedValidation } from '@/hooks/useOptimizedValidation';
+import { useImprovedAutoSave } from '@/hooks/useImprovedAutoSave';
 
 import TravelWizardStepBasic from '@/components/travel/TravelWizardStepBasic';
 import TravelWizardStepRoute from '@/components/travel/TravelWizardStepRoute';
 import TravelWizardStepMedia from '@/components/travel/TravelWizardStepMedia';
 import TravelWizardStepDetails from '@/components/travel/TravelWizardStepDetails';
 import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
-import { useAutoSaveForm } from '@/hooks/useAutoSaveForm';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 export default function UpsertTravel() {
@@ -26,58 +28,80 @@ export default function UpsertTravel() {
     const { userId, isAuthenticated, isSuperuser } = useAuth();
     const isSuperAdmin = isSuperuser;
     const isNew = !id;
-    const windowWidth = Dimensions.get('window').width;
-    const isMobile = windowWidth <= 768;
+    
+    // Responsive design with memoization
+    const windowWidth = useMemo(() => Dimensions.get('window').width, []);
+    const isMobile = useMemo(() => windowWidth <= 768, [windowWidth]);
 
     const [currentStep, setCurrentStep] = useState(1);
-    const totalSteps = 5; // 1 — Основное, 2 — Маршрут, 3 — Медиа, 4 — Детали и советы, 5 — Публикация
+    const totalSteps = 5;
 
     const [menuVisible, setMenuVisible] = useState(!isMobile);
     const [markers, setMarkers] = useState<MarkerData[]>([]);
     const [travelDataOld, setTravelDataOld] = useState<Travel | null>(null);
     const [filters, setFilters] = useState<ReturnType<typeof initFilters> | null>(null);
-    const [formData, setFormData] = useState<TravelFormData>(getEmptyFormData(isNew ? null : String(id)));
-    const [snackbarVisible, setSnackbarVisible] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState('');
-    const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
-    const [step1Errors, setStep1Errors] = useState<string[]>([]);
-    const [step1FirstErrorField, setStep1FirstErrorField] = useState<string | null>(null);
+    
+    // Optimized form state management
+    const initialFormData = useMemo(() => getEmptyFormData(isNew ? null : String(id)), [isNew, id]);
+    const formState = useOptimizedFormState(initialFormData, {
+        debounce: 5000,
+        validateOnChange: true,
+        validationDebounce: 300,
+    });
+    
+    // Optimized validation
+    const validation = useOptimizedValidation(formState.data, {
+        debounce: 300,
+        validateOnChange: true,
+    });
+    
+    // Improved autosave
+    const autosave = useImprovedAutoSave(
+        formState.data,
+        initialFormData,
+        {
+            debounce: 5000,
+            onSave: async (data) => {
+                const cleanedData = cleanEmptyFields({ ...data, id: data.id || null });
+                return await saveFormData(cleanedData);
+            },
+            onSuccess: (savedData) => {
+                if (isNew && savedData.id) {
+                    router.replace(`/travel/${savedData.id}`);
+                }
+                showToast('Сохранено успешно!');
+            },
+            onError: (error) => {
+                showToast('Ошибка автосохранения');
+                console.error('Autosave error:', error);
+            },
+            onStart: () => {
+                // Show saving indicator
+            },
+        }
+    );
 
-    const saveFormDataWithId = async (data: TravelFormData) => {
-        const cleanedData = cleanEmptyFields({ ...data, id: data.id || null });
-        return await saveFormData(cleanedData);
-    };
-
-    const applySavedData = (savedData: TravelFormData) => {
+    // Optimized toast notification
+    const showToast = useCallback((message: string) => {
+        Toast.show({
+            type: autosave.hasError ? 'error' : 'success',
+            text1: message,
+        });
+    }, [autosave.hasError]);
+    
+    // Apply saved data with markers synchronization
+    const applySavedData = useCallback((savedData: TravelFormData) => {
         const markersFromData = (savedData.coordsMeTravel as any) || [];
         const syncedCountries = syncCountriesFromMarkers(markersFromData, savedData.countries || []);
 
-        setFormData({
+        formState.updateFields({
             ...savedData,
             countries: syncedCountries,
         });
         setMarkers(markersFromData);
-        resetOriginalData({
-            ...savedData,
-            countries: syncedCountries,
-        });
-    };
-
-    const { resetOriginalData } = useAutoSaveForm(formData, {
-        debounce: 5000,
-        onSave: saveFormDataWithId,
-        onStart: () => setAutosaveStatus('saving'),
-        onSuccess: savedData => {
-            applySavedData(savedData);
-            setAutosaveStatus('saved');
-        },
-        onError: () => {
-            setAutosaveStatus('error');
-            showSnackbar('Ошибка автосохранения');
-        },
-    });
+    }, [formState]);
 
     useEffect(() => {
         let isMounted = true;
@@ -118,31 +142,32 @@ export default function UpsertTravel() {
         };
     }, [id, isNew, isAuthenticated, userId, router]);
 
-    const handleManualSave = async () => {
+    const handleManualSave = useCallback(async () => {
         try {
             await trackWizardEvent('wizard_manual_save', {
                 step: currentStep,
                 is_new: isNew,
                 is_edit: !isNew,
-                status: formData.moderation ? 'moderation' : 'draft',
+                status: formState.data.moderation ? 'moderation' : 'draft',
             });
 
-            const savedData = await saveFormDataWithId(formData);
+            const savedData = await autosave.saveNow();
             applySavedData(savedData);
-            if (isNew && savedData.id) router.replace(`/travel/${savedData.id}`);
-            showSnackbar('Сохранено успешно!');
-        } catch {
-            showSnackbar('Ошибка сохранения');
+        } catch (error) {
+            showToast('Ошибка сохранения');
+            console.error('Manual save error:', error);
         }
-    };
+    }, [currentStep, isNew, formState.data.moderation, autosave, applySavedData, showToast]);
 
-    const handleFinishWizard = async () => {
+    const handleFinishWizard = useCallback(async () => {
         await handleManualSave();
-    };
+    }, [handleManualSave]);
 
     const loadTravelData = async (travelId: string) => {
+        console.log('Loading travel data for ID:', travelId, typeof travelId);
         try {
             const travelData = await fetchTravel(Number(travelId));
+            console.log('Loaded travel data:', travelData?.id, travelData?.name);
 
             // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Проверка прав доступа при редактировании
             if (!isNew && travelData) {
@@ -183,15 +208,11 @@ export default function UpsertTravel() {
             const syncedCountries = syncCountriesFromMarkers(markersFromData, transformed.countries || []);
 
             setTravelDataOld(travelData);
-            setFormData({
+            formState.updateFields({
                 ...transformed,
                 countries: syncedCountries,
             });
             setMarkers(markersFromData);
-            resetOriginalData({
-                ...transformed,
-                countries: syncedCountries,
-            });
         } catch (error) {
             console.error('Ошибка загрузки путешествия:', error);
             Toast.show({
@@ -205,33 +226,21 @@ export default function UpsertTravel() {
         }
     };
 
-    const handleCountrySelect = (countryId: string) => {
-        if (countryId) {
-            setFormData(prevData =>
-                prevData.countries.includes(countryId)
-                    ? prevData
-                    : { ...prevData, countries: [...prevData.countries, countryId] }
-            );
+    const handleCountrySelect = useCallback((countryId: string) => {
+        if (countryId && !formState.data.countries.includes(countryId)) {
+            formState.updateField('countries', [...formState.data.countries, countryId]);
         }
-    };
+    }, [formState]);
 
-    const handleCountryDeselect = (countryId: string) => {
-        setFormData(prevData => ({
-            ...prevData,
-            countries: prevData.countries.filter(id => id !== countryId),
-        }));
-    };
+    const handleCountryDeselect = useCallback((countryId: string) => {
+        formState.updateField('countries', formState.data.countries.filter(id => id !== countryId));
+    }, [formState]);
 
-    const showSnackbar = (message: string) => {
-        setSnackbarMessage(message);
-        setSnackbarVisible(true);
-    };
-
-    const handleNextFromBasic = () => {
+    const handleNextFromBasic = useCallback(() => {
         const result = validateStep(1, {
-            name: formData.name ?? '',
-            description: formData.description ?? '',
-            countries: formData.countries ?? [],
+            name: formState.data.name ?? '',
+            description: formState.data.description ?? '',
+            countries: formState.data.countries ?? [],
         } as any);
 
         const hadErrors = !result.isValid;
@@ -245,16 +254,12 @@ export default function UpsertTravel() {
 
         if (!result.isValid) {
             const requiredMessages = result.errors.map((e: ValidationError) => e.message);
-            setStep1Errors(requiredMessages);
-            setStep1FirstErrorField(result.errors[0]?.field ?? null);
-            showSnackbar('Заполните обязательные поля на шаге "Основное", чтобы перейти дальше.');
+            showToast('Заполните обязательные поля на шаге "Основное", чтобы перейти дальше.');
             return;
         }
 
-        setStep1Errors([]);
-        setStep1FirstErrorField(null);
         setCurrentStep(2);
-    };
+    }, [formState.data, showToast]);
 
     // Показываем загрузку или блокируем доступ
     if (isInitialLoading) {
@@ -281,8 +286,8 @@ export default function UpsertTravel() {
             <TravelWizardStepBasic
                 currentStep={currentStep}
                 totalSteps={totalSteps}
-                formData={formData}
-                setFormData={setFormData}
+                formData={formState.data}
+                setFormData={formState.updateFields}
                 filters={filters}
                 travelDataOld={travelDataOld}
                 isSuperAdmin={isSuperAdmin}
@@ -290,13 +295,13 @@ export default function UpsertTravel() {
                 menuVisible={menuVisible}
                 setMenuVisible={setMenuVisible}
                 onManualSave={handleManualSave}
-                snackbarVisible={snackbarVisible}
-                snackbarMessage={snackbarMessage}
-                onDismissSnackbar={() => setSnackbarVisible(false)}
+                snackbarVisible={autosave.status === 'error'}
+                snackbarMessage={autosave.error?.message || ''}
+                onDismissSnackbar={autosave.clearError}
                 onGoNext={handleNextFromBasic}
-                stepErrors={step1Errors}
-                firstErrorField={step1FirstErrorField}
-                autosaveStatus={autosaveStatus}
+                stepErrors={validation.errors.map(e => e.message)}
+                firstErrorField={validation.errors[0]?.field}
+                autosaveStatus={autosave.status as 'idle' | 'saving' | 'saved' | 'error'}
             />
         );
     }
@@ -312,15 +317,12 @@ export default function UpsertTravel() {
                 markers={markers}
                 setMarkers={(updatedMarkers) => {
                     setMarkers(updatedMarkers);
-                    setFormData(prev => ({
-                        ...prev,
-                        coordsMeTravel: updatedMarkers as any,
-                    }));
+                    formState.updateField('coordsMeTravel', updatedMarkers as any);
                 }}
                 categoryTravelAddress={filters?.categoryTravelAddress || []}
                 countries={filters?.countries || []}
                 isFiltersLoading={!filters}
-                selectedCountryIds={formData.countries}
+                selectedCountryIds={formState.data.countries}
                 onCountrySelect={handleCountrySelect}
                 onCountryDeselect={handleCountryDeselect}
                 onBack={() => {
@@ -331,17 +333,16 @@ export default function UpsertTravel() {
                     setCurrentStep(1);
                 }}
                 onNext={() => {
-                    const validation = validateStep(2, { coordsMeTravel: (formData as any).coordsMeTravel } as any, markers);
-                    const hadErrors = !validation.isValid;
+                    const stepValidation = validateStep(2, { coordsMeTravel: (formState.data as any).coordsMeTravel } as any, markers);
+                    const hadErrors = !stepValidation.isValid;
                     trackWizardEvent('wizard_step_next_click', {
                         step_from: 2,
                         step_to: 3,
                         had_errors: hadErrors,
-                        // На шаге 2 ошибок по полям нет, только общий маркер маршрута
-                        error_fields: validation.errors.map((e: ValidationError) => e.field),
+                        error_fields: stepValidation.errors.map((e: ValidationError) => e.field),
                     });
-                    if (!validation.isValid) {
-                        showSnackbar('Добавьте хотя бы одну точку маршрута, чтобы перейти к медиа');
+                    if (!stepValidation.isValid) {
+                        showToast('Добавьте хотя бы одну точку маршрута, чтобы перейти к медиа');
                         return;
                     }
                     setCurrentStep(3);
@@ -358,8 +359,8 @@ export default function UpsertTravel() {
             <TravelWizardStepMedia
                 currentStep={currentStep}
                 totalSteps={totalSteps}
-                formData={formData}
-                setFormData={setFormData}
+                formData={formState.data}
+                setFormData={formState.updateFields}
                 travelDataOld={travelDataOld}
                 onManualSave={handleManualSave}
                 onBack={() => {
@@ -390,8 +391,8 @@ export default function UpsertTravel() {
             <TravelWizardStepDetails
                 currentStep={currentStep}
                 totalSteps={totalSteps}
-                formData={formData}
-                setFormData={setFormData}
+                formData={formState.data}
+                setFormData={formState.updateFields}
                 onBack={() => {
                     trackWizardEvent('wizard_step_back_click', {
                         step_from: 4,
@@ -416,8 +417,8 @@ export default function UpsertTravel() {
         <TravelWizardStepPublish
             currentStep={currentStep}
             totalSteps={totalSteps}
-            formData={formData}
-            setFormData={setFormData}
+            formData={formState.data}
+            setFormData={formState.updateFields}
             filters={filters}
             travelDataOld={travelDataOld}
             isSuperAdmin={isSuperAdmin}
