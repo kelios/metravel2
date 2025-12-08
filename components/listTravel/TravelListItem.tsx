@@ -9,13 +9,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/src/types/types";
 import OptimizedFavoriteButton from "@/components/OptimizedFavoriteButton";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travelsApi";
-// ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
-import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize, generateSrcSet } from "@/utils/imageOptimization";
-// ✅ ДИЗАЙН: Импорт максимально легкой и воздушной палитры
-import { AIRY_COLORS, AIRY_SHADOWS, AIRY_BOX_SHADOWS } from "@/constants/airyColors";
+import {generateSrcSet } from "@/utils/imageOptimization";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { enhancedTravelCardStyles } from './enhancedTravelCardStyles';
-import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { globalFocusStyles } from '@/styles/globalFocus';
 
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
@@ -135,8 +132,7 @@ function TravelListItem({
         name,
         countryName = "",
         userName,
-        countUnicIpView = 0,
-        number_days = 0,
+        countUnicIpView = 0
     } = travel;
 
     // ✅ УЛУЧШЕНИЕ: Оптимизация превью под карточку с использованием новых утилит
@@ -555,11 +551,6 @@ const styles = StyleSheet.create({
 
   imageContainer: {
     ...enhancedTravelCardStyles.imageContainer,
-  } as any,
-
-  imageContainerMobile: {
-    height: 220,
-    // На мобильных фиксированная высота надежнее, чем aspectRatio
   } as any,
 
   androidOptimized: {

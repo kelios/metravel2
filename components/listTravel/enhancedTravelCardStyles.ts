@@ -89,6 +89,8 @@ export const enhancedTravelCardStyles = StyleSheet.create({
     overflow: "hidden",
     flexDirection: 'column',
     alignSelf: 'stretch',
+    // ✅ FIX: Добавлен marginBottom для создания отступа между карточками
+    marginBottom: Platform.select({ default: 16, web: 20 }),
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -110,7 +112,8 @@ export const enhancedTravelCardStyles = StyleSheet.create({
   imageContainer: {
     position: "relative",
     width: "100%",
-    aspectRatio: Platform.select({ default: 4/3, web: 16/9 }), // 4:3 на мобильных, 16:9 на web
+    // ✅ ИСПРАВЛЕНИЕ: Фиксированная высота для всех платформ для предотвращения обрезки
+    height: Platform.select({ default: 200, web: 240 }),
     backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     overflow: "hidden",
     flexShrink: 0,

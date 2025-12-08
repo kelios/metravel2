@@ -1,6 +1,8 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '@/context/AuthContext';
+import { FavoritesProvider } from '@/context/FavoritesContext';
 import TravelListItem from '@/components/listTravel/TravelListItem';
 import type { Travel } from '@/src/types/types';
 
@@ -22,7 +24,6 @@ const baseTravel: Travel = {
   countUnicIpView: '0',
   gallery: [],
   travelAddress: [],
-  userIds: '42',
   year: '',
   monthName: '',
   number_days: 0,
@@ -40,14 +41,18 @@ const renderItem = (props: Partial<React.ComponentProps<typeof TravelListItem>> 
   const queryClient = createTestClient();
   return render(
     <QueryClientProvider client={queryClient}>
-      <TravelListItem
-        travel={baseTravel}
-        currentUserId={null}
-        isSuperuser={false}
-        isMetravel={false}
-        isMobile={false}
-        {...props}
-      />
+      <AuthProvider>
+        <FavoritesProvider>
+          <TravelListItem
+            travel={baseTravel}
+            currentUserId={null}
+            isSuperuser={false}
+            isMetravel={false}
+            isMobile={false}
+            {...props}
+          />
+        </FavoritesProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

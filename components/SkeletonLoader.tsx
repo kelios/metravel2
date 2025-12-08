@@ -38,10 +38,11 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 
 /**
  * Skeleton для карточки путешествия
+ * ✅ ИСПРАВЛЕНИЕ: Высоты должны совпадать с реальными карточками
  */
 export const TravelCardSkeleton: React.FC = () => {
-  // Адаптивная высота изображения
-  const imageHeight = Platform.select({ default: 180, web: 200 });
+  // ✅ FIX: Унифицированная высота изображения с реальными карточками
+  const imageHeight = Platform.select({ default: 200, web: 240 });
   const titleHeight = Platform.select({ default: 14, web: 16 });
   const metaHeight = Platform.select({ default: 11, web: 12 });
   
@@ -89,23 +90,25 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    borderRadius: DESIGN_TOKENS.radii.lg,
+    maxWidth: '100%',
+    borderRadius: Platform.select({ default: 20, web: 24 }),
     backgroundColor: DESIGN_TOKENS.colors.surface,
     overflow: 'hidden',
-    marginBottom: 16,
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    // ✅ FIX: Обновлен marginBottom для соответствия реальным карточкам
+    marginBottom: Platform.select({ default: 16, web: 20 }),
+    // ✅ ИСПРАВЛЕНИЕ: Тени должны совпадать с реальными карточками
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
       },
       android: {
-        elevation: 2,
+        elevation: 4,
       },
       web: {
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02)',
       },
     }),
   },
@@ -114,7 +117,9 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Platform.select({ default: 14, web: 20 }),
-    gap: 8,
+    paddingTop: Platform.select({ default: 12, web: 16 }),
+    gap: Platform.select({ default: 8, web: 12 }),
+    backgroundColor: '#ffffff',
   },
   marginBottom: {
     marginBottom: 4,

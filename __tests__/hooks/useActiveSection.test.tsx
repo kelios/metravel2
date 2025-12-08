@@ -30,22 +30,23 @@ describe('useActiveSection', () => {
 
   it('updates activeSection when intersection entries indicate visible section', () => {
     const anchors = {
-      'section-1': createRef<any>(),
-      'section-2': createRef<any>(),
+      'section-1': { current: null },
+      'section-2': { current: null },
     }
 
     const { result } = renderHook(() => useActiveSection(anchors, 0))
 
-    // Простая заглушка элемента с data-section-key="section-1"
-    const mockTarget = {
-      getAttribute: (name: string) => (name === 'data-section-key' ? 'section-1' : null),
-      boundingClientRect: {
-        top: 0,
-        bottom: 200,
-      },
-    } as any
-
+    // Wait for the Intersection Observer to be set up
     act(() => {
+      // Simulate the Intersection Observer callback being called directly
+      const mockTarget = {
+        getAttribute: (name: string) => (name === 'data-section-key' ? 'section-1' : null),
+        boundingClientRect: {
+          top: 0,
+          bottom: 200,
+        },
+      } as any
+
       lastObserverCallback?.(
         [
           {

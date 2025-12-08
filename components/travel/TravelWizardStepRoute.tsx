@@ -16,12 +16,14 @@ interface TravelWizardStepRouteProps {
     setMarkers: (data: MarkerData[]) => void;
     categoryTravelAddress: any[];
     countries: any[];
+    travelId?: string | null;
     selectedCountryIds: string[];
     onCountrySelect: (countryId: string) => void;
     onCountryDeselect: (countryId: string) => void;
     onBack: () => void;
     onNext: () => void;
     isFiltersLoading?: boolean;
+    onManualSave?: () => void;
 }
 
 const windowWidth = Dimensions.get('window').width;
@@ -35,12 +37,14 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     setMarkers,
     categoryTravelAddress,
     countries,
+    travelId,
     selectedCountryIds,
     onCountrySelect,
     onCountryDeselect,
     onBack,
     onNext,
     isFiltersLoading,
+    onManualSave,
 }) => {
     const isMobile = isMobileDefault;
 
@@ -133,6 +137,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                         countrylist={countries}
                         onCountrySelect={onCountrySelect}
                         onCountryDeselect={onCountryDeselect}
+                        travelId={travelId ?? undefined}
                     />
                 </View>
             </ScrollView>
@@ -142,6 +147,8 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                 onBack={onBack}
                 onPrimary={handleNext}
                 primaryLabel="К медиа"
+                onSave={onManualSave}
+                saveLabel="Сохранить маршрут"
                 primaryDisabled={!hasAtLeastOnePoint}
             />
         </SafeAreaView>

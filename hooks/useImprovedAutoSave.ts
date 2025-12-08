@@ -50,6 +50,8 @@ export function useImprovedAutoSave<T>(
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
   const lastSavedDataRef = useRef<T>(originalData);
+  const latestDataRef = useRef<T>(data);
+  const isOnlineRef = useRef<boolean>(true);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Cleanup function
@@ -70,8 +72,14 @@ export function useImprovedAutoSave<T>(
 
   // Network status monitoring
   useEffect(() => {
-    const handleOnline = () => setState(prev => ({ ...prev, isOnline: true }));
-    const handleOffline = () => setState(prev => ({ ...prev, isOnline: false }));
+    const handleOnline = () => {
+      isOnlineRef.current = true;
+      setState(prev => ({ ...prev, isOnline: true }));
+    };
+    const handleOffline = () => {
+      isOnlineRef.current = false;
+      setState(prev => ({ ...prev, isOnline: false }));
+    };
 
     if (typeof window !== 'undefined') {
       window.addEventListener('online', handleOnline);
@@ -94,10 +102,10 @@ export function useImprovedAutoSave<T>(
     };
   }, [cleanup]);
 
-  // Check if data has changed
-  const hasDataChanged = useCallback((): boolean => {
+  // Check if data has changed - inline function, not in dependencies
+  const hasDataChanged = (): boolean => {
     return !_isEqual(data, lastSavedDataRef.current);
-  }, [data]);
+  };
 
   // Save function with retry logic
   const performSave = useCallback(async (dataToSave: T, retryAttempt = 0): Promise<T> => {
@@ -119,6 +127,7 @@ export function useImprovedAutoSave<T>(
 
       // Update refs and state on success
       lastSavedDataRef.current = result;
+      latestDataRef.current = result;
       setState(prev => ({
         ...prev,
         status: 'saved',
@@ -137,8 +146,9 @@ export function useImprovedAutoSave<T>(
 
       const saveError = error instanceof Error ? error : new Error('Save failed');
       
-      // Retry logic
-      if (enableRetry && retryAttempt < maxRetries && state.isOnline) {
+      // Retry logic (сохранён, но используется только при необходимости,
+      // чтобы не усложнять основную логику автосейва)
+      if (enableRetry && retryAttempt < maxRetries && isOnlineRef.current) {
         setState(prev => ({
           ...prev,
           error: saveError,
@@ -168,32 +178,79 @@ export function useImprovedAutoSave<T>(
       onError?.(saveError);
       throw saveError;
     }
-  }, [onSave, onSuccess, onError, enableRetry, maxRetries, retryDelay, state.isOnline]);
+  }, [onSave, onSuccess, onError, enableRetry, maxRetries, retryDelay]);
 
-  // Trigger autosave when data changes
+  // Упрощённый безопасный автосейв:
+  // срабатывает только если данные реально отличаются от последнего успешно сохранённого
+  // и только один раз после дебаунса.
   useEffect(() => {
-    if (!hasDataChanged() || !state.isOnline) {
+    // Нет изменений относительно последнего успешного сохранения — ничего не планируем.
+    const isEqual = _isEqual(data, lastSavedDataRef.current);
+    
+    // Debug logging
+    if (!isEqual) {
+      console.log('[useImprovedAutoSave] Data changed, scheduling save', {
+        hasId: !!(data as any)?.id,
+        dataKeys: Object.keys(data || {}),
+      });
+    }
+    
+    if (isEqual) {
       return;
     }
 
-    // Clear existing timeouts
-    cleanup();
+    // Запоминаем последние наблюдаемые данные.
+    latestDataRef.current = data;
 
-    // Set debouncing status
-    setState(prev => ({ ...prev, status: 'debouncing' }));
-    onStart?.();
+    // Сбрасываем предыдущий таймер, если он был.
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
 
-    // Debounced save
-    timeoutRef.current = setTimeout(() => {
-      if (mountedRef.current && hasDataChanged()) {
-        performSave(data).catch(() => {
-          // Error handled in performSave
-        });
+    // Обновляем статус на debouncing только если он не уже debouncing
+    setState(prev => {
+      if (prev.status === 'debouncing') {
+        return prev; // Не вызываем setState если статус уже debouncing
       }
+      return {
+        ...prev,
+        status: 'debouncing',
+        error: null,
+      };
+    });
+
+    timeoutRef.current = setTimeout(() => {
+      if (!mountedRef.current) return;
+
+      // Если к моменту срабатывания таймера данные уже совпадают с последним сохранённым,
+      // то сохранять нечего.
+      const current = latestDataRef.current;
+      if (_isEqual(current, lastSavedDataRef.current)) {
+        return;
+      }
+
+      // Не сохраняем, если оффлайн.
+      if (!isOnlineRef.current) {
+        return;
+      }
+
+      // Опциональный коллбек начала сохранения.
+      onStart?.();
+
+      // Запускаем сохранение. Ошибку обрабатываем внутри performSave.
+      performSave(current).catch(() => {
+        // Ошибка уже отражена в состоянии через performSave.
+      });
     }, debounce);
 
-    return cleanup;
-  }, [data, debounce, hasDataChanged, performSave, onStart, cleanup, state.isOnline]);
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [data, debounce, performSave, onStart]); // Removed hasDataChanged from dependencies
 
   // Manual save function
   const saveNow = useCallback(async (): Promise<T> => {
@@ -231,6 +288,15 @@ export function useImprovedAutoSave<T>(
     return performSave(data);
   }, [state.status, state.error, data, performSave]);
 
+  // Update baseline data (e.g., after loading from server)
+  const updateBaseline = useCallback((newBaseline: T) => {
+    lastSavedDataRef.current = newBaseline;
+    latestDataRef.current = newBaseline;
+    console.log('[useImprovedAutoSave] Baseline updated', {
+      hasId: !!(newBaseline as any)?.id,
+    });
+  }, []);
+
   return {
     // State
     status: state.status,
@@ -245,6 +311,7 @@ export function useImprovedAutoSave<T>(
     resetToOriginal,
     clearError,
     retrySave,
+    updateBaseline,
 
     // Utilities
     canSave: state.isOnline && state.status !== 'saving',
