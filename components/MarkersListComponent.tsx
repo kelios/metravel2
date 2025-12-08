@@ -16,6 +16,7 @@ interface MarkersListComponentProps {
     setEditingIndex: (index: number | null) => void;
     activeIndex?: number | null;
     setActiveIndex?: (index: number | null) => void;
+    travelId?: string | null;
 }
 
 const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
@@ -243,15 +244,24 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
 
                     <div style={styles.field}>
                         <label style={styles.fieldLabel}>Изображение точки</label>
-                        <ImageUploadComponent
-                            collection="travelImageAddress"
-                            idTravel={marker.id}
-                            oldImage={marker.image}
-                            onUpload={(imageUrl) => handleImageUpload(index, imageUrl)}
-                        />
-                        <div style={styles.fieldHint}>
-                            Фото поможет путешественникам узнать место. Можно загрузить одно главное изображение.
-                        </div>
+                        {marker.id == null ? (
+                            <div style={styles.fieldHint}>
+                                Фото можно будет добавить после сохранения маршрута.
+                                Нажмите «Сохранить маршрут» внизу шага и затем откройте точку снова.
+                            </div>
+                        ) : (
+                            <>
+                                <ImageUploadComponent
+                                    collection="travelImageAddress"
+                                    idTravel={marker.id}
+                                    oldImage={marker.image}
+                                    onUpload={(imageUrl) => handleImageUpload(index, imageUrl)}
+                                />
+                                <div style={styles.fieldHint}>
+                                    Фото поможет путешественникам узнать место. Можно загрузить одно главное изображение.
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     <div style={styles.actionsRow}>

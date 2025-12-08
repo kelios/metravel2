@@ -48,9 +48,9 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
     // ✅ УЛУЧШЕНИЕ: Более точные брейкпоинты для адаптивности
     const numColumns = useMemo(() => {
       if (width < 640) return 1; // Мобильные
-      if (width < 1024) return Math.min(maxColumns, 2); // Планшеты
-      if (width < 1440) return Math.min(maxColumns, 3); // Десктопы
-      return Math.min(maxColumns, 3); // Большие десктопы
+      if (width < 1024) return Math.min(maxColumns, 2); // Планшеты портретные
+      if (width < 1280) return Math.min(maxColumns, 2); // Планшеты landscape - исправлено на 2 колонки
+      return Math.min(maxColumns, 3); // Десктопы от 1280px
     }, [width, maxColumns]);
 
     const fetchPopularTravels = useCallback(async () => {

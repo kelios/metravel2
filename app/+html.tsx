@@ -10,7 +10,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
     <html lang="ru">
     <head>
       <meta charSet="utf-8" />
-      <meta name="viewport" content="width=device-width,initial-scale=1" />
+      <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />
 
       {/* Critical Meta */}
       <meta property="og:type" content="website" />
@@ -223,19 +223,21 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
 const criticalCSS = `
 *,*::before,*::after{box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;height:100%}
 body{
   margin:0;
   min-height:100vh;
+  min-height:-webkit-fill-available;
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   line-height:1.6;
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeSpeed;
   color:#1f2937;
   background:linear-gradient(180deg,rgba(246,244,239,0.9) 0%,rgba(249,248,244,0.8) 40%,rgba(255,255,255,0.9) 100%);
+  padding-bottom:env(safe-area-inset-bottom);
 }
 img,picture,video,canvas,svg{display:block;max-width:100%}
-img{height:auto;width:100%}
+img{height:auto;width:100%;object-fit:cover}
 input,button,textarea,select{font:inherit}
 button{cursor:pointer}
 [hidden]{display:none !important}
@@ -255,8 +257,17 @@ img[fetchpriority="high"]{content-visibility:auto;will-change:auto}
 }
 @media (prefers-color-scheme: dark){body{background:#000;color:#fff}}
 :focus-visible{outline:2px solid #007bff;outline-offset:2px}
-/* Оптимизация для предотвращения CLS на мобильных */
+/* ✅ ИСПРАВЛЕНИЕ: Оптимизация для мобильных устройств (320-430px) */
 @media (max-width:768px){
+  html{height:100%;height:-webkit-fill-available}
+  body{min-height:100vh;min-height:-webkit-fill-available;padding-bottom:calc(env(safe-area-inset-bottom) + 80px)}
   img[data-lcp]{min-height:200px;background:#e9e7df}
+  /* Предотвращаем обрезку карточек */
+  [data-card]{margin-bottom:16px;width:100%;max-width:100%}
+  [data-card] img{height:200px;object-fit:cover;width:100%}
+}
+/* ✅ ИСПРАВЛЕНИЕ: Поддержка iOS Safari safe area */
+@supports (padding-bottom: env(safe-area-inset-bottom)){
+  body{padding-bottom:env(safe-area-inset-bottom)}
 }
 `;

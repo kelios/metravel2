@@ -23,7 +23,7 @@ export const RECOMMENDATIONS_VISIBLE_KEY = 'recommendations_visible';
 // ✅ АРХИТЕКТУРА: Breakpoints для адаптивности
 // ✅ ИСПРАВЛЕНИЕ: Добавлены промежуточные breakpoints для лучшей адаптивности
 export const BREAKPOINTS = {
-  MOBILE: 768,
+  MOBILE: 900, // Увеличено с 768 до 900 для одной колонки на маленьких планшетах
   TABLET: 1024,
   TABLET_LANDSCAPE: 1280,
   DESKTOP: 1440,
@@ -35,7 +35,7 @@ export const BREAKPOINTS = {
 export const GRID_COLUMNS = {
   MOBILE: 1,
   TABLET: 2,
-  TABLET_LANDSCAPE: 3,
+  TABLET_LANDSCAPE: 2, // Исправлено: 2 колонки вместо 3 для планшетов в landscape
   DESKTOP: 3,
   DESKTOP_LARGE: 3,
 } as const;

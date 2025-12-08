@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 // CSS загружается через CDN в Map.web.tsx
 import L from 'leaflet';
@@ -55,10 +55,56 @@ const WebMapComponent = ({
                              countrylist,
                              onCountrySelect,
                              onCountryDeselect,
+                             travelId,
                          }) => {
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
+    
+    // Локальное состояние маркеров для немедленного отображения изменений
+    const [localMarkers, setLocalMarkers] = useState(markers);
+    const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const lastMarkersRef = useRef(markers);
+    
+    // Синхронизируем локальное состояние с пропсами только при реальных изменениях
+    useEffect(() => {
+        // Проверяем, действительно ли маркеры изменились (по длине и первому элементу)
+        const markersChanged = 
+            markers.length !== lastMarkersRef.current.length ||
+            (markers.length > 0 && lastMarkersRef.current.length > 0 && 
+             markers[0] !== lastMarkersRef.current[0]);
+        
+        if (markersChanged) {
+            setLocalMarkers(markers);
+            lastMarkersRef.current = markers;
+        }
+    }, [markers]);
+    
+    // Debounced обновление родительского компонента
+    const debouncedMarkersChange = useCallback((updatedMarkers: any[]) => {
+        // Обновляем локальное состояние немедленно для UI
+        setLocalMarkers(updatedMarkers);
+        
+        // Отменяем предыдущий таймер
+        if (updateTimeoutRef.current) {
+            clearTimeout(updateTimeoutRef.current);
+        }
+        
+        // Увеличен debounce до 1000ms для синхронизации с UpsertTravel
+        updateTimeoutRef.current = setTimeout(() => {
+            onMarkersChange(updatedMarkers);
+            lastMarkersRef.current = updatedMarkers;
+        }, 1000);
+    }, [onMarkersChange]);
+    
+    // Cleanup при размонтировании
+    useEffect(() => {
+        return () => {
+            if (updateTimeoutRef.current) {
+                clearTimeout(updateTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const isValidCoordinates = ({ lat, lng }) =>
         lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
@@ -88,8 +134,8 @@ const WebMapComponent = ({
             }
         }
 
-        onMarkersChange([...markers, newMarker]);
-        setActiveIndex(markers.length);
+        debouncedMarkersChange([...localMarkers, newMarker]);
+        setActiveIndex(localMarkers.length);
     };
 
     const handleEditMarker = (index: number) => {
@@ -99,21 +145,21 @@ const WebMapComponent = ({
     };
 
     const handleMarkerChange = (index: number, field: string, value: any) => {
-        const updated = [...markers];
+        const updated = [...localMarkers];
         updated[index] = { ...updated[index], [field]: value };
-        onMarkersChange(updated);
+        debouncedMarkersChange(updated);
     };
 
     const handleImageUpload = (index: number, imageUrl: string) => {
-        const updated = [...markers];
+        const updated = [...localMarkers];
         updated[index].image = imageUrl;
-        onMarkersChange(updated);
+        debouncedMarkersChange(updated);
     };
 
     const handleMarkerRemove = (index: number) => {
-        const removed = markers[index];
-        const updated = markers.filter((_, i) => i !== index);
-        onMarkersChange(updated);
+        const removed = localMarkers[index];
+        const updated = localMarkers.filter((_, i) => i !== index);
+        debouncedMarkersChange(updated);
 
         if (removed.country) {
             const stillExists = updated.some(m => m.country === removed.country);
@@ -128,8 +174,8 @@ const WebMapComponent = ({
             <MapContainer center={[51.505, -0.09]} zoom={13} style={{ height: 500 }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <MapClickHandler addMarker={addMarker} />
-                <FitBounds markers={markers} />
-                {markers.map((marker, idx) => (
+                <FitBounds markers={localMarkers} />
+                {localMarkers.map((marker, idx) => (
                     <Marker
                         key={idx}
                         position={[marker.lat, marker.lng]}
@@ -198,7 +244,7 @@ const WebMapComponent = ({
                 }}>
                     {isExpanded && (
                         <MarkersListComponent
-                            markers={markers}
+                            markers={localMarkers}
                             categoryTravelAddress={categoryTravelAddress}
                             handleMarkerChange={handleMarkerChange}
                             handleImageUpload={handleImageUpload}
@@ -207,6 +253,7 @@ const WebMapComponent = ({
                             setEditingIndex={setEditingIndex}
                             activeIndex={activeIndex}
                             setActiveIndex={setActiveIndex}
+                            travelId={travelId}
                         />
                     )}
                 </div>

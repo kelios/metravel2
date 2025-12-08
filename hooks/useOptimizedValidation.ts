@@ -48,7 +48,7 @@ export function useOptimizedValidation<T extends Record<string, any>>(
   // Optimized validation with debouncing
   const validate = useCallback((force = false): Promise<ValidationResult> => {
     return new Promise((resolve) => {
-      // Skip validation if data hasn't changed and not forced
+      // Skip validation if data hasn't changed and не форсируем проверку
       if (!force && _isEqual(data, lastValidatedDataRef.current)) {
         resolve({ isValid: state.isValid, errors: state.errors });
         return;
@@ -96,7 +96,7 @@ export function useOptimizedValidation<T extends Record<string, any>>(
         }
       }, debounce);
     });
-  }, [data, debounce, state.isValid, state.errors]);
+  }, [data, debounce]);
 
   // Auto-validate on data change
   useEffect(() => {

@@ -349,7 +349,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         cursor: 'pointer',
         backgroundColor: palette.primarySoft,
-        outline: 'none',
         overflow: 'hidden',
         transition: 'all 0.2s ease',
     },

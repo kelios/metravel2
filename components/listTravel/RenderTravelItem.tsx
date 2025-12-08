@@ -50,7 +50,8 @@ function RenderTravelItem({
         const base: ContainerStyle = {
             borderRadius: radii.lg,
             overflow: Platform.OS === "android" ? "visible" : "hidden",
-            marginBottom: isMobile ? spacing.sm : spacing.md,
+            // ✅ FIX: Убран marginBottom - он уже есть в enhancedTravelCardStyles.card
+            // Двойной marginBottom создавал "дыры" между карточками (12px + 10px = 22px)
             backgroundColor: 'white',
             // Platform-specific shadows
             ...(Platform.OS === 'web' 
@@ -75,18 +76,21 @@ function RenderTravelItem({
             return {
                 ...base,
                 width: "100%",
-                marginBottom: spacing.sm,
+                maxWidth: "100%", // Явно ограничиваем ширину
                 overflow: "hidden",
+                // ✅ FIX: Убран дублирующий marginBottom
             };
         }
 
+        // Для desktop/tablet в сетке
         return {
             ...base,
             flex: 1,
-            minWidth: 0,
-            marginHorizontal: spacing.sm,
+            minWidth: 0, // Важно для flexbox
+            maxWidth: "100%", // Предотвращаем переполнение
+            // Убираем marginHorizontal - отступы управляются через gap в columnWrapperStyle
         };
-    }, [isMobile, isSingle]); // Убрали isTablet из зависимостей, так как она не используется
+    }, [isMobile, isSingle]);
 
     const selectedStyle = useMemo<ViewStyle>(() => ({
         borderWidth: 2,

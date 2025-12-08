@@ -17,6 +17,7 @@ interface TravelWizardStepDetailsProps {
     setFormData: React.Dispatch<React.SetStateAction<TravelFormData>>;
     onBack: () => void;
     onNext: () => void;
+    onManualSave?: () => void;
 }
 
 const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
@@ -26,6 +27,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
     setFormData,
     onBack,
     onNext,
+    onManualSave,
 }) => {
     const idTravelStr = useMemo(
         () => (formData?.id != null ? String(formData.id) : undefined),
@@ -139,6 +141,8 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                 canGoBack={true}
                 onBack={onBack}
                 onPrimary={onNext}
+                onSave={onManualSave}
+                saveLabel="Сохранить"
                 primaryLabel="К публикации"
             />
         </SafeAreaView>

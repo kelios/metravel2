@@ -1,46 +1,53 @@
 // ListTravel.tsx
-import React, {
-    memo,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    lazy,
-    Suspense,
-} from "react";
+import React, { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    View,
-    useWindowDimensions,
-    Platform,
-    Pressable,
-    NativeScrollEvent,
-    NativeSyntheticEvent,
-    RefreshControl,
-    Animated,
-    Modal,
-    TextInput,
-} from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams, useRouter, usePathname } from "expo-router";
-import { useRoute } from "@react-navigation/native";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Feather } from "@expo/vector-icons";
-
-import RenderTravelItem from "./RenderTravelItem";
-import StickySearchBar from "@/components/mainPage/StickySearchBar";
-import ModernFilters from "./ModernFilters";
-import ConfirmDialog from "../ConfirmDialog";
-import UIButton from '@/components/ui/Button';
-import HeroSection from "./HeroSection";
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useAuth } from '@/context/AuthContext';
+  ActivityIndicator,
+  Alert,
+  Animated,
+  FlatList,
+  Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View
+} from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { useLocalSearchParams, usePathname, useRouter } from 'expo-router'
+import { useRoute } from '@react-navigation/native'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import RenderTravelItem from './RenderTravelItem'
+import StickySearchBar from '@/components/mainPage/StickySearchBar'
+import ModernFilters from './ModernFilters'
+import ConfirmDialog from '../ConfirmDialog'
+import UIButton from '@/components/ui/Button'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useAuth } from '@/context/AuthContext'
+import { fetchAllFiltersOptimized } from '@/src/api/miscOptimized'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { TravelListSkeleton } from '@/components/SkeletonLoader'
+import EmptyState from '@/components/EmptyState'
+import CategoryChips from '@/components/CategoryChips'
+import ProgressIndicator from '@/components/ProgressIndicator'
+import ScrollToTopButton from '@/components/ScrollToTopButton'
+// ✅ АРХИТЕКТУРА: Импорт констант, типов, утилит и хуков
+import {
+  BREAKPOINTS,
+  FLATLIST_CONFIG,
+  FLATLIST_CONFIG_MOBILE,
+  MAX_VISIBLE_CATEGORIES,
+  PER_PAGE,
+  RECOMMENDATIONS_VISIBLE_KEY
+} from './utils/listTravelConstants'
+import { useListTravelVisibility } from './hooks/useListTravelVisibility'
+import { useListTravelFilters } from './hooks/useListTravelFilters'
+import { useListTravelData } from './hooks/useListTravelData'
+import { useListTravelExport } from './hooks/useListTravelExport'
+import { calculateCategoriesWithCount, calculateColumns, isMobile as checkIsMobile } from './utils/listTravelHelpers'
 
 // Ленивая загрузка объединенного компонента с табами
 // @ts-ignore - Dynamic imports are supported in runtime
@@ -59,17 +66,6 @@ const RecommendationsTabs = lazy(() => {
     return import('./RecommendationsTabs');
 });
 
-import { fetchTravels } from "@/src/api/travelsApi";
-import { fetchAllFiltersOptimized } from "@/src/api/miscOptimized";
-import { Travel } from "@/src/types/types";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { TravelListSkeleton } from "@/components/SkeletonLoader";
-import EmptyState from "@/components/EmptyState";
-import CategoryChips from "@/components/CategoryChips";
-import ProgressIndicator from "@/components/ProgressIndicator";
-import ScrollToTopButton from "@/components/ScrollToTopButton";
-import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
-
 const palette = DESIGN_TOKENS.colors;
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
@@ -87,24 +83,6 @@ const deleteTravel = async (id: string): Promise<void> => {
 
 // @ts-ignore - Dynamic imports are supported in runtime
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
-
-// ✅ АРХИТЕКТУРА: Импорт констант, типов, утилит и хуков
-import {
-  PER_PAGE,
-  PERSONALIZATION_VISIBLE_KEY,
-  WEEKLY_HIGHLIGHTS_VISIBLE_KEY,
-  RECOMMENDATIONS_VISIBLE_KEY,
-  MAX_VISIBLE_CATEGORIES,
-  FLATLIST_CONFIG,
-  FLATLIST_CONFIG_MOBILE,
-  BREAKPOINTS,
-} from "./utils/listTravelConstants";
-import { useListTravelVisibility } from "./hooks/useListTravelVisibility";
-import { useListTravelFilters } from "./hooks/useListTravelFilters";
-import { useListTravelData } from "./hooks/useListTravelData";
-import { useListTravelExport } from "./hooks/useListTravelExport";
-import { calculateColumns, isMobile as checkIsMobile, calculateCategoriesWithCount } from "./utils/listTravelHelpers";
-import type { FilterState } from "./utils/listTravelTypes";
 
 // ✅ УЛУЧШЕНИЕ: Улучшенный skeleton для рекомендаций
 const RecommendationsPlaceholder = () => (
@@ -566,7 +544,8 @@ function ListTravel({
 
     // ✅ АДАПТИВНОСТЬ: Динамические отступы в зависимости от устройства
     const contentPadding = useMemo(() => {
-      if (isMobile) return spacing.sm;
+      // ✅ FIX: Увеличен отступ для мобильных до spacing.md (14px)
+      if (isMobile) return spacing.md;
       if (isTablet) return spacing.md;
       return spacing.lg;
     }, [isMobile, isTablet]);
@@ -601,26 +580,36 @@ function ListTravel({
     const onMomentumBegin = useCallback(() => {
         onMomentumRef.current = false;
     }, []);
+    
+    // Оптимизированный обработчик прокрутки с минимальными операциями
     const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
         const { contentSize, layoutMeasurement, contentOffset } = e.nativeEvent;
+        
+        // Проверка для автоматической подгрузки
         if (contentSize.height <= layoutMeasurement.height * 1.05) {
             onMomentumRef.current = true;
         }
+        
+        // Сохранение позиции скролла только для web с оптимизацией
         if (Platform.OS === 'web') {
             const offsetY = contentOffset.y;
             
-            // Simple debounce with threshold to reduce sessionStorage calls
-            if (Math.abs(offsetY - lastScrollOffsetRef.current) > 50) {
+            // Увеличен порог до 100px для меньшего количества записей
+            if (Math.abs(offsetY - lastScrollOffsetRef.current) > 100) {
+                // Отменяем предыдущий таймер
                 if (saveScrollTimeoutRef.current) {
-                    cancelAnimationFrame(saveScrollTimeoutRef.current);
+                    clearTimeout(saveScrollTimeoutRef.current);
                 }
-                saveScrollTimeoutRef.current = requestAnimationFrame(() => {
+                
+                // Используем setTimeout вместо requestAnimationFrame для лучшей производительности
+                saveScrollTimeoutRef.current = setTimeout(() => {
                     try {
                         window.sessionStorage.setItem('travel-list-scroll', String(offsetY));
                         lastScrollOffsetRef.current = offsetY;
-                    } catch (error) {}
-                    saveScrollTimeoutRef.current = null;
-                });
+                    } catch (error) {
+                        // Игнорируем ошибки sessionStorage
+                    }
+                }, 300) as any; // Debounce 300ms
             }
         }
     }, []);
@@ -652,31 +641,27 @@ function ListTravel({
 
     const displayData = travels;
 
-    // ✅ UX УЛУЧШЕНИЕ: Подсчитываем количество активных фильтров
+    // ✅ UX УЛУЧШЕНИЕ: Подсчитываем количество активных фильтров с мемоизацией
     const activeFiltersCount = useMemo(() => {
       let count = 0;
       
-      if (filter.categories && filter.categories.length > 0) {
-        count += filter.categories.length;
-      }
-      if (filter.transports && filter.transports.length > 0) {
-        count += filter.transports.length;
-      }
-      if (filter.categoryTravelAddress && filter.categoryTravelAddress.length > 0) {
-        count += filter.categoryTravelAddress.length;
-      }
-      if (filter.companions && filter.companions.length > 0) {
-        count += filter.companions.length;
-      }
-      if (filter.complexity && filter.complexity.length > 0) {
-        count += filter.complexity.length;
-      }
-      if (filter.month && filter.month.length > 0) {
-        count += filter.month.length;
-      }
-      if (filter.over_nights_stay && filter.over_nights_stay.length > 0) {
-        count += filter.over_nights_stay.length;
-      }
+      // Оптимизированный подсчет через reduce
+      const filterKeys = [
+        'categories',
+        'transports', 
+        'categoryTravelAddress',
+        'companions',
+        'complexity',
+        'month',
+        'over_nights_stay'
+      ] as const;
+      
+      filterKeys.forEach(key => {
+        const value = filter[key];
+        if (Array.isArray(value) && value.length > 0) {
+          count += value.length;
+        }
+      });
       if (filter.year) {
         count += 1;
       }
@@ -1152,6 +1137,12 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#fafbfc',
+    // ✅ ИСПРАВЛЕНИЕ: Учитываем safe area для iOS
+    ...Platform.select({
+      web: {
+        paddingBottom: 'env(safe-area-inset-bottom)' as any,
+      },
+    }),
   },
   container: {
     flex: 1,
@@ -1258,7 +1249,10 @@ const styles = StyleSheet.create({
     }),
   },
   listContentMobile: {
-    paddingBottom: Platform.select({ default: spacing.xl, web: 100 }),
+    // ✅ FIX: Увеличен paddingBottom для учета нижней навигации
+    // 60px навигация + 34px safe area (iOS) + 26px отступ = 120px
+    paddingBottom: Platform.select({ default: 120, web: 120 }),
+    // paddingHorizontal уже установлен через contentPadding
   },
   columnWrapper: { 
     gap: 15,
