@@ -64,18 +64,21 @@ export function deduplicateTravels(travels: Travel[]): Travel[] {
 // ✅ ОПТИМИЗАЦИЯ: Улучшена адаптивность для всех устройств с учетом читаемости
 export function calculateColumns(width: number): number {
   if (width < BREAKPOINTS.MOBILE) {
-    return GRID_COLUMNS.MOBILE; // < 768px: 1 колонка
+    return GRID_COLUMNS.MOBILE;
   }
   if (width < BREAKPOINTS.TABLET) {
-    return GRID_COLUMNS.TABLET; // 768-1024px: 2 колонки
+    return GRID_COLUMNS.TABLET;
   }
   if (width < BREAKPOINTS.TABLET_LANDSCAPE) {
-    return GRID_COLUMNS.TABLET_LANDSCAPE; // 1024-1280px: 2 колонки
+    return GRID_COLUMNS.TABLET_LANDSCAPE;
   }
   if (width < BREAKPOINTS.DESKTOP) {
-    return GRID_COLUMNS.TABLET_LANDSCAPE; // 1280-1440px: держим 2 колонки для более "воздушной" сетки
+    return GRID_COLUMNS.DESKTOP;
   }
-  return GRID_COLUMNS.DESKTOP; // > 1440px: максимум 3 колонки на очень широких экранах
+  if (width < BREAKPOINTS.DESKTOP_LARGE) {
+    return GRID_COLUMNS.DESKTOP;
+  }
+  return GRID_COLUMNS.DESKTOP_LARGE;
 }
 
 // ✅ АРХИТЕКТУРА: Определение badges для социального доказательства

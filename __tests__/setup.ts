@@ -3,6 +3,11 @@ import '@testing-library/jest-native/extend-expect'
 // Ensure critical Expo env vars exist for API clients referenced in tests
 process.env.EXPO_PUBLIC_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://example.test/api'
 
+// Polyfill TextEncoder/TextDecoder for JSDOM environment
+import { TextEncoder, TextDecoder } from 'util'
+global.TextEncoder = TextEncoder
+global.TextDecoder = TextDecoder
+
 // Basic DOM polyfills for react-native-web components used in tests
 if (typeof window === 'undefined') {
   ;(global as any).window = {

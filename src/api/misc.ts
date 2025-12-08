@@ -48,9 +48,6 @@ export const saveFormData = async (data: TravelFormData): Promise<TravelFormData
     }
 
     const responseData = await safeJsonParse<TravelFormData>(response);
-    if (__DEV__) {
-      console.log('Данные успешно сохранены:', responseData);
-    }
     return responseData;
   } catch (error) {
     if (__DEV__) {

@@ -1,0 +1,273 @@
+/**
+ * Performance monitoring and optimization script
+ * Measures Core Web Vitals and provides optimization suggestions
+ */
+
+export interface PerformanceMetrics {
+  lcp: number; // Largest Contentful Paint
+  fid: number; // First Input Delay
+  cls: number; // Cumulative Layout Shift
+  ttfb: number; // Time to First Byte
+  fcp: number; // First Contentful Paint
+  loadTime: number; // Page load time
+}
+
+export class PerformanceMonitor {
+  private metrics: Partial<PerformanceMetrics> = {};
+  private observers: PerformanceObserver[] = [];
+
+  constructor() {
+    if (typeof window === 'undefined') return;
+    this.init();
+  }
+
+  private init() {
+    this.measureLCP();
+    this.measureFID();
+    this.measureCLS();
+    this.measureTTFB();
+    this.measureFCP();
+    this.measureLoadTime();
+  }
+
+  private measureLCP() {
+    try {
+      const observer = new PerformanceObserver((entryList) => {
+        const entries = entryList.getEntries();
+        const lastEntry = entries[entries.length - 1];
+        this.metrics.lcp = lastEntry.startTime;
+        
+        // Send to analytics if needed
+        this.sendMetric('lcp', lastEntry.startTime);
+      });
+      observer.observe({ entryTypes: ['largest-contentful-paint'] });
+      this.observers.push(observer);
+    } catch (e) {
+      console.warn('[Performance] LCP measurement not supported');
+    }
+  }
+
+  private measureFID() {
+    try {
+      const observer = new PerformanceObserver((entryList) => {
+        const entries = entryList.getEntries();
+        entries.forEach((entry: any) => {
+          const fid = entry.processingStart - entry.startTime;
+          this.metrics.fid = fid;
+          this.sendMetric('fid', fid);
+        });
+      });
+      observer.observe({ entryTypes: ['first-input'] });
+      this.observers.push(observer);
+    } catch (e) {
+      console.warn('[Performance] FID measurement not supported');
+    }
+  }
+
+  private measureCLS() {
+    try {
+      let clsValue = 0;
+      const observer = new PerformanceObserver((entryList) => {
+        const entries = entryList.getEntries();
+        entries.forEach((entry: any) => {
+          if (!entry.hadRecentInput) {
+            clsValue += entry.value;
+            this.metrics.cls = clsValue;
+            this.sendMetric('cls', clsValue);
+          }
+        });
+      });
+      observer.observe({ entryTypes: ['layout-shift'] });
+      this.observers.push(observer);
+    } catch (e) {
+      console.warn('[Performance] CLS measurement not supported');
+    }
+  }
+
+  private measureTTFB() {
+    if (performance.timing) {
+      const ttfb = performance.timing.responseStart - performance.timing.requestStart;
+      this.metrics.ttfb = ttfb;
+      this.sendMetric('ttfb', ttfb);
+    }
+  }
+
+  private measureFCP() {
+    try {
+      const observer = new PerformanceObserver((entryList) => {
+        const entries = entryList.getEntries();
+        const fcpEntry = entries.find(entry => entry.name === 'first-contentful-paint');
+        if (fcpEntry) {
+          this.metrics.fcp = fcpEntry.startTime;
+          this.sendMetric('fcp', fcpEntry.startTime);
+        }
+      });
+      observer.observe({ entryTypes: ['paint'] });
+      this.observers.push(observer);
+    } catch (e) {
+      console.warn('[Performance] FCP measurement not supported');
+    }
+  }
+
+  private measureLoadTime() {
+    window.addEventListener('load', () => {
+      if (performance.timing) {
+        const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+        this.metrics.loadTime = loadTime;
+        this.sendMetric('loadTime', loadTime);
+      }
+    });
+  }
+
+  private sendMetric(name: string, value: number) {
+    // Send to analytics service (Google Analytics, etc.)
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'web_vitals', {
+        name,
+        value: Math.round(value),
+        event_category: 'Performance'
+      });
+    }
+  }
+
+  public getMetrics(): PerformanceMetrics {
+    return this.metrics as PerformanceMetrics;
+  }
+
+  public getOptimizationSuggestions(): string[] {
+    const suggestions: string[] = [];
+    const metrics = this.metrics;
+
+    if (!metrics.lcp) return ['Waiting for LCP measurement...'];
+
+    // LCP suggestions
+    if (metrics.lcp > 2500) {
+      suggestions.push('LCP > 2.5s: Optimize largest contentful paint');
+      suggestions.push('- Preload LCP image');
+      suggestions.push('- Use WebP format for images');
+      suggestions.push('- Remove render-blocking resources');
+    }
+
+    // FID suggestions
+    if (metrics.fid && metrics.fid > 100) {
+      suggestions.push('FID > 100ms: Reduce first input delay');
+      suggestions.push('- Minimize JavaScript execution time');
+      suggestions.push('- Use code splitting');
+      suggestions.push('- Reduce main thread work');
+    }
+
+    // CLS suggestions
+    if (metrics.cls && metrics.cls > 0.1) {
+      suggestions.push('CLS > 0.1: Reduce cumulative layout shift');
+      suggestions.push('- Specify image dimensions');
+      suggestions.push('- Reserve space for dynamic content');
+      suggestions.push('- Avoid inserting content above existing content');
+    }
+
+    // TTFB suggestions
+    if (metrics.ttfb && metrics.ttfb > 600) {
+      suggestions.push('TTFB > 600ms: Improve server response time');
+      suggestions.push('- Use CDN');
+      suggestions.push('- Enable compression');
+      suggestions.push('- Optimize backend performance');
+    }
+
+    return suggestions;
+  }
+
+  public destroy() {
+    this.observers.forEach(observer => observer.disconnect());
+    this.observers = [];
+  }
+}
+
+// Initialize performance monitoring
+export function initPerformanceMonitoring() {
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+    const monitor = new PerformanceMonitor();
+    
+    // Log suggestions after page load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const suggestions = monitor.getOptimizationSuggestions();
+        if (suggestions.length > 0) {
+          // Send suggestions to analytics silently
+        }
+      }, 3000);
+    });
+
+    return monitor;
+  }
+  return null;
+}
+
+// Resource timing analysis
+export function analyzeResourceTiming() {
+  if (typeof window === 'undefined' || !performance.getEntriesByType) {
+    return;
+  }
+
+  const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
+  const analysis = {
+    totalResources: resources.length,
+    totalSize: 0,
+    slowResources: [] as PerformanceResourceTiming[],
+    largeResources: [] as PerformanceResourceTiming[],
+    cachedResources: 0,
+  };
+
+  resources.forEach(resource => {
+    // Calculate transfer size (approximate)
+    const size = resource.transferSize || 0;
+    analysis.totalSize += size;
+
+    // Check if resource was cached
+    if (resource.transferSize === 0 && resource.decodedBodySize > 0) {
+      analysis.cachedResources++;
+    }
+
+    // Identify slow resources (>2 seconds)
+    if (resource.duration > 2000) {
+      analysis.slowResources.push(resource);
+    }
+
+    // Identify large resources (>1MB)
+    if (size > 1024 * 1024) {
+      analysis.largeResources.push(resource);
+    }
+  });
+
+  console.table(analysis);
+  
+  // Log specific issues
+  if (analysis.slowResources.length > 0) {
+    console.warn('[Performance] Slow resources found:', analysis.slowResources.map(r => r.name));
+  }
+  
+  if (analysis.largeResources.length > 0) {
+    console.warn('[Performance] Large resources found:', analysis.largeResources.map(r => r.name));
+  }
+
+  return analysis;
+}
+
+// Memory usage monitoring
+export function monitorMemoryUsage() {
+  if (typeof window === 'undefined' || !(performance as any).memory) {
+    return;
+  }
+
+  const memory = (performance as any).memory;
+  const usage = {
+    used: memory.usedJSHeapSize,
+    total: memory.totalJSHeapSize,
+    limit: memory.jsHeapSizeLimit,
+    percentage: (memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100,
+  };
+
+  if (usage.percentage > 80) {
+    console.warn('[Memory] High memory usage detected!');
+  }
+
+  return usage;
+}

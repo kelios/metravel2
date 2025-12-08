@@ -197,6 +197,7 @@ function RecommendationsTabs({ forceVisible, onVisibilityChange }: Recommendatio
                         <PersonalizedRecommendations 
                             forceVisible={true}
                             onVisibilityChange={() => {}}
+                            showHeader={false}
                         />
                     </Suspense>
                 )}
@@ -206,6 +207,7 @@ function RecommendationsTabs({ forceVisible, onVisibilityChange }: Recommendatio
                         <WeeklyHighlights 
                             forceVisible={true}
                             onVisibilityChange={() => {}}
+                            showHeader={false}
                         />
                     </Suspense>
                 )}

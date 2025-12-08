@@ -7,18 +7,19 @@ import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/src/types/types";
-import FavoriteButton from "@/components/FavoriteButton";
+import OptimizedFavoriteButton from "@/components/OptimizedFavoriteButton";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travelsApi";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize, generateSrcSet } from "@/utils/imageOptimization";
 // ✅ ДИЗАЙН: Импорт максимально легкой и воздушной палитры
 import { AIRY_COLORS, AIRY_SHADOWS, AIRY_BOX_SHADOWS } from "@/constants/airyColors";
-import { DESIGN_TOKENS } from "@/constants/designSystem";
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { enhancedTravelCardStyles } from './enhancedTravelCardStyles';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
-const ICON_COLOR = "#111827"; // тёмные иконки под светлое стекло
+const ICON_COLOR = "#111827"; // тёмкие иконки под светлое стекло
 
 const WebImageOptimized = memo(function WebImageOptimized({
                                                               src,
@@ -29,25 +30,18 @@ const WebImageOptimized = memo(function WebImageOptimized({
     alt: string;
     priority?: boolean;
 }) {
-    // ✅ УЛУЧШЕНИЕ: Используем новые утилиты для генерации srcset
-    const srcset = useMemo(() => {
-        if (!src) return undefined;
-        const sizes = [400, 600, 800, 1200];
-        return generateSrcSet(src, sizes);
-    }, [src]);
-
-    // Определяем sizes для правильного выбора изображения
-    const sizesAttr = useMemo(() => {
-        return "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw";
-    }, []);
-
-    // RN Web допускает нативный <img>, TS может ругаться в некоторых конфигурациях — это безопасно.
-    // eslint-disable-next-line jsx-a11y/alt-text
+    // Дополнительная проверка для SSR
+    if (Platform.OS !== 'web' || typeof document === 'undefined') {
+        return null;
+    }
+    
+    const imageSrcSet = useMemo(() => generateSrcSet(src, [400, 800, 1200]), [src]);
+    const imageSizes = useMemo(() => "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw", []);
     return (
         <img
             src={src}
-            srcSet={srcset}
-            sizes={sizesAttr}
+            srcSet={imageSrcSet}
+            sizes={imageSizes}
             alt={alt}
             style={{
                 width: "100%",
@@ -149,24 +143,9 @@ function TravelListItem({
     const imgUrl = useMemo(() => {
         if (!travel_image_thumb_url) return null;
         
-        const versionedUrl = buildVersionedImageUrl(
-            travel_image_thumb_url,
-            (travel as any).updated_at,
-            travel.id
-        );
-        
-        const targetW = isSingle ? 600 : 400;
-        const targetH = Math.floor(targetW * 0.75);
-        const optimalSize = getOptimalImageSize(targetW, targetH);
-        
-        return optimizeImageUrl(versionedUrl, {
-            width: optimalSize.width,
-            height: optimalSize.height,
-            format: 'webp',
-            quality: 75,
-            fit: 'cover',
-        }) || versionedUrl;
-    }, [travel_image_thumb_url, isSingle, travel]);
+        // Упрощенная обработка - меньше вычислений при скролле
+        return travel_image_thumb_url;
+    }, [travel_image_thumb_url]);
 
     const viewsFormatted = useMemo(() => {
         const views = Number(countUnicIpView) || 0;
@@ -263,16 +242,30 @@ function TravelListItem({
         }
     }, [selectable, onToggle, slug, id, router, queryClient]);
 
-    const handleEdit = useCallback(() => {
+    const handleEdit = useCallback((e?: any) => {
+        // Предотвращаем всплытие и стандартное поведение на веб-платформе
+        if (e) {
+            e.stopPropagation();
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+        }
+        console.log('Edit travel ID:', id, typeof id);
         router.push(`/travel/${id}`);
     }, [id]);
 
-    const handleDelete = useCallback(() => {
+    const handleDelete = useCallback((e?: any) => {
+        // Предотвращаем всплытие и стандартное поведение на веб-платформе
+        if (e) {
+            e.stopPropagation();
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+        }
         onDeletePress?.(id);
     }, [id, onDeletePress]);
 
-    const [hovered, setHovered] = useState(false);
-
+    
     // ✅ FIX: On web (non-selectable), we wrap card in <a>, so use View instead of Pressable to avoid nested buttons
     const CardWrapper = (Platform.OS === 'web' && !selectable) ? View : Pressable;
     const cardWrapperProps = (Platform.OS === 'web' && !selectable) 
@@ -331,18 +324,21 @@ function TravelListItem({
               style={styles.favoriteButtonContainer}
               pointerEvents="box-none"
               {...(Platform.OS === 'web' && {
-                onClick: (e: any) => e.stopPropagation(),
+                onClick: (e: any) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                },
                 onMouseDown: (e: any) => e.stopPropagation(),
               })}
             >
-              <FavoriteButton
+              <OptimizedFavoriteButton
                 id={id}
                 type="travel"
                 title={name}
                 imageUrl={travel_image_thumb_url}
                 url={travelUrl}
                 country={countries[0]}
-                size={18}
+                size={Platform.select({ default: 16, web: 18 })}
               />
             </View>
           )}
@@ -353,44 +349,77 @@ function TravelListItem({
               style={styles.adminActionsContainer}
               pointerEvents="box-none"
               {...(Platform.OS === "web" && {
-                onClick: (e: any) => e.stopPropagation(),
+                onClick: (e: any) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                },
                 onMouseDown: (e: any) => e.stopPropagation(),
               })}
             >
               <Pressable 
-                onPress={handleEdit} 
+                onPress={(e) => handleEdit(e)} 
                 hitSlop={10} 
                 style={styles.adminBtn}
                 accessibilityRole="button"
                 accessibilityLabel="Редактировать"
+                {...(Platform.OS === 'web' && {
+                  onClick: (e: any) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    handleEdit(e);
+                  },
+                  onMouseDown: (e: any) => e.stopPropagation(),
+                })}
               >
-                <Feather name="edit-2" size={16} color="#1e293b" />
+                <Feather name="edit-2" size={Platform.select({ default: 14, web: 16 })} color="#1e293b" />
               </Pressable>
               <View style={styles.adminDivider} />
               <Pressable 
-                onPress={handleDelete} 
+                onPress={(e) => handleDelete(e)} 
                 hitSlop={10} 
                 style={styles.adminBtn}
                 accessibilityRole="button"
                 accessibilityLabel="Удалить"
+                {...(Platform.OS === 'web' && {
+                  onClick: (e: any) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    handleDelete(e);
+                  },
+                  onMouseDown: (e: any) => e.stopPropagation(),
+                })}
               >
-                <Feather name="trash-2" size={16} color="#1e293b" />
+                <Feather name="trash-2" size={Platform.select({ default: 14, web: 16 })} color="#1e293b" />
               </Pressable>
             </View>
           )}
 
-          {/* Минимальный градиент только внизу для читаемости */}
-          <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.02)", "rgba(0,0,0,0.15)", "rgba(0,0,0,0.35)"]}
-            pointerEvents="none"
-            style={styles.grad}
-          />
+          {/* Минимальный градиент только внизу для читаемости - заменен на CSS для производительности */}
+          {Platform.OS === 'web' ? (
+            <View 
+              style={{
+                position: 'absolute' as any,
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 120,
+                backgroundColor: 'transparent' as any,
+                pointerEvents: 'none' as any,
+              }}
+            />
+          ) : (
+            <LinearGradient
+              colors={["transparent", "rgba(0,0,0,0.02)", "rgba(0,0,0,0.15)", "rgba(0,0,0,0.35)"]}
+              pointerEvents="none"
+              style={styles.grad}
+            />
+          )}
 
           {/* Только бейдж локации на фото - полупрозрачный */}
           {countries.length > 0 && countries[0] && (
             <View style={styles.topBadges} pointerEvents="none">
               <View style={styles.infoBadge}>
-                <Feather name="map-pin" size={11} color="#fff" />
+                <Feather name="map-pin" size={Platform.select({ default: 10, web: 11 })} color="#0f172a" />
                 <Text style={styles.infoBadgeText} numberOfLines={1}>
                   {countries[0]}
                 </Text>
@@ -417,14 +446,14 @@ function TravelListItem({
             <View style={styles.metaInfoLeft}>
               {!!userName && (
                 <View style={styles.metaBox}>
-                  <Feather name="user" size={11} color="#64748b" style={{ marginRight: 4 }} />
+                  <Feather name="user" size={Platform.select({ default: 10, web: 11 })} color="#64748b" style={{ marginRight: 4 }} />
                   <Text style={styles.metaTxt} numberOfLines={1}>
                     {userName}
                   </Text>
                 </View>
               )}
               <View style={styles.metaBox}>
-                <Feather name="eye" size={11} color="#64748b" style={{ marginRight: 4 }} />
+                <Feather name="eye" size={Platform.select({ default: 10, web: 11 })} color="#64748b" style={{ marginRight: 4 }} />
                 <Text style={styles.metaTxt}>{viewsFormatted}</Text>
               </View>
 
@@ -434,7 +463,7 @@ function TravelListItem({
                     <View style={[styles.statusBadge, styles.statusBadgePopular]}>
                       <Feather
                         name="trending-up"
-                        size={12}
+                        size={Platform.select({ default: 10, web: 12 })}
                         color={DESIGN_TOKENS.colors.primary}
                       />
                       <Text style={[styles.statusBadgeText, styles.statusBadgeTextPopular]}>
@@ -446,7 +475,7 @@ function TravelListItem({
                     <View style={[styles.statusBadge, styles.statusBadgeNew]}>
                       <Feather
                         name="star"
-                        size={12}
+                        size={Platform.select({ default: 10, web: 12 })}
                         color={DESIGN_TOKENS.colors.accent || "#f59e0b"}
                       />
                       <Text style={[styles.statusBadgeText, styles.statusBadgeTextNew]}>
@@ -465,12 +494,6 @@ function TravelListItem({
   return (
     <View
       style={styles.wrap}
-      {...(Platform.OS === 'web'
-        ? {
-            onMouseEnter: () => setHovered(true),
-            onMouseLeave: () => setHovered(false),
-          }
-        : {})}
     >
     {Platform.OS === 'web' ? (
       // На вебе различаем два режима:
@@ -522,52 +545,22 @@ function TravelListItem({
 
 const styles = StyleSheet.create({
   wrap: { 
-    padding: 0, 
     width: "100%",
   },
 
   // ... (rest of the styles remain the same)
   card: {
-    width: "100%",
-    height: "100%", // Занимаем всю высоту ячейки грида
-    borderRadius: Platform.select({ default: 20, web: 24 }),
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-    overflow: "hidden",
-    flexDirection: 'column', // Выстраиваем контент вертикально
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02)',
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        cursor: "pointer",
-        // @ts-ignore
-        ":hover": {
-          transform: "translateY(-4px)",
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03)',
-          borderColor: 'rgba(0,0,0,0)',
-        },
-      },
-    }),
-  },
+    ...enhancedTravelCardStyles.card,
+  } as any,
 
   imageContainer: {
-    position: "relative",
-    width: "100%",
-    aspectRatio: 4/3, // Строгое соотношение сторон
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    overflow: "hidden",
-    flexShrink: 0, // Не сжимать изображение
-  },
+    ...enhancedTravelCardStyles.imageContainer,
+  } as any,
+
+  imageContainerMobile: {
+    height: 220,
+    // На мобильных фиксированная высота надежнее, чем aspectRatio
+  } as any,
 
   androidOptimized: {
     shadowColor: undefined,
@@ -678,66 +671,32 @@ const styles = StyleSheet.create({
   },
 
   favoriteButtonContainer: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    zIndex: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    borderRadius: 50,
-    padding: 10,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-      web: {
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
-        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
-        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-        // @ts-ignore
-        ":hover": {
-          transform: "scale(1.05)",
-          backgroundColor: "#ffffff",
-          boxShadow: "0 6px 12px -1px rgba(0, 0, 0, 0.1)",
-        },
-      },
-    }),
-  },
+    ...enhancedTravelCardStyles.favoriteButton,
+  } as any,
 
   contentBelow: {
-    padding: 16,
-    paddingTop: 12, // Чуть меньше отступ сверху
-    gap: 8,
-    backgroundColor: '#ffffff',
-    flex: 1,
-    justifyContent: 'space-between',
-  },
+    ...enhancedTravelCardStyles.contentContainer,
+  } as any,
   
   topBadges: {
     position: "absolute",
-    bottom: 12,
-    left: 12,
-    right: 12,
+    bottom: Platform.select({ default: 10, web: 12 }),
+    left: Platform.select({ default: 10, web: 12 }),
+    right: Platform.select({ default: 10, web: 12 }),
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: Platform.select({ default: 6, web: 8 }),
     zIndex: 10,
   },
   
   infoBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: Platform.select({ default: 4, web: 6 }),
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderRadius: 100,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: Platform.select({ default: 8, web: 10 }),
+    paddingVertical: Platform.select({ default: 4, web: 6 }),
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -757,7 +716,7 @@ const styles = StyleSheet.create({
   },
   
   infoBadgeText: {
-    fontSize: 12,
+    fontSize: Platform.select({ default: 11, web: 12 }),
     color: "#0f172a",
     fontWeight: "600",
     letterSpacing: -0.1,
@@ -802,15 +761,8 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 17,
-    fontWeight: '700' as any,
-    fontFamily: Platform.select({ web: DESIGN_TOKENS.typography.fontFamily, default: undefined }),
-    color: "#0f172a", // slate-900 - более контрастный
-    lineHeight: 24,
-    letterSpacing: -0.3,
-    marginBottom: 4,
-    minHeight: 48, // Фиксируем высоту под 2 строки (24 * 2)
-  },
+    ...enhancedTravelCardStyles.title,
+  } as any,
 
   metaRow: {
     flexDirection: "row",
@@ -875,6 +827,24 @@ const styles = StyleSheet.create({
   
   actionsHidden: {
     opacity: 0,
+  },
+
+  btncard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    overflow: Platform.OS === "android" ? "visible" : "hidden",
+    marginBottom: 16,
+    ...Platform.select({
+      web: {
+        transition: "all 0.2s ease",
+        cursor: "pointer",
+        // @ts-ignore
+        ":hover": {
+          backgroundColor: "#e2e8f0",
+          color: DESIGN_TOKENS.colors.primary,
+        },
+      } as any,
+    }),
   },
 
   btn: {

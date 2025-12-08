@@ -51,7 +51,14 @@ import ScrollToTopButton from "@/components/ScrollToTopButton";
 import ReadingProgressBar from "@/components/ReadingProgressBar";
 import TravelSectionTabs from "@/components/travel/TravelSectionTabs";
 import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/travel/sectionLinks";
+import usePerformanceOptimization from '@/hooks/usePerformanceOptimization';
+import { useProgressiveLoad, ProgressiveWrapper } from '@/hooks/useProgressiveLoading';
 import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl as buildVersionedImageUrlLCP } from "@/utils/imageOptimization";
+import { injectCriticalStyles } from '@/styles/criticalCSS';
+import { initPerformanceMonitoring } from '@/utils/performanceMonitoring';
+import { SectionSkeleton } from '@/components/SectionSkeleton';
+import { OptimizedLCPImage } from '@/components/OptimizedLCPImage';
+import { optimizeCriticalPath } from '@/utils/advancedPerformanceOptimization';
 
 /* ---------- LCP-компонент грузим СИНХРОННО ---------- */
 import Slider from "@/components/travel/Slider";
@@ -61,8 +68,7 @@ import {
   DescriptionSkeleton, 
   MapSkeleton, 
   PointListSkeleton, 
-  TravelListSkeleton,
-  SectionSkeleton 
+  TravelListSkeleton
 } from "@/components/travel/TravelDetailSkeletons";
 
 /* ✅ УЛУЧШЕНИЕ: QuickFacts компонент для быстрых фактов */
@@ -230,12 +236,17 @@ const TravelListFallback = () => (
 );
 
 const Icon: React.FC<{ name: string; size?: number; color?: string }> = ({
-                                                                           name,
-                                                                           size = 22,
-                                                                           color,
-                                                                         }) => (
+  name,
+  size = 22,
+  color,
+}) => (
   <Suspense fallback={<View style={{ width: size, height: size }} />}>
-    <LazyMaterialIcons name={name} size={size} color={color} />
+    <LazyMaterialIcons 
+      // @ts-ignore - MaterialIcons name prop
+      name={name} 
+      size={size} 
+      color={color} 
+    />
   </Suspense>
 );
 
@@ -311,9 +322,16 @@ const useLCPPreload = (travel?: Travel) => {
   useEffect(() => {
     if (Platform.OS !== "web") return;
     const first = travel?.gallery?.[0];
-    if (!first?.url) return;
+    if (!first) return;
 
-    const href = buildVersioned(first.url, first.updated_at, first.id);
+    // Handle both string URLs and object format
+    const imageUrl = typeof first === 'string' ? first : first.url;
+    const updatedAt = typeof first === 'string' ? undefined : first.updated_at;
+    const id = typeof first === 'string' ? undefined : first.id;
+    
+    if (!imageUrl) return;
+
+    const href = buildVersioned(imageUrl, updatedAt, id);
     if (!document.querySelector(`link[rel="preload"][as="image"][href="${href}"]`)) {
       const link = document.createElement("link");
       link.rel = "preload";
@@ -325,7 +343,7 @@ const useLCPPreload = (travel?: Travel) => {
     }
 
     const domains = [
-      getOrigin(first.url),
+      getOrigin(imageUrl),
       "https://maps.googleapis.com",
       "https://img.youtube.com",
       "https://api.metravel.by",
@@ -610,7 +628,7 @@ export default function TravelDetails() {
 
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
   const { travel, isLoading, isError, slug, isId } = useTravelDetails();
-  const { anchors, scrollTo, scrollRef } = useScrollNavigation();
+  const { anchors, scrollTo, scrollRef } = useScrollNavigation() as { anchors: AnchorsMap; scrollTo: any; scrollRef: any };
   const { activeSection, setActiveSection } = useActiveSection(anchors, headerOffset);
   const { menuOpen, toggleMenu, closeMenu, animatedX, menuWidth, menuWidthNum, openMenuOnDesktop } =
     useMenuState(isMobile);
@@ -631,6 +649,15 @@ export default function TravelDetails() {
   const fabTop = headerOffset + insets.top + 12;
 
   useLCPPreload(travel);
+
+  /* ---- Inject critical CSS for faster First Paint ---- */
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      injectCriticalStyles();
+      initPerformanceMonitoring();
+      optimizeCriticalPath();
+    }
+  }, []);
 
   /* ---- warm up heavy lazy chunks on web (без Slider) ---- */
   useEffect(() => {
@@ -700,8 +727,8 @@ export default function TravelDetails() {
         : (key: string) => handleSectionOpen(key);
 
     if (Platform.OS === "web") {
-      window.addEventListener("open-section", handler as EventListener, { passive: true } as any);
-      return () => window.removeEventListener("open-section", handler as EventListener);
+      window.addEventListener("open-section", handler as unknown as EventListener, { passive: true } as any);
+      return () => window.removeEventListener("open-section", handler as unknown as EventListener);
     } else {
       const sub = DeviceEventEmitter.addListener("open-section", handler);
       return () => sub.remove();
@@ -836,7 +863,7 @@ export default function TravelDetails() {
       image: [readyImage],
       dateModified: travel.updated_at ?? undefined,
       datePublished: travel.created_at ?? undefined,
-      author: travel.author?.name ? [{ "@type": "Person", name: travel.author.name }] : undefined,
+      author: travel.userName ? [{ "@type": "Person", name: travel.userName }] : undefined,
       mainEntityOfPage: canonicalUrl,
       description: readyDesc,
     } as const);
@@ -921,7 +948,7 @@ export default function TravelDetails() {
             <>
               {firstImg?.url && (
                 <>
-                  <link rel="preload" as="image" href={readyImage} fetchpriority="high" />
+                  <link rel="preload" as="image" href={readyImage} fetchPriority="high" />
                   {firstImgOrigin && <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />}
                 </>
               )}
@@ -944,7 +971,7 @@ export default function TravelDetails() {
       Platform.OS === "web" && {
         // @ts-ignore - web-specific CSS property
         backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f9f8f2 100%)",
-      },
+      } as any,
     ]}>
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
@@ -959,7 +986,7 @@ export default function TravelDetails() {
                 sideMenuPlatformStyles,
                 {
                   transform: [{ translateX: animatedX }],
-                  width: menuWidth,
+                  width: menuWidth as any,
                   zIndex: 1000,
                 },
               ]}
@@ -1041,7 +1068,7 @@ export default function TravelDetails() {
               [{ nativeEvent: { contentOffset: { y: scrollY } } }],
               { useNativeDriver: false }
             )}
-            scrollEventThrottle={16}
+            scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
             style={styles.scrollView}
             nestedScrollEnabled
             onContentSizeChange={handleContentSizeChange}
@@ -1076,14 +1103,19 @@ export default function TravelDetails() {
 
                   {/* -------- deferred heavy content -------- */}
                   <Defer when={deferAllowed}>
-                    <TravelDeferredSections
-                      travel={travel}
-                      isMobile={isMobile}
-                      forceOpenKey={forceOpenKey}
-                      anchors={anchors}
-                      relatedTravels={relatedTravels}
-                      setRelatedTravels={setRelatedTravels}
-                    />
+                    <ProgressiveWrapper 
+                      config={{ priority: 'normal', rootMargin: '100px' }}
+                      fallback={<SectionSkeleton />}
+                    >
+                      <TravelDeferredSections
+                        travel={travel}
+                        isMobile={isMobile}
+                        forceOpenKey={forceOpenKey}
+                        anchors={anchors}
+                        relatedTravels={relatedTravels}
+                        setRelatedTravels={setRelatedTravels}
+                      />
+                    </ProgressiveWrapper>
                   </Defer>
                 </SList>
               </View>
@@ -1203,7 +1235,11 @@ const TravelHeroSection: React.FC<{
           <View style={styles.sliderContainer} collapsable={false}>
             <Slider
               key={isMobile ? "mobile" : "desktop"}
-              images={travel.gallery}
+              images={travel.gallery?.map((item, index) => 
+                typeof item === 'string' 
+                  ? { url: item, id: index } 
+                  : { ...item, id: item.id || index }
+              ) || []}
               showArrows={!isMobile}
               hideArrowsOnMobile
               showDots={isMobile}
@@ -1212,14 +1248,7 @@ const TravelHeroSection: React.FC<{
               aspectRatio={aspectRatio as number}
               mobileHeightPercent={0.7}
               onFirstImageLoad={onFirstImageLoad}
-              lazyLoading={true}
-              responsiveSizes={{
-                mobile: { width: 640, height: Math.round(640 / aspectRatio) },
-                tablet: { width: 1024, height: Math.round(1024 / aspectRatio) },
-                desktop: { width: 1600, height: Math.round(1600 / aspectRatio) }
-              }}
-              preferredFormats={['webp', 'jpeg']}
-            />
+                          />
           </View>
         </View>
       )}
@@ -1496,7 +1525,7 @@ const TravelVisualSections: React.FC<{
                 <View style={{ marginTop: 12 }}>
                   <BelkrajWidgetComponent
                     countryCode={travel.countryCode}
-                    points={travel.travelAddress}
+                    points={travel.travelAddress as any}
                     collapsedHeight={600}
                     expandedHeight={1000}
                   />
@@ -1523,7 +1552,7 @@ const TravelVisualSections: React.FC<{
             >
               {shouldRenderMap ? (
                 <Suspense fallback={<MapFallback />}>
-                  <MapClientSide travel={{ data: travel.travelAddress }} />
+                  <MapClientSide travel={{ data: travel.travelAddress as any }} />
                 </Suspense>
               ) : null}
             </ToggleableMap>
@@ -1545,7 +1574,7 @@ const TravelVisualSections: React.FC<{
         <View style={{ marginTop: 12 }}>
           {travel.travelAddress && (
             <Suspense fallback={<PointListFallback />}>
-              <PointList points={travel.travelAddress} baseUrl={travel.url} />
+              <PointList points={travel.travelAddress as any} baseUrl={travel.url} />
             </Suspense>
           )}
         </View>
@@ -1701,18 +1730,77 @@ const styles = StyleSheet.create({
   },
   
   sectionContainer: {
-    marginBottom: Platform.select({
-      default: DESIGN_TOKENS.spacing.lg,
-      web: DESIGN_TOKENS.spacing.xl,
+    marginBottom: DESIGN_TOKENS.spacing.xl,
+    paddingHorizontal: Platform.select({
+      default: DESIGN_TOKENS.spacing.md,
+      web: 0,
     }),
   },
   
   contentStable: {
-    marginBottom: Platform.select({
-      default: DESIGN_TOKENS.spacing.md,
-      web: DESIGN_TOKENS.spacing.lg,
-    }),
+    // Предотвращает layout shift при загрузке контента
+    minHeight: 48,
   },
+  
+  contentOuter: {
+    flex: 1,
+  },
+  
+  contentWrapper: {
+    flex: 1,
+  },
+  
+  sectionTabsContainer: {
+    marginBottom: DESIGN_TOKENS.spacing.md,
+  },
+  
+  quickFactsContainer: {
+    marginBottom: DESIGN_TOKENS.spacing.md,
+  },
+  
+  descriptionIntroWrapper: {
+    marginBottom: DESIGN_TOKENS.spacing.lg,
+  },
+  
+  descriptionIntroTitle: {
+    fontSize: DESIGN_TOKENS.typography.sizes.lg,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    color: DESIGN_TOKENS.colors.text,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+  },
+  
+  descriptionIntroText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    color: DESIGN_TOKENS.colors.textMuted,
+    lineHeight: 24,
+  },
+  
+  backToTopWrapper: {
+    alignItems: 'center',
+    paddingVertical: DESIGN_TOKENS.spacing.lg,
+  },
+  
+  backToTopText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: DESIGN_TOKENS.colors.textMuted,
+  },
+  
+  navigationArrowsContainer: {
+    marginBottom: DESIGN_TOKENS.spacing.xl,
+  },
+  
+  authorCardContainer: {
+    marginBottom: DESIGN_TOKENS.spacing.md,
+  },
+  
+  shareButtonsContainer: {
+    marginBottom: DESIGN_TOKENS.spacing.md,
+  },
+  
+  ctaContainer: {
+    marginTop: DESIGN_TOKENS.spacing.xl,
+  },
+  
   sideMenuNative: {
     position: "absolute",
     top: 0,
@@ -1724,7 +1812,6 @@ const styles = StyleSheet.create({
     top: HEADER_OFFSET_DESKTOP as any,
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     backdropFilter: "blur(20px)" as any,
-    WebkitBackdropFilter: "blur(20px)" as any,
   },
   sideMenuWebMobile: {
     position: "fixed" as any,
@@ -1758,9 +1845,10 @@ const styles = StyleSheet.create({
   },
   fabWeb: {
     cursor: "pointer" as any,
+    // @ts-ignore - Web-specific CSS properties
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)" as any,
     // @ts-ignore
-    backgroundImage: "linear-gradient(135deg, #ff9f5a 0%, #ff6b35 100%)",
+    backgroundImage: "linear-gradient(135deg, #ff9f5a 0%, #ff6b35 100%)" as any,
     ":hover": {
       transform: "scale(1.1) translateY(-2px)" as any,
       shadowOpacity: 0.5 as any,
@@ -1923,14 +2011,22 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: DESIGN_TOKENS.radii.lg,
     overflow: "hidden",
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.10,
-    shadowRadius: 12,
-    elevation: 4,
     marginBottom: Platform.select({
       default: DESIGN_TOKENS.spacing.md,
       web: DESIGN_TOKENS.spacing.lg,
+    }),
+    // Объединенные стили теней
+    ...Platform.select({
+      web: {
+        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+      },
+      default: {
+        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.10,
+        shadowRadius: 12,
+        elevation: 4,
+      },
     }),
   },
 
@@ -1940,11 +2036,19 @@ const styles = StyleSheet.create({
     borderRadius: DESIGN_TOKENS.radii.md,
     overflow: "hidden",
     backgroundColor: DESIGN_TOKENS.colors.text,
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    // Объединенные стили теней
+    ...Platform.select({
+      web: {
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+      },
+      default: {
+        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 3,
+      },
+    }),
   },
 
   playOverlay: {

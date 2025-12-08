@@ -90,6 +90,16 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
             setUploadMessage(null);
             setUploadProgress(0);
 
+            // ✅ ВАЖНО: Без валидного ID сервер вернёт "A valid integer is required"
+            // Для новых точек маршрута idTravel ещё нет, поэтому блокируем загрузку
+            const normalizedId = (idTravel ?? '').toString();
+            if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') {
+                setError('Сначала сохраните точку маршрута, затем попробуйте загрузить фото.');
+                setPreviewUrl(null);
+                setPreviewFile(null);
+                return;
+            }
+
             // ✅ УЛУЧШЕНИЕ: Валидация перед загрузкой
             const validationError = validateFile(file);
             if (validationError) {
@@ -117,7 +127,7 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
             }
 
             formData.append('collection', collection);
-            formData.append('id', idTravel);
+            formData.append('id', normalizedId);
 
             // ✅ УЛУЧШЕНИЕ: Симуляция прогресса (можно заменить на реальный XMLHttpRequest с onprogress)
             const progressInterval = setInterval(() => {

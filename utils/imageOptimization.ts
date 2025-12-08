@@ -227,3 +227,46 @@ export function buildVersionedImageUrl(
     return url;
   }
 }
+
+/**
+ * Создает lazy-loading компонент для изображений
+ */
+export function createLazyImageProps(
+  src: string,
+  options: ImageOptimizationOptions = {}
+): {
+  src: string;
+  loading: 'lazy' | 'eager';
+  decoding: 'async' | 'sync' | 'auto';
+  fetchpriority?: 'high' | 'low' | 'auto';
+} {
+  const optimizedSrc = optimizeImageUrl(src, {
+    format: 'webp',
+    quality: 85,
+    ...options,
+  });
+
+  return {
+    src: optimizedSrc || src,
+    loading: options.width && options.width > 400 ? 'lazy' : 'eager',
+    decoding: 'async',
+    fetchpriority: options.width && options.width > 800 ? 'low' : 'auto',
+  };
+}
+
+/**
+ * Определяет, следует ли загружать изображение немедленно (LCP)
+ */
+export function shouldLoadEager(
+  index: number,
+  containerWidth?: number
+): boolean {
+  // Первое изображение всегда загружаем немедленно (LCP)
+  if (index === 0) return true;
+  
+  // Маленькие изображения (например, в галерее) загружаем лениво
+  if (containerWidth && containerWidth < 300) return false;
+  
+  // Первые 3 изображения в large контейнере загружаем немедленно
+  return index < 3;
+}

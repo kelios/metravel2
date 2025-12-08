@@ -42,49 +42,52 @@ export function useActiveSection(
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const visibleSections: Array<{ key: string; ratio: number; top: number }> = [];
+        // Debounce Intersection Observer callbacks to improve performance
+        requestAnimationFrame(() => {
+          const visibleSections: Array<{ key: string; ratio: number; top: number }> = [];
 
-        entries.forEach((entry) => {
-          const sectionKey = (entry.target as HTMLElement).getAttribute('data-section-key');
-          if (!sectionKey || !entry.isIntersecting) return;
+          entries.forEach((entry) => {
+            const sectionKey = (entry.target as HTMLElement).getAttribute('data-section-key');
+            if (!sectionKey || !entry.isIntersecting) return;
 
-          const rect = entry.boundingClientRect;
-          const viewportTop = headerOffset;
+            const rect = entry.boundingClientRect;
+            const viewportTop = headerOffset;
 
-          if (rect.top <= viewportTop + 100 && rect.bottom >= viewportTop) {
-            const ratio = entry.intersectionRatio;
-            const distanceFromTop = Math.abs(rect.top - viewportTop);
-            visibleSections.push({
-              key: sectionKey,
-              ratio,
-              top: distanceFromTop,
-            });
-          }
-        });
-
-        if (visibleSections.length > 0) {
-          visibleSections.sort((a, b) => {
-            if (Math.abs(a.top - b.top) < 50) {
-              return b.ratio - a.ratio;
+            if (rect.top <= viewportTop + 100 && rect.bottom >= viewportTop) {
+              const ratio = entry.intersectionRatio;
+              const distanceFromTop = Math.abs(rect.top - viewportTop);
+              visibleSections.push({
+                key: sectionKey,
+                ratio,
+                top: distanceFromTop,
+              });
             }
-            return a.top - b.top;
           });
 
-          let mostVisible = visibleSections[0];
+          if (visibleSections.length > 0) {
+            visibleSections.sort((a, b) => {
+              if (Math.abs(a.top - b.top) < 50) {
+                return b.ratio - a.ratio;
+              }
+              return a.top - b.top;
+            });
 
-          // Небольшой приоритет: если одновременно видны описание и видео,
-          // и секция видео находится недалеко от верха, считаем активным именно видео.
-          if (mostVisible.key === 'description') {
-            const videoCandidate = visibleSections.find((s) => s.key === 'video');
-            if (videoCandidate && videoCandidate.top - mostVisible.top < 150) {
-              mostVisible = videoCandidate;
+            let mostVisible = visibleSections[0];
+
+            // Небольшой приоритет: если одновременно видны описание и видео,
+            // и секция видео находится недалеко от верха, считаем активным именно видео.
+            if (mostVisible.key === 'description') {
+              const videoCandidate = visibleSections.find((s) => s.key === 'video');
+              if (videoCandidate && videoCandidate.top - mostVisible.top < 150) {
+                mostVisible = videoCandidate;
+              }
+            }
+
+            if (mostVisible && mostVisible.key !== activeSection) {
+              setActiveSection(mostVisible.key);
             }
           }
-
-          if (mostVisible && mostVisible.key !== activeSection) {
-            setActiveSection(mostVisible.key);
-          }
-        }
+        });
       },
       {
         root: null,

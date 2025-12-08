@@ -22,3 +22,8 @@ globalThis.expo.EventEmitter = globalThis.expo.EventEmitter || MockEventEmitter;
 globalThis.expo.NativeModule = globalThis.expo.NativeModule || MockNativeModule;
 globalThis.expo.SharedObject = globalThis.expo.SharedObject || MockSharedObject;
 globalThis.expo.NativeModulesProxy = globalThis.expo.NativeModulesProxy || {};
+
+// Polyfill setImmediate for jsdom environment
+if (typeof setImmediate === 'undefined') {
+  global.setImmediate = (fn: Function) => setTimeout(fn, 0);
+}

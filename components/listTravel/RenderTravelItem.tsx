@@ -75,9 +75,8 @@ function RenderTravelItem({
             return {
                 ...base,
                 width: "100%",
-                marginBottom: spacing.md,
-                // Убираем боковые отступы, чтобы карточка была на всю ширину
-                marginHorizontal: 0,
+                marginBottom: spacing.sm,
+                overflow: "hidden",
             };
         }
 
@@ -87,14 +86,14 @@ function RenderTravelItem({
             minWidth: 0,
             marginHorizontal: spacing.sm,
         };
-    }, [isMobile, isTablet, isSingle]);
+    }, [isMobile, isSingle]); // Убрали isTablet из зависимостей, так как она не используется
 
     const selectedStyle = useMemo<ViewStyle>(() => ({
         borderWidth: 2,
         borderColor: DESIGN_TOKENS.colors.primary,
     }), []);
 
-    // Всегда используем классическую карточку TravelListItem внутри AnimatedCard
+    // Всегда используем TravelListItem
     return (
         <AnimatedCard 
             index={index || 0} 
@@ -102,7 +101,6 @@ function RenderTravelItem({
         >
             <TravelListItem
                 travel={item}
-                currentUserId={undefined}
                 isSuperuser={isSuperuser}
                 isMetravel={isMetravel}
                 onDeletePress={onDeletePress}
@@ -122,16 +120,17 @@ function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
     // когда react-query приносит новый объект с тем же id.
     const sameItemRef = prev.item === next.item;
 
-    const sameFlags =
-        prev.isSuperuser === next.isSuperuser &&
-        prev.isMetravel === next.isMetravel &&
-        prev.isFirst === next.isFirst &&
-        prev.isSingle === next.isSingle &&
-        prev.selectable === next.selectable &&
-        prev.isSelected === next.isSelected &&
-        prev.isMobile === next.isMobile;
+    // Оптимизированное сравнение флагов - выходим раньше если есть различия
+    if (prev.isSuperuser !== next.isSuperuser) return false;
+    if (prev.isMetravel !== next.isMetravel) return false;
+    if (prev.isFirst !== next.isFirst) return false;
+    if (prev.isSingle !== next.isSingle) return false;
+    if (prev.selectable !== next.selectable) return false;
+    if (prev.isSelected !== next.isSelected) return false;
+    if (prev.isMobile !== next.isMobile) return false;
+    if (prev.index !== next.index) return false;
 
-    return sameItemRef && sameFlags;
+    return sameItemRef;
 }
 
 export default memo(RenderTravelItem, areEqual);

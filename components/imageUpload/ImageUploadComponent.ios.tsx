@@ -52,6 +52,13 @@ const ImageUploadComponentIOS: React.FC<ImageUploadComponentProps> = ({
       setUploadMessage(null);
       setLoading(true);
 
+      const normalizedId = (idTravel ?? '').toString();
+      if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') {
+        setError('Сначала сохраните точку маршрута, затем попробуйте загрузить фото.');
+        setPreviewUrl(null);
+        return;
+      }
+
       const formData = new FormData();
       formData.append('file', {
         uri: file.uri,
@@ -59,7 +66,7 @@ const ImageUploadComponentIOS: React.FC<ImageUploadComponentProps> = ({
         type: file.type,
       } as any);
       formData.append('collection', collection);
-      formData.append('id', idTravel);
+      formData.append('id', normalizedId);
 
       const response = await uploadImage(formData);
 

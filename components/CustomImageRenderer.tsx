@@ -10,8 +10,9 @@ import {
 import { CustomRendererProps } from "react-native-render-html";
 import { Image as ExpoImage } from "expo-image";
 
-interface CustomImageRendererProps extends CustomRendererProps {
+interface CustomImageRendererProps extends CustomRendererProps<any> {
   contentWidth: number;
+  tnode: any;
 }
 
 const MAX_WIDTH = 800;
@@ -165,7 +166,11 @@ const styles = StyleSheet.create({
     marginVertical: 16,
     alignItems: "center",
     paddingHorizontal: H_PADDING,
-    contain: 'layout style paint',
+    ...Platform.select({
+      web: {
+        contain: 'layout style paint',
+      } as any,
+    }),
   },
   image: {
     borderRadius: 8,

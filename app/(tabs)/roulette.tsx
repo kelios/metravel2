@@ -15,7 +15,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useListTravelFilters } from '@/components/listTravel/hooks/useListTravelFilters';
 import { useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
 import { normalizeApiResponse, deduplicateTravels } from '@/components/listTravel/utils/listTravelHelpers';
-import { fetchAllCountries, fetchFilters, fetchFiltersCountry } from '@/src/api/misc';
+import { fetchAllCountries, fetchAllFiltersOptimized } from '@/src/api/miscOptimized';
 import type { Travel } from '@/src/types/types';
 import type { FilterOptions } from '@/components/listTravel/utils/listTravelTypes';
 
@@ -48,14 +48,8 @@ export default function RouletteScreen() {
   const compassBackground = require('../../assets/travel/roulette-compass-bg.jpg');
 
   const { data: rawOptions, isLoading: filtersLoading } = useQuery({
-    queryKey: ['roulette-filter-options'],
-    queryFn: async () => {
-      const [base, countries] = await Promise.all([
-        fetchFilters(),
-        fetchFiltersCountry(),
-      ]);
-      return { ...base, countries } as any;
-    },
+    queryKey: ['filter-options'],
+    queryFn: fetchAllFiltersOptimized,
     staleTime: 10 * 60 * 1000,
   });
 

@@ -23,7 +23,7 @@ export default function AccountConfirmation() {
                     setIsAuthenticated(true);
                     router.replace('/'); // ✅ переходим на главную
                 } else {
-                    setError('Не удалось подтвердить учетную запись. ' + response?.non_field_errors?.[0]);
+                    setError('Не удалось подтвердить учетную запись. ' + (response as any)?.non_field_errors?.[0]);
                 }
             } catch (err: any) {
                 setError('Произошла ошибка при подтверждении учетной записи. ' + err.message);

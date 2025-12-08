@@ -202,13 +202,13 @@ export default function Login() {
                                                         secureTextEntry
                                                         placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
                                                         returnKeyType="done"
-                                                        onSubmitEditing={handleSubmit}
+                                                        onSubmitEditing={() => handleSubmit()}
                                                     />
                                                 </FormFieldWithValidation>
 
                                                 <Button
                                                     mode="contained"
-                                                    onPress={handleSubmit}
+                                                    onPress={() => handleSubmit()}
                                                     disabled={isSubmitting}
                                                     loading={isSubmitting}
                                                     style={styles.btn}

@@ -59,8 +59,8 @@ const RecommendationsTabs = lazy(() => {
     return import('./RecommendationsTabs');
 });
 
-import { deleteTravel, fetchTravels } from "@/src/api/travelsApi";
-import { fetchFilters, fetchFiltersCountry } from "@/src/api/misc";
+import { fetchTravels } from "@/src/api/travelsApi";
+import { fetchAllFiltersOptimized } from "@/src/api/miscOptimized";
 import { Travel } from "@/src/types/types";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { TravelListSkeleton } from "@/components/SkeletonLoader";
@@ -73,6 +73,17 @@ import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
 const palette = DESIGN_TOKENS.colors;
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
+
+// Simple delete function implementation
+const deleteTravel = async (id: string): Promise<void> => {
+    const URLAPI = process.env.EXPO_PUBLIC_API_URL || '';
+    const response = await fetch(`${URLAPI}/api/travels/${id}`, {
+        method: 'DELETE',
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to delete travel: ${response.statusText}`);
+    }
+};
 
 // @ts-ignore - Dynamic imports are supported in runtime
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
@@ -329,6 +340,7 @@ function ListTravel({
     const onMomentumRef = useRef(false);
     const lastEndReachedAtRef = useRef<number>(0);
     const scrollY = useRef(new Animated.Value(0)).current;
+    const saveScrollTimeoutRef = useRef<number | null>(null);
     const lastScrollOffsetRef = useRef<number>(0);
 
     /* UI / dialogs */
@@ -336,16 +348,10 @@ function ListTravel({
     const [showFilters, setShowFilters] = useState(false);
     const flatListRef = useRef<FlatList>(null);
 
-    /* Filters options */
+    /* Filters options - оптимизированный запрос с кэшированием */
     const { data: rawOptions } = useQuery({
         queryKey: ["filter-options"],
-        queryFn: async () => {
-            const [base, countries] = await Promise.all([
-                fetchFilters(),
-                fetchFiltersCountry(),
-            ]);
-            return { ...base, countries };
-        },
+        queryFn: fetchAllFiltersOptimized,
         staleTime: 10 * 60 * 1000,
     });
 
@@ -572,27 +578,47 @@ function ListTravel({
         }
         if (Platform.OS === 'web') {
             const offsetY = contentOffset.y;
-            scrollY.setValue(offsetY);
-            lastScrollOffsetRef.current = offsetY;
-            try {
-                window.sessionStorage.setItem('travel-list-scroll', String(offsetY));
-            } catch (error) {}
+            
+            // Simple debounce with threshold to reduce sessionStorage calls
+            if (Math.abs(offsetY - lastScrollOffsetRef.current) > 50) {
+                if (saveScrollTimeoutRef.current) {
+                    cancelAnimationFrame(saveScrollTimeoutRef.current);
+                }
+                saveScrollTimeoutRef.current = requestAnimationFrame(() => {
+                    try {
+                        window.sessionStorage.setItem('travel-list-scroll', String(offsetY));
+                        lastScrollOffsetRef.current = offsetY;
+                    } catch (error) {}
+                    saveScrollTimeoutRef.current = null;
+                });
+            }
         }
-    }, [scrollY]);
+    }, []);
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;
         if (!flatListRef.current) return;
-        try {
-            const stored = window.sessionStorage.getItem('travel-list-scroll');
-            if (!stored) return;
-            const value = Number(stored);
-            if (!Number.isFinite(value) || value <= 0) return;
-            requestAnimationFrame(() => {
-                flatListRef.current?.scrollToOffset({ offset: value, animated: false });
-            });
-        } catch (error) {}
-    }, [flatListRef]);
+        
+        // Defer scroll restoration to prevent layout thrashing
+        const restoreScroll = () => {
+            try {
+                const stored = window.sessionStorage.getItem('travel-list-scroll');
+                if (!stored) return;
+                const value = Number(stored);
+                if (!Number.isFinite(value) || value <= 0) return;
+                
+                // Use single requestAnimationFrame for better performance
+                requestAnimationFrame(() => {
+                    flatListRef.current?.scrollToOffset({ offset: value, animated: false });
+                });
+            } catch (error) {}
+        };
+        
+        // Use setTimeout to ensure DOM is ready
+        const timeoutId = setTimeout(restoreScroll, 100);
+        
+        return () => clearTimeout(timeoutId);
+    }, []);
 
     const displayData = travels;
 
@@ -875,11 +901,11 @@ function ListTravel({
 
               {/* Скелетон загрузки */}
               {showInitialLoading && (
-                <TravelListSkeleton count={PER_PAGE} />
+                <TravelListSkeleton count={PER_PAGE} columns={columns} />
               )}
 
               {/* Ошибка */}
-              {isError && (
+              {isError && !showInitialLoading && (
                 <EmptyState
                   icon="alert-circle"
                   title="Ошибка загрузки"
@@ -893,6 +919,7 @@ function ListTravel({
               )}
 
               {/* Список путешествий */}
+              {!showInitialLoading && (
               <FlatList
                 key={listKey}
                 ref={flatListRef}
@@ -902,7 +929,7 @@ function ListTravel({
                 keyExtractor={keyExtractor}
                 numColumns={columns}
                 columnWrapperStyle={columns > 1 ? { 
-                    gap: isMobile ? 20 : 32,
+                    gap: isMobile ? spacing.sm : spacing.md,
                     justifyContent: 'flex-start',
                 } : undefined}
                 contentContainerStyle={[
@@ -913,7 +940,7 @@ function ListTravel({
                 onEndReached={handleListEndReached}
                 onEndReachedThreshold={isMobile ? FLATLIST_CONFIG_MOBILE.ON_END_REACHED_THRESHOLD : FLATLIST_CONFIG.ON_END_REACHED_THRESHOLD}
                 onScroll={onScroll}
-                scrollEventThrottle={16}
+                scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
                 onMomentumScrollBegin={onMomentumBegin}
                 refreshing={isRefreshing}
                 onRefresh={handleRefresh}
@@ -961,7 +988,7 @@ function ListTravel({
                           <Text style={styles.categoriesTitle}>Популярные категории</Text>
                           <CategoryChips
                             categories={categoriesWithCount}
-                            selectedCategories={filter.categories || []}
+                            selectedCategories={(filter.categories || []).map(String)}
                             onToggleCategory={handleToggleCategory}
                             maxVisible={isMobile ? 6 : 8}
                             showIcons={!isMobile}
@@ -975,13 +1002,10 @@ function ListTravel({
                 maxToRenderPerBatch={listVirtualization.batch}
                 windowSize={listVirtualization.window}
                 updateCellsBatchingPeriod={listVirtualization.updateCellsBatchingPeriod}
-                removeClippedSubviews={Platform.OS !== 'web'}
-                getItemLayout={Platform.OS !== 'web' ? undefined : (data, index) => ({
-                  length: isMobile ? 320 : 360,
-                  offset: (isMobile ? 320 : 360) * index,
-                  index,
-                })}
+                removeClippedSubviews={Platform.OS !== 'web' && !isMobile}
+                getItemLayout={undefined}
               />
+              )}
             </View>
           </View>
         </View>
@@ -1101,7 +1125,7 @@ const styles = StyleSheet.create({
     width: '100%',
     ...Platform.select({
       web: {
-        minHeight: '100vh',
+        minHeight: '100vh' as any,
       },
     }),
   },
@@ -1126,30 +1150,30 @@ const styles = StyleSheet.create({
         position: 'sticky' as any,
         top: 0,
         alignSelf: 'flex-start',
-        maxHeight: '100vh',
+        maxHeight: '100vh' as any,
         overflowY: 'auto' as any,
       },
     }),
   },
   main: {
     flex: 1,
-    paddingHorizontal: Platform.select({ default: 12, web: 32 }),
-    paddingRight: Platform.select({ default: 12, web: 40 }),
+    paddingHorizontal: Platform.select({ default: 0, web: 32 }), // Убран padding на мобильных
+    paddingRight: Platform.select({ default: 0, web: 40 }),
     minWidth: 0,
   },
   // Жёсткое переопределение паддингов для мобильной ширины на web
   mainMobile: {
-    paddingHorizontal: 12,
-    paddingRight: 12,
+    paddingHorizontal: 0, // Убран padding на мобильных
+    paddingRight: 0,
   },
   searchSection: {
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: Platform.select({ default: spacing.xs, web: spacing.sm }), // Минимальный padding на мобильных
     paddingBottom: spacing.sm,
     marginBottom: spacing.xs,
   },
   searchSectionMain: {
     marginBottom: 16,
-    paddingHorizontal: Platform.select({ default: 12, web: 0 }),
+    paddingHorizontal: Platform.select({ default: spacing.xs, web: 0 }), // Минимальный padding на мобильных
   },
   categoriesSectionMain: {
     marginTop: 20,
@@ -1164,10 +1188,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     ...Platform.select({
       web: {
-        fontFamily: DESIGN_TOKENS.typography.fontFamily,
+        fontFamily: DESIGN_TOKENS.typography.fontFamily as any,
       },
     }),
-  },
+  } as any,
   loader: {
     justifyContent: "center",
     alignItems: "center",
@@ -1188,13 +1212,20 @@ const styles = StyleSheet.create({
     gap: Platform.select({ default: spacing.sm, web: spacing.md }),
   },
   listContent: {
-    padding: Platform.select({ default: 12, web: 12 }),
-    gap: Platform.select({ default: 20, web: 28 }),
-    paddingBottom: Platform.select({ default: 56, web: 80 }),
+    paddingLeft: Platform.select({ default: spacing.sm, web: 24 }),
+    paddingRight: Platform.select({ default: spacing.sm, web: 24 }),
+    paddingBottom: Platform.select({ default: 100, web: 120 }),
+    ...Platform.select({
+      web: {
+        maxWidth: 1400,
+        marginHorizontal: 'auto',
+      } as any,
+    }),
   },
   listContentMobile: {
-    padding: spacing.xs,
-    gap: spacing.xs,
+    paddingLeft: spacing.sm,
+    paddingRight: spacing.sm,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.xl,
   },
   columnWrapper: { 

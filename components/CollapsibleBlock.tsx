@@ -123,7 +123,7 @@ export default function CollapsibleBlock({
 
   const heightInterpolated = animatedHeight.interpolate({
     inputRange: [0, 1],
-    outputRange: [minHeight, contentHeight || 'auto'],
+    outputRange: [minHeight, contentHeight || 'auto'] as any,
   });
 
   return (
@@ -244,7 +244,7 @@ export default function CollapsibleBlock({
   );
 }
 
-const styles = StyleSheet.create({
+const styles: any = StyleSheet.create({
   container: {
     backgroundColor: palette.surface,
     borderRadius: radii.md,
@@ -393,5 +393,5 @@ const styles = StyleSheet.create({
     color: palette.primary,
     fontWeight: '500',
   },
-});
+} as any);
 

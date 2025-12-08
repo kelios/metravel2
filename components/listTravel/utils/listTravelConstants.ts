@@ -27,16 +27,17 @@ export const BREAKPOINTS = {
   TABLET: 1024,
   TABLET_LANDSCAPE: 1280,
   DESKTOP: 1440,
+  DESKTOP_LARGE: 1920,
 } as const;
 
 // ✅ АРХИТЕКТУРА: Количество колонок для разных экранов
 // ✅ ОПТИМИЗАЦИЯ: Оптимизировано для лучшей читаемости и производительности
 export const GRID_COLUMNS = {
   MOBILE: 1,
-  TABLET: 2,        // 768-1024px: 2 колонки
-  TABLET_LANDSCAPE: 2, // 1024-1280px: 2 колонки (было 3, уменьшено для лучшей читаемости)
-  DESKTOP: 3,       // 1280-1440px: 3 колонки (было 4, оптимизировано)
-  DESKTOP_LARGE: 3, // >1440px: 3 колонки (было 5, ограничено для лучшего UX)
+  TABLET: 2,
+  TABLET_LANDSCAPE: 3,
+  DESKTOP: 3,
+  DESKTOP_LARGE: 3,
 } as const;
 
 // ✅ АРХИТЕКТУРА: Время кеширования для React Query (staleTime)
@@ -80,11 +81,11 @@ export const MAX_VISIBLE_CATEGORIES = 8;
 // ✅ АРХИТЕКТУРА: Настройки FlatList для производительности
 // ✅ ОПТИМИЗАЦИЯ: Динамические настройки для разных устройств
 export const FLATLIST_CONFIG = {
-  INITIAL_NUM_TO_RENDER: 8, // Увеличено с 6 для лучшего первого рендера
-  MAX_TO_RENDER_PER_BATCH: 10, // Увеличено с 6 для более плавной прокрутки
-  WINDOW_SIZE: 7, // Увеличено с 5 для лучшей производительности при быстрой прокрутке
-  UPDATE_CELLS_BATCHING_PERIOD: 50, // Уменьшено с 100 для более отзывчивого UI
-  ON_END_REACHED_THRESHOLD: 0.3, // Уменьшено с 0.5 для более ранней подгрузки
+  INITIAL_NUM_TO_RENDER: 6, // Уменьшено для более быстрого первого рендера
+  MAX_TO_RENDER_PER_BATCH: 8, // Оптимально для плавного скролла
+  WINDOW_SIZE: 10, // Увеличено для лучшей производительности при быстрой прокрутке
+  UPDATE_CELLS_BATCHING_PERIOD: 32, // Уменьшено для более отзывчивого UI
+  ON_END_REACHED_THRESHOLD: 0.5, // Стандартное значение
 } as const;
 
 // ✅ ОПТИМИЗАЦИЯ: Специальные настройки для мобильных устройств

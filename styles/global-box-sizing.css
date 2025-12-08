@@ -1,0 +1,13 @@
+/* global-box-sizing.css */
+/* Исправление box-sizing для всех элементов на web */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Убеждаемся, что карточки не выходят за пределы */
+.travel-card,
+.travel-list-item {
+  box-sizing: border-box;
+  max-width: 100%;
+}

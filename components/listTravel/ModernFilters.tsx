@@ -395,6 +395,16 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
     elevation: 0,
   },
+  containerWebFull: {
+    width: '100%',
+    maxWidth: '100%',
+    height: '100%',
+    borderRadius: 0,
+    position: 'relative',
+    top: 0,
+    maxHeight: 'none',
+    boxShadow: 'none',
+  },
   containerCompact: {
     padding: spacing.md,
     ...Platform.select({

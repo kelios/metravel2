@@ -35,7 +35,7 @@ import Animated, {
   Extrapolate,
 } from "react-native-reanimated";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
-import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl } from "@/utils/imageOptimization";
+import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl, shouldLoadEager } from "@/utils/imageOptimization";
 import { Feather } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
@@ -474,7 +474,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
                 style={styles.blurBg}
                 contentFit="cover"
                 cachePolicy="disk"
-                priority={index === 0 ? "high" : "low"}
+                priority={shouldLoadEager(index) ? "high" : "low"}
                 blurRadius={12}
               />
               <View style={styles.blurOverlay} />
@@ -506,7 +506,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
                   // Сохраняем оригинальные пропорции без обрезки, пустые области заполняет размытый фон
                   contentFit="contain"
                   cachePolicy="disk"
-                  priority={index === 0 ? "high" : "low"}
+                  priority={shouldLoadEager(index) ? "high" : "low"}
                   transition={reduceMotion ? 0 : 250}
                   contentPosition="center"
                   accessibilityIgnoresInvertColors

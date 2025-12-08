@@ -376,7 +376,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         AsyncStorage.setItem(storageKey, JSON.stringify({
             index: currentIndex, unlocked: unlockedIndex, answers, attempts, hints, showMap
         })).catch(e => console.log('Error saving progress:', e));
-    }, [currentIndex, unlockedIndex, answers, attempts, hints, showMap, storageKey]);
+    }, [currentIndex, unlockedIndex, JSON.stringify(answers), JSON.stringify(attempts), JSON.stringify(hints), showMap, storageKey]);
 
     const completedSteps = steps.filter(s => answers[s.id]);
     const progress = steps.length > 0 ? completedSteps.length / steps.length : 0;

@@ -135,8 +135,8 @@ function StickySearchBar({
             </Pressable>
           )}
 
-          {/* Кнопка фильтров (только если передан обработчик) */}
-          {onFiltersPress && (
+          {/* Кнопка фильтров: показываем только на мобильных, на вебе фильтры всегда в левой панели */}
+          {onFiltersPress && isMobile && (
             <Pressable
               onPress={onFiltersPress}
               style={[
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     borderBottomColor: palette.border,
     borderRadius: radii.lg,
     paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
-    paddingVertical: Platform.select({ default: spacing.xs, web: spacing.sm }),
+    paddingVertical: Platform.select({ default: spacing.sm, web: spacing.md }),
     gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
     ...Platform.select({
       web: {
