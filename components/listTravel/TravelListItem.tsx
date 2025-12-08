@@ -264,17 +264,19 @@ function TravelListItem({
     
     // ✅ FIX: On web (non-selectable), we wrap card in <a>, so use View instead of Pressable to avoid nested buttons
     const CardWrapper = (Platform.OS === 'web' && !selectable) ? View : Pressable;
+    // ✅ B5.1: Улучшенные accessibility атрибуты
     const cardWrapperProps = (Platform.OS === 'web' && !selectable) 
         ? {} 
         : {
             onPress: handlePress,
             android_ripple: Platform.OS === "android" ? { color: "rgba(17,24,39,0.06)" } : undefined,
             accessibilityState: selectable ? { selected: isSelected } : undefined,
-            accessibilityLabel: `Путешествие: ${name}${countries.length > 0 ? `. Страны: ${countries.join(', ')}` : ''}`,
+            accessibilityLabel: `Путешествие: ${name}${countries.length > 0 ? `. Страны: ${countries.join(', ')}` : ''}. Просмотров: ${viewsFormatted}`,
             accessibilityRole: "button" as const,
-            accessibilityHint: selectable ? 'Нажмите для выбора' : 'Нажмите для просмотра деталей путешествия',
+            accessibilityHint: selectable ? 'Двойное нажатие для выбора' : 'Двойное нажатие для просмотра деталей',
+            // ✅ B5.1: Дополнительные ARIA атрибуты для web
             // @ts-ignore - aria attributes for web accessibility
-            'aria-label': Platform.OS === 'web' ? `Путешествие: ${name}` : undefined,
+            'aria-label': Platform.OS === 'web' ? `Путешествие: ${name}. ${countries.length > 0 ? `Страны: ${countries.join(', ')}. ` : ''}Просмотров: ${viewsFormatted}` : undefined,
             // @ts-ignore
             'aria-pressed': selectable ? isSelected : undefined,
         };

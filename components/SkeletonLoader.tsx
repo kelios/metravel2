@@ -41,8 +41,8 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
  * ✅ ИСПРАВЛЕНИЕ: Высоты должны совпадать с реальными карточками
  */
 export const TravelCardSkeleton: React.FC = () => {
-  // ✅ FIX: Унифицированная высота изображения с реальными карточками
-  const imageHeight = Platform.select({ default: 200, web: 240 });
+  // ✅ FIX: Унифицированная высота изображения с реальными карточками и учетом маленьких экранов
+  const imageHeight = Platform.select({ default: 160, web: 180 }); // Уменьшенная высота для узких экранов
   const titleHeight = Platform.select({ default: 14, web: 16 });
   const metaHeight = Platform.select({ default: 11, web: 12 });
   
@@ -91,11 +91,12 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: '100%',
-    borderRadius: Platform.select({ default: 20, web: 24 }),
+    borderRadius: Platform.select({ default: 16, web: 20 }), // Соответствует обновленным карточкам
     backgroundColor: DESIGN_TOKENS.colors.surface,
     overflow: 'hidden',
     // ✅ FIX: Обновлен marginBottom для соответствия реальным карточкам
-    marginBottom: Platform.select({ default: 16, web: 20 }),
+    marginBottom: Platform.select({ default: 14, web: 18 }),
+    minHeight: Platform.select({ default: 280, web: 320 }), // Минимальная высота для стабильности макета
     // ✅ ИСПРАВЛЕНИЕ: Тени должны совпадать с реальными карточками
     ...Platform.select({
       ios: {
@@ -116,10 +117,11 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   content: {
-    padding: Platform.select({ default: 14, web: 20 }),
-    paddingTop: Platform.select({ default: 12, web: 16 }),
-    gap: Platform.select({ default: 8, web: 12 }),
+    padding: Platform.select({ default: 12, web: 16 }), // Уменьшен отступ для мобильных
+    paddingTop: Platform.select({ default: 10, web: 14 }),
+    gap: Platform.select({ default: 6, web: 10 }),
     backgroundColor: '#ffffff',
+    flex: 1, // Добавлен flex для правильного расположения
   },
   marginBottom: {
     marginBottom: 4,
@@ -135,8 +137,8 @@ const styles = StyleSheet.create({
   listContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Platform.select({ default: 16, web: 20 }),
-    padding: Platform.select({ default: 12, web: 16 }),
+    gap: Platform.select({ default: 10, web: 16 }), // Уменьшен отступ для мобильных
+    padding: Platform.select({ default: 10, web: 14 }), // Уменьшен отступ для мобильных
   },
 });
 

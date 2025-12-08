@@ -191,6 +191,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: palette.border,
+    marginTop: -1, // Устраняем зазор между контентом и футером
   },
   item: {
     alignItems: "center",
@@ -240,10 +241,11 @@ const mobileStyles = StyleSheet.create({
     position: Platform.OS === "web" ? "sticky" : "relative",
     bottom: 0,
     zIndex: 50,
+    marginTop: -1, // Дополнительное перекрытие для мобильных устройств
   },
   dockWrapper: {
     paddingTop: 4,        // Уменьшили отступы
-    paddingBottom: 4,     // Уменьшили отступы
+    paddingBottom: Platform.select({ web: 6, default: 4 }), // Увеличили паддинг внизу для web
     paddingHorizontal: 8, // Уменьшили отступы
     backgroundColor: palette.dockBackground,
     borderTopLeftRadius: 18,

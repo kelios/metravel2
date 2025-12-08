@@ -60,25 +60,57 @@ export function deduplicateTravels(travels: Travel[]): Travel[] {
   });
 }
 
-// ✅ АРХИТЕКТУРА: Расчет количества колонок
-// ✅ ОПТИМИЗАЦИЯ: Улучшена адаптивность для всех устройств с учетом читаемости
-export function calculateColumns(width: number): number {
+// ✅ B1.2: Улучшенный расчет количества колонок на основе минимальной ширины карточки
+const MIN_CARD_WIDTH = 280; // Минимальная комфортная ширина карточки
+const MAX_CARD_WIDTH = 400; // Максимальная ширина карточки
+const GAP = 16; // Отступ между карточками
+
+// Функция для расчета padding контейнера
+function getContainerPadding(width: number): number {
+  if (width < BREAKPOINTS.XS) return 8;
+  if (width < BREAKPOINTS.SM) return 12;
+  if (width < BREAKPOINTS.MOBILE) return 16;
+  if (width < BREAKPOINTS.TABLET) return 20;
+  if (width < BREAKPOINTS.DESKTOP) return 24;
+  if (width < BREAKPOINTS.DESKTOP_LARGE) return 32;
+  return 40;
+}
+
+export function calculateColumns(width: number, orientation: 'portrait' | 'landscape' = 'landscape'): number {
+  // Для очень маленьких экранов всегда 1 колонка
   if (width < BREAKPOINTS.MOBILE) {
-    return GRID_COLUMNS.MOBILE;
+    return 1;
   }
+  
+  // Рассчитываем доступную ширину с учетом padding
+  const containerPadding = getContainerPadding(width);
+  const availableWidth = width - (containerPadding * 2);
+  
+  // Рассчитываем максимальное количество колонок на основе минимальной ширины карточки
+  let columns = Math.floor((availableWidth + GAP) / (MIN_CARD_WIDTH + GAP));
+  
+  // Ограничения для разных устройств
   if (width < BREAKPOINTS.TABLET) {
-    return GRID_COLUMNS.TABLET;
+    // Планшеты в портретной ориентации - максимум 2 колонки
+    columns = Math.min(columns, 2);
+  } else if (width < BREAKPOINTS.DESKTOP) {
+    // Планшеты в ландшафте - максимум 3 колонки
+    columns = Math.min(columns, 3);
+  } else if (width < BREAKPOINTS.XXL) {
+    // Desktop - максимум 3 колонки для лучшей читаемости
+    columns = Math.min(columns, 3);
+  } else {
+    // Очень большие экраны - максимум 4 колонки
+    columns = Math.min(columns, 4);
   }
-  if (width < BREAKPOINTS.TABLET_LANDSCAPE) {
-    return GRID_COLUMNS.TABLET_LANDSCAPE;
+  
+  // Учитываем ориентацию для планшетов
+  if (orientation === 'portrait' && width >= BREAKPOINTS.MOBILE && width < BREAKPOINTS.DESKTOP) {
+    columns = Math.min(columns, 2);
   }
-  if (width < BREAKPOINTS.DESKTOP) {
-    return GRID_COLUMNS.DESKTOP;
-  }
-  if (width < BREAKPOINTS.DESKTOP_LARGE) {
-    return GRID_COLUMNS.DESKTOP;
-  }
-  return GRID_COLUMNS.DESKTOP_LARGE;
+  
+  // Минимум 1 колонка
+  return Math.max(columns, 1);
 }
 
 // ✅ АРХИТЕКТУРА: Определение badges для социального доказательства
