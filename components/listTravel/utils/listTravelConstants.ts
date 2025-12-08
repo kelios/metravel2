@@ -21,13 +21,17 @@ export const WEEKLY_HIGHLIGHTS_VISIBLE_KEY = 'weekly_highlights_visible';
 export const RECOMMENDATIONS_VISIBLE_KEY = 'recommendations_visible';
 
 // ✅ АРХИТЕКТУРА: Breakpoints для адаптивности
-// ✅ ИСПРАВЛЕНИЕ: Добавлены промежуточные breakpoints для лучшей адаптивности
+// ✅ B1.1: Расширенные breakpoints для лучшей адаптивности
 export const BREAKPOINTS = {
-  MOBILE: 900, // Увеличено с 768 до 900 для одной колонки на маленьких планшетах
-  TABLET: 1024,
+  XS: 360,  // Очень маленькие телефоны
+  SM: 480,  // Маленькие телефоны
+  MOBILE: 768, // Планшеты портрет
+  MD: 900,  // Маленькие планшеты
+  TABLET: 1024, // Планшеты ландшафт
   TABLET_LANDSCAPE: 1280,
   DESKTOP: 1440,
   DESKTOP_LARGE: 1920,
+  XXL: 2560, // Очень большие мониторы
 } as const;
 
 // ✅ АРХИТЕКТУРА: Количество колонок для разных экранов

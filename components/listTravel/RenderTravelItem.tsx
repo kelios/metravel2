@@ -50,8 +50,6 @@ function RenderTravelItem({
         const base: ContainerStyle = {
             borderRadius: radii.lg,
             overflow: Platform.OS === "android" ? "visible" : "hidden",
-            // ✅ FIX: Убран marginBottom - он уже есть в enhancedTravelCardStyles.card
-            // Двойной marginBottom создавал "дыры" между карточками (12px + 10px = 22px)
             backgroundColor: 'white',
             // Platform-specific shadows
             ...(Platform.OS === 'web' 
@@ -120,21 +118,28 @@ function RenderTravelItem({
 }
 
 function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
-    // Важно: сравниваем ссылку на объект, чтобы компонент обновлялся,
-    // когда react-query приносит новый объект с тем же id.
-    const sameItemRef = prev.item === next.item;
-
-    // Оптимизированное сравнение флагов - выходим раньше если есть различия
-    if (prev.isSuperuser !== next.isSuperuser) return false;
+    // ✅ A3.1: Оптимизированный порядок сравнений - самые частые изменения первыми для early exit
+    
+    // 1. Самые частые изменения (при выборе/скролле)
+    if (prev.isSelected !== next.isSelected) return false;
+    if (prev.index !== next.index) return false;
+    
+    // 2. Проверка ссылки на объект данных (меняется при обновлении данных)
+    if (prev.item !== next.item) return false;
+    
+    // 3. Режимы работы (меняются при навигации)
+    if (prev.selectable !== next.selectable) return false;
     if (prev.isMetravel !== next.isMetravel) return false;
+    
+    // 4. Редкие изменения (меняются только при resize или смене роли)
+    if (prev.isMobile !== next.isMobile) return false;
+    if (prev.isSuperuser !== next.isSuperuser) return false;
+    
+    // 5. Очень редкие изменения
     if (prev.isFirst !== next.isFirst) return false;
     if (prev.isSingle !== next.isSingle) return false;
-    if (prev.selectable !== next.selectable) return false;
-    if (prev.isSelected !== next.isSelected) return false;
-    if (prev.isMobile !== next.isMobile) return false;
-    if (prev.index !== next.index) return false;
 
-    return sameItemRef;
+    return true;
 }
 
 export default memo(RenderTravelItem, areEqual);

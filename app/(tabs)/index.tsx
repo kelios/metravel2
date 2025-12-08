@@ -69,7 +69,7 @@ function TravelScreen() {
 const styles = StyleSheet.create({
     container: { 
         flex: 1,
-        backgroundColor: '#fafbfc',
+        backgroundColor: '#f5f5f5', // ✅ Светло-серый фон для контраста с белыми карточками
     },
     errorContainer: {
         flex: 1,

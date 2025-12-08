@@ -525,36 +525,71 @@ function ListTravel({
 
     const keyExtractor = useCallback((item: any) => String(item.id), []);
 
-    // ✅ ОПТИМИЗАЦИЯ: Динамическая конфигурация виртуализации на основе устройства
+    // ✅ КРИТИЧНО: ItemSeparator создает вертикальные отступы между карточками
+    // ПРОБЛЕМА: marginBottom на карточке НЕ РАБОТАЕТ в FlatList (конфликт с gap в columnWrapperStyle)
+    // РЕШЕНИЕ: Используем ItemSeparatorComponent для явного контроля отступов
+    // 
+    // ВАЖНО: В браузере Platform всегда = 'web', поэтому используем width для определения мобильных
+    // 
+    // Значения:
+    // - Mobile (< 768px): 20px между карточками
+    // - Desktop (>= 768px): 24px между карточками
+    const ItemSeparator = useCallback(() => {
+      const separatorHeight = width < 768 ? 20 : 24;
+      return <View style={{ height: separatorHeight }} />;
+    }, [width]);
+
+    // ✅ ОПТИМИЗАЦИЯ: Динамическая конфигурация виртуализации на основе устройства и viewport
     const listVirtualization = useMemo(() => {
       const config = isMobile ? FLATLIST_CONFIG_MOBILE : FLATLIST_CONFIG;
 
-      // Адаптируем под количество колонок
-      const initial = Math.max(config.INITIAL_NUM_TO_RENDER, columns * 2);
-      const batch = Math.max(config.MAX_TO_RENDER_PER_BATCH, columns * 3);
-      const window = config.WINDOW_SIZE;
+      // ✅ A1.1: Расчет на основе высоты viewport для оптимального количества элементов
+      const estimatedItemHeight = isMobile ? 280 : 320;
+      const itemsPerScreen = Math.ceil(height / estimatedItemHeight);
+      const itemsPerRow = columns;
+      const rowsPerScreen = Math.ceil(itemsPerScreen / itemsPerRow);
+      
+      // Адаптируем под количество колонок и размер экрана
+      const initial = Math.max(rowsPerScreen * itemsPerRow, config.INITIAL_NUM_TO_RENDER);
+      const batch = Math.max(Math.ceil(rowsPerScreen * 1.5) * itemsPerRow, config.MAX_TO_RENDER_PER_BATCH);
+      
+      // ✅ A1.1: Адаптивный windowSize в зависимости от устройства
+      let windowSize: number = config.WINDOW_SIZE;
+      if (isMobile) {
+        windowSize = 5; // Меньше для экономии памяти
+      } else if (isTablet) {
+        windowSize = 7;
+      } else {
+        windowSize = 10; // Больше для desktop для плавного скролла
+      }
 
       return {
         initial,
         batch,
-        window,
+        window: windowSize,
         updateCellsBatchingPeriod: config.UPDATE_CELLS_BATCHING_PERIOD,
       };
-    }, [columns, isMobile]);
+    }, [columns, isMobile, isTablet, height]);
 
-    // ✅ АДАПТИВНОСТЬ: Динамические отступы в зависимости от устройства
+    // ✅ B1.1: Улучшенные адаптивные отступы с плавными переходами
     const contentPadding = useMemo(() => {
-      // ✅ FIX: Увеличен отступ для мобильных до spacing.md (14px)
-      if (isMobile) return spacing.md;
-      if (isTablet) return spacing.md;
-      return spacing.lg;
-    }, [isMobile, isTablet]);
+      if (width < 360) return 16;  // XS: Увеличено для маленьких экранов
+      if (width < 480) return 20; // SM: iPhone SE и подобные - увеличено!
+      if (width < 768) return 20; // Mobile: Стандартные телефоны
+      if (width < 1024) return 20; // Tablet
+      if (width < 1440) return 24; // Desktop
+      if (width < 1920) return 32; // Large Desktop
+      return 40; // XXL
+    }, [width]);
 
+    // ✅ B1.1: Улучшенные отступы между карточками
     const gapSize = useMemo(() => {
-      if (isMobile) return spacing.sm;
-      if (isTablet) return spacing.md;
-      return spacing.md;
-    }, [isMobile, isTablet]);
+      if (width < 360) return 8;  // XS
+      if (width < 480) return 10; // SM
+      if (width < 768) return 12; // Mobile
+      if (width < 1024) return 14; // Tablet
+      return 16; // Desktop+
+    }, [width]);
 
     /* Loading helpers */
     const hasAnyItems = travels.length > 0;
@@ -581,7 +616,7 @@ function ListTravel({
         onMomentumRef.current = false;
     }, []);
     
-    // Оптимизированный обработчик прокрутки с минимальными операциями
+    // ✅ A1.2: Оптимизированный обработчик прокрутки с улучшенным debounce и requestIdleCallback
     const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
         const { contentSize, layoutMeasurement, contentOffset } = e.nativeEvent;
         
@@ -594,25 +629,36 @@ function ListTravel({
         if (Platform.OS === 'web') {
             const offsetY = contentOffset.y;
             
-            // Увеличен порог до 100px для меньшего количества записей
-            if (Math.abs(offsetY - lastScrollOffsetRef.current) > 100) {
+            // ✅ A1.2: Увеличен порог до 200px для web, 150px для mobile
+            const threshold = isMobile ? 150 : 200;
+            
+            if (Math.abs(offsetY - lastScrollOffsetRef.current) > threshold) {
                 // Отменяем предыдущий таймер
                 if (saveScrollTimeoutRef.current) {
                     clearTimeout(saveScrollTimeoutRef.current);
                 }
                 
-                // Используем setTimeout вместо requestAnimationFrame для лучшей производительности
+                // ✅ A1.2: Увеличен debounce до 500ms для снижения нагрузки
                 saveScrollTimeoutRef.current = setTimeout(() => {
-                    try {
-                        window.sessionStorage.setItem('travel-list-scroll', String(offsetY));
-                        lastScrollOffsetRef.current = offsetY;
-                    } catch (error) {
-                        // Игнорируем ошибки sessionStorage
+                    // ✅ A1.2: Используем requestIdleCallback для записи в storage
+                    const saveToStorage = () => {
+                        try {
+                            window.sessionStorage.setItem('travel-list-scroll', String(offsetY));
+                            lastScrollOffsetRef.current = offsetY;
+                        } catch (error) {
+                            // Игнорируем ошибки sessionStorage
+                        }
+                    };
+                    
+                    if ('requestIdleCallback' in window) {
+                        (window as any).requestIdleCallback(saveToStorage, { timeout: 1000 });
+                    } else {
+                        saveToStorage();
                     }
-                }, 300) as any; // Debounce 300ms
+                }, 500) as any; // Debounce 500ms
             }
         }
-    }, []);
+    }, [isMobile]);
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;
@@ -897,7 +943,7 @@ function ListTravel({
 
             <View style={[styles.main, Platform.OS === 'web' && isMobile && styles.mainMobile]}>
               {/* Поиск - StickySearchBar: одинаковый вид для десктопа и мобайла */}
-              <View style={styles.searchSectionMain}>
+              <View style={[styles.searchSectionMain, { paddingHorizontal: contentPadding }]}>
                 <StickySearchBar
                   search={search}
                   onSearchChange={setSearch}
@@ -943,15 +989,20 @@ function ListTravel({
                 renderItem={renderItem}
                 keyExtractor={keyExtractor}
                 numColumns={columns}
+                ItemSeparatorComponent={ItemSeparator} // ✅ Separator для вертикальных отступов
                 columnWrapperStyle={columns > 1 ? {
-                    gap: gapSize,
                     justifyContent: 'flex-start',
+                    gap: gapSize, // ✅ Используем gap для отступов между колонками
                 } : undefined}
                 contentContainerStyle={[
                   styles.listContent,
                   {
+                    // ✅ ВАЖНО: paddingHorizontal для отступов слева/справа
                     paddingHorizontal: contentPadding,
-                    paddingTop: contentPadding,
+                    // ✅ ВАЖНО: paddingTop для отступа от панели поиска
+                    paddingTop: contentPadding + 8, // +8px дополнительно для воздуха
+                    // 🔍 DEBUG: Временный background для проверки отступов (удалить после теста)
+                    // backgroundColor: 'rgba(255, 0, 0, 0.1)',
                   },
                   isMobile && styles.listContentMobile, // ✅ АДАПТИВНОСТЬ: Отдельные стили для мобильных
                   isExport && {
@@ -961,7 +1012,7 @@ function ListTravel({
                 onEndReached={handleListEndReached}
                 onEndReachedThreshold={isMobile ? FLATLIST_CONFIG_MOBILE.ON_END_REACHED_THRESHOLD : FLATLIST_CONFIG.ON_END_REACHED_THRESHOLD}
                 onScroll={onScroll}
-                scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
+                scrollEventThrottle={Platform.select({ ios: 16, android: 32, web: 32 })}
                 onMomentumScrollBegin={onMomentumBegin}
                 refreshing={isRefreshing}
                 onRefresh={handleRefresh}
@@ -1023,8 +1074,14 @@ function ListTravel({
                 maxToRenderPerBatch={listVirtualization.batch}
                 windowSize={listVirtualization.window}
                 updateCellsBatchingPeriod={listVirtualization.updateCellsBatchingPeriod}
-                removeClippedSubviews={Platform.OS !== 'web' && !isMobile}
+                removeClippedSubviews={false} // ✅ Отключено для предотвращения мерцания и скачков при загрузке
                 getItemLayout={undefined}
+                maintainVisibleContentPosition={
+                  Platform.OS !== 'web' ? {
+                    minIndexForVisible: 0,
+                    autoscrollToTopThreshold: 10,
+                  } : undefined
+                } // ✅ Предотвращает скачки при обновлении данных
               />
               )}
             </View>
@@ -1136,7 +1193,7 @@ function ListTravel({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#fafbfc',
+    backgroundColor: '#f5f5f5', // ✅ Светло-серый фон для контраста с белыми карточками
     // ✅ ИСПРАВЛЕНИЕ: Учитываем safe area для iOS
     ...Platform.select({
       web: {
@@ -1188,9 +1245,13 @@ const styles = StyleSheet.create({
     paddingRight: Platform.select({ default: 0, web: 40 }),
     minWidth: 0,
   },
-  // Жёсткое переопределение паддингов для мобильной ширины на web
+  // Жёсткое переопределение для мобильной ширины на web
   mainMobile: {
-    paddingHorizontal: 0, // Убран padding на мобильных
+    // ✅ ВАЖНО: Убираем padding от main (32px) чтобы не было двойных отступов
+    // Отступы управляются через contentPadding (20px) в:
+    // - searchSectionMain (панель поиска)
+    // - contentContainerStyle (FlatList карточки)
+    paddingHorizontal: 0,
     paddingRight: 0,
   },
   searchSection: {
@@ -1200,7 +1261,8 @@ const styles = StyleSheet.create({
   },
   searchSectionMain: {
     marginBottom: 16,
-    paddingHorizontal: Platform.select({ default: spacing.xs, web: 0 }), // Минимальный padding на мобильных
+    // ✅ ВАЖНО: paddingHorizontal управляется через contentPadding в inline стиле
+    // Это гарантирует одинаковые отступы для поиска и карточек
   },
   categoriesSectionMain: {
     marginTop: Platform.select({ default: spacing.md, web: 20 }),
@@ -1240,7 +1302,9 @@ const styles = StyleSheet.create({
     gap: Platform.select({ default: spacing.sm, web: spacing.md }),
   },
   listContent: {
-    paddingBottom: Platform.select({ default: 100, web: 120 }),
+    // ✅ ВАЖНО: Уменьшен paddingBottom для мобильных (футер фиксированный внизу)
+    paddingBottom: 40, // Мобильное значение по умолчанию (было 100/120)
+    backgroundColor: 'transparent', // Прозрачный, чтобы видеть фон root
     ...Platform.select({
       web: {
         maxWidth: 1400,
@@ -1249,13 +1313,14 @@ const styles = StyleSheet.create({
     }),
   },
   listContentMobile: {
-    // ✅ FIX: Увеличен paddingBottom для учета нижней навигации
-    // 60px навигация + 34px safe area (iOS) + 26px отступ = 120px
-    paddingBottom: Platform.select({ default: 120, web: 120 }),
+    // ✅ ВАЖНО: Минимальный paddingBottom для мобильных (футер внизу экрана)
+    // Высота футера ~60px + небольшой отступ = 80px
+    paddingBottom: 80,
     // paddingHorizontal уже установлен через contentPadding
+    backgroundColor: 'transparent', // Прозрачный, чтобы видеть фон root
   },
   columnWrapper: { 
-    gap: 15,
+    gap: Platform.select({ default: 16, web: 20 }), // ✅ Увеличен gap для большего пространства
     justifyContent: "flex-start",
   },
   exportBar: {
