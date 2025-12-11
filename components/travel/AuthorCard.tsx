@@ -22,8 +22,47 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
   const { width } = useWindowDimensions();
   const isMobile = width <= 768;
 
-  // Извлекаем данные об авторе
-  const userName = (travel as any).userName || '';
+  // Извлекаем и очищаем данные об авторе
+  const userName = useMemo(() => {
+    // 1. Пробуем user объект (самый надежный источник)
+    const userObj = travel.user;
+    if (userObj) {
+      const firstName = userObj.first_name || userObj.name;
+      const lastName = userObj.last_name;
+      
+      if (firstName && typeof firstName === 'string' && firstName.trim()) {
+        const cleanFirstName = firstName.trim();
+        if (lastName && typeof lastName === 'string' && lastName.trim()) {
+          return `${cleanFirstName} ${lastName.trim()}`.trim();
+        }
+        return cleanFirstName;
+      }
+    }
+    
+    // 2. Пробуем прямые поля в travel объекте
+    const directName = (travel as any).author_name || (travel as any).authorName || (travel as any).owner_name || (travel as any).ownerName;
+    if (directName && typeof directName === 'string' && directName.trim()) {
+      const clean = directName.trim();
+      // Проверяем на очевидные плейсхолдеры
+      if (!/^[\.\s\u00B7\u2022]+$|^Автор|^Пользователь|^User/i.test(clean)) {
+        return clean;
+      }
+    }
+    
+    // 3. Используем поле userName как основной fallback
+    const base = (travel as any).userName || '';
+    if (typeof base === 'string' && base.trim()) {
+      const clean = base.trim();
+      // Проверяем на плейсхолдеры, но менее строго
+      if (!/^[\.\s\u00B7\u2022]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i.test(clean)) {
+        return clean;
+      }
+    }
+    
+    // 4. Ничего не найдено
+    return '';
+  }, [travel.user?.name, travel.user?.first_name, travel.user?.last_name, (travel as any).userName]);
+  
   const countryName = (travel as any).countryName || '';
   const userId = (travel as any).userIds ?? (travel as any).userId ?? null;
   
@@ -96,7 +135,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
         {/* Информация об авторе */}
         <View style={styles.infoSection}>
           <Text style={[styles.authorName, isMobile && styles.authorNameMobile]}>
-            {userName || 'Автор путешествия'}
+            {userName || 'Аноним'}
           </Text>
           
           {countryName && (
@@ -163,8 +202,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 0, 0, 0.06)',
   },
   containerMobile: {
-    padding: DESIGN_TOKENS.spacing.xxs0,
-    marginBottom: DESIGN_TOKENS.spacing.xxs4,
+    padding: DESIGN_TOKENS.spacing.xxs,
+    marginBottom: DESIGN_TOKENS.spacing.xxs,
     borderRadius: 12,
   },
   content: {

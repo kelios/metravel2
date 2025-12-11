@@ -1,5 +1,5 @@
 // src/components/listTravel/TravelListItem.tsx
-import React, { memo, useCallback, useMemo, useState } from "react";
+import React, { memo, useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { View, Pressable, Text, StyleSheet, Platform } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { Feather } from "@expo/vector-icons";
@@ -10,13 +10,29 @@ import type { Travel } from "@/src/types/types";
 import OptimizedFavoriteButton from "@/components/OptimizedFavoriteButton";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travelsApi";
 import {generateSrcSet } from "@/utils/imageOptimization";
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { enhancedTravelCardStyles } from './enhancedTravelCardStyles';
+import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
+import { enhancedTravelCardStyles, getResponsiveCardValues } from './enhancedTravelCardStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';
 
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
 const ICON_COLOR = "#111827"; // тёмкие иконки под светлое стекло
+
+// Простая эвристика для отбрасывания изображений с водяными знаками / стоковых доменов
+const WATERMARK_DOMAINS = [
+  'shutterstock',
+  'istockphoto',
+  'gettyimages',
+  'depositphotos',
+  'dreamstime',
+  'alamy',
+];
+
+const isLikelyWatermarked = (url: string | null | undefined): boolean => {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return WATERMARK_DOMAINS.some((domain) => lower.includes(domain));
+};
 
 const WebImageOptimized = memo(function WebImageOptimized({
                                                               src,
@@ -27,27 +43,67 @@ const WebImageOptimized = memo(function WebImageOptimized({
     alt: string;
     priority?: boolean;
 }) {
+    // ✅ ОПТИМИЗАЦИЯ: Intersection Observer для lazy loading (кроме приоритетных картинок)
+    const [isInView, setIsInView] = useState(priority);
+    const [isLoaded, setIsLoaded] = useState(false);
+    const imgRef = useRef<HTMLImageElement>(null);
+
+    useEffect(() => {
+        // Для приоритетных изображений (первой карточки) не используем lazy loading — грузим сразу
+        if (priority) {
+            setIsInView(true);
+            return;
+        }
+
+        if (!imgRef.current) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    setIsInView(true);
+                    observer.disconnect();
+                }
+            },
+            { rootMargin: '50px' } // Начинаем загрузку за 50px до появления
+        );
+
+        observer.observe(imgRef.current);
+        return () => observer.disconnect();
+    }, [priority]);
+
     // Дополнительная проверка для SSR
     if (Platform.OS !== 'web' || typeof document === 'undefined') {
         return null;
     }
     
     const imageSrcSet = useMemo(() => generateSrcSet(src, [400, 800, 1200]), [src]);
-    const imageSizes = useMemo(() => "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw", []);
+    // Для трёх колонок с левой панелью уточняем sizes, чтобы не тянуть лишнее
+    const imageSizes = useMemo(
+      () => "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 30vw",
+      []
+    );
+
+    // ✅ На web определяем, мобильная ли сейчас ширина, чтобы управлять режимом вписывания картинки
+    const isMobileWidth = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+    
     return (
         <img
-            src={src}
-            srcSet={imageSrcSet}
+            ref={imgRef}
+            src={isInView ? src : undefined}
+            srcSet={isInView ? imageSrcSet : undefined}
             sizes={imageSizes}
             alt={alt}
             style={{
                 width: "100%",
                 height: "100%",
-                objectFit: "cover",
+                objectFit: isMobileWidth ? "contain" : "cover",
                 display: "block",
+                opacity: isLoaded ? 1 : 0,
+                transition: 'opacity 0.3s ease',
             }}
             loading={priority ? "eager" : "lazy"}
             decoding="async"
+            onLoad={() => setIsLoaded(true)}
             {...(Platform.OS === 'web' ? { fetchpriority: priority ? "high" : "auto" } as any : {})}
         />
     );
@@ -69,6 +125,7 @@ const NativeImageOptimized = memo(function NativeImageOptimized({
             priority="low"
             recyclingKey={uri}
             accessibilityIgnoresInvertColors
+            testID="travel-image"
         />
     );
 });
@@ -108,6 +165,8 @@ type Props = {
     isSelected?: boolean;
     onToggle?: () => void;
     isMobile?: boolean; // ✅ УЛУЧШЕНИЕ: Добавлен проп для определения мобильного устройства
+    cardWidth?: number; // ✅ Фактическая ширина карточки (с учётом паддингов и колонок)
+    viewportWidth?: number; // ✅ Ширина viewport для width-based адаптивности на web
 };
 
 function TravelListItem({
@@ -122,6 +181,8 @@ function TravelListItem({
                             isSelected = false,
                             onToggle,
                             isMobile = false,
+                            cardWidth,
+                            viewportWidth,
                         }: Props) {
     if (!travel) return null;
 
@@ -135,6 +196,53 @@ function TravelListItem({
         countUnicIpView = 0
     } = travel;
 
+    const authorName = useMemo(() => {
+        // 1. Пробуем user объект (самый надежный источник)
+        const userObj = travel.user;
+        if (userObj) {
+            const firstName = userObj.first_name || userObj.name;
+            const lastName = userObj.last_name;
+            
+            if (firstName && typeof firstName === 'string' && firstName.trim()) {
+                const cleanFirstName = firstName.trim();
+                if (lastName && typeof lastName === 'string' && lastName.trim()) {
+                    return `${cleanFirstName} ${lastName.trim()}`.trim();
+                }
+                return cleanFirstName;
+            }
+        }
+        
+        // 2. Пробуем прямые поля в travel объекте
+        const directName = (travel as any).author_name || (travel as any).authorName || (travel as any).owner_name || (travel as any).ownerName;
+        if (directName && typeof directName === 'string' && directName.trim()) {
+            const clean = directName.trim();
+            // Проверяем на очевидные плейсхолдеры
+            if (!/^[\.\s\u00B7\u2022]+$|^Автор|^Пользователь|^User/i.test(clean)) {
+                return clean;
+            }
+        }
+        
+        // 3. Используем поле userName как основной fallback
+        const base = userName;
+        if (typeof base === 'string' && base.trim()) {
+            const clean = base.trim();
+            // Проверяем на плейсхолдеры, но менее строго
+            if (!/^[\.\s\u00B7\u2022]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i.test(clean)) {
+                return clean;
+            }
+        }
+        
+        // 4. Ничего не найдено
+        return '';
+    }, [userName, travel.user?.name, travel.user?.first_name, travel.user?.last_name]);
+
+    // Отладка: выводим результат
+    if (__DEV__) {
+        console.log('Author name result:', authorName, 'Raw userName:', userName, 'User object:', travel.user);
+    }
+
+    const views = Number(countUnicIpView) || 0;
+
     // ✅ УЛУЧШЕНИЕ: Оптимизация превью под карточку с использованием новых утилит
     const imgUrl = useMemo(() => {
         if (!travel_image_thumb_url) return null;
@@ -143,8 +251,33 @@ function TravelListItem({
         return travel_image_thumb_url;
     }, [travel_image_thumb_url]);
 
+    // ✅ PRELOAD: для первой карточки на web добавляем link rel="preload" для её изображения
+    useEffect(() => {
+        if (!isFirst || Platform.OS !== 'web' || !imgUrl) return;
+        if (typeof document === 'undefined') return;
+
+        const linkId = `preload-travel-img-${String(id)}`;
+        // Если уже есть такой preload — не дублируем
+        if (document.getElementById(linkId)) return;
+
+        const link = document.createElement('link');
+        link.id = linkId;
+        link.rel = 'preload';
+        link.as = 'image';
+        link.href = imgUrl;
+        // Небольшой hint для браузера
+        (link as any).fetchpriority = 'high';
+        document.head.appendChild(link);
+
+        return () => {
+            // При анмаунте можно убрать, но это не обязательно критично
+            if (link.parentNode) {
+                link.parentNode.removeChild(link);
+            }
+        };
+    }, [isFirst, imgUrl, id]);
+
     const viewsFormatted = useMemo(() => {
-        const views = Number(countUnicIpView) || 0;
         try {
             // Компактный формат: 1,2K / 3,4M
             return new Intl.NumberFormat('ru-RU', {
@@ -154,16 +287,29 @@ function TravelListItem({
         } catch {
             return String(views);
         }
-    }, [countUnicIpView]);
+    }, [views]);
 
     const countries = useMemo(
         () => (countryName || "").split(",").map((c) => c.trim()).filter(Boolean),
         [countryName]
     );
 
+    // ✅ Width-based адаптивные значения для карточки: используем фактическую ширину, если она есть
+    const effectiveWidth = typeof cardWidth === 'number' ? cardWidth : viewportWidth;
+
+    const responsiveValues = useMemo(
+        () => getResponsiveCardValues(
+            typeof effectiveWidth === 'number'
+                ? effectiveWidth
+                : isMobile
+                    ? 375 // разумный fallback для мобильных
+                    : 1024 // fallback для desktop
+        ),
+        [effectiveWidth, isMobile]
+    );
+
     // ✅ БИЗНЕС: Определение badges для социального доказательства
     const popularityFlags = useMemo(() => {
-        const views = Number(countUnicIpView) || 0;
         const updatedAt = (travel as any).updated_at;
         const createdAt = (travel as any).created_at || updatedAt;
 
@@ -185,7 +331,7 @@ function TravelListItem({
         }
 
         return { isPopular, isNew };
-    }, [countUnicIpView, travel]);
+    }, [views, travel]);
 
     // Право редактирования:
     //  - суперпользователь может управлять всеми путешествиями
@@ -286,6 +432,10 @@ function TravelListItem({
         {...cardWrapperProps}
         style={[
           styles.card,
+          Platform.OS === 'web' && {
+            // ✅ Радиус карточки на web теперь зависит от ширины viewport
+            borderRadius: responsiveValues.borderRadius,
+          },
           globalFocusStyles.focusable,
           Platform.OS === "android" && styles.androidOptimized,
           isSingle && styles.single,
@@ -296,22 +446,33 @@ function TravelListItem({
           <View
             pointerEvents="none"
             style={[
-              styles.selectionOverlay,
-              isSelected && styles.selectionOverlayActive,
+              {
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: isSelected ? "rgba(5,150,105,0.12)" : "rgba(96,165,250,0.08)",
+                zIndex: 2,
+                opacity: 1,
+                transitionDuration: "150ms",
+                pointerEvents: "none",
+              } as any,
             ]}
           />
         )}
 
         {/* Блок изображения */}
         <View style={styles.imageContainer}>
-          {imgUrl ? (
+          {imgUrl && !isLikelyWatermarked(imgUrl) ? (
             Platform.OS === "web" ? (
-              <WebImageOptimized src={imgUrl} alt={name} priority={isFirst} />
+              // Первую карточку загружаем с приоритетом для улучшения LCP
+              <WebImageOptimized src={imgUrl} alt={name} priority={!!isFirst} />
             ) : (
               <NativeImageOptimized uri={imgUrl} />
             )
           ) : (
-            <View style={styles.imgStub}>
+            <View style={styles.imgStub} testID="image-stub">
               <Feather name="image" size={40} color="#94a3b8" />
             </View>
           )}
@@ -435,55 +596,109 @@ function TravelListItem({
         </View>
 
         {/* Контент под изображением */}
-        <View style={styles.contentBelow}>
-          <Text style={styles.title} numberOfLines={2}>
+        <View
+          style={[
+            styles.contentBelow,
+            // На web оставляем компактные фиксированные отступы 5px и gap 5px
+            Platform.OS === 'web' && {
+              padding: 5,
+              gap: 5,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.title,
+              Platform.OS === 'web' && {
+                // Фиксированная типографика заголовка на web
+                fontFamily: "Inter, System",
+                fontSize: 17,
+                lineHeight: responsiveValues.titleLineHeight,
+                marginBottom: responsiveValues.titleMarginBottom,
+                minHeight: responsiveValues.titleMinHeight,
+              },
+            ]}
+            numberOfLines={2}
+          >
             {name}
           </Text>
 
-          <View style={styles.metaRow}>
-            <View style={styles.metaInfoLeft}>
-              {!!userName && (
-                <View style={styles.metaBox}>
-                  <Feather name="user" size={Platform.select({ default: 10, web: 11 })} color="#64748b" style={{ marginRight: 4 }} />
-                  <Text style={styles.metaTxt} numberOfLines={1}>
-                    {userName}
-                  </Text>
-                </View>
-              )}
+          <View
+            style={[
+              styles.metaRow,
+              Platform.OS === 'web' && typeof viewportWidth === 'number' && viewportWidth < 375 && {
+                // ✅ На очень узких экранах выравниваем по верху, чтобы элементы могли переноситься на новую строку
+                alignItems: 'flex-start',
+              },
+            ]}
+          >
+            {/* Первая строка: иконка пользователя + имя + просмотры */}
+            <View style={styles.metaInfoTopRow}>
               <View style={styles.metaBox}>
-                <Feather name="eye" size={Platform.select({ default: 10, web: 11 })} color="#64748b" style={{ marginRight: 4 }} />
-                <Text style={styles.metaTxt}>{viewsFormatted}</Text>
+                <Feather
+                  name="user"
+                  size={Platform.select({ default: 10, web: 11 })}
+                  color="#64748b"
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={styles.metaTxt}>
+                  {authorName || 'Аноним'}
+                </Text>
               </View>
-
-              {(popularityFlags.isPopular || popularityFlags.isNew) && (
-                <View style={styles.metaIcons}>
-                  {popularityFlags.isPopular && (
-                    <View style={[styles.statusBadge, styles.statusBadgePopular]}>
-                      <Feather
-                        name="trending-up"
-                        size={Platform.select({ default: 10, web: 12 })}
-                        color={DESIGN_TOKENS.colors.primary}
-                      />
-                      <Text style={[styles.statusBadgeText, styles.statusBadgeTextPopular]}>
-                        Популярное
-                      </Text>
-                    </View>
-                  )}
-                  {popularityFlags.isNew && (
-                    <View style={[styles.statusBadge, styles.statusBadgeNew]}>
-                      <Feather
-                        name="star"
-                        size={Platform.select({ default: 10, web: 12 })}
-                        color={DESIGN_TOKENS.colors.accent || "#f59e0b"}
-                      />
-                      <Text style={[styles.statusBadgeText, styles.statusBadgeTextNew]}>
-                        Новое
-                      </Text>
-                    </View>
-                  )}
+              {views > 0 && (
+                <View
+                  style={styles.metaBoxViews}
+                  testID="views-meta"
+                >
+                  <Feather
+                    name="eye"
+                    size={Platform.select({ default: 10, web: 11 })}
+                    color="#64748b"
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.metaTxtViews}>{viewsFormatted}</Text>
                 </View>
               )}
             </View>
+
+            {/* Вторая строка: только бейджи Популярное / Новое */}
+            {(popularityFlags.isPopular || popularityFlags.isNew) && (
+              <View
+                style={[
+                  styles.metaBadgesRow,
+                  Platform.OS === 'web' && typeof viewportWidth === 'number' && viewportWidth < 375 && {
+                    // ✅ Бейджи могут переноситься на следующую строку вместо выхода за правый край
+                    flexWrap: 'wrap',
+                    gap: 6,
+                  },
+                ]}
+              >
+                {popularityFlags.isPopular && (
+                  <View style={[styles.statusBadge, styles.statusBadgePopular]}>
+                    <Feather
+                      name="trending-up"
+                      size={Platform.select({ default: 10, web: 12 })}
+                      color={TOKENS.colors.primary}
+                    />
+                    <Text style={[styles.statusBadgeText, styles.statusBadgeTextPopular]}>
+                      Популярное
+                    </Text>
+                  </View>
+                )}
+                {popularityFlags.isNew && (
+                  <View style={[styles.statusBadge, styles.statusBadgeNew]}>
+                    <Feather
+                      name="star"
+                      size={Platform.select({ default: 10, web: 12 })}
+                      color={TOKENS.colors.success}
+                    />
+                    <Text style={[styles.statusBadgeText, styles.statusBadgeTextNew]}>
+                      Новое
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
         </View>
       </CardWrapper>
@@ -491,7 +706,15 @@ function TravelListItem({
 
   return (
     <View
-      style={styles.wrap}
+      style={[
+        styles.wrap,
+        Platform.OS === 'web' && typeof cardWidth === 'number' && {
+          // ✅ На web ограничиваем фактическую ширину карточки и центрируем её в колонке
+          // maxWidth: cardWidth, // УБРАНО: теперь ширина ограничивается в самих стилях карточки
+          alignSelf: 'center',
+          width: '100%',
+        },
+      ]}
     >
     {Platform.OS === 'web' ? (
       // На вебе различаем два режима:
@@ -546,14 +769,35 @@ const styles = StyleSheet.create({
     width: "100%",
   },
 
-  // ... (rest of the styles remain the same)
+  // Современная минималистичная карточка
   card: {
-    ...enhancedTravelCardStyles.card,
-  } as any,
+    width: '100%',
+    backgroundColor: TOKENS.colors.surface,
+    borderRadius: TOKENS.radii.lg,
+    borderWidth: Platform.OS === 'web' ? 1 : 0,
+    borderColor: TOKENS.colors.border,
+    overflow: 'hidden',
+    // Фиксированная высота на web, чтобы все карточки в ряду были одной высоты
+    ...(Platform.OS === 'web'
+      ? {
+          height: 360,
+        }
+      : {}),
+    // Минимальные тени для глубины - разделены по платформам
+    ...(Platform.OS === 'web' 
+      ? { boxShadow: TOKENS.shadows.subtle }
+      : TOKENS.shadowsNative.subtle
+    ),
+  },
 
   imageContainer: {
-    ...enhancedTravelCardStyles.imageContainer,
-  } as any,
+    position: 'relative',
+    width: '100%',
+    // Фиксированная высота для предсказуемого layout и отсутствия прыжков при загрузке изображений
+    height: 220,
+    backgroundColor: TOKENS.colors.backgroundSecondary,
+    overflow: 'hidden',
+  },
 
   androidOptimized: {
     shadowColor: undefined,
@@ -563,28 +807,16 @@ const styles = StyleSheet.create({
   },
 
   selected: {
-    ...Platform.select({
-      web: {
-        boxShadow: `0 0 0 2px ${DESIGN_TOKENS.colors.primary}`,
-        borderColor: DESIGN_TOKENS.colors.primary,
-      },
-    }),
-  },
-  selectionOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(96,165,250,0.08)",
-    zIndex: 2,
-    opacity: 0,
-    transitionDuration: "150ms",
-    pointerEvents: "none",
-  } as any,
-  selectionOverlayActive: {
-    opacity: 1,
-    backgroundColor: "rgba(5,150,105,0.12)",
+    ...(Platform.OS === 'web' 
+      ? { boxShadow: TOKENS.shadows.soft, borderColor: TOKENS.colors.primary }
+      : {
+          shadowColor: TOKENS.colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          elevation: 4,
+        }
+    ),
   },
 
   single: {
@@ -603,289 +835,252 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: TOKENS.colors.backgroundSecondary,
   },
 
+  // Убираем градиент для минимализма
   grad: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: "40%", // Чуть выше градиент для лучшей читаемости бейджа
+    height: "25%", // Минимальный градиент
   },
 
+  // Упрощенные бейджи
+  topBadges: {
+    position: "absolute",
+    bottom: TOKENS.spacing.sm,
+    left: TOKENS.spacing.sm,
+    right: TOKENS.spacing.sm,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: TOKENS.spacing.xs,
+    zIndex: 10,
+  },
+
+  infoBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: TOKENS.spacing.xs,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: TOKENS.radii.full,
+    paddingHorizontal: TOKENS.spacing.sm,
+    paddingVertical: TOKENS.spacing.xs,
+    ...(Platform.OS === 'web' ? {
+      backdropFilter: "blur(12px)",
+      WebkitBackdropFilter: "blur(12px)",
+    } : {}),
+  },
+
+  infoBadgeText: {
+    fontSize: TOKENS.typography.sizes.sm,
+    color: TOKENS.colors.text,
+    fontWeight: TOKENS.typography.weights.medium,
+    letterSpacing: -0.2,
+  },
+
+  // Упрощенные кнопки управления
   adminActionsContainer: {
     position: 'absolute',
-    top: 12,
-    left: 12,
+    top: TOKENS.spacing.sm,
+    left: TOKENS.spacing.sm,
     zIndex: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-      web: {
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        boxShadow: '0 4px 6px -1px rgba(15,23,42,0.08)',
-      },
-    }),
+    gap: TOKENS.spacing.xs,
+    // Компактный glass-пил, по высоте близкий к кнопке избранного
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: TOKENS.radii.full,
+    paddingHorizontal: TOKENS.spacing.xs,
+    paddingVertical: TOKENS.spacing.xs * 0.75,
+    ...(Platform.OS === 'web' ? {
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
+    } : {}),
   },
 
   adminBtn: {
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingHorizontal: TOKENS.spacing.xs,
+    paddingVertical: TOKENS.spacing.xs * 0.25,
+    borderRadius: TOKENS.radii.full,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
   },
 
   adminDivider: {
     width: 1,
-    height: 18,
-    marginHorizontal: 6,
-    backgroundColor: 'rgba(148,163,184,0.5)',
+    height: 16,
+    backgroundColor: TOKENS.colors.border,
   },
 
   favoriteButtonContainer: {
-    ...enhancedTravelCardStyles.favoriteButton,
-  } as any,
-
-  contentBelow: {
-    ...enhancedTravelCardStyles.contentContainer,
-  } as any,
-  
-  topBadges: {
-    position: "absolute",
-    bottom: Platform.select({ default: 10, web: 12 }),
-    left: Platform.select({ default: 10, web: 12 }),
-    right: Platform.select({ default: 10, web: 12 }),
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Platform.select({ default: 6, web: 8 }),
-    zIndex: 10,
+    position: 'absolute',
+    top: TOKENS.spacing.sm,
+    right: TOKENS.spacing.sm,
+    zIndex: 20,
   },
-  
-  infoBadge: {
+
+  // Упрощенный контент
+  contentBelow: {
+    // Небольшой внутренний отступ и маленький gap между элементами
+    paddingHorizontal: 5,
+    paddingVertical: 5,
+    gap: 5,
+    backgroundColor: TOKENS.colors.surface,
+  },
+
+  // Современная типографика
+  title: {
+    fontSize: TOKENS.card.title.size,
+    fontWeight: TOKENS.card.title.weight,
+    lineHeight: TOKENS.card.title.lineHeight,
+    color: TOKENS.colors.text,
+    marginBottom: 0,
+  },
+
+  // Упрощенная мета-информация
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: 'space-between',
+    gap: TOKENS.spacing.xs,
+    flexWrap: 'wrap',
+  },
+
+  // Первая строка: пользователь + просмотры
+  metaInfoTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    width: '100%',
+    position: 'relative', // Для абсолютного позиционирования просмотров
+    minHeight: 20, // Минимальная высота для размещения элементов
+  },
+
+  // Вторая строка: бейджи Популярное / Новое
+  metaBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: TOKENS.spacing.xs,
+    marginTop: TOKENS.spacing.xs,
+    flexWrap: 'wrap',
+    // Небольшая минимальная высота, чтобы карточки с одним и двумя бейджами выглядели ровнее
+    minHeight: 28,
+  },
+
+  metaBox: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Platform.select({ default: 4, web: 6 }),
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderRadius: 100,
-    paddingHorizontal: Platform.select({ default: 8, web: 10 }),
-    paddingVertical: Platform.select({ default: 4, web: 6 }),
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-      web: {
-        boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
-      },
-    }),
-  },
-  
-  infoBadgeText: {
-    fontSize: Platform.select({ default: 11, web: 12 }),
-    color: "#0f172a",
-    fontWeight: "600",
-    letterSpacing: -0.1,
+    gap: TOKENS.spacing.xs,
+    width: '100%', // Занимаем всю ширину родителя
+    paddingRight: 120, // Увеличиваем место для просмотров справа
   },
 
-  // ... (badgesContainer, badge, badgeText - can remove if unused or keep)
-  badgesContainer: {
+  // Отдельный стиль для просмотров - абсолютно позиционированы
+  metaBoxViews: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 4,
-  },
-  badge: {
-    borderRadius: 4,
-    paddingHorizontal: 6,
+    alignItems: "center",
+    gap: TOKENS.spacing.xs,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    paddingHorizontal: TOKENS.spacing.xs,
     paddingVertical: 2,
   },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: "700",
+
+  metaTxt: {
+    fontSize: TOKENS.card.meta.size,
+    color: TOKENS.colors.textSecondary,
+    fontWeight: TOKENS.card.meta.weight,
+    lineHeight: TOKENS.card.meta.lineHeight,
+    flex: 1, // Занимаем доступное пространство в контейнере
+    minWidth: 0, // Важно для корректного обрезания текста
   },
 
+  // Отдельный стиль для текста просмотров - не обрезается
+  metaTxtViews: {
+    fontSize: TOKENS.card.meta.size,
+    color: TOKENS.colors.textSecondary,
+    fontWeight: TOKENS.card.meta.weight,
+    lineHeight: TOKENS.card.meta.lineHeight,
+  },
+
+  // Упрощенные статус-бейджи (современные нейтральные pill-метки)
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: TOKENS.spacing.xs,
+    paddingHorizontal: TOKENS.spacing.sm,
+    paddingVertical: TOKENS.spacing.xs * 0.75,
+    borderRadius: TOKENS.radii.full,
+    borderWidth: 1,
+    backgroundColor: TOKENS.colors.backgroundSecondary,
+    borderColor: TOKENS.colors.border,
+  },
+
+  statusBadgePopular: {},
+
+  statusBadgeNew: {},
+
+  statusBadgeText: {
+    fontSize: TOKENS.typography.sizes.xs,
+    fontWeight: TOKENS.typography.weights.semibold,
+    letterSpacing: -0.1,
+    color: TOKENS.colors.textSecondary,
+  },
+
+  statusBadgeTextPopular: {},
+
+  statusBadgeTextNew: {},
+
+  // Упрощенные теги стран
   tags: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginBottom: 8,
-    gap: 4,
+    gap: TOKENS.spacing.xs,
   },
 
   tag: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f1f5f9",
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: TOKENS.colors.backgroundSecondary,
+    borderRadius: TOKENS.radii.sm,
+    paddingHorizontal: TOKENS.spacing.sm,
+    paddingVertical: TOKENS.spacing.xs,
+    gap: TOKENS.spacing.xs,
   },
 
   tagTxt: {
-    fontSize: 11,
-    color: "#64748b",
-    fontWeight: "600",
+    fontSize: TOKENS.typography.sizes.sm,
+    color: TOKENS.colors.textSecondary,
+    fontWeight: TOKENS.typography.weights.medium,
   },
 
-  title: {
-    ...enhancedTravelCardStyles.title,
-  } as any,
-
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: 'space-between',
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    marginTop: 'auto', // Прижимает футер к низу
-  },
-  
-  metaInfoLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    flex: 1,
-  },
-  
-  metaBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-
-  metaTxt: {
-    fontSize: 13,
-    color: "#64748b", // slate-500
-    fontWeight: '500' as any,
-  },
-
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: Platform.select({ default: 6, web: 8 }),
-    paddingVertical: Platform.select({ default: 2, web: 4 }),
-    borderRadius: 999,
-    backgroundColor: '#f1f5f9',
-  },
-  statusBadgeText: {
-    fontSize: Platform.select({ default: 10, web: 11 }),
-    fontWeight: '600' as any,
-    color: '#475569',
-  },
-  statusBadgePopular: {
-    backgroundColor: 'rgba(56, 189, 248, 0.1)', // Light blue/cyan
-  },
-  statusBadgeTextPopular: {
-    color: '#0284c7', // Darker blue
-  },
-  statusBadgeNew: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)', // Light amber
-  },
-  statusBadgeTextNew: {
-    color: '#d97706', // Darker amber
-  },
-  metaIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  
-  actionsHidden: {
-    opacity: 0,
-  },
-
-  btncard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    overflow: Platform.OS === "android" ? "visible" : "hidden",
-    marginBottom: 16,
-    ...Platform.select({
-      web: {
-        transition: "all 0.2s ease",
-        cursor: "pointer",
-        // @ts-ignore
-        ":hover": {
-          backgroundColor: "#e2e8f0",
-          color: DESIGN_TOKENS.colors.primary,
-        },
-      } as any,
-    }),
-  },
-
-  btn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f1f5f9",
-    ...Platform.select({
-      web: {
-        transition: "all 0.2s ease",
-        cursor: "pointer",
-        // @ts-ignore
-        ":hover": {
-          backgroundColor: "#e2e8f0",
-          color: DESIGN_TOKENS.colors.primary,
-        },
-      },
-    }),
-  },
-
+  // Упрощенные чекбоксы
   checkWrap: {
     position: "absolute",
-    top: 12,
-    left: 12,
+    top: TOKENS.spacing.sm,
+    right: TOKENS.spacing.sm,
     zIndex: 20,
   },
 
   checkbox: {
     width: 24,
     height: 24,
-    borderRadius: 8,
+    borderRadius: TOKENS.radii.sm,
     borderWidth: 2,
-    borderColor: '#fff',
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-    ...Platform.select({
-      web: {
-        backdropFilter: "blur(4px)",
-      }
-    })
+    borderColor: TOKENS.colors.borderStrong,
+    backgroundColor: TOKENS.colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
   },
 
   checkboxChecked: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    borderColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: TOKENS.colors.primary,
+    borderColor: TOKENS.colors.primary,
   },
 });
 
