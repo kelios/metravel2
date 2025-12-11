@@ -72,9 +72,9 @@ export default function ListTravelSkeleton() {
 
     // ✅ B4.1: Адаптивные отступы как в реальных карточках
     const contentPadding = useMemo(() => {
-      if (width < 360) return 16;  // XS: Увеличено для маленьких экранов
-      if (width < 480) return 20; // SM: iPhone SE и подобные - синхронизировано!
-      if (width < 768) return 20; // Mobile: Стандартные телефоны
+      if (width < 360) return 16;  // XS: компактные устройства
+      if (width < 480) return 26; // SM: чуть уже карточки на очень маленьких телефонах
+      if (width < 768) return 26; // Mobile: стандартные телефоны — синхронизировано с реальными карточками
       if (width < 1024) return 20;
       if (width < 1440) return 24;
       if (width < 1920) return 32;
@@ -87,6 +87,25 @@ export default function ListTravelSkeleton() {
       if (width < 768) return 12;
       if (width < 1024) return 14;
       return 16;
+    }, [width]);
+
+    // ✅ Width-based максимальная ширина skeleton-карточки на web-мобайле
+    const mobileCardMaxWidth = useMemo(() => {
+      if (width >= 768) return undefined;
+
+      let horizontalPadding = 26;
+      if (width < 360) {
+        horizontalPadding = 16;
+      }
+
+      const availableWidth = width - horizontalPadding * 2;
+      const innerMargin = 12;
+      const rawWidth = availableWidth - innerMargin * 2;
+
+      const MIN_WIDTH = 280;
+      const MAX_WIDTH = 360;
+
+      return Math.max(MIN_WIDTH, Math.min(rawWidth, MAX_WIDTH));
     }, [width]);
 
     return (
@@ -120,7 +139,17 @@ export default function ListTravelSkeleton() {
                                }
                              ]}
                            >
-                               <View style={styles.card}>
+                               <View
+                                 style={[
+                                   styles.card,
+                                   width < 768 && mobileCardMaxWidth != null && {
+                                     // ✅ Ограничиваем ширину skeleton-карточки на основе ширины экрана и центрируем
+                                     maxWidth: mobileCardMaxWidth,
+                                     alignSelf: 'center',
+                                     width: '100%',
+                                   },
+                                 ]}
+                               >
                                    {/* Изображение */}
                                    <ShimmerPlaceholder style={styles.imagePlaceholder} />
                                    

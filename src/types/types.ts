@@ -55,6 +55,8 @@ export type Travel = {
     user?: {
         id: number;
         name: string;
+        first_name?: string;
+        last_name?: string;
         avatar?: string;
     }
     created_at?: string

@@ -36,7 +36,7 @@ const baseTravel: any = {
 describe('AuthorCard', () => {
   it('returns null when no author data', () => {
     const { queryByText } = render(<AuthorCard travel={{} as any} />)
-    expect(queryByText('Автор путешествия')).toBeNull()
+    expect(queryByText('Аноним')).toBeNull()
   })
 
   it('renders author info with placeholder avatar when no image', () => {

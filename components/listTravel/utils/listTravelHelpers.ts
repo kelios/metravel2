@@ -51,7 +51,7 @@ export function normalizeApiResponse(data: any): { items: Travel[]; total: numbe
 export function deduplicateTravels(travels: Travel[]): Travel[] {
   const seenIds = new Set<string | number>();
   return travels.filter((travel) => {
-    const id = travel?.id ?? travel?.slug ?? travel?._id;
+    const id = travel?.id ?? travel?.slug ?? (travel as any)?._id;
     if (!id || seenIds.has(id)) {
       return false;
     }
@@ -66,7 +66,7 @@ const MAX_CARD_WIDTH = 400; // Максимальная ширина карто�
 const GAP = 16; // Отступ между карточками
 
 // Функция для расчета padding контейнера
-function getContainerPadding(width: number): number {
+export function getContainerPadding(width: number): number {
   if (width < BREAKPOINTS.XS) return 8;
   if (width < BREAKPOINTS.SM) return 12;
   if (width < BREAKPOINTS.MOBILE) return 16;
@@ -89,19 +89,13 @@ export function calculateColumns(width: number, orientation: 'portrait' | 'lands
   // Рассчитываем максимальное количество колонок на основе минимальной ширины карточки
   let columns = Math.floor((availableWidth + GAP) / (MIN_CARD_WIDTH + GAP));
   
-  // Ограничения для разных устройств
+  // Ограничения для разных устройств - максимум 3 колонки
   if (width < BREAKPOINTS.TABLET) {
     // Планшеты в портретной ориентации - максимум 2 колонки
     columns = Math.min(columns, 2);
-  } else if (width < BREAKPOINTS.DESKTOP) {
-    // Планшеты в ландшафте - максимум 3 колонки
-    columns = Math.min(columns, 3);
-  } else if (width < BREAKPOINTS.XXL) {
-    // Desktop - максимум 3 колонки для лучшей читаемости
-    columns = Math.min(columns, 3);
   } else {
-    // Очень большие экраны - максимум 4 колонки
-    columns = Math.min(columns, 4);
+    // Все остальные - максимум 3 колонки
+    columns = Math.min(columns, 3);
   }
   
   // Учитываем ориентацию для планшетов
@@ -169,8 +163,8 @@ export function calculateCategoriesWithCount(
   
   const categoryCounts: Record<string, number> = {};
   travels.forEach((travel) => {
-    if (travel.categoryName) {
-      const cats = travel.categoryName.split(',').map((c: string) => c.trim());
+    if ((travel as any).categoryName) {
+      const cats = (travel as any).categoryName.split(',').map((c: string) => c.trim()).filter(Boolean);
       cats.forEach((cat: string) => {
         categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
       });

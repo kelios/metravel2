@@ -58,7 +58,7 @@ export class EnhancedPdfGenerator {
     const sortedTravels = this.sortTravels(travels, settings.sortOrder);
     const coverImage = this.resolveCoverImage(sortedTravels, settings);
     const yearRange = this.getYearRange(sortedTravels);
-    const userName = sortedTravels[0]?.userName || 'Путешественник';
+    const userName = sortedTravels[0]?.userName || 'Аноним';
 
     if (!this.selectedQuotes) {
       const coverQuote = pickRandomQuote();

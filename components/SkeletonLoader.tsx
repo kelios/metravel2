@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
 
 interface SkeletonLoaderProps {
   width?: number | string;
@@ -42,7 +42,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
  */
 export const TravelCardSkeleton: React.FC = () => {
   // ✅ FIX: Унифицированная высота изображения с реальными карточками и учетом маленьких экранов
-  const imageHeight = Platform.select({ default: 160, web: 180 }); // Уменьшенная высота для узких экранов
+  const imageHeight = 220;
   const titleHeight = Platform.select({ default: 14, web: 16 });
   const metaHeight = Platform.select({ default: 11, web: 12 });
   
@@ -68,77 +68,88 @@ export const TravelCardSkeleton: React.FC = () => {
  * Skeleton для списка путешествий
  */
 export const TravelListSkeleton: React.FC<{ count?: number; columns?: number }> = ({ count = 6, columns = 1 }) => {
-  // Для одной колонки используем 100%, для нескольких - вычисляем с учетом gap
-  const widthPct = columns > 1 ? `${Math.floor(100 / columns) - 2}%` : '100%';
+  const isWeb = Platform.OS === 'web';
 
+  // На web делаем сетку по колонкам, чтобы скелетоны совпадали с реальными карточками
+  if (isWeb) {
+    const itemWidth = `${100 / columns}%`;
+
+    return (
+      <>
+        {Array.from({ length: count }).map((_, index) => (
+          <View key={index} style={{ width: itemWidth } as any}>
+            <TravelCardSkeleton />
+          </View>
+        ))}
+      </>
+    );
+  }
+
+  // На native оставляем простой вертикальный список
   return (
-    <View style={styles.listContainer}>
+    <>
       {Array.from({ length: count }).map((_, index) => (
-        <View key={index} style={{ width: widthPct as any }}>
-           <TravelCardSkeleton />
-        </View>
+        <TravelCardSkeleton key={index} />
       ))}
-    </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    // ✅ УЛУЧШЕНИЕ: Более выразительный цвет с легким градиентом
-    // ✅ FIX: Анимация применяется через className, а не через inline стили
+    backgroundColor: TOKENS.colors.skeleton,
+    // Современные скелетоны - очень светлые
   },
+
+  // Современная карточка скелетона
   card: {
     width: '100%',
     maxWidth: '100%',
-    borderRadius: Platform.select({ default: 16, web: 20 }), // Соответствует обновленным карточкам
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderRadius: TOKENS.radii.lg,
+    backgroundColor: TOKENS.colors.surface,
     overflow: 'hidden',
-    // ✅ FIX: Обновлен marginBottom для соответствия реальным карточкам
-    marginBottom: Platform.select({ default: 14, web: 18 }),
-    minHeight: Platform.select({ default: 280, web: 320 }), // Минимальная высота для стабильности макета
-    // ✅ ИСПРАВЛЕНИЕ: Тени должны совпадать с реальными карточками
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.12,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 4,
-      },
-      web: {
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02)',
-      },
-    }),
+    // Высота теперь определяется содержимым, чтобы совпадать с реальной карточкой
+    borderWidth: Platform.OS === 'web' ? 1 : 0,
+    borderColor: TOKENS.colors.border,
+    // Минимальные тени
+    ...(Platform.OS === 'web'
+      ? { boxShadow: TOKENS.shadows.subtle } as any
+      : TOKENS.shadowsNative.subtle
+    ),
   },
+
   image: {
     marginBottom: 0,
   },
+
+  // Упрощенный контент скелетона
   content: {
-    padding: Platform.select({ default: 12, web: 16 }), // Уменьшен отступ для мобильных
-    paddingTop: Platform.select({ default: 10, web: 14 }),
-    gap: Platform.select({ default: 6, web: 10 }),
-    backgroundColor: '#ffffff',
-    flex: 1, // Добавлен flex для правильного расположения
+    padding: TOKENS.card.padding.desktop,
+    gap: TOKENS.card.gap,
+    backgroundColor: TOKENS.colors.surface,
   },
+
   marginBottom: {
-    marginBottom: 4,
+    marginBottom: TOKENS.spacing.xs,
   },
+
   marginBottomLarge: {
-    marginBottom: 12,
+    marginBottom: TOKENS.spacing.sm,
   },
+
+  // Упрощенная мета-информация скелетона
   metaRow: {
     flexDirection: 'row',
-    gap: 16,
-    marginTop: 8,
+    gap: TOKENS.spacing.md,
+    marginTop: TOKENS.spacing.sm,
   },
+
+  // Упрощенный контейнер списка
   listContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Platform.select({ default: 10, web: 16 }), // Уменьшен отступ для мобильных
-    padding: Platform.select({ default: 10, web: 14 }), // Уменьшен отступ для мобильных
+    gap: Platform.select({ default: TOKENS.spacing.md, web: TOKENS.spacing.lg }),
+    padding: Platform.select({ default: TOKENS.spacing.md, web: TOKENS.spacing.lg }),
   },
 });
 
@@ -150,9 +161,9 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
     style.id = styleId;
     style.textContent = `
       .skeleton-pulse {
-        background: linear-gradient(90deg, ${DESIGN_TOKENS.colors.backgroundSecondary} 0%, #e8e7e5 50%, ${DESIGN_TOKENS.colors.backgroundSecondary} 100%);
+        background: linear-gradient(90deg, ${TOKENS.colors.skeleton} 0%, ${TOKENS.colors.skeletonHighlight} 50%, ${TOKENS.colors.skeleton} 100%);
         background-size: 200% 100%;
-        animation: skeleton-pulse 1.5s ease-in-out infinite;
+        animation: skeleton-pulse 2s ease-in-out infinite;
       }
       @keyframes skeleton-pulse {
         0% {

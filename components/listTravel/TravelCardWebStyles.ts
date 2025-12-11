@@ -60,7 +60,7 @@ export const travelCardWebStyles = `
     .travel-card-content {
       padding: 24px;
       padding-top: 21px;
-      gap: 15px;
+      gap: 5px;
     }
     
     .travel-card-title {

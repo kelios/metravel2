@@ -110,6 +110,27 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
     return Object.values(selectedFilters).reduce((sum, filters) => sum + filters.length, 0);
   }, [selectedFilters]);
 
+  const allGroupKeys = useMemo(() => filterGroups.map((g) => g.key), [filterGroups]);
+
+  const areAllGroupsExpanded = useMemo(
+    () => allGroupKeys.length > 0 && allGroupKeys.every((key) => expandedGroups.has(key)),
+    [allGroupKeys, expandedGroups],
+  );
+
+  const resultsText = useMemo(() => {
+    if (typeof resultsCount !== 'number') return '';
+    const count = resultsCount;
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    let noun = 'путешествий';
+    if (mod10 === 1 && mod100 !== 11) {
+      noun = 'путешествие';
+    } else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+      noun = 'путешествия';
+    }
+    return `Найдено ${count} ${noun}`;
+  }, [resultsCount]);
+
   const FilterCheckbox = ({ checked }: { checked: boolean }) => (
     <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
       {checked && <Feather name="check" size={12} color="#fff" />}
@@ -157,12 +178,13 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 
       {/* Toggle all groups */}
       <Pressable
+        testID="toggle-all-groups"
         onPress={() => {
-          const allKeys = filterGroups.map(g => g.key);
-          const allExpanded = allKeys.every(key => expandedGroups.has(key));
+          const allKeys = filterGroups.map((g) => g.key);
+          const allExpanded = allKeys.every((key) => expandedGroups.has(key));
           const next = new Set<string>();
 
-          allKeys.forEach(key => {
+          allKeys.forEach((key) => {
             // Инициализируем анимационные значения при необходимости
             if (!animatedValues[key]) {
               animatedValues[key] = new Animated.Value(allExpanded ? 1 : 0);
@@ -188,7 +210,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         style={styles.toggleAllButton}
       >
         <Text style={styles.toggleAllButtonText}>
-          {filterGroups.every(g => expandedGroups.has(g.key)) ? 'Свернуть все' : 'Развернуть все'}
+          {areAllGroupsExpanded ? 'Свернуть все' : 'Развернуть все'}
         </Text>
       </Pressable>
 
@@ -198,6 +220,12 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
           <Pressable
             onPress={onToggleModeration}
             style={styles.moderationRow}
+            {...(Platform.OS === 'web'
+              ? ({
+                  title: 'Показывать только путешествия, ожидающие модерации',
+                  'aria-label': 'Показывать только путешествия, ожидающие модерации',
+                } as any)
+              : null)}
           >
             <Feather
               name={moderationValue === 0 ? 'check-square' : 'square'}
@@ -214,7 +242,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         <View style={styles.resultsBadge}>
           <Feather name="search" size={14} color={colors.neutral[500]} />
           <Text style={styles.resultsBadgeText}>
-            Найдено: {resultsCount}
+            {resultsText}
           </Text>
         </View>
       )}
@@ -370,7 +398,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.surface.default,
     borderRadius: radii['2xl'],
-    padding: spacing.lg,
+    // Чуть более компактные отступы, чтобы панель влезала по высоте без скрола
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     ...Platform.select({
       web: {
         ...shadows.sm,
@@ -459,7 +489,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radii.pill,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   resultsBadgeText: {
     fontSize: typography.fontSize.sm,
@@ -467,7 +497,7 @@ const styles = StyleSheet.create({
     color: colors.neutral[700],
   },
   extraFilters: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     gap: spacing.xs,
   },
   yearGroup: {
@@ -539,11 +569,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: spacing.xl,
+    // Меньше нижний отступ, чтобы не провоцировать вертикальный скролл
+    paddingBottom: spacing.lg,
   },
   filterGroup: {
-    marginBottom: spacing.lg,
-    paddingBottom: spacing.lg,
+    marginBottom: spacing.md,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.neutral[100],
   },

@@ -3,7 +3,6 @@ import React, { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, u
 import {
   ActivityIndicator,
   Alert,
-  Animated,
   FlatList,
   Modal,
   NativeScrollEvent,
@@ -25,7 +24,7 @@ import StickySearchBar from '@/components/mainPage/StickySearchBar'
 import ModernFilters from './ModernFilters'
 import ConfirmDialog from '../ConfirmDialog'
 import UIButton from '@/components/ui/Button'
-import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
 import { useAuth } from '@/context/AuthContext'
 import { fetchAllFiltersOptimized } from '@/src/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
@@ -34,6 +33,8 @@ import EmptyState from '@/components/EmptyState'
 import CategoryChips from '@/components/CategoryChips'
 import ProgressIndicator from '@/components/ProgressIndicator'
 import ScrollToTopButton from '@/components/ScrollToTopButton'
+// ✅ АРХИТЕКТУРА: Импорт типов
+import type { Travel } from '@/src/types/types'
 // ✅ АРХИТЕКТУРА: Импорт констант, типов, утилит и хуков
 import {
   BREAKPOINTS,
@@ -47,7 +48,201 @@ import { useListTravelVisibility } from './hooks/useListTravelVisibility'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
 import { useListTravelExport } from './hooks/useListTravelExport'
-import { calculateCategoriesWithCount, calculateColumns, isMobile as checkIsMobile } from './utils/listTravelHelpers'
+import { calculateCategoriesWithCount, calculateColumns, isMobile as checkIsMobile, getContainerPadding } from './utils/listTravelHelpers'
+
+// Define styles at the top level before any component definitions
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: TOKENS.colors.background,
+    // Современный минималистичный layout
+    display: 'flex',
+    flexDirection: 'row',
+    overflowX: 'hidden',
+    width: '100%',
+    maxWidth: '100%',
+    height: '100%',
+  },
+  content: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingHorizontal: TOKENS.spacing.lg,
+    paddingTop: TOKENS.spacing.lg,
+    paddingBottom: TOKENS.spacing.lg,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  contentMobile: {
+    paddingHorizontal: TOKENS.spacing.md,
+    paddingTop: TOKENS.spacing.md,
+    paddingBottom: TOKENS.spacing.md,
+  },
+  sidebar: {
+    width: 320,
+    flexShrink: 0,
+    borderRightWidth: 1,
+    borderRightColor: TOKENS.colors.border,
+    backgroundColor: TOKENS.colors.surface,
+    paddingHorizontal: TOKENS.spacing.lg,
+    paddingTop: TOKENS.spacing.lg,
+    height: '100%',
+    overflowY: 'auto',
+    overflowX: 'hidden',
+  },
+  listContainer: {
+    paddingHorizontal: TOKENS.spacing.lg,
+    paddingTop: TOKENS.spacing.lg,
+    paddingBottom: TOKENS.spacing.lg,
+  },
+  listContainerMobile: {
+    paddingHorizontal: TOKENS.spacing.md,
+    paddingTop: TOKENS.spacing.md,
+    paddingBottom: TOKENS.spacing.md,
+  },
+  exportBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    backgroundColor: TOKENS.colors.surface,
+    borderRadius: TOKENS.radii.md,
+    padding: TOKENS.spacing.md,
+    marginBottom: TOKENS.spacing.md,
+    borderWidth: 1,
+    borderColor: TOKENS.colors.border,
+    ...Platform.select({
+      web: {
+        boxShadow: TOKENS.shadows.subtle,
+      },
+      default: TOKENS.shadowsNative.subtle,
+    }),
+  },
+  exportBarMobileWeb: {
+    marginHorizontal: -TOKENS.spacing.xs,
+    marginBottom: TOKENS.spacing.sm,
+  },
+  exportBarInfo: {
+    flex: 1,
+    marginRight: TOKENS.spacing.md,
+  },
+  exportBarInfoTitle: {
+    fontSize: TOKENS.typography.sizes.lg,
+    fontWeight: TOKENS.typography.weights.semibold,
+    color: TOKENS.colors.text,
+    marginBottom: TOKENS.spacing.xs,
+  },
+  exportBarInfoSubtitle: {
+    fontSize: TOKENS.typography.sizes.sm,
+    color: TOKENS.colors.textSecondary,
+    marginBottom: TOKENS.spacing.sm,
+  },
+  exportBarInfoActions: {
+    flexDirection: 'row',
+    gap: TOKENS.spacing.sm,
+  },
+  linkButton: {
+    fontSize: TOKENS.typography.sizes.sm,
+    color: TOKENS.colors.primary,
+    textDecorationLine: 'underline',
+  },
+  exportBarButtons: {
+    flexDirection: 'row',
+    gap: TOKENS.spacing.sm,
+  },
+  exportBarButtonsMobile: {
+    flexDirection: 'column',
+    width: '100%',
+  },
+  progressWrapper: {
+    marginTop: TOKENS.spacing.sm,
+  },
+  recommendationsLoader: {
+    marginTop: TOKENS.spacing.lg,
+    padding: TOKENS.spacing.md,
+    backgroundColor: TOKENS.colors.surface,
+    borderRadius: TOKENS.radii.md,
+    alignItems: 'center',
+  },
+  recommendationsSkeleton: {
+    width: '100%',
+  },
+  recommendationsSkeletonHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: TOKENS.spacing.md,
+  },
+  recommendationsSkeletonTitle: {
+    width: 120,
+    height: 20,
+    backgroundColor: TOKENS.colors.skeleton,
+    borderRadius: TOKENS.radii.sm,
+  },
+  recommendationsSkeletonTabs: {
+    flexDirection: 'row',
+    gap: TOKENS.spacing.sm,
+  },
+  recommendationsSkeletonContent: {
+    flexDirection: 'row',
+    gap: TOKENS.spacing.sm,
+  },
+  recommendationsSkeletonCard: {
+    flex: 1,
+    height: 80,
+    backgroundColor: TOKENS.colors.skeleton,
+    borderRadius: TOKENS.radii.sm,
+  },
+  // ✅ RIGHT COLUMN: Основной контейнер правой части
+  rightColumn: {
+    flex: 1,
+    minWidth: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    height: '100%',
+  },
+  // ✅ SEARCH HEADER: Прикрепленный заголовок поиска
+  searchHeader: {
+    position: Platform.OS === 'web' ? 'sticky' : 'relative',
+    top: 0,
+    zIndex: 10,
+    backgroundColor: TOKENS.colors.surface,
+    ...Platform.select({
+      web: {
+        boxShadow: TOKENS.shadows.subtle,
+      },
+      default: TOKENS.shadowsNative.subtle,
+    }),
+  },
+  // ✅ CARDS CONTAINER: Прокручиваемый контейнер для карточек
+  cardsContainer: {
+    flex: 1,
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    // Горизонтальные отступы задаются динамически через contentPadding, чтобы избежать лишних белых полей
+    paddingTop: TOKENS.spacing.lg,
+    paddingBottom: TOKENS.spacing.lg,
+  },
+  // ✅ CARDS GRID: Flexbox layout for both platforms
+  cardsGrid: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: TOKENS.grid.gap.desktop,
+    justifyContent: 'center',
+  },
+  resultsCount: {
+    marginBottom: TOKENS.spacing.lg,
+  },
+  resultsCountText: {
+    fontSize: TOKENS.typography.sizes.md,
+    fontWeight: TOKENS.typography.weights.medium,
+    color: TOKENS.colors.text,
+  },
+  footerLoader: {
+    paddingVertical: TOKENS.spacing.lg,
+    alignItems: 'center',
+  },
+});
 
 // Ленивая загрузка объединенного компонента с табами
 // @ts-ignore - Dynamic imports are supported in runtime
@@ -66,9 +261,9 @@ const RecommendationsTabs = lazy(() => {
     return import('./RecommendationsTabs');
 });
 
-const palette = DESIGN_TOKENS.colors;
-const spacing = DESIGN_TOKENS.spacing;
-const radii = DESIGN_TOKENS.radii;
+// ✅ АДАПТИВНОСТЬ: Константы для динамического расчета ширины карточки
+const MIN_CARD_WIDTH = 280;
+const MAX_CARD_WIDTH = 400;
 
 // Simple delete function implementation
 const deleteTravel = async (id: string): Promise<void> => {
@@ -110,7 +305,7 @@ const pluralizeTravels = (count: number) => {
 };
 
 /* ===== Small local component: Export bar ===== */
-export const ExportBar = memo(function ExportBar({
+const ExportBar = memo(function ExportBar({
                        isMobile,
                        selectedCount,
                        allCount,
@@ -201,8 +396,8 @@ interface ListTravelProps {
 
 function ListTravel({
     onTogglePersonalization,
-    onToggleWeeklyHighlights,
     isPersonalizationVisible: externalPersonalizationVisible,
+    onToggleWeeklyHighlights,
     isWeeklyHighlightsVisible: externalWeeklyHighlightsVisible,
 }: ListTravelProps = {}) {
     // ✅ АРХИТЕКТУРА: Использование кастомного хука для видимости
@@ -233,18 +428,45 @@ function ListTravel({
 
     // ✅ АДАПТИВНОСТЬ: Определяем устройство и ориентацию
     const isMobile = checkIsMobile(width);
-    const isTablet = useMemo(() => width >= BREAKPOINTS.MOBILE && width < BREAKPOINTS.DESKTOP, [width]);
+    // Планшет: от MOBILE до TABLET_LANDSCAPE, всё, что шире, считаем десктопом (3 колонки)
+    const isTablet = useMemo(
+      () => width >= BREAKPOINTS.MOBILE && width < BREAKPOINTS.TABLET_LANDSCAPE,
+      [width]
+    );
+    const isDesktop = !isMobile && !isTablet;
     const isPortrait = height > width;
 
-    const columns = useMemo(() => {
-        // ✅ ОПТИМИЗАЦИЯ: Используем оптимизированную функцию расчета колонок с учетом ориентации
-        const baseColumns = calculateColumns(width);
-        // На планшете в портретной ориентации используем меньше колонок для лучшей читаемости
-        if (isTablet && isPortrait && baseColumns > 2) {
-            return 2;
-        }
-        return baseColumns;
-    }, [width, isTablet, isPortrait]);
+    // ✅ ОПТИМИЗАЦИЯ: Базовое количество колонок для логики (от общей ширины окна)
+    // На десктопе всегда 3 колонки, на планшетах/мобилках рассчитываем динамически
+    const baseColumns = isDesktop ? 3 : calculateColumns(width);
+    const columns = isTablet && isPortrait && baseColumns > 2 ? 2 : baseColumns;
+
+    const gapSize = width < 360 ? 8 : width < 480 ? 10 : width < 768 ? 12 : width < 1024 ? 14 : 16;
+
+    // ✅ ОПТИМИЗАЦИЯ: Стабильные адаптивные отступы и ширина правой колонки
+    const effectiveWidth = isMobile ? width : width - 280; // ✅ FIX: Учитываем ширину sidebar (280px)
+
+    const contentPadding = useMemo(() => {
+      // ✅ ОПТИМИЗАЦИЯ: Используем стабильные breakpoints для избежания лишних перерасчетов
+      if (effectiveWidth < 360) return 16;  // XS: компактные устройства
+      if (effectiveWidth < 480) return 12; // SM: чуть уже карточки на очень маленьких телефонах
+      if (effectiveWidth < 768) return 12; // Mobile: стандартные телефоны — синхронизировано
+      if (effectiveWidth < 1024) return 20; // Tablet
+      if (effectiveWidth < 1440) return 24; // Desktop
+      if (effectiveWidth < 1920) return 32; // Large Desktop
+      return 40; // XXL
+    }, [effectiveWidth]); // ✅ ОПТИМИЗАЦИЯ: Только эффективная ширина в зависимостях
+
+    // ✅ Определяем количество колонок для grid на основе эффективной ширины правой части
+    const baseColumnsEffective = isDesktop ? 3 : calculateColumns(effectiveWidth);
+    const gridColumns = isTablet && isPortrait && baseColumnsEffective > 2 ? 2 : baseColumnsEffective;
+
+    // ✅ Определяем ширину карточки для flexbox layout
+    const cardWidth = useMemo(() => {
+      if (gridColumns === 1) return '100%';
+      if (gridColumns === 2) return '50%';
+      return '33.3333%';
+    }, [gridColumns]);
 
     const listKey = useMemo(() => `grid-${columns}`, [columns]);
 
@@ -252,7 +474,7 @@ function ListTravel({
     const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(false);
     const [recommendationsVisibilityInitialized, setRecommendationsVisibilityInitialized] = useState(false);
 
-    // ✅ ИСПРАВЛЕНИЕ: Загружаем сохраненное состояние видимости рекомендаций
+    // ИСПРАВЛЕНИЕ: Загружаем сохраненное состояние видимости рекомендаций
     useEffect(() => {
         const loadRecommendationsVisibility = async () => {
             try {
@@ -327,7 +549,7 @@ function ListTravel({
 
     const onMomentumRef = useRef(false);
     const lastEndReachedAtRef = useRef<number>(0);
-    const scrollY = useRef(new Animated.Value(0)).current;
+    const scrollY = useRef<number>(0);
     const saveScrollTimeoutRef = useRef<number | null>(null);
     const lastScrollOffsetRef = useRef<number>(0);
 
@@ -343,40 +565,22 @@ function ListTravel({
         staleTime: 10 * 60 * 1000,
     });
 
-    // ✅ ИСПРАВЛЕНИЕ: Преобразуем данные из API в формат FilterOptions
+    // ✅ ОПТИМИЗАЦИЯ: Упрощенная трансформация данных - убраны тяжелые операции
     const options = useMemo((): import('./utils/listTravelTypes').FilterOptions | undefined => {
         if (!rawOptions) return undefined;
-        
-        const transformed: import('./utils/listTravelTypes').FilterOptions = {
+
+        // ✅ ОПТИМИЗАЦИЯ: Прямое копирование без сложных трансформаций
+        return {
             countries: rawOptions.countries || [],
+            categories: rawOptions.categories || [],
+            transports: rawOptions.transports || [],
+            categoryTravelAddress: rawOptions.categoryTravelAddress || [],
+            companions: rawOptions.companions || [],
+            complexity: rawOptions.complexity || [],
+            month: rawOptions.month || [],
+            over_nights_stay: rawOptions.over_nights_stay || [],
         };
-
-        // Преобразуем строковые массивы в объекты с id и name
-        const stringArrayFields = ['categories', 'categoryTravelAddress', 'transports', 'companions', 'complexity', 'month', 'over_nights_stay'] as const;
-        
-        stringArrayFields.forEach(field => {
-            const value = (rawOptions as any)[field];
-            if (Array.isArray(value) && value.length > 0) {
-                // ✅ ИСПРАВЛЕНИЕ: Обрабатываем как строки, так и объекты
-                (transformed as any)[field] = value.map((item: any) => {
-                    // Если уже объект с id и name, возвращаем как есть
-                    if (typeof item === 'object' && item !== null && 'id' in item && 'name' in item) {
-                        return item;
-                    }
-                    // Если строка, создаем объект
-                    return {
-                        id: String(item),
-                        name: String(item),
-                    };
-                });
-            } else if (Array.isArray(value) && value.length === 0) {
-                // ✅ ИСПРАВЛЕНИЕ: Сохраняем пустые массивы
-                (transformed as any)[field] = [];
-            }
-        });
-
-        return transformed;
-    }, [rawOptions]);
+    }, [rawOptions]); // ✅ ОПТИМИЗАЦИЯ: Только rawOptions в зависимостях
 
     const {
         filter,
@@ -436,6 +640,74 @@ function ListTravel({
       () => calculateCategoriesWithCount(travels, options?.categories as any).slice(0, maxVisibleCategories),
       [travels, options?.categories, maxVisibleCategories]
     );
+
+    // ✅ ОПТИМИЗАЦИЯ: Упрощенный расчет gridRows - убрана сложная логика
+    const gridRows = travels && travels.length > 0
+      ? Array.from({ length: Math.ceil(travels.length / columns) }, (_, i) =>
+          travels.slice(i * columns, (i + 1) * columns)
+        )
+      : [];
+
+    // DEBUG: Temporarily force showing test data
+    // const forceShowTestData = true;
+    
+    // DEBUG: Always create test data for testing
+    // const testGridRows = [
+    //   [{
+    //     id: 1,
+    //     slug: 'test-travel-1',
+    //     name: 'Test Travel 1',
+    //     travel_image_thumb_url: '',
+    //     travel_image_thumb_small_url: '',
+    //     url: '/travels/test-travel-1',
+    //     youtube_link: '',
+    //     userName: 'Test User',
+    //     description: 'Test description',
+    //     recommendation: '',
+    //     plus: '',
+    //     minus: '',
+    //     cityName: 'Test City',
+    //     countryName: 'Россия',
+    //     countUnicIpView: '100',
+    //     gallery: [],
+    //     travelAddress: [],
+    //     userIds: '1',
+    //     year: '2024',
+    //     monthName: 'Январь',
+    //     number_days: 7,
+    //     companions: ['Семья'],
+    //     countryCode: 'RU',
+    //     created_at: new Date().toISOString(),
+    //   } as Travel],
+    //   [{
+    //     id: 2,
+    //     slug: 'test-travel-2',
+    //     name: 'Test Travel 2', 
+    //     travel_image_thumb_url: '',
+    //     travel_image_thumb_small_url: '',
+    //     url: '/travels/test-travel-2',
+    //     youtube_link: '',
+    //     userName: 'Test User 2',
+    //     description: 'Test description 2',
+    //     recommendation: '',
+    //     plus: '',
+    //     minus: '',
+    //     cityName: 'Test City 2',
+    //     countryName: 'Беларусь',
+    //     countUnicIpView: '50',
+    //     gallery: [],
+    //     travelAddress: [],
+    //     userIds: '2',
+    //     year: '2024',
+    //     monthName: 'Февраль',
+    //     number_days: 5,
+    //     companions: ['Друзья'],
+    //     countryCode: 'BY',
+    //     created_at: new Date().toISOString(),
+    //   } as Travel]
+    // ];
+    
+    // const displayGridRows = forceShowTestData ? testGridRows : gridRows;
 
     /* Delete */
     const handleDelete = useCallback(async () => {
@@ -504,92 +776,6 @@ function ListTravel({
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [settingsModalMode, setSettingsModalMode] = useState<'save' | 'preview'>('save');
 
-    /* Render item */
-    const renderItem = useCallback(
-      ({ item, index }: any) => (
-        <MemoizedTravelItem
-          item={item}
-          index={index}
-          isMobile={isMobile}
-          isSuperuser={isSuper}
-          isMetravel={isMeTravel}
-          onDeletePress={setDelete}
-          isFirst={index === 0}
-          selectable={isExport}
-          isSelected={isSelected(item.id)}
-          onToggle={() => toggleSelect(item)}
-        />
-      ),
-      [isMobile, isSuper, isMeTravel, isExport, isSelected, toggleSelect]
-    );
-
-    const keyExtractor = useCallback((item: any) => String(item.id), []);
-
-    // ✅ КРИТИЧНО: ItemSeparator создает вертикальные отступы между карточками
-    // ПРОБЛЕМА: marginBottom на карточке НЕ РАБОТАЕТ в FlatList (конфликт с gap в columnWrapperStyle)
-    // РЕШЕНИЕ: Используем ItemSeparatorComponent для явного контроля отступов
-    // 
-    // ВАЖНО: В браузере Platform всегда = 'web', поэтому используем width для определения мобильных
-    // 
-    // Значения:
-    // - Mobile (< 768px): 20px между карточками
-    // - Desktop (>= 768px): 24px между карточками
-    const ItemSeparator = useCallback(() => {
-      const separatorHeight = width < 768 ? 20 : 24;
-      return <View style={{ height: separatorHeight }} />;
-    }, [width]);
-
-    // ✅ ОПТИМИЗАЦИЯ: Динамическая конфигурация виртуализации на основе устройства и viewport
-    const listVirtualization = useMemo(() => {
-      const config = isMobile ? FLATLIST_CONFIG_MOBILE : FLATLIST_CONFIG;
-
-      // ✅ A1.1: Расчет на основе высоты viewport для оптимального количества элементов
-      const estimatedItemHeight = isMobile ? 280 : 320;
-      const itemsPerScreen = Math.ceil(height / estimatedItemHeight);
-      const itemsPerRow = columns;
-      const rowsPerScreen = Math.ceil(itemsPerScreen / itemsPerRow);
-      
-      // Адаптируем под количество колонок и размер экрана
-      const initial = Math.max(rowsPerScreen * itemsPerRow, config.INITIAL_NUM_TO_RENDER);
-      const batch = Math.max(Math.ceil(rowsPerScreen * 1.5) * itemsPerRow, config.MAX_TO_RENDER_PER_BATCH);
-      
-      // ✅ A1.1: Адаптивный windowSize в зависимости от устройства
-      let windowSize: number = config.WINDOW_SIZE;
-      if (isMobile) {
-        windowSize = 5; // Меньше для экономии памяти
-      } else if (isTablet) {
-        windowSize = 7;
-      } else {
-        windowSize = 10; // Больше для desktop для плавного скролла
-      }
-
-      return {
-        initial,
-        batch,
-        window: windowSize,
-        updateCellsBatchingPeriod: config.UPDATE_CELLS_BATCHING_PERIOD,
-      };
-    }, [columns, isMobile, isTablet, height]);
-
-    // ✅ B1.1: Улучшенные адаптивные отступы с плавными переходами
-    const contentPadding = useMemo(() => {
-      if (width < 360) return 16;  // XS: Увеличено для маленьких экранов
-      if (width < 480) return 20; // SM: iPhone SE и подобные - увеличено!
-      if (width < 768) return 20; // Mobile: Стандартные телефоны
-      if (width < 1024) return 20; // Tablet
-      if (width < 1440) return 24; // Desktop
-      if (width < 1920) return 32; // Large Desktop
-      return 40; // XXL
-    }, [width]);
-
-    // ✅ B1.1: Улучшенные отступы между карточками
-    const gapSize = useMemo(() => {
-      if (width < 360) return 8;  // XS
-      if (width < 480) return 10; // SM
-      if (width < 768) return 12; // Mobile
-      if (width < 1024) return 14; // Tablet
-      return 16; // Desktop+
-    }, [width]);
 
     /* Loading helpers */
     const hasAnyItems = travels.length > 0;
@@ -597,6 +783,23 @@ function ListTravel({
     const showInitialLoading = isInitialLoading || isUserIdLoading;
     const showNextPageLoading = isNextPageLoading;
     const showEmptyState = !isUserIdLoading && isEmpty;
+
+    // DEBUG: Add logging to see what's happening
+    // console.log('ListTravel Debug:', {
+    //   travelsLength: travels?.length || 0,
+    //   gridRowsLength: gridRows?.length || 0,
+    //   isInitialLoading,
+    //   isUserIdLoading,
+    //   isQueryEnabled,
+    //   isEmpty,
+    //   showInitialLoading,
+    //   showEmptyState,
+    //   userId,
+    //   isMeTravel,
+    //   isExport,
+    //   routeName: (route as any)?.name,
+    //   pathname,
+    // });
 
     const handleListEndReached = useCallback(() => {
         if (onMomentumRef.current) return;
@@ -616,46 +819,37 @@ function ListTravel({
         onMomentumRef.current = false;
     }, []);
     
-    // ✅ A1.2: Оптимизированный обработчик прокрутки с улучшенным debounce и requestIdleCallback
+    // ✅ A2.1: Оптимизированный обработчик прокрутки с улучшенным debounce и без requestAnimationFrame
     const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
         const { contentSize, layoutMeasurement, contentOffset } = e.nativeEvent;
-        
+
         // Проверка для автоматической подгрузки
         if (contentSize.height <= layoutMeasurement.height * 1.05) {
             onMomentumRef.current = true;
         }
-        
+
         // Сохранение позиции скролла только для web с оптимизацией
         if (Platform.OS === 'web') {
             const offsetY = contentOffset.y;
-            
-            // ✅ A1.2: Увеличен порог до 200px для web, 150px для mobile
-            const threshold = isMobile ? 150 : 200;
-            
+
+            // ✅ A2.1: Увеличен порог до 300px для web, 200px для mobile (меньше частоты)
+            const threshold = isMobile ? 200 : 300;
+
             if (Math.abs(offsetY - lastScrollOffsetRef.current) > threshold) {
                 // Отменяем предыдущий таймер
                 if (saveScrollTimeoutRef.current) {
                     clearTimeout(saveScrollTimeoutRef.current);
                 }
-                
-                // ✅ A1.2: Увеличен debounce до 500ms для снижения нагрузки
+
+                // ✅ A2.1: Увеличен debounce до 800ms для web, 600ms для mobile
                 saveScrollTimeoutRef.current = setTimeout(() => {
-                    // ✅ A1.2: Используем requestIdleCallback для записи в storage
-                    const saveToStorage = () => {
-                        try {
-                            window.sessionStorage.setItem('travel-list-scroll', String(offsetY));
-                            lastScrollOffsetRef.current = offsetY;
-                        } catch (error) {
-                            // Игнорируем ошибки sessionStorage
-                        }
-                    };
-                    
-                    if ('requestIdleCallback' in window) {
-                        (window as any).requestIdleCallback(saveToStorage, { timeout: 1000 });
-                    } else {
-                        saveToStorage();
+                    try {
+                        window.sessionStorage.setItem('travel-list-scroll', String(offsetY));
+                        lastScrollOffsetRef.current = offsetY;
+                    } catch (error) {
+                        // Игнорируем ошибки sessionStorage
                     }
-                }, 500) as any; // Debounce 500ms
+                }, isMobile ? 600 : 800) as any;
             }
         }
     }, [isMobile]);
@@ -663,131 +857,102 @@ function ListTravel({
     useEffect(() => {
         if (Platform.OS !== 'web') return;
         if (!flatListRef.current) return;
-        
-        // Defer scroll restoration to prevent layout thrashing
+
+        // ✅ A2.2: Упрощенное восстановление скролла без двойного requestAnimationFrame
         const restoreScroll = () => {
             try {
                 const stored = window.sessionStorage.getItem('travel-list-scroll');
                 if (!stored) return;
                 const value = Number(stored);
                 if (!Number.isFinite(value) || value <= 0) return;
-                
-                // Use single requestAnimationFrame for better performance
-                requestAnimationFrame(() => {
+
+                // Простое восстановление без лишних анимаций
+                setTimeout(() => {
                     flatListRef.current?.scrollToOffset({ offset: value, animated: false });
-                });
+                }, 50); // Небольшая задержка для стабильности
             } catch (error) {}
         };
-        
-        // Use setTimeout to ensure DOM is ready
+
+        // Используем setTimeout для обеспечения готовности DOM
         const timeoutId = setTimeout(restoreScroll, 100);
-        
+
         return () => clearTimeout(timeoutId);
     }, []);
 
-    const displayData = travels;
-
-    // ✅ UX УЛУЧШЕНИЕ: Подсчитываем количество активных фильтров с мемоизацией
+    // ✅ ОПТИМИЗАЦИЯ: Подсчитываем количество активных фильтров с мемоизацией
+    // Оптимизируем расчет путем использования стабильных ссылок на filter
     const activeFiltersCount = useMemo(() => {
       let count = 0;
-      
-      // Оптимизированный подсчет через reduce
-      const filterKeys = [
-        'categories',
-        'transports', 
-        'categoryTravelAddress',
-        'companions',
-        'complexity',
-        'month',
-        'over_nights_stay'
-      ] as const;
-      
-      filterKeys.forEach(key => {
+
+      // ✅ ОПТИМИЗАЦИЯ: Предварительно определяем ключи фильтров
+      const filterKeys = ['categories', 'transports', 'categoryTravelAddress', 'companions', 'complexity', 'month', 'over_nights_stay'] as const;
+
+      // ✅ ОПТИМИЗАЦИЯ: Используем for...of вместо forEach для лучшей производительности
+      for (const key of filterKeys) {
         const value = filter[key];
         if (Array.isArray(value) && value.length > 0) {
           count += value.length;
         }
-      });
-      if (filter.year) {
-        count += 1;
       }
-      if (filter.moderation !== undefined) {
-        count += 1;
-      }
-      if (debSearch && debSearch.trim().length > 0) {
-        count += 1;
-      }
-      
-      return count;
-    }, [filter, debSearch]);
 
-    // ✅ UX УЛУЧШЕНИЕ: Генерируем красивое сообщение для пустого состояния
+      // ✅ ОПТИМИЗАЦИЯ: Проверяем остальные поля отдельно
+      if (filter.year) count += 1;
+      if (filter.moderation !== undefined) count += 1;
+      if (debSearch && debSearch.trim().length > 0) count += 1;
+
+      return count;
+    }, [filter, debSearch]); // ✅ ОПТИМИЗАЦИЯ: Зависимости стабильны
+
+    // ✅ ОПТИМИЗАЦИЯ: Генерируем красивое сообщение для пустого состояния
     const getEmptyStateMessage = useMemo(() => {
+      // ✅ ОПТИМИЗАЦИЯ: Быстрый возврат если не нужно показывать
       if (!showEmptyState) return null;
-      
+
       const activeFilters: string[] = [];
 
-      // Определяем активные фильтры
-      if (filter.categories && filter.categories.length > 0) {
-        const categoryNames = (options?.categories || [])
-          .filter((cat: any) => filter.categories?.includes(cat.id))
+      // ✅ ОПТИМИЗАЦИЯ: Предварительная проверка наличия опций
+      if (!options?.categories) return null;
+
+      // Определяем активные фильтры - оптимизированная версия с проверками типов
+      if (Array.isArray(filter.categories) && filter.categories.length > 0) {
+        const categoryNames = options.categories
+          .filter((cat: any) => cat?.name && filter.categories?.includes(cat.id))
           .map((cat: any) => cat.name)
           .slice(0, 2);
         if (categoryNames.length > 0) {
-          activeFilters.push(`категории "${categoryNames.join('", "')}"${categoryNames.length < (filter.categories?.length || 0) ? ' и другие' : ''}`);
+          activeFilters.push(`категории "${categoryNames.join('", "')}"${categoryNames.length < filter.categories.length ? ' и другие' : ''}`);
         }
       }
-      
-      if (filter.transports && filter.transports.length > 0) {
-        const transportNames = (options?.transports || [])
-          .filter((t: any) => {
-            const transportId = String(t.id);
-            return filter.transports?.some((fid: any) => String(fid) === transportId);
-          })
+
+      if (Array.isArray(filter.transports) && filter.transports.length > 0) {
+        const transportNames = (options.transports || [])
+          .filter((t: any) => t?.name && filter.transports?.some((fid: any) => String(fid) === String(t.id)))
           .map((t: any) => t.name)
           .slice(0, 2);
         if (transportNames.length > 0) {
-          activeFilters.push(`транспорт "${transportNames.join('", "')}"${transportNames.length < (filter.transports?.length || 0) ? ' и другой' : ''}`);
+          activeFilters.push(`транспорт "${transportNames.join('", "')}"${transportNames.length < filter.transports.length ? ' и другой' : ''}`);
         }
       }
-      
-      if (filter.categoryTravelAddress && filter.categoryTravelAddress.length > 0) {
-        const objectNames = (options?.categoryTravelAddress || [])
-          .filter((obj: any) => {
-            const objId = String(obj.id);
-            return filter.categoryTravelAddress?.some((fid: any) => String(fid) === objId);
-          })
+
+      if (Array.isArray(filter.categoryTravelAddress) && filter.categoryTravelAddress.length > 0) {
+        const objectNames = (options.categoryTravelAddress || [])
+          .filter((obj: any) => obj?.name && filter.categoryTravelAddress?.some((fid: any) => String(fid) === String(obj.id)))
           .map((obj: any) => obj.name)
           .slice(0, 2);
         if (objectNames.length > 0) {
-          activeFilters.push(`объекты "${objectNames.join('", "')}"${objectNames.length < (filter.categoryTravelAddress?.length || 0) ? ' и другие' : ''}`);
+          activeFilters.push(`объекты "${objectNames.join('", "')}"${objectNames.length < filter.categoryTravelAddress.length ? ' и другие' : ''}`);
         }
       }
-      
-      if (filter.companions && filter.companions.length > 0) {
-        activeFilters.push('спутники');
-      }
-      
-      if (filter.complexity && filter.complexity.length > 0) {
-        activeFilters.push('сложность');
-      }
-      
-      if (filter.month && filter.month.length > 0) {
-        activeFilters.push('месяц');
-      }
-      
-      if (filter.over_nights_stay && filter.over_nights_stay.length > 0) {
-        activeFilters.push('ночлег');
-      }
-      
-      if (filter.year) {
-        activeFilters.push(`год ${filter.year}`);
-      }
 
-      if (debSearch) {
-        activeFilters.push(`поиск "${debSearch}"`);
-      }
+      // Остальные фильтры - простые проверки с type guards
+      if (Array.isArray(filter.companions) && filter.companions.length > 0) activeFilters.push('спутники');
+      if (Array.isArray(filter.complexity) && filter.complexity.length > 0) activeFilters.push('сложность');
+      if (Array.isArray(filter.month) && filter.month.length > 0) activeFilters.push('месяц');
+      if (Array.isArray(filter.over_nights_stay) && filter.over_nights_stay.length > 0) activeFilters.push('ночлег');
+      if (filter.year) activeFilters.push(`год ${filter.year}`);
+      if (debSearch) activeFilters.push(`поиск "${debSearch}"`);
 
+      // Формируем сообщение
       if (activeFilters.length === 0) {
         return {
           icon: 'inbox',
@@ -817,7 +982,7 @@ function ListTravel({
         description,
         variant: 'search' as const,
       };
-    }, [showEmptyState, filter, options, debSearch]);
+    }, [showEmptyState, filter, options?.categories, options?.transports, options?.categoryTravelAddress, debSearch]); // ✅ ОПТИМИЗАЦИЯ: Более точные зависимости
 
     // ✅ АРХИТЕКТУРА: Централизованная конфигурация групп фильтров для переиспользования в десктоп и мобильной версии
     const filterGroups = useMemo(() => [
@@ -907,588 +1072,134 @@ function ListTravel({
       },
     ], [options, isTravelBy]);
 
-    return (
-      <SafeAreaView style={styles.root}>
-        <View style={styles.container}>
-          <View style={[styles.content, Platform.OS === 'web' && isMobile && styles.contentMobile]}>
-            {!isMobile && (
-              <View style={styles.sidebar}>
-                <ModernFilters
-                  filterGroups={filterGroups}
-                  selectedFilters={filter as any}
-                  onFilterChange={(groupKey, optionId) => {
-                    const currentValues: string[] = ((filter as any)[groupKey] || []).map((v: any) => String(v));
-                    const normalizedId = String(optionId);
-                    const newValues = currentValues.includes(normalizedId)
-                      ? currentValues.filter((id) => id !== normalizedId)
-                      : [...currentValues, normalizedId];
-                    onSelect(groupKey, newValues);
-                  }}
-                  onClearAll={() => {
-                    setSearch('');
-                    resetFilters();
-                  }}
-                  resultsCount={total}
-                  year={filter.year}
-                  onYearChange={(value) => onSelect('year', value)}
-                  showModeration={isSuper}
-                  moderationValue={filter.moderation}
-                  onToggleModeration={() => {
-                    const next = filter.moderation === 0 ? undefined : 0;
-                    onSelect('moderation', next);
-                  }}
-                />
+  return (
+    <View style={styles.root}>
+      <Suspense fallback={<TravelListSkeleton count={6} columns={columns} />}>
+        {/* Sidebar */}
+        {!isMobile && (
+          <View style={styles.sidebar}>
+            <ModernFilters
+              filterGroups={filterGroups}
+              selectedFilters={filter as any}
+              onFilterChange={(groupKey, optionId) => {
+                const currentValues: string[] = ((filter as any)[groupKey] || []).map((v: any) => String(v));
+                const normalizedId = String(optionId);
+                const newValues = currentValues.includes(normalizedId)
+                  ? currentValues.filter((id) => id !== normalizedId)
+                  : [...currentValues, normalizedId];
+                onSelect(groupKey, newValues);
+              }}
+              onClearAll={() => {
+                setSearch('');
+                resetFilters();
+              }}
+              resultsCount={total}
+              year={filter.year}
+              onYearChange={(value) => onSelect('year', value)}
+              showModeration={isSuper}
+              moderationValue={filter.moderation}
+              onToggleModeration={() => {
+                const next = filter.moderation === 0 ? undefined : 0;
+                onSelect('moderation', next);
+              }}
+            />
+          </View>
+        )}
+
+        {/* Right Column */}
+        <View style={styles.rightColumn}>
+          {/* Search Header - Sticky */}
+          <View style={styles.searchHeader}>
+            <StickySearchBar
+              search={search}
+              onSearchChange={setSearch}
+              onFiltersPress={() => setShowFilters(true)}
+              onToggleRecommendations={() => handleRecommendationsVisibilityChange(!isRecommendationsVisible)}
+              isRecommendationsVisible={isRecommendationsVisible}
+              hasActiveFilters={activeFiltersCount > 0}
+              resultsCount={total}
+              activeFiltersCount={activeFiltersCount}
+              onClearAll={() => {
+                setSearch('');
+                resetFilters();
+              }}
+            />
+          </View>
+
+          {/* Cards Container - Scrollable */}
+          <View style={[styles.cardsContainer, { paddingHorizontal: contentPadding }] }>
+            {/* Loading */}
+            {showInitialLoading && (
+              <View style={styles.cardsGrid}>
+                <TravelListSkeleton count={PER_PAGE} columns={gridColumns} />
               </View>
             )}
 
-            <View style={[styles.main, Platform.OS === 'web' && isMobile && styles.mainMobile]}>
-              {/* Поиск - StickySearchBar: одинаковый вид для десктопа и мобайла */}
-              <View style={[styles.searchSectionMain, { paddingHorizontal: contentPadding }]}>
-                <StickySearchBar
-                  search={search}
-                  onSearchChange={setSearch}
-                  onFiltersPress={() => setShowFilters(true)}
-                  onToggleRecommendations={() => handleRecommendationsVisibilityChange(!isRecommendationsVisible)}
-                  isRecommendationsVisible={isRecommendationsVisible}
-                  hasActiveFilters={activeFiltersCount > 0}
-                  resultsCount={total}
-                  activeFiltersCount={activeFiltersCount}
-                  onClearAll={() => {
-                    setSearch('');
-                    resetFilters();
-                  }}
-                />
-              </View>
-
-              {/* Скелетон загрузки */}
-              {showInitialLoading && (
-                <TravelListSkeleton count={PER_PAGE} columns={columns} />
-              )}
-
-              {/* Ошибка */}
-              {isError && !showInitialLoading && (
-                <EmptyState
-                  icon="alert-circle"
-                  title="Ошибка загрузки"
-                  description="Не удалось загрузить путешествия."
-                  variant="error"
-                  action={{
-                    label: "Повторить",
-                    onPress: () => refetch(),
-                  }}
-                />
-              )}
-
-              {/* Список путешествий */}
-              {!showInitialLoading && (
-              <FlatList
-                key={listKey}
-                ref={flatListRef}
-                data={displayData}
-                extraData={displayData.length}
-                renderItem={renderItem}
-                keyExtractor={keyExtractor}
-                numColumns={columns}
-                ItemSeparatorComponent={ItemSeparator} // ✅ Separator для вертикальных отступов
-                columnWrapperStyle={columns > 1 ? {
-                    justifyContent: 'flex-start',
-                    gap: gapSize, // ✅ Используем gap для отступов между колонками
-                } : undefined}
-                contentContainerStyle={[
-                  styles.listContent,
-                  {
-                    // ✅ ВАЖНО: paddingHorizontal для отступов слева/справа
-                    paddingHorizontal: contentPadding,
-                    // ✅ ВАЖНО: paddingTop для отступа от панели поиска
-                    paddingTop: contentPadding + 8, // +8px дополнительно для воздуха
-                    // 🔍 DEBUG: Временный background для проверки отступов (удалить после теста)
-                    // backgroundColor: 'rgba(255, 0, 0, 0.1)',
-                  },
-                  isMobile && styles.listContentMobile, // ✅ АДАПТИВНОСТЬ: Отдельные стили для мобильных
-                  isExport && {
-                    paddingBottom: isMobile ? 200 : isTablet ? 180 : 150
-                  }, // ✅ АДАПТИВНОСТЬ: Отступ для панели экспорта + нижнее меню
-                ]}
-                onEndReached={handleListEndReached}
-                onEndReachedThreshold={isMobile ? FLATLIST_CONFIG_MOBILE.ON_END_REACHED_THRESHOLD : FLATLIST_CONFIG.ON_END_REACHED_THRESHOLD}
-                onScroll={onScroll}
-                scrollEventThrottle={Platform.select({ ios: 16, android: 32, web: 32 })}
-                onMomentumScrollBegin={onMomentumBegin}
-                refreshing={isRefreshing}
-                onRefresh={handleRefresh}
-                ListEmptyComponent={
-                  showEmptyState && getEmptyStateMessage ? (
-                    <EmptyState
-                      icon={getEmptyStateMessage.icon}
-                      title={getEmptyStateMessage.title}
-                      description={getEmptyStateMessage.description}
-                      variant={getEmptyStateMessage.variant}
-                      action={
-                        (debSearch || Object.keys(queryParams).length > 0) ? {
-                          label: activeFiltersCount > 0 ? `Сбросить фильтры (${activeFiltersCount})` : "Сбросить фильтры",
-                          onPress: () => {
-                            setSearch('');
-                            resetFilters();
-                          },
-                        } : undefined
-                      }
-                    />
-                  ) : null
-                }
-                ListFooterComponent={
-                  showNextPageLoading ? (
-                    <View style={styles.footerLoader}>
-                      <ActivityIndicator size="small" />
-                    </View>
-                  ) : null
-                }
-                ListHeaderComponent={
-                  !isMeTravel && !isExport ? (
-                    <View>
-                      {/* Рекомендации */}
-                      {isRecommendationsVisible === true && recommendationsVisibilityInitialized && recommendationsReady && (
-                        <Suspense fallback={<RecommendationsPlaceholder />}>
-                          <RecommendationsTabs 
-                            onVisibilityChange={handleRecommendationsVisibilityChange}
-                          />
-                        </Suspense>
-                      )}
-
-                      {/* Категории */}
-                      {categoriesWithCount.length > 0 && (
-                        <View style={styles.categoriesSectionMain}>
-                          <Text style={styles.categoriesTitle}>Популярные категории</Text>
-                          <CategoryChips
-                            categories={categoriesWithCount}
-                            selectedCategories={(filter.categories || []).map(String)}
-                            onToggleCategory={handleToggleCategory}
-                            maxVisible={maxVisibleCategories}
-                            showIcons={!isMobile}
-                          />
-                        </View>
-                      )}
-                    </View>
-                  ) : null
-                }
-                initialNumToRender={listVirtualization.initial}
-                maxToRenderPerBatch={listVirtualization.batch}
-                windowSize={listVirtualization.window}
-                updateCellsBatchingPeriod={listVirtualization.updateCellsBatchingPeriod}
-                removeClippedSubviews={false} // ✅ Отключено для предотвращения мерцания и скачков при загрузке
-                getItemLayout={undefined}
-                maintainVisibleContentPosition={
-                  Platform.OS !== 'web' ? {
-                    minIndexForVisible: 0,
-                    autoscrollToTopThreshold: 10,
-                  } : undefined
-                } // ✅ Предотвращает скачки при обновлении данных
+            {/* Error */}
+            {isError && !showInitialLoading && (
+              <EmptyState
+                icon="alert-circle"
+                title="Ошибка загрузки"
+                description="Не удалось загрузить путешествия."
+                variant="error"
+                action={{
+                  label: "Повторить",
+                  onPress: () => refetch(),
+                }}
               />
-              )}
-            </View>
+            )}
+
+            {/* Empty State */}
+            {!showInitialLoading && !isError && showEmptyState && getEmptyStateMessage && (
+              <EmptyState
+                icon={getEmptyStateMessage.icon}
+                title={getEmptyStateMessage.title}
+                description={getEmptyStateMessage.description}
+                variant={getEmptyStateMessage.variant}
+              />
+            )}
+
+            {/* Travel Cards Grid */}
+            {!showInitialLoading && !isError && !showEmptyState && (
+              <View style={styles.cardsGrid}>
+                {travels.map((travel, index) => (
+                  <View
+                    key={String(travel.id)}
+                    style={[
+                      { width: `${100 / gridColumns}%` as any },
+                      Platform.OS === 'web' && {
+                        maxWidth: 350,
+                        alignItems: 'center',
+                      },
+                    ]}
+                  >
+                    <MemoizedTravelItem
+                      item={travel}
+                      index={index}
+                      isMobile={isMobile}
+                      isSuperuser={isSuper}
+                      isMetravel={isMeTravel}
+                      onDeletePress={setDelete}
+                      isFirst={index === 0}
+                      selectable={isExport}
+                      isSelected={isSelected(travel.id)}
+                      onToggle={() => toggleSelect(travel)}
+                    />
+                  </View>
+                ))}
+                {showNextPageLoading && (
+                  <View style={styles.footerLoader}>
+                    <ActivityIndicator size="small" />
+                  </View>
+                )}
+              </View>
+            )}
           </View>
         </View>
-
-            {/* Модальное окно фильтров для мобильной версии */}
-        {isMobile && (
-          <Modal
-            visible={showFilters}
-            animationType="slide"
-            onRequestClose={() => setShowFilters(false)}
-          >
-            <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-              <ModernFilters
-                filterGroups={filterGroups}
-                selectedFilters={filter as any}
-                onFilterChange={(groupKey, optionId) => {
-                  const currentValues: string[] = ((filter as any)[groupKey] || []).map((v: any) => String(v));
-                  const normalizedId = String(optionId);
-                  const newValues = currentValues.includes(normalizedId)
-                    ? currentValues.filter((id) => id !== normalizedId)
-                    : [...currentValues, normalizedId];
-                  onSelect(groupKey, newValues);
-                }}
-                onClearAll={() => {
-                  setSearch('');
-                  resetFilters();
-                }}
-                resultsCount={total}
-                year={filter.year}
-                onYearChange={(value) => onSelect('year', value)}
-                showModeration={isSuper}
-                moderationValue={filter.moderation}
-                onToggleModeration={() => {
-                  const next = filter.moderation === 0 ? undefined : 0;
-                  onSelect('moderation', next);
-                }}
-                onClose={() => setShowFilters(false)}
-                onApply={() => setShowFilters(false)}
-              />
-            </SafeAreaView>
-          </Modal>
-        )}
-
-          <ConfirmDialog
-            visible={!!deleteId}
-            onClose={() => setDelete(null)}
-            onConfirm={handleDelete}
-            title="Удаление"
-            message="Удалить это путешествие?"
-          />
-
-          {isExport && (
-            <ExportBar
-              isMobile={isMobile}
-              selectedCount={selectionCount}
-              allCount={displayData.length}
-              onToggleSelectAll={toggleSelectAll}
-              onClearSelection={clearSelection}
-              onPreview={() => {
-                setSettingsModalMode('preview');
-                setShowSettingsModal(true);
-              }}
-              onSave={() => {
-                setSettingsModalMode('save');
-                setShowSettingsModal(true);
-              }}
-              onSettings={() => {
-                setSettingsModalMode('save');
-                setShowSettingsModal(true);
-              }}
-              isGenerating={pdfExport.isGenerating}
-              progress={pdfExport.progress}
-              settingsSummary={settingsSummary}
-              hasSelection={hasSelection}
-            />
-          )}
-
-          {/* Модальное окно настроек фотоальбома (только web) */}
-          {isExport && Platform.OS === "web" && (
-            <Suspense fallback={null}>
-              <BookSettingsModalLazy
-                visible={showSettingsModal}
-                onClose={() => setShowSettingsModal(false)}
-                onSave={handleSaveWithSettings}
-                onPreview={handlePreviewWithSettings}
-                defaultSettings={lastSettings}
-                travelCount={selectionCount}
-                userName={userId || undefined}
-                mode={settingsModalMode}
-              />
-            </Suspense>
-          )}
-
-          {/* ✅ УЛУЧШЕНИЕ: Кнопка "Наверх" для длинных страниц */}
-          {Platform.OS === 'web' && (
-            <ScrollToTopButton
-              flatListRef={flatListRef}
-              scrollY={scrollY}
-              threshold={400}
-            />
-          )}
-      </SafeAreaView>
-    );
+      </Suspense>
+    </View>
+  );
 }
 
-/* ===== Styles ===== */
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#f5f5f5', // ✅ Светло-серый фон для контраста с белыми карточками
-    // ✅ ИСПРАВЛЕНИЕ: Учитываем safe area для iOS
-    ...Platform.select({
-      web: {
-        paddingBottom: 'env(safe-area-inset-bottom)' as any,
-      },
-    }),
-  },
-  container: {
-    flex: 1,
-    flexDirection: 'row',
-    maxWidth: 1600,
-    marginHorizontal: 'auto',
-    width: '100%',
-    ...Platform.select({
-      web: {
-        minHeight: '100vh' as any,
-      },
-    }),
-  },
-  content: {
-    flex: 1,
-    flexDirection: 'row',
-    paddingTop: Platform.select({ default: 16, web: 32 }),
-    gap: Platform.select({ default: 0, web: 40 }),
-  },
-  // Компактный верхний отступ и gap для мобильной ширины на web
-  contentMobile: {
-    paddingTop: 12,
-    gap: 16,
-  },
-  sidebar: {
-    width: Platform.select({ default: 260, web: 300 }),
-    paddingRight: 0,
-    paddingLeft: Platform.select({ default: spacing.sm, web: 20 }),
-    borderRightWidth: 0,
-    ...Platform.select({
-      web: {
-        position: 'sticky' as any,
-        top: 0,
-        alignSelf: 'flex-start',
-        maxHeight: '100vh' as any,
-        overflowY: 'auto' as any,
-      },
-    }),
-  },
-  main: {
-    flex: 1,
-    paddingHorizontal: Platform.select({ default: 0, web: 32 }), // Убран padding на мобильных
-    paddingRight: Platform.select({ default: 0, web: 40 }),
-    minWidth: 0,
-  },
-  // Жёсткое переопределение для мобильной ширины на web
-  mainMobile: {
-    // ✅ ВАЖНО: Убираем padding от main (32px) чтобы не было двойных отступов
-    // Отступы управляются через contentPadding (20px) в:
-    // - searchSectionMain (панель поиска)
-    // - contentContainerStyle (FlatList карточки)
-    paddingHorizontal: 0,
-    paddingRight: 0,
-  },
-  searchSection: {
-    paddingHorizontal: Platform.select({ default: spacing.xs, web: spacing.sm }), // Минимальный padding на мобильных
-    paddingBottom: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  searchSectionMain: {
-    marginBottom: 16,
-    // ✅ ВАЖНО: paddingHorizontal управляется через contentPadding в inline стиле
-    // Это гарантирует одинаковые отступы для поиска и карточек
-  },
-  categoriesSectionMain: {
-    marginTop: Platform.select({ default: spacing.md, web: 20 }),
-    marginBottom: Platform.select({ default: spacing.lg, web: 32 }),
-    paddingVertical: Platform.select({ default: spacing.sm, web: 16 }),
-  },
-  categoriesTitle: {
-    fontSize: Platform.select({ default: 15, web: 17 }),
-    fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-    color: '#0f172a',
-    marginBottom: Platform.select({ default: spacing.sm, web: 16 }),
-    letterSpacing: -0.3,
-    paddingHorizontal: Platform.select({ default: spacing.xs, web: 0 }),
-    ...Platform.select({
-      web: {
-        fontFamily: DESIGN_TOKENS.typography.fontFamily as any,
-      },
-    }),
-  } as any,
-  loader: {
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: Platform.select({ default: spacing.xl, web: 40 }),
-  },
-  footerLoader: {
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: Platform.select({ default: spacing.md, web: spacing.lg }),
-  },
-  status: { 
-    marginTop: spacing.xl, 
-    textAlign: "center", 
-    fontSize: Platform.select({ default: 14, web: 16 }), 
-    color: palette.textMuted,
-  },
-  list: { 
-    gap: Platform.select({ default: spacing.sm, web: spacing.md }),
-  },
-  listContent: {
-    // ✅ ВАЖНО: Уменьшен paddingBottom для мобильных (футер фиксированный внизу)
-    paddingBottom: 40, // Мобильное значение по умолчанию (было 100/120)
-    backgroundColor: 'transparent', // Прозрачный, чтобы видеть фон root
-    ...Platform.select({
-      web: {
-        maxWidth: 1400,
-        marginHorizontal: 'auto',
-      } as any,
-    }),
-  },
-  listContentMobile: {
-    // ✅ ВАЖНО: Минимальный paddingBottom для мобильных (футер внизу экрана)
-    // Высота футера ~60px + небольшой отступ = 80px
-    paddingBottom: 80,
-    // paddingHorizontal уже установлен через contentPadding
-    backgroundColor: 'transparent', // Прозрачный, чтобы видеть фон root
-  },
-  columnWrapper: { 
-    gap: Platform.select({ default: 16, web: 20 }), // ✅ Увеличен gap для большего пространства
-    justifyContent: "flex-start",
-  },
-  exportBar: {
-    gap: spacing.xs,
-    padding: Platform.select({ default: spacing.sm, web: spacing.md }),
-    paddingBottom: Platform.select({ default: 70, web: 24 }), // отступ для нижнего меню/футера
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: palette.borderLight,
-    backgroundColor: palette.surface,
-    position: Platform.select({ default: 'absolute' as any, web: 'fixed' as any }),
-    bottom: Platform.select({ default: 60, web: 67 }),
-    left: 0,
-    right: 0,
-    zIndex: 999, // ✅ АДАПТИВНОСТЬ: Под нижним меню, но над контентом
-    ...Platform.select({
-      ios: {
-        shadowColor: "#0f172a",
-        shadowOpacity: 0.05,
-        shadowOffset: { width: 0, height: -2 },
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-      web: {
-        boxShadow: '0 -2px 12px rgba(15, 23, 42, 0.08)',
-      },
-    }),
-  },
-  exportBarMobileWeb: {
-    bottom: 55,
-    paddingBottom: Platform.select({ default: 20, web: 24 }),
-    padding: spacing.sm,
-  },
-  exportBarInfo: {
-    gap: spacing.xxs,
-    marginBottom: spacing.xxs,
-  },
-  exportBarInfoTitle: {
-    fontSize: Platform.select({ default: 14, web: 15 }),
-    fontWeight: "700",
-    color: palette.text,
-    letterSpacing: -0.2,
-  },
-  exportBarInfoSubtitle: {
-    fontSize: Platform.select({ default: 11, web: 12 }),
-    color: palette.textMuted,
-    lineHeight: Platform.select({ default: 14, web: 16 }),
-  },
-  exportBarInfoActions: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    flexWrap: "wrap",
-    marginTop: spacing.xs,
-  },
-  exportBarButtons: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    flexWrap: "wrap",
-    alignItems: 'center',
-  },
-  exportBarButtonsMobile: {
-    flexDirection: "column",
-    width: '100%',
-  },
-  linkButton: {
-    color: palette.primary,
-    fontSize: Platform.select({ default: 12, web: 13 }),
-    fontWeight: "600",
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-        textDecorationLine: 'underline',
-      },
-    }),
-  },
-  progressWrapper: {
-    height: 4,
-    backgroundColor: palette.surfaceMuted,
-    borderRadius: radii.sm,
-    overflow: "hidden",
-    marginTop: spacing.sm,
-  },
-  progressBar: {
-    height: "100%",
-    backgroundColor: palette.accent,
-    borderRadius: radii.sm,
-  },
-  recommendationsLoader: {
-    paddingVertical: Platform.select({ default: spacing.md, web: spacing.lg }),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  recommendationsSkeleton: {
-    width: "100%",
-    paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
-    gap: Platform.select({ default: spacing.sm, web: spacing.md }),
-  },
-  recommendationsSkeletonHeader: {
-    gap: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  recommendationsSkeletonTitle: {
-    height: Platform.select({ default: 20, web: 24 }),
-    width: Platform.select({ default: 160, web: 200 }),
-    backgroundColor: palette.surfaceMuted,
-    borderRadius: radii.sm,
-  },
-  recommendationsSkeletonTabs: {
-    height: Platform.select({ default: 28, web: 32 }),
-    width: Platform.select({ default: 240, web: 300 }),
-    backgroundColor: palette.surfaceMuted,
-    borderRadius: radii.md,
-  },
-  recommendationsSkeletonContent: {
-    flexDirection: "row",
-    gap: Platform.select({ default: spacing.sm, web: spacing.md }),
-    flexWrap: "wrap",
-  },
-  recommendationsSkeletonCard: {
-    width: Platform.select({
-      default: "100%",
-      web: "calc(33.333% - 12px)" as any,
-    }),
-    height: Platform.select({ default: 180, web: 200 }),
-    backgroundColor: palette.surfaceMuted,
-    borderRadius: radii.md,
-  },
-  sidebarExtraFilters: {
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: palette.borderLight,
-    gap: spacing.xs,
-  },
-  yearFilterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.xs,
-  },
-  yearFilterLabel: {
-    fontSize: Platform.select({ default: 12, web: 12 }),
-    color: palette.textMuted,
-    fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-  },
-  yearFilterInput: {
-    flexBasis: 78,
-    maxWidth: 78,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderRadius: 999,
-    borderColor: palette.borderLight,
-    backgroundColor: palette.surfaceMuted,
-    fontSize: 13,
-    textAlign: 'center',
-  },
-  moderationRow: {
-    marginTop: spacing.xs,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  moderationLabel: {
-    fontSize: 12,
-    color: palette.textMuted,
-  },
-});
-
 export default memo(ListTravel);
+export { ExportBar };

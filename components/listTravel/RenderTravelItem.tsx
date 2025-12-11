@@ -26,6 +26,7 @@ type RenderTravelItemProps = {
     selectable?: boolean;
     isSelected?: boolean;
     onToggle?: () => void;
+    cardWidth?: string | number; // пока не используем для width, оставляем для совместимости пропсов
 };
 
 function RenderTravelItem({
@@ -40,6 +41,7 @@ function RenderTravelItem({
                               selectable = false,
                               isSelected = false,
                               onToggle,
+                              cardWidth,
                           }: RenderTravelItemProps) {
     if (!item) return null;
 
@@ -80,13 +82,12 @@ function RenderTravelItem({
             };
         }
 
-        // Для desktop/tablet в сетке
+        // Для desktop/tablet в сетке: карточка занимает всю ширину своей колонки
         return {
             ...base,
-            flex: 1,
-            minWidth: 0, // Важно для flexbox
-            maxWidth: "100%", // Предотвращаем переполнение
-            // Убираем marginHorizontal - отступы управляются через gap в columnWrapperStyle
+            flexShrink: 0,
+            width: "100%",
+            maxWidth: "100%",
         };
     }, [isMobile, isSingle]);
 
@@ -112,6 +113,8 @@ function RenderTravelItem({
                 isSelected={isSelected}
                 onToggle={onToggle}
                 isMobile={isMobile}
+                viewportWidth={width}
+                cardWidth={cardWidth}
             />
         </AnimatedCard>
     );
