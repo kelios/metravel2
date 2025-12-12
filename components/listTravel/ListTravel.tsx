@@ -20,8 +20,9 @@ import { useLocalSearchParams, usePathname, useRouter } from 'expo-router'
 import { useRoute } from '@react-navigation/native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import RenderTravelItem from './RenderTravelItem'
+import SidebarFilters from './SidebarFilters'
+import RightColumn from './RightColumn'
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
-import ModernFilters from './ModernFilters'
 import ConfirmDialog from '../ConfirmDialog'
 import UIButton from '@/components/ui/Button'
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
@@ -30,12 +31,8 @@ import { fetchAllFiltersOptimized } from '@/src/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { TravelListSkeleton } from '@/components/SkeletonLoader'
 import EmptyState from '@/components/EmptyState'
-import CategoryChips from '@/components/CategoryChips'
 import ProgressIndicator from '@/components/ProgressIndicator'
-import ScrollToTopButton from '@/components/ScrollToTopButton'
-// ✅ АРХИТЕКТУРА: Импорт типов
 import type { Travel } from '@/src/types/types'
-// ✅ АРХИТЕКТУРА: Импорт констант, типов, утилит и хуков
 import {
   BREAKPOINTS,
   FLATLIST_CONFIG,
@@ -261,10 +258,6 @@ const RecommendationsTabs = lazy(() => {
     return import('./RecommendationsTabs');
 });
 
-// ✅ АДАПТИВНОСТЬ: Константы для динамического расчета ширины карточки
-const MIN_CARD_WIDTH = 280;
-const MAX_CARD_WIDTH = 400;
-
 // Simple delete function implementation
 const deleteTravel = async (id: string): Promise<void> => {
     const URLAPI = process.env.EXPO_PUBLIC_API_URL || '';
@@ -336,7 +329,7 @@ const ExportBar = memo(function ExportBar({
       ? `Выбрано ${selectedCount} ${pluralizeTravels(selectedCount)}`
       : 'Выберите путешествия для экспорта';
 
-    return (
+  return (
       <View style={[styles.exportBar, Platform.OS === 'web' && isMobile && styles.exportBarMobileWeb]}>
           <View style={styles.exportBarInfo}>
             <Text style={styles.exportBarInfoTitle as any}>{selectionText}</Text>
@@ -460,15 +453,6 @@ function ListTravel({
     // ✅ Определяем количество колонок для grid на основе эффективной ширины правой части
     const baseColumnsEffective = isDesktop ? 3 : calculateColumns(effectiveWidth);
     const gridColumns = isTablet && isPortrait && baseColumnsEffective > 2 ? 2 : baseColumnsEffective;
-
-    // ✅ Определяем ширину карточки для flexbox layout
-    const cardWidth = useMemo(() => {
-      if (gridColumns === 1) return '100%';
-      if (gridColumns === 2) return '50%';
-      return '33.3333%';
-    }, [gridColumns]);
-
-    const listKey = useMemo(() => `grid-${columns}`, [columns]);
 
     const [recommendationsReady, setRecommendationsReady] = useState(Platform.OS !== 'web');
     const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(false);
@@ -641,74 +625,6 @@ function ListTravel({
       [travels, options?.categories, maxVisibleCategories]
     );
 
-    // ✅ ОПТИМИЗАЦИЯ: Упрощенный расчет gridRows - убрана сложная логика
-    const gridRows = travels && travels.length > 0
-      ? Array.from({ length: Math.ceil(travels.length / columns) }, (_, i) =>
-          travels.slice(i * columns, (i + 1) * columns)
-        )
-      : [];
-
-    // DEBUG: Temporarily force showing test data
-    // const forceShowTestData = true;
-    
-    // DEBUG: Always create test data for testing
-    // const testGridRows = [
-    //   [{
-    //     id: 1,
-    //     slug: 'test-travel-1',
-    //     name: 'Test Travel 1',
-    //     travel_image_thumb_url: '',
-    //     travel_image_thumb_small_url: '',
-    //     url: '/travels/test-travel-1',
-    //     youtube_link: '',
-    //     userName: 'Test User',
-    //     description: 'Test description',
-    //     recommendation: '',
-    //     plus: '',
-    //     minus: '',
-    //     cityName: 'Test City',
-    //     countryName: 'Россия',
-    //     countUnicIpView: '100',
-    //     gallery: [],
-    //     travelAddress: [],
-    //     userIds: '1',
-    //     year: '2024',
-    //     monthName: 'Январь',
-    //     number_days: 7,
-    //     companions: ['Семья'],
-    //     countryCode: 'RU',
-    //     created_at: new Date().toISOString(),
-    //   } as Travel],
-    //   [{
-    //     id: 2,
-    //     slug: 'test-travel-2',
-    //     name: 'Test Travel 2', 
-    //     travel_image_thumb_url: '',
-    //     travel_image_thumb_small_url: '',
-    //     url: '/travels/test-travel-2',
-    //     youtube_link: '',
-    //     userName: 'Test User 2',
-    //     description: 'Test description 2',
-    //     recommendation: '',
-    //     plus: '',
-    //     minus: '',
-    //     cityName: 'Test City 2',
-    //     countryName: 'Беларусь',
-    //     countUnicIpView: '50',
-    //     gallery: [],
-    //     travelAddress: [],
-    //     userIds: '2',
-    //     year: '2024',
-    //     monthName: 'Февраль',
-    //     number_days: 5,
-    //     companions: ['Друзья'],
-    //     countryCode: 'BY',
-    //     created_at: new Date().toISOString(),
-    //   } as Travel]
-    // ];
-    
-    // const displayGridRows = forceShowTestData ? testGridRows : gridRows;
-
     /* Delete */
     const handleDelete = useCallback(async () => {
         if (!deleteId) return;
@@ -769,6 +685,24 @@ function ListTravel({
         handlePreviewWithSettings,
         settingsSummary,
     } = exportState;
+
+    const renderTravelListItem = useCallback(
+      (travel: Travel, index: number) => (
+        <MemoizedTravelItem
+          item={travel}
+          index={index}
+          isMobile={isMobile}
+          isSuperuser={isSuper}
+          isMetravel={isMeTravel}
+          onDeletePress={setDelete}
+          isFirst={index === 0}
+          selectable={isExport}
+          isSelected={isSelected(travel.id)}
+          onToggle={() => toggleSelect(travel)}
+        />
+      ),
+      [isMobile, isSuper, isMeTravel, isExport, setDelete, isSelected, toggleSelect]
+    );
 
     const selectionLabel = hasSelection
       ? `Выбрано ${selectionCount} ${pluralizeTravels(selectionCount)}`
@@ -1076,126 +1010,43 @@ function ListTravel({
     <View style={styles.root}>
       <Suspense fallback={<TravelListSkeleton count={6} columns={columns} />}>
         {/* Sidebar */}
-        {!isMobile && (
-          <View style={styles.sidebar}>
-            <ModernFilters
-              filterGroups={filterGroups}
-              selectedFilters={filter as any}
-              onFilterChange={(groupKey, optionId) => {
-                const currentValues: string[] = ((filter as any)[groupKey] || []).map((v: any) => String(v));
-                const normalizedId = String(optionId);
-                const newValues = currentValues.includes(normalizedId)
-                  ? currentValues.filter((id) => id !== normalizedId)
-                  : [...currentValues, normalizedId];
-                onSelect(groupKey, newValues);
-              }}
-              onClearAll={() => {
-                setSearch('');
-                resetFilters();
-              }}
-              resultsCount={total}
-              year={filter.year}
-              onYearChange={(value) => onSelect('year', value)}
-              showModeration={isSuper}
-              moderationValue={filter.moderation}
-              onToggleModeration={() => {
-                const next = filter.moderation === 0 ? undefined : 0;
-                onSelect('moderation', next);
-              }}
-            />
-          </View>
-        )}
+        <SidebarFilters
+          isMobile={isMobile}
+          filterGroups={filterGroups}
+          filter={filter}
+          onSelect={onSelect}
+          total={total}
+          isSuper={isSuper}
+          setSearch={setSearch}
+          resetFilters={resetFilters}
+          containerStyle={styles.sidebar}
+        />
 
         {/* Right Column */}
-        <View style={styles.rightColumn}>
-          {/* Search Header - Sticky */}
-          <View style={styles.searchHeader}>
-            <StickySearchBar
-              search={search}
-              onSearchChange={setSearch}
-              onFiltersPress={() => setShowFilters(true)}
-              onToggleRecommendations={() => handleRecommendationsVisibilityChange(!isRecommendationsVisible)}
-              isRecommendationsVisible={isRecommendationsVisible}
-              hasActiveFilters={activeFiltersCount > 0}
-              resultsCount={total}
-              activeFiltersCount={activeFiltersCount}
-              onClearAll={() => {
-                setSearch('');
-                resetFilters();
-              }}
-            />
-          </View>
-
-          {/* Cards Container - Scrollable */}
-          <View style={[styles.cardsContainer, { paddingHorizontal: contentPadding }] }>
-            {/* Loading */}
-            {showInitialLoading && (
-              <View style={styles.cardsGrid}>
-                <TravelListSkeleton count={PER_PAGE} columns={gridColumns} />
-              </View>
-            )}
-
-            {/* Error */}
-            {isError && !showInitialLoading && (
-              <EmptyState
-                icon="alert-circle"
-                title="Ошибка загрузки"
-                description="Не удалось загрузить путешествия."
-                variant="error"
-                action={{
-                  label: "Повторить",
-                  onPress: () => refetch(),
-                }}
-              />
-            )}
-
-            {/* Empty State */}
-            {!showInitialLoading && !isError && showEmptyState && getEmptyStateMessage && (
-              <EmptyState
-                icon={getEmptyStateMessage.icon}
-                title={getEmptyStateMessage.title}
-                description={getEmptyStateMessage.description}
-                variant={getEmptyStateMessage.variant}
-              />
-            )}
-
-            {/* Travel Cards Grid */}
-            {!showInitialLoading && !isError && !showEmptyState && (
-              <View style={styles.cardsGrid}>
-                {travels.map((travel, index) => (
-                  <View
-                    key={String(travel.id)}
-                    style={[
-                      { width: `${100 / gridColumns}%` as any },
-                      Platform.OS === 'web' && {
-                        maxWidth: 350,
-                        alignItems: 'center',
-                      },
-                    ]}
-                  >
-                    <MemoizedTravelItem
-                      item={travel}
-                      index={index}
-                      isMobile={isMobile}
-                      isSuperuser={isSuper}
-                      isMetravel={isMeTravel}
-                      onDeletePress={setDelete}
-                      isFirst={index === 0}
-                      selectable={isExport}
-                      isSelected={isSelected(travel.id)}
-                      onToggle={() => toggleSelect(travel)}
-                    />
-                  </View>
-                ))}
-                {showNextPageLoading && (
-                  <View style={styles.footerLoader}>
-                    <ActivityIndicator size="small" />
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-        </View>
+        <RightColumn
+          search={search}
+          setSearch={setSearch}
+          isRecommendationsVisible={isRecommendationsVisible}
+          handleRecommendationsVisibilityChange={handleRecommendationsVisibilityChange}
+          activeFiltersCount={activeFiltersCount}
+          total={total}
+          contentPadding={contentPadding}
+          showInitialLoading={showInitialLoading}
+          isError={isError}
+          showEmptyState={showEmptyState}
+          getEmptyStateMessage={getEmptyStateMessage}
+          travels={travels}
+          gridColumns={gridColumns}
+          isMobile={isMobile}
+          showNextPageLoading={showNextPageLoading}
+          refetch={refetch}
+          containerStyle={styles.rightColumn}
+          searchHeaderStyle={styles.searchHeader}
+          cardsContainerStyle={styles.cardsContainer}
+          cardsGridStyle={styles.cardsGrid}
+          footerLoaderStyle={styles.footerLoader}
+          renderItem={renderTravelListItem}
+        />
       </Suspense>
     </View>
   );
