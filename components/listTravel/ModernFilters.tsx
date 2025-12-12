@@ -155,6 +155,16 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Фильтры</Text>
+        </View>
+        <View style={styles.headerRight}>
+          {activeFiltersCount > 0 && (
+            <Pressable onPress={onClearAll} style={styles.clearButton}>
+              <Text style={styles.clearButtonText}>
+                Очистить ({activeFiltersCount})
+              </Text>
+            </Pressable>
+          )}
           {onClose && (
             <Pressable
               onPress={onClose}
@@ -165,15 +175,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               <Feather name="x" size={18} color={colors.neutral[600]} />
             </Pressable>
           )}
-          <Text style={styles.headerTitle}>Фильтры</Text>
         </View>
-        {activeFiltersCount > 0 && (
-          <Pressable onPress={onClearAll} style={styles.clearButton}>
-            <Text style={styles.clearButtonText}>
-              Очистить ({activeFiltersCount})
-            </Text>
-          </Pressable>
-        )}
       </View>
 
       {/* Toggle all groups */}
@@ -459,6 +461,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     flex: 1,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   closeButton: {
     padding: spacing.xs,

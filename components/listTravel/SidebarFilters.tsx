@@ -1,5 +1,5 @@
 import React, { memo } from 'react'
-import { View, ViewStyle } from 'react-native'
+import { Platform, View, ViewStyle } from 'react-native'
 import ModernFilters from './ModernFilters'
 
 interface SidebarFiltersProps {
@@ -11,6 +11,8 @@ interface SidebarFiltersProps {
   isSuper: boolean
   setSearch: (value: string) => void
   resetFilters: () => void
+  isVisible?: boolean
+  onClose?: () => void
   containerStyle?: ViewStyle | ViewStyle[] | undefined
 }
 
@@ -24,9 +26,16 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
     isSuper,
     setSearch,
     resetFilters,
+    isVisible = true,
+    onClose,
     containerStyle,
   }) => {
-    if (isMobile) {
+    // На native скрываем фильтры на мобильных, на web скрываем только если явно выключены
+    if (Platform.OS !== 'web' && isMobile) {
+      return null
+    }
+
+    if (Platform.OS === 'web' && isMobile && !isVisible) {
       return null
     }
 
@@ -56,6 +65,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
             const next = filter.moderation === 0 ? undefined : 0
             onSelect('moderation', next)
           }}
+          onClose={onClose}
         />
       </View>
     )

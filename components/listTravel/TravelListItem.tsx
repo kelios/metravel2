@@ -82,9 +82,6 @@ const WebImageOptimized = memo(function WebImageOptimized({
       () => "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 30vw",
       []
     );
-
-    // ✅ На web определяем, мобильная ли сейчас ширина, чтобы управлять режимом вписывания картинки
-    const isMobileWidth = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
     
     return (
         <img
@@ -96,7 +93,7 @@ const WebImageOptimized = memo(function WebImageOptimized({
             style={{
                 width: "100%",
                 height: "100%",
-                objectFit: isMobileWidth ? "contain" : "cover",
+                objectFit: "cover",
                 display: "block",
                 opacity: isLoaded ? 1 : 0,
                 transition: 'opacity 0.3s ease',

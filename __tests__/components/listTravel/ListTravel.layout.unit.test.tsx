@@ -164,7 +164,8 @@ jest.mock('@/constants/designSystem', () => ({
 jest.mock('@/components/listTravel/utils/listTravelHelpers', () => ({
   calculateCategoriesWithCount: () => [],
   calculateColumns: () => 3,
-  isMobile: false,
+  // Функция isMobile должна соответствовать реальному helper'у и вызываться как isMobile(width)
+  isMobile: (width: number) => width < 768,
   getContainerPadding: () => 16,
 }));
 
