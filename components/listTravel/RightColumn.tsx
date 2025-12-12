@@ -23,6 +23,7 @@ interface RightColumnProps {
   isMobile: boolean
   showNextPageLoading: boolean
   refetch: () => void
+  onFiltersPress?: () => void
   containerStyle?: ViewStyle | ViewStyle[]
   searchHeaderStyle?: ViewStyle | ViewStyle[]
   cardsContainerStyle?: ViewStyle | ViewStyle[]
@@ -49,6 +50,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     isMobile,
     showNextPageLoading,
     refetch,
+    onFiltersPress,
     containerStyle,
     searchHeaderStyle,
     cardsContainerStyle,
@@ -63,7 +65,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
           <StickySearchBar
             search={search}
             onSearchChange={setSearch}
-            onFiltersPress={() => {}}
+            onFiltersPress={onFiltersPress}
             onToggleRecommendations={() => handleRecommendationsVisibilityChange(!isRecommendationsVisible)}
             isRecommendationsVisible={isRecommendationsVisible}
             hasActiveFilters={activeFiltersCount > 0}
@@ -121,10 +123,16 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                   key={String(travel.id)}
                   style={[
                     { width: `${100 / gridColumns}%` as any },
-                    Platform.OS === 'web' && {
-                      maxWidth: 350,
-                      alignItems: 'center',
-                    },
+                    Platform.OS === 'web' &&
+                      (isMobile
+                        ? {
+                            maxWidth: '100%',
+                            alignItems: 'stretch',
+                          }
+                        : {
+                            maxWidth: 350,
+                            alignItems: 'center',
+                          }),
                   ]}
                 >
                   {renderItem(travel, index)}

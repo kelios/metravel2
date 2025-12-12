@@ -45,7 +45,7 @@ import { useListTravelVisibility } from './hooks/useListTravelVisibility'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
 import { useListTravelExport } from './hooks/useListTravelExport'
-import { calculateCategoriesWithCount, calculateColumns, isMobile as checkIsMobile, getContainerPadding } from './utils/listTravelHelpers'
+import { calculateCategoriesWithCount, calculateColumns, isMobile, getContainerPadding } from './utils/listTravelHelpers'
 
 // Define styles at the top level before any component definitions
 const styles = StyleSheet.create({
@@ -59,6 +59,9 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: '100%',
     height: '100%',
+  },
+  rootMobile: {
+    flexDirection: 'column',
   },
   content: {
     flex: 1,
@@ -85,6 +88,11 @@ const styles = StyleSheet.create({
     height: '100%',
     overflowY: 'auto',
     overflowX: 'hidden',
+  },
+  sidebarMobile: {
+    width: '100%',
+    borderRightWidth: 0,
+    borderBottomWidth: 1,
   },
   listContainer: {
     paddingHorizontal: TOKENS.spacing.lg,
@@ -197,6 +205,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     height: '100%',
   },
+  rightColumnMobile: {
+    width: '100%',
+  },
   // ✅ SEARCH HEADER: Прикрепленный заголовок поиска
   searchHeader: {
     position: Platform.OS === 'web' ? 'sticky' : 'relative',
@@ -217,7 +228,10 @@ const styles = StyleSheet.create({
     overflowX: 'hidden',
     // Горизонтальные отступы задаются динамически через contentPadding, чтобы избежать лишних белых полей
     paddingTop: TOKENS.spacing.lg,
-    paddingBottom: TOKENS.spacing.lg,
+    paddingBottom: TOKENS.spacing.md,
+  },
+  cardsContainerMobile: {
+    paddingBottom: 0,
   },
   // ✅ CARDS GRID: Flexbox layout for both platforms
   cardsGrid: {
@@ -420,13 +434,14 @@ function ListTravel({
     const isExport = (route as any).name === "export" || pathname?.includes('/export');
 
     // ✅ АДАПТИВНОСТЬ: Определяем устройство и ориентацию
-    const isMobile = checkIsMobile(width);
+    // На всех платформах считаем устройство "мобильным", если ширина меньше MOBILE breakpoint
+    const isMobileDevice = isMobile(width);
     // Планшет: от MOBILE до TABLET_LANDSCAPE, всё, что шире, считаем десктопом (3 колонки)
     const isTablet = useMemo(
       () => width >= BREAKPOINTS.MOBILE && width < BREAKPOINTS.TABLET_LANDSCAPE,
       [width]
     );
-    const isDesktop = !isMobile && !isTablet;
+    const isDesktop = !isMobileDevice && !isTablet;
     const isPortrait = height > width;
 
     // ✅ ОПТИМИЗАЦИЯ: Базовое количество колонок для логики (от общей ширины окна)
@@ -437,7 +452,8 @@ function ListTravel({
     const gapSize = width < 360 ? 8 : width < 480 ? 10 : width < 768 ? 12 : width < 1024 ? 14 : 16;
 
     // ✅ ОПТИМИЗАЦИЯ: Стабильные адаптивные отступы и ширина правой колонки
-    const effectiveWidth = isMobile ? width : width - 280; // ✅ FIX: Учитываем ширину sidebar (280px)
+    // На мобильном layout используем полную ширину, на десктопе вычитаем ширину sidebar
+    const effectiveWidth = isMobileDevice ? width : width - 280; // 280px ~ ширина sidebar
 
     const contentPadding = useMemo(() => {
       // ✅ ОПТИМИЗАЦИЯ: Используем стабильные breakpoints для избежания лишних перерасчетов
@@ -615,10 +631,10 @@ function ListTravel({
 
     // ✅ АДАПТИВНОСТЬ: Количество видимых категорий зависит от устройства
     const maxVisibleCategories = useMemo(() => {
-      if (isMobile) return 6;
+      if (isMobileDevice) return 6;
       if (isTablet) return 8;
       return MAX_VISIBLE_CATEGORIES;
-    }, [isMobile, isTablet]);
+    }, [isMobileDevice, isTablet]);
 
     const categoriesWithCount = useMemo(
       () => calculateCategoriesWithCount(travels, options?.categories as any).slice(0, maxVisibleCategories),
@@ -691,7 +707,7 @@ function ListTravel({
         <MemoizedTravelItem
           item={travel}
           index={index}
-          isMobile={isMobile}
+          isMobile={isMobileDevice}
           isSuperuser={isSuper}
           isMetravel={isMeTravel}
           onDeletePress={setDelete}
@@ -701,7 +717,7 @@ function ListTravel({
           onToggle={() => toggleSelect(travel)}
         />
       ),
-      [isMobile, isSuper, isMeTravel, isExport, setDelete, isSelected, toggleSelect]
+      [isMobileDevice, isSuper, isMeTravel, isExport, setDelete, isSelected, toggleSelect]
     );
 
     const selectionLabel = hasSelection
@@ -767,7 +783,7 @@ function ListTravel({
             const offsetY = contentOffset.y;
 
             // ✅ A2.1: Увеличен порог до 300px для web, 200px для mobile (меньше частоты)
-            const threshold = isMobile ? 200 : 300;
+            const threshold = isMobileDevice ? 200 : 300;
 
             if (Math.abs(offsetY - lastScrollOffsetRef.current) > threshold) {
                 // Отменяем предыдущий таймер
@@ -783,10 +799,10 @@ function ListTravel({
                     } catch (error) {
                         // Игнорируем ошибки sessionStorage
                     }
-                }, isMobile ? 600 : 800) as any;
+                }, isMobileDevice ? 600 : 800) as any;
             }
         }
-    }, [isMobile]);
+    }, [isMobileDevice]);
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;
@@ -1007,11 +1023,11 @@ function ListTravel({
     ], [options, isTravelBy]);
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, isMobileDevice && styles.rootMobile]}>
       <Suspense fallback={<TravelListSkeleton count={6} columns={columns} />}>
         {/* Sidebar */}
         <SidebarFilters
-          isMobile={isMobile}
+          isMobile={isMobileDevice}
           filterGroups={filterGroups}
           filter={filter}
           onSelect={onSelect}
@@ -1019,7 +1035,9 @@ function ListTravel({
           isSuper={isSuper}
           setSearch={setSearch}
           resetFilters={resetFilters}
-          containerStyle={styles.sidebar}
+          isVisible={!isMobileDevice || showFilters}
+          onClose={isMobileDevice ? () => setShowFilters(false) : undefined}
+          containerStyle={[styles.sidebar, isMobileDevice && styles.sidebarMobile]}
         />
 
         {/* Right Column */}
@@ -1037,12 +1055,16 @@ function ListTravel({
           getEmptyStateMessage={getEmptyStateMessage}
           travels={travels}
           gridColumns={gridColumns}
-          isMobile={isMobile}
+          isMobile={isMobileDevice}
           showNextPageLoading={showNextPageLoading}
           refetch={refetch}
-          containerStyle={styles.rightColumn}
+          onFiltersPress={isMobileDevice ? () => setShowFilters(true) : undefined}
+          containerStyle={[styles.rightColumn, isMobileDevice && styles.rightColumnMobile]}
           searchHeaderStyle={styles.searchHeader}
-          cardsContainerStyle={styles.cardsContainer}
+          cardsContainerStyle={[
+            styles.cardsContainer,
+            isMobileDevice ? styles.cardsContainerMobile : undefined,
+          ]}
           cardsGridStyle={styles.cardsGrid}
           footerLoaderStyle={styles.footerLoader}
           renderItem={renderTravelListItem}
