@@ -599,10 +599,12 @@ function TravelListItem({
         <View
           style={[
             styles.contentBelow,
-            // На web оставляем компактные фиксированные отступы 5px и gap 5px
+            // На web делаем компактную, но "дышащую" панель текста с небольшим отступом снизу
             Platform.OS === 'web' && {
-              padding: 5,
-              gap: 5,
+              paddingHorizontal: 12,
+              paddingTop: 8,
+              paddingBottom: 10,
+              gap: 4,
             },
           ]}
         >
@@ -924,10 +926,10 @@ const styles = StyleSheet.create({
 
   // Упрощенный контент
   contentBelow: {
-    // Небольшой внутренний отступ и маленький gap между элементами
-    paddingHorizontal: 5,
-    paddingVertical: 5,
-    gap: 5,
+    // Компактный внутренний отступ и небольшой gap между элементами
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    gap: 4,
     backgroundColor: TOKENS.colors.surface,
   },
 
@@ -964,10 +966,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: TOKENS.spacing.xs,
-    marginTop: TOKENS.spacing.xs,
+    marginTop: TOKENS.spacing.xs * 0.5,
+    marginBottom: TOKENS.spacing.xs, // небольшой визуальный отступ снизу
     flexWrap: 'wrap',
-    // Небольшая минимальная высота, чтобы карточки с одним и двумя бейджами выглядели ровнее
-    minHeight: 28,
+    // Чуть меньшая минимальная высота, чтобы панель была компактнее
+    minHeight: 22,
   },
 
   metaBox: {
