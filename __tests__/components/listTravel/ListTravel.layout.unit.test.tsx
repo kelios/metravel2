@@ -68,23 +68,25 @@ jest.mock('@/components/listTravel/hooks/useListTravelFilters', () => ({
   }),
 }));
 
+const defaultListTravelData = {
+  data: [],
+  total: 0,
+  hasMore: false,
+  isLoading: false,
+  isFetching: false,
+  isError: false,
+  status: 'success',
+  isInitialLoading: false,
+  isNextPageLoading: false,
+  isEmpty: true,
+  refetch: jest.fn(),
+  handleEndReached: jest.fn(),
+  handleRefresh: jest.fn(),
+  isRefreshing: false,
+};
+
 jest.mock('@/components/listTravel/hooks/useListTravelData', () => ({
-  useListTravelData: () => ({
-    data: [],
-    total: 0,
-    hasMore: false,
-    isLoading: false,
-    isFetching: false,
-    isError: false,
-    status: 'success',
-    isInitialLoading: false,
-    isNextPageLoading: false,
-    isEmpty: true,
-    refetch: jest.fn(),
-    handleEndReached: jest.fn(),
-    handleRefresh: jest.fn(),
-    isRefreshing: false,
-  }),
+  useListTravelData: jest.fn(() => defaultListTravelData),
 }));
 
 jest.mock('@/components/listTravel/hooks/useListTravelExport', () => ({
@@ -162,11 +164,11 @@ jest.mock('@/constants/designSystem', () => ({
 }));
 
 jest.mock('@/components/listTravel/utils/listTravelHelpers', () => ({
-  calculateCategoriesWithCount: () => [],
-  calculateColumns: () => 3,
+  calculateCategoriesWithCount: jest.fn(() => []),
+  calculateColumns: jest.fn(() => 3),
   // Функция isMobile должна соответствовать реальному helper'у и вызываться как isMobile(width)
-  isMobile: (width: number) => width < 768,
-  getContainerPadding: () => 16,
+  isMobile: jest.fn((width: number) => width < 768),
+  getContainerPadding: jest.fn(() => 16),
 }));
 
 jest.mock('@/components/listTravel/utils/listTravelConstants', () => ({

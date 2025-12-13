@@ -150,10 +150,10 @@ jest.mock('@/constants/designSystem', () => ({
 }));
 
 jest.mock('@/components/listTravel/utils/listTravelHelpers', () => ({
-  calculateCategoriesWithCount: () => [],
-  calculateColumns: () => 3,
-  isMobile: false,
-  getContainerPadding: () => 16,
+  calculateCategoriesWithCount: jest.fn(() => []),
+  calculateColumns: jest.fn(() => 3),
+  isMobile: jest.fn((width: number) => width < 768),
+  getContainerPadding: jest.fn(() => 16),
 }));
 
 jest.mock('@/components/listTravel/utils/listTravelConstants', () => ({

@@ -112,6 +112,27 @@ jest.mock('expo-router', () => {
   }
 })
 
+// Provide a lightweight FavoritesContext mock so components using the hook
+// don't fail outside of the real provider during unit tests
+jest.mock('@/context/FavoritesContext', () => {
+  const React = require('react')
+  const stub = {
+    favorites: [],
+    viewHistory: [],
+    addFavorite: jest.fn(),
+    removeFavorite: jest.fn(),
+    isFavorite: jest.fn(() => false),
+    addToHistory: jest.fn(),
+    clearHistory: jest.fn(),
+    getRecommendations: jest.fn(() => []),
+  }
+
+  return {
+    FavoritesProvider: ({ children }: any) => <React.Fragment>{children}</React.Fragment>,
+    useFavorites: () => stub,
+  }
+})
+
 // Properly typed AsyncStorage mock
 const createAsyncStorageMock = () => {
   const store = new Map<string, string>()
@@ -270,8 +291,8 @@ jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native')
   return {
     ...RN,
-    // Desktop-like default; individual tests can override via their own mocks
-    useWindowDimensions: () => ({ width: 1024, height: 768 }),
+    // Desktop-like default; individual tests can override via jest.fn mock
+    useWindowDimensions: jest.fn(() => ({ width: 1024, height: 768 })),
     Settings: {
       get: jest.fn(),
       set: jest.fn(),

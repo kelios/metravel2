@@ -584,11 +584,22 @@ function TravelListItem({
           )}
 
           {selectable && (
-            <View style={styles.checkWrap} pointerEvents="none">
+            <Pressable
+              style={styles.checkWrap}
+              testID="selection-checkbox"
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: isSelected }}
+              onPress={(e: any) => {
+                if (e?.stopPropagation) {
+                  e.stopPropagation();
+                }
+                onToggle?.();
+              }}
+            >
               <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
                 {isSelected && <Feather name="check" size={14} color="#fff" />}
               </View>
-            </View>
+            </Pressable>
           )}
         </View>
 

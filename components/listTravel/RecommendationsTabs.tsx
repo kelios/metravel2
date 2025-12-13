@@ -6,21 +6,18 @@ import React, {
   useCallback,
   useRef,
   useEffect,
+  memo,
 } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
-  Platform,
-  useWindowDimensions,
   ScrollView,
   Image,
   Animated,
   FlatList,
   RefreshControl,
-  findNodeHandle,
-  UIManager,
 } from 'react-native';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -30,39 +27,28 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 
-/* ---------------- lazy blocks ---------------- */
+/* ---------------- Lazy Components ---------------- */
 
 const PersonalizedRecommendations = lazy(() =>
   import('@/components/PersonalizedRecommendations').catch(() => ({
-    default: () => (
-      <View style={styles.errorContainer}>
-        <MaterialIcons
-          name="error-outline"
-          size={48}
-          color={DESIGN_TOKENS.colors.error}
-        />
-        <Text style={styles.errorText}>Не удалось загрузить рекомендации</Text>
-      </View>
-    ),
-  })),
+    default: () => <ErrorFallback message="Не удалось загрузить рекомендации" />,
+  }))
 );
 
 const WeeklyHighlights = lazy(() =>
   import('@/components/WeeklyHighlights').catch(() => ({
-    default: () => (
-      <View style={styles.errorContainer}>
-        <MaterialIcons
-          name="error-outline"
-          size={48}
-          color={DESIGN_TOKENS.colors.error}
-        />
-        <Text style={styles.errorText}>Не удалось загрузить подборку месяца</Text>
-      </View>
-    ),
-  })),
+    default: () => <ErrorFallback message="Не удалось загрузить подборку месяца" />,
+  }))
 );
 
-/* ---------------- types ---------------- */
+const ErrorFallback = ({ message }: { message: string }) => (
+  <View style={styles.errorContainer}>
+    <MaterialIcons name="error-outline" size={48} color={DESIGN_TOKENS.colors.error} />
+    <Text style={styles.errorText}>{message}</Text>
+  </View>
+);
+
+/* ---------------- Types ---------------- */
 
 type TabType = 'recommendations' | 'highlights' | 'favorites' | 'history';
 
@@ -71,7 +57,7 @@ interface RecommendationsTabsProps {
   onVisibilityChange?: (visible: boolean) => void;
 }
 
-/* ---------------- skeletons ---------------- */
+/* ---------------- Skeletons ---------------- */
 
 const CardSkeleton = () => (
   <View style={styles.skeletonCard}>
@@ -85,286 +71,470 @@ const CardSkeleton = () => (
 
 const RecommendationsPlaceholder = () => (
   <View style={styles.placeholderContainer}>
-    <View style={styles.skeletonHeader} />
+    <View style={[styles.skeletonLine, { width: 160, height: 20, marginBottom: 12 }]} />
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      {[1, 2, 3].map(i => (
+      {[1, 2, 3, 4].map((i) => (
         <CardSkeleton key={i} />
       ))}
     </ScrollView>
   </View>
 );
 
-/* ---------------- card ---------------- */
+/* ---------------- Travel Card ---------------- */
 
-const TravelCard = React.memo(
-  ({
-     item,
-     onPress,
-     isHistory = false,
-   }: {
-    item: any;
-    onPress: () => void;
-    isHistory?: boolean;
-  }) => {
-    const scale = useRef(new Animated.Value(1)).current;
+const TravelCard = memo(
+  ({ item, onPress, isHistory = false }: { item: any; onPress: () => void; isHistory?: boolean }) => {
+    const scaleAnim = useRef(new Animated.Value(1)).current;
 
-    const pressIn = () =>
-      Animated.spring(scale, {
-        toValue: 0.98,
+    const handlePressIn = () => {
+      Animated.spring(scaleAnim, {
+        toValue: 0.97,
         useNativeDriver: true,
-        speed: 20,
+        friction: 8,
+        tension: 300,
       }).start();
+    };
 
-    const pressOut = () =>
-      Animated.spring(scale, {
+    const handlePressOut = () => {
+      Animated.spring(scaleAnim, {
         toValue: 1,
         useNativeDriver: true,
-        speed: 20,
       }).start();
+    };
 
     return (
-      <Animated.View style={[styles.cardContainer, { transform: [{ scale }] }]}>
+      <Animated.View style={[styles.cardContainer, { transform: [{ scale: scaleAnim }] }]}>
         <Pressable
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
           onPress={onPress}
-          onPressIn={pressIn}
-          onPressOut={pressOut}
-          style={styles.cardPressable}
+          android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
+          accessibilityRole="button"
+          accessibilityLabel={item.title}
         >
           <View style={styles.cardImageContainer}>
             {item.imageUrl ? (
-              <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+              <Image source={{ uri: item.imageUrl }} style={styles.cardImage} resizeMode="cover" />
             ) : (
-              <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
-                <MaterialIcons name="route" size={32} />
+              <View style={styles.placeholderImage}>
+                <MaterialIcons name="route" size={40} color="#aaa" />
               </View>
             )}
 
             {isHistory && (
               <View style={styles.historyBadge}>
-                <MaterialIcons name="history" size={14} color="#fff" />
+                <MaterialIcons name="history" size={16} color="#fff" />
               </View>
             )}
 
             <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.7)']}
-              style={styles.cardGradient}
+              colors={['transparent', 'rgba(0,0,0,0.8)']}
+              style={StyleSheet.absoluteFill}
             />
           </View>
 
           <View style={styles.cardContent}>
             <Text style={styles.cardTitle} numberOfLines={2}>
-              {item.title}
+              {item.title || 'Без названия'}
             </Text>
           </View>
         </Pressable>
       </Animated.View>
     );
-  },
+  }
 );
 
-/* ---------------- main ---------------- */
+TravelCard.displayName = 'TravelCard';
 
-function RecommendationsTabs({
-                               forceVisible,
-                               onVisibilityChange,
-                             }: RecommendationsTabsProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('highlights');
-  const [collapsed, setCollapsed] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+/* ---------------- Main Component ---------------- */
 
-  const router = useRouter();
-  const { favorites, viewHistory, refreshFavorites } = useFavorites();
-  const { isAuthenticated } = useAuth();
+const RecommendationsTabs = memo(
+  ({ forceVisible = false, onVisibilityChange }: RecommendationsTabsProps) => {
+    const [activeTab, setActiveTab] = useState<TabType>('highlights');
+    const [collapsed, setCollapsed] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
-  const underline = useRef(new Animated.Value(0)).current;
-  const scrollRef = useRef<ScrollView>(null);
-  const scrollLock = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const router = useRouter();
+    const { favorites = [], viewHistory = [], refreshFavorites } = useFavorites();
+    const { isAuthenticated } = useAuth();
 
-  /* ---- tabs MUST be before effects ---- */
+    const tabLayout = useRef<Record<string, { x: number; width: number }>>({}).current;
+    const underlineAnim = useRef(new Animated.Value(0)).current;
+    const scrollRef = useRef<ScrollView>(null);
 
-  const tabs = useMemo(
-    () => [
-      { id: 'highlights' as TabType, label: 'Подборка месяца', icon: 'auto-awesome' },
-      { id: 'recommendations' as TabType, label: 'Рекомендации', icon: 'star' },
-      { id: 'favorites' as TabType, label: 'Избранное', icon: 'favorite', count: favorites.length },
-      { id: 'history' as TabType, label: 'История', icon: 'history', count: viewHistory.length },
-    ],
-    [favorites.length, viewHistory.length],
-  );
+    // Табы с бейджами
+    const tabs = useMemo(
+      () => [
+        { id: 'highlights' as const, label: 'Подборка месяца', icon: 'auto-awesome' },
+        { id: 'recommendations' as const, label: 'Рекомендации', icon: 'star' },
+        { id: 'favorites' as const, label: 'Избранное', icon: 'favorite', count: favorites.length },
+        { id: 'history' as const, label: 'История', icon: 'history', count: viewHistory.length },
+      ],
+      [favorites.length, viewHistory.length]
+    );
 
-  /* ---- underline animation ---- */
+    // Анимация подчёркивания
+    useEffect(() => {
+      const current = tabs.findIndex((t) => t.id === activeTab);
+      if (current === -1) return;
 
-  useEffect(() => {
-    const index = tabs.findIndex(t => t.id === activeTab);
-    if (index >= 0) {
-      Animated.spring(underline, {
-        toValue: index,
+      const { x = 0, width = 100 } = tabLayout[tabs[current].id] || {};
+      Animated.spring(underlineAnim, {
+        toValue: x + width / 2,
         useNativeDriver: true,
+        friction: 8,
       }).start();
+    }, [activeTab, tabLayout, tabs, underlineAnim]);
+
+    const handleTabLayout = (id: string, event: any) => {
+      const { x, width } = event.nativeEvent.layout;
+      tabLayout[id] = { x, width };
+
+      // Прокрутка к активному табу при смене
+      if (id === activeTab && scrollRef.current) {
+        scrollRef.current.scrollTo({ x: Math.max(0, x - 50), animated: true });
+      }
+    };
+
+    const handleRefresh = useCallback(async () => {
+      if (!refreshFavorites) return;
+      setRefreshing(true);
+      try {
+        await refreshFavorites();
+      } finally {
+        setRefreshing(false);
+      }
+    }, [refreshFavorites]);
+
+    const toggleCollapse = () => {
+      const newCollapsed = !collapsed;
+      setCollapsed(newCollapsed);
+      onVisibilityChange?.(!newCollapsed);
+    };
+
+    // Если принудительно скрыто — ничего не рендерим
+    if (!forceVisible && collapsed) {
+      return (
+        <View style={styles.collapsedContainer}>
+          <Pressable onPress={toggleCollapse} style={styles.expandButton}>
+            <Feather name="chevron-down" size={20} color={DESIGN_TOKENS.colors.primary} />
+            <Text style={styles.expandText}>Показать рекомендации</Text>
+          </Pressable>
+        </View>
+      );
     }
-  }, [activeTab, tabs, underline]);
 
-  /* ---- handlers ---- */
+    const renderContent = () => {
+      switch (activeTab) {
+        case 'highlights':
+          return (
+            <Suspense fallback={<RecommendationsPlaceholder />}>
+              <WeeklyHighlights showHeader={false} />
+            </Suspense>
+          );
+        case 'recommendations':
+          return (
+            <Suspense fallback={<RecommendationsPlaceholder />}>
+              <PersonalizedRecommendations showHeader={false} />
+            </Suspense>
+          );
+        case 'favorites':
+          return favorites.length === 0 ? (
+            <EmptyState message="Избранное пусто" icon="favorite-border" />
+          ) : (
+            <FlatList
+              horizontal
+              data={favorites}
+              renderItem={({ item }) => (
+                <TravelCard item={item} onPress={() => router.push(item.url)} />
+              )}
+              keyExtractor={(item) => `${item.type || 'item'}-${item.id}`}
+              showsHorizontalScrollIndicator={false}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+            />
+          );
+        case 'history':
+          return viewHistory.length === 0 ? (
+            <EmptyState message="История просмотров пуста" icon="history" />
+          ) : (
+            <FlatList
+              horizontal
+              data={viewHistory}
+              renderItem={({ item }) => (
+                <TravelCard item={item} onPress={() => router.push(item.url)} isHistory />
+              )}
+              keyExtractor={(item) => `history-${item.id}-${item.viewedAt}`}
+              showsHorizontalScrollIndicator={false}
+            />
+          );
+        default:
+          return null;
+      }
+    };
 
-  const refresh = useCallback(async () => {
-    setRefreshing(true);
-    await refreshFavorites?.();
-    setRefreshing(false);
-  }, [refreshFavorites]);
-
-  const collapse = () => {
-    setCollapsed(true);
-    onVisibilityChange?.(false);
-  };
-
-  const expand = () => {
-    setCollapsed(false);
-    onVisibilityChange?.(true);
-  };
-
-  /* ---- collapsed ---- */
-
-  if (!forceVisible && collapsed) {
     return (
-      <View style={styles.collapsedContainer}>
-        <Pressable onPress={expand} style={styles.expandButton}>
-          <Feather name="chevron-down" size={18} />
-          <Text style={styles.expandText}>Показать рекомендации</Text>
-        </Pressable>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabsContainer}
+          >
+            {tabs.map((tab) => (
+              <Pressable
+                key={tab.id}
+                onPress={() => setActiveTab(tab.id)}
+                onLayout={(e) => handleTabLayout(tab.id, e)}
+                style={[styles.tab, activeTab === tab.id && styles.activeTab]}
+              >
+                <MaterialIcons
+                  name={tab.icon as any}
+                  size={18}
+                  color={activeTab === tab.id ? DESIGN_TOKENS.colors.primary : '#666'}
+                />
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    activeTab === tab.id && styles.activeTabLabel,
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+                {tab.count !== undefined && tab.count > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{tab.count > 99 ? '99+' : tab.count}</Text>
+                  </View>
+                )}
+              </Pressable>
+            ))}
+
+            <Animated.View
+              style={[
+                styles.tabUnderline,
+                {
+                  width: 24,
+                  transform: [
+                    {
+                      translateX: underlineAnim.interpolate({
+                        inputRange: [0, 1000],
+                        outputRange: [0, 1000],
+                        extrapolate: 'clamp',
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+          </ScrollView>
+
+          <Pressable onPress={toggleCollapse} hitSlop={10} style={styles.collapseButton}>
+            <Feather name="chevron-up" size={20} color="#666" />
+          </Pressable>
+        </View>
+
+        <View style={styles.content}>{renderContent()}</View>
       </View>
     );
   }
+);
 
-  /* ---- content ---- */
+RecommendationsTabs.displayName = 'RecommendationsTabs';
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'highlights':
-        return (
-          <Suspense fallback={<RecommendationsPlaceholder />}>
-            <WeeklyHighlights showHeader={false} />
-          </Suspense>
-        );
-      case 'recommendations':
-        return (
-          <Suspense fallback={<RecommendationsPlaceholder />}>
-            <PersonalizedRecommendations showHeader={false} />
-          </Suspense>
-        );
-      case 'favorites':
-        return (
-          <FlatList
-            horizontal
-            data={favorites}
-            renderItem={({ item }) => (
-              <TravelCard item={item} onPress={() => router.push(item.url)} />
-            )}
-            keyExtractor={i => `${i.type}-${i.id}`}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={refresh} />
-            }
-          />
-        );
-      case 'history':
-        return (
-          <FlatList
-            horizontal
-            data={viewHistory}
-            renderItem={({ item }) => (
-              <TravelCard
-                item={item}
-                onPress={() => router.push(item.url)}
-                isHistory
-              />
-            )}
-            keyExtractor={i => `${i.id}-${i.viewedAt}`}
-          />
-        );
-    }
-  };
+/* ---------------- Empty State Helper ---------------- */
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <ScrollView horizontal ref={scrollRef} showsHorizontalScrollIndicator={false}>
-          {tabs.map(tab => (
-            <Pressable key={tab.id} onPress={() => setActiveTab(tab.id)} style={styles.tab}>
-              <MaterialIcons name={tab.icon as any} size={16} />
-              <Text>{tab.label}</Text>
-            </Pressable>
-          ))}
+const EmptyState = ({ message, icon }: { message: string; icon: any }) => (
+  <View style={styles.emptyState}>
+    <MaterialIcons name={icon} size={48} color="#ccc" />
+    <Text style={styles.emptyText}>{message}</Text>
+  </View>
+);
 
-          <Animated.View
-            style={[
-              styles.tabUnderline,
-              {
-                transform: [
-                  {
-                    translateX: underline.interpolate({
-                      inputRange: tabs.map((_, i) => i),
-                      outputRange: tabs.map((_, i) => i * 100),
-                    }),
-                  },
-                ],
-              },
-            ]}
-          />
-        </ScrollView>
-
-        <Pressable onPress={collapse} style={styles.collapseButton}>
-          <Feather name="chevron-up" size={18} />
-        </Pressable>
-      </View>
-
-      <View style={styles.content}>{renderContent()}</View>
-    </View>
-  );
-}
-
-/* ---------------- styles ---------------- */
+/* ---------------- Styles ---------------- */
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: '#fff', borderRadius: 16 },
-  header: { flexDirection: 'row', alignItems: 'center' },
-  tab: { flexDirection: 'row', padding: 8, alignItems: 'center' },
-  tabUnderline: { height: 2, backgroundColor: '#000', position: 'absolute', bottom: 0 },
-  collapseButton: { padding: 8 },
-  content: { padding: 12 },
+  container: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  tabsContainer: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  tab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    minHeight: 40,
+  },
+  activeTab: {
+    backgroundColor: '#f0f8ff',
+  },
+  tabLabel: {
+    marginLeft: 6,
+    fontSize: 14,
+    color: '#666',
+  },
+  activeTabLabel: {
+    color: DESIGN_TOKENS.colors.primary,
+    fontWeight: '600',
+  },
+  badge: {
+    backgroundColor: DESIGN_TOKENS.colors.primary,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 6,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  tabUnderline: {
+    position: 'absolute',
+    bottom: 4,
+    height: 3,
+    backgroundColor: DESIGN_TOKENS.colors.primary,
+    borderRadius: 2,
+  },
+  collapseButton: {
+    padding: 12,
+  },
+  content: {
+    minHeight: 200,
+  },
 
-  cardContainer: { width: 200, marginRight: 12 },
-  cardPressable: { flex: 1 },
-  cardImageContainer: { height: 120 },
-  cardImage: { width: '100%', height: '100%' },
-  cardImagePlaceholder: { justifyContent: 'center', alignItems: 'center' },
-  cardGradient: { position: 'absolute', bottom: 0, height: '50%', width: '100%' },
-  cardContent: { padding: 12 },
-  cardTitle: { fontSize: 14 },
-
+  // Cards
+  cardContainer: {
+    width: 200,
+    marginRight: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  cardImageContainer: {
+    height: 140,
+    position: 'relative',
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  placeholderImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   historyBadge: {
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 14,
+    width: 28,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  cardContent: {
+    padding: 12,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    lineHeight: 20,
+  },
 
-  collapsedContainer: { padding: 12 },
-  expandButton: { flexDirection: 'row', alignItems: 'center' },
-  expandText: { marginLeft: 8 },
+  // Collapsed
+  collapsedContainer: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 16,
+  },
+  expandButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expandText: {
+    marginLeft: 8,
+    fontSize: 15,
+    color: DESIGN_TOKENS.colors.primary,
+    fontWeight: '500',
+  },
 
-  placeholderContainer: { padding: 16 },
-  skeletonHeader: { height: 20, width: 160 },
-  skeletonCard: { width: 200 },
-  skeletonImage: { height: 120 },
-  skeletonContent: { padding: 12 },
-  skeletonLine: { height: 12 },
-
-  errorContainer: { padding: 24, alignItems: 'center' },
-  errorText: { textAlign: 'center' },
+  // Placeholders & Empty
+  placeholderContainer: {
+    padding: 16,
+  },
+  skeletonCard: {
+    width: 200,
+    marginRight: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  skeletonImage: {
+    height: 140,
+    backgroundColor: '#eee',
+  },
+  skeletonContent: {
+    padding: 12,
+  },
+  skeletonLine: {
+    height: 12,
+    backgroundColor: '#eee',
+    borderRadius: 6,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#999',
+  },
+  errorContainer: {
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorText: {
+    marginTop: 12,
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+  },
 });
 
 export default RecommendationsTabs;

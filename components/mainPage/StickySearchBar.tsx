@@ -120,12 +120,14 @@ function StickySearchBar({
           {/* Рекомендации */}
           {onToggleRecommendations && (
             <Pressable
+              testID="toggle-recommendations-button"
               onPress={onToggleRecommendations}
               style={[
                 styles.actionButton,
                 isRecommendationsVisible && styles.actionButtonActive,
               ]}
               accessibilityLabel={isRecommendationsVisible ? "Скрыть рекомендации" : "Показать рекомендации"}
+              accessibilityState={{ selected: !!isRecommendationsVisible }}
             >
               <MaterialIcons
                 name="lightbulb-outline"
@@ -138,12 +140,14 @@ function StickySearchBar({
           {/* Кнопка фильтров: показываем только на мобильных, на вебе фильтры всегда в левой панели */}
           {onFiltersPress && isMobile && (
             <Pressable
+              testID="filters-button"
               onPress={onFiltersPress}
               style={[
                 styles.actionButton,
                 hasActiveFilters && styles.actionButtonActive,
               ]}
               accessibilityLabel="Открыть фильтры"
+              accessibilityHint={hasActiveFilters ? `Активно фильтров: ${activeFiltersCount ?? 0}` : undefined}
             >
               <Feather
                 name="filter"
@@ -151,7 +155,7 @@ function StickySearchBar({
                 color={hasActiveFilters ? palette.primary : palette.textMuted}
               />
               {hasActiveFilters && (
-                <View style={styles.badge}>
+                <View style={styles.badge} testID="filters-badge">
                   <View style={styles.badgeDot} />
                 </View>
               )}
@@ -161,6 +165,7 @@ function StickySearchBar({
           {/* Сбросить все (если есть активные фильтры или поиск) */}
           {onClearAll && (hasActiveFilters || search.length > 0) && (
              <Pressable
+               testID="clear-all-button"
                onPress={onClearAll}
                style={styles.clearAllButton}
                accessibilityLabel="Сбросить все"
@@ -174,8 +179,8 @@ function StickySearchBar({
 
       {/* Счетчик результатов (вторая строка на десктопе, если нужно) */}
       {showResultsCount && (
-        <View style={styles.resultsBar}>
-          <Text style={styles.resultsText}>
+        <View style={styles.resultsBar} testID="results-count-wrapper">
+          <Text style={styles.resultsText} testID="results-count-text">
             Найдено: {resultsCount} {resultsCount === 1 ? 'путешествие' : resultsCount < 5 ? 'путешествия' : 'путешествий'}
           </Text>
         </View>

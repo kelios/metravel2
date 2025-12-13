@@ -3,6 +3,13 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { ThemeProvider } from '@/context/ThemeContext';
 import StickySearchBar from '@/components/mainPage/StickySearchBar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useWindowDimensions } from 'react-native';
+
+const mockUseWindowDimensions = useWindowDimensions as unknown as jest.Mock;
+
+const setWindowWidth = (width: number) => {
+  mockUseWindowDimensions.mockReturnValue({ width, height: 768 });
+};
 
 const renderWithProviders = (component: React.ReactElement) => {
   const queryClient = new QueryClient({
@@ -29,9 +36,10 @@ describe('StickySearchBar Component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    setWindowWidth(1024);
   });
 
-  it('renders search input and buttons', () => {
+  it('renders search input and desktop actions', () => {
     renderWithProviders(
       <StickySearchBar
         search=""
@@ -47,8 +55,8 @@ describe('StickySearchBar Component', () => {
     );
 
     expect(screen.getByPlaceholderText('Поиск путешествий...')).toBeTruthy();
-    expect(screen.getByText('Фильтры')).toBeTruthy();
-    expect(screen.getByText('Рекомендации')).toBeTruthy();
+    expect(screen.getByTestId('toggle-recommendations-button')).toBeTruthy();
+    expect(screen.getByText('Найдено: 10 путешествий')).toBeTruthy();
   });
 
   it('calls onSearchChange when text is entered', async () => {
@@ -66,7 +74,7 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    const searchInput = screen.getByPlaceholderText('Поиск путешествий...');
+    const searchInput = screen.getByPlaceholderText('Найти путешествия...');
     fireEvent.changeText(searchInput, 'test search');
 
     await waitFor(() => {
@@ -74,7 +82,8 @@ describe('StickySearchBar Component', () => {
     });
   });
 
-  it('calls onFiltersPress when filters button is pressed', () => {
+  it('calls onFiltersPress when filters button is pressed (mobile)', () => {
+    setWindowWidth(375);
     renderWithProviders(
       <StickySearchBar
         search=""
@@ -89,7 +98,7 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    const filtersButton = screen.getByText('Фильтры');
+    const filtersButton = screen.getByTestId('filters-button');
     fireEvent.press(filtersButton);
 
     expect(mockOnFiltersPress).toHaveBeenCalled();
@@ -110,13 +119,14 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    const recommendationsButton = screen.getByText('Рекомендации');
+    const recommendationsButton = screen.getByTestId('toggle-recommendations-button');
     fireEvent.press(recommendationsButton);
 
     expect(mockOnToggleRecommendations).toHaveBeenCalled();
   });
 
-  it('shows active filters indicator when hasActiveFilters is true', () => {
+  it('shows active filters indicator on mobile when hasActiveFilters is true', () => {
+    setWindowWidth(375);
     renderWithProviders(
       <StickySearchBar
         search=""
@@ -131,7 +141,7 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    expect(screen.getByText('Фильтры (2)')).toBeTruthy();
+    expect(screen.getByTestId('filters-badge')).toBeTruthy();
   });
 
   it('calls onClearAll when clear button is pressed', () => {
@@ -149,7 +159,7 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    const clearButton = screen.getByText('Очистить');
+    const clearButton = screen.getByTestId('clear-all-button');
     fireEvent.press(clearButton);
 
     expect(mockOnClearAll).toHaveBeenCalled();
@@ -170,12 +180,11 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    // Should show active state for recommendations
-    const recommendationsButton = screen.getByText('Рекомендации');
-    expect(recommendationsButton).toBeTruthy();
+    const recommendationsButton = screen.getByTestId('toggle-recommendations-button');
+    expect(recommendationsButton.props.accessibilityState?.selected).toBe(true);
   });
 
-  it('displays results count correctly', () => {
+  it('displays results count correctly on desktop', () => {
     renderWithProviders(
       <StickySearchBar
         search=""
@@ -190,6 +199,6 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    expect(screen.getByText('25')).toBeTruthy();
+    expect(screen.getByText('Найдено: 25 путешествий')).toBeTruthy();
   });
 });

@@ -1,10 +1,13 @@
-import React, { memo, Suspense, lazy } from 'react'
+import React, { memo, Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   ActivityIndicator,
   Platform,
   View,
   ViewStyle,
   Text,
+  ScrollView,
+  LayoutChangeEvent,
+  StyleProp,
 } from 'react-native'
 
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
@@ -14,15 +17,19 @@ import type { Travel } from '@/src/types/types'
 import { PER_PAGE } from './utils/listTravelConstants'
 
 // Lazy load RecommendationsTabs with proper error boundary
-const RecommendationsTabs = lazy(() =>
-  import('./RecommendationsTabs').catch(() => ({
-    default: () => (
-      <View style={{ padding: 16, alignItems: 'center' }}>
-        <Text>Не удалось загрузить рекомендации</Text>
-      </View>
-    ),
-  })),
-)
+const RecommendationsTabs = lazy(async () => {
+  try {
+    return await import('./RecommendationsTabs')
+  } catch (error) {
+    return {
+      default: memo(() => (
+        <View style={{ padding: 16, alignItems: 'center' }}>
+          <Text>Не удалось загрузить рекомендации</Text>
+        </View>
+      )),
+    }
+  }
+})
 
 // Simple placeholder for loading state
 const RecommendationsPlaceholder = () => (
@@ -83,6 +90,54 @@ const RightColumn: React.FC<RightColumnProps> = memo(
      footerLoaderStyle,
      renderItem,
    }) => {
+    const scrollViewRef = useRef<ScrollView | null>(null)
+    const recommendationsOffsetRef = useRef(0)
+    const shouldScrollRef = useRef(false)
+    const prevVisibilityRef = useRef(isRecommendationsVisible)
+
+    const scrollToRecommendations = useCallback(() => {
+      if (!scrollViewRef.current) return
+      const target = Math.max(recommendationsOffsetRef.current - 16, 0)
+      scrollViewRef.current.scrollTo({ y: target, animated: true })
+      shouldScrollRef.current = false
+    }, [])
+
+    const handleRecommendationsLayout = useCallback((event: LayoutChangeEvent) => {
+      recommendationsOffsetRef.current = event.nativeEvent.layout.y
+      if (shouldScrollRef.current) {
+        shouldScrollRef.current = false
+        scrollToRecommendations()
+      }
+    }, [scrollToRecommendations])
+
+    useEffect(() => {
+      if (isRecommendationsVisible && !prevVisibilityRef.current) {
+        if (recommendationsOffsetRef.current > 0) {
+          scrollToRecommendations()
+        } else {
+          shouldScrollRef.current = true
+        }
+      } else {
+        shouldScrollRef.current = false
+      }
+
+      prevVisibilityRef.current = isRecommendationsVisible
+    }, [isRecommendationsVisible, scrollToRecommendations])
+
+    const cardsWrapperStyle = useMemo<StyleProp<ViewStyle>>(() => {
+      const resetPadding = { paddingHorizontal: 0 }
+
+      if (Array.isArray(cardsContainerStyle)) {
+        return [...cardsContainerStyle, resetPadding]
+      }
+
+      if (cardsContainerStyle) {
+        return [cardsContainerStyle, resetPadding]
+      }
+
+      return resetPadding
+    }, [cardsContainerStyle])
+
     return (
       <View style={containerStyle}>
         {/* Search Header - Sticky */}
@@ -104,90 +159,94 @@ const RightColumn: React.FC<RightColumnProps> = memo(
           />
         </View>
 
-        {/* Recommendations Tabs */}
-        <View
-          style={[
-            { paddingHorizontal: contentPadding, marginBottom: 16 },
-            !isRecommendationsVisible && { display: 'none' },
-          ]}
-        >
-          <Suspense fallback={<RecommendationsPlaceholder />}>
-            <RecommendationsTabs />
-          </Suspense>
-        </View>
-
         {/* Cards Container */}
-        <View
-          style={[
-            cardsContainerStyle,
-            { paddingHorizontal: contentPadding },
-          ]}
-        >
-          {/* Initial Loading */}
-          {showInitialLoading && (
-            <View style={cardsGridStyle}>
-              <TravelListSkeleton count={PER_PAGE} columns={gridColumns} />
-            </View>
-          )}
+        <View style={cardsWrapperStyle}>
+          <ScrollView
+            ref={scrollViewRef}
+            contentContainerStyle={{
+              paddingHorizontal: contentPadding,
+              paddingTop: 24,
+              paddingBottom: 16,
+            }}
+            scrollEventThrottle={16}
+          >
+            {isRecommendationsVisible && (
+              <View
+                onLayout={handleRecommendationsLayout}
+                style={{ marginTop: 8, marginBottom: 24 }}
+              >
+                <Suspense fallback={<RecommendationsPlaceholder />}>
+                  <RecommendationsTabs />
+                </Suspense>
+              </View>
+            )}
 
-          {/* Error */}
-          {isError && !showInitialLoading && (
-            <EmptyState
-              icon="alert-circle"
-              title="Ошибка загрузки"
-              description="Не удалось загрузить путешествия."
-              variant="error"
-              action={{
-                label: 'Повторить',
-                onPress: () => refetch(),
-              }}
-            />
-          )}
+            {/* Initial Loading */}
+            {showInitialLoading && (
+              <View style={cardsGridStyle}>
+                <TravelListSkeleton count={PER_PAGE} columns={gridColumns} />
+              </View>
+            )}
 
-          {/* Empty State */}
-          {!showInitialLoading &&
-            !isError &&
-            showEmptyState &&
-            getEmptyStateMessage && (
+            {/* Error */}
+            {isError && !showInitialLoading && (
               <EmptyState
-                icon={getEmptyStateMessage.icon}
-                title={getEmptyStateMessage.title}
-                description={getEmptyStateMessage.description}
-                variant={getEmptyStateMessage.variant}
+                icon="alert-circle"
+                title="Ошибка загрузки"
+                description="Не удалось загрузить путешествия."
+                variant="error"
+                action={{
+                  label: 'Повторить',
+                  onPress: () => refetch(),
+                }}
               />
             )}
 
-          {/* Travel Cards Grid */}
-          {!showInitialLoading && !isError && !showEmptyState && (
-            <View style={cardsGridStyle}>
-              {travels.map((travel, index) => (
-                <View
-                  key={String(travel.id)}
-                  style={[
-                    { width: `${100 / gridColumns}%` as any },
-                    Platform.OS === 'web' &&
-                    (isMobile
-                      ? {
-                        maxWidth: '100%',
-                        alignItems: 'stretch',
-                      }
-                      : {
-                        maxWidth: 350,
-                        alignItems: 'center',
-                      }),
-                  ]}
-                >
-                  {renderItem(travel, index)}
-                </View>
-              ))}
-
-              {showNextPageLoading && (
-                <View style={footerLoaderStyle}>
-                  <ActivityIndicator size="small" />
-                </View>
+            {/* Empty State */}
+            {!showInitialLoading &&
+              !isError &&
+              showEmptyState &&
+              getEmptyStateMessage && (
+                <EmptyState
+                  icon={getEmptyStateMessage.icon}
+                  title={getEmptyStateMessage.title}
+                  description={getEmptyStateMessage.description}
+                  variant={getEmptyStateMessage.variant}
+                />
               )}
-            </View>
-          )}
+
+            {/* Travel Cards Grid */}
+            {!showInitialLoading && !isError && !showEmptyState && (
+              <View style={cardsGridStyle}>
+                {travels.map((travel, index) => (
+                  <View
+                    key={String(travel.id)}
+                    style={[
+                      { width: `${100 / gridColumns}%` as any },
+                      Platform.OS === 'web' &&
+                      (isMobile
+                        ? {
+                          maxWidth: '100%',
+                          alignItems: 'stretch',
+                        }
+                        : {
+                          maxWidth: 350,
+                          alignItems: 'center',
+                        }),
+                    ]}
+                  >
+                    {renderItem(travel, index)}
+                  </View>
+                ))}
+
+                {showNextPageLoading && (
+                  <View style={footerLoaderStyle}>
+                    <ActivityIndicator size="small" />
+                  </View>
+                )}
+              </View>
+            )}
+          </ScrollView>
         </View>
       </View>
     )
