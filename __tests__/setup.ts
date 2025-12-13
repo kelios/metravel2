@@ -127,9 +127,16 @@ jest.mock('@/context/FavoritesContext', () => {
     getRecommendations: jest.fn(() => []),
   }
 
+  const useFavoritesMock = jest.fn(() => stub)
+
   return {
-    FavoritesProvider: ({ children }: any) => <React.Fragment>{children}</React.Fragment>,
-    useFavorites: () => stub,
+    __esModule: true,
+    FavoritesProvider: ({ children }: any) => React.createElement(React.Fragment, null, children),
+    useFavorites: useFavoritesMock,
+    default: {
+      FavoritesProvider: ({ children }: any) => React.createElement(React.Fragment, null, children),
+      useFavorites: useFavoritesMock,
+    },
   }
 })
 

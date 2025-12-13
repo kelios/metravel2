@@ -13,7 +13,8 @@ import {
   StyleSheet,
   Text,
   useWindowDimensions,
-  View
+  View,
+  ViewStyle,
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router'
@@ -232,8 +233,7 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: TOKENS.grid.gap.desktop,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   resultsCount: {
     marginBottom: TOKENS.spacing.lg,
@@ -429,7 +429,25 @@ function ListTravel({
     const baseColumns = isDesktop ? 3 : calculateColumns(width);
     const columns = isTablet && isPortrait && baseColumns > 2 ? 2 : baseColumns;
 
-    const gapSize = width < 360 ? 8 : width < 480 ? 10 : width < 768 ? 12 : width < 1024 ? 14 : 16;
+    const gapSize = width < 360 ? 12 : width < 480 ? 14 : width < 768 ? 16 : width < 1024 ? 18 : width < 1440 ? 24 : 32;
+
+    const cardsGridDynamicStyle = useMemo(() => {
+      const styleArray: ViewStyle[] = [styles.cardsGrid]
+
+      if (Platform.OS === 'web') {
+        styleArray.push({
+          gap: gapSize,
+          rowGap: gapSize,
+          columnGap: gapSize,
+        })
+      } else {
+        styleArray.push({
+          marginHorizontal: -(gapSize / 2),
+        })
+      }
+
+      return styleArray
+    }, [gapSize]);
 
     // ✅ ОПТИМИЗАЦИЯ: Стабильные адаптивные отступы и ширина правой колонки
     // На мобильном layout используем полную ширину, на десктопе вычитаем ширину sidebar
@@ -446,9 +464,17 @@ function ListTravel({
       return 40; // XXL
     }, [effectiveWidth]); // ✅ ОПТИМИЗАЦИЯ: Только эффективная ширина в зависимостях
 
-    // ✅ Определяем количество колонок для grid на основе эффективной ширины правой части
-    const baseColumnsEffective = isDesktop ? 3 : calculateColumns(effectiveWidth);
-    const gridColumns = isTablet && isPortrait && baseColumnsEffective > 2 ? 2 : baseColumnsEffective;
+    const gridColumns = useMemo(() => {
+      if (isMobileDevice) {
+        return calculateColumns(width, isPortrait ? 'portrait' : 'landscape');
+      }
+
+      if (!isTablet || !isPortrait) {
+        return 3;
+      }
+
+      return calculateColumns(width, 'portrait');
+    }, [isMobileDevice, isTablet, isPortrait, width]);
 
     const [recommendationsReady, setRecommendationsReady] = useState(Platform.OS !== 'web');
     const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(false);
@@ -1048,7 +1074,8 @@ function ListTravel({
           containerStyle={isMobileDevice ? [styles.rightColumn, styles.rightColumnMobile] : styles.rightColumn}
           searchHeaderStyle={styles.searchHeader}
           cardsContainerStyle={isMobileDevice ? [styles.cardsContainer, styles.cardsContainerMobile] : styles.cardsContainer}
-          cardsGridStyle={styles.cardsGrid}
+          cardsGridStyle={cardsGridDynamicStyle}
+          cardSpacing={gapSize}
           footerLoaderStyle={styles.footerLoader}
           renderItem={renderTravelListItem}
         />

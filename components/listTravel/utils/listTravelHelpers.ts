@@ -61,7 +61,7 @@ export function deduplicateTravels(travels: Travel[]): Travel[] {
 }
 
 // ✅ B1.2: Улучшенный расчет количества колонок на основе минимальной ширины карточки
-const MIN_CARD_WIDTH = 280; // Минимальная комфортная ширина карточки
+const MIN_CARD_WIDTH = 300; // Минимальная комфортная ширина карточки
 const MAX_CARD_WIDTH = 400; // Максимальная ширина карточки
 const GAP = 16; // Отступ между карточками
 

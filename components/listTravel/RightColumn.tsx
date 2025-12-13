@@ -62,6 +62,7 @@ interface RightColumnProps {
   cardsGridStyle?: ViewStyle | ViewStyle[]
   footerLoaderStyle?: ViewStyle | ViewStyle[]
   renderItem: (travel: Travel, index: number) => React.ReactNode
+  cardSpacing?: number
 }
 
 const RightColumn: React.FC<RightColumnProps> = memo(
@@ -89,6 +90,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
      cardsGridStyle,
      footerLoaderStyle,
      renderItem,
+     cardSpacing = 16,
    }) => {
     const scrollViewRef = useRef<ScrollView | null>(null)
     const recommendationsOffsetRef = useRef(0)
@@ -125,7 +127,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     }, [isRecommendationsVisible, scrollToRecommendations])
 
     const cardsWrapperStyle = useMemo<StyleProp<ViewStyle>>(() => {
-      const resetPadding = { paddingHorizontal: 0 }
+      const resetPadding = { paddingHorizontal: 0, paddingTop: 12 }
 
       if (Array.isArray(cardsContainerStyle)) {
         return [...cardsContainerStyle, resetPadding]
@@ -159,21 +161,22 @@ const RightColumn: React.FC<RightColumnProps> = memo(
           />
         </View>
 
-        {/* Cards Container */}
+        {/* Cards + Recommendations */}
         <View style={cardsWrapperStyle}>
           <ScrollView
             ref={scrollViewRef}
+            style={{ flex: 1 }}
             contentContainerStyle={{
               paddingHorizontal: contentPadding,
-              paddingTop: 24,
-              paddingBottom: 16,
+              paddingTop: 8,
+              paddingBottom: 28,
             }}
             scrollEventThrottle={16}
           >
             {isRecommendationsVisible && (
               <View
                 onLayout={handleRecommendationsLayout}
-                style={{ marginTop: 8, marginBottom: 24 }}
+                style={{ marginBottom: 24 }}
               >
                 <Suspense fallback={<RecommendationsPlaceholder />}>
                   <RecommendationsTabs />
@@ -222,17 +225,32 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                   <View
                     key={String(travel.id)}
                     style={[
-                      { width: `${100 / gridColumns}%` as any },
-                      Platform.OS === 'web' &&
-                      (isMobile
-                        ? {
+                      Platform.select({
+                        web: {
+                          flexGrow: 1,
+                          flexShrink: 1,
+                          flexBasis: 300,
+                          minWidth: 300,
+                          maxWidth: 360,
+                        },
+                        default: {
+                          width: '100%',
                           maxWidth: '100%',
+                        },
+                      }) as ViewStyle,
+                      Platform.OS === 'web'
+                        ? {
+                          alignSelf: 'stretch',
                           alignItems: 'stretch',
+                          paddingBottom: cardSpacing,
+                          paddingRight: cardSpacing / 2,
+                          paddingLeft: cardSpacing / 2,
                         }
                         : {
-                          maxWidth: 350,
-                          alignItems: 'center',
-                        }),
+                          paddingHorizontal: cardSpacing / 2,
+                          paddingBottom: cardSpacing,
+                          alignItems: 'stretch',
+                        },
                     ]}
                   >
                     {renderItem(travel, index)}

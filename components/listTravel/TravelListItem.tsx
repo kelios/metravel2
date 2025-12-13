@@ -424,9 +424,11 @@ function TravelListItem({
             'aria-pressed': selectable ? isSelected : undefined,
         };
 
+    const cardTestId = 'travel-card-link';
     const card = (
       <CardWrapper
         {...cardWrapperProps}
+        testID={cardTestId}
         style={[
           styles.card,
           Platform.OS === 'web' && {
@@ -534,6 +536,7 @@ function TravelListItem({
                 onPress={(e) => handleDelete(e)} 
                 hitSlop={10} 
                 style={styles.adminBtn}
+                testID="delete-button"
                 accessibilityRole="button"
                 accessibilityLabel="Удалить"
                 {...(Platform.OS === 'web' && {
@@ -736,6 +739,7 @@ function TravelListItem({
         <>
           <a
             href={travelUrl}
+            {...(Platform.OS === 'web' ? { 'data-testid': 'travel-card-link' } : {})}
             style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
             onClick={(e: any) => {
               // Не даём событию дойти до внутренних Pressable

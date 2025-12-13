@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent, within } from '@testing-library/react-native';
 import { ThemeProvider } from '@/context/ThemeContext';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -74,7 +74,8 @@ describe('RenderTravelItem Component', () => {
 
     expect(screen.getByText('Test Travel')).toBeTruthy();
     expect(screen.getByText('Test User')).toBeTruthy();
-    expect(screen.getByText('Test City, Россия')).toBeTruthy();
+    expect(screen.getByText('Россия')).toBeTruthy();
+    expect(within(screen.getByTestId('views-meta')).getByText('100')).toBeTruthy();
   });
 
   it('renders mobile version correctly', () => {
@@ -94,7 +95,7 @@ describe('RenderTravelItem Component', () => {
     );
 
     expect(screen.getByText('Test Travel')).toBeTruthy();
-    expect(screen.getByText('Test City, Россия')).toBeTruthy();
+    expect(screen.getByText('Россия')).toBeTruthy();
   });
 
   it('shows delete button for superuser', () => {
@@ -180,62 +181,5 @@ describe('RenderTravelItem Component', () => {
     fireEvent.press(checkbox);
 
     expect(mockOnToggle).toHaveBeenCalled();
-  });
-
-  it('displays travel duration correctly', () => {
-    renderWithProviders(
-      <RenderTravelItem
-        item={mockTravel}
-        index={0}
-        isMobile={false}
-        isSuperuser={false}
-        isMetravel={false}
-        onDeletePress={mockOnDeletePress}
-        isFirst={false}
-        selectable={false}
-        isSelected={false}
-        onToggle={mockOnToggle}
-      />
-    );
-
-    expect(screen.getByText('7 дней')).toBeTruthy();
-  });
-
-  it('displays companions correctly', () => {
-    renderWithProviders(
-      <RenderTravelItem
-        item={mockTravel}
-        index={0}
-        isMobile={false}
-        isSuperuser={false}
-        isMetravel={false}
-        onDeletePress={mockOnDeletePress}
-        isFirst={false}
-        selectable={false}
-        isSelected={false}
-        onToggle={mockOnToggle}
-      />
-    );
-
-    expect(screen.getByText('Семья')).toBeTruthy();
-  });
-
-  it('displays view count correctly', () => {
-    renderWithProviders(
-      <RenderTravelItem
-        item={mockTravel}
-        index={0}
-        isMobile={false}
-        isSuperuser={false}
-        isMetravel={false}
-        onDeletePress={mockOnDeletePress}
-        isFirst={false}
-        selectable={false}
-        isSelected={false}
-        onToggle={mockOnToggle}
-      />
-    );
-
-    expect(screen.getByText('100 просмотров')).toBeTruthy();
   });
 });

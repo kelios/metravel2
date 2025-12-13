@@ -18,14 +18,14 @@ jest.mock('@tanstack/react-query', () => ({
 
 jest.mock('@/components/OptimizedFavoriteButton', () => {
   return function MockOptimizedFavoriteButton(props: any) {
+    const { Pressable, Text } = require('react-native');
     return (
-      <button 
-        data-testid="favorite-button"
-        onClick={props.onPress}
-        data-id={props.id}
+      <Pressable 
+        testID="favorite-button"
+        onPress={props.onPress}
       >
-        ❤️
-      </button>
+        <Text>❤️</Text>
+      </Pressable>
     );
   };
 });
@@ -82,7 +82,6 @@ describe('TravelListItem - Action Buttons', () => {
     render(<TravelListItem {...mockProps} />);
     
     const favoriteButton = screen.getByTestId('favorite-button');
-    const card = screen.getByText('Test Travel').closest('a');
     
     // Simulate click on favorite button
     fireEvent.press(favoriteButton);
@@ -128,9 +127,18 @@ describe('TravelListItem - Action Buttons', () => {
     
     render(<TravelListItem {...mockProps} />);
     
-    // Click on the card title (not an action button)
-    const cardTitle = screen.getByText('Test Travel');
-    fireEvent.press(cardTitle);
+    // Click on the card container (not an action button)
+    const card = screen.getByTestId('travel-card-link');
+    const mockEvent = {
+      stopPropagation: jest.fn(),
+      preventDefault: jest.fn(),
+      metaKey: false,
+      ctrlKey: false,
+      shiftKey: false,
+      altKey: false,
+      button: 0,
+    };
+    fireEvent(card, 'click', mockEvent);
     
     // Should navigate to travel detail
     expect(router.push).toHaveBeenCalledWith('/travels/test-travel');
