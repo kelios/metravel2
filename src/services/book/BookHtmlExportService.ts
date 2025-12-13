@@ -51,6 +51,11 @@ export class BookHtmlExportService {
   }
 
   private enhanceHtmlForPrintPreview(html: string): string {
+    // Если HTML уже дополнен тулбаром, не дублируем разметку и стили
+    if (html.includes('print-toolbar no-print')) {
+      return html;
+    }
+
     let result = html;
 
     const toolbarHtml = `\n<div class="print-toolbar no-print" style="position:sticky;top:0;z-index:50;width:100%;background:rgba(15,23,42,0.96);color:#e5e7eb;padding:12px 24px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:14px;">\n  <div style="max-width:70%;">\n    Для сохранения книги в PDF используйте меню печати браузера (Ctrl/Cmd+P) и выберите «Сохранить как PDF».\n  </div>\n  <button onclick="window.print()" style="background:#f97316;border:none;border-radius:999px;color:#fff;padding:8px 16px;font-weight:600;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.3);">\n    Печать / Сохранить в PDF\n  </button>\n</div>\n`;

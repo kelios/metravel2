@@ -99,14 +99,23 @@ export async function generateMapImageFromDOM(
       return w.html2canvas;
     }
 
-    await new Promise<void>((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = (err) => reject(err);
-      document.body.appendChild(script);
-    });
+    // Не создаём несколько тегов <script> при конкурентных вызовах
+    if (!(ensureHtml2Canvas as any)._loader) {
+      (ensureHtml2Canvas as any)._loader = new Promise<void>((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = (err) => {
+          // Сбрасываем кеш промиса при ошибке загрузки, чтобы можно было повторить попытку
+          (ensureHtml2Canvas as any)._loader = null;
+          reject(err);
+        };
+        document.body.appendChild(script);
+      });
+    }
+
+    await (ensureHtml2Canvas as any)._loader;
 
     if (!w.html2canvas) {
       throw new Error('html2canvas failed to load from CDN');
