@@ -3,43 +3,62 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { View } from 'react-native';
 import { ThemeProvider } from '@/context/ThemeContext';
 import TravelSidebar from '@/components/listTravel/TravelSidebar';
-import type { FilterGroup, FilterState } from '@/components/listTravel/utils/listTravelTypes';
+import type { FilterState } from '@/components/listTravel/utils/listTravelTypes';
+
+type MockFilterGroup = {
+  key: string;
+  title: string;
+  options: Array<{ id: string; name: string }>;
+  multiSelect?: boolean;
+  icon?: string;
+};
 
 // Mock the ModernFilters component
-jest.mock('@/components/ui/ModernFilters', () => {
+jest.mock('@/components/listTravel/ModernFilters', () => {
+  const React = require('react');
+  const { View, Pressable } = require('react-native');
+
   return function MockModernFilters({ onFilterChange, onClearAll, onYearChange, onToggleModeration }: any) {
-    return (
-      <View>
-        <View
-          testID="filter-change"
-          onTouchEnd={() => onFilterChange('categories', '1')}
-        >
-          Change Filter
-        </View>
-        <View
-          testID="clear-all"
-          onTouchEnd={onClearAll}
-        >
-          Clear All
-        </View>
-        <View
-          testID="year-change"
-          onTouchEnd={() => onYearChange('2023')}
-        >
-          Change Year
-        </View>
-        <View
-          testID="toggle-moderation"
-          onTouchEnd={onToggleModeration}
-        >
-          Toggle Moderation
-        </View>
-      </View>
+    return React.createElement(
+      View,
+      null,
+      React.createElement(
+        Pressable,
+        {
+          testID: 'filter-change',
+          onPress: () => onFilterChange('categories', '1'),
+        },
+        'Change Filter'
+      ),
+      React.createElement(
+        Pressable,
+        {
+          testID: 'clear-all',
+          onPress: onClearAll,
+        },
+        'Clear All'
+      ),
+      React.createElement(
+        Pressable,
+        {
+          testID: 'year-change',
+          onPress: () => onYearChange('2023'),
+        },
+        'Change Year'
+      ),
+      React.createElement(
+        Pressable,
+        {
+          testID: 'toggle-moderation',
+          onPress: onToggleModeration,
+        },
+        'Toggle Moderation'
+      )
     );
   };
 });
 
-const mockFilterGroups: FilterGroup[] = [
+const mockFilterGroups: MockFilterGroup[] = [
   {
     key: 'categories',
     title: 'Categories',

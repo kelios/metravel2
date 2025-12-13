@@ -1,544 +1,370 @@
-import React, { useState, useMemo, lazy, Suspense, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions, ScrollView, Image } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { Feather } from '@expo/vector-icons';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import React, {
+  useState,
+  useMemo,
+  lazy,
+  Suspense,
+  useCallback,
+  useRef,
+  useEffect,
+} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Platform,
+  useWindowDimensions,
+  ScrollView,
+  Image,
+  Animated,
+  FlatList,
+  RefreshControl,
+  findNodeHandle,
+  UIManager,
+} from 'react-native';
+import { MaterialIcons, Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 
-// Ленивая загрузка компонентов
-const PersonalizedRecommendations = lazy(() => 
-    typeof window !== 'undefined' && 'requestIdleCallback' in window
-        ? new Promise(resolve => {
-            (window as any).requestIdleCallback(() => {
-                resolve(import('@/components/PersonalizedRecommendations'));
-            }, { timeout: 2000 });
-        })
-        : import('@/components/PersonalizedRecommendations')
+/* ---------------- lazy blocks ---------------- */
+
+const PersonalizedRecommendations = lazy(() =>
+  import('@/components/PersonalizedRecommendations').catch(() => ({
+    default: () => (
+      <View style={styles.errorContainer}>
+        <MaterialIcons
+          name="error-outline"
+          size={48}
+          color={DESIGN_TOKENS.colors.error}
+        />
+        <Text style={styles.errorText}>Не удалось загрузить рекомендации</Text>
+      </View>
+    ),
+  })),
 );
 
-const WeeklyHighlights = lazy(() => 
-    typeof window !== 'undefined' && 'requestIdleCallback' in window
-        ? new Promise(resolve => {
-            (window as any).requestIdleCallback(() => {
-                resolve(import('@/components/WeeklyHighlights'));
-            }, { timeout: 2000 });
-        })
-        : import('@/components/WeeklyHighlights')
+const WeeklyHighlights = lazy(() =>
+  import('@/components/WeeklyHighlights').catch(() => ({
+    default: () => (
+      <View style={styles.errorContainer}>
+        <MaterialIcons
+          name="error-outline"
+          size={48}
+          color={DESIGN_TOKENS.colors.error}
+        />
+        <Text style={styles.errorText}>Не удалось загрузить подборку месяца</Text>
+      </View>
+    ),
+  })),
 );
+
+/* ---------------- types ---------------- */
 
 type TabType = 'recommendations' | 'highlights' | 'favorites' | 'history';
 
 interface RecommendationsTabsProps {
-    forceVisible?: boolean;
-    onVisibilityChange?: (visible: boolean) => void;
+  forceVisible?: boolean;
+  onVisibilityChange?: (visible: boolean) => void;
 }
 
-const RecommendationsPlaceholder = () => (
-    <View style={styles.placeholder}>
-        <Text style={styles.placeholderText}>Загрузка...</Text>
+/* ---------------- skeletons ---------------- */
+
+const CardSkeleton = () => (
+  <View style={styles.skeletonCard}>
+    <View style={styles.skeletonImage} />
+    <View style={styles.skeletonContent}>
+      <View style={[styles.skeletonLine, { width: '80%' }]} />
+      <View style={[styles.skeletonLine, { width: '60%', marginTop: 8 }]} />
     </View>
+  </View>
 );
 
-function FavoritesTab({ favorites, isAuthenticated, router }: { favorites: any[], isAuthenticated: boolean, router: any }) {
-    if (!isAuthenticated) {
-        return (
-            <View style={styles.emptyState}>
-                <MaterialIcons name="favorite-border" size={48} color={DESIGN_TOKENS.colors.textMuted} />
-                <Text style={styles.emptyTitle}>Войдите, чтобы видеть избранное</Text>
-                <Text style={styles.emptyDescription}>
-                    Сохраняйте понравившиеся маршруты и возвращайтесь к ним позже
-                </Text>
-                <Pressable
-                    onPress={() => router.push('/login')}
-                    style={styles.loginButton}
-                >
-                    <Text style={styles.loginButtonText}>Войти или зарегистрироваться</Text>
-                </Pressable>
-            </View>
-        );
-    }
+const RecommendationsPlaceholder = () => (
+  <View style={styles.placeholderContainer}>
+    <View style={styles.skeletonHeader} />
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      {[1, 2, 3].map(i => (
+        <CardSkeleton key={i} />
+      ))}
+    </ScrollView>
+  </View>
+);
 
-    if (!favorites || favorites.length === 0) {
-        return (
-            <View style={styles.emptyState}>
-                <MaterialIcons name="favorite-border" size={48} color={DESIGN_TOKENS.colors.textMuted} />
-                <Text style={styles.emptyTitle}>Пока нет избранных маршрутов</Text>
-                <Text style={styles.emptyDescription}>
-                    Добавляйте понравившиеся путешествия в избранное, нажимая на звездочку
-                </Text>
-            </View>
-        );
-    }
+/* ---------------- card ---------------- */
+
+const TravelCard = React.memo(
+  ({
+     item,
+     onPress,
+     isHistory = false,
+   }: {
+    item: any;
+    onPress: () => void;
+    isHistory?: boolean;
+  }) => {
+    const scale = useRef(new Animated.Value(1)).current;
+
+    const pressIn = () =>
+      Animated.spring(scale, {
+        toValue: 0.98,
+        useNativeDriver: true,
+        speed: 20,
+      }).start();
+
+    const pressOut = () =>
+      Animated.spring(scale, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 20,
+      }).start();
 
     return (
-        <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.favoritesScroll}
+      <Animated.View style={[styles.cardContainer, { transform: [{ scale }] }]}>
+        <Pressable
+          onPress={onPress}
+          onPressIn={pressIn}
+          onPressOut={pressOut}
+          style={styles.cardPressable}
         >
-            {favorites.map((item) => (
-                <Pressable
-                    key={`${item.type}-${item.id}`}
-                    onPress={() => router.push(item.url)}
-                    style={styles.favoriteCard}
-                >
-                    {item.imageUrl && (
-                        <Image 
-                            source={{ uri: item.imageUrl }} 
-                            style={styles.favoriteImage}
-                            resizeMode="cover"
-                        />
-                    )}
-                    <View style={styles.favoriteContent}>
-                        <Text style={styles.favoriteTitle} numberOfLines={2}>
-                            {item.title}
-                        </Text>
-                        {(item.country || item.city) && (
-                            <Text style={styles.favoriteLocation} numberOfLines={1}>
-                                {[item.city, item.country].filter(Boolean).join(', ')}
-                            </Text>
-                        )}
-                    </View>
-                </Pressable>
-            ))}
-        </ScrollView>
+          <View style={styles.cardImageContainer}>
+            {item.imageUrl ? (
+              <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+            ) : (
+              <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
+                <MaterialIcons name="route" size={32} />
+              </View>
+            )}
+
+            {isHistory && (
+              <View style={styles.historyBadge}>
+                <MaterialIcons name="history" size={14} color="#fff" />
+              </View>
+            )}
+
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.7)']}
+              style={styles.cardGradient}
+            />
+          </View>
+
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle} numberOfLines={2}>
+              {item.title}
+            </Text>
+          </View>
+        </Pressable>
+      </Animated.View>
     );
-}
+  },
+);
 
-function RecommendationsTabs({ forceVisible, onVisibilityChange }: RecommendationsTabsProps) {
-    // По умолчанию показываем "Подборка месяца"
-    const [activeTab, setActiveTab] = useState<TabType>('highlights');
-    const [isCollapsed, setIsCollapsed] = useState(false);
-    const { width } = useWindowDimensions();
-    const isMobile = width <= 768;
-    const router = useRouter();
-    const { favorites, viewHistory } = useFavorites();
-    const { isAuthenticated } = useAuth();
+/* ---------------- main ---------------- */
 
-    const handleCollapse = useCallback(() => {
-        setIsCollapsed(true);
-        onVisibilityChange?.(false);
-    }, [onVisibilityChange]);
+function RecommendationsTabs({
+                               forceVisible,
+                               onVisibilityChange,
+                             }: RecommendationsTabsProps) {
+  const [activeTab, setActiveTab] = useState<TabType>('highlights');
+  const [collapsed, setCollapsed] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-    const handleExpand = useCallback(() => {
-        setIsCollapsed(false);
-        onVisibilityChange?.(true);
-    }, [onVisibilityChange]);
+  const router = useRouter();
+  const { favorites, viewHistory, refreshFavorites } = useFavorites();
+  const { isAuthenticated } = useAuth();
 
-    // ✅ ИСПРАВЛЕНИЕ: Если свернуто - полностью скрываем компонент (не показываем кнопку "Показать рекомендации")
-    if (!forceVisible && isCollapsed) {
-        return null;
+  const underline = useRef(new Animated.Value(0)).current;
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollLock = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* ---- tabs MUST be before effects ---- */
+
+  const tabs = useMemo(
+    () => [
+      { id: 'highlights' as TabType, label: 'Подборка месяца', icon: 'auto-awesome' },
+      { id: 'recommendations' as TabType, label: 'Рекомендации', icon: 'star' },
+      { id: 'favorites' as TabType, label: 'Избранное', icon: 'favorite', count: favorites.length },
+      { id: 'history' as TabType, label: 'История', icon: 'history', count: viewHistory.length },
+    ],
+    [favorites.length, viewHistory.length],
+  );
+
+  /* ---- underline animation ---- */
+
+  useEffect(() => {
+    const index = tabs.findIndex(t => t.id === activeTab);
+    if (index >= 0) {
+      Animated.spring(underline, {
+        toValue: index,
+        useNativeDriver: true,
+      }).start();
     }
+  }, [activeTab, tabs, underline]);
 
-    const tabs = useMemo(() => {
-        const tabsList = [
-            { id: 'highlights' as TabType, label: 'Подборка месяца', icon: 'auto-awesome' },
-            { id: 'recommendations' as TabType, label: 'Рекомендации', icon: 'star' },
-            { id: 'favorites' as TabType, label: 'Избранное', icon: 'favorite' },
-            { id: 'history' as TabType, label: 'История', icon: 'history' },
-        ];
-        return tabsList;
-    }, []);
+  /* ---- handlers ---- */
 
-    const renderFavorites = useCallback(() => {
-        return <FavoritesTab favorites={favorites} isAuthenticated={isAuthenticated} router={router} />;
-    }, [favorites, isAuthenticated, router]);
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshFavorites?.();
+    setRefreshing(false);
+  }, [refreshFavorites]);
 
-    const renderHistory = useCallback(() => {
-        return <HistoryTab viewHistory={viewHistory} isAuthenticated={isAuthenticated} router={router} />;
-    }, [viewHistory, isAuthenticated, router]);
+  const collapse = () => {
+    setCollapsed(true);
+    onVisibilityChange?.(false);
+  };
 
+  const expand = () => {
+    setCollapsed(false);
+    onVisibilityChange?.(true);
+  };
+
+  /* ---- collapsed ---- */
+
+  if (!forceVisible && collapsed) {
     return (
-        <View style={styles.container}>
-            {/* Заголовок с кнопкой сворачивания */}
-            <View style={styles.header}>
-                <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.tabsContainer}
-                    style={Platform.select({ default: { flex: 1 }, web: {} })}
-                >
-                    {tabs.map((tab) => (
-                        <Pressable
-                            key={tab.id}
-                            onPress={() => setActiveTab(tab.id)}
-                            style={[
-                                styles.tab,
-                                activeTab === tab.id && styles.tabActive
-                            ]}
-                        >
-                            <MaterialIcons
-                                name={tab.icon as any}
-                                size={Platform.select({ default: 16, web: 18 })}
-                                color={activeTab === tab.id ? DESIGN_TOKENS.colors.text : DESIGN_TOKENS.colors.textMuted}
-                            />
-                            <Text
-                                style={[
-                                    styles.tabText,
-                                    activeTab === tab.id && styles.tabTextActive
-                                ]}
-                            >
-                                {tab.label}
-                            </Text>
-                        </Pressable>
-                    ))}
-                </ScrollView>
-                <Pressable onPress={handleCollapse} style={styles.collapseButton}>
-                    <Feather name="chevron-up" size={20} color={DESIGN_TOKENS.colors.textMuted} />
-                </Pressable>
-            </View>
-
-            {/* Контент табов */}
-            <View style={styles.content}>
-                {activeTab === 'recommendations' && (
-                    <Suspense fallback={<RecommendationsPlaceholder />}>
-                        <PersonalizedRecommendations 
-                            forceVisible={true}
-                            onVisibilityChange={() => {}}
-                            showHeader={false}
-                        />
-                    </Suspense>
-                )}
-                
-                {activeTab === 'highlights' && (
-                    <Suspense fallback={<RecommendationsPlaceholder />}>
-                        <WeeklyHighlights 
-                            forceVisible={true}
-                            onVisibilityChange={() => {}}
-                            showHeader={false}
-                        />
-                    </Suspense>
-                )}
-                
-                {activeTab === 'favorites' && renderFavorites()}
-                
-                {activeTab === 'history' && renderHistory()}
-            </View>
-        </View>
+      <View style={styles.collapsedContainer}>
+        <Pressable onPress={expand} style={styles.expandButton}>
+          <Feather name="chevron-down" size={18} />
+          <Text style={styles.expandText}>Показать рекомендации</Text>
+        </Pressable>
+      </View>
     );
-}
+  }
 
-function HistoryTab({ viewHistory, isAuthenticated, router }: { viewHistory: any[], isAuthenticated: boolean, router: any }) {
-    if (!isAuthenticated) {
+  /* ---- content ---- */
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'highlights':
         return (
-            <View style={styles.emptyState}>
-                <MaterialIcons name="history" size={48} color={DESIGN_TOKENS.colors.textMuted} />
-                <Text style={styles.emptyTitle}>Войдите, чтобы видеть историю просмотров</Text>
-                <Text style={styles.emptyDescription}>
-                    Мы сохраняем историю просмотренных вами путешествий для удобного доступа
-                </Text>
-                <Pressable
-                    onPress={() => router.push('/login')}
-                    style={styles.loginButton}
-                >
-                    <Text style={styles.loginButtonText}>Войти или зарегистрироваться</Text>
-                </Pressable>
-            </View>
+          <Suspense fallback={<RecommendationsPlaceholder />}>
+            <WeeklyHighlights showHeader={false} />
+          </Suspense>
+        );
+      case 'recommendations':
+        return (
+          <Suspense fallback={<RecommendationsPlaceholder />}>
+            <PersonalizedRecommendations showHeader={false} />
+          </Suspense>
+        );
+      case 'favorites':
+        return (
+          <FlatList
+            horizontal
+            data={favorites}
+            renderItem={({ item }) => (
+              <TravelCard item={item} onPress={() => router.push(item.url)} />
+            )}
+            keyExtractor={i => `${i.type}-${i.id}`}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+            }
+          />
+        );
+      case 'history':
+        return (
+          <FlatList
+            horizontal
+            data={viewHistory}
+            renderItem={({ item }) => (
+              <TravelCard
+                item={item}
+                onPress={() => router.push(item.url)}
+                isHistory
+              />
+            )}
+            keyExtractor={i => `${i.id}-${i.viewedAt}`}
+          />
         );
     }
+  };
 
-    if (!viewHistory || viewHistory.length === 0) {
-        return (
-            <View style={styles.emptyState}>
-                <MaterialIcons name="history" size={48} color={DESIGN_TOKENS.colors.textMuted} />
-                <Text style={styles.emptyTitle}>История просмотров пуста</Text>
-                <Text style={styles.emptyDescription}>
-                    Начните просматривать путешествия, и они появятся здесь
-                </Text>
-            </View>
-        );
-    }
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <ScrollView horizontal ref={scrollRef} showsHorizontalScrollIndicator={false}>
+          {tabs.map(tab => (
+            <Pressable key={tab.id} onPress={() => setActiveTab(tab.id)} style={styles.tab}>
+              <MaterialIcons name={tab.icon as any} size={16} />
+              <Text>{tab.label}</Text>
+            </Pressable>
+          ))}
 
-    return (
-        <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.favoritesScroll}
-        >
-            {viewHistory.map((item) => (
-                <Pressable
-                    key={`${item.type}-${item.id}`}
-                    onPress={() => router.push(item.url)}
-                    style={styles.favoriteCard}
-                >
-                    {item.imageUrl && (
-                        <View style={styles.favoriteImageContainer}>
-                            <Image 
-                                source={{ uri: item.imageUrl }} 
-                                style={styles.favoriteImage}
-                                resizeMode="cover"
-                            />
-                            <View style={styles.historyBadge}>
-                                <MaterialIcons name="history" size={14} color={DESIGN_TOKENS.colors.textMuted} />
-                            </View>
-                        </View>
-                    )}
-                    {!item.imageUrl && (
-                        <View style={[styles.favoriteImage, styles.favoriteImagePlaceholder]}>
-                            <MaterialIcons name={item.type === 'travel' ? 'route' : 'article'} size={24} color={DESIGN_TOKENS.colors.textMuted} />
-                            <View style={[styles.historyBadge, { position: 'absolute', top: 8, right: 8 }]}>
-                                <MaterialIcons name="history" size={14} color={DESIGN_TOKENS.colors.textMuted} />
-                            </View>
-                        </View>
-                    )}
-                    <View style={styles.favoriteContent}>
-                        <Text style={styles.favoriteTitle} numberOfLines={2}>
-                            {item.title}
-                        </Text>
-                        {(item.country || item.city) && (
-                            <Text style={styles.favoriteLocation} numberOfLines={1}>
-                                {[item.city, item.country].filter(Boolean).join(', ')}
-                            </Text>
-                        )}
-                    </View>
-                </Pressable>
-            ))}
+          <Animated.View
+            style={[
+              styles.tabUnderline,
+              {
+                transform: [
+                  {
+                    translateX: underline.interpolate({
+                      inputRange: tabs.map((_, i) => i),
+                      outputRange: tabs.map((_, i) => i * 100),
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
         </ScrollView>
-    );
+
+        <Pressable onPress={collapse} style={styles.collapseButton}>
+          <Feather name="chevron-up" size={18} />
+        </Pressable>
+      </View>
+
+      <View style={styles.content}>{renderContent()}</View>
+    </View>
+  );
 }
+
+/* ---------------- styles ---------------- */
 
 const styles = StyleSheet.create({
-    container: {
-        marginBottom: Platform.select({ default: 16, web: 24 }),
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        borderRadius: DESIGN_TOKENS.radii.md,
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-        overflow: 'hidden',
-        shadowColor: '#1f1f1f',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 2,
-        ...Platform.select({
-            web: {
-                boxShadow: DESIGN_TOKENS.shadows.medium,
-            },
-        }),
-        // ✅ ИСПРАВЛЕНИЕ: Убираем фиксированное позиционирование, чтобы блок скроллился с основной страницей
-        position: 'relative',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: Platform.select({ default: 12, web: 16 }),
-        paddingVertical: Platform.select({ default: 10, web: 12 }),
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется отступ для разделения
-        marginBottom: 4,
-    },
-    tabsContainer: {
-        flexDirection: 'row',
-        gap: Platform.select({ default: 4, web: 8 }),
-        alignItems: 'center',
-        ...Platform.select({
-            web: {
-                flex: 1,
-            },
-        }),
-    },
-    tab: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Platform.select({ default: 4, web: 6 }),
-        paddingHorizontal: Platform.select({ default: 12, web: 14 }),
-        paddingVertical: Platform.select({ default: 8, web: 10 }),
-        borderRadius: DESIGN_TOKENS.radii.sm,
-        minHeight: 44,
-        ...Platform.select({
-            web: {
-                cursor: 'pointer',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                // @ts-ignore
-                ':hover': {
-                    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-                },
-            },
-        }),
-    },
-    tabActive: {
-        backgroundColor: DESIGN_TOKENS.colors.primaryLight,
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон и тень
-        ...Platform.select({
-            web: {
-                boxShadow: `0 2px 4px rgba(93, 140, 124, 0.15)`,
-            },
-        }),
-    },
-    tabText: {
-        fontSize: Platform.select({ default: 13, web: 14 }),
-        fontWeight: '500',
-        color: DESIGN_TOKENS.colors.textMuted,
-    },
-    tabTextActive: {
-        color: DESIGN_TOKENS.colors.primary,
-        fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-    },
-    collapseButton: {
-        padding: 8,
-        ...Platform.select({
-            web: {
-                cursor: 'pointer',
-            },
-        }),
-    },
-    content: {
-        minHeight: 200,
-    },
-    placeholder: {
-        padding: 40,
-        alignItems: 'center',
-    },
-    placeholderText: {
-        color: DESIGN_TOKENS.colors.textMuted,
-        fontSize: 14,
-    },
-    collapsedContainer: {
-        marginBottom: Platform.select({ default: 16, web: 24 }),
-        padding: Platform.select({ default: 12, web: 16 }),
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        borderRadius: DESIGN_TOKENS.radii.md,
-        borderWidth: 0.5, // Более тонкая граница
-        borderColor: 'rgba(0, 0, 0, 0.06)', // Более светлая граница
-    },
-    expandButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        ...Platform.select({
-            web: {
-                cursor: 'pointer',
-            },
-        }),
-    },
-    expandText: {
-        fontSize: Platform.select({ default: 13, web: 14 }),
-        fontWeight: '500',
-        color: DESIGN_TOKENS.colors.text, // Нейтральный цвет вместо яркого primary
-    },
-    emptyState: {
-        padding: Platform.select({ default: 32, web: 40 }),
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    emptyTitle: {
-        fontSize: Platform.select({ default: 15, web: 16 }),
-        fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
-        marginTop: Platform.select({ default: 12, web: 16 }),
-        marginBottom: Platform.select({ default: 6, web: 8 }),
-    },
-    emptyDescription: {
-        fontSize: Platform.select({ default: 13, web: 14 }),
-        color: DESIGN_TOKENS.colors.textMuted,
-        textAlign: 'center',
-        marginBottom: Platform.select({ default: 20, web: 24 }),
-        paddingHorizontal: Platform.select({ default: 16, web: 0 }),
-    },
-    loginButton: {
-        paddingHorizontal: Platform.select({ default: 20, web: 24 }),
-        paddingVertical: Platform.select({ default: 10, web: 12 }),
-        backgroundColor: DESIGN_TOKENS.colors.primary,
-        borderRadius: DESIGN_TOKENS.radii.md,
-        shadowColor: '#1f1f1f',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.12,
-        shadowRadius: 8,
-        elevation: 3,
-        minHeight: 44,
-        ...Platform.select({
-            web: {
-                cursor: 'pointer',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: DESIGN_TOKENS.shadows.medium,
-                // @ts-ignore
-                ':hover': {
-                    backgroundColor: DESIGN_TOKENS.colors.primaryDark,
-                    transform: 'translateY(-2px)',
-                    boxShadow: DESIGN_TOKENS.shadows.hover,
-                },
-                ':active': {
-                    transform: 'translateY(0)',
-                },
-            },
-        }),
-    },
-    loginButtonText: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    favoritesScroll: {
-        padding: Platform.select({ default: 12, web: 16 }),
-        gap: Platform.select({ default: 10, web: 12 }),
-    },
-    favoriteCard: {
-        width: Platform.select({
-            default: 240, // Уже для мобильных
-            web: 280,
-        }),
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        borderRadius: DESIGN_TOKENS.radii.md,
-        overflow: 'hidden',
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-        shadowColor: '#1f1f1f',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 2,
-        ...Platform.select({
-            web: {
-                cursor: 'pointer',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: DESIGN_TOKENS.shadows.medium,
-                // @ts-ignore
-                ':hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: DESIGN_TOKENS.shadows.hover,
-                },
-            },
-        }),
-    },
-    favoriteImageContainer: {
-        position: 'relative',
-        width: '100%',
-        height: 160,
-    },
-    favoriteImage: {
-        width: '100%',
-        height: Platform.select({ default: 140, web: 160 }),
-        backgroundColor: 'rgba(0, 0, 0, 0.04)', // Более светлый placeholder
-    },
-    favoriteImagePlaceholder: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.04)', // Более светлый placeholder
-    },
-    historyBadge: {
-        position: 'absolute',
-        top: Platform.select({ default: 6, web: 8 }),
-        right: Platform.select({ default: 6, web: 8 }),
-        backgroundColor: 'rgba(255, 255, 255, 0.9)', // Более прозрачный
-        borderRadius: 8, // Меньше радиус для прозаичности
-        padding: Platform.select({ default: 4, web: 6 }),
-        borderWidth: 0.5, // Более тонкая граница
-        borderColor: 'rgba(0, 0, 0, 0.06)',
-    },
-    favoriteContent: {
-        padding: Platform.select({ default: 10, web: 12 }),
-    },
-    favoriteTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
-        marginBottom: 4,
-    },
-    favoriteLocation: {
-        fontSize: 12,
-        color: DESIGN_TOKENS.colors.textMuted,
-    },
+  container: { backgroundColor: '#fff', borderRadius: 16 },
+  header: { flexDirection: 'row', alignItems: 'center' },
+  tab: { flexDirection: 'row', padding: 8, alignItems: 'center' },
+  tabUnderline: { height: 2, backgroundColor: '#000', position: 'absolute', bottom: 0 },
+  collapseButton: { padding: 8 },
+  content: { padding: 12 },
+
+  cardContainer: { width: 200, marginRight: 12 },
+  cardPressable: { flex: 1 },
+  cardImageContainer: { height: 120 },
+  cardImage: { width: '100%', height: '100%' },
+  cardImagePlaceholder: { justifyContent: 'center', alignItems: 'center' },
+  cardGradient: { position: 'absolute', bottom: 0, height: '50%', width: '100%' },
+  cardContent: { padding: 12 },
+  cardTitle: { fontSize: 14 },
+
+  historyBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  collapsedContainer: { padding: 12 },
+  expandButton: { flexDirection: 'row', alignItems: 'center' },
+  expandText: { marginLeft: 8 },
+
+  placeholderContainer: { padding: 16 },
+  skeletonHeader: { height: 20, width: 160 },
+  skeletonCard: { width: 200 },
+  skeletonImage: { height: 120 },
+  skeletonContent: { padding: 12 },
+  skeletonLine: { height: 12 },
+
+  errorContainer: { padding: 24, alignItems: 'center' },
+  errorText: { textAlign: 'center' },
 });
 
 export default RecommendationsTabs;

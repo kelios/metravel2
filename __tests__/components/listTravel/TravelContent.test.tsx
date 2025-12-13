@@ -1,47 +1,82 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { View } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { ThemeProvider } from '@/context/ThemeContext';
 import TravelContent from '@/components/listTravel/TravelContent';
 import type { Travel } from '@/src/types/types';
-import type { EmptyStateMessage } from '@/components/listTravel/utils/listTravelTypes';
 
 // Mock components
-jest.mock('@/components/ui/StickySearchBar', () => {
-  return function MockStickySearchBar({ onFiltersPress, onToggleRecommendations, onClearAll }: any) {
-    return (
-      <View>
-        <View testID="filters-press" onTouchEnd={onFiltersPress}>Filters</View>
-        <View testID="toggle-recommendations" onTouchEnd={onToggleRecommendations}>Recommendations</View>
-        <View testID="clear-all" onTouchEnd={onClearAll}>Clear All</View>
-      </View>
+jest.mock('@/components/mainPage/StickySearchBar', () => {
+  const React = require('react');
+  const { View, Pressable } = require('react-native');
+
+  function MockStickySearchBar({ onFiltersPress, onToggleRecommendations, onClearAll }: any) {
+    return React.createElement(
+      View,
+      null,
+      React.createElement(
+        Pressable,
+        { testID: 'filters-press', onPress: onFiltersPress },
+        'Filters'
+      ),
+      React.createElement(
+        Pressable,
+        { testID: 'toggle-recommendations', onPress: onToggleRecommendations },
+        'Recommendations'
+      ),
+      React.createElement(
+        Pressable,
+        { testID: 'clear-all', onPress: onClearAll },
+        'Clear All'
+      )
     );
+  }
+
+  return {
+    __esModule: true,
+    default: MockStickySearchBar,
   };
 });
 
-jest.mock('@/components/listTravel/TravelListSkeleton', () => {
-  return function MockTravelListSkeleton() {
-    return <View testID="skeleton">Loading...</View>;
+jest.mock('@/components/SkeletonLoader', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  return {
+    __esModule: true,
+    TravelListSkeleton: function MockTravelListSkeleton() {
+      return React.createElement(View, { testID: 'skeleton' }, 'Loading...');
+    },
   };
 });
 
-jest.mock('@/components/ui/EmptyState', () => {
+jest.mock('@/components/EmptyState', () => {
+  const React = require('react');
+  const { View, Pressable } = require('react-native');
+
   return function MockEmptyState({ action }: any) {
-    return (
-      <View testID="empty-state">
-        <View testID="retry" onTouchEnd={action?.onPress}>Retry</View>
-      </View>
+    return React.createElement(
+      View,
+      { testID: 'empty-state' },
+      React.createElement(
+        Pressable,
+        { testID: 'retry', onPress: action?.onPress },
+        'Retry'
+      )
     );
   };
 });
 
 jest.mock('@/components/listTravel/TravelListItem', () => {
-  return function MockMemoizedTravelItem({ item }: any) {
-    return <View testID={`travel-item-${item.id}`}>{item.name}</View>;
+  const React = require('react');
+  const { View } = require('react-native');
+
+  return function MockMemoizedTravelItem({ travel }: any) {
+    return React.createElement(View, { testID: `travel-item-${travel?.id}` }, travel?.name);
   };
 });
 
-const mockTravel: Travel = {
+const mockTravel = {
   id: 1,
   name: 'Test Travel',
   slug: 'test-travel',
@@ -72,9 +107,16 @@ const mockTravel: Travel = {
   month: null,
   over_nights_stay: null,
   country: null,
-} as Travel;
+} as unknown as Travel;
 
-const mockEmptyStateMessage: EmptyStateMessage = {
+type MockEmptyStateMessage = {
+  icon: string;
+  title: string;
+  description: string;
+  variant: 'default' | 'search' | 'error' | 'empty';
+};
+
+const mockEmptyStateMessage: MockEmptyStateMessage = {
   icon: 'inbox',
   title: 'No travels',
   description: 'No travels found',
@@ -104,7 +146,7 @@ describe('TravelContent', () => {
     showInitialLoading: false,
     isError: false,
     showEmptyState: false,
-    getEmptyStateMessage: null as EmptyStateMessage | null,
+    getEmptyStateMessage: null as MockEmptyStateMessage | null,
     travels: [mockTravel],
     gridColumns: 1,
     showNextPageLoading: false,

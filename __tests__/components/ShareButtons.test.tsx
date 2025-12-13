@@ -37,12 +37,12 @@ const mockWindow = {
 };
 
 describe('ShareButtons', () => {
-  const mockTravel: Travel = {
+  const mockTravel = {
     id: 1,
     slug: 'test-travel',
     name: 'Test Travel',
     title: 'Test Travel',
-  } as Travel;
+  } as unknown as Travel;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -162,18 +162,17 @@ describe('ShareButtons', () => {
   it('should show copied state temporarily', async () => {
     (Platform.OS as any) = 'web';
 
-    // Используем fake timers ДО рендера, чтобы setTimeout компонента был управляемым
     jest.useFakeTimers();
 
     const { getByLabelText, queryByText, getByText } = render(<ShareButtons travel={mockTravel} />);
 
     const copyButton = getByLabelText('Копировать ссылку');
-    fireEvent.press(copyButton);
 
-    // Ждём, когда появится индикатор "скопировано"
-    await waitFor(() => {
-      expect(getByText('✓')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(copyButton);
     });
+
+    expect(getByText('✓')).toBeTruthy();
 
     await act(async () => {
       jest.advanceTimersByTime(2100);

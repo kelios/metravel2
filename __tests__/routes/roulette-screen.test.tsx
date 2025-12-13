@@ -37,20 +37,7 @@ jest.mock('react-native', () => {
   };
 });
 
-jest.mock('@/components/listTravel/ModernFilters', () => {
-  const React = require('react');
-  const { View, Text } = require('react-native');
-  return {
-    __esModule: true,
-    default: function MockModernFilters() {
-      return (
-        <View testID="modern-filters">
-          <Text>ModernFilters</Text>
-        </View>
-      );
-    },
-  };
-});
+jest.mock('@/components/listTravel/ModernFilters', () => 'ModernFilters');
 jest.mock('@/components/listTravel/SearchAndFilterBar', () => 'SearchAndFilterBar');
 jest.mock('@/components/listTravel/RenderTravelItem', () => {
   const React = require('react');
@@ -195,19 +182,6 @@ function setupMobileWeb() {
 describe('RouletteScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  beforeAll(() => {
-    jest.useFakeTimers();
-  });
-
-  afterEach(() => {
-    jest.runOnlyPendingTimers();
-    jest.clearAllTimers();
-  });
-
-  afterAll(() => {
-    jest.useRealTimers();
   });
 
   it('calls refetch when central roulette circle is pressed', async () => {

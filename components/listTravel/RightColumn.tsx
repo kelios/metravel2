@@ -1,10 +1,35 @@
-import React, { memo } from 'react'
-import { ActivityIndicator, Platform, View, ViewStyle } from 'react-native'
+import React, { memo, Suspense, lazy } from 'react'
+import {
+  ActivityIndicator,
+  Platform,
+  View,
+  ViewStyle,
+  Text,
+} from 'react-native'
+
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
 import { TravelListSkeleton } from '@/components/SkeletonLoader'
 import EmptyState from '@/components/EmptyState'
 import type { Travel } from '@/src/types/types'
 import { PER_PAGE } from './utils/listTravelConstants'
+
+// Lazy load RecommendationsTabs with proper error boundary
+const RecommendationsTabs = lazy(() =>
+  import('./RecommendationsTabs').catch(() => ({
+    default: () => (
+      <View style={{ padding: 16, alignItems: 'center' }}>
+        <Text>Не удалось загрузить рекомендации</Text>
+      </View>
+    ),
+  })),
+)
+
+// Simple placeholder for loading state
+const RecommendationsPlaceholder = () => (
+  <View style={{ padding: 16, alignItems: 'center' }}>
+    <ActivityIndicator size="small" />
+  </View>
+)
 
 interface RightColumnProps {
   search: string
@@ -34,30 +59,30 @@ interface RightColumnProps {
 
 const RightColumn: React.FC<RightColumnProps> = memo(
   ({
-    search,
-    setSearch,
-    isRecommendationsVisible,
-    handleRecommendationsVisibilityChange,
-    activeFiltersCount,
-    total,
-    contentPadding,
-    showInitialLoading,
-    isError,
-    showEmptyState,
-    getEmptyStateMessage,
-    travels,
-    gridColumns,
-    isMobile,
-    showNextPageLoading,
-    refetch,
-    onFiltersPress,
-    containerStyle,
-    searchHeaderStyle,
-    cardsContainerStyle,
-    cardsGridStyle,
-    footerLoaderStyle,
-    renderItem,
-  }) => {
+     search,
+     setSearch,
+     isRecommendationsVisible,
+     handleRecommendationsVisibilityChange,
+     activeFiltersCount,
+     total,
+     contentPadding,
+     showInitialLoading,
+     isError,
+     showEmptyState,
+     getEmptyStateMessage,
+     travels,
+     gridColumns,
+     isMobile,
+     showNextPageLoading,
+     refetch,
+     onFiltersPress,
+     containerStyle,
+     searchHeaderStyle,
+     cardsContainerStyle,
+     cardsGridStyle,
+     footerLoaderStyle,
+     renderItem,
+   }) => {
     return (
       <View style={containerStyle}>
         {/* Search Header - Sticky */}
@@ -66,7 +91,9 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             search={search}
             onSearchChange={setSearch}
             onFiltersPress={onFiltersPress}
-            onToggleRecommendations={() => handleRecommendationsVisibilityChange(!isRecommendationsVisible)}
+            onToggleRecommendations={() =>
+              handleRecommendationsVisibilityChange(!isRecommendationsVisible)
+            }
             isRecommendationsVisible={isRecommendationsVisible}
             hasActiveFilters={activeFiltersCount > 0}
             resultsCount={total}
@@ -77,14 +104,26 @@ const RightColumn: React.FC<RightColumnProps> = memo(
           />
         </View>
 
-        {/* Cards Container - Scrollable */}
+        {/* Recommendations Tabs */}
+        <View
+          style={[
+            { paddingHorizontal: contentPadding, marginBottom: 16 },
+            !isRecommendationsVisible && { display: 'none' },
+          ]}
+        >
+          <Suspense fallback={<RecommendationsPlaceholder />}>
+            <RecommendationsTabs />
+          </Suspense>
+        </View>
+
+        {/* Cards Container */}
         <View
           style={[
             cardsContainerStyle,
             { paddingHorizontal: contentPadding },
           ]}
         >
-          {/* Loading */}
+          {/* Initial Loading */}
           {showInitialLoading && (
             <View style={cardsGridStyle}>
               <TravelListSkeleton count={PER_PAGE} columns={gridColumns} />
@@ -106,14 +145,17 @@ const RightColumn: React.FC<RightColumnProps> = memo(
           )}
 
           {/* Empty State */}
-          {!showInitialLoading && !isError && showEmptyState && getEmptyStateMessage && (
-            <EmptyState
-              icon={getEmptyStateMessage.icon}
-              title={getEmptyStateMessage.title}
-              description={getEmptyStateMessage.description}
-              variant={getEmptyStateMessage.variant}
-            />
-          )}
+          {!showInitialLoading &&
+            !isError &&
+            showEmptyState &&
+            getEmptyStateMessage && (
+              <EmptyState
+                icon={getEmptyStateMessage.icon}
+                title={getEmptyStateMessage.title}
+                description={getEmptyStateMessage.description}
+                variant={getEmptyStateMessage.variant}
+              />
+            )}
 
           {/* Travel Cards Grid */}
           {!showInitialLoading && !isError && !showEmptyState && (
@@ -124,20 +166,21 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                   style={[
                     { width: `${100 / gridColumns}%` as any },
                     Platform.OS === 'web' &&
-                      (isMobile
-                        ? {
-                            maxWidth: '100%',
-                            alignItems: 'stretch',
-                          }
-                        : {
-                            maxWidth: 350,
-                            alignItems: 'center',
-                          }),
+                    (isMobile
+                      ? {
+                        maxWidth: '100%',
+                        alignItems: 'stretch',
+                      }
+                      : {
+                        maxWidth: 350,
+                        alignItems: 'center',
+                      }),
                   ]}
                 >
                   {renderItem(travel, index)}
                 </View>
               ))}
+
               {showNextPageLoading && (
                 <View style={footerLoaderStyle}>
                   <ActivityIndicator size="small" />
@@ -148,7 +191,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
         </View>
       </View>
     )
-  }
+  },
 )
 
 export default RightColumn
