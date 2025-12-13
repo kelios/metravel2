@@ -113,7 +113,7 @@ function OptimizedImage({
 
       {/* Индикатор загрузки */}
       {isLoading && !hasError && (
-        <View style={styles.loadingContainer}>
+        <View style={styles.loadingContainer} testID="optimized-image-loading">
           <ActivityIndicator
             size="small"
             color={DESIGN_TOKENS.colors.primary}
@@ -123,7 +123,7 @@ function OptimizedImage({
 
       {/* Заглушка при ошибке */}
       {hasError && (
-        <View style={[styles.errorContainer, { borderRadius }]}>
+        <View style={[styles.errorContainer, { borderRadius }]} testID="optimized-image-error">
           <View style={styles.errorIcon}>
             <View style={styles.errorIconInner} />
           </View>

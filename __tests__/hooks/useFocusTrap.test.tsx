@@ -1,74 +1,60 @@
-import React, { createRef } from 'react'
-import { act, render } from '@testing-library/react-native'
+import React, { useRef } from 'react'
+import { fireEvent, render } from '@testing-library/react'
+import { Platform } from 'react-native'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 
-function FocusTrapTest() {
-  const containerRef = createRef<HTMLDivElement>()
-  const initialRef = createRef<HTMLButtonElement>()
-  const returnRef = createRef<HTMLButtonElement>()
+const originalPlatform = Platform.OS
 
-  useFocusTrap(containerRef as any, {
-    enabled: true,
-    initialFocus: initialRef as any,
-    returnFocus: returnRef as any,
-  })
+function FocusTrapHarness({ enabled = true }: { enabled?: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const initialRef = useRef<HTMLButtonElement>(null)
+  const returnRef = useRef<HTMLButtonElement>(null)
+
+  useFocusTrap(containerRef, { enabled, initialFocus: initialRef, returnFocus: returnRef })
 
   return (
-    <div ref={containerRef}>
-      <button ref={initialRef}>first</button>
-      <button>middle</button>
-      <button ref={returnRef}>last</button>
-    </div>
-  )
-}
-
-function FocusTrapWithTestId(props: { enabled?: boolean }) {
-  const containerRef = createRef<HTMLDivElement>()
-  const firstRef = createRef<HTMLButtonElement>()
-  const middleRef = createRef<HTMLButtonElement>()
-  const lastRef = createRef<HTMLButtonElement>()
-
-  useFocusTrap(containerRef as any, {
-    enabled: props.enabled,
-    initialFocus: firstRef as any,
-    returnFocus: lastRef as any,
-  })
-
-  return (
-    <div ref={containerRef}>
-      <button ref={firstRef}>first</button>
-      <button ref={middleRef}>middle</button>
-      <button ref={lastRef}>last</button>
+    <div ref={containerRef} data-testid="trap-container">
+      <button ref={returnRef} data-testid="return-btn">Return</button>
+      <button ref={initialRef} data-testid="initial-btn">Initial</button>
+      <button data-testid="last-btn">Last</button>
     </div>
   )
 }
 
 describe('useFocusTrap', () => {
-  beforeEach(() => {
-    const RN = require('react-native')
-    RN.Platform.OS = 'web'
+  beforeAll(() => {
+    ;(Platform as any).OS = 'web'
   })
 
-  it('mounts and unmounts focus trap on web without errors', () => {
-    const { unmount } = render(<FocusTrapTest />)
-
-    act(() => {})
-
-    act(() => {
-      unmount()
-    })
+  afterAll(() => {
+    ;(Platform as any).OS = originalPlatform
   })
 
-  it('renders helper component with enabled/disabled states without errors', () => {
-    render(<FocusTrapWithTestId enabled />)
-    render(<FocusTrapWithTestId enabled={false} />)
+  it('cycles focus with Tab and Shift+Tab and restores focus on cleanup', () => {
+    const { getByTestId, unmount } = render(<FocusTrapHarness />)
+
+    const container = getByTestId('trap-container')
+    const initialButton = getByTestId('initial-btn') as HTMLButtonElement
+    const returnButton = getByTestId('return-btn') as HTMLButtonElement
+    const lastButton = getByTestId('last-btn') as HTMLButtonElement
+
+    expect(document.activeElement).toBe(initialButton)
+
+    lastButton.focus()
+    fireEvent.keyDown(container, { key: 'Tab' })
+    expect(document.activeElement).toBe(initialButton)
+
+    fireEvent.keyDown(container, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(lastButton)
+
+    unmount()
+    expect(document.activeElement).toBe(returnButton)
   })
 
-  it('does not activate on non-web platforms', () => {
-    const RN = require('react-native')
-    RN.Platform.OS = 'ios'
+  it('does nothing when disabled', () => {
+    const { getByTestId } = render(<FocusTrapHarness enabled={false} />)
+    const initialButton = getByTestId('initial-btn') as HTMLButtonElement
 
-    // Просто убеждаемся, что рендер на не-web платформе не падает
-    render(<FocusTrapWithTestId enabled />)
+    expect(document.activeElement).not.toBe(initialButton)
   })
 })
