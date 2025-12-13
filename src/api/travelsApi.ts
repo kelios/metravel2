@@ -7,6 +7,7 @@ import { devError } from '@/src/utils/logger';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { retry, isRetryableError } from '@/src/utils/retry';
+import { getSecureItem } from '@/src/utils/secureStorage';
 
 const URLAPI: string =
     process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
@@ -49,6 +50,17 @@ const travelDef: Travel = {
 } as unknown as Travel;
 
 const travelCache = new Map<number, Travel>();
+const TOKEN_KEY = 'userToken';
+
+const buildAuthHeaders = async (): Promise<HeadersInit | undefined> => {
+    const token = await getSecureItem(TOKEN_KEY);
+    if (!token) {
+        return undefined;
+    }
+    return {
+        Authorization: `Token ${token}`,
+    };
+};
 
 const normalizeNumericFilterArray = (value: any): number[] => {
     if (!Array.isArray(value)) return [];
@@ -364,14 +376,23 @@ export const fetchRandomTravels = async (
 };
 
 export const fetchTravel = async (id: number): Promise<Travel> => {
-    if (travelCache.has(id)) {
+    const authHeaders = await buildAuthHeaders();
+    const isAuthenticated = Boolean(authHeaders);
+
+    if (!isAuthenticated && travelCache.has(id)) {
         return travelCache.get(id) as Travel;
     }
 
     try {
-        const res = await fetchWithTimeout(`${GET_TRAVELS}/${id}`, {}, DEFAULT_TIMEOUT);
+        const res = await fetchWithTimeout(
+            `${GET_TRAVELS}/${id}`,
+            authHeaders ? { headers: authHeaders } : {},
+            DEFAULT_TIMEOUT,
+        );
         const travel = await safeJsonParse<Travel>(res, travelDef);
-        travelCache.set(id, travel);
+        if (!isAuthenticated) {
+            travelCache.set(id, travel);
+        }
         return travel;
     } catch (e: any) {
         devError('Error fetching Travel:', e);
@@ -381,7 +402,12 @@ export const fetchTravel = async (id: number): Promise<Travel> => {
 
 export const fetchTravelBySlug = async (slug: string): Promise<Travel> => {
     try {
-        const res = await fetchWithTimeout(`${GET_TRAVELS_BY_SLUG}/${slug}`, {}, DEFAULT_TIMEOUT);
+        const authHeaders = await buildAuthHeaders();
+        const res = await fetchWithTimeout(
+            `${GET_TRAVELS_BY_SLUG}/${slug}`,
+            authHeaders ? { headers: authHeaders } : {},
+            DEFAULT_TIMEOUT,
+        );
         return await safeJsonParse<Travel>(res, travelDef);
     } catch (e: any) {
         devError('Error fetching Travel by slug:', e);

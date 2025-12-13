@@ -24,6 +24,7 @@ import {
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { devError } from '@/src/utils/logger';
+import { getSecureItem } from '@/src/utils/secureStorage';
 import { retry } from '@/src/utils/retry';
 
 jest.mock('react-native', () => ({
@@ -51,10 +52,16 @@ jest.mock('@/src/utils/retry', () => ({
 
 const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>;
 const mockedSafeJsonParse = safeJsonParse as jest.MockedFunction<typeof safeJsonParse>;
+const mockedGetSecureItem = getSecureItem as jest.MockedFunction<typeof getSecureItem>;
+
+jest.mock('@/src/utils/secureStorage', () => ({
+  getSecureItem: jest.fn(),
+}));
 
 describe('src/api/travelsApi.ts', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockedGetSecureItem.mockResolvedValue(null);
   });
 
   describe('fetchTravels', () => {
@@ -195,6 +202,39 @@ describe('src/api/travelsApi.ts', () => {
       expect(result).toBeDefined();
     });
 
+    it('fetchTravel использует кэш только для неавторизованных пользователей', async () => {
+      const travelPayload = { id: 99 } as any;
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce(travelPayload);
+
+      mockedGetSecureItem.mockResolvedValueOnce(null);
+      const first = await fetchTravel(99);
+      expect(first).toBe(travelPayload);
+
+      mockedGetSecureItem.mockResolvedValueOnce(null);
+      const second = await fetchTravel(99);
+
+      expect(second).toBe(travelPayload);
+      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
+    });
+
+    it('fetchTravel добавляет Authorization и не кэширует авторизованные ответы', async () => {
+      const travelPayload = { id: 42 } as any;
+      mockedFetchWithTimeout.mockResolvedValue({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValue(travelPayload);
+
+      mockedGetSecureItem.mockResolvedValueOnce('secret-token');
+      await fetchTravel(42);
+
+      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
+      const [, options] = mockedFetchWithTimeout.mock.calls[0];
+      expect(options).toMatchObject({ headers: { Authorization: 'Token secret-token' } });
+
+      mockedGetSecureItem.mockResolvedValueOnce('secret-token');
+      await fetchTravel(42);
+      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2);
+    });
+
     it('fetchTravelBySlug возвращает дефолт при ошибке', async () => {
       mockedFetchWithTimeout.mockRejectedValueOnce(new Error('network'));
 
@@ -202,6 +242,18 @@ describe('src/api/travelsApi.ts', () => {
 
       expect(devError).toHaveBeenCalled();
       expect(result).toBeDefined();
+    });
+
+    it('fetchTravelBySlug передаёт токен, если он есть', async () => {
+      const travelPayload = { id: 77 } as any;
+      mockedFetchWithTimeout.mockResolvedValue({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValue(travelPayload);
+
+      mockedGetSecureItem.mockResolvedValueOnce('slug-token');
+      await fetchTravelBySlug('my-trip');
+
+      const [, options] = mockedFetchWithTimeout.mock.calls[0];
+      expect(options).toMatchObject({ headers: { Authorization: 'Token slug-token' } });
     });
 
     it('fetchArticles обрабатывает неожиданный ответ', async () => {
