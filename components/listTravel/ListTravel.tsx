@@ -114,12 +114,9 @@ const styles = StyleSheet.create({
     marginBottom: TOKENS.spacing.md,
     borderWidth: 1,
     borderColor: TOKENS.colors.border,
-    ...Platform.select({
-      web: {
-        boxShadow: TOKENS.shadows.subtle,
-      },
-      default: TOKENS.shadowsNative.subtle,
-    }),
+    ...(Platform.OS === 'web'
+      ? ({ shadowColor: TOKENS.colors.border, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4 } as const)
+      : TOKENS.shadowsNative.subtle),
   },
   exportBarMobileWeb: {
     marginHorizontal: -TOKENS.spacing.xs,
@@ -214,12 +211,9 @@ const styles = StyleSheet.create({
     top: 0,
     zIndex: 10,
     backgroundColor: TOKENS.colors.surface,
-    ...Platform.select({
-      web: {
-        boxShadow: TOKENS.shadows.subtle,
-      },
-      default: TOKENS.shadowsNative.subtle,
-    }),
+    ...(Platform.OS === 'web'
+      ? ({ shadowColor: TOKENS.colors.border, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3 } as const)
+      : TOKENS.shadowsNative.subtle),
   },
   // ✅ CARDS CONTAINER: Прокручиваемый контейнер для карточек
   cardsContainer: {
@@ -1023,9 +1017,8 @@ function ListTravel({
     ], [options, isTravelBy]);
 
   return (
-    <View style={[styles.root, isMobileDevice && styles.rootMobile]}>
+    <View style={[styles.root, isMobileDevice ? styles.rootMobile : undefined]}>
       <Suspense fallback={<TravelListSkeleton count={6} columns={columns} />}>
-        {/* Sidebar */}
         <SidebarFilters
           isMobile={isMobileDevice}
           filterGroups={filterGroups}
@@ -1037,10 +1030,9 @@ function ListTravel({
           resetFilters={resetFilters}
           isVisible={!isMobileDevice || showFilters}
           onClose={isMobileDevice ? () => setShowFilters(false) : undefined}
-          containerStyle={[styles.sidebar, isMobileDevice && styles.sidebarMobile]}
+          containerStyle={isMobileDevice ? [styles.sidebar, styles.sidebarMobile] : styles.sidebar}
         />
 
-        {/* Right Column */}
         <RightColumn
           search={search}
           setSearch={setSearch}
@@ -1059,12 +1051,9 @@ function ListTravel({
           showNextPageLoading={showNextPageLoading}
           refetch={refetch}
           onFiltersPress={isMobileDevice ? () => setShowFilters(true) : undefined}
-          containerStyle={[styles.rightColumn, isMobileDevice && styles.rightColumnMobile]}
+          containerStyle={isMobileDevice ? [styles.rightColumn, styles.rightColumnMobile] : styles.rightColumn}
           searchHeaderStyle={styles.searchHeader}
-          cardsContainerStyle={[
-            styles.cardsContainer,
-            isMobileDevice ? styles.cardsContainerMobile : undefined,
-          ]}
+          cardsContainerStyle={isMobileDevice ? [styles.cardsContainer, styles.cardsContainerMobile] : styles.cardsContainer}
           cardsGridStyle={styles.cardsGrid}
           footerLoaderStyle={styles.footerLoader}
           renderItem={renderTravelListItem}

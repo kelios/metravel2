@@ -821,11 +821,17 @@ export default function TravelDetails() {
   // }, [travel?.id, queryClient]);
 
   /* ---- LCP gate ---- */
-  const [lcpLoaded, setLcpLoaded] = useState(false);
+  const [lcpLoaded, setLcpLoaded] = useState(Platform.OS !== "web");
   const [deferAllowed, setDeferAllowed] = useState(false);
   useEffect(() => {
     if (lcpLoaded) setDeferAllowed(true);
     else rIC(() => setDeferAllowed(true), 2000);
+  }, [lcpLoaded]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || lcpLoaded) return;
+    const timeout = setTimeout(() => setLcpLoaded(true), 4500);
+    return () => clearTimeout(timeout);
   }, [lcpLoaded]);
 
   /* ---- show menu on desktop after defer ---- */
@@ -1087,6 +1093,7 @@ export default function TravelDetails() {
                     travel={travel}
                     anchors={anchors}
                     isMobile={isMobile}
+                    renderSlider={Platform.OS !== "web" ? true : lcpLoaded}
                     onFirstImageLoad={() => setLcpLoaded(true)}
                   />
 
@@ -1211,11 +1218,23 @@ const TravelHeroSection: React.FC<{
   travel: Travel;
   anchors: AnchorsMap;
   isMobile: boolean;
+  renderSlider?: boolean;
   onFirstImageLoad: () => void;
-}> = ({ travel, anchors, isMobile, onFirstImageLoad }) => {
+}> = ({ travel, anchors, isMobile, renderSlider = true, onFirstImageLoad }) => {
   const firstImg = (travel?.gallery?.[0] ?? null) as unknown as ImgLike | null;
   const aspectRatio =
     (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9;
+  const galleryImages = useMemo(
+    () =>
+      travel.gallery?.map((item, index) =>
+        typeof item === "string"
+          ? { url: item, id: index }
+          : { ...item, id: item.id || index }
+      ) || [],
+    [travel.gallery]
+  );
+  const heroAlt = travel?.name ? `Фотография маршрута «${travel.name}»` : "Фото путешествия";
+  const shouldShowOptimizedHero = Platform.OS === "web" && !!firstImg;
 
   return (
     <>
@@ -1233,22 +1252,34 @@ const TravelHeroSection: React.FC<{
       {!!firstImg && (
         <View style={[styles.sectionContainer, styles.contentStable]} collapsable={false}>
           <View style={styles.sliderContainer} collapsable={false}>
-            <Slider
-              key={isMobile ? "mobile" : "desktop"}
-              images={travel.gallery?.map((item, index) => 
-                typeof item === 'string' 
-                  ? { url: item, id: index } 
-                  : { ...item, id: item.id || index }
-              ) || []}
-              showArrows={!isMobile}
-              hideArrowsOnMobile
-              showDots={isMobile}
-              preloadCount={isMobile ? 1 : 2}
-              blurBackground
-              aspectRatio={aspectRatio as number}
-              mobileHeightPercent={0.7}
-              onFirstImageLoad={onFirstImageLoad}
-                          />
+            {shouldShowOptimizedHero && !renderSlider && (
+              <OptimizedLCPHero
+                img={{
+                  url: typeof firstImg === "string" ? firstImg : firstImg.url,
+                  width: firstImg.width,
+                  height: firstImg.height,
+                  updated_at: firstImg.updated_at,
+                  id: firstImg.id,
+                }}
+                alt={heroAlt}
+                onLoad={onFirstImageLoad}
+              />
+            )}
+
+            {(Platform.OS !== "web" || renderSlider) && (
+              <Slider
+                key={`${isMobile ? "mobile" : "desktop"}-${renderSlider ? "ready" : "pending"}`}
+                images={galleryImages}
+                showArrows={!isMobile}
+                hideArrowsOnMobile
+                showDots={isMobile}
+                preloadCount={isMobile ? 1 : 2}
+                blurBackground
+                aspectRatio={aspectRatio as number}
+                mobileHeightPercent={0.7}
+                onFirstImageLoad={onFirstImageLoad}
+              />
+            )}
           </View>
         </View>
       )}

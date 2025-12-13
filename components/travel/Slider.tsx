@@ -101,7 +101,7 @@ const buildUri = (img: SliderImage, containerWidth?: number, containerHeight?: n
         width: optimalSize.width,
         format: "webp",
         quality: isFirst ? 90 : 85, // Выше качество для первого изображения
-        fit: "inside",
+        fit: "contain",
       }) || versionedUrl
     );
   }
@@ -194,10 +194,12 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     images.map(() => "loading")
   );
   const [showSwipeHint, setShowSwipeHint] = useState(images.length > 1);
+  const [prefetchEnabled, setPrefetchEnabled] = useState(Platform.OS !== "web");
 
   useEffect(() => {
     setLoadStatuses(images.map(() => "loading"));
     setShowSwipeHint(images.length > 1);
+    setPrefetchEnabled(Platform.OS !== "web");
   }, [images]);
 
   const updateLoadStatus = useCallback((idx: number, status: LoadStatus) => {
@@ -272,16 +274,19 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   }, []);
 
   // прогрев соседних изображений
+  const effectivePreload = prefetchEnabled ? preloadCount : 0;
+
   const warmNeighbors = useCallback(
     (idx: number) => {
-      for (let d = -preloadCount; d <= preloadCount; d++) {
+      if (effectivePreload <= 0) return;
+      for (let d = -effectivePreload; d <= effectivePreload; d++) {
         const t = idx + d;
         if (t < 0 || t >= images.length) continue;
         const u = uriMap[t];
         ExpoImage.prefetch?.(u).catch(() => {});
       }
     },
-    [images.length, preloadCount, uriMap]
+    [images.length, effectivePreload, uriMap]
   );
 
   // автоплей
@@ -290,15 +295,17 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   const pausedByTouch = useRef(false);
   const autoplayTimer = useRef<number | null>(null);
 
+  const autoplayAllowed = autoPlay && !isMobile && Platform.OS !== "web";
+
   const canAutoplay = useCallback(() => {
     return (
-      autoPlay &&
+      autoplayAllowed &&
       images.length > 1 &&
       !reduceMotion &&
       !pausedByAppState.current &&
       !pausedByTouch.current
     );
-  }, [autoPlay, images.length, reduceMotion]);
+  }, [autoplayAllowed, images.length, reduceMotion]);
 
   const clearAutoplay = useCallback(() => {
     if (autoplayTimer.current != null) {
@@ -405,17 +412,14 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
 
   // прогреть стартовые (отложено для улучшения LCP)
   useEffect(() => {
-    if (!images.length) return;
+    if (!images.length || !prefetchEnabled) return;
     // Первое изображение уже загружается с high priority, остальные откладываем
     if (Platform.OS === "web") {
-      // На web откладываем prefetch соседних изображений
-      const timer = setTimeout(() => warmNeighbors(0), 100);
+      const timer = setTimeout(() => warmNeighbors(0), 200);
       return () => clearTimeout(timer);
-    } else {
-      // На native можно prefetch сразу
-      warmNeighbors(0);
     }
-  }, [images.length, warmNeighbors]);
+    warmNeighbors(0);
+  }, [images.length, warmNeighbors, prefetchEnabled]);
 
   if (!images.length) return null;
 
@@ -518,7 +522,12 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
                   }
                   onLoad={() => {
                     updateLoadStatus(index, "loaded");
-                    if (index === 0) onFirstImageLoad?.();
+                    if (index === 0) {
+                      onFirstImageLoad?.();
+                      if (!prefetchEnabled) {
+                        setPrefetchEnabled(true);
+                      }
+                    }
                   }}
                   onLoadStart={() => updateLoadStatus(index, "loading")}
                   onError={() => updateLoadStatus(index, "error")}
@@ -647,50 +656,48 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
           { height: containerH ?? computeHeight(containerW) },
           isMobile && styles.wrapperMobile,
         ]}
-        accessibilityRole="group"
-        accessibilityLabel="Image slider"
       >
         <Animated.FlatList
-        ref={listRef}
-        data={images}
-        keyExtractor={keyExtractor}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        renderItem={renderItem}
-        initialNumToRender={1} // Уменьшаем до 1 для улучшения LCP (рендерим только первый слайд сразу)
-        windowSize={2 + preloadCount} // Уменьшаем windowSize для меньшего initial render
-        maxToRenderPerBatch={1 + preloadCount} // Уменьшаем batch size
-        maintainVisibleContentPosition={Platform.OS === "ios" ? undefined : { minIndexForVisible: 0 }}
-        disableIntervalMomentum={true}
-        // removeClippedSubviews — отключено, чтобы избежать пустых слайдов на Android
-        getItemLayout={getItemLayout}
-        bounces={false}
-        decelerationRate={Platform.select({ ios: "fast", default: 0.98 })}
-        // убрано: snapToInterval/Alignment/disableIntervalMomentum — конфликтовало с pagingEnabled
-        onScrollBeginDrag={() => {
-          pausedByTouch.current = true;
-          clearAutoplay();
-          dismissSwipeHint();
-        }}
-        onScrollEndDrag={() => {
-          pausedByTouch.current = false;
-          scheduleAutoplay();
-        }}
-        onMomentumScrollEnd={() => {
-          // синхронизация индекса на случай программного скролла
-          const idx = Math.round((x.value || 0) / (containerW || 1));
-          if (Number.isFinite(idx)) {
-            const clampedIdx = clamp(idx, 0, images.length - 1);
-            indexRef.current = clampedIdx;
-            setCurrentIndex(clampedIdx); // ✅ УЛУЧШЕНИЕ: Обновляем текущий индекс для счетчика
-          }
-        }}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        extraData={containerW}
+          ref={listRef}
+          data={images}
+          keyExtractor={keyExtractor}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          renderItem={renderItem}
+          initialNumToRender={1}
+          windowSize={2 + Math.max(0, effectivePreload)}
+          maxToRenderPerBatch={1 + Math.max(0, effectivePreload)}
+          maintainVisibleContentPosition={Platform.OS === "ios" ? undefined : { minIndexForVisible: 0 }}
+          disableIntervalMomentum
+          getItemLayout={getItemLayout}
+          bounces={false}
+          decelerationRate={Platform.OS === "ios" ? "fast" : 0.98}
+          onScrollBeginDrag={() => {
+            pausedByTouch.current = true;
+            clearAutoplay();
+            dismissSwipeHint();
+            if (!prefetchEnabled) {
+              setPrefetchEnabled(true);
+            }
+          }}
+          onScrollEndDrag={() => {
+            pausedByTouch.current = false;
+            scheduleAutoplay();
+          }}
+          onMomentumScrollEnd={() => {
+            const idx = Math.round((x.value || 0) / (containerW || 1));
+            if (Number.isFinite(idx)) {
+              const clampedIdx = clamp(idx, 0, images.length - 1);
+              indexRef.current = clampedIdx;
+              setCurrentIndex(clampedIdx);
+            }
+          }}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          extraData={containerW}
         />
         {showArrows && images.length > 1 && (
           <>
@@ -749,7 +756,7 @@ export default memo(Slider);
 
 /* --------------------------------- Styles ---------------------------------- */
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<Record<string, any>>({
   sliderStack: {
     width: "100%",
   },
@@ -856,8 +863,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.85)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs4,
-    paddingVertical: DESIGN_TOKENS.spacing.xxs4,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
   },
   placeholderTitle: {
     color: "#0f172a",
@@ -938,7 +945,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   arrowIcon: {
-    textShadow: "0 1px 3px rgba(15,23,42,0.35)" as any,
+    textShadowColor: "rgba(15,23,42,0.35)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   dots: {
     position: "absolute",
@@ -988,8 +997,8 @@ const styles = StyleSheet.create({
     zIndex: DESIGN_TOKENS.zIndex.fixed, // 300
     ...Platform.select({
       web: {
-        top: "16px",
-        right: "16px",
+        top: 16,
+        right: 16,
       },
     }),
   },
