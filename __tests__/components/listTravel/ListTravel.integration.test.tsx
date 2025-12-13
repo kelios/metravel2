@@ -257,6 +257,9 @@ describe('ListTravel Integration Tests', () => {
       expect(screen.getByText('Категории')).toBeTruthy();
     });
 
+    // Expand all groups to render category options
+    fireEvent.press(screen.getByTestId('toggle-all-groups'));
+
     expect(screen.getByText('Горы')).toBeTruthy();
     expect(screen.getByText('Море')).toBeTruthy();
   });

@@ -54,7 +54,7 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    expect(screen.getByPlaceholderText('Поиск путешествий...')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Найти путешествия...')).toBeTruthy();
     expect(screen.getByTestId('toggle-recommendations-button')).toBeTruthy();
     expect(screen.getByText('Найдено: 10 путешествий')).toBeTruthy();
   });

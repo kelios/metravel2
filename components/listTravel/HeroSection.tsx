@@ -42,8 +42,8 @@ function HeroSection({
   popularCategories = [],
   onCategoryPress,
 }: HeroSectionProps) {
-  const { width } = useWindowDimensions();
-  const isMobile = width < DESIGN_TOKENS.breakpoints.mobile;
+  const dimensions = useWindowDimensions() || { width: 0, height: 0 };
+  const isMobile = dimensions.width < DESIGN_TOKENS.breakpoints.mobile;
   const [isExpanded, setIsExpanded] = useState(false); // По умолчанию свернут, чтобы не отвлекать от путешествий
   
   // На десктопе тоже можно свернуть для компактности
@@ -420,4 +420,3 @@ const styles = StyleSheet.create({
 });
 
 export default memo(HeroSection);
-

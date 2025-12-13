@@ -48,14 +48,15 @@ describe('useOptimizedValidation', () => {
     const { result } = renderHook(() => 
       useOptimizedValidation(testData, {
         validateOnChange: true,
-        debounce: 100,
+        debounce: 0,
       })
     );
 
-    await waitFor(() => {
-      expect(mockValidateTravelForm).toHaveBeenCalledWith(testData);
+    await act(async () => {
+      await result.current.forceValidate();
     });
 
+    expect(mockValidateTravelForm).toHaveBeenCalledWith(testData);
     expect(result.current.isValid).toBe(true);
     expect(result.current.lastValidated).toBeInstanceOf(Date);
   });
@@ -72,15 +73,17 @@ describe('useOptimizedValidation', () => {
     const { result } = renderHook(() => 
       useOptimizedValidation(testData, {
         validateOnChange: true,
-        debounce: 100,
+        debounce: 0,
       })
     );
 
-    await waitFor(() => {
-      expect(result.current.isValid).toBe(false);
-      expect(result.current.hasErrors).toBe(true);
-      expect(result.current.errorCount).toBe(2);
+    await act(async () => {
+      await result.current.forceValidate();
     });
+
+    expect(result.current.isValid).toBe(false);
+    expect(result.current.hasErrors).toBe(true);
+    expect(result.current.errorCount).toBe(2);
 
     expect(result.current.getFieldError('name')).toBe('Name is required');
     expect(result.current.getFieldError('description')).toBe('Description is too short');
@@ -250,13 +253,16 @@ describe('useOptimizedValidation', () => {
     const { result } = renderHook(() => 
       useOptimizedValidation(testData, {
         validateOnChange: false,
+        debounce: 0,
       })
     );
 
-    const validationResult = await result.current.forceValidate();
+    await act(async () => {
+      await result.current.forceValidate();
+    });
 
     expect(mockValidateTravelForm).toHaveBeenCalledWith(testData);
-    expect(validationResult.isValid).toBe(true);
+    expect(result.current.isValid).toBe(true);
     expect(result.current.lastValidated).toBeInstanceOf(Date);
   });
 
@@ -268,16 +274,18 @@ describe('useOptimizedValidation', () => {
     const { result } = renderHook(() => 
       useOptimizedValidation(testData, {
         validateOnChange: true,
-        debounce: 100,
+        debounce: 0,
       })
     );
 
-    await waitFor(() => {
-      expect(result.current.isValid).toBe(false);
-      expect(result.current.errors).toEqual([
-        { field: 'general', message: 'Validation error occurred' }
-      ]);
+    await act(async () => {
+      await result.current.forceValidate();
     });
+
+    expect(result.current.isValid).toBe(false);
+    expect(result.current.errors).toEqual([
+      { field: 'general', message: 'Validation error occurred' }
+    ]);
   });
 
   it('debounces validation correctly', async () => {

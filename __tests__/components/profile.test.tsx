@@ -1,11 +1,9 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import ProfileScreen from '@/app/(tabs)/profile';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 
 jest.mock('@/context/AuthContext');
-jest.mock('@/context/FavoritesContext');
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
@@ -28,6 +26,8 @@ jest.mock('@/src/utils/storageBatch', () => ({
     userEmail: 'user@example.com',
   }),
 }));
+
+const ProfileScreen = require('@/app/(tabs)/profile').default;
 
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockUseFavorites = useFavorites as jest.MockedFunction<typeof useFavorites>;

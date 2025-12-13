@@ -18,6 +18,7 @@ import {
   Animated,
   FlatList,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,6 +27,7 @@ import { useRouter } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
+import { TAB_CARD_TEMPLATE, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
 
 /* ---------------- Lazy Components ---------------- */
 
@@ -57,6 +59,8 @@ interface RecommendationsTabsProps {
   onVisibilityChange?: (visible: boolean) => void;
 }
 
+const TAB_CONTENT_HEIGHT = 320;
+
 /* ---------------- Skeletons ---------------- */
 
 const CardSkeleton = () => (
@@ -85,6 +89,9 @@ const RecommendationsPlaceholder = () => (
 const TravelCard = memo(
   ({ item, onPress, isHistory = false }: { item: any; onPress: () => void; isHistory?: boolean }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
+    const { width } = useWindowDimensions();
+    const isMobile = width <= 768;
+    const location = [item?.city, item?.country].filter(Boolean).join(', ');
 
     const handlePressIn = () => {
       Animated.spring(scaleAnim, {
@@ -103,7 +110,13 @@ const TravelCard = memo(
     };
 
     return (
-      <Animated.View style={[styles.cardContainer, { transform: [{ scale: scaleAnim }] }]}>
+      <Animated.View
+        style={[
+          styles.cardContainer,
+          isMobile && styles.cardContainerMobile,
+          { transform: [{ scale: scaleAnim }] },
+        ]}
+      >
         <Pressable
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
@@ -137,6 +150,12 @@ const TravelCard = memo(
             <Text style={styles.cardTitle} numberOfLines={2}>
               {item.title || 'Без названия'}
             </Text>
+            {!!location && (
+              <View style={styles.cardMeta}>
+                <MaterialIcons name="place" size={12} color="#6b7280" style={styles.cardMetaIcon} />
+                <Text style={styles.cardMetaText}>{location}</Text>
+              </View>
+            )}
           </View>
         </Pressable>
       </Animated.View>
@@ -224,51 +243,72 @@ const RecommendationsTabs = memo(
       );
     }
 
+    const renderTabPane = (children: React.ReactNode) => (
+      <View style={styles.tabPane}>
+        <ScrollView
+          style={styles.tabPaneScroll}
+          contentContainerStyle={styles.tabPaneContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {children}
+        </ScrollView>
+      </View>
+    )
+
     const renderContent = () => {
       switch (activeTab) {
         case 'highlights':
-          return (
+          return renderTabPane(
             <Suspense fallback={<RecommendationsPlaceholder />}>
               <WeeklyHighlights showHeader={false} />
             </Suspense>
           );
         case 'recommendations':
-          return (
+          return renderTabPane(
             <Suspense fallback={<RecommendationsPlaceholder />}>
               <PersonalizedRecommendations showHeader={false} />
             </Suspense>
           );
         case 'favorites':
-          return favorites.length === 0 ? (
-            <EmptyState message="Избранное пусто" icon="favorite-border" />
-          ) : (
-            <FlatList
-              horizontal
-              data={favorites}
-              renderItem={({ item }) => (
-                <TravelCard item={item} onPress={() => router.push(item.url)} />
-              )}
-              keyExtractor={(item) => `${item.type || 'item'}-${item.id}`}
-              showsHorizontalScrollIndicator={false}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-            />
+          return renderTabPane(
+            favorites.length === 0 ? (
+              <EmptyState message="Избранное пусто" icon="favorite-border" />
+            ) : (
+              <FlatList
+                horizontal
+                data={favorites}
+                renderItem={({ item }) => (
+                  <TravelCard item={item} onPress={() => router.push(item.url)} />
+                )}
+                keyExtractor={(item) => `${item.type || 'item'}-${item.id}`}
+                showsHorizontalScrollIndicator={false}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+                style={styles.horizontalList}
+                contentContainerStyle={styles.horizontalListContent}
+              />
+            )
           );
         case 'history':
-          return viewHistory.length === 0 ? (
-            <EmptyState message="История просмотров пуста" icon="history" />
-          ) : (
-            <FlatList
-              horizontal
-              data={viewHistory}
-              renderItem={({ item }) => (
-                <TravelCard item={item} onPress={() => router.push(item.url)} isHistory />
-              )}
-              keyExtractor={(item) => `history-${item.id}-${item.viewedAt}`}
-              showsHorizontalScrollIndicator={false}
-            />
+          return renderTabPane(
+            viewHistory.length === 0 ? (
+              <EmptyState message="История просмотров пуста" icon="history" />
+            ) : (
+              <FlatList
+                horizontal
+                data={viewHistory}
+                renderItem={({ item }) => (
+                  <TravelCard item={item} onPress={() => router.push(item.url)} isHistory />
+                )}
+                keyExtractor={(item) => `history-${item.id}-${item.viewedAt}`}
+                showsHorizontalScrollIndicator={false}
+                style={styles.horizontalList}
+                contentContainerStyle={styles.horizontalListContent}
+              />
+            )
           );
         default:
-          return null;
+          return renderTabPane(null);
       }
     };
 
@@ -419,34 +459,38 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   content: {
-    minHeight: 200,
+    height: TAB_CONTENT_HEIGHT,
+    paddingVertical: 8,
+  },
+  tabPane: {
+    height: TAB_CONTENT_HEIGHT,
+    flex: 1,
+  },
+  tabPaneScroll: {
+    flex: 1,
+  },
+  tabPaneContent: {
+    flexGrow: 1,
+    paddingVertical: 4,
   },
 
   // Cards
   cardContainer: {
-    width: 200,
+    ...TAB_CARD_TEMPLATE.container,
     marginRight: 16,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  },
+  cardContainerMobile: {
+    width: MOBILE_CARD_WIDTH,
   },
   cardImageContainer: {
-    height: 140,
-    position: 'relative',
+    ...TAB_CARD_TEMPLATE.imageContainer,
   },
   cardImage: {
-    width: '100%',
-    height: '100%',
+    ...TAB_CARD_TEMPLATE.image,
   },
   placeholderImage: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#f0f0f0',
+    ...TAB_CARD_TEMPLATE.image,
+    backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -462,13 +506,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardContent: {
-    padding: 12,
+    ...TAB_CARD_TEMPLATE.content,
   },
   cardTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
-    lineHeight: 20,
+    ...TAB_CARD_TEMPLATE.title,
+  },
+  cardMeta: {
+    ...TAB_CARD_TEMPLATE.metaRow,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardMetaIcon: {
+    marginRight: 4,
+  },
+  cardMetaText: {
+    ...TAB_CARD_TEMPLATE.metaText,
   },
 
   // Collapsed
@@ -495,14 +547,14 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   skeletonCard: {
-    width: 200,
+    width: TAB_CARD_TEMPLATE.container.width || 208,
     marginRight: 16,
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: TAB_CARD_TEMPLATE.container.borderRadius || 12,
     overflow: 'hidden',
   },
   skeletonImage: {
-    height: 140,
+    height: TAB_CARD_TEMPLATE.imageContainer.height || 136,
     backgroundColor: '#eee',
   },
   skeletonContent: {
@@ -534,6 +586,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#666',
     textAlign: 'center',
+  },
+  horizontalList: {
+    minHeight: 210,
+    paddingVertical: 4,
+  },
+  horizontalListContent: {
+    paddingHorizontal: 8,
+    paddingBottom: 12,
   },
 });
 

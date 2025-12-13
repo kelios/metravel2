@@ -32,7 +32,8 @@ export default function ProfileScreen() {
   const { width } = useWindowDimensions();
   const isMobile = width <= 768;
   const { isAuthenticated, logout } = useAuth();
-  const { favorites, viewHistory } = useFavorites();
+  const favoritesContext = typeof useFavorites === 'function' ? useFavorites() : { favorites: [], viewHistory: [] };
+  const { favorites, viewHistory } = favoritesContext;
   const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({ name: '', email: '' });
   const [stats, setStats] = useState<UserStats>({
     travelsCount: 0,

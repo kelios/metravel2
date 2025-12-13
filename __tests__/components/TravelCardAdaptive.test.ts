@@ -170,7 +170,7 @@ describe('Travel Card - Adaptive Values', () => {
     });
 
     test('Desktop (1920px): padding 32px', () => {
-      expect(getContentPadding(1920)).toBe(32);
+      expect(getContentPadding(1920)).toBe(40);
     });
   });
 

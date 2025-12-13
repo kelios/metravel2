@@ -121,29 +121,23 @@ export function getResponsiveCardValues(width: number) {
   return values;
 }
 
-// Вычисляем ширину карточки отдельно для избежания проблем с типами
-const getCardWidth = () => {
-  if (Platform.OS === 'web') {
-    // Ещё более узкая карточка, чтобы 3 штуки уверенно помещались в ряд на широких экранах
-    return 280;
-  }
-  return '100%'; // Полная ширина на мобильных
-};
+// Карточка всегда занимает всю ширину доступной ячейки, но имеет максимальную ширину
+const getCardWidth = () => '100%';
 
 export const enhancedTravelCardStyles = StyleSheet.create({
   // Основная карточка с улучшенной тенью и анимацией
   card: {
-    width: getCardWidth() as any, // ✅ Адаптивная ширина: 100% на мобильных, фиксированная база на десктопе
-    maxWidth: 350,
+    width: getCardWidth() as any,
+    maxWidth: 360,
     borderRadius: designTokens.radius.lg, // Используем design token
     backgroundColor: designTokens.colors.neutral[50], // Используем design token
     borderWidth: 1,
     borderColor: designTokens.colors.neutral[200], // Используем design token
     overflow: "hidden",
     flexDirection: 'column',
-    // На web не растягиваем карточку на всю ширину колонки, а центрируем её
-    alignSelf: Platform.OS === 'web' ? 'center' : 'stretch',
-    flexShrink: 0, // ✅ Предотвращает сжатие карточки flexbox'ом
+    // Карточка растягивается на всю ячейку, но не выходит за пределы maxWidth
+    alignSelf: 'stretch',
+    flexShrink: 1,
     // ✅ ВАЖНО: marginBottom удален, отступы создаются через ItemSeparatorComponent в FlatList
     // Это предотвращает конфликты с gap в columnWrapperStyle и дает явный контроль над отступами
     ...Platform.select({

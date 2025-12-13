@@ -8,15 +8,17 @@ import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AIRY_COLORS } from '@/constants/airyColors'; // ✅ ИСПРАВЛЕНИЕ: Добавлен импорт AIRY_COLORS
 import { Image as ExpoImage } from 'expo-image';
+import { TAB_CARD_TEMPLATE, MOBILE_CARD_WIDTH } from '@/components/listTravel/recommendationsCardTemplate';
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
 
 interface WeeklyHighlightsProps {
     forceVisible?: boolean;
     onVisibilityChange?: (visible: boolean) => void;
+    showHeader?: boolean;
 }
 
-function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlightsProps) {
+function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true }: WeeklyHighlightsProps) {
     const router = useRouter();
     const { width } = useWindowDimensions();
     const isMobile = width <= 768;
@@ -151,21 +153,22 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                {/* ✅ ДИЗАЙН: Воздушный легкий персиковый фон */}
-            <View style={[styles.iconContainer, { backgroundColor: AIRY_COLORS.primaryLight }]}>
-                    {/* ✅ БИЗНЕС: Оранжевая иконка */}
-                    <MaterialIcons name="auto-awesome" size={20} color={AIRY_COLORS.primary} />
-                </View>
-                <View style={styles.titleContainer}>
-                    <Text style={styles.title}>Подборка месяца</Text>
-                    <View style={styles.badgeContainer}>
-                        <Text style={styles.badgeText}>Выбор месяца</Text>
+            {showHeader && (
+                <>
+                    <View style={styles.header}>
+                        <View style={[styles.iconContainer, { backgroundColor: AIRY_COLORS.primaryLight }]}>
+                            <MaterialIcons name="auto-awesome" size={20} color={AIRY_COLORS.primary} />
+                        </View>
+                        <View style={styles.titleContainer}>
+                            <Text style={styles.title}>Подборка месяца</Text>
+                            <View style={styles.badgeContainer}>
+                                <Text style={styles.badgeText}>Выбор месяца</Text>
+                            </View>
+                        </View>
                     </View>
-                </View>
-                {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
-            </View>
-            <Text style={styles.subtitle}>Самые популярные маршруты этого месяца</Text>
+                    <Text style={styles.subtitle}>Самые популярные маршруты этого месяца</Text>
+                </>
+            )}
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={Platform.OS === 'web'}
@@ -189,19 +192,24 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
                         onPress={() => handleItemPress(item.url)}
                         activeOpacity={0.8}
                     >
-                        {item.imageUrl ? (
-                            <ExpoImage
-                                source={{ uri: item.imageUrl }}
-                                style={styles.itemImage}
-                                contentFit="cover"
-                                transition={120}
-                                cachePolicy="memory-disk"
-                            />
-                        ) : (
-                            <View style={[styles.itemImage, styles.itemImagePlaceholder]}>
-                                <MaterialIcons name="route" size={24} color="#9ca3af" />
+                        <View style={styles.imageContainer}>
+                            {item.imageUrl ? (
+                                <ExpoImage
+                                    source={{ uri: item.imageUrl }}
+                                    style={styles.image}
+                                    contentFit="cover"
+                                    transition={120}
+                                    cachePolicy="memory-disk"
+                                />
+                            ) : (
+                                <View style={[styles.image, styles.imagePlaceholder]}>
+                                    <MaterialIcons name="route" size={24} color="#9ca3af" />
+                                </View>
+                            )}
+                            <View style={styles.badge}>
+                                <MaterialIcons name="trending-up" size={14} color="#6b8e7f" />
                             </View>
-                        )}
+                        </View>
                         <View style={styles.itemContent}>
                             <Text style={styles.itemTitle} numberOfLines={2}>
                                 {item.title}
@@ -212,9 +220,6 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange }: WeeklyHighlights
                                     <Text style={styles.itemMetaText}>{item.country}</Text>
                                 </View>
                             )}
-                        </View>
-                        <View style={styles.badge}>
-                            <MaterialIcons name="trending-up" size={14} color="#6b8e7f" />
                         </View>
                     </TouchableOpacity>
                 ))}
@@ -334,20 +339,8 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
     },
     item: {
-        width: 220,
-        backgroundColor: '#ffffff',
-        borderRadius: 12,
-        overflow: 'hidden',
+        ...TAB_CARD_TEMPLATE.container,
         marginRight: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-        elevation: 2,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-        position: 'relative',
-        transform: [{ scale: 1 }],
         ...Platform.select({
             web: {
                 cursor: 'pointer',
@@ -355,43 +348,29 @@ const styles = StyleSheet.create({
         }),
     },
     itemMobile: {
-        width: 180,
+        width: MOBILE_CARD_WIDTH,
     },
-    itemImage: {
-        width: '100%',
-        height: 140,
-        backgroundColor: '#f3f4f6',
+    imageContainer: {
+        ...TAB_CARD_TEMPLATE.imageContainer,
     },
-    itemImagePlaceholder: {
+    image: {
+        ...TAB_CARD_TEMPLATE.image,
+    },
+    imagePlaceholder: {
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#f9fafb',
     },
     itemContent: {
-        padding: 8,
-        backgroundColor: '#ffffff',
+        ...TAB_CARD_TEMPLATE.content,
     },
     itemTitle: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#1f2937',
-        marginBottom: 4,
-        lineHeight: 16,
-        letterSpacing: -0.1,
+        ...TAB_CARD_TEMPLATE.title,
     },
     itemMeta: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f0f9f9',
-        paddingHorizontal: 6,
-        paddingVertical: 3,
-        borderRadius: 6,
-        alignSelf: 'flex-start',
+        ...TAB_CARD_TEMPLATE.metaRow,
     },
     itemMetaText: {
-        fontSize: 11,
-        color: '#6b8e7f',
-        fontWeight: '600',
+        ...TAB_CARD_TEMPLATE.metaText,
     },
     badge: {
         position: 'absolute',

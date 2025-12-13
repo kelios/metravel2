@@ -1,3 +1,5 @@
+jest.unmock('@/context/FavoritesContext')
+
 import React from 'react'
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
 import { View, Text, Pressable } from 'react-native'

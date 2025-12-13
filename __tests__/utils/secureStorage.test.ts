@@ -27,7 +27,7 @@ const mockSecureStore: any = {
   isAvailableAsync: jest.fn().mockResolvedValue(true),
 }
 
-jest.mock('expo-secure-store', () => mockSecureStore, { virtual: true })
+jest.mock('expo-secure-store', () => mockSecureStore)
 
 describe('secureStorage (web)', () => {
   beforeEach(() => {

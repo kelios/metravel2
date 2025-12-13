@@ -1,3 +1,5 @@
+jest.unmock('@/context/FavoritesContext')
+
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
 import { FavoritesProvider, useFavorites, FavoriteItem, ViewHistoryItem } from '@/context/FavoritesContext';

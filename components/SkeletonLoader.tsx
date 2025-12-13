@@ -69,6 +69,11 @@ export const TravelCardSkeleton: React.FC = () => {
  */
 export const TravelListSkeleton: React.FC<{ count?: number; columns?: number }> = ({ count = 6, columns = 1 }) => {
   const isWeb = Platform.OS === 'web';
+  const itemsCount = Math.max(0, count ?? 0);
+
+  if (itemsCount === 0) {
+    return null;
+  }
 
   // На web делаем сетку по колонкам, чтобы скелетоны совпадали с реальными карточками
   if (isWeb) {
@@ -76,7 +81,7 @@ export const TravelListSkeleton: React.FC<{ count?: number; columns?: number }> 
 
     return (
       <>
-        {Array.from({ length: count }).map((_, index) => (
+        {Array.from({ length: itemsCount }).map((_, index) => (
           <View key={index} style={{ width: itemWidth } as any}>
             <TravelCardSkeleton />
           </View>
@@ -88,7 +93,7 @@ export const TravelListSkeleton: React.FC<{ count?: number; columns?: number }> 
   // На native оставляем простой вертикальный список
   return (
     <>
-      {Array.from({ length: count }).map((_, index) => (
+      {Array.from({ length: itemsCount }).map((_, index) => (
         <TravelCardSkeleton key={index} />
       ))}
     </>
@@ -185,4 +190,3 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
     document.head.appendChild(style);
   }
 }
-

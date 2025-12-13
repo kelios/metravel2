@@ -59,6 +59,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
             onPress={handlePress}
             style={[styles.favoriteButton, style]}
             hitSlop={10}
+            testID="favorite-button"
             {...(Platform.OS === 'web' && {
                 onClick: (e: any) => {
                     e.stopPropagation();

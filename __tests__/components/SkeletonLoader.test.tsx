@@ -115,7 +115,6 @@ describe('TravelListSkeleton', () => {
   it('should handle zero count', () => {
     const { toJSON } = render(<TravelListSkeleton count={0} />);
     const tree = toJSON();
-    expect(tree).toBeTruthy();
+    expect(tree).toBeNull();
   });
 });
-

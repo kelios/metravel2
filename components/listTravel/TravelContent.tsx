@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Platform, ActivityIndicator } from 'react-native';
+import type { ViewStyle } from 'react-native';
 import StickySearchBar from '@/components/mainPage/StickySearchBar';
 import EmptyState from '@/components/EmptyState';
 import { TravelListSkeleton } from '@/components/SkeletonLoader';
 import MemoizedTravelItem from './TravelListItem';
 import type { Travel } from '@/src/types/types';
-import type { EmptyStateMessage } from './utils/listTravelTypes';
 
 interface TravelContentProps {
   // Search props
@@ -24,7 +24,7 @@ interface TravelContentProps {
   showInitialLoading: boolean;
   isError: boolean;
   showEmptyState: boolean;
-  getEmptyStateMessage: EmptyStateMessage | null;
+  getEmptyStateMessage: any;
   travels: Travel[];
   gridColumns: number;
   showNextPageLoading: boolean;
@@ -139,11 +139,19 @@ const TravelContent: React.FC<TravelContentProps> = ({
               <View
                 key={String(travel.id)}
                 style={[
-                  {
-                    width: `${100 / gridColumns}%`,
-                    minWidth: 280,
-                    maxWidth: Platform.OS === 'web' ? 350 : '100%',
-                  },
+                  Platform.select({
+                    web: {
+                      flexGrow: 1,
+                      flexShrink: 1,
+                      flexBasis: 300,
+                      minWidth: 300,
+                      maxWidth: 360,
+                    },
+                    default: {
+                      width: '100%',
+                      maxWidth: '100%',
+                    },
+                  }) as ViewStyle,
                 ]}
               >
                 <MemoizedTravelItem
