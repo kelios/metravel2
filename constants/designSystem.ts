@@ -6,6 +6,7 @@ export const DESIGN_TOKENS = {
     // Фоны (матовые, теплые)
     background: MODERN_MATTE_PALETTE.background,
     backgroundSecondary: MODERN_MATTE_PALETTE.backgroundSecondary,
+    backgroundTertiary: MODERN_MATTE_PALETTE.backgroundTertiary,
     surface: MODERN_MATTE_PALETTE.surface,
     surfaceMuted: MODERN_MATTE_PALETTE.surfaceMuted,
     surfaceElevated: MODERN_MATTE_PALETTE.surfaceElevated,
@@ -46,6 +47,10 @@ export const DESIGN_TOKENS = {
     dangerDark: MODERN_MATTE_PALETTE.dangerDark,
     dangerLight: MODERN_MATTE_PALETTE.dangerLight,
     dangerSoft: MODERN_MATTE_PALETTE.dangerSoft,
+    error: MODERN_MATTE_PALETTE.danger,
+    errorDark: MODERN_MATTE_PALETTE.dangerDark,
+    errorLight: MODERN_MATTE_PALETTE.dangerLight,
+    errorSoft: MODERN_MATTE_PALETTE.dangerSoft,
     
     info: MODERN_MATTE_PALETTE.info,
     infoDark: MODERN_MATTE_PALETTE.infoDark,
@@ -77,6 +82,7 @@ export const DESIGN_TOKENS = {
     md: 16,
     sm: 12,
     pill: 999,
+    full: 9999,
   },
   shadows: {
     light: MODERN_MATTE_BOX_SHADOWS.light,

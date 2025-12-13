@@ -87,7 +87,8 @@ const webStyles: any = {
  * Использует ширину вместо Platform.select для правильной работы в браузере
  * ✅ ОПТИМИЗАЦИЯ: Добавляем мемоизацию для избежания лишних перерасчетов
  */
-const responsiveValuesCache = new Map<number, ReturnType<typeof calculateResponsiveValues>>();
+type ResponsiveCacheKey = 'mobile' | 'desktop';
+const responsiveValuesCache = new Map<ResponsiveCacheKey, ReturnType<typeof calculateResponsiveValues>>();
 
 function calculateResponsiveValues(width: number) {
   const isMobile = width < 768;
@@ -110,7 +111,7 @@ function calculateResponsiveValues(width: number) {
 
 export function getResponsiveCardValues(width: number) {
   // ✅ ОПТИМИЗАЦИЯ: Используем кэширование для избежания перерасчетов
-  const cacheKey = Math.floor(width / 50) * 50; // Кэшируем по интервалам 50px для стабильности
+  const cacheKey: ResponsiveCacheKey = width < 768 ? 'mobile' : 'desktop';
   if (responsiveValuesCache.has(cacheKey)) {
     return responsiveValuesCache.get(cacheKey)!;
   }
@@ -150,7 +151,6 @@ export const enhancedTravelCardStyles = StyleSheet.create({
         shadowColor: designTokens.colors.neutral[900], // Используем design token
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 4,
         shadowRadius: 16,
       },
       android: {
@@ -337,8 +337,8 @@ export const enhancedTravelCardStyles = StyleSheet.create({
 
   // Популярный статус с улучшенными цветами
   popularBadge: {
-    backgroundColor: designTokens.colors.primary[100], // Используем design token
-    borderColor: designTokens.colors.primary[200], // Используем design token
+    backgroundColor: designTokens.colors.primary[50], // Используем доступный оттенок token
+    borderColor: designTokens.colors.primary[100], // Используем доступный оттенок token
   },
   popularBadgeText: {
     color: designTokens.colors.primary[600], // Используем design token

@@ -59,6 +59,8 @@ const renderWithProviders = (component: React.ReactElement) => {
 describe('ModernFilters Component', () => {
   const mockOnFilterChange = jest.fn();
   const mockOnClearAll = jest.fn();
+  const mockOnYearChange = jest.fn();
+  const mockOnToggleModeration = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -77,7 +79,7 @@ describe('ModernFilters Component', () => {
 
     expect(screen.getByText('Категории')).toBeTruthy();
     expect(screen.getByText('Транспорт')).toBeTruthy();
-    expect(screen.getByText('Найдено 10 результатов')).toBeTruthy();
+    expect(screen.getByText('Найдено 10 путешествий')).toBeTruthy();
   });
 
   it('calls onFilterChange when filter option is selected', async () => {
@@ -91,6 +93,7 @@ describe('ModernFilters Component', () => {
       />
     );
 
+    fireEvent.press(screen.getByText('Категории'));
     const categoryButton = screen.getByText('Горы');
     fireEvent.press(categoryButton);
 
@@ -140,7 +143,7 @@ describe('ModernFilters Component', () => {
       />
     );
 
-    const clearButton = screen.getByText('Очистить все');
+    const clearButton = screen.getByText('Очистить (1)');
     fireEvent.press(clearButton);
 
     expect(mockOnClearAll).toHaveBeenCalled();
@@ -155,10 +158,11 @@ describe('ModernFilters Component', () => {
         onClearAll={mockOnClearAll}
         resultsCount={10}
         year={2023}
+        onYearChange={mockOnYearChange}
       />
     );
 
-    expect(screen.getByText('2023')).toBeTruthy();
+    expect(screen.getByDisplayValue('2023')).toBeTruthy();
   });
 
   it('shows moderation toggle for superuser', () => {
@@ -177,9 +181,10 @@ describe('ModernFilters Component', () => {
         resultsCount={10}
         showModeration={true}
         moderationValue={0}
+        onToggleModeration={mockOnToggleModeration}
       />
     );
 
-    expect(screen.getByText('Только проверенные')).toBeTruthy();
+    expect(screen.getByText('Только на модерации')).toBeTruthy();
   });
 });

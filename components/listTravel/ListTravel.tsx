@@ -249,22 +249,8 @@ const styles = StyleSheet.create({
   },
 });
 
-// Ленивая загрузка объединенного компонента с табами
-// @ts-ignore - Dynamic imports are supported in runtime
-const RecommendationsTabs = lazy(() => {
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        return new Promise<{ default: React.ComponentType<any> }>(resolve => {
-            (window as any).requestIdleCallback(() => {
-                // @ts-ignore
-                import('./RecommendationsTabs').then(module => {
-                    resolve(module);
-                });
-            }, { timeout: 2000 });
-        });
-    }
-    // @ts-ignore
-    return import('./RecommendationsTabs');
-});
+// Ленивая загрузка RecommendationsTabs без requestIdleCallback (устраняем тайпинги)
+const RecommendationsTabs = lazy(() => import('./RecommendationsTabs'));
 
 // Simple delete function implementation
 const deleteTravel = async (id: string): Promise<void> => {
@@ -464,42 +450,14 @@ function ListTravel({
     const baseColumnsEffective = isDesktop ? 3 : calculateColumns(effectiveWidth);
     const gridColumns = isTablet && isPortrait && baseColumnsEffective > 2 ? 2 : baseColumnsEffective;
 
-    const [recommendationsReady, setRecommendationsReady] = useState(Platform.OS !== 'web');
-    const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(false);
-    const [recommendationsVisibilityInitialized, setRecommendationsVisibilityInitialized] = useState(false);
+    const [recommendationsReady, setRecommendationsReady] = useState(true);
+    const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(true);
+    const [recommendationsVisibilityInitialized, setRecommendationsVisibilityInitialized] = useState(true);
 
-    // ИСПРАВЛЕНИЕ: Загружаем сохраненное состояние видимости рекомендаций
     useEffect(() => {
-        const loadRecommendationsVisibility = async () => {
-            try {
-                if (Platform.OS === 'web') {
-                    const saved = sessionStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
-                    // По умолчанию на web не показываем блок рекомендаций, пока пользователь явно не включит его.
-                    // Если сохранено 'true' или любой другой непустой флаг, считаем, что пользователь уже включал блок.
-                    if (saved === 'true') {
-                        setIsRecommendationsVisible(true);
-                        setRecommendationsReady(true);
-                    } else {
-                        setIsRecommendationsVisible(false);
-                    }
-                } else {
-                    const saved = await AsyncStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
-                    // На native оставляем прежний дефолт: если явно не выключено, считаем видимым.
-                    if (saved === 'false') {
-                        setIsRecommendationsVisible(false);
-                    } else {
-                        setIsRecommendationsVisible(true);
-                        setRecommendationsReady(true);
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading recommendations visibility:', error);
-            } finally {
-                setRecommendationsVisibilityInitialized(true);
-            }
-        };
-        
-        loadRecommendationsVisibility();
+        setRecommendationsReady(true);
+        setIsRecommendationsVisible(true);
+        setRecommendationsVisibilityInitialized(true);
     }, []);
 
     // ✅ ИСПРАВЛЕНИЕ: Сохраняем состояние видимости рекомендаций при изменении и запускаем ленивую загрузку блока

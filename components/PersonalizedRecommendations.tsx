@@ -77,6 +77,11 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
         return raw.filter(item => !favorites.some(f => f.id === item.id && f.type === item.type));
     }, [favorites, viewHistory, isAuthenticated, getRecommendations]);
 
+    const containerStyles = useMemo(() => [
+        styles.container,
+        !showHeader && styles.containerCompact,
+    ], [showHeader]);
+
     // ВАЖНО: все хуки должны быть вызваны до условных возвратов
     const handleItemPress = useCallback((url: string) => {
         if (Platform.OS === 'web') {
@@ -158,20 +163,24 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
 
     if (!isAuthenticated) {
         return (
-                <View style={styles.container}>
-                <View style={styles.header}>
-                        <View style={[styles.iconContainer, { backgroundColor: '#f0f9f9' }]}>
-                            <MaterialIcons name="star" size={24} color="#6b8e7f" />
-                        </View>
-                        <View style={styles.titleContainer}>
-                            <Text style={styles.title}>Рекомендации для вас</Text>
-                            <View style={styles.badgeContainer}>
-                                <Text style={styles.badgeText}>Для вас</Text>
+            <View style={containerStyles}>
+                {showHeader && (
+                    <>
+                        <View style={styles.header}>
+                            <View style={[styles.iconContainer, { backgroundColor: '#f0f9f9' }]}>
+                                <MaterialIcons name="star" size={24} color="#6b8e7f" />
                             </View>
+                            <View style={styles.titleContainer}>
+                                <Text style={styles.title}>Рекомендации для вас</Text>
+                                <View style={styles.badgeContainer}>
+                                    <Text style={styles.badgeText}>Для вас</Text>
+                                </View>
+                            </View>
+                            {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
                         </View>
-                        {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
-                    </View>
-                    <Text style={styles.subtitle}>Персональные рекомендации на основе ваших интересов</Text>
+                        <Text style={styles.subtitle}>Персональные рекомендации на основе ваших интересов</Text>
+                    </>
+                )}
                     <View style={[styles.promptCard, isMobile ? styles.promptCardMobile : styles.promptCardDesktop]}>
                         <View style={styles.promptLead}>
                             <View style={styles.promptIcon}>
@@ -199,20 +208,24 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
     // ✅ ИСПРАВЛЕНИЕ: Показываем пустое состояние, только если нет избранного, истории и рекомендаций
     if (!hasFavorites && !hasHistory && recommendations.length === 0) {
         return (
-            <View style={styles.container}>
-                <View style={styles.header}>
-                    <View style={[styles.iconContainer, { backgroundColor: AIRY_COLORS.primaryLight }]}>
-                        <MaterialIcons name="star" size={24} color={AIRY_COLORS.primary} />
-                    </View>
-                    <View style={styles.titleContainer}>
-                        <Text style={styles.title}>Рекомендации для вас</Text>
-                        <View style={styles.badgeContainer}>
-                            <Text style={styles.badgeText}>Для вас</Text>
+            <View style={containerStyles}>
+                {showHeader && (
+                    <>
+                        <View style={styles.header}>
+                            <View style={[styles.iconContainer, { backgroundColor: AIRY_COLORS.primaryLight }]}>
+                                <MaterialIcons name="star" size={24} color={AIRY_COLORS.primary} />
+                            </View>
+                            <View style={styles.titleContainer}>
+                                <Text style={styles.title}>Рекомендации для вас</Text>
+                                <View style={styles.badgeContainer}>
+                                    <Text style={styles.badgeText}>Для вас</Text>
+                                </View>
+                            </View>
+                            {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
                         </View>
-                    </View>
-                    {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
-                </View>
-                <Text style={styles.subtitle}>Рекомендации на основе ваших интересов</Text>
+                        <Text style={styles.subtitle}>Рекомендации на основе ваших интересов</Text>
+                    </>
+                )}
                 <View style={[styles.emptyCard, isMobile ? styles.promptCardMobile : styles.promptCardDesktop]}>
                     <View style={styles.promptLead}>
                         <View style={styles.promptIcon}>
@@ -230,20 +243,24 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
     }
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <View style={[styles.iconContainer, { backgroundColor: '#fff5eb' }]}> 
-                    <MaterialIcons name="star" size={24} color={AIRY_COLORS.primary} />
-                </View>
-                <View style={styles.titleContainer}>
-                    <Text style={styles.title}>Рекомендации для вас</Text>
-                    <View style={styles.badgeContainer}>
-                        <Text style={styles.badgeText}>Для вас</Text>
+        <View style={containerStyles}>
+            {showHeader && (
+                <>
+                    <View style={styles.header}>
+                        <View style={[styles.iconContainer, { backgroundColor: '#fff5eb' }]}> 
+                            <MaterialIcons name="star" size={24} color={AIRY_COLORS.primary} />
+                        </View>
+                        <View style={styles.titleContainer}>
+                            <Text style={styles.title}>Рекомендации для вас</Text>
+                            <View style={styles.badgeContainer}>
+                                <Text style={styles.badgeText}>Для вас</Text>
+                            </View>
+                        </View>
+                        {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
                     </View>
-                </View>
-                {/* ✅ ИСПРАВЛЕНИЕ: Убрана кнопка сворачивания, так как она уже есть в RecommendationsTabs */}
-            </View>
-            <Text style={styles.subtitle}>Рекомендации на основе ваших интересов</Text>
+                    <Text style={styles.subtitle}>Рекомендации на основе ваших интересов</Text>
+                </>
+            )}
 
             {hasFavorites && (
                 <View style={styles.section}>

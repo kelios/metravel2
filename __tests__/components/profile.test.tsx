@@ -25,6 +25,7 @@ jest.mock('@/src/utils/storageBatch', () => ({
   getStorageBatch: jest.fn().mockResolvedValue({
     userName: 'Test User',
     userId: '123',
+    userEmail: 'user@example.com',
   }),
 }));
 
