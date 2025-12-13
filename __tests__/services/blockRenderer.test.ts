@@ -1,0 +1,41 @@
+import { BlockRenderer } from '@/src/services/pdf-export/renderers/BlockRenderer'
+import { getThemeConfig } from '@/src/services/pdf-export/themes/PdfThemeConfig'
+
+const theme = getThemeConfig('minimal')
+
+describe('BlockRenderer', () => {
+  it('escapes unsafe text but keeps provided HTML content', () => {
+    const renderer = new BlockRenderer(theme)
+
+    const escaped = renderer.renderBlock({
+      type: 'paragraph',
+      text: 'Hello <script>alert(1)</script>',
+    })
+
+    expect(escaped).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
+
+    const withHtml = renderer.renderBlock({
+      type: 'paragraph',
+      text: 'Bold',
+      html: '<strong>Bold</strong>',
+    })
+
+    expect(withHtml).toContain('<strong>Bold</strong>')
+  })
+
+  it('renders common structural blocks with theme styles', () => {
+    const renderer = new BlockRenderer(theme)
+
+    const html = renderer.renderBlocks([
+      { type: 'heading', level: 3, text: 'Маршрут' } as any,
+      { type: 'list', ordered: true, items: ['Пункт 1', 'Пункт 2'] } as any,
+      { type: 'warning-block', content: 'Осторожно', title: 'Важно' } as any,
+      { type: 'table', headers: ['Колонка'], rows: [['Значение']] } as any,
+    ])
+
+    expect(html).toContain('<h3')
+    expect(html).toContain('<ol')
+    expect(html).toContain('Осторожно')
+    expect(html).toContain('<table')
+  })
+})
