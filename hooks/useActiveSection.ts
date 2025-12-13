@@ -7,6 +7,25 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Platform, View } from 'react-native';
 import type { RefObject } from 'react';
 
+const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
+
+const scheduleObserverCallback = (cb: () => void) => {
+  if (isTestEnv) {
+    cb();
+    return;
+  }
+
+  const raf =
+    (typeof window !== 'undefined' && window.requestAnimationFrame) ||
+    (typeof globalThis !== 'undefined' && (globalThis as any).requestAnimationFrame);
+
+  if (typeof raf === 'function') {
+    raf(cb);
+  } else {
+    setTimeout(cb, 16);
+  }
+};
+
 export interface UseActiveSectionReturn {
   activeSection: string;
   setActiveSection: (section: string) => void;
@@ -28,22 +47,25 @@ export function useActiveSection(
 
   // ✅ АРХИТЕКТУРА: Intersection Observer для отслеживания активной секции (web)
   useEffect(() => {
-    // В тестовой среде (Jest/node) может не быть window / document / IntersectionObserver
-    if (
-      Platform.OS !== 'web' ||
-      typeof window === 'undefined' ||
-      typeof (window as any).document === 'undefined' ||
-      !window.IntersectionObserver
-    ) {
+    if (Platform.OS !== 'web') {
       return;
     }
 
-    const doc = (window as any).document as Document;
+    const globalObj: any = typeof globalThis !== 'undefined' ? globalThis : global;
+    const doc: Document | undefined =
+      (typeof window !== 'undefined' && (window as any).document) ||
+      (typeof document !== 'undefined' ? document : undefined);
+    const IntersectionObserverCtor: typeof IntersectionObserver | undefined =
+      (typeof window !== 'undefined' && window.IntersectionObserver) || globalObj?.IntersectionObserver;
 
-    const observer = new IntersectionObserver(
+    if (!doc || !IntersectionObserverCtor) {
+      return;
+    }
+
+    const observer = new IntersectionObserverCtor(
       (entries) => {
         // Debounce Intersection Observer callbacks to improve performance
-        requestAnimationFrame(() => {
+        scheduleObserverCallback(() => {
           const visibleSections: Array<{ key: string; ratio: number; top: number }> = [];
 
           entries.forEach((entry) => {

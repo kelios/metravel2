@@ -450,18 +450,54 @@ function ListTravel({
     const baseColumnsEffective = isDesktop ? 3 : calculateColumns(effectiveWidth);
     const gridColumns = isTablet && isPortrait && baseColumnsEffective > 2 ? 2 : baseColumnsEffective;
 
-    const [recommendationsReady, setRecommendationsReady] = useState(true);
-    const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(true);
-    const [recommendationsVisibilityInitialized, setRecommendationsVisibilityInitialized] = useState(true);
+    const [recommendationsReady, setRecommendationsReady] = useState(Platform.OS !== 'web');
+    const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(false);
+    const [recommendationsVisibilityInitialized, setRecommendationsVisibilityInitialized] = useState(false);
 
     useEffect(() => {
-        setRecommendationsReady(true);
-        setIsRecommendationsVisible(true);
-        setRecommendationsVisibilityInitialized(true);
+        let isMounted = true;
+
+        const loadRecommendationsVisibility = async () => {
+            try {
+                if (Platform.OS === 'web') {
+                    const stored = sessionStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
+                    const visible = stored !== 'false';
+                    if (!isMounted) return;
+                    setIsRecommendationsVisible(visible);
+                    if (visible) {
+                        setRecommendationsReady(true);
+                    }
+                } else {
+                    const stored = await AsyncStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
+                    if (!isMounted) return;
+                    const visible = stored !== 'false';
+                    setIsRecommendationsVisible(visible);
+                    if (visible) {
+                        setRecommendationsReady(true);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading recommendations visibility:', error);
+            } finally {
+                if (isMounted) {
+                    setRecommendationsVisibilityInitialized(true);
+                }
+            }
+        };
+
+        loadRecommendationsVisibility();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     // ✅ ИСПРАВЛЕНИЕ: Сохраняем состояние видимости рекомендаций при изменении и запускаем ленивую загрузку блока
     const handleRecommendationsVisibilityChange = useCallback((visible: boolean) => {
+        if (!recommendationsVisibilityInitialized) {
+            return;
+        }
+
         setIsRecommendationsVisible(visible);
 
         // При первом включении рекомендаций инициируем загрузку тяжёлого блока
@@ -488,7 +524,7 @@ function ListTravel({
         };
         
         saveVisibility();
-    }, [recommendationsReady]);
+    }, [recommendationsReady, recommendationsVisibilityInitialized]);
 
     const queryClient = useQueryClient();
 
