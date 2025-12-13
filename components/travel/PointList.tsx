@@ -470,7 +470,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 
 /* ============================= styles ============================= */
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<Record<string, any>>({
   wrapper: { width: '100%', marginTop: DESIGN_TOKENS.spacing.lg },
 
   // ✅ ИСПРАВЛЕНИЕ: Современная кнопка переключения с улучшенной интерактивностью и единой палитрой

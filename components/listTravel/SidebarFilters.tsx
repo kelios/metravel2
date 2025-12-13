@@ -1,5 +1,5 @@
 import React, { memo } from 'react'
-import { Platform, View, ViewStyle } from 'react-native'
+import { Platform, StyleProp, View, ViewStyle } from 'react-native'
 import ModernFilters from './ModernFilters'
 
 interface SidebarFiltersProps {
@@ -13,7 +13,7 @@ interface SidebarFiltersProps {
   resetFilters: () => void
   isVisible?: boolean
   onClose?: () => void
-  containerStyle?: ViewStyle | ViewStyle[] | undefined
+  containerStyle?: StyleProp<ViewStyle>
 }
 
 const SidebarFilters: React.FC<SidebarFiltersProps> = memo(

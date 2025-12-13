@@ -9,53 +9,55 @@ import { Platform } from 'react-native';
 export function preloadCriticalResources() {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
 
-  // Preload LCP image
-  const lcpImage = document.querySelector('img[src*="travel"]');
+  // Preload LCP image (avoid duplicates)
+  const lcpImage = document.querySelector('img[data-lcp]') || document.querySelector('img[src*="travel"]');
   if (lcpImage) {
-    const preloadLink = document.createElement('link');
-    preloadLink.rel = 'preload';
-    preloadLink.as = 'image';
-    preloadLink.href = (lcpImage as HTMLImageElement).src;
-    preloadLink.fetchPriority = 'high';
-    document.head.appendChild(preloadLink);
+    const href = (lcpImage as HTMLImageElement).currentSrc || (lcpImage as HTMLImageElement).src;
+    if (href && !document.querySelector(`link[rel="preload"][as="image"][href="${href}"]`)) {
+      const preloadLink = document.createElement('link');
+      preloadLink.rel = 'preload';
+      preloadLink.as = 'image';
+      preloadLink.href = href;
+      preloadLink.fetchPriority = 'high';
+      document.head.appendChild(preloadLink);
+    }
   }
 
-  // Preload critical fonts
-  const fontPreload = document.createElement('link');
-  fontPreload.rel = 'preload';
-  fontPreload.as = 'font';
-  fontPreload.type = 'font/woff2';
-  fontPreload.href = '/fonts/inter-v12-latin-regular.woff2';
-  fontPreload.crossOrigin = 'anonymous';
-  document.head.appendChild(fontPreload);
-
-  // Preload critical CSS
-  const cssPreload = document.createElement('link');
-  cssPreload.rel = 'preload';
-  cssPreload.as = 'style';
-  cssPreload.href = '/styles/critical.css';
-  document.head.appendChild(cssPreload);
+  // Preload critical fonts once
+  const fontHref = '/fonts/inter-v12-latin-regular.woff2';
+  if (!document.querySelector(`link[rel="preload"][href="${fontHref}"]`)) {
+    const fontPreload = document.createElement('link');
+    fontPreload.rel = 'preload';
+    fontPreload.as = 'font';
+    fontPreload.type = 'font/woff2';
+    fontPreload.href = fontHref;
+    fontPreload.crossOrigin = 'anonymous';
+    document.head.appendChild(fontPreload);
+  }
 }
 
 // 2. Optimize LCP with Resource Hints
 export function addResourceHints() {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
 
-  // DNS prefetch for external domains
-  const domains = ['metravel.by', 'cdn.metravel.by', 'fonts.googleapis.com'];
-  domains.forEach(domain => {
-    const dnsPrefetch = document.createElement('link');
-    dnsPrefetch.rel = 'dns-prefetch';
-    dnsPrefetch.href = `//${domain}`;
-    document.head.appendChild(dnsPrefetch);
+  const ensureLink = (rel: string, href: string, attrs: Record<string, string> = {}) => {
+    if (document.querySelector(`link[rel="${rel}"][href="${href}"]`)) return;
+    const link = document.createElement('link');
+    link.rel = rel;
+    link.href = href;
+    Object.entries(attrs).forEach(([key, value]) => {
+      if (value) {
+        (link as any)[key] = value;
+      }
+    });
+    document.head.appendChild(link);
+  };
+
+  ['//metravel.by', '//cdn.metravel.by', '//fonts.googleapis.com'].forEach((domain) => {
+    ensureLink('dns-prefetch', domain);
   });
 
-  // Preconnect for critical domains
-  const preconnect = document.createElement('link');
-  preconnect.rel = 'preconnect';
-  preconnect.href = 'https://metravel.by';
-  preconnect.crossOrigin = 'anonymous';
-  document.head.appendChild(preconnect);
+  ensureLink('preconnect', 'https://metravel.by', { crossOrigin: 'anonymous' });
 }
 
 // 3. Critical CSS Inline Optimization
@@ -207,20 +209,23 @@ export const serverOptimizations = {
 
 // 10. Critical Path Optimization
 export function optimizeCriticalPath() {
-  if (Platform.OS !== 'web') return;
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return;
 
-  // 1. Inline critical CSS immediately
-  const criticalStyle = document.createElement('style');
-  criticalStyle.textContent = ultraCriticalCSS;
-  criticalStyle.setAttribute('data-critical', 'true');
-  document.head.insertBefore(criticalStyle, document.head.firstChild);
+  // 1. Inline critical CSS once
+  if (!document.querySelector('style[data-ultra-critical="true"]')) {
+    const criticalStyle = document.createElement('style');
+    criticalStyle.textContent = ultraCriticalCSS;
+    criticalStyle.setAttribute('data-critical', 'true');
+    criticalStyle.setAttribute('data-ultra-critical', 'true');
+    document.head.insertBefore(criticalStyle, document.head.firstChild);
+  }
 
   // 2. Preload critical resources
   preloadCriticalResources();
-  
+
   // 3. Add resource hints
   addResourceHints();
-  
+
   // 4. Optimize images
   const images = document.querySelectorAll('img');
   images.forEach(img => {
