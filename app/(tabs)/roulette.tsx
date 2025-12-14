@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Modal, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions, Pressable, FlatList, Image } from 'react-native';
+import { Animated, Easing, Modal, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions, Pressable, FlatList, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -456,7 +456,6 @@ export default function RouletteScreen() {
           <View style={[styles.resultsContainer, isMobile && styles.resultsContainerMobile]}>
             {showLoading && (
               <View style={styles.loaderBox}>
-                <ActivityIndicator size="large" color={palette.primary} />
                 <Text style={styles.loaderText}>Подбираем маршруты…</Text>
               </View>
             )}
@@ -484,7 +483,6 @@ export default function RouletteScreen() {
                 {spinning && (
                   <View style={styles.overlaySpinner}>
                     <View style={styles.spinnerCircle}>
-                      <ActivityIndicator size="large" color={palette.primary} />
                       <Text style={styles.spinnerText}>Подбираем маршруты…</Text>
                     </View>
                   </View>

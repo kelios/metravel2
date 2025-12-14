@@ -192,8 +192,6 @@ const variantHoverStyles: Record<ButtonVariant, ViewStyle> = {
     backgroundColor: palette.primaryDark,
     ...Platform.select({
       web: {
-        // @ts-ignore
-        transform: 'translateY(-2px)',
         boxShadow: '0 4px 12px rgba(31, 31, 31, 0.15), 0 2px 4px rgba(31, 31, 31, 0.1)',
       },
     }),
@@ -202,8 +200,6 @@ const variantHoverStyles: Record<ButtonVariant, ViewStyle> = {
     backgroundColor: palette.primaryLight,
     ...Platform.select({
       web: {
-        // @ts-ignore
-        transform: 'translateY(-1px)',
         boxShadow: '0 3px 10px rgba(31, 31, 31, 0.12), 0 1px 4px rgba(31, 31, 31, 0.08)',
       },
     }),
@@ -212,8 +208,6 @@ const variantHoverStyles: Record<ButtonVariant, ViewStyle> = {
     backgroundColor: palette.primarySoft,
     ...Platform.select({
       web: {
-        // @ts-ignore
-        transform: 'translateY(-1px)',
       },
     }),
   },
@@ -221,8 +215,6 @@ const variantHoverStyles: Record<ButtonVariant, ViewStyle> = {
     backgroundColor: palette.dangerDark,
     ...Platform.select({
       web: {
-        // @ts-ignore
-        transform: 'translateY(-2px)',
         boxShadow: '0 4px 12px rgba(31, 31, 31, 0.15), 0 2px 4px rgba(31, 31, 31, 0.1)',
       },
     }),

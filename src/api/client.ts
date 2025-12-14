@@ -420,6 +420,71 @@ class ApiClient {
             throw new ApiError(0, error instanceof Error ? error.message : 'Ошибка загрузки файла');
         }
     }
+
+    async uploadFormData<T>(
+        endpoint: string,
+        formData: FormData,
+        method: 'POST' | 'PUT' | 'PATCH' = 'POST',
+        timeout: number = LONG_TIMEOUT
+    ): Promise<T> {
+        const token = await this.getAccessToken();
+        const headers: HeadersInit = {
+            ...(token && { Authorization: `Token ${token}` }),
+        };
+
+        try {
+            const response = await fetchWithTimeout(
+                `${this.baseURL}${endpoint}`,
+                {
+                    method,
+                    headers,
+                    body: formData,
+                },
+                timeout
+            );
+
+            if (response.status === 401 && token) {
+                const newToken = await this.refreshAccessToken();
+                const retryHeaders: HeadersInit = {
+                    Authorization: `Token ${newToken}`,
+                };
+
+                const retryResponse = await fetchWithTimeout(
+                    `${this.baseURL}${endpoint}`,
+                    {
+                        method,
+                        headers: retryHeaders,
+                        body: formData,
+                    },
+                    timeout
+                );
+
+                if (!retryResponse.ok) {
+                    throw new ApiError(
+                        retryResponse.status,
+                        `Ошибка загрузки: ${retryResponse.statusText}`
+                    );
+                }
+
+                return await this.parseSuccessResponse<T>(retryResponse);
+            }
+
+            if (!response.ok) {
+                throw new ApiError(
+                    response.status,
+                    `Ошибка загрузки: ${response.statusText}`
+                );
+            }
+
+            return await this.parseSuccessResponse<T>(response);
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            devError('FormData upload error:', error);
+            throw new ApiError(0, error instanceof Error ? error.message : 'Ошибка загрузки файла');
+        }
+    }
 }
 
 // Экспортируем singleton экземпляр

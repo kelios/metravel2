@@ -9,6 +9,7 @@ import {
   Pressable,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -17,6 +18,8 @@ import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { fetchTravels } from '@/src/api/travelsApi';
+import { fetchUserProfile, type UserProfileDto } from '@/src/api/user';
+import { ApiError } from '@/src/api/client';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
@@ -28,10 +31,11 @@ interface UserStats {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, userId } = useAuth();
   const favoritesContext = typeof useFavorites === 'function' ? useFavorites() : { favorites: [], viewHistory: [] };
   const { favorites, viewHistory } = favoritesContext as any;
   const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({ name: '', email: '' });
+  const [profile, setProfile] = useState<UserProfileDto | null>(null);
   const [stats, setStats] = useState<UserStats>({
     travelsCount: 0,
     favoritesCount: 0,
@@ -53,14 +57,27 @@ export default function ProfileScreen() {
       const { getStorageBatch } = await import('@/src/utils/storageBatch');
       const storageData = await getStorageBatch(['userName', 'userId', 'userEmail']);
       const userName = storageData.userName || '';
-      const userId = storageData.userId;
+      const userIdFromStorage = storageData.userId;
       const userEmail = storageData.userEmail || '';
 
       setUserInfo({ name: userName, email: userEmail });
 
+      const uid = userId || userIdFromStorage;
+      if (uid) {
+        try {
+          const profileData = await fetchUserProfile(uid);
+          setProfile(profileData);
+        } catch (e) {
+          if (__DEV__) {
+            const message = e instanceof ApiError ? e.message : String(e);
+            console.warn('Error loading user profile:', message);
+          }
+        }
+      }
+
       // ✅ ИСПРАВЛЕНИЕ: Загружаем статистику путешествий из API
       let travelsCount = 0;
-      if (userId) {
+      if (uid) {
         try {
           // Загружаем путешествия пользователя (только опубликованные)
           const travelsData = await fetchTravels(
@@ -68,7 +85,7 @@ export default function ProfileScreen() {
             1, // itemsPerPage - нам нужен только total
             '', // search
             {
-              user_id: userId,
+              user_id: uid,
               publish: 1, // только опубликованные
               moderation: 1, // только прошедшие модерацию
             }
@@ -164,13 +181,39 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <View style={styles.avatar}>
-              <Feather name="user" size={28} color={DESIGN_TOKENS.colors.primary} />
+              {profile?.avatar ? (
+                <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
+              ) : (
+                <Feather name="user" size={28} color={DESIGN_TOKENS.colors.primary} />
+              )}
             </View>
             <View style={styles.headerTextBlock}>
-              <Text style={styles.userName}>{userInfo.name || 'Пользователь'}</Text>
+              <Text style={styles.userName}>
+                {(() => {
+                  const clean = (value: unknown) => {
+                    const v = String(value ?? '').trim();
+                    if (!v) return '';
+                    if (v.toLowerCase() === 'null' || v.toLowerCase() === 'undefined') return '';
+                    return v;
+                  };
+                  const fullName = profile
+                    ? `${clean(profile.first_name)} ${clean(profile.last_name)}`.trim()
+                    : '';
+                  return fullName || userInfo.name || 'Пользователь';
+                })()}
+              </Text>
               {!!userInfo.email && <Text style={styles.userEmail}>{userInfo.email}</Text>}
             </View>
           </View>
+
+          {!!profile && (
+            <View style={styles.socialsRow}>
+              {!!profile.youtube && <Text style={styles.socialChip}>YouTube</Text>}
+              {!!profile.instagram && <Text style={styles.socialChip}>Instagram</Text>}
+              {!!profile.twitter && <Text style={styles.socialChip}>Twitter</Text>}
+              {!!profile.vk && <Text style={styles.socialChip}>VK</Text>}
+            </View>
+          )}
 
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
@@ -473,6 +516,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 3,
     borderColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  socialsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 6,
+    marginBottom: 12,
+  },
+  socialChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    color: DESIGN_TOKENS.colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
   },
   userName: {
     fontSize: 20,

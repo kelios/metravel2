@@ -1,5 +1,5 @@
 import "@expo/metro-runtime";
-import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 import { MD3LightTheme as DefaultTheme, PaperProvider } from "react-native-paper";
 import { SplashScreen, Stack, usePathname } from "expo-router";
@@ -13,6 +13,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import SkipLinks from "@/components/SkipLinks";
 import { NetworkStatus } from "@/components/NetworkStatus";
 import ConsentBanner from "@/components/ConsentBanner";
+import Footer from "@/components/Footer";
 import { useFonts } from "expo-font";
 import { DESIGN_TOKENS } from "@/constants/designSystem"; // ✅ ИСПРАВЛЕНИЕ: Импорт единой палитры
 
@@ -34,8 +35,6 @@ if (Platform.OS === 'web') {
     originalError.apply(console, args);
   };
 }
-
-const Footer = lazy(() => import("@/components/Footer"));
 
 /** ===== Helpers ===== */
 const isWeb = Platform.OS === "web";
@@ -180,8 +179,11 @@ function RootLayoutNav() {
         setIsMounted(true);
     }, []);
 
+    // На web футер-док находится в потоке (position: sticky), поэтому дополнительная прокладка
+    // приводит к поздним layout shifts при измерении высоты дока.
+    // Прокладку используем только на native, где док может перекрывать контент.
     const BottomGutter = () =>
-      showFooter && isMobile && dockHeight > 0 ? <View style={{ height: dockHeight}} /> : null;
+      !isWeb && showFooter && isMobile && dockHeight > 0 ? <View style={{ height: dockHeight }} /> : null;
 
     // На web шрифты подгружаются через link + font-display: swap, поэтому
     // не блокируем рендер и не дергаем fontfaceobserver (во избежание timeout).
@@ -267,19 +269,11 @@ function RootLayoutNav() {
                             <ConsentBanner />
 
                             {showFooter && (
-                              <Suspense
-                                fallback={
-                                    <View style={styles.footerFallback}>
-                                        <ActivityIndicator size="small" />
-                                    </View>
-                                }
-                              >
-                                <Footer
-                                  /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
-                                  onDockHeight={(h) => setDockHeight(h)}
-                                />
-                            </Suspense>
-                          )}
+                              <Footer
+                                /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
+                                onDockHeight={(h) => setDockHeight(h)}
+                              />
+                            )}
                       </View>
                   </FiltersProvider>
               </QueryClientProvider>

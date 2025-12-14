@@ -28,14 +28,13 @@ import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
   useAnimatedStyle,
-  withTiming,
   withSpring,
   runOnJS,
   interpolate,
   Extrapolate,
 } from "react-native-reanimated";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
-import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl, shouldLoadEager } from "@/utils/imageOptimization";
+import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl } from "@/utils/imageOptimization";
 import { Feather } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
@@ -75,6 +74,99 @@ export interface SliderRef {
 
 type LoadStatus = "loading" | "loaded" | "error";
 
+const Arrow = memo(function Arrow({
+  dir,
+  onPress,
+  isMobile,
+  hideArrowsOnMobile,
+  insets,
+  dismissSwipeHint,
+}: {
+  dir: "left" | "right";
+  onPress: () => void;
+  isMobile: boolean;
+  hideArrowsOnMobile?: boolean;
+  insets: { left: number; right: number };
+  dismissSwipeHint: () => void;
+}) {
+  if (isMobile && hideArrowsOnMobile) return null;
+
+  const arrowOpacity = useSharedValue(1);
+  const arrowScale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: arrowOpacity.value,
+    transform: [{ scale: arrowScale.value }],
+  }));
+
+  const handlePressIn = useCallback(() => {
+    arrowOpacity.value = withSpring(0.7, { damping: 15 });
+    arrowScale.value = withSpring(0.95, { damping: 15 });
+  }, [arrowOpacity, arrowScale]);
+
+  const handlePressOut = useCallback(() => {
+    arrowOpacity.value = withSpring(1, { damping: 15 });
+    arrowScale.value = withSpring(1, { damping: 15 });
+  }, [arrowOpacity, arrowScale]);
+
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleHover = useCallback(
+    (hover: boolean) => {
+      if (Platform.OS === "web" && !isMobile) {
+        setIsHovered(hover);
+        if (hover) {
+          arrowOpacity.value = withSpring(1, { damping: 15 });
+          arrowScale.value = withSpring(1.1, { damping: 15 });
+        } else {
+          arrowOpacity.value = withSpring(1, { damping: 15 });
+          arrowScale.value = withSpring(1, { damping: 15 });
+        }
+      }
+    },
+    [isMobile, arrowOpacity, arrowScale]
+  );
+
+  const iconSize = isMobile ? 20 : 24;
+
+  return (
+    <TouchableOpacity
+      onPress={() => {
+        dismissSwipeHint();
+        onPress();
+      }}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      // @ts-ignore - web-only props
+      onMouseEnter={() => handleHover(true)}
+      onMouseLeave={() => handleHover(false)}
+      accessibilityRole="button"
+      accessibilityLabel={dir === "left" ? "Previous slide" : "Next slide"}
+      hitSlop={12}
+      activeOpacity={0.8}
+      style={[
+        styles.navBtn,
+        isMobile ? styles.navBtnMobile : styles.navBtnDesktop,
+        dir === "left"
+          ? { left: NAV_BTN_OFFSET + (isMobile ? 8 : insets.left) }
+          : { right: NAV_BTN_OFFSET + (isMobile ? 8 : insets.right) },
+        Platform.OS === "web" && isHovered && styles.navBtnHover,
+      ]}
+    >
+      <Animated.View style={animatedStyle}>
+        <View style={styles.arrowIconContainer}>
+          <Feather
+            name={dir === "left" ? "chevron-left" : "chevron-right"}
+            size={iconSize}
+            color="#ffffff"
+            style={styles.arrowIcon}
+          />
+        </View>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+});
+
 /* -------------------------------------------------------------------------- */
 
 const DEFAULT_AR = 16 / 9;
@@ -82,10 +174,7 @@ const DOT_SIZE = 6;
 const DOT_ACTIVE_SIZE = 24; // Увеличиваем для современного вида (широкая активная точка)
 const NAV_BTN_OFFSET = 16;
 const MOBILE_HEIGHT_PERCENT = 0.7;
-const ARROW_ANIMATION_DURATION = 200;
-const GLASS_BG = "rgba(255,255,255,0.55)";
 const GLASS_BORDER = "rgba(255,255,255,0.35)";
-const GLASS_CARD = "rgba(255,255,255,0.92)";
 
 const buildUri = (img: SliderImage, containerWidth?: number, containerHeight?: number, isFirst: boolean = false) => {
   const versionedUrl = buildVersionedImageUrl(img.url, img.updated_at, img.id);
@@ -247,13 +336,6 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
 
   // начальная высота по AR, потом обновляется при layout
   useEffect(() => {
-    if (containerH == null) {
-      setContainerH(computeHeight(containerW));
-    }
-  }, [containerH, computeHeight, containerW]);
-
-  // пересчёт при изменении зависимостей
-  useEffect(() => {
     setContainerH(computeHeight(containerW));
   }, [containerW, computeHeight]);
 
@@ -319,7 +401,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     if (!images.length) return;
     const target = (indexRef.current + 1) % images.length;
     indexRef.current = target;
-    setCurrentIndex(target); // ✅ УЛУЧШЕНИЕ: Обновляем текущий индекс для счетчика
+    setCurrentIndex((prev) => (prev === target ? prev : target));
     // программный скролл
     listRef.current?.scrollToOffset({
       offset: target * containerW,
@@ -376,7 +458,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
         animated,
       });
       indexRef.current = wrapped;
-      setCurrentIndex(wrapped); // ✅ УЛУЧШЕНИЕ: Обновляем текущий индекс для счетчика
+      setCurrentIndex((prev) => (prev === wrapped ? prev : wrapped));
       warmNeighbors(wrapped);
       onIndexChanged?.(wrapped);
     },
@@ -388,7 +470,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     if (!images.length) return;
     const target = (indexRef.current - 1 + images.length) % Math.max(1, images.length);
     indexRef.current = target;
-    setCurrentIndex(target); // ✅ УЛУЧШЕНИЕ: Обновляем текущий индекс для счетчика
+    setCurrentIndex((p) => (p === target ? p : target));
     scrollTo(target);
   }, [images.length, scrollTo, dismissSwipeHint]);
 
@@ -441,7 +523,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
         const idx = first.index;
         if (indexRef.current !== idx) {
           indexRef.current = idx;
-          setCurrentIndex(idx); // ✅ УЛУЧШЕНИЕ: Обновляем текущий индекс для счетчика
+          setCurrentIndex((prev) => (prev === idx ? prev : idx));
           onIndexChanged?.(idx);
           warmNeighbors(idx);
         }
@@ -569,88 +651,6 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     ]
   );
 
-  const Arrow = ({
-                   dir,
-                   onPress,
-                 }: {
-    dir: "left" | "right";
-    onPress: () => void;
-  }) => {
-    if (isMobile && hideArrowsOnMobile) return null;
-
-    const arrowOpacity = useSharedValue(1);
-    const arrowScale = useSharedValue(1);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-      opacity: arrowOpacity.value,
-      transform: [{ scale: arrowScale.value }],
-    }));
-
-    const handlePressIn = () => {
-      arrowOpacity.value = withSpring(0.7, { damping: 15 });
-      arrowScale.value = withSpring(0.95, { damping: 15 });
-    };
-
-    const handlePressOut = () => {
-      arrowOpacity.value = withSpring(1, { damping: 15 });
-      arrowScale.value = withSpring(1, { damping: 15 });
-    };
-
-    const [isHovered, setIsHovered] = useState(false);
-
-    const handleHover = useCallback((hover: boolean) => {
-      if (Platform.OS === "web" && !isMobile) {
-        setIsHovered(hover);
-        if (hover) {
-          arrowOpacity.value = withSpring(1, { damping: 15 });
-          arrowScale.value = withSpring(1.1, { damping: 15 });
-        } else {
-          arrowOpacity.value = withSpring(1, { damping: 15 });
-          arrowScale.value = withSpring(1, { damping: 15 });
-        }
-      }
-    }, [isMobile, arrowOpacity, arrowScale]);
-
-    const iconSize = isMobile ? 20 : 24;
-
-    return (
-      <TouchableOpacity
-        onPress={() => {
-          dismissSwipeHint();
-          onPress();
-        }}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        // @ts-ignore - web-only props
-        onMouseEnter={() => handleHover(true)}
-        onMouseLeave={() => handleHover(false)}
-        accessibilityRole="button"
-        accessibilityLabel={dir === "left" ? "Previous slide" : "Next slide"}
-        hitSlop={12}
-        activeOpacity={0.8}
-        style={[
-          styles.navBtn,
-          isMobile ? styles.navBtnMobile : styles.navBtnDesktop,
-          dir === "left"
-            ? { left: NAV_BTN_OFFSET + (isMobile ? 8 : insets.left) }
-            : { right: NAV_BTN_OFFSET + (isMobile ? 8 : insets.right) },
-          Platform.OS === "web" && isHovered && styles.navBtnHover,
-        ]}
-      >
-        <Animated.View style={animatedStyle}>
-          <View style={styles.arrowIconContainer}>
-            <Feather
-              name={dir === "left" ? "chevron-left" : "chevron-right"}
-              size={iconSize}
-              color="#ffffff"
-              style={styles.arrowIcon}
-            />
-          </View>
-        </Animated.View>
-      </TouchableOpacity>
-    );
-  };
-
   return (
     <View style={styles.sliderStack}>
       <View
@@ -669,7 +669,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           onScroll={onScroll}
-          scrollEventThrottle={16}
+          scrollEventThrottle={Platform.OS === "web" ? 32 : 16}
           renderItem={renderItem}
           initialNumToRender={1}
           windowSize={2 + Math.max(0, effectivePreload)}
@@ -696,17 +696,30 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
             if (Number.isFinite(idx)) {
               const clampedIdx = clamp(idx, 0, images.length - 1);
               indexRef.current = clampedIdx;
-              setCurrentIndex(clampedIdx);
+              setCurrentIndex((prev) => (prev === clampedIdx ? prev : clampedIdx));
             }
           }}
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
-          extraData={containerW}
         />
         {showArrows && images.length > 1 && (
           <>
-            <Arrow dir="left" onPress={prev} />
-            <Arrow dir="right" onPress={next} />
+            <Arrow
+              dir="left"
+              onPress={prev}
+              isMobile={isMobile}
+              hideArrowsOnMobile={hideArrowsOnMobile}
+              insets={insets}
+              dismissSwipeHint={dismissSwipeHint}
+            />
+            <Arrow
+              dir="right"
+              onPress={next}
+              isMobile={isMobile}
+              hideArrowsOnMobile={hideArrowsOnMobile}
+              insets={insets}
+              dismissSwipeHint={dismissSwipeHint}
+            />
           </>
         )}
 

@@ -1,6 +1,6 @@
 // src/components/listTravel/TravelListItem.tsx
 import React, { memo, useCallback, useMemo, useState, useRef, useEffect } from "react";
-import { View, Pressable, Text, StyleSheet, Platform } from "react-native";
+import { View, Pressable, Text, StyleSheet, Platform, Image } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/src/types/types";
 import OptimizedFavoriteButton from "@/components/OptimizedFavoriteButton";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travelsApi";
-import {generateSrcSet } from "@/utils/imageOptimization";
+import { generateSrcSet, optimizeImageUrl } from "@/utils/imageOptimization";
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
 import { enhancedTravelCardStyles, getResponsiveCardValues } from './enhancedTravelCardStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -38,10 +38,14 @@ const WebImageOptimized = memo(function WebImageOptimized({
                                                               src,
                                                               alt,
                                                               priority = false,
+                                                              width,
+                                                              height,
                                                           }: {
     src: string;
     alt: string;
     priority?: boolean;
+    width: number;
+    height: number;
 }) {
     // ✅ ОПТИМИЗАЦИЯ: Intersection Observer для lazy loading (кроме приоритетных картинок)
     const [isInView, setIsInView] = useState(priority);
@@ -90,6 +94,8 @@ const WebImageOptimized = memo(function WebImageOptimized({
             srcSet={isInView ? imageSrcSet : undefined}
             sizes={imageSizes}
             alt={alt}
+            width={width}
+            height={height}
             style={{
                 width: "100%",
                 height: "100%",
@@ -101,7 +107,7 @@ const WebImageOptimized = memo(function WebImageOptimized({
             loading={priority ? "eager" : "lazy"}
             decoding="async"
             onLoad={() => setIsLoaded(true)}
-            {...(Platform.OS === 'web' ? { fetchpriority: priority ? "high" : "auto" } as any : {})}
+            fetchPriority={priority ? 'high' : 'auto'}
         />
     );
 });
@@ -257,11 +263,27 @@ function TravelListItem({
         // Если уже есть такой preload — не дублируем
         if (document.getElementById(linkId)) return;
 
+        // Для LCP-картинки прелоадим оптимизированный вариант под реальный размер карточки,
+        // чтобы не тянуть оригинал слишком большого разрешения и не создавать лишние скачивания.
+        const assumedCardWidth =
+          typeof cardWidth === 'number'
+            ? Math.round(cardWidth)
+            : 360; // соответствует maxWidth карточки на web в RightColumn
+        const assumedImageHeight = 220; // соответствует styles.imageContainer
+
+        const preloadUrl =
+          optimizeImageUrl(imgUrl, {
+            width: assumedCardWidth,
+            height: assumedImageHeight,
+            format: 'webp',
+            quality: 85,
+          }) ?? imgUrl;
+
         const link = document.createElement('link');
         link.id = linkId;
         link.rel = 'preload';
         link.as = 'image';
-        link.href = imgUrl;
+        link.href = preloadUrl;
         // Небольшой hint для браузера
         (link as any).fetchpriority = 'high';
         document.head.appendChild(link);
@@ -272,7 +294,7 @@ function TravelListItem({
                 link.parentNode.removeChild(link);
             }
         };
-    }, [isFirst, imgUrl, id]);
+    }, [isFirst, imgUrl, id, cardWidth]);
 
     const viewsFormatted = useMemo(() => {
         try {
@@ -466,7 +488,13 @@ function TravelListItem({
           {imgUrl && !isLikelyWatermarked(imgUrl) ? (
             Platform.OS === "web" ? (
               // Первую карточку загружаем с приоритетом для улучшения LCP
-              <WebImageOptimized src={imgUrl} alt={name} priority={!!isFirst} />
+              <WebImageOptimized
+                src={imgUrl}
+                alt={name}
+                priority={!!isFirst}
+                width={typeof cardWidth === 'number' ? Math.round(cardWidth) : 360}
+                height={220}
+              />
             ) : (
               <NativeImageOptimized uri={imgUrl} />
             )

@@ -11,6 +11,74 @@ export type CardViewTravelDto = {
     updated_at: string | null;
 };
 
+export type UserProfileDto = {
+    id: number;
+    first_name: string;
+    last_name: string;
+    youtube: string;
+    instagram: string;
+    twitter: string;
+    vk: string;
+    avatar: string;
+    user: number;
+};
+
+export type UpdateUserProfilePayload = Partial<
+    Pick<
+        UserProfileDto,
+        'first_name' | 'last_name' | 'youtube' | 'instagram' | 'twitter' | 'vk'
+    >
+>;
+
+export const fetchUserProfile = async (userId: string | number): Promise<UserProfileDto> => {
+    return apiClient.get<UserProfileDto>(`/api/user/${userId}/profile/`);
+};
+
+export const updateUserProfile = async (
+    userId: string | number,
+    payload: UpdateUserProfilePayload
+): Promise<UserProfileDto> => {
+    return apiClient.put<UserProfileDto>(`/api/user/${userId}/profile/update/`, payload);
+};
+
+export const uploadUserProfileAvatar = async (
+    userId: string | number,
+    avatar: string
+): Promise<UserProfileDto> => {
+    return apiClient.put<UserProfileDto>(`/api/user/${userId}/profile/avatar-upload/`, { avatar });
+};
+
+export type UploadUserProfileAvatarFile =
+    | File
+    | {
+          uri: string;
+          name: string;
+          type: string;
+      };
+
+export const uploadUserProfileAvatarFile = async (
+    userId: string | number,
+    file: UploadUserProfileAvatarFile
+): Promise<UserProfileDto> => {
+    const formData = new FormData();
+    if (typeof File !== 'undefined' && file instanceof File) {
+        formData.append('avatar', file);
+    } else {
+        const f = file as { uri: string; name: string; type: string };
+        formData.append('avatar', {
+            uri: f.uri,
+            name: f.name,
+            type: f.type,
+        } as any);
+    }
+
+    return apiClient.uploadFormData<UserProfileDto>(
+        `/api/user/${userId}/profile/avatar-upload/`,
+        formData,
+        'PUT'
+    );
+};
+
 type MaybePaginated<T> =
     | T[]
     | {
