@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View, Text, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Snackbar } from 'react-native-paper';
+import { Button, FAB, IconButton, Modal, Portal, Snackbar } from 'react-native-paper';
 
 import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
@@ -84,6 +84,13 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                             <Text style={styles.autosaveBadgeText}>{autosaveBadge}</Text>
                         </View>
                     )}
+                    {!isMobile && (
+                        <IconButton
+                            icon={menuVisible ? 'chevron-right' : 'chevron-left'}
+                            onPress={() => setMenuVisible(!menuVisible)}
+                            accessibilityLabel={menuVisible ? 'Скрыть панель' : 'Показать панель'}
+                        />
+                    )}
                 </View>
                 <View style={styles.progressBarTrack}>
                     <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
@@ -121,26 +128,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                         autosaveStatus={autosaveStatus}
                     />
                 </ScrollView>
-                {isMobile ? (
-                    <View style={styles.mobileFiltersWrapper}>
-                        {menuVisible && (
-                            <ScrollView style={styles.filtersScroll}>
-                                <FiltersUpsertComponent
-                                    filters={filters}
-                                    formData={formData}
-                                    setFormData={setFormData}
-                                    travelDataOld={travelDataOld}
-                                    onClose={() => setMenuVisible(false)}
-                                    isSuperAdmin={isSuperAdmin}
-                                    onSave={onManualSave}
-                                    showSaveButton={false}
-                                    showPreviewButton={false}
-                                    showPublishControls={false}
-                                />
-                            </ScrollView>
-                        )}
-                    </View>
-                ) : (
+                {!isMobile && menuVisible && (
                     <View style={styles.filtersColumn}>
                         <FiltersUpsertComponent
                             filters={filters}
@@ -176,20 +164,48 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                         Сохранить
                     </Button>
                     <Button
-                        mode="outlined"
-                        icon="filter-outline"
-                        onPress={() => setMenuVisible(!menuVisible)}
-                        style={styles.filterButton}
-                    >
-                        Боковая панель
-                    </Button>
-                    <Button
                         mode="text"
                         onPress={onGoNext}
                     >
                         Далее: Маршрут (шаг 2 из 5)
                     </Button>
                 </View>
+            )}
+            {isMobile && (
+                <>
+                    <Portal>
+                        <Modal
+                            visible={menuVisible}
+                            onDismiss={() => setMenuVisible(false)}
+                            contentContainerStyle={styles.bottomSheetContainer}
+                        >
+                            <View style={styles.bottomSheetHeader}>
+                                <Text style={styles.bottomSheetTitle}>Панель</Text>
+                                <IconButton icon="close" onPress={() => setMenuVisible(false)} />
+                            </View>
+                            <ScrollView style={styles.bottomSheetBody} keyboardShouldPersistTaps="handled">
+                                <FiltersUpsertComponent
+                                    filters={filters}
+                                    formData={formData}
+                                    setFormData={setFormData}
+                                    travelDataOld={travelDataOld}
+                                    onClose={() => setMenuVisible(false)}
+                                    isSuperAdmin={isSuperAdmin}
+                                    onSave={onManualSave}
+                                    showSaveButton={false}
+                                    showPreviewButton={false}
+                                    showPublishControls={false}
+                                />
+                            </ScrollView>
+                        </Modal>
+                    </Portal>
+                    <FAB
+                        icon="tune"
+                        style={styles.fab}
+                        onPress={() => setMenuVisible(true)}
+                        accessibilityLabel="Открыть панель"
+                    />
+                </>
             )}
             <Snackbar visible={snackbarVisible} onDismiss={onDismissSnackbar}>
                 {snackbarMessage}
@@ -291,10 +307,38 @@ const styles = StyleSheet.create({
         borderRadius: 50,
         minWidth: 150,
     },
-    filterButton: {
-        borderColor: '#007AFF',
-        borderRadius: 50,
-        minWidth: 100,
+    fab: {
+        position: 'absolute',
+        right: DESIGN_TOKENS.spacing.lg,
+        bottom: 96,
+    },
+    bottomSheetContainer: {
+        alignSelf: 'stretch',
+        marginTop: 'auto',
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 18,
+        borderTopRightRadius: 18,
+        paddingTop: 8,
+        maxHeight: '85%',
+    },
+    bottomSheetHeader: {
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+        paddingTop: 4,
+        paddingBottom: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottomWidth: 1,
+        borderColor: '#e5e7eb',
+    },
+    bottomSheetTitle: {
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        fontWeight: '700',
+        color: '#111827',
+    },
+    bottomSheetBody: {
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingBottom: 24,
     },
     errorSummaryContainer: {
         paddingHorizontal: DESIGN_TOKENS.spacing.lg,

@@ -16,8 +16,13 @@ import {
 
 describe('travel wizard validation', () => {
   describe('validateStep', () => {
-    it('step 1: requires name and description, but not countries', () => {
-      const base = { name: 'Test trip', description: 'X'.repeat(60), countries: [] };
+    it('step 1: requires name, description, countries and categories', () => {
+      const base = {
+        name: 'Test trip',
+        description: 'X'.repeat(60),
+        countries: ['BY'],
+        categories: ['city'],
+      };
 
       const ok = validateStep(1, base as any);
       expect(ok.isValid).toBe(true);
@@ -29,6 +34,14 @@ describe('travel wizard validation', () => {
       const noDescription = validateStep(1, { ...base, description: '' } as any);
       expect(noDescription.isValid).toBe(false);
       expect(noDescription.errors.some(e => e.field === 'description')).toBe(true);
+
+      const noCountries = validateStep(1, { ...base, countries: [] } as any);
+      expect(noCountries.isValid).toBe(false);
+      expect(noCountries.errors.some(e => e.field === 'countries')).toBe(true);
+
+      const noCategories = validateStep(1, { ...base, categories: [] } as any);
+      expect(noCategories.isValid).toBe(false);
+      expect(noCategories.errors.some(e => e.field === 'categories')).toBe(true);
     });
 
     it('step 2: requires at least one marker in coordsMeTravel/markers', () => {

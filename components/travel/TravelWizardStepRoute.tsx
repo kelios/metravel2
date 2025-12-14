@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, StyleSheet, Text, ScrollView, Dimensions } from 'react-native';
+import { View, StyleSheet, Text, ScrollView, Dimensions, TextInput } from 'react-native';
 import { Button } from 'react-native-paper';
 
 import WebMapComponent from '@/components/travel/WebMapComponent';
@@ -39,6 +39,8 @@ const windowWidth = Dimensions.get('window').width;
 const isMobileDefault = windowWidth <= 768;
 const MultiSelectFieldAny: any = MultiSelectField;
 
+const MAP_COACHMARK_STORAGE_KEY = 'travelWizardRouteMapCoachmarkDismissed';
+
 const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     currentStep,
     totalSteps,
@@ -65,8 +67,125 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
 
     const hasAtLeastOnePoint = useMemo(() => markers && markers.length > 0, [markers]);
 
+    const [isCoachmarkVisible, setIsCoachmarkVisible] = useState(false);
+    const [isManualPointVisible, setIsManualPointVisible] = useState(false);
+    const [manualCoords, setManualCoords] = useState('');
+    const [manualLat, setManualLat] = useState('');
+    const [manualLng, setManualLng] = useState('');
+    const [countriesSyncedVisible, setCountriesSyncedVisible] = useState(false);
+
+    const parseCoordsPair = (raw: string): { lat: number; lng: number } | null => {
+        // Accept common copy/paste formats:
+        // - "49.609645, 18.845693"
+        // - "49.609645 18.845693"
+        // - "49.609645;18.845693"
+        const normalized = String(raw || '').trim();
+        if (!normalized) return null;
+
+        const parts = normalized
+            .split(/[\s,;]+/)
+            .map(p => p.trim())
+            .filter(Boolean);
+
+        if (parts.length < 2) return null;
+
+        const lat = Number(parts[0]);
+        const lng = Number(parts[1]);
+
+        const latOk = Number.isFinite(lat) && lat >= -90 && lat <= 90;
+        const lngOk = Number.isFinite(lng) && lng >= -180 && lng <= 180;
+        if (!latOk || !lngOk) return null;
+
+        return { lat, lng };
+    };
+
+    useEffect(() => {
+        if (hasAtLeastOnePoint) {
+            setIsCoachmarkVisible(false);
+            return;
+        }
+
+        if (typeof window === 'undefined') {
+            setIsCoachmarkVisible(true);
+            return;
+        }
+
+        try {
+            const dismissed = window.localStorage.getItem(MAP_COACHMARK_STORAGE_KEY) === '1';
+            setIsCoachmarkVisible(!dismissed);
+        } catch {
+            setIsCoachmarkVisible(true);
+        }
+    }, [hasAtLeastOnePoint]);
+
     const handleMarkersChange = (updated: MarkerData[]) => {
         setMarkers(updated);
+    };
+
+    const dismissCoachmark = () => {
+        setIsCoachmarkVisible(false);
+        if (typeof window === 'undefined') return;
+        try {
+            window.localStorage.setItem(MAP_COACHMARK_STORAGE_KEY, '1');
+        } catch {
+            // ignore
+        }
+    };
+
+    const reverseGeocode = async (lat: number, lng: number) => {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
+        );
+        return await response.json();
+    };
+
+    const handleAddManualPoint = async () => {
+        const parsedFromPair = parseCoordsPair(manualCoords);
+        const lat = parsedFromPair?.lat ?? Number(manualLat);
+        const lng = parsedFromPair?.lng ?? Number(manualLng);
+
+        const latOk = Number.isFinite(lat) && lat >= -90 && lat <= 90;
+        const lngOk = Number.isFinite(lng) && lng >= -180 && lng <= 180;
+        if (!latOk || !lngOk) return;
+
+        let address = '';
+        let derivedCountryId: string | null = null;
+
+        try {
+            const data = await reverseGeocode(lat, lng);
+            address = data?.display_name || '';
+            const countryName = data?.address?.country || '';
+            if (countryName) {
+                const foundCountry = (countries || []).find((c: any) => c?.title_ru === countryName);
+                if (foundCountry?.country_id) {
+                    derivedCountryId = foundCountry.country_id;
+                }
+            }
+        } catch {
+            // ignore
+        }
+
+        const newMarker: MarkerData = {
+            id: null,
+            lat,
+            lng,
+            address,
+            categories: [],
+            image: '',
+            country: derivedCountryId ? Number(derivedCountryId) : null,
+        };
+
+        if (derivedCountryId && !selectedCountryIds.includes(derivedCountryId)) {
+            onCountrySelect(derivedCountryId);
+            setCountriesSyncedVisible(true);
+            setTimeout(() => setCountriesSyncedVisible(false), 3000);
+        }
+
+        handleMarkersChange([...(markers || []), newMarker]);
+        setManualCoords('');
+        setManualLat('');
+        setManualLng('');
+        setIsManualPointVisible(false);
     };
 
     const handleCountriesFilterChange = (values: string[]) => {
@@ -115,6 +234,11 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                     <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
                 </View>
                 <Text style={styles.progressLabel}>Готово на {progressPercent}%</Text>
+                {countriesSyncedVisible && (
+                    <View style={styles.syncBadge}>
+                        <Text style={styles.syncBadgeText}>Страны синхронизированы</Text>
+                    </View>
+                )}
                 {markers.length > 0 && (
                     <View style={styles.headerActions}>
                         <Button mode="outlined" onPress={handleScrollToMarkers} compact>
@@ -141,6 +265,81 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                     </View>
                     <Text style={styles.mapCount}>Точек: {markers?.length ?? 0}</Text>
                 </View>
+
+                {isCoachmarkVisible && !hasAtLeastOnePoint && (
+                    <View style={styles.coachmark}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.coachmarkTitle}>Как добавить первую точку</Text>
+                            <Text style={styles.coachmarkBody}>Кликните по карте — точка добавится автоматически.</Text>
+                        </View>
+                        <Button mode="text" onPress={dismissCoachmark} compact>
+                            Понятно
+                        </Button>
+                    </View>
+                )}
+
+                <View style={styles.manualPointRow}>
+                    <Button
+                        mode={isManualPointVisible ? 'contained' : 'outlined'}
+                        onPress={() => setIsManualPointVisible(v => !v)}
+                        compact
+                    >
+                        Добавить точку вручную
+                    </Button>
+                </View>
+
+                {isManualPointVisible && (
+                    <View style={styles.manualPointCard}>
+                        <View style={styles.manualCoordsWrapper}>
+                            <Text style={styles.manualPointLabel}>Координаты (lat, lng)</Text>
+                            <TextInput
+                                value={manualCoords}
+                                onChangeText={(value) => {
+                                    setManualCoords(value);
+                                    const parsed = parseCoordsPair(value);
+                                    if (parsed) {
+                                        setManualLat(String(parsed.lat));
+                                        setManualLng(String(parsed.lng));
+                                    }
+                                }}
+                                placeholder="49.609645, 18.845693"
+                                style={styles.manualPointInput}
+                                inputMode="text"
+                            />
+                        </View>
+
+                        <View style={styles.manualPointInputsRow}>
+                            <View style={styles.manualPointInputWrapper}>
+                                <Text style={styles.manualPointLabel}>Широта</Text>
+                                <TextInput
+                                    value={manualLat}
+                                    onChangeText={setManualLat}
+                                    placeholder="например 53.90"
+                                    style={styles.manualPointInput}
+                                    inputMode="decimal"
+                                />
+                            </View>
+                            <View style={styles.manualPointInputWrapper}>
+                                <Text style={styles.manualPointLabel}>Долгота</Text>
+                                <TextInput
+                                    value={manualLng}
+                                    onChangeText={setManualLng}
+                                    placeholder="например 27.56"
+                                    style={styles.manualPointInput}
+                                    inputMode="decimal"
+                                />
+                            </View>
+                        </View>
+                        <View style={styles.manualPointActionsRow}>
+                            <Button mode="contained" onPress={handleAddManualPoint} compact>
+                                Добавить
+                            </Button>
+                            <Button mode="text" onPress={() => setIsManualPointVisible(false)} compact>
+                                Отмена
+                            </Button>
+                        </View>
+                    </View>
+                )}
 
                 <View style={styles.filtersRow}>
                     <View style={styles.filterItem}>
@@ -239,6 +438,21 @@ const styles = StyleSheet.create({
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: '#6b7280',
     },
+    syncBadge: {
+        marginTop: 8,
+        alignSelf: 'flex-start',
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        paddingVertical: DESIGN_TOKENS.spacing.xxs,
+        borderRadius: 999,
+        backgroundColor: '#ecfdf5',
+        borderWidth: 1,
+        borderColor: '#a7f3d0',
+    },
+    syncBadgeText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: '#065f46',
+        fontWeight: '600',
+    },
     headerActions: {
         marginTop: 8,
         flexDirection: 'row',
@@ -277,6 +491,74 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+    },
+    coachmark: {
+        marginHorizontal: 8,
+        marginBottom: 8,
+        padding: DESIGN_TOKENS.spacing.md,
+        borderRadius: 12,
+        backgroundColor: '#eff6ff',
+        borderWidth: 1,
+        borderColor: '#bfdbfe',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.sm,
+    },
+    coachmarkTitle: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: '700',
+        color: '#1e3a8a',
+        marginBottom: 2,
+    },
+    coachmarkBody: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: '#1e40af',
+    },
+    manualPointRow: {
+        paddingHorizontal: 8,
+        paddingBottom: 8,
+        flexDirection: 'row',
+        justifyContent: 'flex-start',
+    },
+    manualPointCard: {
+        marginHorizontal: 8,
+        marginBottom: 8,
+        padding: DESIGN_TOKENS.spacing.md,
+        borderRadius: 12,
+        backgroundColor: '#ffffff',
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+    },
+    manualCoordsWrapper: {
+        marginBottom: DESIGN_TOKENS.spacing.sm,
+    },
+    manualPointInputsRow: {
+        flexDirection: 'row',
+        gap: DESIGN_TOKENS.spacing.sm,
+    },
+    manualPointInputWrapper: {
+        flex: 1,
+    },
+    manualPointLabel: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: '#6b7280',
+        marginBottom: 6,
+        fontWeight: '600',
+    },
+    manualPointInput: {
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+        borderRadius: 10,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingVertical: 10,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        backgroundColor: '#fff',
+    },
+    manualPointActionsRow: {
+        marginTop: DESIGN_TOKENS.spacing.sm,
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: DESIGN_TOKENS.spacing.sm,
     },
     mapTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,

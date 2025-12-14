@@ -11,6 +11,7 @@
     "web": "npx expo start --web",
     "web:prod": "NODE_ENV=production npx expo start --web",
     "test": "jest --watchAll",
+    "test:ci": "jest --ci --runInBand --reporters=default --testLocationInResults --json --outputFile=jest-results.json | tee jest-full.log",
     "test:coverage": "jest --coverage",
     "format": "npx prettier --write .",
     "build:web": "npx expo export --web",

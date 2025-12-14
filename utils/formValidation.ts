@@ -63,8 +63,8 @@ export function validateName(name: string | undefined | null): ValidationError |
  * Централизованная валидация шагов мастера
  *
  * Требования по ТЗ:
- *  - Шаг 1: блокируем переход без name/description/countries
- *  - Шаг 2: блокируем переход без хотя бы одной точки маршрута
+ *  - Шаг 1: блокируем переход без name/description
+ *  - Шаг 2: блокируем переход без countries/categories и хотя бы одной точки маршрута
  *  - Шаги 3–4: рекомендательные поля, переходы не блокируются
  *  - Шаг 5: валидация на уровне модерации (см. getModerationErrors)
  */
@@ -82,12 +82,6 @@ export function validateStep(
     const descriptionError = validateDescription(formData.description ?? undefined);
     if (descriptionError) errors.push(descriptionError);
 
-    const countriesError = validateCountries((formData.countries ?? []) as string[]);
-    if (countriesError) errors.push(countriesError);
-
-    const categoriesError = validateCategories((formData.categories ?? []) as string[]);
-    if (categoriesError) errors.push(categoriesError);
-
     return {
       isValid: errors.length === 0,
       errors,
@@ -95,6 +89,12 @@ export function validateStep(
   }
 
   if (step === 2) {
+    const countriesError = validateCountries((formData.countries ?? []) as string[]);
+    if (countriesError) errors.push(countriesError);
+
+    const categoriesError = validateCategories((formData.categories ?? []) as string[]);
+    if (categoriesError) errors.push(categoriesError);
+
     const markersToValidate = (
       Array.isArray(markers) && markers.length > 0
         ? markers
