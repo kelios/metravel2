@@ -462,15 +462,19 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
       const isPortrait = ratio < 0.95;
       const isSquareish = ratio >= 0.95 && ratio <= 1.1;
       // Фон всегда та же фотография, растянутая и заблюренная, если blurBackground включен
+
       const shouldBlur = blurBackground;
       const slideHeight = containerH ?? computeHeight(containerW);
       const status = loadStatuses[index] ?? "loading";
+      const isFirstSlide = index === 0;
+      const mainPriority = isFirstSlide ? "high" : "low";
+      const shouldRenderBlurBg =
+        shouldBlur &&
+        !(Platform.OS === "web" && isFirstSlide && status !== "loaded");
 
       return (
-        <View
-          style={[styles.slide, { width: containerW, height: slideHeight }]}
-        >
-          {shouldBlur ? (
+        <View style={[styles.slide, { width: containerW, height: slideHeight }]}>
+          {shouldRenderBlurBg ? (
             <>
               <ExpoImage
                 testID={`slider-blur-bg-${index}`}
@@ -478,7 +482,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
                 style={styles.blurBg}
                 contentFit="cover"
                 cachePolicy="disk"
-                priority={shouldLoadEager(index) ? "high" : "low"}
+                priority="low"
                 blurRadius={12}
               />
               <View style={styles.blurOverlay} />
@@ -510,7 +514,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
                   // Сохраняем оригинальные пропорции без обрезки, пустые области заполняет размытый фон
                   contentFit="contain"
                   cachePolicy="disk"
-                  priority={shouldLoadEager(index) ? "high" : "low"}
+                  priority={mainPriority as any}
                   transition={reduceMotion ? 0 : 250}
                   contentPosition="center"
                   accessibilityIgnoresInvertColors

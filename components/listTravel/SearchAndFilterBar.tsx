@@ -316,7 +316,7 @@ function SearchAndFilterBar({
                             </View>
                         )}
                     </View>
-                    {onClearAll && (
+                    {onClearAll && !isMobile && (
                         <Pressable
                             onPress={onClearAll}
                             style={[styles.clearAllBtn, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор

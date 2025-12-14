@@ -1,13 +1,17 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, StyleSheet, Text, ScrollView, Dimensions, TextInput, Platform, findNodeHandle, UIManager } from 'react-native';
+import { KeyboardAvoidingView, View, StyleSheet, Text, ScrollView, Dimensions, TextInput, Platform, findNodeHandle, UIManager, LayoutChangeEvent, useWindowDimensions } from 'react-native';
 import { Button } from 'react-native-paper';
 
-import WebMapComponent from '@/components/travel/WebMapComponent';
+import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
-import { MarkerData } from '@/src/types/types';
+import { MarkerData, TravelFormData } from '@/src/types/types';
 import MultiSelectField from '@/components/MultiSelectField';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+
+const WebMapComponent = Platform.OS === 'web'
+    ? React.lazy(() => import('@/components/travel/WebMapComponent'))
+    : null;
 
 interface TravelWizardStepRouteProps {
     currentStep: number;
@@ -23,7 +27,7 @@ interface TravelWizardStepRouteProps {
     onBack: () => void;
     onNext: () => void;
     isFiltersLoading?: boolean;
-    onManualSave?: () => void;
+    onManualSave?: () => Promise<TravelFormData | void>;
     stepMeta?: {
         title?: string;
         subtitle?: string;
@@ -37,8 +41,6 @@ interface TravelWizardStepRouteProps {
     onAnchorHandled?: () => void;
 }
 
-const windowWidth = Dimensions.get('window').width;
-const isMobileDefault = windowWidth <= 768;
 const MultiSelectFieldAny: any = MultiSelectField;
 
 const MAP_COACHMARK_STORAGE_KEY = 'travelWizardRouteMapCoachmarkDismissed';
@@ -64,10 +66,23 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     focusAnchorId,
     onAnchorHandled,
 }) => {
-    const isMobile = isMobileDefault;
+    const { width } = useWindowDimensions();
+    const isMobile = width <= DESIGN_TOKENS.breakpoints.mobile;
+
+    const [footerHeight, setFooterHeight] = useState(0);
+
+    const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
+        const next = Math.ceil(event.nativeEvent.layout.height);
+        setFooterHeight(prev => (prev === next ? prev : next));
+    }, []);
+
+    const contentPaddingBottom = useMemo(() => {
+        return footerHeight > 0 ? footerHeight + 16 : 180;
+    }, [footerHeight]);
 
     const scrollRef = useRef<ScrollView | null>(null);
     const markersListAnchorRef = useRef<View | null>(null);
+    const countriesAnchorRef = useRef<View | null>(null);
 
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
@@ -83,7 +98,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
 
     useEffect(() => {
         if (!focusAnchorId) return;
-        if (focusAnchorId !== 'markers-list-root') return;
+        if (focusAnchorId !== 'markers-list-root' && focusAnchorId !== 'travelwizard-route-countries') return;
 
         if (Platform.OS === 'web') {
             onAnchorHandled?.();
@@ -91,7 +106,9 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         }
 
         const scrollNode = scrollRef.current;
-        const anchorNode = markersListAnchorRef.current;
+        const anchorNode = focusAnchorId === 'travelwizard-route-countries'
+            ? countriesAnchorRef.current
+            : markersListAnchorRef.current;
         if (!scrollNode || !anchorNode) {
             onAnchorHandled?.();
             return;
@@ -255,288 +272,254 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
 
     return (
         <SafeAreaView style={styles.safeContainer}>
-            <View style={styles.headerWrapper}>
-                <View style={styles.headerRow}>
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.headerTitle}>{stepMeta?.title ?? 'Маршрут путешествия'}</Text>
-                        <Text style={styles.headerSubtitle}>{stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}</Text>
-                    </View>
-                    {autosaveBadge && (
-                        <View style={styles.autosaveBadge}>
-                            <Text style={styles.autosaveBadgeText}>{autosaveBadge}</Text>
-                        </View>
-                    )}
-                </View>
-                <View style={styles.progressBarTrack}>
-                    <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
-                </View>
-                <Text style={styles.progressLabel}>Готово на {progressPercent}%</Text>
-                {countriesSyncedVisible && (
-                    <View style={styles.syncBadge}>
-                        <Text style={styles.syncBadgeText}>Страны синхронизированы</Text>
-                    </View>
-                )}
-                {markers.length > 0 && (
-                    <View style={styles.headerActions}>
-                        <Button mode="outlined" onPress={handleScrollToMarkers} compact>
-                            Показать точки
-                        </Button>
-                    </View>
-                )}
-            </View>
+            <KeyboardAvoidingView
+                style={styles.keyboardAvoid}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={0}
+            >
+                <TravelWizardHeader
+                    canGoBack={true}
+                    onBack={onBack}
+                    title={stepMeta?.title ?? 'Маршрут путешествия'}
+                    subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
+                    progressPercent={progressPercent}
+                    autosaveBadge={autosaveBadge}
+                    tipTitle={stepMeta?.tipTitle}
+                    tipBody={stepMeta?.tipBody}
+                />
 
-            {stepMeta?.tipBody && (
-                <View style={styles.tipCard}>
-                    <Text style={styles.tipTitle}>{stepMeta.tipTitle ?? 'Подсказка'}</Text>
-                    <Text style={styles.tipBody}>{stepMeta.tipBody}</Text>
-                </View>
-            )}
-
-            <ScrollView ref={scrollRef} style={styles.content} contentContainerStyle={styles.contentContainer}>
-                <View style={styles.mapHeader}>
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.mapTitle}>Ключевые точки маршрута</Text>
-                        <Text style={styles.mapHint}>
-                            Добавьте точки маршрута на карте. Для модерации потребуется минимум одна точка.
-                        </Text>
-                    </View>
-                    <Text style={styles.mapCount}>Точек: {markers?.length ?? 0}</Text>
-                </View>
-
-                {isCoachmarkVisible && !hasAtLeastOnePoint && (
-                    <View style={styles.coachmark}>
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.coachmarkTitle}>Как добавить первую точку</Text>
-                            <Text style={styles.coachmarkBody}>Кликните по карте — точка добавится автоматически.</Text>
-                        </View>
-                        <Button mode="text" onPress={dismissCoachmark} compact>
-                            Понятно
-                        </Button>
-                    </View>
-                )}
-
-                <View style={styles.manualPointRow}>
-                    <Button
-                        mode={isManualPointVisible ? 'contained' : 'outlined'}
-                        onPress={() => setIsManualPointVisible(v => !v)}
-                        compact
-                    >
-                        Добавить точку вручную
-                    </Button>
-                </View>
-
-                {isManualPointVisible && (
-                    <View style={styles.manualPointCard}>
-                        <View style={styles.manualCoordsWrapper}>
-                            <Text style={styles.manualPointLabel}>Координаты (lat, lng)</Text>
-                            <TextInput
-                                value={manualCoords}
-                                onChangeText={(value) => {
-                                    setManualCoords(value);
-                                    const parsed = parseCoordsPair(value);
-                                    if (parsed) {
-                                        setManualLat(String(parsed.lat));
-                                        setManualLng(String(parsed.lng));
-                                    }
-                                }}
-                                placeholder="49.609645, 18.845693"
-                                style={styles.manualPointInput}
-                                inputMode="text"
-                            />
-                        </View>
-
-                        <View style={styles.manualPointInputsRow}>
-                            <View style={styles.manualPointInputWrapper}>
-                                <Text style={styles.manualPointLabel}>Широта</Text>
-                                <TextInput
-                                    value={manualLat}
-                                    onChangeText={setManualLat}
-                                    placeholder="например 53.90"
-                                    style={styles.manualPointInput}
-                                    inputMode="decimal"
-                                />
+                <ScrollView
+                    ref={scrollRef}
+                    style={styles.content}
+                    contentContainerStyle={[styles.contentContainer, { paddingBottom: contentPaddingBottom }]}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View style={styles.contentInner}>
+                        <View style={styles.card}>
+                            <View style={[styles.mapHeader, isMobile && styles.mapHeaderMobile]}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.mapTitle}>Ключевые точки маршрута</Text>
+                                    <Text style={styles.mapHint}>
+                                        Добавьте точки маршрута на карте. Для модерации потребуется минимум одна точка.
+                                    </Text>
+                                </View>
+                                <Text style={styles.mapCount}>Точек: {markers?.length ?? 0}</Text>
                             </View>
-                            <View style={styles.manualPointInputWrapper}>
-                                <Text style={styles.manualPointLabel}>Долгота</Text>
-                                <TextInput
-                                    value={manualLng}
-                                    onChangeText={setManualLng}
-                                    placeholder="например 27.56"
-                                    style={styles.manualPointInput}
-                                    inputMode="decimal"
-                                />
+
+                            {isCoachmarkVisible && !hasAtLeastOnePoint && (
+                                <View style={styles.coachmark}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.coachmarkTitle}>Как добавить первую точку</Text>
+                                        <Text style={styles.coachmarkBody}>
+                                            Кликните по карте — точка добавится автоматически.
+                                        </Text>
+                                    </View>
+                                    <Button mode="text" onPress={dismissCoachmark} compact>
+                                        Понятно
+                                    </Button>
+                                </View>
+                            )}
+
+                            <View style={[styles.manualPointRow, isMobile && styles.manualPointRowMobile]}>
+                                <Button
+                                    mode={isManualPointVisible ? 'contained' : 'outlined'}
+                                    onPress={() => setIsManualPointVisible(v => !v)}
+                                    compact
+                                >
+                                    Добавить точку вручную
+                                </Button>
+                            </View>
+
+                            {isManualPointVisible && (
+                                <View style={styles.manualPointCard}>
+                                    <View style={styles.manualCoordsWrapper}>
+                                        <Text style={styles.manualPointLabel}>Координаты (lat, lng)</Text>
+                                        <TextInput
+                                            value={manualCoords}
+                                            onChangeText={(value) => {
+                                                setManualCoords(value);
+                                                const parsed = parseCoordsPair(value);
+                                                if (parsed) {
+                                                    setManualLat(String(parsed.lat));
+                                                    setManualLng(String(parsed.lng));
+                                                }
+                                            }}
+                                            placeholder="49.609645, 18.845693"
+                                            style={styles.manualPointInput}
+                                            inputMode="text"
+                                        />
+                                    </View>
+
+                                    <View style={styles.manualPointInputsRow}>
+                                        <View style={styles.manualPointInputWrapper}>
+                                            <Text style={styles.manualPointLabel}>Широта</Text>
+                                            <TextInput
+                                                value={manualLat}
+                                                onChangeText={setManualLat}
+                                                placeholder="например 53.90"
+                                                style={styles.manualPointInput}
+                                                inputMode="decimal"
+                                            />
+                                        </View>
+                                        <View style={styles.manualPointInputWrapper}>
+                                            <Text style={styles.manualPointLabel}>Долгота</Text>
+                                            <TextInput
+                                                value={manualLng}
+                                                onChangeText={setManualLng}
+                                                placeholder="например 27.56"
+                                                style={styles.manualPointInput}
+                                                inputMode="decimal"
+                                            />
+                                        </View>
+                                    </View>
+                                    <View style={styles.manualPointActionsRow}>
+                                        <Button mode="contained" onPress={handleAddManualPoint} compact>
+                                            Добавить
+                                        </Button>
+                                        <Button mode="text" onPress={() => setIsManualPointVisible(false)} compact>
+                                            Отмена
+                                        </Button>
+                                    </View>
+                                </View>
+                            )}
+
+                            <View style={[styles.filtersRow, isMobile && styles.filtersRowMobile]}>
+                                <View ref={countriesAnchorRef} nativeID="travelwizard-route-countries" />
+                                <View style={styles.filterItem}>
+                                    {isFiltersLoading ? (
+                                        <View style={styles.filtersSkeleton}>
+                                            <View style={styles.filtersSkeletonLabel} />
+                                            <View style={styles.filtersSkeletonInput} />
+                                        </View>
+                                    ) : (
+                                        <MultiSelectFieldAny
+                                            label="Страны маршрута"
+                                            items={countries}
+                                            value={selectedCountryIds}
+                                            onChange={handleCountriesFilterChange}
+                                            labelField="title_ru"
+                                            valueField="country_id"
+                                        />
+                                    )}
+                                </View>
                             </View>
                         </View>
-                        <View style={styles.manualPointActionsRow}>
-                            <Button mode="contained" onPress={handleAddManualPoint} compact>
-                                Добавить
-                            </Button>
-                            <Button mode="text" onPress={() => setIsManualPointVisible(false)} compact>
-                                Отмена
-                            </Button>
+
+                        <View style={styles.card}>
+                            <View ref={markersListAnchorRef} nativeID="markers-list-root" />
+                            <View style={[styles.mapContainer, isMobile && styles.mapContainerMobile]}>
+                                {Platform.OS === 'web' && WebMapComponent ? (
+                                    <Suspense
+                                        fallback={
+                                            <View style={styles.lazyFallback}>
+                                                <Text style={styles.lazyFallbackText}>Загрузка карты…</Text>
+                                            </View>
+                                        }
+                                    >
+                                        <WebMapComponent
+                                            markers={markers || []}
+                                            onMarkersChange={handleMarkersChange}
+                                            categoryTravelAddress={categoryTravelAddress}
+                                            countrylist={countries}
+                                            onCountrySelect={onCountrySelect}
+                                            onCountryDeselect={onCountryDeselect}
+                                            travelId={travelId ?? undefined}
+                                        />
+                                    </Suspense>
+                                ) : (
+                                    <View style={styles.nativeMapPlaceholder}>
+                                        <Text style={styles.nativeMapTitle}>Карта доступна в браузере</Text>
+                                        <Text style={styles.nativeMapBody}>
+                                            На мобильном приложении добавьте точки вручную (кнопка выше) и сохраните маршрут.
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
                         </View>
                     </View>
-                )}
+                </ScrollView>
 
-                <View style={styles.filtersRow}>
-                    <View style={styles.filterItem}>
-                        {isFiltersLoading ? (
-                            <View style={styles.filtersSkeleton}>
-                                <View style={styles.filtersSkeletonLabel} />
-                                <View style={styles.filtersSkeletonInput} />
-                            </View>
-                        ) : (
-                            <MultiSelectFieldAny
-                                label="Страны маршрута"
-                                items={countries}
-                                value={selectedCountryIds}
-                                onChange={handleCountriesFilterChange}
-                                labelField="title_ru"
-                                valueField="country_id"
-                            />
-                        )}
-                    </View>
-                </View>
-
-                <View style={styles.mapContainer}>
-                    <View ref={markersListAnchorRef} nativeID="markers-list-root" />
-                    <WebMapComponent
-                        markers={markers || []}
-                        onMarkersChange={handleMarkersChange}
-                        categoryTravelAddress={categoryTravelAddress}
-                        countrylist={countries}
-                        onCountrySelect={onCountrySelect}
-                        onCountryDeselect={onCountryDeselect}
-                        travelId={travelId ?? undefined}
-                    />
-                </View>
-            </ScrollView>
-
-            <TravelWizardFooter
-                canGoBack={true}
-                onBack={onBack}
-                onPrimary={handleNext}
-                primaryLabel="К медиа"
-                onSave={onManualSave}
-                saveLabel="Сохранить маршрут"
-            />
+                <TravelWizardFooter
+                    canGoBack={false}
+                    onPrimary={handleNext}
+                    primaryLabel="К медиа"
+                    onSave={onManualSave}
+                    saveLabel="Сохранить маршрут"
+                    onLayout={handleFooterLayout}
+                />
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    safeContainer: { flex: 1, backgroundColor: '#f9f9f9' },
-    headerWrapper: {
-        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-        paddingTop: 12,
-        paddingBottom: 8,
-        backgroundColor: '#f9f9f9',
-    },
-    headerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: DESIGN_TOKENS.spacing.sm,
-    },
-    headerTitle: {
-        fontSize: DESIGN_TOKENS.typography.sizes.lg,
-        fontWeight: '700',
-        color: '#111827',
-        marginBottom: 4,
-    },
-    headerSubtitle: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#6b7280',
-    },
-    autosaveBadge: {
-        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-        paddingVertical: DESIGN_TOKENS.spacing.xxs,
-        borderRadius: 999,
-        backgroundColor: '#eef2ff',
-    },
-    autosaveBadgeText: {
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#4338ca',
-        fontWeight: '600',
-    },
-    progressBarTrack: {
-        marginTop: 8,
-        width: '100%',
-        height: 6,
-        borderRadius: 999,
-        backgroundColor: '#e5e7eb',
-    },
-    progressBarFill: {
-        height: 6,
-        borderRadius: 999,
-        backgroundColor: '#2563eb',
-    },
-    progressLabel: {
-        marginTop: 6,
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#6b7280',
-    },
+    safeContainer: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
+    keyboardAvoid: { flex: 1 },
     syncBadge: {
         marginTop: 8,
         alignSelf: 'flex-start',
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
         paddingVertical: DESIGN_TOKENS.spacing.xxs,
         borderRadius: 999,
-        backgroundColor: '#ecfdf5',
+        backgroundColor: DESIGN_TOKENS.colors.successSoft,
         borderWidth: 1,
-        borderColor: '#a7f3d0',
+        borderColor: DESIGN_TOKENS.colors.successLight,
     },
     syncBadgeText: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#065f46',
-        fontWeight: '600',
+        color: DESIGN_TOKENS.colors.successDark,
+        fontWeight: '700',
     },
     headerActions: {
         marginTop: 8,
         flexDirection: 'row',
         justifyContent: 'flex-end',
     },
-    tipCard: {
-        marginHorizontal: DESIGN_TOKENS.spacing.lg,
-        marginTop: 8,
-        padding: DESIGN_TOKENS.spacing.md,
-        borderRadius: 12,
-        backgroundColor: '#ecfdf5',
-        borderWidth: 1,
-        borderColor: '#a7f3d0',
-    },
-    tipTitle: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        fontWeight: '600',
-        color: '#047857',
-        marginBottom: 4,
-    },
-    tipBody: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#065f46',
-    },
     content: {
         flex: 1,
         paddingHorizontal: 8,
     },
     contentContainer: {
-        paddingBottom: 80,
+        paddingBottom: 0,
+        paddingTop: DESIGN_TOKENS.spacing.sm,
+        alignItems: 'center',
+    },
+    contentInner: {
+        width: '100%',
+        maxWidth: 980,
+    },
+    card: {
+        marginTop: DESIGN_TOKENS.spacing.lg,
+        padding: DESIGN_TOKENS.spacing.lg,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
+        ...(Platform.OS === 'web'
+            ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
+            : (DESIGN_TOKENS.shadowsNative.light as any)),
+        overflow: 'hidden',
     },
     mapHeader: {
-        paddingHorizontal: 8,
-        paddingTop: 12,
-        paddingBottom: 8,
+        paddingTop: 2,
+        paddingBottom: 10,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
+    mapHeaderMobile: {
+        paddingTop: 10,
+        paddingBottom: 8,
+        alignItems: 'flex-start',
+        gap: DESIGN_TOKENS.spacing.sm,
+    },
     coachmark: {
-        marginHorizontal: 8,
         marginBottom: 8,
         padding: DESIGN_TOKENS.spacing.md,
-        borderRadius: 12,
-        backgroundColor: '#eff6ff',
+        borderRadius: DESIGN_TOKENS.radii.md,
+        backgroundColor: DESIGN_TOKENS.colors.infoSoft,
         borderWidth: 1,
-        borderColor: '#bfdbfe',
+        borderColor: DESIGN_TOKENS.colors.infoLight,
         flexDirection: 'row',
         alignItems: 'center',
         gap: DESIGN_TOKENS.spacing.sm,
@@ -544,27 +527,28 @@ const styles = StyleSheet.create({
     coachmarkTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '700',
-        color: '#1e3a8a',
+        color: DESIGN_TOKENS.colors.infoDark,
         marginBottom: 2,
     },
     coachmarkBody: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#1e40af',
+        color: DESIGN_TOKENS.colors.text,
     },
     manualPointRow: {
-        paddingHorizontal: 8,
         paddingBottom: 8,
         flexDirection: 'row',
         justifyContent: 'flex-start',
     },
+    manualPointRowMobile: {
+        paddingBottom: 10,
+    },
     manualPointCard: {
-        marginHorizontal: 8,
         marginBottom: 8,
         padding: DESIGN_TOKENS.spacing.md,
-        borderRadius: 12,
-        backgroundColor: '#ffffff',
+        borderRadius: DESIGN_TOKENS.radii.md,
+        backgroundColor: DESIGN_TOKENS.colors.surfaceElevated,
         borderWidth: 1,
-        borderColor: '#e5e7eb',
+        borderColor: DESIGN_TOKENS.colors.border,
     },
     manualCoordsWrapper: {
         marginBottom: DESIGN_TOKENS.spacing.sm,
@@ -578,18 +562,18 @@ const styles = StyleSheet.create({
     },
     manualPointLabel: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#6b7280',
+        color: DESIGN_TOKENS.colors.textMuted,
         marginBottom: 6,
         fontWeight: '600',
     },
     manualPointInput: {
         borderWidth: 1,
-        borderColor: '#d1d5db',
+        borderColor: DESIGN_TOKENS.colors.border,
         borderRadius: 10,
         paddingHorizontal: DESIGN_TOKENS.spacing.md,
         paddingVertical: 10,
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        backgroundColor: '#fff',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
     },
     manualPointActionsRow: {
         marginTop: DESIGN_TOKENS.spacing.sm,
@@ -600,26 +584,66 @@ const styles = StyleSheet.create({
     mapTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '600',
-        color: '#111827',
+        color: DESIGN_TOKENS.colors.text,
         marginBottom: DESIGN_TOKENS.spacing.xxs,
     },
     mapHint: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#6b7280',
+        color: DESIGN_TOKENS.colors.textMuted,
     },
     mapCount: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '600',
-        color: '#2563eb',
+        color: DESIGN_TOKENS.colors.primary,
     },
     mapContainer: {
         marginTop: 4,
-        paddingHorizontal: 8,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
         paddingBottom: DESIGN_TOKENS.spacing.lg,
     },
+    mapContainerMobile: {
+        marginTop: 6,
+        paddingBottom: DESIGN_TOKENS.spacing.md,
+    },
+    lazyFallback: {
+        padding: DESIGN_TOKENS.spacing.lg,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 240,
+    },
+    lazyFallbackText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: DESIGN_TOKENS.colors.textMuted,
+        fontWeight: '600',
+    },
+    nativeMapPlaceholder: {
+        padding: DESIGN_TOKENS.spacing.lg,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
+    },
+    nativeMapTitle: {
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        fontWeight: '700',
+        color: DESIGN_TOKENS.colors.text,
+        marginBottom: 6,
+    },
+    nativeMapBody: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: DESIGN_TOKENS.colors.textMuted,
+        lineHeight: 18,
+    },
     filtersRow: {
-        paddingHorizontal: 8,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
         paddingBottom: 8,
+    },
+    filtersRowMobile: {
+        paddingBottom: 10,
     },
     filterItem: {
         flex: 1,
@@ -632,14 +656,14 @@ const styles = StyleSheet.create({
         width: 120,
         height: 12,
         borderRadius: 4,
-        backgroundColor: '#e5e7eb',
+        backgroundColor: DESIGN_TOKENS.colors.borderLight,
         marginBottom: 8,
     },
     filtersSkeletonInput: {
         width: '100%',
         height: 40,
         borderRadius: 8,
-        backgroundColor: '#e5e7eb',
+        backgroundColor: DESIGN_TOKENS.colors.borderLight,
     },
 });
 

@@ -89,7 +89,7 @@ describe('ProfileScreen', () => {
 
     expect(getByText('Войдите в аккаунт')).toBeTruthy();
     expect(
-      getByText('Для доступа к профилю необходимо войти в систему')
+      getByText('Войдите, чтобы открыть профиль и управлять своими данными.')
     ).toBeTruthy();
   });
 

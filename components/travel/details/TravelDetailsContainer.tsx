@@ -25,6 +25,7 @@ import {
   Pressable,
   DeviceEventEmitter,
   InteractionManager,
+  LayoutChangeEvent,
 } from "react-native";
 
 import { useRouter } from "expo-router";
@@ -331,12 +332,22 @@ const useLCPPreload = (travel?: Travel) => {
     
     if (!imageUrl) return;
 
-    const href = buildVersioned(imageUrl, updatedAt, id);
-    if (!document.querySelector(`link[rel="preload"][as="image"][href="${href}"]`)) {
+    const versionedHref = buildVersioned(imageUrl, updatedAt, id);
+    const targetWidth = typeof window !== "undefined" ? Math.min(window.innerWidth || 1200, 1440) : 1200;
+    const optimizedHref =
+      optimizeImageUrl(versionedHref, {
+        width: targetWidth,
+        format: "webp",
+        quality: 85,
+        fit: "contain",
+      }) || versionedHref;
+
+    // Preload the exact URL that will be used for LCP (optimized), otherwise the preload can be wasted.
+    if (!document.querySelector(`link[rel="preload"][as="image"][href="${optimizedHref}"]`)) {
       const link = document.createElement("link");
       link.rel = "preload";
       link.as = "image";
-      link.href = href;
+      link.href = optimizedHref;
       link.setAttribute("fetchpriority", "high");
       link.setAttribute("referrerpolicy", "no-referrer");
       document.head.appendChild(link);
@@ -393,10 +404,10 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
 
   if (Platform.OS !== "web") {
     return (
-      <View style={styles.sliderContainer}>
+      <View style={{ width: "100%", height: "100%" }}>
         <ExpoImage
           source={{ uri: optimizedSrc }}
-          style={{ width: "100%", aspectRatio: ratio, borderRadius: 12 }}
+          style={{ width: "100%", height: "100%", borderRadius: 12 }}
           contentFit="cover"
           cachePolicy="memory-disk"
           priority="high"
@@ -407,7 +418,7 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
   }
 
   return (
-    <div style={{ width: "100%", contain: "layout style paint" as any }}>
+    <div style={{ width: "100%", height: "100%", contain: "layout style paint" as any }}>
       <img
         src={optimizedSrc}
         alt={alt || ""}
@@ -415,11 +426,11 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
         height={img.height || Math.round(1200 / ratio)}
         style={{
           width: "100%",
-          height: "auto",
-          aspectRatio: String(ratio),
+          height: "100%",
           borderRadius: 12,
           display: "block",
           backgroundColor: "#e9e7df",
+          objectFit: "cover",
         }}
         loading="eager"
         decoding="async"
@@ -855,6 +866,18 @@ export default function TravelDetails() {
   const readyImage = firstImg?.url
     ? buildVersioned(firstImg.url, firstImg.updated_at ?? null, firstImg.id)
     : `${SITE}/og-preview.jpg`;
+  const lcpPreloadImage = useMemo(() => {
+    if (!firstImg?.url) return readyImage;
+    const targetWidth = Math.min(width || 1200, 1440);
+    return (
+      optimizeImageUrl(readyImage, {
+        width: targetWidth,
+        format: "webp",
+        quality: 85,
+        fit: "contain",
+      }) || readyImage
+    );
+  }, [firstImg?.url, readyImage, width]);
   const firstImgOrigin = getOrigin(firstImg?.url);
   const headKey = `travel-${slug}`;
   const firstRatio =
@@ -954,7 +977,7 @@ export default function TravelDetails() {
             <>
               {firstImg?.url && (
                 <>
-                  <link rel="preload" as="image" href={readyImage} fetchPriority="high" />
+                  <link rel="preload" as="image" href={lcpPreloadImage} fetchPriority="high" />
                   {firstImgOrigin && <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />}
                 </>
               )}
@@ -1221,9 +1244,21 @@ const TravelHeroSection: React.FC<{
   renderSlider?: boolean;
   onFirstImageLoad: () => void;
 }> = ({ travel, anchors, isMobile, renderSlider = true, onFirstImageLoad }) => {
+  const { width: winW, height: winH } = useWindowDimensions();
+  const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(null);
   const firstImg = (travel?.gallery?.[0] ?? null) as unknown as ImgLike | null;
   const aspectRatio =
     (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9;
+  const resolvedWidth = heroContainerWidth ?? winW;
+  const heroHeight = useMemo(() => {
+    if (!resolvedWidth) return undefined;
+    if (isMobile) {
+      const mobileHeight = winH * 0.7;
+      return Math.max(200, Math.min(mobileHeight, winH * 0.8));
+    }
+    const h = resolvedWidth / (aspectRatio || 16 / 9);
+    return Math.max(320, Math.min(h, 640));
+  }, [aspectRatio, isMobile, winH, resolvedWidth]);
   const galleryImages = useMemo(
     () =>
       travel.gallery?.map((item, index) =>
@@ -1251,19 +1286,30 @@ const TravelHeroSection: React.FC<{
 
       {!!firstImg && (
         <View style={[styles.sectionContainer, styles.contentStable]} collapsable={false}>
-          <View style={styles.sliderContainer} collapsable={false}>
+          <View
+            style={styles.sliderContainer}
+            collapsable={false}
+            onLayout={(e: LayoutChangeEvent) => {
+              const w = e.nativeEvent.layout.width;
+              if (w && Math.abs((heroContainerWidth ?? 0) - w) > 2) {
+                setHeroContainerWidth(w);
+              }
+            }}
+          >
             {shouldShowOptimizedHero && !renderSlider && (
-              <OptimizedLCPHero
-                img={{
-                  url: typeof firstImg === "string" ? firstImg : firstImg.url,
-                  width: firstImg.width,
-                  height: firstImg.height,
-                  updated_at: firstImg.updated_at,
-                  id: firstImg.id,
-                }}
-                alt={heroAlt}
-                onLoad={onFirstImageLoad}
-              />
+              <View style={heroHeight ? { height: heroHeight } : undefined}>
+                <OptimizedLCPHero
+                  img={{
+                    url: typeof firstImg === "string" ? firstImg : firstImg.url,
+                    width: firstImg.width,
+                    height: firstImg.height,
+                    updated_at: firstImg.updated_at,
+                    id: firstImg.id,
+                  }}
+                  alt={heroAlt}
+                  onLoad={onFirstImageLoad}
+                />
+              </View>
             )}
 
             {(Platform.OS !== "web" || renderSlider) && (

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { View, SafeAreaView, StyleSheet, ScrollView, Text, NativeSyntheticEvent, LayoutChangeEvent } from 'react-native';
+import { View, SafeAreaView, StyleSheet, ScrollView, Text, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform, Dimensions } from 'react-native';
 import { TravelFormData } from '@/src/types/types';
 import TextInputComponent from '@/components/TextInputComponent';
 import ArticleEditor from '@/components/ArticleEditor';
@@ -11,6 +11,8 @@ interface ContentUpsertSectionProps {
     setFormData: React.Dispatch<React.SetStateAction<TravelFormData>>;
     firstErrorField?: string | null;
     autosaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+    focusAnchorId?: string | null;
+    onAnchorHandled?: () => void;
     visibleFields?: Array<'name' | 'description' | 'plus' | 'minus' | 'recommendation'>;
     showProgress?: boolean;
 }
@@ -20,6 +22,8 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                                        setFormData,
                                                                        firstErrorField,
                                                                        autosaveStatus,
+                                                                       focusAnchorId,
+                                                                       onAnchorHandled,
                                                                        visibleFields,
                                                                        showProgress = true,
                                                                    }) => {
@@ -28,6 +32,13 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
     const [fieldPositions, setFieldPositions] = useState<Record<string, number>>({});
     const scrollRef = useRef<ScrollView>(null);
+    const [isDescriptionFullscreen, setIsDescriptionFullscreen] = useState(false);
+
+    const isMobile = useMemo(() => {
+        if (Platform.OS === 'web') return false;
+        const { width } = Dimensions.get('window');
+        return width <= 768;
+    }, []);
 
     useEffect(() => {
         const result = validateTravelForm({
@@ -60,6 +71,15 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             .replace(/\s+/g, ' ')
             .trim();
         return withoutTags.length;
+    }, [formData.description]);
+
+    const descriptionPlainText = useMemo(() => {
+        const raw = formData.description ?? '';
+        return String(raw)
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/&nbsp;/gi, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
     }, [formData.description]);
 
     const descriptionStatusText = useMemo(() => {
@@ -135,14 +155,71 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                             <Text style={styles.editorHint}>{hint}</Text>
                         )}
                     </View>
-                    <ArticleEditor
-                        key={`${title}-${idTravelStr ?? 'new'}`}
-                        label={title}
-                        content={content ?? ''}
-                        onChange={onChange}
-                        idTravel={idTravelStr}
-                        variant={isDescription ? 'default' : 'compact'}
-                    />
+                    {isDescription && isMobile ? (
+                        <>
+                            <TouchableOpacity
+                                style={styles.descriptionPreview}
+                                activeOpacity={0.9}
+                                onPress={() => setIsDescriptionFullscreen(true)}
+                            >
+                                <Text style={styles.descriptionPreviewText} numberOfLines={4}>
+                                    {descriptionPlainText.length > 0
+                                        ? descriptionPlainText
+                                        : (hint ?? 'Введите описание…')}
+                                </Text>
+                                <View style={styles.descriptionPreviewFooter}>
+                                    <Text style={styles.descriptionCounterText}>{descriptionPlainLength} символов</Text>
+                                    <View style={styles.descriptionEditChip}>
+                                        <Text style={styles.descriptionEditChipText}>Редактировать</Text>
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+
+                            <Modal
+                                visible={isDescriptionFullscreen}
+                                animationType="slide"
+                                presentationStyle="fullScreen"
+                                onRequestClose={() => setIsDescriptionFullscreen(false)}
+                            >
+                                <SafeAreaView style={styles.modalSafeArea}>
+                                    <View style={styles.modalHeader}>
+                                        <TouchableOpacity
+                                            onPress={() => setIsDescriptionFullscreen(false)}
+                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                        >
+                                            <Text style={styles.modalHeaderAction}>Закрыть</Text>
+                                        </TouchableOpacity>
+                                        <Text style={styles.modalHeaderTitle}>Описание</Text>
+                                        <TouchableOpacity
+                                            onPress={() => setIsDescriptionFullscreen(false)}
+                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                        >
+                                            <Text style={styles.modalHeaderAction}>Готово</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                    <View style={styles.modalBody}>
+                                        <ArticleEditor
+                                            key={`description-fullscreen-${idTravelStr ?? 'new'}`}
+                                            label={title}
+                                            content={content ?? ''}
+                                            onChange={onChange}
+                                            idTravel={idTravelStr}
+                                            variant="default"
+                                        />
+                                    </View>
+                                </SafeAreaView>
+                            </Modal>
+                        </>
+                    ) : (
+                        <ArticleEditor
+                            key={`${title}-${idTravelStr ?? 'new'}`}
+                            label={title}
+                            content={content ?? ''}
+                            onChange={onChange}
+                            idTravel={idTravelStr}
+                            variant={isDescription ? 'default' : 'compact'}
+                        />
+                    )}
                     {isDescription && (
                         <View style={styles.descriptionStatusRow}>
                             <Text style={styles.descriptionStatusText}>{descriptionStatusText}</Text>
@@ -172,7 +249,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                 </View>
             );
         },
-        [idTravelStr]
+        [descriptionPlainLength, descriptionPlainText, descriptionStatusText, idTravelStr, isDescriptionFullscreen, isMobile]
     );
 
     useEffect(() => {
@@ -181,6 +258,32 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         if (y == null || !scrollRef.current) return;
         scrollRef.current.scrollTo({ y: Math.max(y - 40, 0), animated: true });
     }, [firstErrorField, fieldPositions]);
+
+    useEffect(() => {
+        if (!focusAnchorId) return;
+
+        const key = (() => {
+            if (focusAnchorId === 'travelwizard-basic-name') return 'name';
+            if (focusAnchorId === 'travelwizard-basic-description') return 'description';
+            return null;
+        })();
+
+        if (!key) return;
+
+        if (Platform.OS === 'web') {
+            onAnchorHandled?.();
+            return;
+        }
+
+        const y = fieldPositions[key];
+        if (y == null || !scrollRef.current) {
+            onAnchorHandled?.();
+            return;
+        }
+
+        scrollRef.current.scrollTo({ y: Math.max(y - 40, 0), animated: true });
+        onAnchorHandled?.();
+    }, [fieldPositions, focusAnchorId, onAnchorHandled]);
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -206,6 +309,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                 {(visibleFields == null || visibleFields.includes('name')) && (
                     <View
                         style={styles.section}
+                        nativeID="travelwizard-basic-name"
                         onLayout={event => {
                             const y = event.nativeEvent.layout.y;
                             setFieldPositions(prev => ({ ...prev, name: y }));
@@ -223,14 +327,22 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                 )}
 
                 {(visibleFields == null || visibleFields.includes('description')) &&
-                    renderEditorSection(
-                        'Описание',
-                        formData.description,
-                        val => handleChange('description', val),
-                        getError('description'),
-                        true,
-                        'Опишите, для кого этот маршрут, что в нём главное и чего ожидать. Минимум 50 символов.'
-                    )}
+                    <View
+                        nativeID="travelwizard-basic-description"
+                        onLayout={event => {
+                            const y = event.nativeEvent.layout.y;
+                            setFieldPositions(prev => ({ ...prev, description: y }));
+                        }}
+                    >
+                        {renderEditorSection(
+                            'Описание',
+                            formData.description,
+                            val => handleChange('description', val),
+                            getError('description'),
+                            true,
+                            'Опишите, для кого этот маршрут, что в нём главное и чего ожидать. Минимум 50 символов.'
+                        )}
+                    </View>}
 
                 {(visibleFields == null || visibleFields.includes('plus')) &&
                     renderEditorSection('Плюсы', formData.plus, val => handleChange('plus', val), null, false, 'Что вам понравилось в этом путешествии')}
@@ -246,8 +358,65 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
 };
 
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: '#f9f9f9' },
+    safeArea: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
     container: { padding: DESIGN_TOKENS.spacing.xxs, paddingBottom: 40 },
+    modalSafeArea: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
+    modalHeader: {
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
+        borderBottomWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+    },
+    modalHeaderTitle: {
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        fontWeight: '700',
+        color: DESIGN_TOKENS.colors.text,
+    },
+    modalHeaderAction: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: '600',
+        color: DESIGN_TOKENS.colors.primary,
+    },
+    modalBody: {
+        flex: 1,
+        padding: DESIGN_TOKENS.spacing.xxs,
+    },
+    descriptionPreview: {
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderRadius: 12,
+        padding: DESIGN_TOKENS.spacing.md,
+        minHeight: 140,
+    },
+    descriptionPreviewText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: DESIGN_TOKENS.colors.text,
+        lineHeight: 18,
+        marginBottom: DESIGN_TOKENS.spacing.sm,
+    },
+    descriptionPreviewFooter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    descriptionEditChip: {
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        paddingVertical: DESIGN_TOKENS.spacing.xxs,
+        borderRadius: 999,
+        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.borderAccent,
+    },
+    descriptionEditChipText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        fontWeight: '600',
+        color: DESIGN_TOKENS.colors.primary,
+    },
     progressSection: {
         marginBottom: DESIGN_TOKENS.spacing.xs,
         padding: DESIGN_TOKENS.spacing.lg,
@@ -285,16 +454,14 @@ const styles = StyleSheet.create({
     },
     section: {
         marginBottom: DESIGN_TOKENS.spacing.xxs,
-        backgroundColor: '#fff',
-        borderRadius: 8,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderRadius: DESIGN_TOKENS.radii.md,
         padding: DESIGN_TOKENS.spacing.lg,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
         borderWidth: 1,
-        borderColor: '#eee',
+        borderColor: DESIGN_TOKENS.colors.border,
+        ...(Platform.OS === 'web'
+            ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
+            : (DESIGN_TOKENS.shadowsNative.light as any)),
     },
     descriptionStatusRow: {
         marginTop: 8,
@@ -322,25 +489,23 @@ const styles = StyleSheet.create({
     },
     autosaveSuccess: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#15803d',
+        color: DESIGN_TOKENS.colors.successDark,
     },
     autosaveError: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#b91c1c',
+        color: DESIGN_TOKENS.colors.dangerDark,
     },
     sectionEditor: {
         marginBottom: DESIGN_TOKENS.spacing.xxs,
         paddingBottom: DESIGN_TOKENS.spacing.xs,
-        backgroundColor: '#fff',
-        borderRadius: 8,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderRadius: DESIGN_TOKENS.radii.md,
         padding: DESIGN_TOKENS.spacing.lg,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
         borderWidth: 1,
-        borderColor: '#eee',
+        borderColor: DESIGN_TOKENS.colors.border,
+        ...(Platform.OS === 'web'
+            ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
+            : (DESIGN_TOKENS.shadowsNative.light as any)),
     },
     editorHeader: {
         marginBottom: 12,
@@ -352,7 +517,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     required: {
-        color: '#ef4444',
+        color: DESIGN_TOKENS.colors.danger,
     },
     editorHint: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
@@ -367,28 +532,7 @@ const styles = StyleSheet.create({
     },
     errorText: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#ef4444',
-    },
-    mapHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    mapLabel: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
-    },
-    mapCount: {
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.primary,
-        fontWeight: '600',
-    },
-    mapHint: {
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.textMuted,
-        marginBottom: 12,
+        color: DESIGN_TOKENS.colors.danger,
     },
 });
 

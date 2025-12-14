@@ -202,14 +202,14 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     overflow: 'hidden',
     height: '100%',
+    ...(Platform.OS === 'web' ? ({ paddingTop: TOKENS.spacing.lg } as const) : null),
   },
   rightColumnMobile: {
     width: '100%',
   },
   // ✅ SEARCH HEADER: Прикрепленный заголовок поиска
   searchHeader: {
-    position: Platform.OS === 'web' ? 'sticky' : 'relative',
-    top: 0,
+    position: 'relative',
     zIndex: 10,
     backgroundColor: TOKENS.colors.surface,
     ...(Platform.OS === 'web'
@@ -417,10 +417,7 @@ function ListTravel({
     // На всех платформах считаем устройство "мобильным", если ширина меньше MOBILE breakpoint
     const isMobileDevice = isMobile(width);
     // Планшет: от MOBILE до TABLET_LANDSCAPE, всё, что шире, считаем десктопом (3 колонки)
-    const isTablet = useMemo(
-      () => width >= BREAKPOINTS.MOBILE && width < BREAKPOINTS.TABLET_LANDSCAPE,
-      [width]
-    );
+    const isTablet = width >= BREAKPOINTS.MOBILE && width < BREAKPOINTS.DESKTOP;
     const isDesktop = !isMobileDevice && !isTablet;
     const isPortrait = height > width;
 
@@ -451,7 +448,7 @@ function ListTravel({
 
     // ✅ ОПТИМИЗАЦИЯ: Стабильные адаптивные отступы и ширина правой колонки
     // На мобильном layout используем полную ширину, на десктопе вычитаем ширину sidebar
-    const effectiveWidth = isMobileDevice ? width : width - 280; // 280px ~ ширина sidebar
+    const effectiveWidth = isMobileDevice ? width : width - 320; // 320px ~ ширина sidebar
 
     const contentPadding = useMemo(() => {
       // ✅ ОПТИМИЗАЦИЯ: Используем стабильные breakpoints для избежания лишних перерасчетов
@@ -1089,6 +1086,13 @@ function ListTravel({
         <RightColumn
           search={search}
           setSearch={setSearch}
+          onClearAll={() => {
+            setSearch('')
+            resetFilters()
+            if (isMobileDevice) {
+              setShowFilters(false)
+            }
+          }}
           isRecommendationsVisible={isRecommendationsVisible}
           handleRecommendationsVisibilityChange={handleRecommendationsVisibilityChange}
           activeFiltersCount={activeFiltersCount}
@@ -1105,7 +1109,7 @@ function ListTravel({
           refetch={refetch}
           onFiltersPress={isMobileDevice ? () => setShowFilters(true) : undefined}
           containerStyle={isMobileDevice ? [styles.rightColumn, styles.rightColumnMobile] : styles.rightColumn}
-          searchHeaderStyle={styles.searchHeader}
+          searchHeaderStyle={[styles.searchHeader, { paddingHorizontal: contentPadding }]}
           cardsContainerStyle={isMobileDevice ? [styles.cardsContainer, styles.cardsContainerMobile] : styles.cardsContainer}
           cardsGridStyle={cardsGridDynamicStyle}
           cardSpacing={gapSize}

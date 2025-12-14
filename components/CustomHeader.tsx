@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { View, StyleSheet, Platform, StatusBar, useWindowDimensions, Pressable, Text, Modal, ScrollView } from 'react-native';
+import { View, StyleSheet, Platform, StatusBar, useWindowDimensions, Pressable, Text, Modal, ScrollView, LayoutChangeEvent } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import RenderRightMenu from './RenderRightMenu';
@@ -33,6 +33,12 @@ export default React.memo(function CustomHeader() {
     const { favorites } = useFavorites();
     const { updateFilters } = useFilters();
 
+    const numericUserId = useMemo(() => {
+        if (userId == null) return undefined;
+        const n = Number(userId);
+        return Number.isFinite(n) ? n : undefined;
+    }, [userId]);
+
     // Определяем активную страницу
     const activePath = useMemo(() => {
         if (pathname === '/' || pathname === '/index') return '/';
@@ -63,6 +69,14 @@ export default React.memo(function CustomHeader() {
     return (
       <View 
         style={styles.container}
+        onLayout={(e: LayoutChangeEvent) => {
+          if (Platform.OS !== 'web') return;
+          if (typeof document === 'undefined') return;
+          const h = e?.nativeEvent?.layout?.height;
+          if (typeof h === 'number' && Number.isFinite(h) && h > 0) {
+            document.documentElement.style.setProperty('--app-header-height', `${Math.round(h)}px`);
+          }
+        }}
         {...Platform.select({
           web: {
             // @ts-ignore
@@ -215,7 +229,11 @@ export default React.memo(function CustomHeader() {
                                       </Pressable>
 
                                       <Pressable
-                                          onPress={() => handleUserAction('/metravel', () => updateFilters({ user_id: userId }))}
+                                          onPress={() =>
+                                            handleUserAction('/metravel', () =>
+                                              updateFilters({ user_id: numericUserId })
+                                            )
+                                          }
                                           style={styles.modalNavItem}
                                           accessibilityRole="button"
                                           accessibilityLabel="Мои путешествия"
@@ -293,17 +311,14 @@ export default React.memo(function CustomHeader() {
     );
 });
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<Record<string, any>>({
     container: {
         backgroundColor: palette.surface,
         // ✅ УЛУЧШЕНИЕ: Sticky header для лучшей навигации
-        ...Platform.select({
-            web: {
-                position: 'sticky',
-                top: 0,
-                zIndex: 1000,
-            },
-        }),
+        // (на web положение управляется родительским layout)
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000,
     },
     wrapper: {
         width: '100%',

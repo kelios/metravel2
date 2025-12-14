@@ -113,6 +113,11 @@ const styles = StyleSheet.create({
     borderRadius: TOKENS.radii.lg,
     backgroundColor: TOKENS.colors.surface,
     overflow: 'hidden',
+    ...(Platform.OS === 'web'
+      ? {
+          height: 360,
+        }
+      : {}),
     // Высота теперь определяется содержимым, чтобы совпадать с реальной карточкой
     borderWidth: Platform.OS === 'web' ? 1 : 0,
     borderColor: TOKENS.colors.border,
@@ -129,8 +134,10 @@ const styles = StyleSheet.create({
 
   // Упрощенный контент скелетона
   content: {
-    padding: TOKENS.card.padding.desktop,
-    gap: TOKENS.card.gap,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 10,
+    gap: 4,
     backgroundColor: TOKENS.colors.surface,
   },
 

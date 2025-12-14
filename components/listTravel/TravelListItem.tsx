@@ -95,8 +95,8 @@ const WebImageOptimized = memo(function WebImageOptimized({
                 height: "100%",
                 objectFit: "cover",
                 display: "block",
-                opacity: isLoaded ? 1 : 0,
-                transition: 'opacity 0.3s ease',
+                opacity: priority ? 1 : (isLoaded ? 1 : 0),
+                transition: priority ? undefined : 'opacity 0.3s ease',
             }}
             loading={priority ? "eager" : "lazy"}
             decoding="async"

@@ -2,14 +2,25 @@ import React, { forwardRef, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MultiSelect } from 'react-native-element-dropdown';
 
-const MultiSelectField = forwardRef(
-    (
-        { label, items, value = [], onChange, labelField, valueField, single = false, ...rest },
-        ref
-    ) => {
-        const multiSelectRef = useRef(null);
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
-        const handleChange = (selectedItems) => {
+type MultiSelectFieldProps = {
+    label?: string;
+    items: any[];
+    value?: any[] | any;
+    onChange: (value: any) => void;
+    labelField: string;
+    valueField: string;
+    single?: boolean;
+    compact?: boolean;
+    [key: string]: any;
+};
+
+const MultiSelectField = forwardRef<any, MultiSelectFieldProps>(
+    ({ label, items, value = [], onChange, labelField, valueField, single = false, compact = false, ...rest }, _ref) => {
+        const multiSelectRef = useRef<any>(null);
+
+        const handleChange = (selectedItems: any) => {
             if (single) {
                 const selected = selectedItems?.[0] || '';
                 // ✅ ИСПРАВЛЕНИЕ: Извлекаем значение, если это объект
@@ -32,7 +43,7 @@ const MultiSelectField = forwardRef(
         };
 
         return (
-            <View style={styles.container}>
+            <View style={[styles.container, compact && styles.containerCompact]}>
                 {label ? <Text style={styles.label}>{label}</Text> : null}
                 <MultiSelect
                     ref={multiSelectRef}
@@ -50,7 +61,16 @@ const MultiSelectField = forwardRef(
                     search
                     onChange={handleChange}
                     searchPlaceholder="Поиск..."
-                    style={[styles.dropdown, { height: 44, justifyContent: 'center' }]}
+                    style={[styles.dropdown, compact && styles.dropdownCompact]}
+                    placeholderStyle={styles.placeholder}
+                    inputSearchStyle={styles.searchInput}
+                    iconStyle={styles.icon}
+                    containerStyle={styles.menuContainer}
+                    itemContainerStyle={styles.menuItemContainer}
+                    itemTextStyle={styles.menuItemText}
+                    activeColor={DESIGN_TOKENS.colors.primarySoft}
+                    selectedStyle={styles.selectedChip}
+                    selectedTextStyle={styles.selectedChipText}
                     {...rest}
                 />
             </View>
@@ -59,14 +79,77 @@ const MultiSelectField = forwardRef(
 );
 
 const styles = StyleSheet.create({
-    container: { marginBottom: 12 },
-    label: { fontSize: 14, fontWeight: 'bold', marginBottom: 7 },
+    container: { marginBottom: DESIGN_TOKENS.spacing.md },
+    containerCompact: { marginBottom: DESIGN_TOKENS.spacing.sm },
+    label: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+        color: DESIGN_TOKENS.colors.text,
+        marginBottom: DESIGN_TOKENS.spacing.xs,
+    },
     dropdown: {
+        minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+        justifyContent: 'center',
         borderWidth: 1,
-        borderColor: '#d1d1d1',
-        borderRadius: 6,
-        padding: 8,
-        backgroundColor: 'white',
+        borderColor: DESIGN_TOKENS.colors.border,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+    },
+    dropdownCompact: {
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    },
+    placeholder: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: DESIGN_TOKENS.colors.textMuted,
+    },
+    selectedText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: DESIGN_TOKENS.colors.text,
+    },
+    searchInput: {
+        height: DESIGN_TOKENS.touchTarget.minHeight,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: DESIGN_TOKENS.colors.text,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    },
+    icon: {
+        width: 18,
+        height: 18,
+        tintColor: DESIGN_TOKENS.colors.textMuted,
+    },
+    menuContainer: {
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        ...(DESIGN_TOKENS.shadows.card as any),
+    },
+    menuItemContainer: {
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        marginHorizontal: DESIGN_TOKENS.spacing.xs,
+    },
+    menuItemText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: DESIGN_TOKENS.colors.text,
+    },
+    selectedChip: {
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.borderAccent,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        paddingVertical: DESIGN_TOKENS.spacing.xs,
+        marginRight: DESIGN_TOKENS.spacing.xs,
+        marginBottom: DESIGN_TOKENS.spacing.xs,
+    },
+    selectedChipText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+        color: DESIGN_TOKENS.colors.primaryDark,
     },
 });
 

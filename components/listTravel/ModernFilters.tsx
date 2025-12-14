@@ -13,8 +13,21 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { MODERN_DESIGN_TOKENS } from '@/styles/modernRedesign';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { designTokens } from '@/constants/designTokens';
 
 const { colors, spacing, radii, typography, shadows, animations } = MODERN_DESIGN_TOKENS;
+
+const BRAND_PRIMARY = DESIGN_TOKENS.colors.primary;
+const BRAND_PRIMARY_DARK = DESIGN_TOKENS.colors.primaryDark;
+const BRAND_PRIMARY_SOFT = DESIGN_TOKENS.colors.primarySoft;
+const BRAND_ORANGE = designTokens.colors.semantic.warning;
+
+const SURFACE = DESIGN_TOKENS.colors.surfaceElevated;
+const SURFACE_SUBTLE = DESIGN_TOKENS.colors.backgroundSecondary;
+const BORDER_SUBTLE = DESIGN_TOKENS.colors.borderLight;
+const TEXT_MAIN = DESIGN_TOKENS.colors.text;
+const TEXT_SUBTLE = DESIGN_TOKENS.colors.textSubtle;
 
 interface FilterOption {
   id: string;
@@ -143,6 +156,9 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
     </View>
   );
 
+  const showResultsBadge =
+    resultsCount !== undefined && (Platform.OS !== 'web' || isNarrowWeb);
+
   return (
     <View
       style={[
@@ -178,6 +194,20 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         </View>
       </View>
 
+      {/* Mobile/Narrow web: explicit clear-all button (avoid tiny icon-only control) */}
+      {activeFiltersCount > 0 && (Platform.OS !== 'web' || isNarrowWeb) && (
+        <Pressable
+          onPress={onClearAll}
+          style={styles.clearAllMobileButton}
+          accessibilityRole="button"
+          accessibilityLabel="Очистить все фильтры"
+          hitSlop={8}
+        >
+          <Feather name="x-circle" size={16} color={BRAND_ORANGE} />
+          <Text style={styles.clearAllMobileButtonText}>Очистить все фильтры</Text>
+        </Pressable>
+      )}
+
       {/* Toggle all groups */}
       <Pressable
         testID="toggle-all-groups"
@@ -211,9 +241,16 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         }}
         style={styles.toggleAllButton}
       >
-        <Text style={styles.toggleAllButtonText}>
-          {areAllGroupsExpanded ? 'Свернуть все' : 'Развернуть все'}
-        </Text>
+        <View style={styles.toggleAllButtonInner}>
+          <Feather
+            name={areAllGroupsExpanded ? 'chevrons-up' : 'chevrons-down'}
+            size={16}
+            color={colors.neutral[600]}
+          />
+          <Text style={styles.toggleAllButtonText}>
+            {areAllGroupsExpanded ? 'Свернуть все' : 'Развернуть все'}
+          </Text>
+        </View>
       </Pressable>
 
       {/* Moderation (admin) */}
@@ -221,7 +258,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         {showModeration && onToggleModeration && (
           <Pressable
             onPress={onToggleModeration}
-            style={styles.moderationRow}
+            style={[
+              styles.moderationRow,
+              moderationValue === 0 && styles.moderationRowSelected,
+            ]}
             {...(Platform.OS === 'web'
               ? ({
                   title: 'Показывать только путешествия, ожидающие модерации',
@@ -229,18 +269,21 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 } as any)
               : null)}
           >
-            <Feather
-              name={moderationValue === 0 ? 'check-square' : 'square'}
-              size={16}
-              color={colors.neutral[600]}
-            />
-            <Text style={styles.moderationLabel}>Только на модерации</Text>
+            <FilterCheckbox checked={moderationValue === 0} />
+            <Text
+              style={[
+                styles.moderationLabel,
+                moderationValue === 0 && styles.moderationLabelSelected,
+              ]}
+            >
+              Только на модерации
+            </Text>
           </Pressable>
         )}
       </View>
 
       {/* Results Count Badge */}
-      {resultsCount !== undefined && (
+      {showResultsBadge && (
         <View style={styles.resultsBadge}>
           <Feather name="search" size={14} color={colors.neutral[500]} />
           <Text style={styles.resultsBadgeText}>
@@ -298,14 +341,14 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               {isExpanded && (
                 <Animated.View 
                   style={[
-                    styles.groupContent,
+                    styles.groupContent as any,
                     {
                       opacity: animatedValues[group.key],
                       maxHeight: animatedValues[group.key].interpolate({
                         inputRange: [0, 1],
                         outputRange: [0, 500],
                       }),
-                    }
+                    } as any
                   ]}
                 >
                   {group.options.map(option => {
@@ -347,34 +390,34 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             </View>
           );
         })}
-      </ScrollView>
 
-      {/* Year as compact inline row at the bottom */}
-      {onYearChange && (
-        <View style={[styles.filterGroup, styles.filterGroupLast, styles.yearGroup]}>
-          <View style={styles.yearInlineRow}>
-            <View style={styles.yearLabelContainer}>
-              <Feather 
-                name="calendar" 
-                size={16} 
-                color={colors.neutral[600]} 
+        {/* Year */}
+        {onYearChange && (
+          <View style={[styles.filterGroup, styles.filterGroupLast, styles.yearGroup]}>
+            <View style={styles.yearInlineRow}>
+              <View style={styles.yearLabelContainer}>
+                <Feather
+                  name="calendar"
+                  size={16}
+                  color={colors.neutral[600]}
+                />
+                <Text style={styles.yearLabel}>Год</Text>
+              </View>
+              <TextInput
+                value={year ? String(year) : ''}
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^0-9]/g, '').slice(0, 4);
+                  onYearChange(cleaned.length === 4 ? cleaned : cleaned || undefined);
+                }}
+                placeholder="2023"
+                keyboardType="numeric"
+                maxLength={4}
+                style={styles.yearInput}
               />
-              <Text style={styles.yearLabel}>Год</Text>
             </View>
-            <TextInput
-              value={year ? String(year) : ''}
-              onChangeText={(text) => {
-                const cleaned = text.replace(/[^0-9]/g, '').slice(0, 4);
-                onYearChange(cleaned.length === 4 ? cleaned : cleaned || undefined);
-              }}
-              placeholder="2023"
-              keyboardType="numeric"
-              maxLength={4}
-              style={styles.yearInput}
-            />
           </View>
-        </View>
-      )}
+        )}
+      </ScrollView>
 
       {/* Apply Button (Mobile) */}
       {Platform.OS !== 'web' && activeFiltersCount > 0 && (
@@ -395,14 +438,16 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   );
 });
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   container: {
     flex: 1,
-    backgroundColor: colors.surface.default,
+    backgroundColor: SURFACE,
+    borderWidth: 1,
+    borderColor: BORDER_SUBTLE,
     borderRadius: radii['2xl'],
     // Чуть более компактные отступы, чтобы панель влезала по высоте без скрола
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
     ...Platform.select({
       web: {
         ...shadows.sm,
@@ -434,8 +479,8 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     position: 'relative',
     top: 0,
-    maxHeight: 'none',
-    boxShadow: 'none',
+    maxHeight: 'none' as any,
+    boxShadow: 'none' as any,
   },
   containerCompact: {
     padding: spacing.md,
@@ -449,12 +494,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   headerTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.neutral[800],
+    color: TEXT_MAIN,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -471,11 +516,26 @@ const styles = StyleSheet.create({
     padding: spacing.xs,
   },
   toggleAllButton: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
+    backgroundColor: SURFACE_SUBTLE,
+    borderRadius: radii.pill,
+    paddingVertical: 8,
+    paddingHorizontal: spacing.sm,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
+  },
+  toggleAllButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   toggleAllButtonText: {
     fontSize: typography.fontSize.xs,
-    color: colors.neutral[500],
+    color: TEXT_SUBTLE,
+    fontWeight: typography.fontWeight.medium,
   },
   clearButton: {
     paddingHorizontal: spacing.sm,
@@ -486,30 +546,53 @@ const styles = StyleSheet.create({
   clearButtonText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.medium,
-    color: colors.primary[600],
+    color: BRAND_ORANGE,
+  },
+  clearAllMobileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
+    backgroundColor: SURFACE_SUBTLE,
+    borderWidth: 1,
+    borderColor: BORDER_SUBTLE,
+    marginBottom: spacing.xs,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
+  },
+  clearAllMobileButtonText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: TEXT_SUBTLE,
   },
   resultsBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.neutral[50],
+    backgroundColor: SURFACE_SUBTLE,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: 6,
     borderRadius: radii.pill,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   resultsBadgeText: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
-    color: colors.neutral[700],
+    color: TEXT_SUBTLE,
   },
   extraFilters: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     gap: spacing.xs,
   },
   yearGroup: {
     borderTopWidth: 1,
-    borderTopColor: colors.neutral[100],
+    borderTopColor: BORDER_SUBTLE,
     borderBottomWidth: 0,
     marginTop: spacing.md,
     marginBottom: 0,
@@ -540,7 +623,7 @@ const styles = StyleSheet.create({
   },
   yearLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.neutral[700],
+    color: TEXT_SUBTLE,
     fontWeight: typography.fontWeight.semibold,
   },
   yearInput: {
@@ -550,8 +633,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.neutral[200],
-    backgroundColor: colors.neutral[50],
+    borderColor: BORDER_SUBTLE,
+    backgroundColor: SURFACE_SUBTLE,
     fontSize: typography.fontSize.sm,
     textAlign: 'center',
     alignSelf: 'flex-start',
@@ -565,25 +648,40 @@ const styles = StyleSheet.create({
   moderationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radii.md,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
+  },
+  moderationRowSelected: {
+    backgroundColor: BRAND_PRIMARY_SOFT,
   },
   moderationLabel: {
-    fontSize: typography.fontSize.xs,
-    color: colors.neutral[500],
+    fontSize: typography.fontSize.sm,
+    color: TEXT_SUBTLE,
+  },
+  moderationLabelSelected: {
+    color: BRAND_PRIMARY_DARK,
+    fontWeight: typography.fontWeight.medium,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    // Меньше нижний отступ, чтобы не провоцировать вертикальный скролл
+    // Даем достаточный нижний отступ, чтобы последний пункт (Год) не упирался в низ/док
     paddingBottom: spacing.lg,
   },
   filterGroup: {
-    marginBottom: spacing.md,
-    paddingBottom: spacing.md,
+    marginBottom: spacing.sm,
+    paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.neutral[100],
+    borderBottomColor: BORDER_SUBTLE,
   },
   filterGroupLast: {
     borderBottomWidth: 0,
@@ -610,12 +708,12 @@ const styles = StyleSheet.create({
   groupTitle: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.neutral[700],
+    color: TEXT_SUBTLE,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   selectedBadge: {
-    backgroundColor: colors.primary[500],
+    backgroundColor: BRAND_PRIMARY,
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
     borderRadius: radii.pill,
@@ -628,13 +726,13 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   groupContent: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
     overflow: 'hidden',
   },
   filterOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.xs,
+    paddingVertical: 6,
     paddingHorizontal: spacing.xs,
     borderRadius: radii.md,
     marginBottom: spacing.xxs,
@@ -649,7 +747,7 @@ const styles = StyleSheet.create({
     }),
   },
   filterOptionSelected: {
-    backgroundColor: colors.primary[50],
+    backgroundColor: BRAND_PRIMARY_SOFT,
   },
   filterOptionText: {
     flex: 1,
@@ -658,7 +756,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
   },
   filterOptionTextSelected: {
-    color: colors.primary[700],
+    color: BRAND_PRIMARY_DARK,
     fontWeight: typography.fontWeight.medium,
   },
   filterOptionCount: {
@@ -680,8 +778,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   checkboxChecked: {
-    backgroundColor: colors.primary[500],
-    borderColor: colors.primary[500],
+    backgroundColor: BRAND_PRIMARY,
+    borderColor: BRAND_PRIMARY,
   },
   radio: {
     width: 18,
@@ -694,13 +792,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   radioChecked: {
-    borderColor: colors.primary[500],
+    borderColor: BRAND_PRIMARY,
   },
   radioDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.primary[500],
+    backgroundColor: BRAND_PRIMARY,
   },
   applyButtonContainer: {
     marginTop: spacing.lg,
@@ -709,7 +807,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.neutral[100],
   },
   applyButton: {
-    backgroundColor: colors.primary[500],
+    backgroundColor: BRAND_PRIMARY,
     paddingVertical: spacing.md,
     borderRadius: radii.pill,
     alignItems: 'center',

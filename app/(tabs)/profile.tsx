@@ -8,7 +8,6 @@ import {
   SafeAreaView,
   Pressable,
   Platform,
-  useWindowDimensions,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -29,10 +28,9 @@ interface UserStats {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
   const { isAuthenticated, logout } = useAuth();
   const favoritesContext = typeof useFavorites === 'function' ? useFavorites() : { favorites: [], viewHistory: [] };
-  const { favorites, viewHistory, clearHistory, clearFavorites } = favoritesContext as any;
+  const { favorites, viewHistory } = favoritesContext as any;
   const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({ name: '', email: '' });
   const [stats, setStats] = useState<UserStats>({
     travelsCount: 0,
@@ -104,43 +102,13 @@ export default function ProfileScreen() {
     }
   }, [logout, router]);
 
-  const handleClearHistory = useCallback(async () => {
-    try {
-      if (!clearHistory) return;
-
-      if (Platform.OS === 'web') {
-        const confirmed = window.confirm('Очистить историю просмотров?');
-        if (!confirmed) return;
-      }
-
-      await clearHistory();
-    } catch (error) {
-      console.error('Error clearing history:', error);
-    }
-  }, [clearHistory]);
-
-  const handleClearFavorites = useCallback(async () => {
-    try {
-      if (!clearFavorites) return;
-
-      if (Platform.OS === 'web') {
-        const confirmed = window.confirm('Очистить избранное?');
-        if (!confirmed) return;
-      }
-
-      await clearFavorites();
-    } catch (error) {
-      console.error('Error clearing favorites:', error);
-    }
-  }, [clearFavorites]);
-
   if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.container}>
         <EmptyState
           icon="user"
           title="Войдите в аккаунт"
-          description="Для доступа к профилю необходимо войти в систему"
+          description="Войдите, чтобы открыть профиль и управлять своими данными."
           action={{
             label: 'Войти',
             onPress: () => router.push('/login'),
@@ -193,33 +161,30 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        {/* Header */}
         <View style={styles.header}>
-          <View style={styles.avatarContainer}>
+          <View style={styles.headerRow}>
             <View style={styles.avatar}>
-              <Feather name="user" size={32} color={DESIGN_TOKENS.colors.primary} /> {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
+              <Feather name="user" size={28} color={DESIGN_TOKENS.colors.primary} />
+            </View>
+            <View style={styles.headerTextBlock}>
+              <Text style={styles.userName}>{userInfo.name || 'Пользователь'}</Text>
+              {!!userInfo.email && <Text style={styles.userEmail}>{userInfo.email}</Text>}
             </View>
           </View>
-          <Text style={styles.userName}>{userInfo.name || 'Пользователь'}</Text>
-          <Text style={styles.userEmail}>{userInfo.email || ''}</Text>
-        </View>
 
-        {/* Statistics */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Feather name="map" size={24} color={DESIGN_TOKENS.colors.primary} /> {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
-            <Text style={styles.statNumber}>{stats.travelsCount}</Text>
-            <Text style={styles.statLabel}>Путешествий</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Feather name="heart" size={24} color="#ef5350" />
-            <Text style={styles.statNumber}>{stats.favoritesCount}</Text>
-            <Text style={styles.statLabel}>Избранное</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Feather name="eye" size={24} color={DESIGN_TOKENS.colors.primary} /> {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
-            <Text style={styles.statNumber}>{stats.viewsCount}</Text>
-            <Text style={styles.statLabel}>Просмотров</Text>
+          <View style={styles.statsContainer}>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{stats.travelsCount}</Text>
+              <Text style={styles.statLabel}>Путешествий</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{stats.favoritesCount}</Text>
+              <Text style={styles.statLabel}>Избранное</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{stats.viewsCount}</Text>
+              <Text style={styles.statLabel}>Просмотров</Text>
+            </View>
           </View>
         </View>
 
@@ -323,61 +288,34 @@ export default function ProfileScreen() {
         )}
 
         {/* Menu Items */}
-        <View style={styles.menuContainer}>
-          {menuItems.map((item, index) => (
-            <Pressable
-              key={index}
-              style={[styles.menuItem, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-              onPress={item.onPress}
-              accessibilityRole="button"
-              accessibilityLabel={item.label}
-              {...Platform.select({
-                web: { cursor: 'pointer' },
-              })}
-            >
-              <View style={[styles.menuIcon, { backgroundColor: `${item.color}15` }]}>
-                <Feather name={item.icon as any} size={20} color={item.color} />
-              </View>
-              <View style={styles.menuContent}>
-                <Text style={styles.menuLabel}>{item.label}</Text>
-                {item.count !== undefined && (
-                  <Text style={styles.menuCount}>{item.count}</Text>
-                )}
-              </View>
-              <Feather name="chevron-right" size={20} color="#ccc" />
-            </Pressable>
-          ))}
+        <View style={styles.menuSection}>
+          <Text style={styles.menuSectionTitle}>Разделы</Text>
+          <View style={styles.menuContainer}>
+            {menuItems.map((item, index) => (
+              <Pressable
+                key={index}
+                style={[styles.menuItem, globalFocusStyles.focusable]}
+                onPress={item.onPress}
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
+                {...Platform.select({
+                  web: { cursor: 'pointer' },
+                })}
+              >
+                <View style={[styles.menuIcon, { backgroundColor: `${item.color}15` }]}>
+                  <Feather name={item.icon as any} size={20} color={item.color} />
+                </View>
+                <View style={styles.menuContent}>
+                  <Text style={styles.menuLabel}>{item.label}</Text>
+                  {item.count !== undefined && (
+                    <Text style={styles.menuCount}>{item.count}</Text>
+                  )}
+                </View>
+                <Feather name="chevron-right" size={20} color="#ccc" />
+              </Pressable>
+            ))}
+          </View>
         </View>
-
-        {viewHistory?.length > 0 && typeof clearHistory === 'function' && (
-          <Pressable
-            style={[styles.logoutButton, globalFocusStyles.focusable]}
-            onPress={handleClearHistory}
-            accessibilityRole="button"
-            accessibilityLabel="Очистить историю просмотров"
-            {...Platform.select({
-              web: { cursor: 'pointer' },
-            })}
-          >
-            <Feather name="trash-2" size={20} color={DESIGN_TOKENS.colors.danger} />
-            <Text style={styles.logoutText}>Очистить историю</Text>
-          </Pressable>
-        )}
-
-        {favorites?.length > 0 && typeof clearFavorites === 'function' && (
-          <Pressable
-            style={[styles.logoutButton, globalFocusStyles.focusable]}
-            onPress={handleClearFavorites}
-            accessibilityRole="button"
-            accessibilityLabel="Очистить избранное"
-            {...Platform.select({
-              web: { cursor: 'pointer' },
-            })}
-          >
-            <Feather name="trash-2" size={20} color={DESIGN_TOKENS.colors.danger} />
-            <Text style={styles.logoutText}>Очистить избранное</Text>
-          </Pressable>
-        )}
 
         {/* Logout Button */}
         <Pressable
@@ -456,6 +394,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: DESIGN_TOKENS.colors.textMuted,
   },
+  menuSection: {
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.border,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  menuSectionTitle: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 8,
+    fontSize: 14,
+    fontWeight: '700',
+    color: DESIGN_TOKENS.colors.text,
+  },
   sectionAction: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -480,8 +434,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    alignItems: 'center',
-    paddingVertical: 24,
+    paddingVertical: 18,
+    paddingHorizontal: 14,
     backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     borderRadius: DESIGN_TOKENS.radii.lg, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     marginBottom: 16,
@@ -500,13 +454,20 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  avatarContainer: {
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 6,
     marginBottom: 12,
   },
+  headerTextBlock: {
+    flex: 1,
+  },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#f0f9f9',
     justifyContent: 'center',
     alignItems: 'center',

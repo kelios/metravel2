@@ -1,11 +1,12 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { ScrollView, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, View, Text, TouchableOpacity, StyleSheet, LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from 'react-native-paper';
+import { Icon } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
 import { useRouter } from 'expo-router';
 
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
+import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { TravelFormData, Travel } from '@/src/types/types';
 import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
@@ -20,7 +21,7 @@ interface TravelWizardStepPublishProps {
     filters: any;
     travelDataOld: Travel | null;
     isSuperAdmin: boolean;
-    onManualSave: () => void;
+    onManualSave: () => Promise<TravelFormData | void>;
     onGoBack: () => void;
     onFinish: () => void;
     onNavigateToIssue?: (issue: ModerationIssue) => void;
@@ -54,6 +55,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const router = useRouter();
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
+    const [footerHeight, setFooterHeight] = useState(0);
     const [status, setStatus] = useState<'draft' | 'moderation'>(
         formData.moderation ? 'moderation' : 'draft',
     );
@@ -78,14 +80,41 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             { key: 'name', label: 'Название маршрута (не менее 3 символов)', ok: hasName },
             { key: 'description', label: 'Описание для кого маршрут и чего ожидать (не менее 50 символов)', ok: hasDescription },
             { key: 'countries', label: 'Страны маршрута (минимум одна, выбираются на шаге “Маршрут”)', ok: hasCountries },
-            { key: 'categories', label: 'Категории маршрута (минимум одна, выбираются на шаге “Публикация”)', ok: hasCategories },
+            { key: 'categories', label: 'Категории маршрута (минимум одна, выбираются на шаге “Доп. параметры”)', ok: hasCategories },
             { key: 'route', label: 'Маршрут на карте (минимум одна точка на шаге “Маршрут”)', ok: hasRoute },
             { key: 'photos', label: 'Фото или обложка маршрута (рекомендуем горизонтальное изображение, без коллажей)', ok: hasPhotos },
         ];
     }, [formData]);
 
+    const moderationIssues = useMemo(() => {
+        return getModerationIssues({
+            name: formData.name ?? '',
+            description: formData.description ?? '',
+            countries: formData.countries ?? [],
+            categories: (formData as any).categories ?? [],
+            coordsMeTravel: (formData as any).coordsMeTravel ?? (formData as any).markers ?? [],
+            gallery: (formData as any).gallery ?? [],
+            travel_image_thumb_small_url: (formData as any).travel_image_thumb_small_url ?? null,
+        } as any);
+    }, [formData]);
+
+    const moderationIssuesByKey = useMemo(() => {
+        const map = new Map<string, ModerationIssue>();
+        moderationIssues.forEach(issue => map.set(issue.key, issue));
+        return map;
+    }, [moderationIssues]);
+
     const [missingForModeration, setMissingForModeration] = useState<ModerationIssue[]>([]);
     const isNew = !formData.id;
+
+    const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
+        const next = Math.ceil(event.nativeEvent.layout.height);
+        setFooterHeight(prev => (prev === next ? prev : next));
+    }, []);
+
+    const contentPaddingBottom = useMemo(() => {
+        return footerHeight > 0 ? footerHeight + 16 : 220;
+    }, [footerHeight]);
 
     useEffect(() => {
         trackWizardEvent('wizard_step_view', {
@@ -127,6 +156,10 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 photos: hasPhotos,
             },
         });
+
+        // После сохранения на последнем шаге логично вывести пользователя из мастера
+        // в раздел "Мои путешествия", где он увидит черновик.
+        router.replace('/metravel');
     };
 
     const handleSendToModeration = async () => {
@@ -185,242 +218,236 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
     return (
         <SafeAreaView style={styles.safeContainer}>
-            <View style={styles.headerWrapper}>
-                <View style={styles.headerRow}>
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.headerTitle}>{stepMeta?.title ?? 'Публикация путешествия'}</Text>
-                        <Text style={styles.headerSubtitle}>{stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}</Text>
+            <KeyboardAvoidingView
+                style={styles.keyboardAvoid}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={0}
+            >
+                <TravelWizardHeader
+                    canGoBack={true}
+                    onBack={onGoBack}
+                    title={stepMeta?.title ?? 'Публикация путешествия'}
+                    subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
+                    progressPercent={progressPercent}
+                    autosaveBadge={autosaveBadge}
+                    tipTitle={stepMeta?.tipTitle}
+                    tipBody={stepMeta?.tipBody}
+                />
+                <ScrollView
+                    style={styles.content}
+                    contentContainerStyle={[styles.contentContainer, { paddingBottom: contentPaddingBottom }]}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View style={styles.contentInner}>
+                    <FiltersUpsertComponent
+                        filters={filters}
+                        formData={formData}
+                        setFormData={setFormData}
+                        travelDataOld={travelDataOld}
+                        isSuperAdmin={isSuperAdmin}
+                        onSave={onManualSave}
+                        showSaveButton={true}
+                        showPreviewButton={true}
+                        showPublishControls={false}
+                        showCountries={false}
+                        showCoverImage={false}
+                        showCategories={false}
+                        showAdditionalFields={false}
+                    />
+
+                    <View style={[styles.card, styles.statusCard]}>
+                        <Text style={styles.cardTitle}>Статус публикации</Text>
+                        <View style={styles.statusOptions}>
+                            <TouchableOpacity
+                                style={[styles.statusOption, status === 'draft' && styles.statusOptionActive]}
+                                onPress={() => setStatus('draft')}
+                                activeOpacity={0.85}
+                            >
+                                <View style={styles.radioOuter}>
+                                    {status === 'draft' && <View style={styles.radioInner} />}
+                                </View>
+                                <View style={styles.statusTextCol}>
+                                    <Text style={styles.statusLabel}>Сохранить как черновик</Text>
+                                    <Text style={styles.statusHint}>
+                                        Черновик виден только вам. Его можно дополнять и отправить на модерацию позже.
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            <View style={styles.divider} />
+
+                            <TouchableOpacity
+                                style={[styles.statusOption, status === 'moderation' && styles.statusOptionActive]}
+                                onPress={() => setStatus('moderation')}
+                                activeOpacity={0.85}
+                            >
+                                <View style={styles.radioOuter}>
+                                    {status === 'moderation' && <View style={styles.radioInner} />}
+                                </View>
+                                <View style={styles.statusTextCol}>
+                                    <Text style={styles.statusLabel}>Отправить на модерацию</Text>
+                                    <Text style={styles.statusHint}>
+                                        После одобрения маршрут станет публичным и появится в списке путешествий.
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                    {autosaveBadge && (
-                        <View style={styles.autosaveBadge}>
-                            <Text style={styles.autosaveBadgeText}>{autosaveBadge}</Text>
+
+                    <View style={[styles.card, styles.checklistCard]}>
+                        <Text style={styles.cardTitle}>Чек-лист готовности</Text>
+                    {checklist.map(item => {
+                        const issue = moderationIssuesByKey.get(item.key);
+                        const isClickable = !item.ok && !!issue && !!onNavigateToIssue;
+
+                        const RowWrapper: any = isClickable ? TouchableOpacity : View;
+                        return (
+                            <RowWrapper
+                                key={item.key}
+                                style={[styles.checklistRow, isClickable && styles.checklistRowClickable]}
+                                onPress={
+                                    isClickable
+                                        ? () => onNavigateToIssue?.(issue)
+                                        : undefined
+                                }
+                                disabled={!isClickable}
+                            >
+                                <View
+                                    style={[
+                                        styles.checkBadge,
+                                        item.ok ? styles.checkBadgeOk : styles.checkBadgeMissing,
+                                    ]}
+                                >
+                                    <Icon
+                                        source={item.ok ? 'check' : 'alert'}
+                                        size={14}
+                                        color={item.ok ? DESIGN_TOKENS.colors.successDark : DESIGN_TOKENS.colors.dangerDark}
+                                    />
+                                </View>
+                                <Text
+                                    style={[
+                                        styles.checklistLabel,
+                                        isClickable && styles.checklistLabelClickable,
+                                    ]}
+                                >
+                                    {item.label}
+                                </Text>
+                            </RowWrapper>
+                        );
+                    })}
+                    </View>
+
+                    {status === 'moderation' && missingForModeration.length > 0 && (
+                        <View style={[styles.card, styles.bannerError]}>
+                            <Text style={styles.bannerTitle}>Нужно дополнить перед модерацией</Text>
+                            <Text style={styles.bannerDescription}>
+                                Проверьте отмеченные пункты чек-листа. Без них мы не сможем отправить маршрут на модерацию.
+                            </Text>
+                            {missingForModeration.map(issue => {
+                                const isClickable = !!onNavigateToIssue;
+                                const RowWrapper: any = isClickable ? TouchableOpacity : View;
+                                return (
+                                    <RowWrapper
+                                        key={issue.key}
+                                        style={[styles.checklistRow, isClickable && styles.checklistRowClickable]}
+                                        onPress={isClickable ? () => onNavigateToIssue?.(issue) : undefined}
+                                        disabled={!isClickable}
+                                        activeOpacity={0.85}
+                                    >
+                                        <View style={[styles.checkBadge, styles.checkBadgeMissing]}>
+                                            <Icon
+                                                source={'alert'}
+                                                size={14}
+                                                color={DESIGN_TOKENS.colors.dangerDark}
+                                            />
+                                        </View>
+                                        <Text style={[styles.checklistLabel, isClickable && styles.checklistLabelClickable]}>
+                                            {issue.label}
+                                        </Text>
+                                    </RowWrapper>
+                                );
+                            })}
                         </View>
                     )}
-                </View>
-                <View style={styles.progressBarTrack}>
-                    <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
-                </View>
-                <Text style={styles.progressLabel}>Готово на {progressPercent}%</Text>
-            </View>
-
-            {stepMeta?.tipBody && (
-                <View style={styles.tipCard}>
-                    <Text style={styles.tipTitle}>{stepMeta.tipTitle ?? 'Подсказка'}</Text>
-                    <Text style={styles.tipBody}>{stepMeta.tipBody}</Text>
-                </View>
-            )}
-            <ScrollView style={styles.content}>
-                <FiltersUpsertComponent
-                    filters={filters}
-                    formData={formData}
-                    setFormData={setFormData}
-                    travelDataOld={travelDataOld}
-                    isSuperAdmin={isSuperAdmin}
-                    onSave={onManualSave}
-                    showSaveButton={true}
-                    showPreviewButton={true}
-                    showPublishControls={false}
-                    showCountries={false}
-                    showCoverImage={false}
-                    showCategories={false}
-                    showAdditionalFields={false}
+                    </View>
+                </ScrollView>
+                <TravelWizardFooter
+                    canGoBack={false}
+                    onPrimary={handlePrimaryAction}
+                    primaryLabel={status === 'draft' ? 'Сохранить черновик' : 'Отправить на модерацию'}
+                    onSave={status === 'moderation' ? handleSaveDraft : undefined}
+                    saveLabel="Сохранить как черновик"
+                    onLayout={handleFooterLayout}
                 />
-
-                <View style={styles.statusCard}>
-                    <Text style={styles.statusTitle}>Статус публикации</Text>
-                    <View style={styles.statusOptions}>
-                        <TouchableOpacity
-                            style={[styles.statusOption, status === 'draft' && styles.statusOptionActive]}
-                            onPress={() => setStatus('draft')}
-                        >
-                            <View style={styles.radioOuter}>
-                                {status === 'draft' && <View style={styles.radioInner} />}
-                            </View>
-                            <View>
-                                <Text style={styles.statusLabel}>Сохранить как черновик</Text>
-                                <Text style={styles.statusHint}>
-                                    Черновик виден только вам. Его можно дополнять и отправить на модерацию позже.
-                                </Text>
-                            </View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.statusOption, status === 'moderation' && styles.statusOptionActive]}
-                            onPress={() => setStatus('moderation')}
-                        >
-                            <View style={styles.radioOuter}>
-                                {status === 'moderation' && <View style={styles.radioInner} />}
-                            </View>
-                            <View>
-                                <Text style={styles.statusLabel}>Отправить на модерацию</Text>
-                                <Text style={styles.statusHint}>
-                                    Маршрут будет отправлен на модерацию. После одобрения он станет публичным и появится в списке путешествий.
-                                </Text>
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                <View style={styles.checklistCard}>
-                    <Text style={styles.checklistTitle}>Чек-лист готовности</Text>
-                    {checklist.map(item => (
-                        <View key={item.key} style={styles.checklistRow}>
-                            <Text style={[styles.checklistStatus, item.ok ? styles.checkOk : styles.checkMissing]}>
-                                {item.ok ? '✓' : '•'}
-                            </Text>
-                            <Text style={styles.checklistLabel}>{item.label}</Text>
-                        </View>
-                    ))}
-                </View>
-
-                {status === 'moderation' && missingForModeration.length > 0 && (
-                    <View style={styles.bannerError}>
-                        <Text style={styles.bannerTitle}>Нужно дополнить перед модерацией</Text>
-                        <Text style={styles.bannerDescription}>
-                            Проверьте отмеченные пункты чек-листа. Без них мы не сможем отправить маршрут на модерацию.
-                        </Text>
-                        {missingForModeration.map(issue => (
-                            <TouchableOpacity
-                                key={issue.key}
-                                onPress={() => onNavigateToIssue?.(issue)}
-                                disabled={!onNavigateToIssue}
-                            >
-                                <Text style={[styles.bannerItem, onNavigateToIssue && styles.bannerItemClickable]}>
-                                    • {issue.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
-            </ScrollView>
-            <TravelWizardFooter
-                canGoBack={true}
-                onBack={onGoBack}
-                onPrimary={handlePrimaryAction}
-                primaryLabel={status === 'draft' ? 'Сохранить черновик' : 'Отправить на модерацию'}
-                onSave={status === 'moderation' ? handleSaveDraft : undefined}
-                saveLabel="Сохранить как черновик"
-            />
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    safeContainer: { flex: 1, backgroundColor: '#f9f9f9' },
-    headerWrapper: {
-        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-        paddingTop: 12,
-        paddingBottom: 8,
-        backgroundColor: '#f9f9f9',
-    },
-    headerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: DESIGN_TOKENS.spacing.sm,
-    },
-    headerTitle: {
-        fontSize: DESIGN_TOKENS.typography.sizes.lg,
-        fontWeight: '700',
-        color: '#111827',
-        marginBottom: 4,
-    },
-    headerSubtitle: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#6b7280',
-    },
-    bannerItemClickable: {
-        textDecorationLine: 'underline',
-    },
-    autosaveBadge: {
-        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-        paddingVertical: DESIGN_TOKENS.spacing.xxs,
-        borderRadius: 999,
-        backgroundColor: '#eef2ff',
-    },
-    autosaveBadgeText: {
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#4338ca',
-        fontWeight: '600',
-    },
-    progressBarTrack: {
-        marginTop: 8,
-        width: '100%',
-        height: 6,
-        borderRadius: 999,
-        backgroundColor: '#e5e7eb',
-    },
-    progressBarFill: {
-        height: 6,
-        borderRadius: 999,
-        backgroundColor: '#2563eb',
-    },
-    progressLabel: {
-        marginTop: 6,
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#6b7280',
-    },
-    tipCard: {
-        marginHorizontal: DESIGN_TOKENS.spacing.lg,
-        marginTop: 8,
-        padding: DESIGN_TOKENS.spacing.md,
-        borderRadius: 12,
-        backgroundColor: '#ecfdf5',
-        borderWidth: 1,
-        borderColor: '#a7f3d0',
-    },
-    tipTitle: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        fontWeight: '600',
-        color: '#047857',
-        marginBottom: 4,
-    },
-    tipBody: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#065f46',
-    },
+    safeContainer: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
+    keyboardAvoid: { flex: 1 },
     content: {
         flex: 1,
         paddingHorizontal: 8,
     },
-    footerButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-        paddingVertical: 12,
-        borderTopWidth: 1,
-        borderColor: '#e5e7eb',
-        backgroundColor: '#fff',
+    contentContainer: {
+        paddingBottom: 0,
+        paddingTop: DESIGN_TOKENS.spacing.sm,
+        alignItems: 'center',
     },
-    statusCard: {
+    contentInner: {
+        width: '100%',
+        maxWidth: 980,
+    },
+    card: {
         marginTop: DESIGN_TOKENS.spacing.lg,
-        marginHorizontal: 8,
-        padding: DESIGN_TOKENS.spacing.md,
-        backgroundColor: '#fff',
-        borderRadius: 8,
+        padding: DESIGN_TOKENS.spacing.lg,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,
-        borderColor: '#e5e7eb',
+        borderColor: DESIGN_TOKENS.colors.border,
+        ...(Platform.OS === 'web'
+            ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
+            : (DESIGN_TOKENS.shadowsNative.light as any)),
     },
-    statusTitle: {
+    cardTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
-        fontWeight: '600',
-        color: '#111827',
-        marginBottom: 8,
+        fontWeight: '700',
+        color: DESIGN_TOKENS.colors.text,
+        marginBottom: DESIGN_TOKENS.spacing.sm,
     },
+    statusCard: {},
     statusOptions: {
         gap: DESIGN_TOKENS.spacing.sm,
     },
     statusOption: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        paddingVertical: 8,
+        paddingVertical: 10,
+        paddingHorizontal: 10,
+        borderRadius: DESIGN_TOKENS.radii.md,
     },
-    statusOptionActive: {},
+    statusOptionActive: {
+        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.borderAccent,
+    },
+    statusTextCol: {
+        flex: 1,
+        minWidth: 0,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: DESIGN_TOKENS.colors.border,
+        opacity: 0.8,
+    },
     radioOuter: {
         width: 18,
         height: 18,
         borderRadius: 9,
         borderWidth: 2,
-        borderColor: '#2563eb',
+        borderColor: DESIGN_TOKENS.colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 8,
@@ -430,77 +457,70 @@ const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: '#2563eb',
+        backgroundColor: DESIGN_TOKENS.colors.primary,
     },
     statusLabel: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
-        color: '#111827',
+        color: DESIGN_TOKENS.colors.text,
     },
     statusHint: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#6b7280',
+        color: DESIGN_TOKENS.colors.textMuted,
         marginTop: DESIGN_TOKENS.spacing.xxs,
+        lineHeight: 16,
     },
-    checklistCard: {
-        marginTop: DESIGN_TOKENS.spacing.lg,
-        marginHorizontal: 8,
-        padding: DESIGN_TOKENS.spacing.md,
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-    },
-    checklistTitle: {
-        fontSize: DESIGN_TOKENS.typography.sizes.md,
-        fontWeight: '600',
-        color: '#111827',
-        marginBottom: 8,
-    },
+    checklistCard: {},
     checklistRow: {
         flexDirection: 'row',
+        alignItems: 'flex-start',
+        paddingVertical: 8,
+    },
+    checklistRowClickable: {
+        borderRadius: DESIGN_TOKENS.radii.md,
+        paddingHorizontal: 8,
+    },
+    checkBadge: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
         alignItems: 'center',
-        marginBottom: 4,
+        justifyContent: 'center',
+        marginRight: 10,
+        marginTop: 1,
+        borderWidth: 1,
     },
-    checklistStatus: {
-        width: 18,
-        textAlign: 'center',
-        marginRight: 4,
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    checkBadgeOk: {
+        backgroundColor: DESIGN_TOKENS.colors.successSoft,
+        borderColor: DESIGN_TOKENS.colors.successLight,
     },
-    checkOk: {
-        color: '#16a34a',
-    },
-    checkMissing: {
-        color: '#9ca3af',
+    checkBadgeMissing: {
+        backgroundColor: DESIGN_TOKENS.colors.errorSoft,
+        borderColor: DESIGN_TOKENS.colors.dangerLight,
     },
     checklistLabel: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#111827',
+        color: DESIGN_TOKENS.colors.text,
+        flex: 1,
+        lineHeight: 18,
+    },
+    checklistLabelClickable: {
+        textDecorationLine: 'underline',
     },
     bannerError: {
-        marginTop: DESIGN_TOKENS.spacing.lg,
-        marginHorizontal: 8,
-        padding: DESIGN_TOKENS.spacing.md,
-        borderRadius: 8,
-        backgroundColor: '#fef2f2',
-        borderWidth: 1,
-        borderColor: '#fecaca',
+        backgroundColor: DESIGN_TOKENS.colors.errorSoft,
+        borderColor: DESIGN_TOKENS.colors.dangerLight,
     },
     bannerTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
-        color: '#b91c1c',
+        color: DESIGN_TOKENS.colors.dangerDark,
         marginBottom: 4,
     },
     bannerDescription: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#7f1d1d',
+        color: DESIGN_TOKENS.colors.dangerDark,
         marginBottom: DESIGN_TOKENS.spacing.xs,
-    },
-    bannerItem: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#7f1d1d',
     },
 });
 

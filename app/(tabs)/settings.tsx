@@ -8,21 +8,42 @@ import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/EmptyState';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { confirmAction } from '@/src/utils/confirmAction';
 
 export default function SettingsScreen() {
     const router = useRouter();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, logout, username } = useAuth();
     const favoritesContext = typeof useFavorites === 'function' ? useFavorites() : ({} as any);
     const { clearHistory, clearFavorites, favorites, viewHistory } = favoritesContext as any;
+
+    const handleLogout = useCallback(async () => {
+        try {
+            const confirmed = await confirmAction({
+                title: 'Выход из аккаунта',
+                message: 'Выйти из аккаунта?',
+                confirmText: 'Выйти',
+                cancelText: 'Отмена',
+            });
+            if (!confirmed) return;
+
+            await logout();
+            router.replace('/login');
+        } catch (error) {
+            console.error('Error logging out:', error);
+        }
+    }, [logout, router]);
 
     const handleClearHistory = useCallback(async () => {
         try {
             if (typeof clearHistory !== 'function') return;
 
-            if (Platform.OS === 'web') {
-                const confirmed = window.confirm('Очистить историю просмотров?');
-                if (!confirmed) return;
-            }
+            const confirmed = await confirmAction({
+                title: 'Очистить историю',
+                message: 'Очистить историю просмотров?',
+                confirmText: 'Очистить',
+                cancelText: 'Отмена',
+            });
+            if (!confirmed) return;
 
             await clearHistory();
         } catch (error) {
@@ -34,10 +55,13 @@ export default function SettingsScreen() {
         try {
             if (typeof clearFavorites !== 'function') return;
 
-            if (Platform.OS === 'web') {
-                const confirmed = window.confirm('Очистить избранное?');
-                if (!confirmed) return;
-            }
+            const confirmed = await confirmAction({
+                title: 'Очистить избранное',
+                message: 'Очистить избранное?',
+                confirmText: 'Очистить',
+                cancelText: 'Отмена',
+            });
+            if (!confirmed) return;
 
             await clearFavorites();
         } catch (error) {
@@ -50,8 +74,8 @@ export default function SettingsScreen() {
             <SafeAreaView style={styles.container}>
                 <EmptyState
                     icon="settings"
-                    title="Настройки доступны после входа"
-                    description="Войдите в аккаунт, чтобы управлять избранным и историей просмотров."
+                    title="Войдите в аккаунт"
+                    description="Войдите, чтобы управлять настройками и данными аккаунта."
                     action={{
                         label: 'Войти',
                         onPress: () => router.push('/login'),
@@ -65,10 +89,35 @@ export default function SettingsScreen() {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>Настройки</Text>
-                <Text style={styles.subtitle}>Управление данными аккаунта</Text>
+                <Text style={styles.subtitle}>Аккаунт и данные</Text>
             </View>
 
             <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Аккаунт</Text>
+
+                <View style={styles.card}>
+                    <View style={styles.cardRow}>
+                        <View style={styles.cardIcon}>
+                            <Feather name="user" size={18} color={DESIGN_TOKENS.colors.primary} />
+                        </View>
+                        <View style={styles.cardText}>
+                            <Text style={styles.cardTitle}>{username || 'Пользователь'}</Text>
+                            <Text style={styles.cardMeta}>Вы вошли в аккаунт</Text>
+                        </View>
+                    </View>
+
+                    <Pressable
+                        style={[styles.dangerButton, globalFocusStyles.focusable]}
+                        onPress={handleLogout}
+                        accessibilityRole="button"
+                        accessibilityLabel="Выйти из аккаунта"
+                        {...Platform.select({ web: { cursor: 'pointer' } })}
+                    >
+                        <Feather name="log-out" size={18} color={DESIGN_TOKENS.colors.danger} />
+                        <Text style={styles.dangerButtonText}>Выйти</Text>
+                    </Pressable>
+                </View>
+
                 <Text style={styles.sectionTitle}>Данные</Text>
 
                 <View style={styles.card}>

@@ -10,6 +10,8 @@ import {
   StyleProp,
 } from 'react-native'
 
+import { useRouter } from 'expo-router'
+
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
 import { TravelListSkeleton } from '@/components/SkeletonLoader'
 import EmptyState from '@/components/EmptyState'
@@ -41,6 +43,7 @@ const RecommendationsPlaceholder = () => (
 interface RightColumnProps {
   search: string
   setSearch: (value: string) => void
+  onClearAll?: () => void
   isRecommendationsVisible: boolean
   handleRecommendationsVisibilityChange: (visible: boolean) => void
   activeFiltersCount: number
@@ -69,6 +72,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
   ({
      search,
      setSearch,
+     onClearAll,
      isRecommendationsVisible,
      handleRecommendationsVisibilityChange,
      activeFiltersCount,
@@ -92,6 +96,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
      renderItem,
      cardSpacing = 16,
    }) => {
+    const router = useRouter()
     const scrollViewRef = useRef<ScrollView | null>(null)
     const recommendationsOffsetRef = useRef(0)
     const shouldScrollRef = useRef(false)
@@ -147,6 +152,11 @@ const RightColumn: React.FC<RightColumnProps> = memo(
           <StickySearchBar
             search={search}
             onSearchChange={setSearch}
+            primaryAction={{
+              label: 'Создать',
+              onPress: () => router.push('/travel/new' as any),
+              accessibilityLabel: 'Создать путешествие',
+            }}
             onFiltersPress={onFiltersPress}
             onToggleRecommendations={() =>
               handleRecommendationsVisibilityChange(!isRecommendationsVisible)
@@ -155,9 +165,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             hasActiveFilters={activeFiltersCount > 0}
             resultsCount={total}
             activeFiltersCount={activeFiltersCount}
-            onClearAll={() => {
-              setSearch('')
-            }}
+            onClearAll={onClearAll ?? (() => setSearch(''))}
           />
         </View>
 

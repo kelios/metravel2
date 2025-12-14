@@ -155,7 +155,14 @@ function RootLayoutNav() {
     const canonical = `${SITE}${pathname || "/"}`;
 
     const showFooter = useMemo(
-      () => !["/login", "/onboarding"].includes(pathname || ""),
+      () => {
+        const p = pathname || "";
+        if (["/login", "/onboarding"].includes(p)) return false;
+        // On travel create/edit wizard we render our own bottom actions footer.
+        // The global mobile dock would overlap it.
+        if (p.startsWith('/travel') && false) return false;
+        return true;
+      },
       [pathname]
     );
 
@@ -267,12 +274,10 @@ function RootLayoutNav() {
                                     </View>
                                 }
                               >
-                                {idleReady ? (
-                                  <Footer
-                                    /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
-                                    onDockHeight={(h) => setDockHeight(h)}
-                                  />
-                                ) : null}
+                                <Footer
+                                  /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
+                                  onDockHeight={(h) => setDockHeight(h)}
+                                />
                             </Suspense>
                           )}
                       </View>

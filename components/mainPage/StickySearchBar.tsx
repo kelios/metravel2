@@ -19,6 +19,11 @@ interface StickySearchBarProps {
   onSearchChange: (value: string) => void;
   onFiltersPress?: () => void;
   hasActiveFilters: boolean;
+  primaryAction?: {
+    label: string
+    onPress: () => void
+    accessibilityLabel?: string
+  }
   resultsCount?: number;
   sortOptions?: Array<{ value: string; label: string }>;
   onSortChange?: (sort: string) => void;
@@ -39,6 +44,7 @@ function StickySearchBar({
   onSearchChange,
   onFiltersPress,
   hasActiveFilters,
+  primaryAction,
   resultsCount,
   sortOptions = [],
   onSortChange,
@@ -74,8 +80,15 @@ function StickySearchBar({
 
   return (
     <View style={[styles.container, isFocused && styles.containerFocused]}>
-      <View style={styles.contentRow}>
-        <View style={styles.searchBox}>
+      <View style={[styles.inner, isMobile && Platform.OS === 'web' ? { maxWidth: '100%', marginLeft: 0, marginRight: 0 } : null]}>
+        <View style={[styles.contentRow, isMobile && styles.contentRowMobile]}>
+          <View
+            style={[
+              styles.searchBox,
+              isMobile && styles.searchBoxMobile,
+              !isMobile && Platform.OS === 'web' ? ({ maxWidth: 760, minWidth: 420 } as any) : null,
+            ]}
+          >
           <Feather
             name="search"
             size={18}
@@ -113,10 +126,43 @@ function StickySearchBar({
               <Text style={styles.shortcutText}>Ctrl+K</Text>
             </View>
           )}
-        </View>
+          </View>
 
-        {/* Действия */}
-        <View style={styles.actions}>
+          {/* Действия */}
+          <View style={[styles.actions, !isMobile && styles.actionsDesktop, isMobile && styles.actionsMobile]}>
+          {showResultsCount && (
+            <View style={styles.resultsInline} testID="results-count-wrapper">
+              <Text style={styles.resultsText} testID="results-count-text">
+                Найдено: {resultsCount} {resultsCount === 1 ? 'путешествие' : resultsCount < 5 ? 'путешествия' : 'путешествий'}
+              </Text>
+            </View>
+          )}
+
+          {primaryAction && !isMobile && (
+            <Pressable
+              onPress={primaryAction.onPress}
+              style={styles.primaryActionButton}
+              accessibilityRole="button"
+              accessibilityLabel={primaryAction.accessibilityLabel ?? primaryAction.label}
+            >
+              <Feather name="plus" size={18} color={palette.primary} />
+              <Text style={styles.primaryActionText}>{primaryAction.label}</Text>
+            </Pressable>
+          )}
+
+          {/* Создать (mobile): иконка + в одну строку с остальными действиями */}
+          {primaryAction && isMobile && (
+            <Pressable
+              testID="create-button"
+              onPress={primaryAction.onPress}
+              style={styles.actionButton}
+              accessibilityLabel={primaryAction.accessibilityLabel ?? primaryAction.label}
+              accessibilityRole="button"
+            >
+              <Feather name="plus" size={16} color={palette.primary} />
+            </Pressable>
+          )}
+
           {/* Рекомендации */}
           {onToggleRecommendations && (
             <Pressable
@@ -168,7 +214,7 @@ function StickySearchBar({
                testID="clear-all-button"
                onPress={onClearAll}
                style={styles.clearAllButton}
-               accessibilityLabel="Сбросить все"
+               accessibilityLabel="Сбросить все фильтры и поиск"
              >
                <Feather name="x-circle" size={14} color={palette.textMuted} />
                {!isMobile && <Text style={styles.clearAllText}>Сбросить</Text>}
@@ -176,15 +222,7 @@ function StickySearchBar({
           )}
         </View>
       </View>
-
-      {/* Счетчик результатов (вторая строка на десктопе, если нужно) */}
-      {showResultsCount && (
-        <View style={styles.resultsBar} testID="results-count-wrapper">
-          <Text style={styles.resultsText} testID="results-count-text">
-            Найдено: {resultsCount} {resultsCount === 1 ? 'путешествие' : resultsCount < 5 ? 'путешествия' : 'путешествий'}
-          </Text>
-        </View>
-      )}
+      </View>
     </View>
   );
 }
@@ -192,26 +230,34 @@ function StickySearchBar({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: palette.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.border,
+    borderWidth: 1,
+    borderColor: palette.border,
     borderRadius: radii.lg,
     paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
-    paddingVertical: Platform.select({ default: spacing.sm, web: spacing.md }),
-    gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
+    paddingVertical: Platform.select({ default: spacing.sm, web: spacing.sm }),
+    gap: Platform.select({ default: spacing.xs, web: spacing.xs }),
+    minHeight: Platform.select({ default: 52, web: 60 }),
     ...Platform.select({
       web: {
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+        boxShadow: 'none',
       },
     }),
   },
-  containerFocused: {
-    borderBottomColor: palette.primary,
+  inner: {
+    width: '100%',
     ...Platform.select({
       web: {
-        boxShadow: '0 2px 8px rgba(74, 140, 140, 0.12)',
+        maxWidth: 1120,
+        marginLeft: 'auto',
+        marginRight: 'auto',
+      } as any,
+    }),
+  },
+  containerFocused: {
+    borderColor: palette.primary,
+    ...Platform.select({
+      web: {
+        boxShadow: 'none',
       },
     }),
   },
@@ -240,7 +286,7 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         transition: 'all 0.2s ease',
-      },
+      } as any,
     }),
   },
   searchBoxMobile: {
@@ -288,6 +334,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
+  },
+  actionsDesktop: {
+    flexShrink: 0,
+  },
+  resultsInline: {
+    paddingHorizontal: 10,
+    height: Platform.select({ default: 36, web: 44 }),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.surfaceMuted,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  primaryActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    height: Platform.select({ default: 40, web: 44 }),
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: palette.primary,
+    backgroundColor: palette.surface,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
+  },
+  primaryActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: palette.primary,
+  },
+  primaryActionRowMobile: {
+    paddingTop: spacing.xs,
+    alignItems: 'flex-start',
   },
   actionsMobile: {
     width: '100%',
@@ -353,11 +437,8 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     fontWeight: '500',
   },
-  resultsBar: {
-    paddingTop: 4,
-  },
   resultsText: {
-    fontSize: 12,
+    fontSize: 11,
     color: palette.textMuted,
     fontWeight: '500',
   },

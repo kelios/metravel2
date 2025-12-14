@@ -24,18 +24,24 @@ export function useMenuState(isMobile: boolean): UseMenuStateReturn {
   const { width } = useWindowDimensions();
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const stableWidth = useMemo(() => {
+    if (width && width > 0) return width;
+    if (typeof window !== 'undefined' && typeof window.innerWidth === 'number') return window.innerWidth;
+    return 1200;
+  }, [width]);
+
   const menuWidth = useMemo(() => {
     if (isMobile) return '100%';
-    return width >= 1200 ? MENU_WIDTH_DESKTOP : MENU_WIDTH_TABLET;
-  }, [isMobile, width]);
+    return stableWidth >= 1200 ? MENU_WIDTH_DESKTOP : MENU_WIDTH_TABLET;
+  }, [isMobile, stableWidth]);
 
   const menuWidthNum = typeof menuWidth === 'number' ? menuWidth : 0;
 
-  const animatedX = useRef(new Animated.Value(isMobile ? -width : -menuWidthNum)).current;
+  const animatedX = useRef(new Animated.Value(isMobile ? -stableWidth : -menuWidthNum)).current;
 
   const animateMenu = useCallback(
     (open: boolean) => {
-      const targetValue = isMobile ? (open ? 0 : -width) : (open ? 0 : -menuWidthNum);
+      const targetValue = isMobile ? (open ? 0 : -stableWidth) : (open ? 0 : -menuWidthNum);
       Animated.timing(animatedX, {
         toValue: targetValue,
         duration: 230,
@@ -43,7 +49,7 @@ export function useMenuState(isMobile: boolean): UseMenuStateReturn {
         useNativeDriver: true,
       }).start();
     },
-    [animatedX, isMobile, width, menuWidthNum]
+    [animatedX, isMobile, stableWidth, menuWidthNum]
   );
 
   const toggleMenu = useCallback(() => {

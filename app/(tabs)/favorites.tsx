@@ -9,6 +9,7 @@ import EmptyState from '@/components/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { confirmAction } from '@/src/utils/confirmAction';
 
 export default function FavoritesScreen() {
     const router = useRouter();
@@ -19,10 +20,13 @@ export default function FavoritesScreen() {
         try {
             if (!clearFavorites) return;
 
-            if (Platform.OS === 'web') {
-                const confirmed = window.confirm('Очистить избранное?');
-                if (!confirmed) return;
-            }
+            const confirmed = await confirmAction({
+                title: 'Очистить избранное',
+                message: 'Очистить избранное?',
+                confirmText: 'Очистить',
+                cancelText: 'Отмена',
+            });
+            if (!confirmed) return;
 
             await clearFavorites();
         } catch (error) {
@@ -32,11 +36,7 @@ export default function FavoritesScreen() {
 
     const handleOpen = useCallback(
         (url: string) => {
-            if (Platform.OS === 'web') {
-                window.location.href = url;
-            } else {
-                router.push(url as any);
-            }
+            router.push(url as any);
         },
         [router]
     );
@@ -48,8 +48,8 @@ export default function FavoritesScreen() {
             <SafeAreaView style={styles.container}>
                 <EmptyState
                     icon="heart"
-                    title="Избранное доступно после входа"
-                    description="Войдите в аккаунт, чтобы синхронизировать избранное между устройствами."
+                    title="Войдите в аккаунт"
+                    description="Войдите, чтобы сохранять избранное и синхронизировать его между устройствами."
                     action={{
                         label: 'Войти',
                         onPress: () => router.push('/login'),
@@ -65,9 +65,9 @@ export default function FavoritesScreen() {
                 <EmptyState
                     icon="heart"
                     title="В избранном пока пусто"
-                    description="Откройте путешествие и нажмите на сердечко, чтобы добавить его сюда."
+                    description="Откройте путешествие и нажмите на сердечко — оно появится здесь."
                     action={{
-                        label: 'Перейти к путешествиям',
+                        label: 'К путешествиям',
                         onPress: () => router.push('/travelsby'),
                     }}
                 />
@@ -167,22 +167,23 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 6,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: DESIGN_TOKENS.colors.danger,
         backgroundColor: DESIGN_TOKENS.colors.surface,
+        minHeight: 40,
     },
     clearButtonText: {
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '600',
         color: DESIGN_TOKENS.colors.danger,
     },
     listContent: {
-        paddingHorizontal: 18,
-        paddingBottom: 20,
-        paddingTop: 4,
+        paddingHorizontal: 16,
+        paddingBottom: 24,
+        paddingTop: 12,
         gap: 14,
         alignItems: 'center',
     },

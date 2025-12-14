@@ -1,13 +1,21 @@
-import React, { useEffect, useRef } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, StyleSheet, Text, ScrollView, Platform, findNodeHandle, UIManager } from 'react-native';
+import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView, findNodeHandle, UIManager, LayoutChangeEvent } from 'react-native';
 
-import GallerySection from '@/components/travel/GallerySection';
 import YoutubeLinkComponent from '@/components/YoutubeLinkComponent';
 import ImageUploadComponent from '@/components/imageUpload/ImageUploadComponent';
 import { TravelFormData, Travel } from '@/src/types/types';
+import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+
+const GallerySectionLazy = Platform.OS === 'web'
+    ? React.lazy(() => import('@/components/travel/GallerySection'))
+    : null;
+
+// Native (and other platforms) should keep direct rendering for stability.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const GallerySectionNative = Platform.OS !== 'web' ? require('@/components/travel/GallerySection').default : null;
 
 interface TravelWizardStepMediaProps {
     currentStep: number;
@@ -15,7 +23,7 @@ interface TravelWizardStepMediaProps {
     formData: TravelFormData;
     setFormData: (data: TravelFormData) => void;
     travelDataOld: Travel | null;
-    onManualSave: () => void;
+    onManualSave: () => Promise<TravelFormData | void>;
     onBack: () => void;
     onNext: () => void;
     stepMeta?: {
@@ -48,6 +56,16 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
 }) => {
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
+    const [footerHeight, setFooterHeight] = useState(0);
+
+    const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
+        const next = Math.ceil(event.nativeEvent.layout.height);
+        setFooterHeight(prev => (prev === next ? prev : next));
+    }, []);
+
+    const contentPaddingBottom = useMemo(() => {
+        return footerHeight > 0 ? footerHeight + 16 : 180;
+    }, [footerHeight]);
 
     const scrollRef = useRef<ScrollView | null>(null);
     const coverAnchorRef = useRef<View | null>(null);
@@ -94,180 +112,147 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
 
     return (
         <SafeAreaView style={styles.safeContainer}>
-            <View style={styles.headerWrapper}>
-                <View style={styles.headerRow}>
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.headerTitle}>{stepMeta?.title ?? 'Медиа путешествия'}</Text>
-                        <Text style={styles.headerSubtitle}>{stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}</Text>
-                    </View>
-                    {autosaveBadge && (
-                        <View style={styles.autosaveBadge}>
-                            <Text style={styles.autosaveBadgeText}>{autosaveBadge}</Text>
+            <KeyboardAvoidingView
+                style={styles.keyboardAvoid}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={0}
+            >
+                <TravelWizardHeader
+                    canGoBack={true}
+                    onBack={onBack}
+                    title={stepMeta?.title ?? 'Медиа путешествия'}
+                    subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
+                    progressPercent={progressPercent}
+                    autosaveBadge={autosaveBadge}
+                    tipTitle={stepMeta?.tipTitle}
+                    tipBody={stepMeta?.tipBody}
+                />
+
+                <ScrollView
+                    ref={scrollRef}
+                    style={styles.content}
+                    contentContainerStyle={[styles.contentContainer, { paddingBottom: contentPaddingBottom }]}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View style={styles.contentInner}>
+                        <View ref={coverAnchorRef} style={styles.section} nativeID="travelwizard-media-cover">
+                            <Text style={styles.sectionTitle}>Главное изображение</Text>
+                            <Text style={styles.sectionHint}>
+                                Обложка маршрута, которая будет показываться в списках и на странице путешествия.
+                            </Text>
+                            {formData.id ? (
+                                <View style={styles.coverWrapper}>
+                                    <ImageUploadComponent
+                                        collection="travelMainImage"
+                                        idTravel={formData.id}
+                                        oldImage={
+                                            (formData as any).travel_image_thumb_small_url?.length
+                                                ? (formData as any).travel_image_thumb_small_url
+                                                : (travelDataOld as any)?.travel_image_thumb_small_url ?? null
+                                        }
+                                    />
+                                </View>
+                            ) : (
+                                <Text style={styles.infoText}>
+                                    Чтобы добавить обложку, сначала сохраните черновик (кнопка «Сохранить» внизу).
+                                </Text>
+                            )}
                         </View>
-                    )}
-                </View>
-                <View style={styles.progressBarTrack}>
-                    <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
-                </View>
-                <Text style={styles.progressLabel}>Готово на {progressPercent}%</Text>
-            </View>
 
-            {stepMeta?.tipBody && (
-                <View style={styles.tipCard}>
-                    <Text style={styles.tipTitle}>{stepMeta.tipTitle ?? 'Подсказка'}</Text>
-                    <Text style={styles.tipBody}>{stepMeta.tipBody}</Text>
-                </View>
-            )}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Галерея путешествия</Text>
+                            <Text style={styles.sectionHint}>
+                                Фотографии повышают доверие и помогают читателям лучше понять маршрут. Рекомендуем добавить 3–10 снимков.
+                            </Text>
+                            {Platform.OS === 'web' && GallerySectionLazy ? (
+                                <Suspense
+                                    fallback={
+                                        <View style={styles.lazyFallback}>
+                                            <Text style={styles.lazyFallbackText}>Загрузка галереи…</Text>
+                                        </View>
+                                    }
+                                >
+                                    <GallerySectionLazy formData={formData} travelDataOld={travelDataOld} />
+                                </Suspense>
+                            ) : GallerySectionNative ? (
+                                <GallerySectionNative formData={formData} travelDataOld={travelDataOld} />
+                            ) : null}
+                        </View>
 
-            <ScrollView ref={scrollRef} style={styles.content} contentContainerStyle={styles.contentContainer}>
-                <View ref={coverAnchorRef} style={styles.section} nativeID="travelwizard-media-cover">
-                    <Text style={styles.sectionTitle}>Главное изображение</Text>
-                    <Text style={styles.sectionHint}>
-                        Обложка маршрута, которая будет показываться в списках и на странице путешествия.
-                    </Text>
-                    {formData.id ? (
-                        <View style={styles.coverWrapper}>
-                            <ImageUploadComponent
-                                collection="travelMainImage"
-                                idTravel={formData.id}
-                                oldImage={
-                                    (formData as any).travel_image_thumb_small_url?.length
-                                        ? (formData as any).travel_image_thumb_small_url
-                                        : (travelDataOld as any)?.travel_image_thumb_small_url ?? null
-                                }
+                        <View style={styles.section}>
+                            <YoutubeLinkComponent
+                                label="Видео о путешествии (YouTube-ссылка)"
+                                value={formData.youtube_link ?? ''}
+                                onChange={handleYoutubeChange}
+                                hint="Вставьте ссылку на ролик на YouTube, например: https://www.youtube.com/watch?v=..."
                             />
                         </View>
-                    ) : (
-                        <Text style={styles.infoText}>
-                            Сначала сохраните основную информацию, чтобы добавить фото.
-                        </Text>
-                    )}
-                </View>
+                    </View>
+                </ScrollView>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Галерея путешествия</Text>
-                    <Text style={styles.sectionHint}>
-                        Фотографии повышают доверие и помогают читателям лучше понять маршрут. 
-                        Рекомендуем добавить 3–10 снимков.
-                    </Text>
-                    <GallerySection formData={formData} travelDataOld={travelDataOld} />
-                </View>
-
-                <View style={styles.section}>
-                    <YoutubeLinkComponent
-                        label="Видео о путешествии (YouTube-ссылка)"
-                        value={formData.youtube_link ?? ''}
-                        onChange={handleYoutubeChange}
-                        hint="Вставьте ссылку на ролик на YouTube, например: https://www.youtube.com/watch?v=..."
-                    />
-                </View>
-            </ScrollView>
-
-            <TravelWizardFooter
-                canGoBack={true}
-                onBack={onBack}
-                onPrimary={onNext}
-                onSave={onManualSave}
-                primaryLabel="К деталям"
-            />
+                <TravelWizardFooter
+                    canGoBack={false}
+                    onPrimary={onNext}
+                    onSave={onManualSave}
+                    primaryLabel="К деталям"
+                    onLayout={handleFooterLayout}
+                />
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    safeContainer: { flex: 1, backgroundColor: '#f9f9f9' },
-    headerWrapper: {
-        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-        paddingTop: 12,
-        paddingBottom: 8,
-        backgroundColor: '#f9f9f9',
-    },
-    headerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: DESIGN_TOKENS.spacing.sm,
-    },
-    headerTitle: {
-        fontSize: DESIGN_TOKENS.typography.sizes.lg,
-        fontWeight: '700',
-        color: '#111827',
-        marginBottom: 4,
-    },
-    headerSubtitle: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#6b7280',
-    },
-    autosaveBadge: {
-        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-        paddingVertical: DESIGN_TOKENS.spacing.xxs,
-        borderRadius: 999,
-        backgroundColor: '#eef2ff',
-    },
-    autosaveBadgeText: {
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#4338ca',
-        fontWeight: '600',
-    },
-    progressBarTrack: {
-        marginTop: 8,
-        width: '100%',
-        height: 6,
-        borderRadius: 999,
-        backgroundColor: '#e5e7eb',
-    },
-    progressBarFill: {
-        height: 6,
-        borderRadius: 999,
-        backgroundColor: '#2563eb',
-    },
-    progressLabel: {
-        marginTop: 6,
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#6b7280',
-    },
-    tipCard: {
-        marginHorizontal: DESIGN_TOKENS.spacing.lg,
-        marginTop: 8,
-        padding: DESIGN_TOKENS.spacing.md,
-        borderRadius: 12,
-        backgroundColor: '#ecfdf5',
-        borderWidth: 1,
-        borderColor: '#a7f3d0',
-    },
-    tipTitle: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        fontWeight: '600',
-        color: '#047857',
-        marginBottom: 4,
-    },
-    tipBody: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#065f46',
-    },
+    safeContainer: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
+    keyboardAvoid: { flex: 1 },
     content: {
         flex: 1,
     },
     contentContainer: {
-        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-        paddingBottom: 80,
+        paddingHorizontal: 8,
+        paddingBottom: 0,
+        paddingTop: DESIGN_TOKENS.spacing.sm,
+        alignItems: 'center',
+    },
+    contentInner: {
+        width: '100%',
+        maxWidth: 980,
     },
     section: {
         marginTop: DESIGN_TOKENS.spacing.lg,
         padding: DESIGN_TOKENS.spacing.lg,
-        backgroundColor: '#fff',
-        borderRadius: 8,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,
-        borderColor: '#e5e7eb',
+        borderColor: DESIGN_TOKENS.colors.border,
+        ...(Platform.OS === 'web'
+            ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
+            : (DESIGN_TOKENS.shadowsNative.light as any)),
+    },
+    lazyFallback: {
+        marginTop: 8,
+        padding: DESIGN_TOKENS.spacing.md,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    lazyFallbackText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: DESIGN_TOKENS.colors.textMuted,
+        fontWeight: '600',
     },
     sectionTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
-        fontWeight: '600',
-        color: '#111827',
+        fontWeight: '700',
+        color: DESIGN_TOKENS.colors.text,
         marginBottom: 4,
     },
     sectionHint: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#6b7280',
+        color: DESIGN_TOKENS.colors.textMuted,
         marginBottom: 8,
     },
     coverWrapper: {
@@ -277,7 +262,7 @@ const styles = StyleSheet.create({
     infoText: {
         marginTop: 8,
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#6b7280',
+        color: DESIGN_TOKENS.colors.textMuted,
     },
 });
 

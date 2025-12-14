@@ -59,7 +59,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     if (!formData || !filters) {
         return (
             <View style={styles.loaderContainer}>
-                <ActivityIndicator size="large" color="#6AAAAA" />
+                <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} />
                 <Text>Загрузка фильтров...</Text>
             </View>
         );
@@ -293,7 +293,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
 const styles = StyleSheet.create({
     container: {
         padding: DESIGN_TOKENS.spacing.lg,
-        backgroundColor: '#fff',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         flex: 1,
     },
     loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: DESIGN_TOKENS.spacing.xxs },
@@ -301,21 +301,32 @@ const styles = StyleSheet.create({
     coverHint: {
         marginTop: 8,
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#6b7280',
+        color: DESIGN_TOKENS.colors.textMuted,
         textAlign: 'center',
     },
 
     inputGroup: { marginBottom: 12 },
-    input: { borderWidth: 1, borderColor: '#d1d1d1', padding: DESIGN_TOKENS.spacing.sm, borderRadius: 6 },
-    label: { fontWeight: 'bold', marginBottom: 4 },
+    input: {
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
+        padding: DESIGN_TOKENS.spacing.sm,
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        color: DESIGN_TOKENS.colors.text,
+    },
+    label: {
+        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+        marginBottom: 4,
+        color: DESIGN_TOKENS.colors.text,
+    },
 
-    resetButton: { marginTop: DESIGN_TOKENS.spacing.lg, borderColor: '#f57c00' },
+    resetButton: { marginTop: DESIGN_TOKENS.spacing.lg, borderColor: DESIGN_TOKENS.colors.warning },
 
     closeIcon: {
         position: 'absolute',
         top: -16,
         right: -14,
-        backgroundColor: 'rgba(255, 0, 0, 0.8)',
+        backgroundColor: DESIGN_TOKENS.colors.danger,
         borderRadius: 12,
         width: 20,
         height: 20,
@@ -324,13 +335,13 @@ const styles = StyleSheet.create({
         zIndex: 1,
     },
     closeButtonText: {
-        color: '#fff',
+        color: DESIGN_TOKENS.colors.textInverse,
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         lineHeight: 12,
     },
 
     saveButton: {
-        backgroundColor: '#f5a623',
+        backgroundColor: DESIGN_TOKENS.colors.primary,
         borderRadius: 12,
         marginBottom: 12,
     },
@@ -339,7 +350,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         elevation: 3,
         marginBottom: 12,
     },

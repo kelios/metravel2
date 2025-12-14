@@ -122,7 +122,9 @@ export function useImprovedAutoSave<T>(
       const result = await onSave(dataToSave);
       
       if (!mountedRef.current) {
-        throw new Error('Component unmounted during save');
+        // Component is gone (e.g. user navigated away). Do not update state or
+        // fire callbacks; just resolve to avoid surfacing a spurious error.
+        return result;
       }
 
       // Update refs and state on success
@@ -141,7 +143,9 @@ export function useImprovedAutoSave<T>(
 
     } catch (error) {
       if (!mountedRef.current) {
-        throw error;
+        // Component is gone; avoid propagating errors that would otherwise show
+        // up as console noise or user-facing toasts during navigation.
+        return dataToSave;
       }
 
       const saveError = error instanceof Error ? error : new Error('Save failed');

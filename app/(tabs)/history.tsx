@@ -9,6 +9,7 @@ import EmptyState from '@/components/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { confirmAction } from '@/src/utils/confirmAction';
 
 export default function HistoryScreen() {
     const router = useRouter();
@@ -23,11 +24,7 @@ export default function HistoryScreen() {
 
     const handleOpen = useCallback(
         (url: string) => {
-            if (Platform.OS === 'web') {
-                window.location.href = url;
-            } else {
-                router.push(url as any);
-            }
+            router.push(url as any);
         },
         [router]
     );
@@ -35,10 +32,13 @@ export default function HistoryScreen() {
     const handleClear = useCallback(async () => {
         if (!clearHistory) return;
 
-        if (Platform.OS === 'web') {
-            const confirmed = window.confirm('Очистить историю просмотров?');
-            if (!confirmed) return;
-        }
+        const confirmed = await confirmAction({
+            title: 'Очистить историю',
+            message: 'Очистить историю просмотров?',
+            confirmText: 'Очистить',
+            cancelText: 'Отмена',
+        });
+        if (!confirmed) return;
 
         await clearHistory();
     }, [clearHistory]);
@@ -50,8 +50,8 @@ export default function HistoryScreen() {
             <SafeAreaView style={styles.container}>
                 <EmptyState
                     icon="clock"
-                    title="История доступна после входа"
-                    description="Войдите в аккаунт, чтобы видеть историю просмотров и синхронизировать её."
+                    title="Войдите в аккаунт"
+                    description="Войдите, чтобы сохранять историю просмотров и синхронизировать её между устройствами."
                     action={{
                         label: 'Войти',
                         onPress: () => router.push('/login'),
@@ -69,7 +69,7 @@ export default function HistoryScreen() {
                     title="История просмотров пуста"
                     description="Откройте путешествие — оно появится здесь автоматически."
                     action={{
-                        label: 'Перейти к путешествиям',
+                        label: 'К путешествиям',
                         onPress: () => router.push('/travelsby'),
                     }}
                 />
@@ -80,7 +80,7 @@ export default function HistoryScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <View style={styles.headerText}>
+                <View style={styles.headerTitleBlock}>
                     <Text style={styles.title}>История</Text>
                     <Text style={styles.subtitle}>{data.length} шт.</Text>
                 </View>
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         gap: 12,
     },
-    headerText: {
+    headerTitleBlock: {
         flex: 1,
     },
     title: {

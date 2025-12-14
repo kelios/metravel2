@@ -226,16 +226,19 @@ export function optimizeCriticalPath() {
   // 3. Add resource hints
   addResourceHints();
 
-  // 4. Optimize images
-  const images = document.querySelectorAll('img');
-  images.forEach(img => {
-    const src = (img as HTMLImageElement).src;
-    if (src.includes('travel')) {
-      (img as HTMLImageElement).src = optimizeLCPImage(src);
-      (img as HTMLImageElement).loading = 'eager';
-      (img as HTMLImageElement).fetchPriority = 'high';
+  // 4. Optimize only the actual LCP image to avoid forced re-fetches
+  const lcpImg = document.querySelector('img[data-lcp]') as HTMLImageElement | null;
+  if (lcpImg) {
+    const src = lcpImg.currentSrc || lcpImg.src;
+    if (src) {
+      const optimized = optimizeLCPImage(src);
+      if (optimized && optimized !== src) {
+        lcpImg.src = optimized;
+      }
+      lcpImg.loading = 'eager';
+      lcpImg.fetchPriority = 'high';
     }
-  });
+  }
 
   // 5. Prevent layout shift
   preventLayoutShift();

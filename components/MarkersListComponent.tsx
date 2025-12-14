@@ -67,7 +67,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
             </div>
             {markers.length > 0 && (
                 <div style={styles.searchRow}>
-                    <Feather name="search" size={14} color="#6b7280" />
+                    <Feather name="search" size={14} color={palette.textMuted} />
                     <input
                         type="text"
                         value={search}
@@ -132,7 +132,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                             style={styles.editButton}
                                             type="button"
                                         >
-                                            <Feather name="edit-2" size={13} color="#0f3d2e" />
+                                            <Feather name="edit-2" size={13} color={palette.primaryDark} />
                                             <span>Редактировать</span>
                                         </button>
                                         <button
@@ -143,7 +143,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                             style={styles.deleteButton}
                                             type="button"
                                         >
-                                            <Feather name="trash-2" size={13} color="#7f1d1d" />
+                                            <Feather name="trash-2" size={13} color={palette.dangerDark} />
                                             <span>Удалить</span>
                                         </button>
                                     </div>
@@ -337,15 +337,15 @@ const styles: any = {
         fontSize: '14px',
         fontWeight: 700,
         letterSpacing: '0.2px',
-        color: '#111827',
+        color: palette.text,
     },
     headerBadge: {
         fontSize: '12px',
         fontWeight: 700,
         padding: '2px 10px',
         borderRadius: '999px',
-        backgroundColor: '#eef2ff',
-        color: '#3730a3',
+        backgroundColor: palette.primarySoft,
+        color: palette.primaryDark,
     },
     searchRow: {
         display: 'flex',
@@ -353,8 +353,8 @@ const styles: any = {
         gap: '8px',
         padding: '10px 12px',
         borderRadius: '10px',
-        border: '1px solid #e5e7eb',
-        backgroundColor: '#fff',
+        border: `1px solid ${palette.border}`,
+        backgroundColor: palette.surface,
         marginBottom: '12px',
     },
     searchInput: {
@@ -362,12 +362,12 @@ const styles: any = {
         border: 'none',
         outline: 'none',
         fontSize: '13px',
-        color: '#111827',
+        color: palette.text,
         backgroundColor: 'transparent',
     },
     emptyText: {
         textAlign: 'center',
-        color: '#666',
+        color: palette.textMuted,
         fontSize: '13px',
         lineHeight: 1.4,
     },
@@ -377,21 +377,21 @@ const styles: any = {
         gap: '8px',
     },
     markerItem: {
-        border: '1px solid #e5e7eb',
+        border: `1px solid ${palette.border}`,
         borderRadius: '12px',
         padding: '10px 12px',
-        backgroundColor: '#fff',
-        boxShadow: '0 1px 2px rgba(16, 24, 40, 0.06)',
+        backgroundColor: palette.surface,
+        boxShadow: DESIGN_TOKENS.shadows.card,
         cursor: 'pointer',
         transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
     },
     editingItem: {
-        border: '1px solid rgba(79, 70, 229, 0.35)',
-        boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.16)',
+        border: `1px solid ${palette.borderAccent}`,
+        boxShadow: `0 0 0 3px ${palette.primarySoft}`,
     },
     activeItem: {
-        border: '1px solid rgba(17, 94, 71, 0.35)',
-        boxShadow: '0 0 0 3px rgba(17, 94, 71, 0.12)',
+        border: `1px solid ${palette.borderAccent}`,
+        boxShadow: `0 0 0 3px ${palette.accentSoft}`,
     },
     row: {
         display: 'flex',
@@ -402,8 +402,8 @@ const styles: any = {
         width: '26px',
         height: '26px',
         borderRadius: '999px',
-        backgroundColor: '#f3f4f6',
-        color: '#374151',
+        backgroundColor: palette.backgroundSecondary,
+        color: palette.text,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -416,7 +416,7 @@ const styles: any = {
         height: '48px',
         borderRadius: '12px',
         overflow: 'hidden',
-        backgroundColor: '#f3f4f6',
+        backgroundColor: palette.backgroundSecondary,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -429,7 +429,7 @@ const styles: any = {
     },
     placeholderImage: {
         fontSize: '10px',
-        color: '#9ca3af',
+        color: palette.textSubtle,
         textAlign: 'center',
         padding: '4px',
         lineHeight: 1.2,
@@ -441,7 +441,7 @@ const styles: any = {
     markerTitle: {
         fontSize: '13px',
         fontWeight: 700,
-        color: '#111827',
+        color: palette.text,
         lineHeight: 1.25,
         marginBottom: '4px',
         display: '-webkit-box',
@@ -458,15 +458,15 @@ const styles: any = {
         fontSize: '11px',
         padding: '2px 6px',
         borderRadius: '999px',
-        backgroundColor: '#e5f3ef',
-        color: '#115e47',
+        backgroundColor: palette.accentSoft,
+        color: palette.accentDark,
     },
     badgeMuted: {
         fontSize: '11px',
         padding: '2px 6px',
         borderRadius: '999px',
-        backgroundColor: '#e5e7eb',
-        color: '#4b5563',
+        backgroundColor: palette.backgroundSecondary,
+        color: palette.textMuted,
     },
     actions: {
         display: 'flex',
@@ -476,9 +476,9 @@ const styles: any = {
         flexShrink: 0,
     },
     editButton: {
-        backgroundColor: '#eef2ff',
-        color: '#1f2937',
-        border: '1px solid #e5e7eb',
+        backgroundColor: palette.primarySoft,
+        color: palette.text,
+        border: `1px solid ${palette.border}`,
         padding: '6px 10px',
         borderRadius: '10px',
         cursor: 'pointer',
@@ -490,9 +490,9 @@ const styles: any = {
         fontWeight: 600,
     },
     deleteButton: {
-        backgroundColor: '#fee2e2',
-        color: '#7f1d1d',
-        border: '1px solid #fecaca',
+        backgroundColor: palette.dangerSoft,
+        color: palette.dangerDark,
+        border: `1px solid ${palette.dangerLight}`,
         padding: '6px 10px',
         borderRadius: '10px',
         cursor: 'pointer',
@@ -517,11 +517,11 @@ const styles: any = {
     editTitle: {
         fontSize: '14px',
         fontWeight: 600,
-        color: '#111827',
+        color: palette.text,
     },
     editSubtitle: {
         fontSize: '12px',
-        color: '#4b5563',
+        color: palette.textMuted,
         marginTop: '2px',
         maxWidth: '260px',
         whiteSpace: 'nowrap',
@@ -534,13 +534,13 @@ const styles: any = {
         fontSize: '16px',
         lineHeight: 1,
         cursor: 'pointer',
-        color: '#6b7280',
+        color: palette.textMuted,
         padding: '2px 6px',
         borderRadius: '999px',
     },
     helperText: {
         fontSize: '12px',
-        color: '#4b5563',
+        color: palette.textMuted,
         lineHeight: 1.4,
     },
     field: {
@@ -551,26 +551,28 @@ const styles: any = {
     },
     fieldLabel: {
         fontWeight: 500,
-        color: '#111827',
+        color: palette.text,
     },
     fieldHint: {
         fontSize: '11px',
-        color: '#6b7280',
+        color: palette.textMuted,
         lineHeight: 1.4,
     },
     input: {
         width: '100%',
         padding: '8px',
-        border: '1px solid #d1d5db',
+        border: `1px solid ${palette.border}`,
         borderRadius: '6px',
         fontSize: '13px',
+        color: palette.text,
+        backgroundColor: palette.surface,
     },
     imagePreview: {
         width: '100px',
         height: '100px',
         objectFit: 'cover',
         borderRadius: '6px',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: palette.backgroundSecondary,
         marginTop: '4px',
     },
     actionsRow: {
@@ -588,7 +590,7 @@ const styles: any = {
     },
     primaryButton: {
         backgroundColor: palette.primary,
-        color: '#fff',
+        color: palette.textInverse,
         border: 'none',
         padding: '6px 14px',
         borderRadius: '6px',
@@ -597,7 +599,7 @@ const styles: any = {
         fontWeight: 500,
     },
     secondaryButton: {
-        backgroundColor: '#fff',
+        backgroundColor: palette.surface,
         color: palette.text,
         border: `1px solid ${palette.border}`,
         padding: '6px 12px',
@@ -628,17 +630,17 @@ const styles: any = {
     modalBackdrop: {
         position: 'absolute',
         inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.35)',
+        backgroundColor: DESIGN_TOKENS.colors.overlay,
     },
     modalContent: {
         position: 'relative',
-        backgroundColor: '#fff',
+        backgroundColor: palette.surface,
         borderRadius: '12px',
         maxWidth: '720px',
         width: '90%',
         maxHeight: '90vh',
         padding: '20px 24px',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+        boxShadow: DESIGN_TOKENS.shadows.modal,
         overflowY: 'auto',
     },
 };

@@ -136,6 +136,7 @@ export function getModerationIssues(
       key: 'name',
       label: 'Название',
       targetStep: 1,
+      anchorId: 'travelwizard-basic-name',
     });
   }
 
@@ -145,6 +146,7 @@ export function getModerationIssues(
       key: 'description',
       label: 'Описание',
       targetStep: 1,
+      anchorId: 'travelwizard-basic-description',
     });
   }
 
@@ -154,6 +156,7 @@ export function getModerationIssues(
       key: 'countries',
       label: 'Страны (минимум одна)',
       targetStep: 2,
+      anchorId: 'travelwizard-route-countries',
     });
   }
 

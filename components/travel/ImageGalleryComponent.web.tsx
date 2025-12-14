@@ -14,6 +14,25 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { uploadImage, deleteImage } from '@/src/api/misc';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
+const API_BASE_URL: string =
+    process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
+
+const ensureAbsoluteUrl = (value: string): string => {
+    if (!value) return value;
+
+    try {
+        return new URL(value).toString();
+    } catch {
+        const base = API_BASE_URL ? API_BASE_URL.replace(/\/api\/?$/, '') : undefined;
+        if (!base) return value;
+        try {
+            return new URL(value, base).toString();
+        } catch {
+            return value;
+        }
+    }
+};
+
 interface GalleryItem {
     id: string;
     url: string;
@@ -44,7 +63,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
 
     useEffect(() => {
         if (initialImages?.length) {
-            setImages(initialImages);
+            setImages(initialImages.map((img) => ({ ...img, url: ensureAbsoluteUrl(img.url) })));
             setLoading(initialImages.map(() => false));
         }
         setIsInitialLoading(false);
@@ -67,7 +86,10 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                     formData.append('id', idTravel);
                     const response = await uploadImage(formData);
                     if (response?.url) {
-                        setImages((prev) => [...prev, { id: response.id, url: response.url }]);
+                        setImages((prev) => [
+                            ...prev,
+                            { id: response.id, url: ensureAbsoluteUrl(String(response.url)) },
+                        ]);
                     }
                 } finally {
                     newLoading[currentIndex] = false;
@@ -87,6 +109,16 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
         disabled: Platform.OS !== 'web',
         onDrop: (acceptedFiles) => handleUploadImages(acceptedFiles),
     });
+
+    const dropzoneRootProps = useCallback(() => {
+        const props = getRootProps();
+        // react-dropzone uses generic HTML props; RN-web View has stricter typing for tabIndex.
+        const { tabIndex, ...rest } = props as any;
+        return {
+            rootProps: rest,
+            tabIndex: tabIndex as 0 | -1 | undefined,
+        };
+    }, [getRootProps]);
 
     const handleDeleteImage = (imageId: string) => {
         setSelectedImageId(imageId);
@@ -114,8 +146,12 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
             </View>
 
             {Platform.OS === 'web' && (
+                (() => {
+                    const { rootProps, tabIndex } = dropzoneRootProps();
+                    return (
                 <View
-                    {...getRootProps()}
+                    {...(rootProps as any)}
+                    tabIndex={tabIndex}
                     style={[
                         styles.dropzone,
                         isDragActive && styles.activeDropzone,
@@ -127,6 +163,8 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                         {isDragActive ? 'Отпустите файлы...' : 'Перетащите сюда изображения'}
                     </Text>
                 </View>
+                    );
+                })()
             )}
 
             {isInitialLoading ? (

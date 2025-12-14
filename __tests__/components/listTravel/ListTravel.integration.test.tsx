@@ -366,7 +366,7 @@ describe('ListTravel Integration Tests', () => {
     renderWithProviders(<ListTravel />);
 
     // Clear button should be available when there are active filters
-    const clearButton = await screen.findByText(/Очистить/);
+    const clearButton = await screen.findByTestId('clear-all-button');
     fireEvent.press(clearButton);
 
     expect(mockResetFilters).toHaveBeenCalled();

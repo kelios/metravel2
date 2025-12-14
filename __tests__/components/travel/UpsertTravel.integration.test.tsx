@@ -3,7 +3,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, Text, TouchableOpacity } from 'react-native';
 import type { TravelFormData, Travel } from '@/src/types/types';
-import { getModerationErrors } from '@/utils/formValidation';
+import { getModerationErrors, getModerationIssues } from '@/utils/formValidation';
 
 const mockTrackWizardEvent = jest.fn();
 const mockPush = jest.fn();
@@ -27,6 +27,7 @@ const TravelWizardStepPublish: React.FC<any> = ({
   onFinish,
   currentStep,
   totalSteps,
+  onNavigateToIssue,
 }) => {
   const [status, setStatus] = useState<'draft' | 'moderation'>(
     formData.moderation ? 'moderation' : 'draft',
@@ -34,6 +35,19 @@ const TravelWizardStepPublish: React.FC<any> = ({
   const [missingForModeration, setMissingForModeration] = useState<string[]>([]);
 
   const isNew = !formData.id;
+
+  const issues = getModerationIssues(
+    {
+      name: formData.name ?? '',
+      description: formData.description ?? '',
+      countries: formData.countries ?? [],
+      categories: (formData as any).categories ?? [],
+      coordsMeTravel: (formData as any).coordsMeTravel ?? [],
+      gallery: (formData as any).gallery ?? [],
+      travel_image_thumb_small_url: (formData as any).travel_image_thumb_small_url ?? null,
+    } as any,
+    [],
+  );
 
   const handleSaveDraft = async () => {
     setFormData({
@@ -138,6 +152,20 @@ const TravelWizardStepPublish: React.FC<any> = ({
         <TouchableOpacity onPress={handlePrimaryAction} testID="primary-button">
           <Text>{status === 'draft' ? 'Сохранить черновик' : 'Отправить на модерацию'}</Text>
         </TouchableOpacity>
+
+        {/* Чек-лист (кликабельные строки вызывают onNavigateToIssue) */}
+        <View>
+          {issues.map((issue: any) => (
+            <TouchableOpacity
+              key={issue.key}
+              onPress={() => onNavigateToIssue?.(issue)}
+              disabled={!onNavigateToIssue}
+              testID={`checklist-${issue.key}`}
+            >
+              <Text>{issue.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
         {status === 'moderation' && missingForModeration.length > 0 && (
           <Text>Нужно дополнить перед модерацией</Text>
@@ -268,5 +296,55 @@ describe('Travel wizard publish step (integration)', () => {
 
     expect(mockTrackWizardEvent).toHaveBeenCalledWith('wizard_moderation_success', expect.any(Object));
     expect(mockPush).toHaveBeenCalledWith('/metravel');
+  });
+
+  it('calls onNavigateToIssue when user taps a missing checklist row (new UX)', async () => {
+    const onNavigateToIssue = jest.fn();
+
+    // Missing categories should produce an actionable issue.
+    const formData: TravelFormData = {
+      ...baseFormData,
+      categories: [],
+      coordsMeTravel: [{ lat: 1, lng: 2 } as any],
+      travel_image_thumb_small_url: 'https://example.com/cover.jpg',
+    } as any;
+
+    const setFormData = jest.fn();
+    const onManualSave = jest.fn(async () => undefined);
+    const onGoBack = jest.fn();
+    const onFinish = jest.fn(async () => undefined);
+
+    const { getByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={formData}
+        setFormData={setFormData}
+        filters={{}}
+        travelDataOld={null as unknown as Travel}
+        isSuperAdmin={false}
+        onManualSave={onManualSave}
+        onGoBack={onGoBack}
+        onFinish={onFinish}
+        onNavigateToIssue={onNavigateToIssue}
+      />,
+    );
+
+    const issues = getModerationIssues({
+      name: formData.name ?? '',
+      description: formData.description ?? '',
+      countries: formData.countries ?? [],
+      categories: (formData as any).categories ?? [],
+      coordsMeTravel: (formData as any).coordsMeTravel ?? [],
+      gallery: (formData as any).gallery ?? [],
+      travel_image_thumb_small_url: (formData as any).travel_image_thumb_small_url ?? null,
+    } as any, []);
+    const categoriesIssue = issues.find(i => i.key === 'categories');
+    expect(categoriesIssue).toBeTruthy();
+
+    // Mock renders checklist row labels; tap by label text
+    fireEvent.press(getByText(categoriesIssue!.label));
+
+    expect(onNavigateToIssue).toHaveBeenCalledWith(categoriesIssue);
   });
 });

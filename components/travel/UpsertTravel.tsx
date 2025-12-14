@@ -12,7 +12,6 @@ import { useAuth } from '@/context/AuthContext';
 import { validateStep, type ValidationError, type ModerationIssue } from '@/utils/formValidation';
 import { trackWizardEvent } from '@/src/utils/analytics';
 import { useOptimizedFormState } from '@/hooks/useOptimizedFormState';
-import { useOptimizedValidation } from '@/hooks/useOptimizedValidation';
 import { useImprovedAutoSave } from '@/hooks/useImprovedAutoSave';
 
 import TravelWizardStepBasic from '@/components/travel/TravelWizardStepBasic';
@@ -158,15 +157,6 @@ export default function UpsertTravel() {
         pendingIssueNavRef.current = null;
         setFocusAnchorId(null);
     }, []);
-
-    // Debug: trace renders and form state changes
-    console.log('[UpsertTravel] render', { currentStep, isNew, id, hasAccess, isInitialLoading });
-    
-    // Optimized validation
-    const validation = useOptimizedValidation(formState.data, {
-        debounce: 300,
-        validateOnChange: true,
-    });
     
     // Stable toast notification (no dependencies on autosave)
     const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
@@ -197,7 +187,10 @@ export default function UpsertTravel() {
         {
             debounce: 5000,
             onSave: async (data) => {
-                const cleanedData = cleanEmptyFields({ ...data, id: data.id || null });
+                const cleanedData = cleanEmptyFields({
+                    ...data,
+                    id: normalizeTravelId(data.id),
+                });
                 return await saveFormData(cleanedData);
             },
             onSuccess: handleSaveSuccess,
@@ -219,10 +212,8 @@ export default function UpsertTravel() {
 
     // Load travel data from server
     const loadTravelData = useCallback(async (travelId: string) => {
-        console.log('Loading travel data for ID:', travelId, typeof travelId);
         try {
             const travelData = await fetchTravel(Number(travelId));
-            console.log('Loaded travel data:', travelData?.id, travelData?.name);
 
             // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Проверка прав доступа при редактировании
             if (!isNew && travelData) {
@@ -279,7 +270,6 @@ export default function UpsertTravel() {
     }, [isNew, isAuthenticated, userId, isSuperAdmin, router, autosave.updateBaseline]); // Added dependencies for useCallback
 
     useEffect(() => {
-        console.log('[UpsertTravel] useEffect load filters & travel', { id, isNew });
         let isMounted = true;
         (async () => {
             try {
@@ -309,8 +299,7 @@ export default function UpsertTravel() {
         };
     }, [id, isNew, isAuthenticated, userId, router, loadTravelData]);
 
-    const handleManualSave = useCallback(async () => {
-        console.log('[UpsertTravel] handleManualSave start', { currentStep });
+    const handleManualSave = useCallback(async (): Promise<TravelFormData | void> => {
         try {
             await trackWizardEvent('wizard_manual_save', {
                 step: currentStep,
@@ -320,13 +309,14 @@ export default function UpsertTravel() {
             });
 
             const savedData = await autosave.saveNow();
-            console.log('[UpsertTravel] handleManualSave saved', { id: (savedData as any)?.id });
             applySavedData(savedData);
 
             showToast('Сохранено');
+            return savedData;
         } catch (error) {
             showToast('Ошибка сохранения', 'error');
             console.error('Manual save error:', error);
+            return;
         }
     }, [currentStep, isNew, formState.data.moderation, autosave.saveNow, applySavedData, showToast]);
 
@@ -336,7 +326,6 @@ export default function UpsertTravel() {
 
     // Track step views in a dedicated effect instead of inside render
     useEffect(() => {
-        console.log('[UpsertTravel] step view', { step: currentStep });
         trackWizardEvent('wizard_step_view', {
             step: currentStep,
         });
@@ -474,6 +463,8 @@ export default function UpsertTravel() {
                 autosaveBadge={autosaveBadge}
                 stepMeta={stepMeta}
                 progress={progressValue}
+                focusAnchorId={focusAnchorId}
+                onAnchorHandled={handleAnchorHandled}
             />
         );
     }
@@ -656,33 +647,26 @@ export default function UpsertTravel() {
 }
 
 const styles = StyleSheet.create({
-    safeContainer: { flex: 1, backgroundColor: '#f9f9f9' },
+    safeContainer: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
     mainWrapper: { flex: 1, flexDirection: 'row' },
     mainWrapperMobile: { flexDirection: 'column' },
     contentColumn: { flex: 1 },
-    filtersColumn: { width: 320, borderLeftWidth: 1, padding: DESIGN_TOKENS.spacing.md, borderColor: '#ddd' },
+    filtersColumn: {
+        width: 320,
+        borderLeftWidth: 1,
+        padding: DESIGN_TOKENS.spacing.md,
+        borderColor: DESIGN_TOKENS.colors.border,
+    },
     filtersScroll: { maxHeight: '80%' },
     mobileFiltersWrapper: { padding: DESIGN_TOKENS.spacing.md },
-    mobileActionBar: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: '#fff',
-        padding: DESIGN_TOKENS.spacing.md,
-        borderTopWidth: 1,
-        borderColor: '#ddd',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
     saveButtonMobile: {
-        backgroundColor: '#f5a623',
-        borderRadius: 50,
+        backgroundColor: DESIGN_TOKENS.colors.primary,
+        borderRadius: DESIGN_TOKENS.radii.pill,
         minWidth: 150,
     },
     filterButton: {
-        borderColor: '#007AFF',
-        borderRadius: 50,
+        borderColor: DESIGN_TOKENS.colors.primary,
+        borderRadius: DESIGN_TOKENS.radii.pill,
         minWidth: 100,
     },
     loadingContainer: {
@@ -695,20 +679,20 @@ const styles = StyleSheet.create({
     loadingSkeletonHeader: {
         height: 20,
         borderRadius: 6,
-        backgroundColor: '#e5e7eb',
+        backgroundColor: DESIGN_TOKENS.colors.border,
         marginBottom: 4,
     },
     loadingSkeletonSubheader: {
         height: 14,
         borderRadius: 6,
-        backgroundColor: '#e5e7eb',
+        backgroundColor: DESIGN_TOKENS.colors.border,
         width: '70%',
         marginBottom: 12,
     },
     loadingSkeletonBlock: {
         height: 160,
         borderRadius: 10,
-        backgroundColor: '#e5e7eb',
+        backgroundColor: DESIGN_TOKENS.colors.border,
     },
 });
 
@@ -806,4 +790,16 @@ function cleanEmptyFields(obj: any): any {
             return [key, value];
         }),
     );
+}
+
+function normalizeTravelId(id: unknown): number | null {
+    if (id == null) return null;
+    if (typeof id === 'number') return Number.isFinite(id) ? id : null;
+    if (typeof id === 'string') {
+        const trimmed = id.trim();
+        if (!trimmed) return null;
+        const parsed = Number(trimmed);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
 }
