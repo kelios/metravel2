@@ -140,4 +140,20 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(rendered).toContain('<ul>')
     expect(rendered).toContain('<blockquote>')
   })
+
+  it('generates full HTML document with cover, pages and final screen', async () => {
+    ;(generator as any).selectedQuotes = undefined
+    const html = await generator.generate([travelA, travelB], {
+      ...baseSettings,
+      includeChecklists: true,
+      includeGallery: true,
+      includeMap: true,
+      includeToc: true,
+    })
+
+    expect(html).toContain('cover-page')
+    expect(html).toContain('toc-page')
+    expect(html).toContain('travel-content-page')
+    expect(html).toContain('final-page')
+  })
 })

@@ -38,4 +38,31 @@ describe('BlockRenderer', () => {
     expect(html).toContain('Осторожно')
     expect(html).toContain('<table')
   })
+
+  it('renders media-oriented blocks and separators', () => {
+    const renderer = new BlockRenderer(theme)
+
+    const image = renderer.renderBlock({
+      type: 'image',
+      src: 'http://example.com/photo.png',
+      alt: 'Картинка <danger>',
+      caption: 'Описание',
+      width: 200,
+      height: 100,
+    } as any)
+    expect(image).toContain('images.weserv.nl')
+    expect(image).toContain('&lt;danger&gt;')
+    expect(image).toContain('Описание')
+
+    const gallery = renderer.renderBlock({
+      type: 'image-gallery',
+      columns: 3,
+      images: [{ src: 'a.jpg' }, { src: 'b.jpg' }],
+    } as any)
+    expect(gallery).toContain('grid-template-columns: repeat(3')
+    expect(gallery).toContain('a.jpg')
+
+    const separator = renderer.renderBlock({ type: 'separator' } as any)
+    expect(separator).toContain('<hr')
+  })
 })

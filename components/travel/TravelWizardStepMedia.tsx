@@ -1,7 +1,6 @@
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, StyleSheet, Text, ScrollView } from 'react-native';
-import { Button } from 'react-native-paper';
 
 import GallerySection from '@/components/travel/GallerySection';
 import YoutubeLinkComponent from '@/components/YoutubeLinkComponent';
@@ -19,6 +18,15 @@ interface TravelWizardStepMediaProps {
     onManualSave: () => void;
     onBack: () => void;
     onNext: () => void;
+    stepMeta?: {
+        title?: string;
+        subtitle?: string;
+        tipTitle?: string;
+        tipBody?: string;
+        nextLabel?: string;
+    };
+    progress?: number;
+    autosaveBadge?: string;
 }
 
 const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
@@ -30,7 +38,13 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     onManualSave,
     onBack,
     onNext,
+    stepMeta,
+    progress = currentStep / totalSteps,
+    autosaveBadge,
 }) => {
+    const progressValue = Math.min(Math.max(progress, 0), 1);
+    const progressPercent = Math.round(progressValue * 100);
+
     const handleYoutubeChange = (value: string) => {
         setFormData({ ...formData, youtube_link: value });
     };
@@ -38,11 +52,29 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     return (
         <SafeAreaView style={styles.safeContainer}>
             <View style={styles.headerWrapper}>
-                <Text style={styles.headerTitle}>Медиа путешествия</Text>
-                <Text style={styles.headerSubtitle}>
-                    Шаг {currentStep} из {totalSteps} · Фото и видео (предыдущий: Маршрут · следующий: Детали)
-                </Text>
+                <View style={styles.headerRow}>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.headerTitle}>{stepMeta?.title ?? 'Медиа путешествия'}</Text>
+                        <Text style={styles.headerSubtitle}>{stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}</Text>
+                    </View>
+                    {autosaveBadge && (
+                        <View style={styles.autosaveBadge}>
+                            <Text style={styles.autosaveBadgeText}>{autosaveBadge}</Text>
+                        </View>
+                    )}
+                </View>
+                <View style={styles.progressBarTrack}>
+                    <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+                </View>
+                <Text style={styles.progressLabel}>Готово на {progressPercent}%</Text>
             </View>
+
+            {stepMeta?.tipBody && (
+                <View style={styles.tipCard}>
+                    <Text style={styles.tipTitle}>{stepMeta.tipTitle ?? 'Подсказка'}</Text>
+                    <Text style={styles.tipBody}>{stepMeta.tipBody}</Text>
+                </View>
+            )}
 
             <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
                 <View style={styles.section}>
@@ -107,6 +139,11 @@ const styles = StyleSheet.create({
         paddingBottom: 8,
         backgroundColor: '#f9f9f9',
     },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.sm,
+    },
     headerTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.lg,
         fontWeight: '700',
@@ -116,6 +153,53 @@ const styles = StyleSheet.create({
     headerSubtitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#6b7280',
+    },
+    autosaveBadge: {
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        paddingVertical: DESIGN_TOKENS.spacing.xxs,
+        borderRadius: 999,
+        backgroundColor: '#eef2ff',
+    },
+    autosaveBadgeText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: '#4338ca',
+        fontWeight: '600',
+    },
+    progressBarTrack: {
+        marginTop: 8,
+        width: '100%',
+        height: 6,
+        borderRadius: 999,
+        backgroundColor: '#e5e7eb',
+    },
+    progressBarFill: {
+        height: 6,
+        borderRadius: 999,
+        backgroundColor: '#2563eb',
+    },
+    progressLabel: {
+        marginTop: 6,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: '#6b7280',
+    },
+    tipCard: {
+        marginHorizontal: DESIGN_TOKENS.spacing.lg,
+        marginTop: 8,
+        padding: DESIGN_TOKENS.spacing.md,
+        borderRadius: 12,
+        backgroundColor: '#ecfdf5',
+        borderWidth: 1,
+        borderColor: '#a7f3d0',
+    },
+    tipTitle: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: '600',
+        color: '#047857',
+        marginBottom: 4,
+    },
+    tipBody: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: '#065f46',
     },
     content: {
         flex: 1,

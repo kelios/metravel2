@@ -1,4 +1,38 @@
-import { generateMapImageFromDOM, generateStaticMapUrl } from '@/src/utils/mapImageGenerator'
+import * as mapImageGenerator from '@/src/utils/mapImageGenerator'
+import { generateMapImageFromDOM, generateStaticMapUrl, generateLeafletRouteSnapshot } from '@/src/utils/mapImageGenerator'
+
+const mockMapRemove = jest.fn()
+const mockFitBounds = jest.fn()
+const mockTileLayerOn = jest.fn()
+
+const mockLeaflet = {
+  map: jest.fn(() => ({
+    fitBounds: mockFitBounds,
+    remove: mockMapRemove,
+  })),
+  tileLayer: jest.fn(() => {
+    const layer: any = {
+      addTo: jest.fn().mockReturnThis(),
+      on: mockTileLayerOn.mockImplementation((event: string, cb: () => void) => {
+        if (event === 'load') {
+          cb()
+        }
+        return layer
+      }),
+    }
+    return layer
+  }),
+  latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
+  latLngBounds: jest.fn((coords: any[]) => ({ coords })),
+  divIcon: jest.fn((icon: any) => icon),
+  marker: jest.fn(() => ({ addTo: jest.fn() })),
+}
+
+jest.mock('leaflet', () => ({
+  __esModule: true,
+  default: mockLeaflet,
+  ...mockLeaflet,
+}))
 
 describe('generateStaticMapUrl', () => {
   const points = [
@@ -58,5 +92,45 @@ describe('generateMapImageFromDOM', () => {
 
     expect(html2canvasMock).toHaveBeenCalled()
     expect(dataUrl.startsWith('data:image/png')).toBe(true)
+  })
+})
+
+describe('generateLeafletRouteSnapshot', () => {
+  afterEach(() => {
+    jest.useRealTimers()
+    jest.clearAllTimers()
+    mockMapRemove.mockClear()
+    mockFitBounds.mockClear()
+    mockTileLayerOn.mockClear()
+    delete (window as any).html2canvas
+  })
+
+  it('returns null when no points provided', async () => {
+    expect(await generateLeafletRouteSnapshot([])).toBeNull()
+  })
+
+  it('creates off-screen map snapshot and cleans up DOM', async () => {
+    jest.useFakeTimers()
+    ;(window as any).html2canvas = jest.fn(() =>
+      Promise.resolve({
+        toDataURL: () => 'data:image/png;base64,leaflet',
+      })
+    )
+
+    const promise = generateLeafletRouteSnapshot(
+      [
+        { lat: 10, lng: 20 },
+        { lat: 11, lng: 22 },
+      ],
+      { width: 320, height: 180, zoom: 9 }
+    )
+
+    jest.runAllTimers()
+    const result = await promise
+
+    expect(result).toBe('data:image/png;base64,leaflet')
+    expect(mockLeaflet.map).toHaveBeenCalled()
+    expect(mockMapRemove).toHaveBeenCalled()
+    expect(document.getElementById('metravel-map-snapshot')).toBeNull()
   })
 })

@@ -48,6 +48,30 @@ const STEP_CONFIG: StepMeta[] = [
         tipBody: 'Начните с основной географии: добавьте города, потом уточняйте отдельные точки. Это экономит время.',
         nextLabel: 'К медиа (шаг 3 из 5)',
     },
+    {
+        id: 3,
+        title: 'Медиа путешествия',
+        subtitle: 'Добавьте обложку, фотографии и видео — это повышает доверие и конверсию',
+        tipTitle: 'Подсказка',
+        tipBody: 'Если есть выбор, начните с обложки: горизонтальный кадр без коллажей обычно смотрится лучше в списках.',
+        nextLabel: 'К деталям (шаг 4 из 5)',
+    },
+    {
+        id: 4,
+        title: 'Детали и советы',
+        subtitle: 'Плюсы/минусы, рекомендации и бюджет — чтобы маршрут был полезнее',
+        tipTitle: 'Подсказка',
+        tipBody: 'Короткие списки и конкретика работают лучше, чем общий текст. Пишите так, как советовали бы другу.',
+        nextLabel: 'К публикации (шаг 5 из 5)',
+    },
+    {
+        id: 5,
+        title: 'Публикация путешествия',
+        subtitle: 'Проверьте готовность и выберите статус — черновик или модерация',
+        tipTitle: 'Подсказка',
+        tipBody: 'Перед модерацией убедитесь, что есть описание, страны, минимум одна точка маршрута и обложка/фото.',
+        nextLabel: 'Завершить',
+    },
 ];
 
 export default function UpsertTravel() {
@@ -71,6 +95,8 @@ export default function UpsertTravel() {
     const [filters, setFilters] = useState<ReturnType<typeof initFilters> | null>(null);
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
+
+    const [step1SubmitErrors, setStep1SubmitErrors] = useState<ValidationError[]>([]);
     
     // Optimized form state management
     const initialFormData = useMemo(() => getEmptyFormData(isNew ? null : String(id)), [isNew, id]);
@@ -268,6 +294,8 @@ export default function UpsertTravel() {
             const savedData = await autosave.saveNow();
             console.log('[UpsertTravel] handleManualSave saved', { id: (savedData as any)?.id });
             applySavedData(savedData);
+
+            showToast('Сохранено');
         } catch (error) {
             showToast('Ошибка сохранения', 'error');
             console.error('Manual save error:', error);
@@ -312,6 +340,7 @@ export default function UpsertTravel() {
             name: formState.data.name ?? '',
             description: formState.data.description ?? '',
             countries: formState.data.countries ?? [],
+            categories: (formState.data as any).categories ?? [],
         } as any);
 
         const hadErrors = !result.isValid;
@@ -324,10 +353,12 @@ export default function UpsertTravel() {
         });
 
         if (!result.isValid) {
-            const requiredMessages = result.errors.map((e: ValidationError) => e.message);
-            showToast('Заполните обязательные поля на шаге "Основное", чтобы перейти дальше.', 'error');
+            setStep1SubmitErrors(result.errors);
+            showToast('Заполните обязательные поля, чтобы перейти дальше.', 'error');
             return;
         }
+
+        setStep1SubmitErrors([]);
 
         setCurrentStep(2);
     }, [formState.data, showToast]);
@@ -365,6 +396,14 @@ export default function UpsertTravel() {
     })();
 
     if (currentStep === 1) {
+        const firstErrorFieldForContent = (() => {
+            const field = step1SubmitErrors[0]?.field;
+            if (field === 'name' || field === 'description') {
+                return field;
+            }
+            return null;
+        })();
+
         return (
             <TravelWizardStepBasic
                 currentStep={currentStep}
@@ -382,8 +421,8 @@ export default function UpsertTravel() {
                 snackbarMessage={autosave.error?.message || ''}
                 onDismissSnackbar={autosave.clearError}
                 onGoNext={handleNextFromBasic}
-                stepErrors={validation.errors.map(e => e.message)}
-                firstErrorField={validation.errors[0]?.field}
+                stepErrors={step1SubmitErrors.map(e => e.message)}
+                firstErrorField={firstErrorFieldForContent}
                 autosaveStatus={autosave.status as 'idle' | 'saving' | 'saved' | 'error'}
                 autosaveBadge={autosaveBadge}
                 stepMeta={stepMeta}
@@ -445,6 +484,9 @@ export default function UpsertTravel() {
                     setCurrentStep(3);
                 }}
                 onManualSave={handleManualSave}
+                stepMeta={stepMeta}
+                progress={progressValue}
+                autosaveBadge={autosaveBadge}
             />
         );
     }
@@ -505,6 +547,9 @@ export default function UpsertTravel() {
                     });
                     setCurrentStep(5);
                 }}
+                stepMeta={stepMeta}
+                progress={progressValue}
+                autosaveBadge={autosaveBadge}
             />
         );
     }
@@ -521,6 +566,9 @@ export default function UpsertTravel() {
             onManualSave={handleManualSave}
             onGoBack={() => setCurrentStep(4)}
             onFinish={handleFinishWizard}
+            stepMeta={stepMeta}
+            progress={progressValue}
+            autosaveBadge={autosaveBadge}
         />
     );
 }

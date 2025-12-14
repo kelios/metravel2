@@ -1,0 +1,168 @@
+import {
+  saveFormData,
+  uploadImage,
+  deleteImage,
+  fetchFilters,
+  fetchFiltersCountry,
+  fetchAllCountries,
+  sendFeedback,
+  sendAIMessage,
+} from '@/src/api/misc'
+import type { TravelFormData } from '@/src/types/types'
+
+const mockGetSecureItem = jest.fn()
+const mockFetchWithTimeout = jest.fn()
+const mockSafeJsonParse = jest.fn()
+const mockValidateImageFile = jest.fn()
+const mockValidateAIMessage = jest.fn()
+const mockSanitizeInput = jest.fn((v: string) => v)
+const mockDevError = jest.fn()
+
+jest.mock('@/src/utils/secureStorage', () => ({
+  getSecureItem: (...args: any[]) => mockGetSecureItem(...args),
+}))
+
+jest.mock('@/src/utils/fetchWithTimeout', () => ({
+  fetchWithTimeout: (...args: any[]) => mockFetchWithTimeout(...args),
+}))
+
+jest.mock('@/src/utils/safeJsonParse', () => ({
+  safeJsonParse: (...args: any[]) => mockSafeJsonParse(...args),
+}))
+
+jest.mock('@/src/utils/validation', () => ({
+  validateImageFile: (...args: any[]) => mockValidateImageFile(...args),
+  validateAIMessage: (...args: any[]) => mockValidateAIMessage(...args),
+}))
+
+jest.mock('@/src/utils/security', () => ({
+  sanitizeInput: (...args: any[]) => mockSanitizeInput(...args),
+}))
+
+jest.mock('@/src/utils/logger', () => ({
+  devError: (...args: any[]) => mockDevError(...args),
+}))
+
+const baseForm: TravelFormData = {
+  id: 1,
+  slug: 'trip',
+  name: 'Trip',
+  travel_image_thumb_url: '',
+  travel_image_thumb_small_url: '',
+  url: '/trip',
+  youtube_link: '',
+  userName: 'Tester',
+  description: '',
+  recommendation: '',
+  plus: '',
+  minus: '',
+  cityName: '',
+  countryName: '',
+  countUnicIpView: '',
+  gallery: [],
+  travelAddress: [],
+  userIds: '',
+  year: '',
+  monthName: '',
+  number_days: 0,
+  companions: [],
+  countryCode: '',
+}
+
+describe('api/misc', () => {
+  beforeEach(() => {
+    jest.resetAllMocks()
+    ;(global as any).File = class FakeFile {}
+  })
+
+  it('saveFormData requires auth and propagates non-ok responses', async () => {
+    mockGetSecureItem.mockResolvedValue(null)
+    await expect(saveFormData(baseForm)).rejects.toThrow('Пользователь не авторизован')
+
+    mockGetSecureItem.mockResolvedValue('token')
+    mockFetchWithTimeout.mockResolvedValue({ ok: false })
+    await expect(saveFormData(baseForm)).rejects.toThrow('Ошибка при создании записи на сервере')
+  })
+
+  it('saveFormData returns parsed response on success', async () => {
+    mockGetSecureItem.mockResolvedValue('token')
+    mockFetchWithTimeout.mockResolvedValue({ ok: true })
+    mockSafeJsonParse.mockResolvedValue({ ...baseForm, id: 2 })
+
+    const result = await saveFormData(baseForm)
+    expect(result.id).toBe(2)
+    expect(mockFetchWithTimeout).toHaveBeenCalled()
+  })
+
+  it('uploadImage validates file and requires token', async () => {
+    mockGetSecureItem.mockResolvedValue(null)
+    await expect(uploadImage(new FormData())).rejects.toThrow('Пользователь не авторизован')
+
+    mockGetSecureItem.mockResolvedValue('token')
+    mockValidateImageFile.mockReturnValue({ valid: false, error: 'bad' })
+    class CustomFormData extends FormData {
+      get(name: string) {
+        return new File([], `${name}.png`)
+      }
+    }
+    const fd = new CustomFormData()
+    fd.append('file', new File([], 'a.png'))
+    await expect(uploadImage(fd)).rejects.toThrow('bad')
+  })
+
+  it('uploadImage posts to API and parses response', async () => {
+    mockGetSecureItem.mockResolvedValue('token')
+    mockValidateImageFile.mockReturnValue({ valid: true })
+    mockFetchWithTimeout.mockResolvedValue({ status: 200 })
+    mockSafeJsonParse.mockResolvedValue({ ok: true })
+
+    const fd = new FormData()
+    fd.append('file', new File([], 'a.png'))
+    const result = await uploadImage(fd)
+    expect(result).toEqual({ ok: true })
+  })
+
+  it('deleteImage enforces auth and success status', async () => {
+    mockGetSecureItem.mockResolvedValue(null)
+    await expect(deleteImage('1')).rejects.toThrow('Пользователь не авторизован')
+
+    mockGetSecureItem.mockResolvedValue('token')
+    mockFetchWithTimeout.mockResolvedValue({ status: 204 })
+    await expect(deleteImage('1')).resolves.toBeDefined()
+
+    mockFetchWithTimeout.mockResolvedValue({ status: 400 })
+    await expect(deleteImage('1')).rejects.toThrow('Ошибка удаления изображения')
+  })
+
+  it('fetchFilters and country/all fall back to empty on errors', async () => {
+    mockFetchWithTimeout.mockRejectedValue(new Error('network'))
+    const filters = await fetchFilters()
+    const countries = await fetchFiltersCountry()
+    const all = await fetchAllCountries()
+    expect(filters).toEqual([])
+    expect(countries).toEqual([])
+    expect(all).toEqual([])
+    expect(mockDevError).toHaveBeenCalled()
+  })
+
+  it('sendFeedback validates required fields and server errors', async () => {
+    await expect(sendFeedback('', ' ', ' ')).rejects.toThrow('Все поля должны быть заполнены')
+
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockFetchWithTimeout.mockResolvedValue({ ok: false })
+    mockSafeJsonParse.mockResolvedValue({ message: 'oops' })
+    await expect(sendFeedback('A', 'b@c.com', 'Hi')).rejects.toThrow('oops')
+  })
+
+  it('sendAIMessage validates input and handles success', async () => {
+    mockValidateAIMessage.mockReturnValue({ valid: false, error: 'bad' })
+    await expect(sendAIMessage(' ')).rejects.toThrow('bad')
+
+    mockValidateAIMessage.mockReturnValue({ valid: true })
+    mockFetchWithTimeout.mockResolvedValue({ ok: true })
+    mockSafeJsonParse.mockResolvedValue({ answer: 'hi' })
+
+    const res = await sendAIMessage('hello')
+    expect(res).toEqual({ answer: 'hi' })
+  })
+})

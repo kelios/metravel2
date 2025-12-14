@@ -1,48 +1,64 @@
 import React from 'react'
-import { render } from '@testing-library/react-native'
+import { act, render, waitFor } from '@testing-library/react-native'
+import { Platform } from 'react-native'
 import WeatherWidget from '@/components/WeatherWidget'
 
-// Mock fetch
-global.fetch = jest.fn()
-
 describe('WeatherWidget', () => {
+  const originalPlatform = Platform.OS
+  const originalFetch = global.fetch
+
   beforeEach(() => {
+    jest.useRealTimers()
+    ;(Platform as any).OS = 'web'
+    global.fetch = jest.fn()
+  })
+
+  afterEach(() => {
+    ;(Platform as any).OS = originalPlatform
+    global.fetch = originalFetch
     jest.clearAllMocks()
-    ;(global.fetch as jest.Mock).mockResolvedValue({
-      json: async () => ({
-        daily: {
-          time: ['2024-01-01', '2024-01-02', '2024-01-03'],
-          temperature_2m_max: [10, 12, 15],
-          temperature_2m_min: [5, 7, 10],
-          weather_code: [0, 1, 2],
-        },
-      }),
+  })
+
+  it('returns null on non-web platform or invalid coords', () => {
+    ;(Platform as any).OS = 'ios'
+    const { queryByText, rerender } = render(
+      <WeatherWidget points={[{ coord: 'bad' }]} countryName="BY" />
+    )
+    expect(queryByText(/Погода/)).toBeNull()
+
+    ;(Platform as any).OS = 'web'
+    rerender(<WeatherWidget points={[{ coord: 'bad', address: 'Минск' }]} />)
+    expect(queryByText(/Погода/)).toBeNull()
+  })
+
+  it('renders forecast for valid coordinates and shows tooltip only when truncated', async () => {
+    const fetchMock = global.fetch as jest.Mock
+    fetchMock.mockResolvedValue({
+      json: () =>
+        Promise.resolve({
+          daily: {
+            time: ['2024-01-01', '2024-01-02', '2024-01-03'],
+            temperature_2m_max: [10.2, 3.5, -1],
+            temperature_2m_min: [1.5, -2, -4],
+            weather_code: [0, 85, 96],
+          },
+        }),
     })
-  })
 
-  it('renders nothing on non-web platform', () => {
-    const { queryByText } = render(
-      <WeatherWidget points={[{ coord: '53.9,27.5', address: 'Minsk' }]} />
+    const { getByText, queryByText } = render(
+      <WeatherWidget
+        points={[{ coord: '53.9, 27.56', address: 'Минск, Беларусь, Центр' }]}
+        countryName="BY"
+      />
     )
-    // On non-web, component returns null
-    expect(queryByText('Погода')).toBeNull()
-  })
 
-  it('renders nothing when points are empty', () => {
-    const { queryByText } = render(<WeatherWidget points={[]} />)
-    expect(queryByText('Погода')).toBeNull()
-  })
-
-  it('renders nothing when coord is invalid', () => {
-    const { queryByText } = render(
-      <WeatherWidget points={[{ coord: 'invalid', address: 'Minsk' }]} />
-    )
-    expect(queryByText('Погода')).toBeNull()
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    await act(async () => {
+      await Promise.resolve()
+    })
+    await waitFor(() => expect(getByText(/Погода в Минск, Беларусь, Центр, BY/)).toBeTruthy())
+    await waitFor(() => expect(getByText('Ясно')).toBeTruthy())
+    expect(getByText(/Гроза/)).toBeTruthy()
+    expect(queryByText(/tooltip/i)).toBeNull()
   })
 })
-
-
-
-
-
-

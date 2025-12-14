@@ -6,33 +6,39 @@
 - **Цели**: повысить понятность процесса, видимость прогресса и статуса автосохранения, снизить количество ошибок при заполнении.
 
 ## 2. Приоритеты (по очереди внедрения)
-1. **Онбординг и прогресс**
-   - Шаговые карточки с подсказками + визуальный прогресс-бар.
-   - Сохранить “Step n of 5”, но сделать его вторичным.
-2. **Валидация и обратная связь**
-   - Sticky-summary для ошибок, авто-скролл к первому полю, подсветка.
-3. **Прозрачность автосохранения**
-   - Чип статуса («Черновик сохранён 10:35», «Сохраняем…», «Ошибка»).
-   - Подтверждение ручного сохранения баннером/toast.
-4. **Маршрут (шаг 2)**
-   - Tooltip «Добавьте первую точку кликом по карте» + кнопка ручного ввода точки.
-   - Бейдж «Страны синхронизированы» после автообновления.
-5. **Макет панелей**
-   - Desktop: Filters как выдвижной drawer.
-   - Mobile: FAB → bottom sheet вместо «Боковая панель».
-6. **Состояния доступа**
-   - Экран для гостей (CTA «Войдите, чтобы создавать маршруты»).
-   - Предупреждение при попытке редактировать чужой маршрут.
-7. **Loading/Skeleton**
-   - Шаговые skeleton’ы, ленивый импорт карты и медиа.
+1. **Онбординг и прогресс** (выполнено)
+   - [x] Шаговые карточки с подсказками + визуальный прогресс-бар. (`UpsertTravel`, `TravelWizardStepBasic`, `TravelWizardStepRoute`, `TravelWizardStepPublish`)
+   - [x] Сохранить “Step n of 5”, но сделать его вторичным. (subtitle в хедере шагов)
+2. **Валидация и обратная связь** (частично)
+   - [x] Sticky-summary для ошибок (на шаге 1). (`TravelWizardStepBasic`)
+   - [x] Авто-скролл к первому полю (на шаге 1 для `name/description`). (`ContentUpsertSection` + `UpsertTravel`)
+   - [ ] Подсветка всех невалидных полей по клику “Далее” (включая `countries/categories` в фильтрах).
+3. **Прозрачность автосохранения** (выполнено)
+   - [x] Чип статуса («Черновик сохранён 10:35», «Сохраняем…», «Ошибка»). (`UpsertTravel` → `autosaveBadge`, вывод в шагах)
+   - [x] Подтверждение ручного сохранения баннером/toast. (`UpsertTravel` → `handleManualSave`)
+4. **Маршрут (шаг 2)** (не выполнено)
+   - [ ] Tooltip «Добавьте первую точку кликом по карте».
+   - [ ] Кнопка/форма ручного ввода точки.
+   - [ ] Бейдж «Страны синхронизированы» после автообновления.
+5. **Макет панелей** (не выполнено)
+   - [ ] Desktop: Filters как выдвижной drawer.
+   - [ ] Mobile: FAB → bottom sheet вместо «Боковая панель».
+6. **Состояния доступа** (частично)
+   - [ ] Экран для гостей (CTA «Войдите, чтобы создавать маршруты»).
+   - [x] Предупреждение/блокировка при попытке редактировать чужой маршрут. (`UpsertTravel` проверка owner/super-admin)
+7. **Loading/Skeleton** (частично)
+   - [x] Начальный skeleton экрана на время загрузки. (`UpsertTravel`)
+   - [x] Skeleton загрузки фильтров на шаге 2. (`TravelWizardStepRoute`)
+   - [ ] Шаговые skeleton’ы (по каждому шагу мастера).
+   - [ ] Ленивый импорт карты и медиа.
 
 ## 3. Подробности по этапам
 | Этап | Ключевые задачи | Компоненты |
 |------|-----------------|------------|
-| 1. Онбординг + прогресс | StepMeta конфиг, прогресс-бар, подсказки, автосейв-бейдж | `UpsertTravel`, `TravelWizardStepBasic`, `TravelWizardStepRoute`, `TravelWizardFooter` |
-| 2. Валидация | Sticky summary, scrollToInvalidField, inline helper | `TravelWizardStepBasic`, `ContentUpsertSection`, валидация-хелперы |
-| 3. Автосохранение | Чип статуса, баннер после ручного save, улучшение `useImprovedAutoSave` | `UpsertTravel`, `TravelWizardStep*`, `useImprovedAutoSave` |
-| 4. Маршрут | Tooltip, форма ручного ввода точки, бейдж синхронизации | `TravelWizardStepRoute`, `WebMapComponent` |
-| 5. Макет панелей | Drawer на desktop, bottom sheet на mobile, обновление кнопок | `TravelWizardStepBasic`, `FiltersUpsertComponent` |
-| 6. Доступ | Гостевой экран, предупреждение при чужом маршруте | `UpsertTravel`, `AuthContext` (только UI), отдельный компонент Notice |
-| 7. Skeleton + lazy | Тематические skeleton’ы, lazy для карты/медиа | `TravelWizardStep*`, `WebMapComponent`, `ImageUploadComponent` |
+| 1. Онбординг + прогресс | ✅ StepMeta конфиг, прогресс-бар, подсказки, автосейв-бейдж | `UpsertTravel`, `TravelWizardStepBasic`, `TravelWizardStepRoute`, `TravelWizardFooter` |
+| 2. Валидация | ◑ Sticky summary + scrollToInvalidField (шаг 1), осталось: подсветка/scroll для фильтров (`countries/categories`) | `TravelWizardStepBasic`, `ContentUpsertSection`, `formValidation` |
+| 3. Автосохранение | ✅ Чип статуса + toast после ручного save | `UpsertTravel`, `TravelWizardStep*`, `useImprovedAutoSave` |
+| 4. Маршрут | ⏳ Tooltip, форма ручного ввода точки, бейдж синхронизации | `TravelWizardStepRoute`, `WebMapComponent` |
+| 5. Макет панелей | ⏳ Drawer на desktop, bottom sheet на mobile, обновление кнопок | `TravelWizardStepBasic`, `FiltersUpsertComponent` |
+| 6. Доступ | ◑ Блокировка чужого маршрута сделана, осталось: гостевой экран | `UpsertTravel`, `AuthContext` (только UI), отдельный компонент Notice |
+| 7. Skeleton + lazy | ◑ Есть базовые skeleton'ы, осталось: шаговые skeleton’ы и lazy для карты/медиа | `TravelWizardStep*`, `WebMapComponent`, `ImageUploadComponent` |

@@ -82,6 +82,12 @@ export function validateStep(
     const descriptionError = validateDescription(formData.description ?? undefined);
     if (descriptionError) errors.push(descriptionError);
 
+    const countriesError = validateCountries((formData.countries ?? []) as string[]);
+    if (countriesError) errors.push(countriesError);
+
+    const categoriesError = validateCategories((formData.categories ?? []) as string[]);
+    if (categoriesError) errors.push(categoriesError);
+
     return {
       isValid: errors.length === 0,
       errors,
