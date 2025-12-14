@@ -1,5 +1,5 @@
 import React, { useMemo, memo, useCallback, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
@@ -7,8 +7,7 @@ import { fetchTravelsOfMonth } from '@/src/api/map';
 import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AIRY_COLORS } from '@/constants/airyColors'; // ✅ ИСПРАВЛЕНИЕ: Добавлен импорт AIRY_COLORS
-import { Image as ExpoImage } from 'expo-image';
-import { TAB_CARD_TEMPLATE, MOBILE_CARD_WIDTH } from '@/components/listTravel/recommendationsCardTemplate';
+import TabTravelCard from '@/components/listTravel/TabTravelCard';
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
 
@@ -186,42 +185,18 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true 
                 })}
             >
                 {highlights.map((item) => (
-                    <TouchableOpacity
+                    <TabTravelCard
                         key={item.id}
-                        style={[styles.item, isMobile && styles.itemMobile]}
+                        item={{
+                            id: item.id,
+                            title: item.title,
+                            imageUrl: item.imageUrl,
+                            city: null,
+                            country: item.country ?? null,
+                        }}
+                        badge={{ icon: 'trending-up', backgroundColor: '#ffffff', iconColor: '#6b8e7f' }}
                         onPress={() => handleItemPress(item.url)}
-                        activeOpacity={0.8}
-                    >
-                        <View style={styles.imageContainer}>
-                            {item.imageUrl ? (
-                                <ExpoImage
-                                    source={{ uri: item.imageUrl }}
-                                    style={styles.image}
-                                    contentFit="cover"
-                                    transition={120}
-                                    cachePolicy="memory-disk"
-                                />
-                            ) : (
-                                <View style={[styles.image, styles.imagePlaceholder]}>
-                                    <MaterialIcons name="route" size={24} color="#9ca3af" />
-                                </View>
-                            )}
-                            <View style={styles.badge}>
-                                <MaterialIcons name="trending-up" size={14} color="#6b8e7f" />
-                            </View>
-                        </View>
-                        <View style={styles.itemContent}>
-                            <Text style={styles.itemTitle} numberOfLines={2}>
-                                {item.title}
-                            </Text>
-                            {item.country && (
-                                <View style={styles.itemMeta}>
-                                    <MaterialIcons name="place" size={12} color="#6b7280" style={{ marginRight: 4 }} />
-                                    <Text style={styles.itemMetaText}>{item.country}</Text>
-                                </View>
-                            )}
-                        </View>
-                    </TouchableOpacity>
+                    />
                 ))}
             </ScrollView>
         </View>
@@ -337,55 +312,6 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingHorizontal: 12,
         paddingVertical: 6,
-    },
-    item: {
-        ...TAB_CARD_TEMPLATE.container,
-        marginRight: 12,
-        ...Platform.select({
-            web: {
-                cursor: 'pointer',
-            },
-        }),
-    },
-    itemMobile: {
-        width: MOBILE_CARD_WIDTH,
-    },
-    imageContainer: {
-        ...TAB_CARD_TEMPLATE.imageContainer,
-    },
-    image: {
-        ...TAB_CARD_TEMPLATE.image,
-    },
-    imagePlaceholder: {
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    itemContent: {
-        ...TAB_CARD_TEMPLATE.content,
-    },
-    itemTitle: {
-        ...TAB_CARD_TEMPLATE.title,
-    },
-    itemMeta: {
-        ...TAB_CARD_TEMPLATE.metaRow,
-    },
-    itemMetaText: {
-        ...TAB_CARD_TEMPLATE.metaText,
-    },
-    badge: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        backgroundColor: '#ffffff',
-        borderRadius: 12,
-        padding: 4,
-        shadowColor: '#6b8e7f',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.15,
-        shadowRadius: 3,
-        elevation: 2,
-        borderWidth: 1,
-        borderColor: '#6b8e7f',
     },
 });
 

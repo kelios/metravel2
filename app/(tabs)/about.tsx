@@ -6,7 +6,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ImageBackground,
   Linking,
   useWindowDimensions,
   KeyboardAvoidingView,
@@ -145,13 +144,7 @@ function AboutAndContactScreen() {
         )}
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-            <ImageBackground
-                source={require('../../assets/travel/roulette-map-bg.jpg')}
-                style={styles.backgroundImage}
-                resizeMode="cover"
-                // @ts-ignore RN web поддерживает fetchPriority
-                {...(Platform.OS === 'web' ? { fetchPriority: 'high' } : {})}
-            >
+            <View style={styles.backgroundImage}>
               <View style={styles.container}>
                 <StatusBar barStyle="dark-content" />
                 <View style={styles.content}>
@@ -548,7 +541,7 @@ function AboutAndContactScreen() {
                   </View>
                 </View>
               </View>
-            </ImageBackground>
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </>
@@ -557,7 +550,7 @@ function AboutAndContactScreen() {
 
 const styles: any = StyleSheet.create({
   container: { flex: 1, width: '100%' },
-  backgroundImage: { flex: 1, width: '100%', height: '100%' },
+  backgroundImage: { flex: 1, width: '100%', height: '100%', backgroundColor: '#fff' },
   content: {
     margin: 20,
     backgroundColor: 'rgba(255,255,255,0.95)',

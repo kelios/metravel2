@@ -60,6 +60,10 @@ const WebMapComponent = ({
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isWideLayout, setIsWideLayout] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return window.innerWidth >= 1024;
+    });
     
     // Локальное состояние маркеров для немедленного отображения изменений
     const [localMarkers, setLocalMarkers] = useState(markers);
@@ -104,6 +108,17 @@ const WebMapComponent = ({
                 clearTimeout(updateTimeoutRef.current);
             }
         };
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const handleResize = () => {
+            setIsWideLayout(window.innerWidth >= 1024);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     const isValidCoordinates = ({ lat, lng }) =>
@@ -171,90 +186,118 @@ const WebMapComponent = ({
 
     return (
         <div style={{ padding: DESIGN_TOKENS.spacing.xxs0 }}>
-            <MapContainer center={[51.505, -0.09]} zoom={13} style={{ height: 500 }}>
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                <MapClickHandler addMarker={addMarker} />
-                <FitBounds markers={localMarkers} />
-                {localMarkers.map((marker, idx) => (
-                    <Marker
-                        key={idx}
-                        position={[marker.lat, marker.lng]}
-                        icon={markerIcon}
-                        eventHandlers={{
-                            click: () => {
-                                setActiveIndex(idx);
-                                setIsExpanded(true);
-                            },
-                        }}
-                    >
-                        <Popup>
-                            <div style={styles.popupContent}>
-                                {marker.image && (
-                                    <img src={marker.image} alt="Фото" style={styles.popupImage} />
-                                )}
-                                <p><strong>Адрес:</strong> {marker.address || 'Не указан'}</p>
-                                <p><strong>Категории:</strong>
-                                    {marker.categories.length > 0
-                                        ? marker.categories
-                                            .map(catId => {
-                                                const found = categoryTravelAddress.find(c => c.id === catId);
-                                                return found ? found.name : `ID: ${catId}`;
-                                            })
-                                            .join(', ')
-                                        : 'Не выбрано'}
-                                </p>
-                                <div style={styles.popupButtons}>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleEditMarker(idx);
-                                        }}
-                                        style={styles.editButton}
-                                    >
-                                        Редактировать
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleMarkerRemove(idx);
-                                        }}
-                                        style={styles.deleteButton}
-                                    >
-                                        Удалить
-                                    </button>
-                                </div>
-                            </div>
-                        </Popup>
-                    </Marker>
-                ))}
-            </MapContainer>
+            <div style={isWideLayout ? styles.splitLayout : undefined}>
+                <div style={isWideLayout ? styles.mapPane : undefined}>
+                    <div style={isWideLayout ? styles.mapCard : undefined}>
+                        <MapContainer center={[51.505, -0.09]} zoom={13} style={{ height: isWideLayout ? 600 : 500, width: '100%' }}>
+                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                            <MapClickHandler addMarker={addMarker} />
+                            <FitBounds markers={localMarkers} />
+                            {localMarkers.map((marker, idx) => (
+                                <Marker
+                                    key={idx}
+                                    position={[marker.lat, marker.lng]}
+                                    icon={markerIcon}
+                                    eventHandlers={{
+                                        click: () => {
+                                            setActiveIndex(idx);
+                                            setIsExpanded(true);
+                                        },
+                                    }}
+                                >
+                                    <Popup>
+                                        <div style={styles.popupContent}>
+                                            {marker.image && (
+                                                <img src={marker.image} alt="Фото" style={styles.popupImage} />
+                                            )}
+                                            <p><strong>Адрес:</strong> {marker.address || 'Не указан'}</p>
+                                            <p><strong>Категории:</strong>
+                                                {marker.categories.length > 0
+                                                    ? marker.categories
+                                                        .map(catId => {
+                                                            const found = categoryTravelAddress.find(c => c.id === catId);
+                                                            return found ? found.name : `ID: ${catId}`;
+                                                        })
+                                                        .join(', ')
+                                                    : 'Не выбрано'}
+                                            </p>
+                                            <div style={styles.popupButtons}>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditMarker(idx);
+                                                    }}
+                                                    style={styles.editButton}
+                                                >
+                                                    Редактировать
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleMarkerRemove(idx);
+                                                    }}
+                                                    style={styles.deleteButton}
+                                                >
+                                                    Удалить
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </Popup>
+                                </Marker>
+                            ))}
+                        </MapContainer>
+                    </div>
+                </div>
 
-            <div style={{ marginTop: DESIGN_TOKENS.spacing.lg }}>
-                <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    style={styles.toggleButton}
+                <div
+                    id="markers-list-root"
+                    style={isWideLayout ? styles.listPane : { marginTop: DESIGN_TOKENS.spacing.lg }}
                 >
-                    {isExpanded ? `Скрыть точки (${markers.length})` : `Показать точки (${markers.length})`}
-                </button>
+                    {isWideLayout ? (
+                        <div style={styles.listScrollArea}>
+                            <MarkersListComponent
+                                markers={localMarkers}
+                                categoryTravelAddress={categoryTravelAddress}
+                                handleMarkerChange={handleMarkerChange}
+                                handleImageUpload={handleImageUpload}
+                                handleMarkerRemove={handleMarkerRemove}
+                                editingIndex={editingIndex}
+                                setEditingIndex={setEditingIndex}
+                                activeIndex={activeIndex}
+                                setActiveIndex={setActiveIndex}
+                                travelId={travelId}
+                            />
+                        </div>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => setIsExpanded(!isExpanded)}
+                                style={styles.toggleButton}
+                            >
+                                {isExpanded ? `Скрыть точки (${markers.length})` : `Показать точки (${markers.length})`}
+                            </button>
 
-                <div style={{
-                    maxHeight: isExpanded ? '500px' : '0',
-                    overflow: 'hidden',
-                    transition: 'max-height 0.3s ease',
-                }}>
-                    {isExpanded && (
-                        <MarkersListComponent
-                            markers={localMarkers}
-                            categoryTravelAddress={categoryTravelAddress}
-                            handleMarkerChange={handleMarkerChange}
-                            handleImageUpload={handleImageUpload}
-                            handleMarkerRemove={handleMarkerRemove}
-                            editingIndex={editingIndex}
-                            setEditingIndex={setEditingIndex}
-                            activeIndex={activeIndex}
-                            setActiveIndex={setActiveIndex}
-                            travelId={travelId}
-                        />
+                            <div style={{
+                                maxHeight: isExpanded ? '500px' : '0',
+                                overflow: 'hidden',
+                                transition: 'max-height 0.3s ease',
+                            }}>
+                                {isExpanded && (
+                                    <MarkersListComponent
+                                        markers={localMarkers}
+                                        categoryTravelAddress={categoryTravelAddress}
+                                        handleMarkerChange={handleMarkerChange}
+                                        handleImageUpload={handleImageUpload}
+                                        handleMarkerRemove={handleMarkerRemove}
+                                        editingIndex={editingIndex}
+                                        setEditingIndex={setEditingIndex}
+                                        activeIndex={activeIndex}
+                                        setActiveIndex={setActiveIndex}
+                                        travelId={travelId}
+                                    />
+                                )}
+                            </div>
+                        </>
                     )}
                 </div>
             </div>
@@ -263,6 +306,39 @@ const WebMapComponent = ({
 };
 
 const styles = {
+    splitLayout: {
+        display: 'flex',
+        flexDirection: 'row',
+        gap: '16px',
+        alignItems: 'flex-start',
+    },
+    mapPane: {
+        flex: '1 1 60%',
+        minWidth: 0,
+    },
+    listPane: {
+        flex: '0 0 420px',
+        maxWidth: '420px',
+        border: '1px solid rgba(0,0,0,0.08)',
+        borderRadius: '14px',
+        padding: '14px',
+        height: '600px',
+        overflow: 'hidden',
+        backgroundColor: '#f9fafb',
+        boxShadow: '0 10px 25px rgba(16, 24, 40, 0.08)',
+    },
+    listScrollArea: {
+        height: '100%',
+        overflowY: 'auto',
+        paddingRight: '6px',
+    },
+    mapCard: {
+        border: '1px solid rgba(0,0,0,0.08)',
+        borderRadius: '14px',
+        overflow: 'hidden',
+        backgroundColor: '#fff',
+        boxShadow: '0 10px 25px rgba(16, 24, 40, 0.06)',
+    },
     popupContent: {
         display: 'flex',
         flexDirection: 'column',

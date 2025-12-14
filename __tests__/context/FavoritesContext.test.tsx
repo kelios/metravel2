@@ -1,12 +1,24 @@
-jest.unmock('@/context/FavoritesContext')
-
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
-import { FavoritesProvider, useFavorites, FavoriteItem, ViewHistoryItem } from '@/context/FavoritesContext';
+import type { FavoriteItem, ViewHistoryItem } from '@/context/FavoritesContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '@/context/AuthContext';
 
 const mockToastShow = jest.fn();
+
+jest.mock('@/src/api/user', () => ({
+  fetchUserFavoriteTravels: jest.fn(async () => []),
+  fetchUserHistory: jest.fn(async () => []),
+  fetchUserRecommendedTravels: jest.fn(async () => []),
+  clearUserHistory: jest.fn(async () => null),
+  clearUserFavorites: jest.fn(async () => null),
+}));
+
+jest.mock('@/src/api/travelsFavorites', () => ({
+  markTravelAsFavorite: jest.fn(async () => ({})),
+  unmarkTravelAsFavorite: jest.fn(async () => ({})),
+}));
+
 jest.mock('react-native-toast-message', () => ({
   __esModule: true,
   default: {
@@ -29,6 +41,8 @@ jest.mock('@/context/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useAuth: () => mockAuthContext,
 }));
+
+const { FavoritesProvider, useFavorites } = jest.requireActual('@/context/FavoritesContext');
 
 // Test component that uses the hook
 const TestComponent: React.FC<{ onContext?: (context: any) => void }> = ({ onContext }) => {
@@ -53,6 +67,110 @@ describe('FavoritesContext', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (AsyncStorage as any).__reset?.();
+    mockAuthContext.isAuthenticated = false;
+    mockAuthContext.userId = null;
+  });
+
+  it('clears favorites (guest/local)', async () => {
+    const mockFavorites: FavoriteItem[] = [
+      {
+        id: '1',
+        type: 'travel',
+        title: 'Test Travel',
+        url: '/travels/1',
+        addedAt: Date.now(),
+      },
+    ];
+
+    await seedFavorites(mockFavorites);
+    jest.clearAllMocks();
+
+    let contextValue: any;
+
+    render(
+      <AuthProvider>
+        <FavoritesProvider>
+          <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
+        </FavoritesProvider>
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(contextValue.favorites).toHaveLength(1);
+    });
+
+    await act(async () => {
+      await contextValue.clearFavorites();
+    });
+
+    await waitFor(() => {
+      expect(contextValue.favorites).toHaveLength(0);
+    });
+  });
+
+  it('clears favorites (authenticated/server)', async () => {
+    const { clearUserFavorites, fetchUserFavoriteTravels } = require('@/src/api/user');
+
+    mockAuthContext.isAuthenticated = true;
+    mockAuthContext.userId = 'user123' as any;
+
+    const serverFavoritesKey = 'metravel_favorites_server_user123';
+    const serverHistoryKey = 'metravel_view_history_server_user123';
+    const serverRecommendationsKey = 'metravel_recommendations_server_user123';
+
+    const cachedFavorites: FavoriteItem[] = [
+      {
+        id: 10,
+        type: 'travel',
+        title: 'Cached Travel',
+        url: '/travels/10',
+        addedAt: Date.now(),
+      },
+    ];
+
+    fetchUserFavoriteTravels.mockResolvedValueOnce([
+      {
+        id: 10,
+        name: 'Cached Travel',
+        url: '/travels/10',
+        slug: '10',
+        countryName: 'Test Country',
+        travel_image_thumb_small_url: '',
+        travel_image_thumb_url: '',
+        updated_at: new Date().toISOString(),
+      },
+    ]);
+
+    (AsyncStorage.multiGet as jest.Mock).mockResolvedValue([
+      [serverFavoritesKey, JSON.stringify(cachedFavorites)],
+      [serverHistoryKey, JSON.stringify([])],
+      [serverRecommendationsKey, JSON.stringify([])],
+    ]);
+
+    let contextValue: any;
+
+    render(
+      <AuthProvider>
+        <FavoritesProvider>
+          <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
+        </FavoritesProvider>
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(contextValue.favorites).toHaveLength(1);
+    });
+
+    await act(async () => {
+      await contextValue.clearFavorites();
+    });
+
+    await waitFor(() => {
+      expect(clearUserFavorites).toHaveBeenCalledWith('user123');
+      expect(contextValue.favorites).toHaveLength(0);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(serverFavoritesKey, JSON.stringify([]));
+    });
+
     mockAuthContext.isAuthenticated = false;
     mockAuthContext.userId = null;
   });
@@ -390,7 +508,11 @@ describe('FavoritesContext', () => {
     await waitFor(() => {
       const firstCall = (AsyncStorage.multiGet as jest.Mock).mock.calls[0]?.[0] || [];
       expect(firstCall).toEqual(
-        expect.arrayContaining(['metravel_favorites_user123', 'metravel_view_history_user123'])
+        expect.arrayContaining([
+          'metravel_favorites_server_user123',
+          'metravel_view_history_server_user123',
+          'metravel_recommendations_server_user123',
+        ])
       );
     });
 

@@ -106,6 +106,7 @@ jest.mock('expo-router', () => {
       return React.createElement(RN.TouchableOpacity, props, content)
     },
     useRouter: () => router,
+    useLocalSearchParams: () => ({}),
     usePathname: () => '/',
     useSegments: () => [],
     Href: {} as any,

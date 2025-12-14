@@ -34,6 +34,21 @@ export interface TravelFormLike {
   travel_image_thumb_small_url?: string | null;
 }
 
+export type ModerationIssueKey =
+  | 'name'
+  | 'description'
+  | 'countries'
+  | 'categories'
+  | 'route'
+  | 'photos';
+
+export interface ModerationIssue {
+  key: ModerationIssueKey;
+  label: string;
+  targetStep: number;
+  anchorId?: string;
+}
+
 /**
  * Валидация названия путешествия
  */
@@ -63,9 +78,8 @@ export function validateName(name: string | undefined | null): ValidationError |
  * Централизованная валидация шагов мастера
  *
  * Требования по ТЗ:
- *  - Шаг 1: блокируем переход без name/description
- *  - Шаг 2: блокируем переход без countries/categories и хотя бы одной точки маршрута
- *  - Шаги 3–4: рекомендательные поля, переходы не блокируются
+ *  - Шаг 1: блокируем переход только без name
+ *  - Шаги 2–4: переходы не блокируются (поля проверяются при отправке на модерацию)
  *  - Шаг 5: валидация на уровне модерации (см. getModerationErrors)
  */
 export function validateStep(
@@ -79,37 +93,13 @@ export function validateStep(
     const nameError = validateName(formData.name ?? undefined);
     if (nameError) errors.push(nameError);
 
-    const descriptionError = validateDescription(formData.description ?? undefined);
-    if (descriptionError) errors.push(descriptionError);
-
     return {
       isValid: errors.length === 0,
       errors,
     };
   }
 
-  if (step === 2) {
-    const countriesError = validateCountries((formData.countries ?? []) as string[]);
-    if (countriesError) errors.push(countriesError);
-
-    const categoriesError = validateCategories((formData.categories ?? []) as string[]);
-    if (categoriesError) errors.push(categoriesError);
-
-    const markersToValidate = (
-      Array.isArray(markers) && markers.length > 0
-        ? markers
-        : (formData.coordsMeTravel ?? [])
-    ) as any[];
-    const markersError = validateMarkers(markersToValidate);
-    if (markersError) errors.push(markersError);
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
-  }
-
-  // Для шагов 3 и 4 по ТЗ валидация рекомендательная и не должна блокировать переход
+  // Для шагов 2–4 по ТЗ валидация не должна блокировать переход
   return {
     isValid: true,
     errors: [],
@@ -123,6 +113,7 @@ export function validateStep(
  *  - Название (name)
  *  - Описание (description)
  *  - Страны (countries)
+ *  - Категории (categories)
  *  - Маршрут (минимум одна точка: coordsMeTravel или markers)
  *  - Фото (обложка или ≥1 фото в галерее)
  */
@@ -130,40 +121,75 @@ export function getModerationErrors(
   formData: TravelFormLike,
   markers?: any[] | null,
 ): string[] {
-  const missing: string[] = [];
+  return getModerationIssues(formData, markers).map((i) => i.label);
+}
+
+export function getModerationIssues(
+  formData: TravelFormLike,
+  markers?: any[] | null,
+): ModerationIssue[] {
+  const missing: ModerationIssue[] = [];
 
   const nameError = validateName(formData.name ?? undefined);
   if (nameError) {
-    missing.push('Название');
+    missing.push({
+      key: 'name',
+      label: 'Название',
+      targetStep: 1,
+    });
   }
 
   const descriptionError = validateDescription(formData.description ?? undefined);
   if (descriptionError) {
-    missing.push('Описание');
+    missing.push({
+      key: 'description',
+      label: 'Описание',
+      targetStep: 1,
+    });
   }
 
   const countriesError = validateCountries((formData.countries ?? []) as string[]);
   if (countriesError) {
-    missing.push('Страны (минимум одна)');
+    missing.push({
+      key: 'countries',
+      label: 'Страны (минимум одна)',
+      targetStep: 2,
+    });
+  }
+
+  const categoriesError = validateCategories((formData.categories ?? []) as string[]);
+  if (categoriesError) {
+    missing.push({
+      key: 'categories',
+      label: 'Категории (минимум одна)',
+      targetStep: 5,
+      anchorId: 'travelwizard-extras-categories',
+    });
   }
 
   // Если markers передан и не пустой — используем его.
   // Если это пустой массив или undefined/null — используем coordsMeTravel из формы.
-  const markersSource = Array.isArray(markers) && markers.length > 0
-    ? markers
-    : (formData.coordsMeTravel ?? []);
-
-  const markersToValidate = markersSource as any[];
-  const markersError = validateMarkers(markersToValidate);
+  const markersSource = Array.isArray(markers) && markers.length > 0 ? markers : (formData.coordsMeTravel ?? []);
+  const markersError = validateMarkers(markersSource as any[]);
   if (markersError) {
-    missing.push('Маршрут (минимум одна точка)');
+    missing.push({
+      key: 'route',
+      label: 'Маршрут (минимум одна точка)',
+      targetStep: 2,
+      anchorId: 'markers-list-root',
+    });
   }
 
   const gallery = (formData.gallery ?? []) as any[];
   const hasCover = !!(formData.travel_image_thumb_small_url && formData.travel_image_thumb_small_url.trim().length > 0);
   const hasPhotos = hasCover || gallery.length > 0;
   if (!hasPhotos) {
-    missing.push('Фото или обложка');
+    missing.push({
+      key: 'photos',
+      label: 'Фото или обложка',
+      targetStep: 3,
+      anchorId: 'travelwizard-media-cover',
+    });
   }
 
   return missing;

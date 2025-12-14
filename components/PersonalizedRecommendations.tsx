@@ -1,5 +1,5 @@
 import React, { useMemo, memo, useCallback, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, useWindowDimensions, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useRouter } from 'expo-router';
@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ✅ ДИЗАЙН: Импорт максимально легкой и воздушной палитры
 import { AIRY_COLORS } from '@/constants/airyColors';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import TabTravelCard from '@/components/listTravel/TabTravelCard';
 
 const COLLAPSED_KEY = 'personalization_collapsed';
 
@@ -15,9 +16,10 @@ interface PersonalizedRecommendationsProps {
     forceVisible?: boolean;
     onVisibilityChange?: (visible: boolean) => void;
     showHeader?: boolean;
+    onlyRecommendations?: boolean;
 }
 
-function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHeader = true }: PersonalizedRecommendationsProps) {
+function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHeader = true, onlyRecommendations = false }: PersonalizedRecommendationsProps) {
     const { favorites, viewHistory, getRecommendations } = useFavorites();
     const { isAuthenticated } = useAuth();
     const router = useRouter();
@@ -71,11 +73,14 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
     // ✅ ИСПРАВЛЕНИЕ: Показываем только алгоритмические рекомендации (не дублируем избранное и историю)
     const recommendations = useMemo(() => {
         if (!isAuthenticated) return [];
+        const raw = getRecommendations();
+        if (onlyRecommendations) {
+            return raw;
+        }
         // getRecommendations возвращает избранное, отсортированное по дате
         // Здесь исключаем элементы, которые уже отображаются в «Избранном», чтобы не дублировать карточки
-        const raw = getRecommendations();
         return raw.filter(item => !favorites.some(f => f.id === item.id && f.type === item.type));
-    }, [favorites, viewHistory, isAuthenticated, getRecommendations]);
+    }, [favorites, isAuthenticated, getRecommendations, onlyRecommendations]);
 
     const containerStyles = useMemo(() => [
         styles.container,
@@ -97,42 +102,22 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
 
     const renderItem = useCallback((item: typeof recommendations[0]) => {
         return (
-            <TouchableOpacity
+            <TabTravelCard
                 key={`${item.type}-${item.id}`}
-                style={[styles.item, isMobile && styles.itemMobile]}
+                item={{
+                    id: item.id,
+                    title: item.title,
+                    imageUrl: item.imageUrl,
+                    city: (item as any).city ?? null,
+                    country: (item as any).country ?? null,
+                }}
                 onPress={() => handleItemPress(item.url)}
-                activeOpacity={0.8}
-            >
-                {item.imageUrl ? (
-                    <Image 
-                        source={{ uri: item.imageUrl }} 
-                        style={styles.itemImage}
-                        resizeMode="cover"
-                    />
-                ) : (
-                    <View style={[styles.itemImage, styles.itemImagePlaceholder]}>
-                        <MaterialIcons name={item.type === 'travel' ? 'route' : 'article'} size={24} color="#9ca3af" />
-                    </View>
-                )}
-                <View style={styles.itemContent}>
-                    <Text style={styles.itemTitle} numberOfLines={2} onPress={() => handleItemPress(item.url)}>
-                        {item.title}
-                    </Text>
-                    {(item.country || item.city) && (
-                        <View style={styles.itemMeta}>
-                            <MaterialIcons name="place" size={12} color="#6b7280" style={{ marginRight: 4 }} />
-                            <Text style={styles.itemMetaText}>
-                                {[item.city, item.country].filter(Boolean).join(', ')}
-                            </Text>
-                        </View>
-                    )}
-                </View>
-            </TouchableOpacity>
+            />
         );
-    }, [handleItemPress, isMobile]);
+    }, [handleItemPress]);
 
-    const hasFavorites = favorites && favorites.length > 0;
-    const hasHistory = viewHistory && viewHistory.length > 0;
+    const hasFavorites = !onlyRecommendations && favorites && favorites.length > 0;
+    const hasHistory = !onlyRecommendations && viewHistory && viewHistory.length > 0;
 
     // Условные возвраты после всех хуков
     if (!isInitialized) return null;
@@ -205,8 +190,10 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
         );
     }
 
-    // ✅ ИСПРАВЛЕНИЕ: Показываем пустое состояние, только если нет избранного, истории и рекомендаций
-    if (!hasFavorites && !hasHistory && recommendations.length === 0) {
+    // ✅ ИСПРАВЛЕНИЕ: Показываем пустое состояние
+    // - если onlyRecommendations=true: когда нет recommendations
+    // - иначе: когда нет избранного, истории и рекомендаций
+    if (onlyRecommendations ? recommendations.length === 0 : (!hasFavorites && !hasHistory && recommendations.length === 0)) {
         return (
             <View style={containerStyles}>
                 {showHeader && (

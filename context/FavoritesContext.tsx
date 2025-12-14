@@ -2,7 +2,15 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Toast from 'react-native-toast-message';
-import { useAuth } from './AuthContext';
+import { useAuth } from '@/context/AuthContext';
+import {
+    clearUserFavorites,
+    clearUserHistory,
+    fetchUserFavoriteTravels,
+    fetchUserHistory,
+    fetchUserRecommendedTravels,
+} from '@/src/api/user';
+import { markTravelAsFavorite, unmarkTravelAsFavorite } from '@/src/api/travelsFavorites';
 import { safeJsonParseString } from '@/src/utils/safeJsonParse';
 import { devError } from '@/src/utils/logger';
 import { getStorageBatch } from '@/src/utils/storageBatch';
@@ -11,6 +19,9 @@ import { cleanupInvalidFavorites, isValidFavoriteId } from '@/src/utils/favorite
 const FAVORITES_KEY = 'metravel_favorites';
 const VIEW_HISTORY_KEY = 'metravel_view_history';
 const MAX_HISTORY_ITEMS = 50;
+const SERVER_FAVORITES_CACHE_KEY = 'metravel_favorites_server';
+const SERVER_HISTORY_CACHE_KEY = 'metravel_view_history_server';
+const SERVER_RECOMMENDATIONS_CACHE_KEY = 'metravel_recommendations_server';
 
 export type FavoriteItem = {
     id: string | number;
@@ -41,6 +52,7 @@ interface FavoritesContextType {
     removeFavorite: (id: string | number, type: 'travel' | 'article') => Promise<void>;
     isFavorite: (id: string | number, type: 'travel' | 'article') => boolean;
     addToHistory: (item: Omit<ViewHistoryItem, 'viewedAt'>) => Promise<void>;
+    clearFavorites: () => Promise<void>;
     clearHistory: () => Promise<void>;
     getRecommendations: () => FavoriteItem[];
 }
@@ -48,22 +60,47 @@ interface FavoritesContextType {
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
 export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { userId } = useAuth();
+    const { userId, isAuthenticated } = useAuth();
     const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
     const [viewHistory, setViewHistory] = useState<ViewHistoryItem[]>([]);
+    const [recommended, setRecommended] = useState<FavoriteItem[]>([]);
+
+    const saveFavorites = useCallback(
+        async (newFavorites: FavoriteItem[]) => {
+            try {
+                const key = userId ? `${FAVORITES_KEY}_${userId}` : FAVORITES_KEY;
+                await AsyncStorage.setItem(key, JSON.stringify(newFavorites));
+                setFavorites(newFavorites);
+            } catch (error) {
+                devError('Ошибка сохранения избранного:', error);
+            }
+        },
+        [userId]
+    );
+
+    const saveViewHistory = useCallback(
+        async (newHistory: ViewHistoryItem[]) => {
+            try {
+                const key = userId ? `${VIEW_HISTORY_KEY}_${userId}` : VIEW_HISTORY_KEY;
+                await AsyncStorage.setItem(key, JSON.stringify(newHistory));
+                setViewHistory(newHistory);
+            } catch (error) {
+                devError('Ошибка сохранения истории:', error);
+            }
+        },
+        [userId]
+    );
 
     const loadFavorites = useCallback(async () => {
         try {
             const key = userId ? `${FAVORITES_KEY}_${userId}` : FAVORITES_KEY;
             const data = await AsyncStorage.getItem(key);
             if (data) {
-                // ✅ FIX-010: Используем безопасный парсинг JSON
                 const parsed = safeJsonParseString(data, []);
                 const cleaned = cleanupInvalidFavorites(parsed);
                 setFavorites(cleaned);
             }
         } catch (error) {
-            // ✅ FIX-007: Используем централизованный logger
             devError('Ошибка загрузки избранного:', error);
         }
     }, [userId]);
@@ -73,79 +110,197 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
             const key = userId ? `${VIEW_HISTORY_KEY}_${userId}` : VIEW_HISTORY_KEY;
             const data = await AsyncStorage.getItem(key);
             if (data) {
-                // ✅ FIX-010: Используем безопасный парсинг JSON
                 setViewHistory(safeJsonParseString(data, []));
             }
         } catch (error) {
-            // ✅ FIX-007: Используем централизованный logger
             devError('Ошибка загрузки истории:', error);
         }
     }, [userId]);
 
-    // ✅ FIX-004: Оптимизированная загрузка favorites и viewHistory за один запрос
     const loadFavoritesAndHistory = useCallback(async () => {
         try {
             const favoritesKey = userId ? `${FAVORITES_KEY}_${userId}` : FAVORITES_KEY;
             const historyKey = userId ? `${VIEW_HISTORY_KEY}_${userId}` : VIEW_HISTORY_KEY;
-            
+
             const storageData = await getStorageBatch([favoritesKey, historyKey]);
-            
-            if (storageData[favoritesKey]) {
-                // ✅ FIX-010: Используем безопасный парсинг JSON
-                const parsed = safeJsonParseString(storageData[favoritesKey]!, []);
+
+            const favoritesRaw =
+                storageData[favoritesKey] != null
+                    ? storageData[favoritesKey]
+                    : await AsyncStorage.getItem(favoritesKey);
+            const historyRaw =
+                storageData[historyKey] != null ? storageData[historyKey] : await AsyncStorage.getItem(historyKey);
+
+            if (favoritesRaw) {
+                const parsed = safeJsonParseString(favoritesRaw, []);
                 const cleaned = cleanupInvalidFavorites(parsed);
                 setFavorites(cleaned);
+            } else {
+                setFavorites((prev) => (prev.length > 0 ? prev : []));
             }
-            if (storageData[historyKey]) {
-                // ✅ FIX-010: Используем безопасный парсинг JSON
-                setViewHistory(safeJsonParseString(storageData[historyKey]!, []));
+
+            if (historyRaw) {
+                setViewHistory(safeJsonParseString(historyRaw, []));
+            } else {
+                setViewHistory((prev) => (prev.length > 0 ? prev : []));
             }
         } catch (error) {
-            // ✅ FIX-007: Используем централизованный logger
             devError('Ошибка загрузки избранного и истории:', error);
-            // Fallback на отдельные загрузки при ошибке
             loadFavorites();
             loadViewHistory();
         }
     }, [userId, loadFavorites, loadViewHistory]);
 
-    const saveFavorites = async (newFavorites: FavoriteItem[]) => {
-        try {
-            const key = userId ? `${FAVORITES_KEY}_${userId}` : FAVORITES_KEY;
-            await AsyncStorage.setItem(key, JSON.stringify(newFavorites));
-            setFavorites(newFavorites);
-        } catch (error) {
-            // ✅ FIX-007: Используем централизованный logger
-            devError('Ошибка сохранения избранного:', error);
+    const loadServerCached = useCallback(async () => {
+        if (!isAuthenticated || !userId) {
+            return;
         }
-    };
 
-    const saveViewHistory = async (newHistory: ViewHistoryItem[]) => {
         try {
-            const key = userId ? `${VIEW_HISTORY_KEY}_${userId}` : VIEW_HISTORY_KEY;
-            await AsyncStorage.setItem(key, JSON.stringify(newHistory));
-            setViewHistory(newHistory);
-        } catch (error) {
-            // ✅ FIX-007: Используем централизованный logger
-            devError('Ошибка сохранения истории:', error);
-        }
-    };
+            const favoritesKey = userId ? `${SERVER_FAVORITES_CACHE_KEY}_${userId}` : SERVER_FAVORITES_CACHE_KEY;
+            const historyKey = userId ? `${SERVER_HISTORY_CACHE_KEY}_${userId}` : SERVER_HISTORY_CACHE_KEY;
+            const recommendationsKey = userId ? `${SERVER_RECOMMENDATIONS_CACHE_KEY}_${userId}` : SERVER_RECOMMENDATIONS_CACHE_KEY;
 
-    // ✅ FIX-004: Загрузка избранного и истории при монтировании (оптимизировано)
+            const storageData = await getStorageBatch([favoritesKey, historyKey, recommendationsKey]);
+
+            const favoritesRaw =
+                storageData[favoritesKey] != null
+                    ? storageData[favoritesKey]
+                    : await AsyncStorage.getItem(favoritesKey);
+            const historyRaw =
+                storageData[historyKey] != null ? storageData[historyKey] : await AsyncStorage.getItem(historyKey);
+            const recommendationsRaw =
+                storageData[recommendationsKey] != null
+                    ? storageData[recommendationsKey]
+                    : await AsyncStorage.getItem(recommendationsKey);
+
+            if (favoritesRaw) {
+                setFavorites(safeJsonParseString(favoritesRaw, []));
+            }
+            if (historyRaw) {
+                setViewHistory(safeJsonParseString(historyRaw, []));
+            }
+            if (recommendationsRaw) {
+                setRecommended(safeJsonParseString(recommendationsRaw, []));
+            }
+        } catch (error) {
+            devError('Ошибка загрузки серверного кеша:', error);
+        }
+    }, [isAuthenticated, userId]);
+
+    const refreshFromServer = useCallback(async () => {
+        if (!isAuthenticated || !userId) {
+            return;
+        }
+
+        try {
+            const [favDto, historyDto, recDto] = await Promise.all([
+                fetchUserFavoriteTravels(userId),
+                fetchUserHistory(userId),
+                fetchUserRecommendedTravels(userId),
+            ]);
+
+            const favArr = Array.isArray(favDto) ? favDto : [];
+            const historyArr = Array.isArray(historyDto) ? historyDto : [];
+            const recArr = Array.isArray(recDto) ? recDto : [];
+
+            const userFavorites: FavoriteItem[] = favArr.map((t) => ({
+                id: t.id,
+                type: 'travel',
+                title: t.name || 'Без названия',
+                url: t.url || `/travels/${t.slug || t.id}`,
+                imageUrl: t.travel_image_thumb_url,
+                addedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
+                country: t.countryName,
+            }));
+
+            const userHistory: ViewHistoryItem[] = historyArr.map((t) => ({
+                id: t.id,
+                type: 'travel',
+                title: t.name || 'Без названия',
+                url: t.url || `/travels/${t.slug || t.id}`,
+                imageUrl: t.travel_image_thumb_url,
+                viewedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
+                country: t.countryName,
+            }));
+
+            const userRecommended: FavoriteItem[] = recArr.map((t) => ({
+                id: t.id,
+                type: 'travel',
+                title: t.name || 'Без названия',
+                url: t.url || `/travels/${t.slug || t.id}`,
+                imageUrl: t.travel_image_thumb_url,
+                addedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
+                country: t.countryName,
+            }));
+
+            setFavorites((prev) => {
+                if (userFavorites.length === 0 && prev.length > 0) return prev;
+                return userFavorites;
+            });
+            setViewHistory((prev) => {
+                if (userHistory.length === 0 && prev.length > 0) return prev;
+                return userHistory;
+            });
+            setRecommended((prev) => {
+                if (userRecommended.length === 0 && prev.length > 0) return prev;
+                return userRecommended;
+            });
+
+            const favoritesKey = userId ? `${SERVER_FAVORITES_CACHE_KEY}_${userId}` : SERVER_FAVORITES_CACHE_KEY;
+            const historyKey = userId ? `${SERVER_HISTORY_CACHE_KEY}_${userId}` : SERVER_HISTORY_CACHE_KEY;
+            const recommendationsKey = userId ? `${SERVER_RECOMMENDATIONS_CACHE_KEY}_${userId}` : SERVER_RECOMMENDATIONS_CACHE_KEY;
+
+            await AsyncStorage.setItem(favoritesKey, JSON.stringify(userFavorites));
+            await AsyncStorage.setItem(historyKey, JSON.stringify(userHistory));
+            await AsyncStorage.setItem(recommendationsKey, JSON.stringify(userRecommended));
+        } catch (error) {
+            devError('Ошибка обновления данных с сервера:', error);
+        }
+    }, [isAuthenticated, userId]);
+
     useEffect(() => {
-        loadFavoritesAndHistory();
-    }, [userId, loadFavoritesAndHistory]);
+        if (isAuthenticated && userId) {
+            loadServerCached();
+            const timeout = setTimeout(() => {
+                refreshFromServer();
+            }, 0);
+            return () => clearTimeout(timeout);
+        }
 
-        const addFavorite = useCallback(async (item: Omit<FavoriteItem, 'addedAt'>) => {
-        // Валидация ID с использованием утилиты
+        loadFavoritesAndHistory();
+    }, [isAuthenticated, userId, loadFavoritesAndHistory, loadServerCached, refreshFromServer]);
+
+    const addFavorite = useCallback(async (item: Omit<FavoriteItem, 'addedAt'>) => {
+        if (isAuthenticated && userId && item.type === 'travel') {
+            const existing = favorites.find((f) => f.id === item.id && f.type === item.type);
+            if (existing) {
+                return;
+            }
+
+            const optimistic: FavoriteItem = {
+                ...item,
+                addedAt: Date.now(),
+            };
+
+            setFavorites((prev) => [...prev, optimistic]);
+            try {
+                await markTravelAsFavorite(item.id);
+                await refreshFromServer();
+            } catch (error) {
+                setFavorites((prev) => prev.filter((f) => !(f.id === item.id && f.type === item.type)));
+                throw error;
+            }
+
+            return;
+        }
+
         if (!isValidFavoriteId(item.id)) {
-            // Раньше мы полностью блокировали такие ID, но это мешает реальным путешествиям
-            // с id вроде 503. Теперь только логируем предупреждение и продолжаем.
             console.warn(`Suspicious favorite ID detected: ${item.id} (looks like HTTP error code), продолжим сохранение`);
         }
-        
+
         const existingFavorite = favorites.find(f => f.id === item.id && f.type === item.type);
-        
+
         if (existingFavorite) {
             return; // Уже в избранном
         }
@@ -156,7 +311,7 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
         };
 
         const newFavorites = [...favorites, newFavorite];
-        
+
         try {
             await saveFavorites(newFavorites);
 
@@ -178,19 +333,31 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
             }
             throw error;
         }
-    }, [favorites, userId]);
+    }, [favorites, userId, isAuthenticated, refreshFromServer]);
 
-        const removeFavorite = useCallback(async (id: string | number, type: 'travel' | 'article') => {
-        // Валидация ID с использованием утилиты
+    const removeFavorite = useCallback(async (id: string | number, type: 'travel' | 'article') => {
+        if (isAuthenticated && userId && type === 'travel') {
+            const before = favorites;
+            setFavorites((prev) => prev.filter((f) => !(f.id === id && f.type === type)));
+            try {
+                await unmarkTravelAsFavorite(id);
+                await refreshFromServer();
+            } catch (error) {
+                setFavorites(before);
+                throw error;
+            }
+
+            return;
+        }
+
         if (!isValidFavoriteId(id)) {
             console.warn(`Suspicious favorite ID detected on remove: ${id} (looks like HTTP error code), продолжим удаление`);
         }
-        
-        const favoriteToRemove = favorites.find(f => f.id === id && f.type === type);
+
         const newFavorites = favorites.filter(
             f => !(f.id === id && f.type === type)
         );
-        
+
         try {
             await saveFavorites(newFavorites);
             
@@ -206,13 +373,17 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
             console.error('Ошибка удаления из избранного:', error);
             throw error;
         }
-    }, [favorites, userId]);
+    }, [favorites, userId, isAuthenticated, refreshFromServer]);
 
     const isFavorite = useCallback((id: string | number, type: 'travel' | 'article') => {
         return favorites.some(f => f.id === id && f.type === type);
     }, [favorites]);
 
     const addToHistory = useCallback(async (item: Omit<ViewHistoryItem, 'viewedAt'>) => {
+        if (isAuthenticated && userId) {
+            return;
+        }
+
         const historyItem: ViewHistoryItem = {
             ...item,
             viewedAt: Date.now(),
@@ -225,13 +396,35 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
         newHistory = [historyItem, ...newHistory].slice(0, MAX_HISTORY_ITEMS);
         
         await saveViewHistory(newHistory);
-    }, [viewHistory, userId]);
+    }, [viewHistory, userId, isAuthenticated]);
 
     const clearHistory = useCallback(async () => {
+        if (isAuthenticated && userId) {
+            await clearUserHistory(userId);
+            setViewHistory([]);
+            await AsyncStorage.setItem(`${SERVER_HISTORY_CACHE_KEY}_${userId}`, JSON.stringify([]));
+            return;
+        }
+
         await saveViewHistory([]);
-    }, [userId]);
+    }, [userId, isAuthenticated]);
+
+    const clearFavorites = useCallback(async () => {
+        if (isAuthenticated && userId) {
+            await clearUserFavorites(userId);
+            setFavorites([]);
+            await AsyncStorage.setItem(`${SERVER_FAVORITES_CACHE_KEY}_${userId}`, JSON.stringify([]));
+            return;
+        }
+
+        await saveFavorites([]);
+    }, [userId, isAuthenticated, saveFavorites]);
 
     const getRecommendations = useCallback(() => {
+        if (isAuthenticated && userId) {
+            return recommended;
+        }
+
         // Рекомендации на основе избранного и истории
         const countries = new Set<string>();
         const cities = new Set<string>();
@@ -248,7 +441,7 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
 
         // Возвращаем избранное, отсортированное по дате добавления
         return [...favorites].sort((a, b) => b.addedAt - a.addedAt);
-    }, [favorites, viewHistory]);
+    }, [favorites, viewHistory, isAuthenticated, userId, recommended]);
 
     return (
         <FavoritesContext.Provider
@@ -259,6 +452,7 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
                 removeFavorite,
                 isFavorite,
                 addToHistory,
+                clearFavorites,
                 clearHistory,
                 getRecommendations,
             }}

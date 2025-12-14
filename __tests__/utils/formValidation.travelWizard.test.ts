@@ -12,11 +12,12 @@ import {
   validateYouTubeLink,
   validateTravelForm,
   getFieldError,
+  getModerationIssues,
 } from '@/utils/formValidation';
 
 describe('travel wizard validation', () => {
   describe('validateStep', () => {
-    it('step 1: requires name, description, countries and categories', () => {
+    it('step 1: requires name only (navigation gate)', () => {
       const base = {
         name: 'Test trip',
         description: 'X'.repeat(60),
@@ -30,36 +31,40 @@ describe('travel wizard validation', () => {
       const noName = validateStep(1, { ...base, name: '' } as any);
       expect(noName.isValid).toBe(false);
       expect(noName.errors.some(e => e.field === 'name')).toBe(true);
-
-      const noDescription = validateStep(1, { ...base, description: '' } as any);
-      expect(noDescription.isValid).toBe(false);
-      expect(noDescription.errors.some(e => e.field === 'description')).toBe(true);
-
-      const noCountries = validateStep(1, { ...base, countries: [] } as any);
-      expect(noCountries.isValid).toBe(false);
-      expect(noCountries.errors.some(e => e.field === 'countries')).toBe(true);
-
-      const noCategories = validateStep(1, { ...base, categories: [] } as any);
-      expect(noCategories.isValid).toBe(false);
-      expect(noCategories.errors.some(e => e.field === 'categories')).toBe(true);
     });
 
-    it('step 2: requires at least one marker in coordsMeTravel/markers', () => {
-      const noMarkers = validateStep(2, { coordsMeTravel: [] } as any, []);
-      expect(noMarkers.isValid).toBe(false);
-
-      const withCoords = validateStep(2, { coordsMeTravel: [{ lat: 1, lng: 2 }] } as any);
-      expect(withCoords.isValid).toBe(true);
-
-      const viaArg = validateStep(2, { coordsMeTravel: [] } as any, [{ lat: 1, lng: 2 }] as any);
-      expect(viaArg.isValid).toBe(true);
-    });
-
-    it('steps 3 and 4 are always non-blocking', () => {
+    it('steps 2, 3 and 4 are always non-blocking', () => {
+      const step2 = validateStep(2, {} as any);
       const step3 = validateStep(3, {} as any);
       const step4 = validateStep(4, {} as any);
+      expect(step2.isValid).toBe(true);
       expect(step3.isValid).toBe(true);
       expect(step4.isValid).toBe(true);
+    });
+  });
+
+  describe('getModerationIssues', () => {
+    it('provides target step and anchor for each critical field', () => {
+      const issues = getModerationIssues({
+        name: '',
+        description: '',
+        countries: [],
+        categories: [],
+        coordsMeTravel: [],
+        gallery: [],
+        travel_image_thumb_small_url: null,
+      } as any, []);
+
+      const byKey = Object.fromEntries(issues.map(i => [i.key, i]));
+
+      expect(byKey.name.targetStep).toBe(1);
+      expect(byKey.description.targetStep).toBe(1);
+      expect(byKey.countries.targetStep).toBe(2);
+      expect(byKey.route.targetStep).toBe(2);
+      expect(byKey.categories.targetStep).toBe(5);
+      expect(byKey.categories.anchorId).toBe('travelwizard-extras-categories');
+      expect(byKey.photos.targetStep).toBe(3);
+      expect(byKey.photos.anchorId).toBe('travelwizard-media-cover');
     });
   });
 
@@ -69,6 +74,7 @@ describe('travel wizard validation', () => {
         name: '',
         description: '',
         countries: [],
+        categories: [],
         coordsMeTravel: [],
         gallery: [],
         travel_image_thumb_small_url: null,
@@ -77,6 +83,7 @@ describe('travel wizard validation', () => {
       expect(errors).toContain('Название');
       expect(errors).toContain('Описание');
       expect(errors).toContain('Страны (минимум одна)');
+      expect(errors).toContain('Категории (минимум одна)');
       expect(errors).toContain('Маршрут (минимум одна точка)');
       expect(errors).toContain('Фото или обложка');
     });
@@ -86,6 +93,7 @@ describe('travel wizard validation', () => {
         name: 'Test',
         description: 'X'.repeat(60),
         countries: ['1'],
+        categories: ['city'],
         coordsMeTravel: [{ lat: 1, lng: 2 }],
         gallery: ['img'],
         travel_image_thumb_small_url: null,
@@ -99,6 +107,7 @@ describe('travel wizard validation', () => {
         name: 'Test',
         description: 'X'.repeat(60),
         countries: ['1'],
+        categories: ['city'],
         coordsMeTravel: [{ lat: 1, lng: 2 }],
         gallery: [],
         travel_image_thumb_small_url: 'cover.jpg',

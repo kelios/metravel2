@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { TravelFormData, Travel } from '@/src/types/types';
-import { getModerationErrors } from '@/utils/formValidation';
+import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
 import { trackWizardEvent } from '@/src/utils/analytics';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
@@ -23,6 +23,7 @@ interface TravelWizardStepPublishProps {
     onManualSave: () => void;
     onGoBack: () => void;
     onFinish: () => void;
+    onNavigateToIssue?: (issue: ModerationIssue) => void;
     stepMeta?: {
         title?: string;
         subtitle?: string;
@@ -45,6 +46,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     onManualSave,
     onGoBack,
     onFinish,
+    onNavigateToIssue,
     stepMeta,
     progress = currentStep / totalSteps,
     autosaveBadge,
@@ -60,6 +62,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         const hasName = !!formData.name && formData.name.trim().length > 0;
         const hasDescription = !!formData.description && formData.description.trim().length > 0;
         const hasCountries = Array.isArray(formData.countries) && formData.countries.length > 0;
+        const hasCategories = Array.isArray((formData as any).categories) && ((formData as any).categories as any[]).length > 0;
         const hasRoute = Array.isArray((formData as any).coordsMeTravel)
             ? ((formData as any).coordsMeTravel as any[]).length > 0
             : Array.isArray((formData as any).markers)
@@ -75,19 +78,20 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             { key: 'name', label: 'Название маршрута (не менее 3 символов)', ok: hasName },
             { key: 'description', label: 'Описание для кого маршрут и чего ожидать (не менее 50 символов)', ok: hasDescription },
             { key: 'countries', label: 'Страны маршрута (минимум одна, выбираются на шаге “Маршрут”)', ok: hasCountries },
+            { key: 'categories', label: 'Категории маршрута (минимум одна, выбираются на шаге “Публикация”)', ok: hasCategories },
             { key: 'route', label: 'Маршрут на карте (минимум одна точка на шаге “Маршрут”)', ok: hasRoute },
             { key: 'photos', label: 'Фото или обложка маршрута (рекомендуем горизонтальное изображение, без коллажей)', ok: hasPhotos },
         ];
     }, [formData]);
 
-    const [missingForModeration, setMissingForModeration] = useState<string[]>([]);
+    const [missingForModeration, setMissingForModeration] = useState<ModerationIssue[]>([]);
     const isNew = !formData.id;
 
     useEffect(() => {
         trackWizardEvent('wizard_step_view', {
-            step: 5,
+            step: currentStep,
         });
-    }, []);
+    }, [currentStep]);
 
     const handleSaveDraft = async () => {
         setFormData({
@@ -114,7 +118,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
         await trackWizardEvent('wizard_draft_saved', {
             travel_id: formData.id ?? null,
-            step: 5,
+            step: currentStep,
             fields_filled: {
                 name: hasName,
                 description: hasDescription,
@@ -126,17 +130,19 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     };
 
     const handleSendToModeration = async () => {
-        const criticalMissing = getModerationErrors({
+        const criticalMissing = getModerationIssues({
             name: formData.name ?? '',
             description: formData.description ?? '',
             countries: formData.countries ?? [],
+            categories: (formData as any).categories ?? [],
             coordsMeTravel: (formData as any).coordsMeTravel ?? (formData as any).markers ?? [],
             gallery: (formData as any).gallery ?? [],
             travel_image_thumb_small_url: (formData as any).travel_image_thumb_small_url ?? null,
         } as any);
+        const missingLabels = criticalMissing.map(i => i.label);
 
         await trackWizardEvent('wizard_moderation_attempt', {
-            missing_fields: criticalMissing,
+            missing_fields: missingLabels,
             is_new: isNew,
             is_edit: !isNew,
             travel_id: formData.id ?? null,
@@ -213,7 +219,11 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     onSave={onManualSave}
                     showSaveButton={true}
                     showPreviewButton={true}
-                    showPublishControls={true}
+                    showPublishControls={false}
+                    showCountries={false}
+                    showCoverImage={false}
+                    showCategories={false}
+                    showAdditionalFields={false}
                 />
 
                 <View style={styles.statusCard}>
@@ -269,10 +279,16 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         <Text style={styles.bannerDescription}>
                             Проверьте отмеченные пункты чек-листа. Без них мы не сможем отправить маршрут на модерацию.
                         </Text>
-                        {missingForModeration.map(item => (
-                            <Text key={item} style={styles.bannerItem}>
-                                • {item}
-                            </Text>
+                        {missingForModeration.map(issue => (
+                            <TouchableOpacity
+                                key={issue.key}
+                                onPress={() => onNavigateToIssue?.(issue)}
+                                disabled={!onNavigateToIssue}
+                            >
+                                <Text style={[styles.bannerItem, onNavigateToIssue && styles.bannerItemClickable]}>
+                                    • {issue.label}
+                                </Text>
+                            </TouchableOpacity>
                         ))}
                     </View>
                 )}
@@ -311,6 +327,9 @@ const styles = StyleSheet.create({
     headerSubtitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#6b7280',
+    },
+    bannerItemClickable: {
+        textDecorationLine: 'underline',
     },
     autosaveBadge: {
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,

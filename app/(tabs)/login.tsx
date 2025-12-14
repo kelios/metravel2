@@ -15,7 +15,7 @@ import {
 import { Button, Card } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { useIsFocused } from '@react-navigation/native';
-import { usePathname, useRouter } from 'expo-router';
+import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
 import InstantSEO from '@/components/seo/InstantSEO';
 import { useAuth } from '@/context/AuthContext';
@@ -41,6 +41,7 @@ export default function Login() {
     const navigation = useNavigation();
     const router = useRouter();
     const { login, sendPassword } = useAuth();
+    const { redirect } = useLocalSearchParams<{ redirect?: string }>();
 
     const isFocused = useIsFocused();
     const pathname = usePathname();
@@ -83,7 +84,11 @@ export default function Login() {
             const ok = await login(values.email.trim(), values.password);
             if (ok) {
                 // ✅ ИСПРАВЛЕНИЕ: Используем router вместо navigation для Expo Router
-                router.replace('/');
+                if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
+                    router.replace(redirect as any);
+                } else {
+                    router.replace('/');
+                }
             } else {
                 showMsg('Неверный email или пароль.', true);
             }
@@ -226,7 +231,7 @@ export default function Login() {
                                             <View style={styles.registerContainer}>
                                                 <Text style={styles.registerText}>Нет аккаунта? </Text>
                                                 <TouchableOpacity 
-                                                    onPress={() => router.push('/registration' as any)} 
+                                                    onPress={() => router.push((redirect && typeof redirect === 'string') ? (`/registration?redirect=${encodeURIComponent(redirect)}` as any) : ('/registration' as any))} 
                                                     disabled={isSubmitting}
                                                 >
                                                     <Text style={styles.registerLink}>Зарегистрируйтесь</Text>

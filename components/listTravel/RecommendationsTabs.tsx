@@ -14,33 +14,29 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  Image,
+  Platform,
   Animated,
   FlatList,
   RefreshControl,
   useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
-import { TAB_CARD_TEMPLATE, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
+import { TAB_CARD_TEMPLATE } from './recommendationsCardTemplate';
+import TabTravelCard from './TabTravelCard';
 
 /* ---------------- Lazy Components ---------------- */
 
 const PersonalizedRecommendations = lazy(() =>
-  import('@/components/PersonalizedRecommendations').catch(() => ({
-    default: () => <ErrorFallback message="Не удалось загрузить рекомендации" />,
-  }))
+  import('@/components/PersonalizedRecommendations') as any
 );
 
 const WeeklyHighlights = lazy(() =>
-  import('@/components/WeeklyHighlights').catch(() => ({
-    default: () => <ErrorFallback message="Не удалось загрузить подборку месяца" />,
-  }))
+  import('@/components/WeeklyHighlights') as any
 );
 
 const ErrorFallback = ({ message }: { message: string }) => (
@@ -60,6 +56,23 @@ interface RecommendationsTabsProps {
 }
 
 const TAB_CONTENT_HEIGHT = 320;
+
+const AuthGate = ({ message, onLogin }: { message: string; onLogin: () => void }) => (
+  <View style={styles.gateContainer}>
+    <View style={styles.gateCard}>
+      <View style={styles.gateIcon}>
+        <MaterialIcons name="lock" size={24} color={DESIGN_TOKENS.colors.primary} />
+      </View>
+      <View style={styles.gateCopy}>
+        <Text style={styles.gateText}>{message}</Text>
+      </View>
+      <Pressable style={styles.gateButton} onPress={onLogin} accessibilityRole="button">
+        <Text style={styles.gateButtonText}>Войти</Text>
+        <MaterialIcons name="arrow-forward" size={18} color={DESIGN_TOKENS.colors.primary} style={{ marginLeft: 6 }} />
+      </Pressable>
+    </View>
+  </View>
+);
 
 /* ---------------- Skeletons ---------------- */
 
@@ -84,87 +97,6 @@ const RecommendationsPlaceholder = () => (
   </View>
 );
 
-/* ---------------- Travel Card ---------------- */
-
-const TravelCard = memo(
-  ({ item, onPress, isHistory = false }: { item: any; onPress: () => void; isHistory?: boolean }) => {
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-    const { width } = useWindowDimensions();
-    const isMobile = width <= 768;
-    const location = [item?.city, item?.country].filter(Boolean).join(', ');
-
-    const handlePressIn = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 0.97,
-        useNativeDriver: true,
-        friction: 8,
-        tension: 300,
-      }).start();
-    };
-
-    const handlePressOut = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    return (
-      <Animated.View
-        style={[
-          styles.cardContainer,
-          isMobile && styles.cardContainerMobile,
-          { transform: [{ scale: scaleAnim }] },
-        ]}
-      >
-        <Pressable
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          onPress={onPress}
-          android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
-          accessibilityRole="button"
-          accessibilityLabel={item.title}
-        >
-          <View style={styles.cardImageContainer}>
-            {item.imageUrl ? (
-              <Image source={{ uri: item.imageUrl }} style={styles.cardImage} resizeMode="cover" />
-            ) : (
-              <View style={styles.placeholderImage}>
-                <MaterialIcons name="route" size={40} color="#aaa" />
-              </View>
-            )}
-
-            {isHistory && (
-              <View style={styles.historyBadge}>
-                <MaterialIcons name="history" size={16} color="#fff" />
-              </View>
-            )}
-
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.8)']}
-              style={StyleSheet.absoluteFill}
-            />
-          </View>
-
-          <View style={styles.cardContent}>
-            <Text style={styles.cardTitle} numberOfLines={2}>
-              {item.title || 'Без названия'}
-            </Text>
-            {!!location && (
-              <View style={styles.cardMeta}>
-                <MaterialIcons name="place" size={12} color="#6b7280" style={styles.cardMetaIcon} />
-                <Text style={styles.cardMetaText}>{location}</Text>
-              </View>
-            )}
-          </View>
-        </Pressable>
-      </Animated.View>
-    );
-  }
-);
-
-TravelCard.displayName = 'TravelCard';
-
 /* ---------------- Main Component ---------------- */
 
 const RecommendationsTabs = memo(
@@ -174,8 +106,38 @@ const RecommendationsTabs = memo(
     const [refreshing, setRefreshing] = useState(false);
 
     const router = useRouter();
-    const { favorites = [], viewHistory = [], refreshFavorites } = useFavorites();
+    const { favorites = [], viewHistory = [], clearFavorites, clearHistory } = useFavorites() as any;
     const { isAuthenticated } = useAuth();
+
+    const handleClearFavorites = useCallback(async () => {
+      try {
+        if (typeof clearFavorites !== 'function') return;
+
+        if (typeof window !== 'undefined' && (window as any).confirm) {
+          const confirmed = window.confirm('Очистить избранное?');
+          if (!confirmed) return;
+        }
+
+        await clearFavorites();
+      } catch (error) {
+        console.error('Error clearing favorites:', error);
+      }
+    }, [clearFavorites]);
+
+    const handleClearHistory = useCallback(async () => {
+      try {
+        if (typeof clearHistory !== 'function') return;
+
+        if (typeof window !== 'undefined' && (window as any).confirm) {
+          const confirmed = window.confirm('Очистить историю просмотров?');
+          if (!confirmed) return;
+        }
+
+        await clearHistory();
+      } catch (error) {
+        console.error('Error clearing history:', error);
+      }
+    }, [clearHistory]);
 
     const tabLayout = useRef<Record<string, { x: number; width: number }>>({}).current;
     const underlineAnim = useRef(new Animated.Value(0)).current;
@@ -186,10 +148,10 @@ const RecommendationsTabs = memo(
       () => [
         { id: 'highlights' as const, label: 'Подборка месяца', icon: 'auto-awesome' },
         { id: 'recommendations' as const, label: 'Рекомендации', icon: 'star' },
-        { id: 'favorites' as const, label: 'Избранное', icon: 'favorite', count: favorites.length },
-        { id: 'history' as const, label: 'История', icon: 'history', count: viewHistory.length },
+        { id: 'favorites' as const, label: 'Избранное', icon: 'favorite', count: isAuthenticated ? favorites.length : 0 },
+        { id: 'history' as const, label: 'История', icon: 'history', count: isAuthenticated ? viewHistory.length : 0 },
       ],
-      [favorites.length, viewHistory.length]
+      [favorites.length, isAuthenticated, viewHistory.length]
     );
 
     // Анимация подчёркивания
@@ -214,16 +176,6 @@ const RecommendationsTabs = memo(
         scrollRef.current.scrollTo({ x: Math.max(0, x - 50), animated: true });
       }
     };
-
-    const handleRefresh = useCallback(async () => {
-      if (!refreshFavorites) return;
-      setRefreshing(true);
-      try {
-        await refreshFavorites();
-      } finally {
-        setRefreshing(false);
-      }
-    }, [refreshFavorites]);
 
     const toggleCollapse = () => {
       const newCollapsed = !collapsed;
@@ -267,44 +219,144 @@ const RecommendationsTabs = memo(
         case 'recommendations':
           return renderTabPane(
             <Suspense fallback={<RecommendationsPlaceholder />}>
-              <PersonalizedRecommendations showHeader={false} />
+              <PersonalizedRecommendations showHeader={!isAuthenticated} onlyRecommendations={true} />
             </Suspense>
           );
         case 'favorites':
+          if (!isAuthenticated) {
+            return renderTabPane(
+              <AuthGate
+                message="Избранное будет доступно после регистрации или авторизации"
+                onLogin={() => router.push('/login' as any)}
+              />
+            );
+          }
           return renderTabPane(
             favorites.length === 0 ? (
               <EmptyState message="Избранное пусто" icon="favorite-border" />
             ) : (
-              <FlatList
-                horizontal
-                data={favorites}
-                renderItem={({ item }) => (
-                  <TravelCard item={item} onPress={() => router.push(item.url)} />
-                )}
-                keyExtractor={(item) => `${item.type || 'item'}-${item.id}`}
-                showsHorizontalScrollIndicator={false}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-                style={styles.horizontalList}
-                contentContainerStyle={styles.horizontalListContent}
-              />
+              <View>
+                <View style={styles.favoritesHeaderRow}>
+                  <View style={styles.headerTitleBlock}>
+                    <Text style={styles.favoritesHeaderTitle}>Избранное</Text>
+                    <Text style={styles.headerSubtitle}>{favorites.length} шт.</Text>
+                  </View>
+
+                  <View style={styles.headerActions}>
+                    <Pressable
+                      style={styles.seeAllButton}
+                      onPress={() => router.push('/favorites' as any)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Смотреть все избранное"
+                    >
+                      <Text style={styles.seeAllButtonText}>Смотреть все</Text>
+                      <Feather name="chevron-right" size={16} color={DESIGN_TOKENS.colors.primary} />
+                    </Pressable>
+
+                    {typeof clearFavorites === 'function' && favorites.length > 0 && (
+                      <Pressable
+                        style={styles.favoritesClearButton}
+                        onPress={handleClearFavorites}
+                        accessibilityRole="button"
+                        accessibilityLabel="Очистить избранное"
+                      >
+                        <Feather name="trash-2" size={16} color={DESIGN_TOKENS.colors.danger} />
+                        <Text style={styles.favoritesClearButtonText}>Очистить</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+
+                <FlatList
+                  horizontal
+                  data={favorites}
+                  renderItem={({ item }) => (
+                    <TabTravelCard
+                      item={{
+                        id: item.id,
+                        title: item.title,
+                        imageUrl: item.imageUrl,
+                        city: (item as any).city ?? null,
+                        country: item.country ?? (item as any).countryName ?? null,
+                      }}
+                      onPress={() => router.push(item.url as any)}
+                    />
+                  )}
+                  keyExtractor={(item) => `${item.type || 'item'}-${item.id}`}
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.horizontalList}
+                  contentContainerStyle={styles.horizontalListContent}
+                />
+              </View>
             )
           );
         case 'history':
+          if (!isAuthenticated) {
+            return renderTabPane(
+              <AuthGate
+                message="История просмотров будет доступна после регистрации или авторизации"
+                onLogin={() => router.push('/login' as any)}
+              />
+            );
+          }
           return renderTabPane(
             viewHistory.length === 0 ? (
               <EmptyState message="История просмотров пуста" icon="history" />
             ) : (
-              <FlatList
-                horizontal
-                data={viewHistory}
-                renderItem={({ item }) => (
-                  <TravelCard item={item} onPress={() => router.push(item.url)} isHistory />
-                )}
-                keyExtractor={(item) => `history-${item.id}-${item.viewedAt}`}
-                showsHorizontalScrollIndicator={false}
-                style={styles.horizontalList}
-                contentContainerStyle={styles.horizontalListContent}
-              />
+              <View>
+                <View style={styles.favoritesHeaderRow}>
+                  <View style={styles.headerTitleBlock}>
+                    <Text style={styles.favoritesHeaderTitle}>История</Text>
+                    <Text style={styles.headerSubtitle}>{viewHistory.length} шт.</Text>
+                  </View>
+
+                  <View style={styles.headerActions}>
+                    <Pressable
+                      style={styles.seeAllButton}
+                      onPress={() => router.push('/history' as any)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Смотреть всю историю просмотров"
+                    >
+                      <Text style={styles.seeAllButtonText}>Смотреть все</Text>
+                      <Feather name="chevron-right" size={16} color={DESIGN_TOKENS.colors.primary} />
+                    </Pressable>
+
+                    {typeof clearHistory === 'function' && viewHistory.length > 0 && (
+                      <Pressable
+                        style={styles.favoritesClearButton}
+                        onPress={handleClearHistory}
+                        accessibilityRole="button"
+                        accessibilityLabel="Очистить историю просмотров"
+                      >
+                        <Feather name="trash-2" size={16} color={DESIGN_TOKENS.colors.danger} />
+                        <Text style={styles.favoritesClearButtonText}>Очистить</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+
+                <FlatList
+                  horizontal
+                  data={viewHistory}
+                  renderItem={({ item }) => (
+                    <TabTravelCard
+                      item={{
+                        id: item.id,
+                        title: item.title,
+                        imageUrl: item.imageUrl,
+                        city: (item as any).city ?? null,
+                        country: item.country ?? (item as any).countryName ?? null,
+                      }}
+                      badge={{ icon: 'history', backgroundColor: 'rgba(0,0,0,0.7)', iconColor: '#fff' }}
+                      onPress={() => router.push(item.url as any)}
+                    />
+                  )}
+                  keyExtractor={(item) => `history-${item.id}-${item.viewedAt}`}
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.horizontalList}
+                  contentContainerStyle={styles.horizontalListContent}
+                />
+              </View>
             )
           );
         default:
@@ -474,53 +526,54 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
 
-  // Cards
-  cardContainer: {
-    ...TAB_CARD_TEMPLATE.container,
-    marginRight: 16,
+  gateContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  cardContainerMobile: {
-    width: MOBILE_CARD_WIDTH,
-  },
-  cardImageContainer: {
-    ...TAB_CARD_TEMPLATE.imageContainer,
-  },
-  cardImage: {
-    ...TAB_CARD_TEMPLATE.image,
-  },
-  placeholderImage: {
-    ...TAB_CARD_TEMPLATE.image,
-    backgroundColor: '#f3f4f6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  historyBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 14,
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cardContent: {
-    ...TAB_CARD_TEMPLATE.content,
-  },
-  cardTitle: {
-    ...TAB_CARD_TEMPLATE.title,
-  },
-  cardMeta: {
-    ...TAB_CARD_TEMPLATE.metaRow,
+  gateCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: '#fdf8f3',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 159, 90, 0.25)',
   },
-  cardMetaIcon: {
-    marginRight: 4,
+  gateIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(15,23,42,0.08)',
   },
-  cardMetaText: {
-    ...TAB_CARD_TEMPLATE.metaText,
+  gateCopy: {
+    flex: 1,
+    marginLeft: 12,
+    marginRight: 12,
+  },
+  gateText: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  gateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: '#fff',
+  },
+  gateButtonText: {
+    color: DESIGN_TOKENS.colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   // Collapsed
@@ -565,6 +618,80 @@ const styles = StyleSheet.create({
     backgroundColor: '#eee',
     borderRadius: 6,
   },
+
+  horizontalList: {
+    marginBottom: 8,
+  },
+  horizontalListContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+    ...Platform.select({
+      web: {
+        paddingBottom: 12,
+      } as any,
+      default: {},
+    }),
+  },
+
+  favoritesHeaderRow: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  headerTitleBlock: {
+    flex: 1,
+  },
+  headerSubtitle: {
+    marginTop: 2,
+    fontSize: 12,
+    color: DESIGN_TOKENS.colors.textMuted,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  seeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+  },
+  seeAllButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: DESIGN_TOKENS.colors.primary,
+  },
+  favoritesHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: DESIGN_TOKENS.colors.text,
+  },
+  favoritesClearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.border,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+  },
+  favoritesClearButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: DESIGN_TOKENS.colors.danger,
+  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -586,14 +713,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#666',
     textAlign: 'center',
-  },
-  horizontalList: {
-    minHeight: 210,
-    paddingVertical: 4,
-  },
-  horizontalListContent: {
-    paddingHorizontal: 8,
-    paddingBottom: 12,
   },
 });
 

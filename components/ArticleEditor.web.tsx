@@ -137,7 +137,13 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
       :root{--bg:#fff;--fg:#333;--bar:#f5f5f5}
       @media(prefers-color-scheme:dark){:root{--bg:#1e1e1e;--fg:#e0e0e0;--bar:#2a2a2a}}
       .ql-editor{background:var(--bg);color:var(--fg)}
-      .ql-toolbar{background:var(--bar);position:sticky;top:0;z-index:10}
+      .ql-toolbar{background:var(--bar);position:sticky;top:0;z-index:10;max-width:100%}
+      .ql-toolbar.ql-snow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+      .ql-toolbar.ql-snow .ql-formats{display:flex;flex-wrap:wrap;gap:4px;margin-right:6px}
+      .ql-toolbar.ql-snow .ql-picker{max-width:100%}
+      .ql-toolbar.ql-snow button{flex:0 0 auto}
+      .ql-container{max-width:100%}
+      .ql-editor{max-width:100%;overflow-wrap:anywhere}
       .ql-editor img{max-width:100%;height:auto;max-height:60vh;display:block;margin:12px auto;object-fit:contain}
     `;
         win.document.head.appendChild(style);
@@ -390,6 +396,9 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         marginVertical: 8,
         backgroundColor: Platform.OS === 'web' ? ('var(--bg)' as any) : '#fff',
+        width: '100%',
+        maxWidth: '100%',
+        overflow: 'hidden',
     },
     bar: {
         flexDirection: 'row',

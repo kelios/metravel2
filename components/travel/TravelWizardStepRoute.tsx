@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, StyleSheet, Text, ScrollView, Dimensions, TextInput } from 'react-native';
+import { View, StyleSheet, Text, ScrollView, Dimensions, TextInput, Platform, findNodeHandle, UIManager } from 'react-native';
 import { Button } from 'react-native-paper';
 
 import WebMapComponent from '@/components/travel/WebMapComponent';
@@ -33,6 +33,8 @@ interface TravelWizardStepRouteProps {
     };
     progress?: number;
     autosaveBadge?: string;
+    focusAnchorId?: string | null;
+    onAnchorHandled?: () => void;
 }
 
 const windowWidth = Dimensions.get('window').width;
@@ -59,8 +61,13 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     stepMeta,
     progress = currentStep / totalSteps,
     autosaveBadge,
+    focusAnchorId,
+    onAnchorHandled,
 }) => {
     const isMobile = isMobileDefault;
+
+    const scrollRef = useRef<ScrollView | null>(null);
+    const markersListAnchorRef = useRef<View | null>(null);
 
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
@@ -73,6 +80,42 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     const [manualLat, setManualLat] = useState('');
     const [manualLng, setManualLng] = useState('');
     const [countriesSyncedVisible, setCountriesSyncedVisible] = useState(false);
+
+    useEffect(() => {
+        if (!focusAnchorId) return;
+        if (focusAnchorId !== 'markers-list-root') return;
+
+        if (Platform.OS === 'web') {
+            onAnchorHandled?.();
+            return;
+        }
+
+        const scrollNode = scrollRef.current;
+        const anchorNode = markersListAnchorRef.current;
+        if (!scrollNode || !anchorNode) {
+            onAnchorHandled?.();
+            return;
+        }
+
+        const scrollHandle = findNodeHandle(scrollNode);
+        const anchorHandle = findNodeHandle(anchorNode);
+        if (!scrollHandle || !anchorHandle) {
+            onAnchorHandled?.();
+            return;
+        }
+
+        setTimeout(() => {
+            UIManager.measureLayout(
+                anchorHandle,
+                scrollHandle,
+                () => onAnchorHandled?.(),
+                (_x, y) => {
+                    scrollRef.current?.scrollTo({ y: Math.max(y - 12, 0), animated: true });
+                    onAnchorHandled?.();
+                },
+            );
+        }, 50);
+    }, [focusAnchorId, onAnchorHandled]);
 
     const parseCoordsPair = (raw: string): { lat: number; lng: number } | null => {
         // Accept common copy/paste formats:
@@ -200,12 +243,6 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     };
 
     const handleNext = () => {
-        if (!hasAtLeastOnePoint) {
-            // Локальная простая защита: не даём уйти дальше без точки.
-            // Детализированное сообщение пользователю обеспечивается на уровне
-            // карты/подсказок по ТЗ.
-            return;
-        }
         onNext();
     };
 
@@ -255,12 +292,12 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                 </View>
             )}
 
-            <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+            <ScrollView ref={scrollRef} style={styles.content} contentContainerStyle={styles.contentContainer}>
                 <View style={styles.mapHeader}>
                     <View style={{ flex: 1 }}>
                         <Text style={styles.mapTitle}>Ключевые точки маршрута</Text>
                         <Text style={styles.mapHint}>
-                            Добавьте хотя бы одну точку маршрута на карте — без этого нельзя перейти к медиа.
+                            Добавьте точки маршрута на карте. Для модерации потребуется минимум одна точка.
                         </Text>
                     </View>
                     <Text style={styles.mapCount}>Точек: {markers?.length ?? 0}</Text>
@@ -362,6 +399,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                 </View>
 
                 <View style={styles.mapContainer}>
+                    <View ref={markersListAnchorRef} nativeID="markers-list-root" />
                     <WebMapComponent
                         markers={markers || []}
                         onMarkersChange={handleMarkersChange}
@@ -381,7 +419,6 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                 primaryLabel="К медиа"
                 onSave={onManualSave}
                 saveLabel="Сохранить маршрут"
-                primaryDisabled={!hasAtLeastOnePoint}
             />
         </SafeAreaView>
     );

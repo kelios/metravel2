@@ -262,6 +262,8 @@ const styles = StyleSheet.create({
     contentContainer: {
         paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         paddingBottom: 80,
+        width: '100%',
+        maxWidth: '100%',
     },
     progressCard: {
         marginTop: DESIGN_TOKENS.spacing.lg,
@@ -311,6 +313,9 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#e5e7eb',
+        width: '100%',
+        maxWidth: '100%',
+        overflow: 'hidden',
     },
     editorLabel: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,

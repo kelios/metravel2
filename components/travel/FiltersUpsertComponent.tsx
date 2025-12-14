@@ -21,6 +21,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 const { width } = Dimensions.get('window');
 const isMobile = width <= 768;
+const MultiSelectFieldAny: any = MultiSelectField;
 
 interface FiltersComponentProps {
     filters: TravelFilters | null;
@@ -33,6 +34,10 @@ interface FiltersComponentProps {
     showSaveButton?: boolean;
     showPreviewButton?: boolean;
     showPublishControls?: boolean;
+    showCountries?: boolean;
+    showCategories?: boolean;
+    showCoverImage?: boolean;
+    showAdditionalFields?: boolean;
 }
 
 const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
@@ -46,6 +51,10 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                                                                      showSaveButton = true,
                                                                      showPreviewButton = true,
                                                                      showPublishControls = true,
+                                                                     showCountries = true,
+                                                                     showCategories = true,
+                                                                     showCoverImage = true,
+                                                                     showAdditionalFields = true,
                                                                  }) => {
     if (!formData || !filters) {
         return (
@@ -55,6 +64,8 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             </View>
         );
     }
+
+    const form: any = formData;
 
     useEffect(() => {
         // если новая запись — явно фиксируем publish=false,
@@ -67,7 +78,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
 
     const handleResetFilters = () => {
         setFormData({
-            ...formData,
+            ...(formData as any),
             publish: false,
             moderation: false,
             countries: [],
@@ -83,12 +94,12 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             number_days: '',
             budget: '',
             travel_image_thumb_small_url: '', // очищаем картинку
-        });
+        } as any);
     };
 
     const openPreview = () => {
-        if (!formData.slug) return;
-        const url = `/travels/${formData.slug}`;
+        if (!form.slug) return;
+        const url = `/travels/${form.slug}`;
         if (Platform.OS === 'web') {
             window.open(url, '_blank', 'noopener,noreferrer');
         } else {
@@ -122,7 +133,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                 </Button>
             )}
 
-            {showPreviewButton && formData.slug ? (
+            {showPreviewButton && form.slug ? (
                 <Button
                     mode="outlined"
                     icon="open-in-new"
@@ -154,15 +165,15 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                 </>
             )}
 
-            {formData.id && (
+            {showCoverImage && formData.id && (
                 <View style={styles.imageUploadWrapper}>
                     <ImageUploadComponent
                         collection="travelMainImage"
                         idTravel={formData.id}
                         oldImage={
-                            formData.travel_image_thumb_small_url?.length
-                                ? formData.travel_image_thumb_small_url
-                                : travelDataOld?.travel_image_thumb_small_url ?? null
+                            form.travel_image_thumb_small_url?.length
+                                ? form.travel_image_thumb_small_url
+                                : (travelDataOld as any)?.travel_image_thumb_small_url ?? null
                         }
                     />
                     <Text style={styles.coverHint}>
@@ -171,97 +182,104 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                 </View>
             )}
 
-            <MultiSelectField
-                label="Страны для путешествия *"
-                items={filters.countries}
-                value={formData.countries ?? []}
-                onChange={(countries) => setFormData({ ...formData, countries })}
-                labelField="title_ru"
-                valueField="country_id"
-            />
+            {showCountries && (
+                <MultiSelectFieldAny
+                    label="Страны для путешествия *"
+                    items={filters.countries}
+                    value={formData.countries ?? []}
+                    onChange={(countries: any) => setFormData({ ...formData, countries })}
+                    labelField="title_ru"
+                    valueField="country_id"
+                />
+            )}
 
-            <MultiSelectField
-                label="Категории путешествий *"
-                items={filters.categories}
-                value={formData.categories ?? []}
-                onChange={(categories) => setFormData({ ...formData, categories })}
-                labelField="name"
-                valueField="id"
-            />
+            {showCategories && (
+                <View nativeID="travelwizard-publish-categories">
+                    <MultiSelectFieldAny
+                        label="Категории путешествий *"
+                        items={filters.categories}
+                        value={formData.categories ?? []}
+                        onChange={(categories: any) => setFormData({ ...formData, categories })}
+                        labelField="name"
+                        valueField="id"
+                    />
+                </View>
+            )}
 
-            <MultiSelectField
-                label="Средства передвижения"
-                items={filters.transports}
-                value={formData.transports ?? []}
-                onChange={(transports) => setFormData({ ...formData, transports })}
-                labelField="name"
-                valueField="id"
-            />
+            {showAdditionalFields && (
+                <>
+                    <MultiSelectFieldAny
+                        label="Средства передвижения"
+                        items={filters.transports}
+                        value={formData.transports ?? []}
+                        onChange={(transports: any) => setFormData({ ...formData, transports })}
+                        labelField="name"
+                        valueField="id"
+                    />
 
-            <MultiSelectField
-                label="Физическая подготовка"
-                items={filters.complexity}
-                value={formData.complexity ?? []}
-                onChange={(complexity) => setFormData({ ...formData, complexity })}
-                labelField="name"
-                valueField="id"
-            />
+                    <MultiSelectFieldAny
+                        label="Физическая подготовка"
+                        items={filters.complexity}
+                        value={formData.complexity ?? []}
+                        onChange={(complexity: any) => setFormData({ ...formData, complexity })}
+                        labelField="name"
+                        valueField="id"
+                    />
 
-            <MultiSelectField
-                label="Путешествуете с..."
-                items={filters.companions}
-                value={formData.companions ?? []}
-                onChange={(companions) => setFormData({ ...formData, companions })}
-                labelField="name"
-                valueField="id"
-            />
+                    <MultiSelectFieldAny
+                        label="Путешествуете с..."
+                        items={filters.companions}
+                        value={formData.companions ?? []}
+                        onChange={(companions: any) => setFormData({ ...formData, companions })}
+                        labelField="name"
+                        valueField="id"
+                    />
 
-            <MultiSelectField
-                label="Ночлег..."
-                items={filters.over_nights_stay}
-                value={formData.over_nights_stay ?? []}
-                onChange={(over_nights_stay) => setFormData({ ...formData, over_nights_stay })}
-                labelField="name"
-                valueField="id"
-            />
+                    <MultiSelectFieldAny
+                        label="Ночлег..."
+                        items={filters.over_nights_stay}
+                        value={formData.over_nights_stay ?? []}
+                        onChange={(over_nights_stay: any) => setFormData({ ...formData, over_nights_stay })}
+                        labelField="name"
+                        valueField="id"
+                    />
 
-            <MultiSelectField
-                label="Месяц путешествия"
-                items={filters.month}
-                value={formData.month ?? []}
-                onChange={(month) => setFormData({ ...formData, month })}
-                labelField="name"
-                valueField="id"
-            />
+                    <MultiSelectFieldAny
+                        label="Месяц путешествия"
+                        items={filters.month}
+                        value={formData.month ?? []}
+                        onChange={(month: any) => setFormData({ ...formData, month })}
+                        labelField="name"
+                        valueField="id"
+                    />
 
-            {renderNumericInput('Год путешествия', 'year')}
-            <CheckboxComponent
-                label="Требуется виза"
-                value={formData.visa ?? false}
-                onChange={(visa) => setFormData({ ...formData, visa })}
-            />
-            {renderNumericInput('Количество участников', 'number_peoples')}
-            {renderNumericInput('Длительность (дней)', 'number_days')}
-            {renderNumericInput('Бюджет (руб.)', 'budget')}
-
-            <Button mode="outlined" onPress={handleResetFilters} style={styles.resetButton} accessibilityRole="button">
-                Очистить
-            </Button>
+                    {renderNumericInput('Год путешествия', 'year')}
+                    <CheckboxComponent
+                        label="Требуется виза"
+                        value={formData.visa ?? false}
+                        onChange={(visa) => setFormData({ ...formData, visa })}
+                    />
+                    {renderNumericInput('Количество участников', 'number_peoples')}
+                    {renderNumericInput('Длительность (дней)', 'number_days')}
+                    {renderNumericInput('Бюджет (руб.)', 'budget')}
+                </>
+            )}
         </ScrollView>
     );
 
     // Поле, принимающее только цифры
     function renderNumericInput(label: string, field: keyof TravelFormData) {
+        const current = formData as TravelFormData;
         return (
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>{label}</Text>
                 <TextInput
                     style={styles.input}
-                    value={(formData[field] as any)?.toString?.() ?? ''}
+                    value={(current[field] as any)?.toString?.() ?? ''}
                     onChangeText={(value) => {
                         // только цифры (чтобы не разъезжались типы на бэке)
                         const digits = value.replace(/[^\d]/g, '');
-                        setFormData({ ...formData, [field]: digits } as TravelFormData);
+                        setFormData({ ...(current as any), [field]: digits } as TravelFormData);
                     }}
                     placeholder={`Введите ${label.toLowerCase()}`}
                     keyboardType={Platform.select({ ios: 'number-pad', android: 'numeric', default: 'numeric' })}
@@ -278,7 +296,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         flex: 1,
     },
-    loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: DESIGN_TOKENS.spacing.xxs0 },
+    loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: DESIGN_TOKENS.spacing.xxs },
     imageUploadWrapper: { alignItems: 'center', marginVertical: 12 },
     coverHint: {
         marginTop: 8,

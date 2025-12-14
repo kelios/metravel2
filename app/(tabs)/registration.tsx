@@ -17,7 +17,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { Formik, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
 import { useIsFocused } from '@react-navigation/native';
-import { usePathname } from 'expo-router';
+import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
 import InstantSEO from '@/components/seo/InstantSEO';
 import { registration } from '@/src/api/auth';
@@ -32,6 +32,8 @@ const { height } = Dimensions.get('window');
 export default function RegisterForm() {
     const [showPass, setShowPass] = useState(false);
     const [generalMsg, setMsg] = useState<{ text: string; error: boolean }>({ text: '', error: false });
+    const { redirect } = useLocalSearchParams<{ redirect?: string }>();
+    const router = useRouter();
 
     const isFocused = useIsFocused();
     const pathname = usePathname();
@@ -264,14 +266,30 @@ export default function RegisterForm() {
                                             {/* ---------- button ---------- */}
                                             <Button
                                                 mode="contained"
-                                                onPress={handleSubmit as any}
+                                                onPress={() => handleSubmit()}
                                                 disabled={isSubmitting}
                                                 loading={isSubmitting}
                                                 style={styles.btn}
                                                 contentStyle={styles.btnContent}
                                             >
-                                                {isSubmitting ? 'Отправка…' : 'Зарегистрироваться'}
+                                                {isSubmitting ? 'Подождите…' : 'Зарегистрироваться'}
                                             </Button>
+
+                                            <TouchableOpacity
+                                                onPress={() =>
+                                                    router.push(
+                                                        (redirect && typeof redirect === 'string')
+                                                            ? (`/login?redirect=${encodeURIComponent(redirect)}` as any)
+                                                            : ('/login' as any)
+                                                    )
+                                                }
+                                                disabled={isSubmitting}
+                                                style={{ marginTop: 12 }}
+                                            >
+                                                <Text style={{ textAlign: 'center', color: DESIGN_TOKENS.colors.primary, fontWeight: '600' }}>
+                                                    Уже есть аккаунт? Войти
+                                                </Text>
+                                            </TouchableOpacity>
                                         </Card.Content>
                                     </Card>
                                 </View>

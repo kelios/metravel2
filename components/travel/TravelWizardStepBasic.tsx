@@ -1,11 +1,10 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View, Text, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, FAB, IconButton, Modal, Portal, Snackbar } from 'react-native-paper';
+import { Button, Snackbar } from 'react-native-paper';
 
 import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
-import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
-import { TravelFormData, Travel, TravelFilters } from '@/src/types/types';
+import { TravelFormData } from '@/src/types/types';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
@@ -18,12 +17,7 @@ interface TravelWizardStepBasicProps {
     totalSteps: number;
     formData: TravelFormData;
     setFormData: React.Dispatch<React.SetStateAction<TravelFormData>>;
-    filters: TravelFilters | null;
-    travelDataOld: Travel | null;
-    isSuperAdmin: boolean;
     isMobile?: boolean;
-    menuVisible: boolean;
-    setMenuVisible: (visible: boolean) => void;
     onManualSave: () => void;
     snackbarVisible: boolean;
     snackbarMessage: string;
@@ -48,12 +42,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     totalSteps,
     formData,
     setFormData,
-    filters,
-    travelDataOld,
-    isSuperAdmin,
     isMobile = isMobileDefault,
-    menuVisible,
-    setMenuVisible,
     onManualSave,
     snackbarVisible,
     snackbarMessage,
@@ -83,13 +72,6 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                         <View style={styles.autosaveBadge}>
                             <Text style={styles.autosaveBadgeText}>{autosaveBadge}</Text>
                         </View>
-                    )}
-                    {!isMobile && (
-                        <IconButton
-                            icon={menuVisible ? 'chevron-right' : 'chevron-left'}
-                            onPress={() => setMenuVisible(!menuVisible)}
-                            accessibilityLabel={menuVisible ? 'Скрыть панель' : 'Показать панель'}
-                        />
                     )}
                 </View>
                 <View style={styles.progressBarTrack}>
@@ -126,24 +108,10 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                         setFormData={setFormData}
                         firstErrorField={firstErrorField}
                         autosaveStatus={autosaveStatus}
+                        visibleFields={['name', 'description']}
+                        showProgress={false}
                     />
                 </ScrollView>
-                {!isMobile && menuVisible && (
-                    <View style={styles.filtersColumn}>
-                        <FiltersUpsertComponent
-                            filters={filters}
-                            formData={formData}
-                            setFormData={setFormData}
-                            travelDataOld={travelDataOld}
-                            onClose={() => setMenuVisible(false)}
-                            isSuperAdmin={isSuperAdmin}
-                            onSave={onManualSave}
-                            showSaveButton={false}
-                            showPreviewButton={false}
-                            showPublishControls={false}
-                        />
-                    </View>
-                )}
             </View>
             {!isMobile && (
                 <TravelWizardFooter
@@ -167,45 +135,9 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                         mode="text"
                         onPress={onGoNext}
                     >
-                        Далее: Маршрут (шаг 2 из 5)
+                        Далее: Маршрут (шаг 2 из 6)
                     </Button>
                 </View>
-            )}
-            {isMobile && (
-                <>
-                    <Portal>
-                        <Modal
-                            visible={menuVisible}
-                            onDismiss={() => setMenuVisible(false)}
-                            contentContainerStyle={styles.bottomSheetContainer}
-                        >
-                            <View style={styles.bottomSheetHeader}>
-                                <Text style={styles.bottomSheetTitle}>Панель</Text>
-                                <IconButton icon="close" onPress={() => setMenuVisible(false)} />
-                            </View>
-                            <ScrollView style={styles.bottomSheetBody} keyboardShouldPersistTaps="handled">
-                                <FiltersUpsertComponent
-                                    filters={filters}
-                                    formData={formData}
-                                    setFormData={setFormData}
-                                    travelDataOld={travelDataOld}
-                                    onClose={() => setMenuVisible(false)}
-                                    isSuperAdmin={isSuperAdmin}
-                                    onSave={onManualSave}
-                                    showSaveButton={false}
-                                    showPreviewButton={false}
-                                    showPublishControls={false}
-                                />
-                            </ScrollView>
-                        </Modal>
-                    </Portal>
-                    <FAB
-                        icon="tune"
-                        style={styles.fab}
-                        onPress={() => setMenuVisible(true)}
-                        accessibilityLabel="Открыть панель"
-                    />
-                </>
             )}
             <Snackbar visible={snackbarVisible} onDismiss={onDismissSnackbar}>
                 {snackbarMessage}
@@ -287,7 +219,6 @@ const styles = StyleSheet.create({
     mainWrapper: { flex: 1, flexDirection: 'row' },
     mainWrapperMobile: { flexDirection: 'column' },
     contentColumn: { flex: 1 },
-    filtersColumn: { width: 320, borderLeftWidth: 1, padding: DESIGN_TOKENS.spacing.md, borderColor: '#ddd' },
     filtersScroll: { maxHeight: FILTERS_SCROLL_MAX_HEIGHT },
     mobileFiltersWrapper: { padding: DESIGN_TOKENS.spacing.md },
     mobileActionBar: {
@@ -306,39 +237,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#f5a623',
         borderRadius: 50,
         minWidth: 150,
-    },
-    fab: {
-        position: 'absolute',
-        right: DESIGN_TOKENS.spacing.lg,
-        bottom: 96,
-    },
-    bottomSheetContainer: {
-        alignSelf: 'stretch',
-        marginTop: 'auto',
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 18,
-        borderTopRightRadius: 18,
-        paddingTop: 8,
-        maxHeight: '85%',
-    },
-    bottomSheetHeader: {
-        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-        paddingTop: 4,
-        paddingBottom: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderBottomWidth: 1,
-        borderColor: '#e5e7eb',
-    },
-    bottomSheetTitle: {
-        fontSize: DESIGN_TOKENS.typography.sizes.md,
-        fontWeight: '700',
-        color: '#111827',
-    },
-    bottomSheetBody: {
-        paddingHorizontal: DESIGN_TOKENS.spacing.md,
-        paddingBottom: 24,
     },
     errorSummaryContainer: {
         paddingHorizontal: DESIGN_TOKENS.spacing.lg,

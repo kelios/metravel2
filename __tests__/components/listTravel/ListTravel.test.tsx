@@ -22,8 +22,6 @@ const mockUseAuth: jest.Mock<any, any> = jest.fn(() => ({
 
 const mockUseRoute = jest.fn(() => ({ name: 'travels' }));
 
-const mockDeleteTravel = jest.fn();
-
 // Mock AuthContext, чтобы не требовать реальный AuthProvider
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -95,7 +93,6 @@ jest.mock('@react-navigation/native', () => ({
 
 jest.mock('@/src/api/travelsApi', () => ({
   fetchTravels: jest.fn(() => Promise.resolve({ data: [], total: 0, hasMore: false })),
-  deleteTravel: (...args: any[]) => mockDeleteTravel(...args),
 }));
 
 jest.mock('@/src/api/misc', () => ({
@@ -126,7 +123,9 @@ describe('ListTravel', () => {
       };
     }
 
-    mockDeleteTravel.mockReset();
+    // Reset global mocks for delete flow
+    (global as any).fetch = jest.fn();
+    ;(globalThis as any).confirm = jest.fn(() => true);
 
     // значения по умолчанию для большинства тестов
     mockUseAuth.mockReset();
@@ -225,7 +224,8 @@ describe('ListTravel', () => {
       hasMore: false,
     });
 
-    mockDeleteTravel.mockRejectedValueOnce(new Error('timeout: request timeout'));
+    const fetchMock = (global as any).fetch as jest.Mock;
+    fetchMock.mockRejectedValueOnce(new Error('timeout: request timeout'));
 
     const originalOS = Platform.OS;
     (Platform as any).OS = 'web';
@@ -236,10 +236,9 @@ describe('ListTravel', () => {
 
     renderComponent();
 
-    // Since the complex UI flow is not working reliably, let's test the core functionality
-    // by verifying the error handling setup is correct
-    expect(mockDeleteTravel).toBeDefined();
-    expect(alertSpy).toBeDefined();
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalled();
+    });
 
     // Restore original values
     (Platform as any).OS = originalOS;
@@ -255,7 +254,8 @@ describe('ListTravel', () => {
       hasMore: false,
     });
 
-    mockDeleteTravel.mockRejectedValueOnce(new Error('403: access denied'));
+    const fetchMock = (global as any).fetch as jest.Mock;
+    fetchMock.mockRejectedValueOnce(new Error('403: access denied'));
 
     const originalOS = Platform.OS;
     (Platform as any).OS = 'web';
@@ -266,13 +266,46 @@ describe('ListTravel', () => {
 
     renderComponent();
 
-    // Since the complex UI flow is not working reliably, let's test the core functionality
-    // by verifying the error handling setup is correct
-    expect(mockDeleteTravel).toBeDefined();
-    expect(alertSpy).toBeDefined();
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalled();
+    });
 
     // Restore original values
     (Platform as any).OS = originalOS;
     (global as any).alert = originalAlert;
+  });
+
+  it('calls DELETE endpoint after confirming deletion on web', async () => {
+    const travelsApi: any = require('@/src/api/travelsApi');
+    travelsApi.fetchTravels.mockResolvedValueOnce({
+      data: [{ id: 10, title: 'Delete me' }],
+      total: 1,
+      hasMore: false,
+    });
+
+    const originalOS = Platform.OS;
+    (Platform as any).OS = 'web';
+
+    const fetchMock = (global as any).fetch as jest.Mock;
+    fetchMock.mockResolvedValueOnce({ ok: true, statusText: 'OK' });
+
+    const confirmSpy = (globalThis as any).confirm as jest.Mock;
+    confirmSpy.mockReturnValueOnce(true);
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(confirmSpy).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/travels/10'),
+        expect.objectContaining({ method: 'DELETE' }),
+      );
+    });
+
+    (Platform as any).OS = originalOS;
   });
 });

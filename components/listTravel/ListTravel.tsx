@@ -700,6 +700,39 @@ function ListTravel({
         }
     }, [deleteId, queryClient]);
 
+    useEffect(() => {
+        if (!deleteId) return;
+
+        const title = 'Удалить путешествие?';
+        const message = 'Это действие нельзя отменить.';
+
+        if (Platform.OS === 'web') {
+            const ok = typeof (globalThis as any).confirm === 'function'
+                ? (globalThis as any).confirm(`${title}\n\n${message}`)
+                : true;
+
+            if (ok) {
+                handleDelete();
+            } else {
+                setDelete(null);
+            }
+            return;
+        }
+
+        Alert.alert(title, message, [
+            {
+                text: 'Отмена',
+                style: 'cancel',
+                onPress: () => setDelete(null),
+            },
+            {
+                text: 'Удалить',
+                style: 'destructive',
+                onPress: () => handleDelete(),
+            },
+        ]);
+    }, [deleteId, handleDelete]);
+
     /* Selection for export */
     const exportState = useListTravelExport(travels, { ownerName: userId });
     const {

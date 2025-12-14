@@ -32,6 +32,9 @@ export default function TabLayout() {
             <Tabs.Screen name="travelsby" options={HIDDEN} />
             <Tabs.Screen name="map" options={HIDDEN} />
             <Tabs.Screen name="roulette" options={HIDDEN} />
+            <Tabs.Screen name="favorites" options={HIDDEN} />
+            <Tabs.Screen name="history" options={HIDDEN} />
+            <Tabs.Screen name="settings" options={HIDDEN} />
             <Tabs.Screen name="travels/[param]" options={HIDDEN} />
 
             {/* полностью скрытые из линкинга */}
@@ -42,8 +45,8 @@ export default function TabLayout() {
             <Tabs.Screen name="login" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="registration" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="set-password" options={HIDDEN_NOHREF} />
-            <Tabs.Screen name="travel/new" options={{ ...HIDDEN_NOHREF, headerShown: false }} />
-            <Tabs.Screen name="travel/[id]" options={{ ...HIDDEN_NOHREF, headerShown: false }} />
+            <Tabs.Screen name="travel/new" options={HIDDEN_NOHREF} />
+            <Tabs.Screen name="travel/[id]" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="metravel" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="chat" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="profile" options={HIDDEN_NOHREF} />

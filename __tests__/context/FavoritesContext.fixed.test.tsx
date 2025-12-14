@@ -1,12 +1,20 @@
 jest.unmock('@/context/FavoritesContext')
 
 import React from 'react'
-import { render, fireEvent, waitFor } from '@testing-library/react-native'
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native'
 import { View, Text, Pressable } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import Toast from 'react-native-toast-message'
 import { FavoritesProvider, useFavorites } from '@/context/FavoritesContext'
 import { AuthProvider } from '@/context/AuthContext'
+
+jest.mock('@/src/api/user', () => ({
+  fetchUserFavoriteTravels: jest.fn(async () => []),
+  fetchUserHistory: jest.fn(async () => []),
+  fetchUserRecommendedTravels: jest.fn(async () => []),
+  clearUserHistory: jest.fn(async () => null),
+  clearUserFavorites: jest.fn(async () => null),
+}))
 
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage')
@@ -90,8 +98,15 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
       </AuthProvider>
     )
 
+    // Wait for initial provider load
+    await waitFor(() => {
+      expect(getByTestId('favorites-count').props.children).toBe(0)
+    })
+
     const addButton = getByTestId('add-favorite')
-    fireEvent.press(addButton)
+    await act(async () => {
+      fireEvent.press(addButton)
+    })
 
     await waitFor(() => {
       expect(getByTestId('favorites-count').props.children).toBe(1)
@@ -140,7 +155,9 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
     })
 
     const removeButton = getByTestId('remove-favorite')
-    fireEvent.press(removeButton)
+    await act(async () => {
+      fireEvent.press(removeButton)
+    })
 
     await waitFor(() => {
       expect(getByTestId('favorites-count').props.children).toBe(0)

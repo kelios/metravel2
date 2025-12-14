@@ -121,8 +121,8 @@ export async function getSecureItem(key: string): Promise<string | null> {
 export async function removeSecureItem(key: string): Promise<void> {
   try {
     if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        window.sessionStorage.removeItem(`${STORAGE_PREFIX}${key}`);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
       } else {
         await AsyncStorage.removeItem(`${STORAGE_PREFIX}${key}`);
       }
@@ -154,7 +154,7 @@ export async function removeSecureItems(keys: string[]): Promise<void> {
 export async function isSecureStorageAvailable(): Promise<boolean> {
   try {
     if (Platform.OS === 'web') {
-      return typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
+      return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
     } else {
       try {
         const SecureStore = require('expo-secure-store');

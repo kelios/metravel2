@@ -105,7 +105,7 @@ describe('secureStorage (web)', () => {
 
     await removeSecureItem('key')
 
-    expect((global.window as any).sessionStorage.removeItem).toHaveBeenCalledWith('secure_key')
+    expect((global.window as any).localStorage.removeItem).toHaveBeenCalledWith('secure_key')
   })
 
   it('checks availability of web secure storage', async () => {

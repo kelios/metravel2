@@ -147,6 +147,28 @@ class ApiClient {
         return await getSecureItem(TOKEN_KEY);
     }
 
+    private async parseSuccessResponse<T>(response: Response): Promise<T> {
+        if (response.status === 204) {
+            return null as T;
+        }
+
+        const maybeTextFn = (response as any)?.text;
+        if (typeof maybeTextFn === 'function') {
+            const text = await response.text().catch(() => '');
+            if (!text) {
+                return null as T;
+            }
+            return JSON.parse(text) as T;
+        }
+
+        const maybeJsonFn = (response as any)?.json;
+        if (typeof maybeJsonFn === 'function') {
+            return (await response.json()) as T;
+        }
+
+        return null as T;
+    }
+
     /**
      * Проверяет доступность сети
      * ✅ FIX-005: Проверка offline режима
@@ -217,7 +239,7 @@ class ApiClient {
                         );
                     }
 
-                    return await retryResponse.json();
+                    return await this.parseSuccessResponse<T>(retryResponse);
                 } catch (refreshError) {
                     // Если refresh не удался, пробрасываем ошибку
                     throw new ApiError(401, 'Требуется авторизация');
@@ -245,7 +267,7 @@ class ApiClient {
                 return null as T;
             }
 
-            return await response.json();
+            return await this.parseSuccessResponse<T>(response);
         } catch (error) {
             if (error instanceof ApiError) {
                 throw error;

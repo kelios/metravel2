@@ -861,23 +861,23 @@ const styles = StyleSheet.create({
   },
   rouletteCard: {
     position: 'absolute',
-    width: 340,
+    width: 290,
     maxWidth: '86%',
   },
   rouletteCardTop: {
-    top: -50,
+    top: -124,
     left: '50%',
-    transform: [{ translateX: -170 }, { rotate: '-3deg' }, { scale: 1.1 }],
+    transform: [{ translateX: -145 }, { translateY: -12 }, { rotate: '-8deg' }, { scale: 1 }],
   },
   rouletteCardLeft: {
-    bottom: 70,
-    left: -14,
-    transform: [{ rotate: '-10deg' }],
+    bottom: 0,
+    left: -150,
+    transform: [{ rotate: '-16deg' }, { scale: 0.96 }],
   },
   rouletteCardRight: {
-    bottom: 70,
-    right: -14,
-    transform: [{ rotate: '10deg' }],
+    bottom: 0,
+    right: -150,
+    transform: [{ rotate: '16deg' }, { scale: 0.96 }],
   },
   rouletteCenter: {
     width: 190,

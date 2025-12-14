@@ -2,19 +2,19 @@ import React, { useEffect, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, StyleSheet, Text, ScrollView, Platform, findNodeHandle, UIManager } from 'react-native';
 
-import GallerySection from '@/components/travel/GallerySection';
-import YoutubeLinkComponent from '@/components/YoutubeLinkComponent';
-import ImageUploadComponent from '@/components/imageUpload/ImageUploadComponent';
-import { TravelFormData, Travel } from '@/src/types/types';
+import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
+import { TravelFormData, Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
-interface TravelWizardStepMediaProps {
+interface TravelWizardStepExtrasProps {
     currentStep: number;
     totalSteps: number;
     formData: TravelFormData;
     setFormData: (data: TravelFormData) => void;
+    filters: any;
     travelDataOld: Travel | null;
+    isSuperAdmin: boolean;
     onManualSave: () => void;
     onBack: () => void;
     onNext: () => void;
@@ -31,12 +31,14 @@ interface TravelWizardStepMediaProps {
     onAnchorHandled?: () => void;
 }
 
-const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
+const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
     currentStep,
     totalSteps,
     formData,
     setFormData,
+    filters,
     travelDataOld,
+    isSuperAdmin,
     onManualSave,
     onBack,
     onNext,
@@ -50,11 +52,11 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     const progressPercent = Math.round(progressValue * 100);
 
     const scrollRef = useRef<ScrollView | null>(null);
-    const coverAnchorRef = useRef<View | null>(null);
+    const categoriesAnchorRef = useRef<View | null>(null);
 
     useEffect(() => {
         if (!focusAnchorId) return;
-        if (focusAnchorId !== 'travelwizard-media-cover') return;
+        if (focusAnchorId !== 'travelwizard-extras-categories') return;
 
         if (Platform.OS === 'web') {
             onAnchorHandled?.();
@@ -62,7 +64,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
         }
 
         const scrollNode = scrollRef.current;
-        const anchorNode = coverAnchorRef.current;
+        const anchorNode = categoriesAnchorRef.current;
         if (!scrollNode || !anchorNode) {
             onAnchorHandled?.();
             return;
@@ -88,16 +90,12 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
         }, 50);
     }, [focusAnchorId, onAnchorHandled]);
 
-    const handleYoutubeChange = (value: string) => {
-        setFormData({ ...formData, youtube_link: value });
-    };
-
     return (
         <SafeAreaView style={styles.safeContainer}>
             <View style={styles.headerWrapper}>
                 <View style={styles.headerRow}>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.headerTitle}>{stepMeta?.title ?? 'Медиа путешествия'}</Text>
+                        <Text style={styles.headerTitle}>{stepMeta?.title ?? 'Дополнительные параметры'}</Text>
                         <Text style={styles.headerSubtitle}>{stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}</Text>
                     </View>
                     {autosaveBadge && (
@@ -120,55 +118,31 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
             )}
 
             <ScrollView ref={scrollRef} style={styles.content} contentContainerStyle={styles.contentContainer}>
-                <View ref={coverAnchorRef} style={styles.section} nativeID="travelwizard-media-cover">
-                    <Text style={styles.sectionTitle}>Главное изображение</Text>
-                    <Text style={styles.sectionHint}>
-                        Обложка маршрута, которая будет показываться в списках и на странице путешествия.
-                    </Text>
-                    {formData.id ? (
-                        <View style={styles.coverWrapper}>
-                            <ImageUploadComponent
-                                collection="travelMainImage"
-                                idTravel={formData.id}
-                                oldImage={
-                                    (formData as any).travel_image_thumb_small_url?.length
-                                        ? (formData as any).travel_image_thumb_small_url
-                                        : (travelDataOld as any)?.travel_image_thumb_small_url ?? null
-                                }
-                            />
-                        </View>
-                    ) : (
-                        <Text style={styles.infoText}>
-                            Сначала сохраните основную информацию, чтобы добавить фото.
-                        </Text>
-                    )}
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Галерея путешествия</Text>
-                    <Text style={styles.sectionHint}>
-                        Фотографии повышают доверие и помогают читателям лучше понять маршрут. 
-                        Рекомендуем добавить 3–10 снимков.
-                    </Text>
-                    <GallerySection formData={formData} travelDataOld={travelDataOld} />
-                </View>
-
-                <View style={styles.section}>
-                    <YoutubeLinkComponent
-                        label="Видео о путешествии (YouTube-ссылка)"
-                        value={formData.youtube_link ?? ''}
-                        onChange={handleYoutubeChange}
-                        hint="Вставьте ссылку на ролик на YouTube, например: https://www.youtube.com/watch?v=..."
-                    />
-                </View>
+                <View ref={categoriesAnchorRef} nativeID="travelwizard-extras-categories" />
+                <FiltersUpsertComponent
+                    filters={filters}
+                    formData={formData}
+                    setFormData={setFormData}
+                    travelDataOld={travelDataOld}
+                    isSuperAdmin={isSuperAdmin}
+                    onSave={onManualSave}
+                    showSaveButton={false}
+                    showPreviewButton={false}
+                    showPublishControls={false}
+                    showCountries={false}
+                    showCategories={true}
+                    showCoverImage={false}
+                    showAdditionalFields={true}
+                />
             </ScrollView>
 
             <TravelWizardFooter
                 canGoBack={true}
                 onBack={onBack}
                 onPrimary={onNext}
+                primaryLabel={stepMeta?.nextLabel ?? 'К публикации'}
                 onSave={onManualSave}
-                primaryLabel="К деталям"
+                saveLabel="Сохранить"
             />
         </SafeAreaView>
     );
@@ -248,37 +222,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     contentContainer: {
-        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+        paddingHorizontal: 8,
         paddingBottom: 80,
-    },
-    section: {
-        marginTop: DESIGN_TOKENS.spacing.lg,
-        padding: DESIGN_TOKENS.spacing.lg,
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-    },
-    sectionTitle: {
-        fontSize: DESIGN_TOKENS.typography.sizes.md,
-        fontWeight: '600',
-        color: '#111827',
-        marginBottom: 4,
-    },
-    sectionHint: {
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: '#6b7280',
-        marginBottom: 8,
-    },
-    coverWrapper: {
-        marginTop: 8,
-        alignItems: 'center',
-    },
-    infoText: {
-        marginTop: 8,
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#6b7280',
     },
 });
 
-export default React.memo(TravelWizardStepMedia);
+export default React.memo(TravelWizardStepExtras);

@@ -6,6 +6,8 @@ import { MarkerData } from "@/src/types/types";
 import ImageUploadComponent from '@/components/imageUpload/ImageUploadComponent';
 import MultiSelectField from '@/components/MultiSelectField';
 
+const MultiSelectFieldAny: any = MultiSelectField;
+
 interface MarkersListComponentProps {
     markers: MarkerData[];
     categoryTravelAddress: { id: number; name: string }[];
@@ -58,16 +60,22 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
     }, [activeIndex]);
 
     return (
-        <div id="markers-list-root" style={styles.container}>
-            <h3 style={styles.header}>Точки на карте ({markers.length})</h3>
+        <div style={styles.container}>
+            <div style={styles.headerRow}>
+                <div style={styles.headerTitle}>Точки</div>
+                <div style={styles.headerBadge}>{markers.length}</div>
+            </div>
             {markers.length > 0 && (
-                <input
-                    type="text"
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    placeholder="Найти точку по адресу"
-                    style={styles.searchInput}
-                />
+                <div style={styles.searchRow}>
+                    <Feather name="search" size={14} color="#6b7280" />
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Поиск по адресу"
+                        style={styles.searchInput}
+                    />
+                </div>
             )}
             {markers.length === 0 ? (
                 <p style={styles.emptyText}>
@@ -92,12 +100,13 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                 id={`marker-${index}`}
                                 style={{
                                     ...(styles.markerItem as React.CSSProperties),
+                                    ...(isEditing ? (styles.editingItem as React.CSSProperties) : {}),
                                     ...(isActive ? (styles.activeItem as React.CSSProperties) : {}),
                                 }}
                                 onClick={() => setActiveIndex?.(index)}
                             >
                                 <div style={styles.row}>
-                                    <div style={styles.indexBadge}>#{index + 1}</div>
+                                    <div style={styles.indexBadge}>{index + 1}</div>
                                     <div style={styles.thumbnailWrapper}>
                                         {hasImage ? (
                                             <img src={marker.image} alt="Фото" style={styles.previewImage} />
@@ -106,10 +115,8 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                         )}
                                     </div>
                                     <div style={styles.previewText}>
-                                        <div style={styles.titleRow}>
-                                            <span style={styles.markerTitle} title={marker.address || 'Без адреса'}>
-                                                {marker.address || 'Без адреса'}
-                                            </span>
+                                        <div style={styles.markerTitle} title={marker.address || 'Без адреса'}>
+                                            {marker.address || 'Без адреса'}
                                         </div>
                                         <div style={styles.metaRow}>
                                             <span style={styles.badge}>{categoriesLabel}</span>
@@ -117,11 +124,27 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                         </div>
                                     </div>
                                     <div style={styles.actions}>
-                                        <button onClick={() => onEdit(index)} style={styles.editButton}>
-                                            Редактировать
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onEdit(index);
+                                            }}
+                                            style={styles.editButton}
+                                            type="button"
+                                        >
+                                            <Feather name="edit-2" size={13} color="#0f3d2e" />
+                                            <span>Редактировать</span>
                                         </button>
-                                        <button onClick={() => onRemove(index)} style={styles.deleteButton}>
-                                            Удалить
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onRemove(index);
+                                            }}
+                                            style={styles.deleteButton}
+                                            type="button"
+                                        >
+                                            <Feather name="trash-2" size={13} color="#7f1d1d" />
+                                            <span>Удалить</span>
                                         </button>
                                     </div>
                                 </div>
@@ -229,11 +252,11 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
 
                     <div style={styles.field}>
                         <label style={styles.fieldLabel}>Категории точки</label>
-                        <MultiSelectField
+                        <MultiSelectFieldAny
                             label=""
                             items={categoryTravelAddress}
                             value={categories}
-                            onChange={(selected) => setCategories(selected as any[])}
+                            onChange={(selected: any) => setCategories(selected as any[])}
                             labelField="name"
                             valueField="id"
                         />
@@ -253,7 +276,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                             <>
                                 <ImageUploadComponent
                                     collection="travelImageAddress"
-                                    idTravel={marker.id}
+                                    idTravel={String(marker.id)}
                                     oldImage={marker.image}
                                     onUpload={(imageUrl) => handleImageUpload(index, imageUrl)}
                                 />
@@ -299,19 +322,48 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
 
 const palette = DESIGN_TOKENS.colors;
 
-const styles = {
+const styles: any = {
     container: {
-        backgroundColor: '#fff',
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '16px',
-        maxHeight: '400px',
-        overflowY: 'auto',
+        backgroundColor: 'transparent',
+        padding: '0',
     },
-    header: {
-        fontSize: '16px',
-        fontWeight: 600,
-        marginBottom: '8px',
+    headerRow: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '10px',
+    },
+    headerTitle: {
+        fontSize: '14px',
+        fontWeight: 700,
+        letterSpacing: '0.2px',
+        color: '#111827',
+    },
+    headerBadge: {
+        fontSize: '12px',
+        fontWeight: 700,
+        padding: '2px 10px',
+        borderRadius: '999px',
+        backgroundColor: '#eef2ff',
+        color: '#3730a3',
+    },
+    searchRow: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '10px 12px',
+        borderRadius: '10px',
+        border: '1px solid #e5e7eb',
+        backgroundColor: '#fff',
+        marginBottom: '12px',
+    },
+    searchInput: {
+        width: '100%',
+        border: 'none',
+        outline: 'none',
+        fontSize: '13px',
+        color: '#111827',
+        backgroundColor: 'transparent',
     },
     emptyText: {
         textAlign: 'center',
@@ -326,15 +378,20 @@ const styles = {
     },
     markerItem: {
         border: '1px solid #e5e7eb',
-        borderRadius: '8px',
-        padding: '8px 10px',
-        backgroundColor: '#f9fafb',
+        borderRadius: '12px',
+        padding: '10px 12px',
+        backgroundColor: '#fff',
+        boxShadow: '0 1px 2px rgba(16, 24, 40, 0.06)',
+        cursor: 'pointer',
+        transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
     },
     editingItem: {
-        border: '1px solid #4b7c6f',
-        backgroundColor: '#e6f7ff',
-        borderRadius: '8px',
-        padding: '12px',
+        border: '1px solid rgba(79, 70, 229, 0.35)',
+        boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.16)',
+    },
+    activeItem: {
+        border: '1px solid rgba(17, 94, 71, 0.35)',
+        boxShadow: '0 0 0 3px rgba(17, 94, 71, 0.12)',
     },
     row: {
         display: 'flex',
@@ -342,14 +399,22 @@ const styles = {
         gap: '8px',
     },
     indexBadge: {
+        width: '26px',
+        height: '26px',
+        borderRadius: '999px',
+        backgroundColor: '#f3f4f6',
+        color: '#374151',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         fontSize: '12px',
-        color: '#6b7280',
-        minWidth: '28px',
+        fontWeight: 700,
+        flexShrink: 0,
     },
     thumbnailWrapper: {
-        width: '44px',
-        height: '44px',
-        borderRadius: '8px',
+        width: '48px',
+        height: '48px',
+        borderRadius: '12px',
         overflow: 'hidden',
         backgroundColor: '#f3f4f6',
         display: 'flex',
@@ -373,20 +438,16 @@ const styles = {
         flex: 1,
         minWidth: 0,
     },
-    titleRow: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '4px',
-        marginBottom: '2px',
-    },
     markerTitle: {
         fontSize: '13px',
-        fontWeight: 600,
+        fontWeight: 700,
         color: '#111827',
-        whiteSpace: 'nowrap',
+        lineHeight: 1.25,
+        marginBottom: '4px',
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
-        textOverflow: 'ellipsis',
     },
     metaRow: {
         display: 'flex',
@@ -415,33 +476,32 @@ const styles = {
         flexShrink: 0,
     },
     editButton: {
-        backgroundColor: '#4b7c6f',
-        color: 'white',
-        border: 'none',
-        padding: '4px 8px',
-        borderRadius: '6px',
+        backgroundColor: '#eef2ff',
+        color: '#1f2937',
+        border: '1px solid #e5e7eb',
+        padding: '6px 10px',
+        borderRadius: '10px',
         cursor: 'pointer',
         fontSize: '11px',
         whiteSpace: 'nowrap',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        fontWeight: 600,
     },
     deleteButton: {
-        backgroundColor: '#d9534f',
-        color: 'white',
-        border: 'none',
-        padding: '4px 8px',
-        borderRadius: '6px',
+        backgroundColor: '#fee2e2',
+        color: '#7f1d1d',
+        border: '1px solid #fecaca',
+        padding: '6px 10px',
+        borderRadius: '10px',
         cursor: 'pointer',
         fontSize: '11px',
         whiteSpace: 'nowrap',
-    },
-    closeButton: {
-        backgroundColor: '#6b7280',
-        color: 'white',
-        border: 'none',
-        padding: '6px 12px',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontSize: '12px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        fontWeight: 600,
     },
     editForm: {
         display: 'flex',

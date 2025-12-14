@@ -74,6 +74,7 @@ const TravelWizardStepPublish: React.FC<any> = ({
       name: formData.name ?? '',
       description: formData.description ?? '',
       countries: formData.countries ?? [],
+      categories: (formData as any).categories ?? [],
       coordsMeTravel: (formData as any).coordsMeTravel ?? [],
       gallery: (formData as any).gallery ?? [],
       travel_image_thumb_small_url: (formData as any).travel_image_thumb_small_url ?? null,
@@ -194,8 +195,8 @@ describe('Travel wizard publish step (integration)', () => {
 
     const utils = render(
       <TravelWizardStepPublish
-        currentStep={5}
-        totalSteps={5}
+        currentStep={6}
+        totalSteps={6}
         formData={formData}
         setFormData={setFormData}
         filters={{}}
@@ -248,6 +249,7 @@ describe('Travel wizard publish step (integration)', () => {
   it('successfully sends to moderation and redirects to "/metravel" when checklist is complete', async () => {
     const { getByTestId, onFinish } = renderPublishStep({
       countries: ['1'],
+      categories: ['city'],
       coordsMeTravel: [{ lat: 1, lng: 2 } as any],
       moderation: false,
       publish: false,

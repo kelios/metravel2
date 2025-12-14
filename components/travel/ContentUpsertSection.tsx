@@ -11,6 +11,8 @@ interface ContentUpsertSectionProps {
     setFormData: React.Dispatch<React.SetStateAction<TravelFormData>>;
     firstErrorField?: string | null;
     autosaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+    visibleFields?: Array<'name' | 'description' | 'plus' | 'minus' | 'recommendation'>;
+    showProgress?: boolean;
 }
 
 const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
@@ -18,6 +20,8 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                                        setFormData,
                                                                        firstErrorField,
                                                                        autosaveStatus,
+                                                                       visibleFields,
+                                                                       showProgress = true,
                                                                    }) => {
     // ✅ УЛУЧШЕНИЕ: Валидация в реальном времени
     const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
@@ -187,44 +191,55 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                 ref={scrollRef}
             >
                 {/* ✅ УЛУЧШЕНИЕ: Прогресс заполнения формы */}
-                <View style={styles.progressSection}>
-                    <View style={styles.progressHeader}>
-                        <Text style={styles.progressLabel}>Прогресс заполнения</Text>
-                        <Text style={styles.progressPercent}>{formProgress}%</Text>
+                {showProgress && (
+                    <View style={styles.progressSection}>
+                        <View style={styles.progressHeader}>
+                            <Text style={styles.progressLabel}>Прогресс заполнения</Text>
+                            <Text style={styles.progressPercent}>{formProgress}%</Text>
+                        </View>
+                        <View style={styles.progressBarContainer}>
+                            <View style={[styles.progressBar, { width: `${formProgress}%` }]} />
+                        </View>
                     </View>
-                    <View style={styles.progressBarContainer}>
-                        <View style={[styles.progressBar, { width: `${formProgress}%` }]} />
-                    </View>
-                </View>
-
-                <View
-                    style={styles.section}
-                    onLayout={event => {
-                        const y = event.nativeEvent.layout.y;
-                        setFieldPositions(prev => ({ ...prev, name: y }));
-                    }}
-                >
-                    <TextInputComponent
-                        label="Название"
-                        value={formData.name ?? ''}
-                        onChange={value => handleChange('name', value)}
-                        error={getError('name')}
-                        required={true}
-                        hint="Краткое и понятное название (не менее 3 символов). По нему путешественники будут искать маршрут."
-                    />
-                </View>
-
-                {renderEditorSection(
-                    'Описание', 
-                    formData.description, 
-                    val => handleChange('description', val),
-                    getError('description'),
-                    true,
-                    'Опишите, для кого этот маршрут, что в нём главное и чего ожидать. Минимум 50 символов.'
                 )}
-                {renderEditorSection('Плюсы', formData.plus, val => handleChange('plus', val), null, false, 'Что вам понравилось в этом путешествии')}
-                {renderEditorSection('Минусы', formData.minus, val => handleChange('minus', val), null, false, 'Что можно улучшить')}
-                {renderEditorSection('Рекомендации', formData.recommendation, val => handleChange('recommendation', val), null, false, 'Ваши советы для других путешественников')}
+
+                {(visibleFields == null || visibleFields.includes('name')) && (
+                    <View
+                        style={styles.section}
+                        onLayout={event => {
+                            const y = event.nativeEvent.layout.y;
+                            setFieldPositions(prev => ({ ...prev, name: y }));
+                        }}
+                    >
+                        <TextInputComponent
+                            label="Название"
+                            value={formData.name ?? ''}
+                            onChange={value => handleChange('name', value)}
+                            error={getError('name')}
+                            required={true}
+                            hint="Краткое и понятное название (не менее 3 символов). По нему путешественники будут искать маршрут."
+                        />
+                    </View>
+                )}
+
+                {(visibleFields == null || visibleFields.includes('description')) &&
+                    renderEditorSection(
+                        'Описание',
+                        formData.description,
+                        val => handleChange('description', val),
+                        getError('description'),
+                        true,
+                        'Опишите, для кого этот маршрут, что в нём главное и чего ожидать. Минимум 50 символов.'
+                    )}
+
+                {(visibleFields == null || visibleFields.includes('plus')) &&
+                    renderEditorSection('Плюсы', formData.plus, val => handleChange('plus', val), null, false, 'Что вам понравилось в этом путешествии')}
+
+                {(visibleFields == null || visibleFields.includes('minus')) &&
+                    renderEditorSection('Минусы', formData.minus, val => handleChange('minus', val), null, false, 'Что можно улучшить')}
+
+                {(visibleFields == null || visibleFields.includes('recommendation')) &&
+                    renderEditorSection('Рекомендации', formData.recommendation, val => handleChange('recommendation', val), null, false, 'Ваши советы для других путешественников')}
             </ScrollView>
         </SafeAreaView>
     );
@@ -232,9 +247,9 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: '#f9f9f9' },
-    container: { padding: DESIGN_TOKENS.spacing.xxs0, paddingBottom: 40 },
+    container: { padding: DESIGN_TOKENS.spacing.xxs, paddingBottom: 40 },
     progressSection: {
-        marginBottom: DESIGN_TOKENS.spacing.xxs4,
+        marginBottom: DESIGN_TOKENS.spacing.xs,
         padding: DESIGN_TOKENS.spacing.lg,
         backgroundColor: DESIGN_TOKENS.colors.surface,
         borderRadius: 12,
@@ -269,7 +284,7 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     section: {
-        marginBottom: DESIGN_TOKENS.spacing.xxs0,
+        marginBottom: DESIGN_TOKENS.spacing.xxs,
         backgroundColor: '#fff',
         borderRadius: 8,
         padding: DESIGN_TOKENS.spacing.lg,
@@ -314,8 +329,8 @@ const styles = StyleSheet.create({
         color: '#b91c1c',
     },
     sectionEditor: {
-        marginBottom: DESIGN_TOKENS.spacing.xxs0,
-        paddingBottom: DESIGN_TOKENS.spacing.xs0,
+        marginBottom: DESIGN_TOKENS.spacing.xxs,
+        paddingBottom: DESIGN_TOKENS.spacing.xs,
         backgroundColor: '#fff',
         borderRadius: 8,
         padding: DESIGN_TOKENS.spacing.lg,
