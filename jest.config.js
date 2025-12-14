@@ -19,9 +19,19 @@ module.exports = {
     '\\.(svg|png|jpe?g|gif|webp)$': '<rootDir>/__mocks__/fileMock.js',
     '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
   },
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '<rootDir>/components/Map',
+    '<rootDir>/components/MapPage/',
+    '<rootDir>/components/MapUploadComponent',
+    '<rootDir>/components/imageUpload/',
+    '<rootDir>/components/travel/ImageGalleryComponent',
+    '<rootDir>/components/ArticleEditor.web.tsx',
+    '<rootDir>/components/export/BookSettingsModal.tsx',
+    '<rootDir>/components/export/GalleryLayoutSelector.tsx',
+  ],
   transformIgnorePatterns: [
     `node_modules/(?!${allowListedModules})`,
     '/node_modules/react-native-reanimated/plugin/',
   ],
 };
-

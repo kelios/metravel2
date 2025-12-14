@@ -5,19 +5,20 @@ import { Button, Snackbar } from 'react-native-paper';
 
 import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
-import { TravelFormData, Travel } from '@/src/types/types';
+import { TravelFormData, Travel, TravelFilters } from '@/src/types/types';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
-const windowWidth = Dimensions.get('window').width;
+const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
 const isMobileDefault = windowWidth <= 768;
+const FILTERS_SCROLL_MAX_HEIGHT = windowHeight * 0.8;
 
 interface TravelWizardStepBasicProps {
     currentStep: number;
     totalSteps: number;
     formData: TravelFormData;
     setFormData: React.Dispatch<React.SetStateAction<TravelFormData>>;
-    filters: any;
+    filters: TravelFilters | null;
     travelDataOld: Travel | null;
     isSuperAdmin: boolean;
     isMobile?: boolean;
@@ -31,6 +32,15 @@ interface TravelWizardStepBasicProps {
     stepErrors?: string[];
     firstErrorField?: string | null;
     autosaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+    autosaveBadge?: string;
+    stepMeta?: {
+        title?: string;
+        subtitle?: string;
+        tipTitle?: string;
+        tipBody?: string;
+        nextLabel?: string;
+    };
+    progress?: number;
 }
 
 const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
@@ -52,15 +62,40 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     stepErrors,
     firstErrorField,
     autosaveStatus,
+    autosaveBadge,
+    stepMeta,
+    progress = currentStep / totalSteps,
 }) => {
+    const progressValue = Math.min(Math.max(progress, 0), 1);
+    const progressPercent = Math.round(progressValue * 100);
+
     return (
         <SafeAreaView style={styles.safeContainer}>
             <View style={styles.headerWrapper}>
-                <Text style={styles.headerTitle}>Добавление путешествия</Text>
-                <Text style={styles.headerSubtitle}>
-                    Шаг {currentStep} из {totalSteps} · Основная информация (следующий шаг: Маршрут)
-                </Text>
+                <View style={styles.headerRow}>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.headerTitle}>{stepMeta?.title ?? 'Добавление путешествия'}</Text>
+                        <Text style={styles.headerSubtitle}>
+                            {stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
+                        </Text>
+                    </View>
+                    {autosaveBadge && (
+                        <View style={styles.autosaveBadge}>
+                            <Text style={styles.autosaveBadgeText}>{autosaveBadge}</Text>
+                        </View>
+                    )}
+                </View>
+                <View style={styles.progressBarTrack}>
+                    <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+                </View>
+                <Text style={styles.progressLabel}>Готово на {progressPercent}%</Text>
             </View>
+            {stepMeta?.tipBody && (
+                <View style={styles.tipCard}>
+                    <Text style={styles.tipTitle}>{stepMeta.tipTitle ?? 'Подсказка'}</Text>
+                    <Text style={styles.tipBody}>{stepMeta.tipBody}</Text>
+                </View>
+            )}
             {stepErrors && stepErrors.length > 0 && (
                 <View style={styles.errorSummaryContainer}>
                     {stepErrors.map((err, idx) => (
@@ -126,7 +161,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                 <TravelWizardFooter
                     canGoBack={false}
                     onPrimary={onGoNext}
-                    primaryLabel="Далее: Маршрут (шаг 2 из 5)"
+                    primaryLabel={stepMeta?.nextLabel ?? 'Далее'}
                     onSave={onManualSave}
                 />
             )}
@@ -171,6 +206,11 @@ const styles = StyleSheet.create({
         paddingBottom: 8,
         backgroundColor: '#f9f9f9',
     },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.sm,
+    },
     headerTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.lg,
         fontWeight: '700',
@@ -181,11 +221,58 @@ const styles = StyleSheet.create({
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#6b7280',
     },
+    autosaveBadge: {
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        paddingVertical: DESIGN_TOKENS.spacing.xxs,
+        borderRadius: 999,
+        backgroundColor: '#eef2ff',
+    },
+    autosaveBadgeText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: '#4338ca',
+        fontWeight: '600',
+    },
+    progressBarTrack: {
+        marginTop: 8,
+        width: '100%',
+        height: 6,
+        borderRadius: 999,
+        backgroundColor: '#e5e7eb',
+    },
+    progressBarFill: {
+        height: 6,
+        borderRadius: 999,
+        backgroundColor: '#2563eb',
+    },
+    progressLabel: {
+        marginTop: 6,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: '#6b7280',
+    },
+    tipCard: {
+        marginHorizontal: DESIGN_TOKENS.spacing.lg,
+        marginTop: 8,
+        padding: DESIGN_TOKENS.spacing.md,
+        borderRadius: 12,
+        backgroundColor: '#ecfdf5',
+        borderWidth: 1,
+        borderColor: '#a7f3d0',
+    },
+    tipTitle: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: '600',
+        color: '#047857',
+        marginBottom: 4,
+    },
+    tipBody: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: '#065f46',
+    },
     mainWrapper: { flex: 1, flexDirection: 'row' },
     mainWrapperMobile: { flexDirection: 'column' },
     contentColumn: { flex: 1 },
     filtersColumn: { width: 320, borderLeftWidth: 1, padding: DESIGN_TOKENS.spacing.md, borderColor: '#ddd' },
-    filtersScroll: { maxHeight: '80vh' },
+    filtersScroll: { maxHeight: FILTERS_SCROLL_MAX_HEIGHT },
     mobileFiltersWrapper: { padding: DESIGN_TOKENS.spacing.md },
     mobileActionBar: {
         position: 'absolute',

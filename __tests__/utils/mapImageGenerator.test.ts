@@ -57,6 +57,6 @@ describe('generateMapImageFromDOM', () => {
     const dataUrl = await generateMapImageFromDOM(container, 200, 100)
 
     expect(html2canvasMock).toHaveBeenCalled()
-    expect(dataUrl).toMatch(/^data:image\\/png/)
+    expect(dataUrl.startsWith('data:image/png')).toBe(true)
   })
 })

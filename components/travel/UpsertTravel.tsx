@@ -22,6 +22,34 @@ import TravelWizardStepDetails from '@/components/travel/TravelWizardStepDetails
 import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
+type StepMeta = {
+    id: number;
+    title: string;
+    subtitle: string;
+    tipTitle: string;
+    tipBody: string;
+    nextLabel: string;
+};
+
+const STEP_CONFIG: StepMeta[] = [
+    {
+        id: 1,
+        title: 'Основная информация',
+        subtitle: 'Опишите концепцию и базовые параметры путешествия',
+        tipTitle: 'Совет',
+        tipBody: 'Лучше всего заполнять описание в формате истории: зачем поехали, что понравилось, какие инсайты вынесли.',
+        nextLabel: 'Далее: Маршрут (шаг 2 из 5)',
+    },
+    {
+        id: 2,
+        title: 'Маршрут на карте',
+        subtitle: 'Добавьте ключевые точки и страны маршрута',
+        tipTitle: 'Лайфхак',
+        tipBody: 'Начните с основной географии: добавьте города, потом уточняйте отдельные точки. Это экономит время.',
+        nextLabel: 'К медиа (шаг 3 из 5)',
+    },
+];
+
 export default function UpsertTravel() {
     const router = useRouter();
     const { id } = useLocalSearchParams();
@@ -321,6 +349,21 @@ export default function UpsertTravel() {
         return null; // Редирект уже произошел
     }
 
+    const stepMeta = STEP_CONFIG.find((step) => step.id === currentStep);
+    const progressValue = currentStep / totalSteps;
+    const autosaveBadge = (() => {
+        if (autosave.status === 'saving' || autosave.status === 'debouncing') {
+            return 'Сохраняем черновик…';
+        }
+        if (autosave.status === 'error') {
+            return 'Ошибка сохранения — повторите';
+        }
+        if (autosave.lastSaved) {
+            return `Черновик сохранён ${autosave.lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+        return 'Изменения пока не сохранены';
+    })();
+
     if (currentStep === 1) {
         return (
             <TravelWizardStepBasic
@@ -342,6 +385,9 @@ export default function UpsertTravel() {
                 stepErrors={validation.errors.map(e => e.message)}
                 firstErrorField={validation.errors[0]?.field}
                 autosaveStatus={autosave.status as 'idle' | 'saving' | 'saved' | 'error'}
+                autosaveBadge={autosaveBadge}
+                stepMeta={stepMeta}
+                progress={progressValue}
             />
         );
     }
@@ -428,6 +474,9 @@ export default function UpsertTravel() {
                     });
                     setCurrentStep(4);
                 }}
+                stepMeta={stepMeta}
+                progress={progressValue}
+                autosaveBadge={autosaveBadge}
             />
         );
     }
