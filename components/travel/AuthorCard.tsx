@@ -4,13 +4,16 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, useWindowDimensions, Platform, Linking } from 'react-native';
+import { View, Text, StyleSheet, Pressable, useWindowDimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import type { Travel } from '@/src/types/types';
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { type UserProfileDto } from '@/src/api/user';
+import { openExternalUrl } from '@/src/utils/externalLinks';
+import { useUserProfileCached } from '@/src/hooks/useUserProfileCached';
 
 interface AuthorCardProps {
   travel: Travel;
@@ -65,13 +68,42 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
   
   const countryName = (travel as any).countryName || '';
   const userId = (travel as any).userIds ?? (travel as any).userId ?? null;
-  
+
   // Подсчет количества путешествий автора (если доступно)
   const travelsCount = (travel as any).userTravelsCount || null;
 
+  const { profile: authorProfile } = useUserProfileCached(userId, {
+    enabled: !!userId,
+  });
+
+  const socials = useMemo(() => {
+    if (!authorProfile) return [];
+    const raw = [
+      { key: 'youtube', label: 'YouTube', value: authorProfile.youtube },
+      { key: 'instagram', label: 'Instagram', value: authorProfile.instagram },
+      { key: 'twitter', label: 'Twitter', value: authorProfile.twitter },
+      { key: 'vk', label: 'VK', value: authorProfile.vk },
+    ];
+    return raw.filter((s) => Boolean(String(s.value ?? '').trim()));
+  }, [authorProfile]);
+
+  const handleOpenAuthorProfile = useCallback(() => {
+    if (!userId) return;
+    router.push(`/user/${userId}` as any);
+  }, [router, userId]);
+
+  const handleViewAuthorTravels = useCallback(() => {
+    if (onViewAuthorTravels) {
+      onViewAuthorTravels();
+    } else if (userId) {
+      const url = `/?user_id=${userId}`;
+      router.push(url as any);
+    }
+  }, [userId, onViewAuthorTravels, router]);
+
   // Оптимизация аватара
   const avatarUri = useMemo(() => {
-    const rawUri = (travel as any).travel_image_thumb_small_url;
+    const rawUri = (travel as any).user?.avatar || authorProfile?.avatar;
     if (!rawUri) return '';
     
     const versionedUrl = buildVersionedImageUrl(
@@ -90,20 +122,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
       quality: 85,
       fit: 'cover',
     }) || versionedUrl;
-  }, [(travel as any).travel_image_thumb_small_url, (travel as any).updated_at, travel.id, isMobile]);
-
-  const handleViewAuthorTravels = useCallback(() => {
-    if (onViewAuthorTravels) {
-      onViewAuthorTravels();
-    } else if (userId) {
-      const url = `/?user_id=${userId}`;
-      if (Platform.OS === 'web') {
-        router.push(url as any);
-      } else {
-        Linking.openURL(url);
-      }
-    }
-  }, [userId, onViewAuthorTravels, router]);
+  }, [(travel as any).user?.avatar, authorProfile?.avatar, (travel as any).updated_at, travel.id, isMobile]);
 
   // Не показываем если нет данных об авторе
   if (!userName && !countryName && !userId) {
@@ -114,7 +133,13 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
     <View style={[styles.container, isMobile && styles.containerMobile]}>
       <View style={styles.content}>
         {/* Аватар */}
-        <View style={styles.avatarSection}>
+        <Pressable
+          style={styles.avatarSection}
+          onPress={handleOpenAuthorProfile}
+          accessibilityRole={userId ? 'button' : undefined}
+          accessibilityLabel={userId ? `Открыть профиль автора ${userName || 'Аноним'}` : undefined}
+          disabled={!userId}
+        >
           {avatarUri ? (
             <ExpoImage
               source={{ uri: avatarUri }}
@@ -130,18 +155,42 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
               <MaterialIcons name="person" size={isMobile ? 32 : 40} color="#94a3b8" />
             </View>
           )}
-        </View>
+        </Pressable>
 
         {/* Информация об авторе */}
         <View style={styles.infoSection}>
-          <Text style={[styles.authorName, isMobile && styles.authorNameMobile]}>
-            {userName || 'Аноним'}
-          </Text>
+          <Pressable
+            onPress={handleOpenAuthorProfile}
+            disabled={!userId}
+            accessibilityRole={userId ? 'button' : undefined}
+            accessibilityLabel={userId ? `Открыть профиль автора ${userName || 'Аноним'}` : undefined}
+            style={({ pressed }) => [pressed && userId ? { opacity: 0.85 } : null]}
+          >
+            <Text style={[styles.authorName, isMobile && styles.authorNameMobile]}>
+              {userName || 'Аноним'}
+            </Text>
+          </Pressable>
           
           {countryName && (
             <View style={styles.locationRow}>
               <Feather name="map-pin" size={14} color="#718096" />
               <Text style={styles.locationText}>{countryName}</Text>
+            </View>
+          )}
+
+          {socials.length > 0 && (
+            <View style={styles.socialsRow}>
+              {socials.map((s) => (
+                <Pressable
+                  key={s.key}
+                  onPress={() => openExternalUrl(String(s.value))}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Открыть ${s.label}`}
+                  style={({ pressed }) => [styles.socialChip, pressed && styles.socialChipPressed]}
+                >
+                  <Text style={styles.socialChipText}>{s.label}</Text>
+                </Pressable>
+              ))}
             </View>
           )}
 
@@ -264,6 +313,33 @@ const styles = StyleSheet.create({
   infoSection: {
     flex: 1,
     gap: DESIGN_TOKENS.spacing.sm,
+  },
+  socialsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  socialChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+      },
+    }),
+  },
+  socialChipPressed: {
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    transform: [{ scale: 0.98 }],
+  },
+  socialChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6b7280',
   },
   authorName: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,

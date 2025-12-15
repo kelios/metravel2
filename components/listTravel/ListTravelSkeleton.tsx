@@ -16,8 +16,6 @@ const SHIMMER_COLORS = {
   shadow: '#d6d5d3',    // Темнее для контраста
 };
 
-const blocks = Array.from({ length: 6 });
-
 // ✅ B4.1: Компонент с shimmer анимацией
 function ShimmerPlaceholder({ style, children }: { style?: any; children?: React.ReactNode }) {
   const animatedValue = useRef(new Animated.Value(0)).current;
@@ -65,10 +63,21 @@ function ShimmerPlaceholder({ style, children }: { style?: any; children?: React
 }
 
 export default function ListTravelSkeleton() {
-    const { width } = useWindowDimensions();
+    const { width, height } = useWindowDimensions();
     
     const columns = useMemo(() => calculateColumns(width), [width]);
     const isMobile = width < 768;
+
+    const blocks = useMemo(() => {
+      // Скелетон должен визуально занимать примерно ту же высоту, что и реальный список,
+      // чтобы футер не «уезжал» вниз на пустом экране.
+      const searchAndSpacing = isMobile ? 120 : 160; // search + отступы
+      const cardApproxHeight = width < 768 ? 320 + 24 : 360 + 24; // карточка + gap
+      const available = Math.max(0, height - searchAndSpacing);
+      const rows = Math.max(2, Math.ceil(available / cardApproxHeight));
+      const count = Math.max(6, rows * Math.max(1, columns));
+      return Array.from({ length: count });
+    }, [columns, height, isMobile, width]);
 
     // ✅ B4.1: Адаптивные отступы как в реальных карточках
     const contentPadding = useMemo(() => {
@@ -189,6 +198,13 @@ const styles = StyleSheet.create({
     wrapper: {
         flex: 1,
         backgroundColor: '#f5f5f5', // ✅ Светло-серый фон для соответствия дизайну страницы
+        width: '100%',
+        ...Platform.select({
+          web: {
+            minHeight: '100vh',
+          } as any,
+          default: {},
+        }),
     },
     filterRow: {
         flexDirection: 'row',

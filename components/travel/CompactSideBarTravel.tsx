@@ -128,9 +128,21 @@ function CompactSideBarTravel({
       ? Number((travel as any).countUnicIpView)
       : null;
 
+  const authorUserId = useMemo(() => {
+    const ownerId = (travel as any).userIds ?? (travel as any).userId ?? (travel as any).user?.id ?? null;
+    if (ownerId == null) return null;
+    const v = String(ownerId).trim();
+    return v ? v : null;
+  }, [travel]);
+
+  const handleOpenAuthorProfile = useCallback(() => {
+    if (!authorUserId) return;
+    openUrl(`/user/${authorUserId}`);
+  }, [authorUserId]);
+
   // ✅ УЛУЧШЕНИЕ: Оптимизация URL аватара
   const avatarUri = useMemo(() => {
-    const rawUri = (travel as any).travel_image_thumb_small_url;
+    const rawUri = (travel as any).user?.avatar;
     if (!rawUri) return "";
     
     const versionedUrl = buildVersionedImageUrl(
@@ -150,7 +162,7 @@ function CompactSideBarTravel({
       quality: 85,
       fit: 'cover',
     }) || versionedUrl;
-  }, [(travel as any).travel_image_thumb_small_url, (travel as any).updated_at, travel.id]);
+  }, [(travel as any).user?.avatar, (travel as any).updated_at, travel.id]);
 
   // Извлекаем координаты из travelAddress
   const firstCoord = useMemo(() => {
@@ -292,9 +304,18 @@ function CompactSideBarTravel({
             <View style={{ flex: 1 }}>
               <View style={styles.userRow}>
                 {titleLine ? (
-                  <Text style={styles.userName} numberOfLines={1}>
-                    {titleLine}
-                  </Text>
+                  <Pressable
+                    onPress={handleOpenAuthorProfile}
+                    disabled={!authorUserId}
+                    accessibilityRole={authorUserId ? 'button' : undefined}
+                    accessibilityLabel={authorUserId ? `Открыть профиль автора ${userName || 'Пользователь'}` : undefined}
+                    style={({ pressed }) => [pressed && authorUserId ? { opacity: 0.9 } : null]}
+                    {...Platform.select({ web: authorUserId ? { cursor: 'pointer' } : {} })}
+                  >
+                    <Text style={styles.userName} numberOfLines={1}>
+                      {titleLine}
+                    </Text>
+                  </Pressable>
                 ) : (
                   <View />
                 )}

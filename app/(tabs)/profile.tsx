@@ -1,5 +1,5 @@
 // Страница профиля пользователя
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,7 +21,8 @@ import { fetchTravels } from '@/src/api/travelsApi';
 import { fetchUserProfile, type UserProfileDto } from '@/src/api/user';
 import { ApiError } from '@/src/api/client';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { globalFocusStyles } from '@/styles/globalFocus';
+import { openExternalUrl } from '@/src/utils/externalLinks';
 
 interface UserStats {
   travelsCount: number;
@@ -43,8 +44,28 @@ export default function ProfileScreen() {
   });
   const [isLoading, setIsLoading] = useState(true);
 
+  const scrollRef = useRef<ScrollView | null>(null);
+  const sectionOffsetsRef = useRef<Record<string, number>>({});
+
   const favoritesPreview = Array.isArray(favorites) ? favorites.slice(0, 8) : [];
   const historyPreview = Array.isArray(viewHistory) ? viewHistory.slice(0, 8) : [];
+
+  const quickNavItems = useMemo(
+    () =>
+      [
+        { key: 'profile', label: 'Профиль' },
+        ...(favoritesPreview.length > 0 ? [{ key: 'favorites', label: 'Избранное' }] : []),
+        ...(historyPreview.length > 0 ? [{ key: 'history', label: 'История' }] : []),
+        { key: 'sections', label: 'Разделы' },
+      ] as const,
+    [favoritesPreview.length, historyPreview.length]
+  );
+
+  const handleScrollToSection = useCallback((key: string) => {
+    const y = sectionOffsetsRef.current[key];
+    if (typeof y !== 'number') return;
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+  }, []);
 
   useEffect(() => {
     loadUserData();
@@ -177,8 +198,13 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        <View style={styles.header}>
+      <ScrollView ref={scrollRef} style={styles.scrollView} contentContainerStyle={styles.content}>
+        <View
+          style={styles.header}
+          onLayout={(e) => {
+            sectionOffsetsRef.current.profile = e.nativeEvent.layout.y;
+          }}
+        >
           <View style={styles.headerRow}>
             <View style={styles.avatar}>
               {profile?.avatar ? (
@@ -204,14 +230,98 @@ export default function ProfileScreen() {
               </Text>
               {!!userInfo.email && <Text style={styles.userEmail}>{userInfo.email}</Text>}
             </View>
+
+            <Pressable
+              style={[styles.editProfileButton, globalFocusStyles.focusable]}
+              onPress={() => router.push('/settings')}
+              accessibilityRole="button"
+              accessibilityLabel="Редактировать профиль"
+              {...Platform.select({ web: { cursor: 'pointer' } })}
+            >
+              <Feather name="edit-2" size={16} color={DESIGN_TOKENS.colors.primary} />
+              <Text style={styles.editProfileButtonText}>Редактировать</Text>
+            </Pressable>
           </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.quickNavRow}
+            {...Platform.select({
+              web: {
+                style: { overflowX: 'auto', overflowY: 'hidden', width: '100%' } as any,
+              },
+              default: {},
+            })}
+          >
+            {quickNavItems.map((item) => (
+              <Pressable
+                key={item.key}
+                style={[styles.quickNavChip, globalFocusStyles.focusable]}
+                onPress={() => handleScrollToSection(item.key)}
+                accessibilityRole="button"
+                accessibilityLabel={`Перейти к секции: ${item.label}`}
+                {...Platform.select({ web: { cursor: 'pointer' } })}
+              >
+                <Text style={styles.quickNavChipText}>{item.label}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
 
           {!!profile && (
             <View style={styles.socialsRow}>
-              {!!profile.youtube && <Text style={styles.socialChip}>YouTube</Text>}
-              {!!profile.instagram && <Text style={styles.socialChip}>Instagram</Text>}
-              {!!profile.twitter && <Text style={styles.socialChip}>Twitter</Text>}
-              {!!profile.vk && <Text style={styles.socialChip}>VK</Text>}
+              {!!profile.youtube && (
+                <Pressable
+                  style={[styles.socialChip, globalFocusStyles.focusable]}
+                  onPress={() => {
+                    openExternalUrl(String(profile.youtube || ''));
+                  }}
+                  accessibilityRole="link"
+                  accessibilityLabel="Открыть YouTube"
+                  {...Platform.select({ web: { cursor: 'pointer' } })}
+                >
+                  <Text style={styles.socialChipText}>YouTube</Text>
+                </Pressable>
+              )}
+              {!!profile.instagram && (
+                <Pressable
+                  style={[styles.socialChip, globalFocusStyles.focusable]}
+                  onPress={() => {
+                    openExternalUrl(String(profile.instagram || ''));
+                  }}
+                  accessibilityRole="link"
+                  accessibilityLabel="Открыть Instagram"
+                  {...Platform.select({ web: { cursor: 'pointer' } })}
+                >
+                  <Text style={styles.socialChipText}>Instagram</Text>
+                </Pressable>
+              )}
+              {!!profile.twitter && (
+                <Pressable
+                  style={[styles.socialChip, globalFocusStyles.focusable]}
+                  onPress={() => {
+                    openExternalUrl(String(profile.twitter || ''));
+                  }}
+                  accessibilityRole="link"
+                  accessibilityLabel="Открыть Twitter"
+                  {...Platform.select({ web: { cursor: 'pointer' } })}
+                >
+                  <Text style={styles.socialChipText}>Twitter</Text>
+                </Pressable>
+              )}
+              {!!profile.vk && (
+                <Pressable
+                  style={[styles.socialChip, globalFocusStyles.focusable]}
+                  onPress={() => {
+                    openExternalUrl(String(profile.vk || ''));
+                  }}
+                  accessibilityRole="link"
+                  accessibilityLabel="Открыть VK"
+                  {...Platform.select({ web: { cursor: 'pointer' } })}
+                >
+                  <Text style={styles.socialChipText}>VK</Text>
+                </Pressable>
+              )}
             </View>
           )}
 
@@ -234,7 +344,12 @@ export default function ProfileScreen() {
         {(favoritesPreview.length > 0 || historyPreview.length > 0) && (
           <View style={styles.dashboardSections}>
             {favoritesPreview.length > 0 && (
-              <View style={styles.dashboardSectionCard}>
+              <View
+                style={styles.dashboardSectionCard}
+                onLayout={(e) => {
+                  sectionOffsetsRef.current.favorites = e.nativeEvent.layout.y;
+                }}
+              >
                 <View style={styles.sectionHeaderRow}>
                   <View style={styles.sectionHeaderLeft}>
                     <Text style={styles.sectionTitle}>Избранное</Text>
@@ -281,7 +396,12 @@ export default function ProfileScreen() {
             )}
 
             {historyPreview.length > 0 && (
-              <View style={styles.dashboardSectionCard}>
+              <View
+                style={styles.dashboardSectionCard}
+                onLayout={(e) => {
+                  sectionOffsetsRef.current.history = e.nativeEvent.layout.y;
+                }}
+              >
                 <View style={styles.sectionHeaderRow}>
                   <View style={styles.sectionHeaderLeft}>
                     <Text style={styles.sectionTitle}>История</Text>
@@ -331,7 +451,12 @@ export default function ProfileScreen() {
         )}
 
         {/* Menu Items */}
-        <View style={styles.menuSection}>
+        <View
+          style={styles.menuSection}
+          onLayout={(e) => {
+            sectionOffsetsRef.current.sections = e.nativeEvent.layout.y;
+          }}
+        >
           <Text style={styles.menuSectionTitle}>Разделы</Text>
           <View style={styles.menuContainer}>
             {menuItems.map((item, index) => (
@@ -530,11 +655,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     marginBottom: 12,
   },
+  editProfileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+  },
+  editProfileButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: DESIGN_TOKENS.colors.primary,
+  },
+  quickNavRow: {
+    paddingHorizontal: 6,
+    paddingBottom: 4,
+    gap: 8,
+    alignItems: 'center',
+  },
+  quickNavChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.border,
+  },
+  quickNavChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: DESIGN_TOKENS.colors.text,
+  },
   socialChip: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
     backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+  },
+  socialChipText: {
     color: DESIGN_TOKENS.colors.primary,
     fontSize: 12,
     fontWeight: '700',

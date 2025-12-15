@@ -36,6 +36,7 @@ export default function TabLayout() {
             <Tabs.Screen name="history" options={HIDDEN} />
             <Tabs.Screen name="settings" options={HIDDEN} />
             <Tabs.Screen name="travels/[param]" options={HIDDEN} />
+            <Tabs.Screen name="user/[id]" options={HIDDEN} />
 
             {/* полностью скрытые из линкинга */}
             <Tabs.Screen name="about" options={HIDDEN_NOHREF} />

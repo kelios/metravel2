@@ -3,7 +3,7 @@ import { View, Platform, ActivityIndicator } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import StickySearchBar from '@/components/mainPage/StickySearchBar';
 import EmptyState from '@/components/EmptyState';
-import { TravelListSkeleton } from '@/components/SkeletonLoader';
+import { TravelCardSkeleton } from '@/components/SkeletonLoader';
 import MemoizedTravelItem from './TravelListItem';
 import type { Travel } from '@/src/types/types';
 
@@ -100,7 +100,28 @@ const TravelContent: React.FC<TravelContentProps> = ({
             flexWrap: 'wrap',
             gap: 16,
           }}>
-            <TravelListSkeleton count={20} columns={gridColumns} />
+            {Array.from({ length: 12 }).map((_, index) => (
+              <View
+                key={`travel-skeleton-${index}`}
+                style={[
+                  Platform.select({
+                    web: {
+                      flexGrow: 1,
+                      flexShrink: 1,
+                      flexBasis: 300,
+                      minWidth: 300,
+                      maxWidth: 360,
+                    },
+                    default: {
+                      width: '100%',
+                      maxWidth: '100%',
+                    },
+                  }) as ViewStyle,
+                ]}
+              >
+                <TravelCardSkeleton />
+              </View>
+            ))}
           </View>
         )}
 

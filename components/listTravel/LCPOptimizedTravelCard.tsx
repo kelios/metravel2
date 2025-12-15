@@ -1,7 +1,10 @@
-import React, { memo, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import React, { memo, useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { optimizeLCPImage, ultraCriticalCSS } from '@/utils/advancedPerformanceOptimization';
+import { fetchUserProfile } from '@/src/api/user';
 
 interface LCPOptimizedTravelCardProps {
   travel: any;
@@ -14,8 +17,84 @@ export const LCPOptimizedTravelCard = memo(function LCPOptimizedTravelCard({
   isFirst = false,
   isMobile = false,
 }: LCPOptimizedTravelCardProps) {
+  const router = useRouter();
   const [isLoaded, setIsLoaded] = useState(false);
   const imageRef = useRef<any>(null);
+
+  const authorUserId = useMemo(() => {
+    const ownerId = travel?.userIds ?? travel?.userId ?? travel?.user?.id ?? null;
+    if (ownerId == null) return null;
+    const v = String(ownerId).trim();
+    return v ? v : null;
+  }, [travel?.userIds, travel?.userId, travel?.user?.id]);
+
+  const handleAuthorPress = useCallback(
+    (e?: any) => {
+      if (!authorUserId) return;
+      e?.stopPropagation?.();
+      e?.preventDefault?.();
+      router.push(`/user/${authorUserId}` as any);
+    },
+    [authorUserId, router]
+  );
+
+  const authorAvatarUri = useMemo(() => {
+    const uri =
+      travel?.user?.avatar ??
+      travel?.userAvatar ??
+      travel?.avatar ??
+      travel?.authorAvatar ??
+      null;
+    if (!uri) return null;
+    const v = String(uri).trim();
+    return v ? v : null;
+  }, [travel?.user?.avatar, travel?.userAvatar, travel?.avatar, travel?.authorAvatar]);
+
+  const shouldFetchAuthorProfile = !!authorUserId && !authorAvatarUri;
+
+  const { data: authorProfile } = useQuery({
+    queryKey: ['user-profile', authorUserId],
+    queryFn: () => fetchUserProfile(String(authorUserId)),
+    enabled: shouldFetchAuthorProfile,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const resolvedAuthorAvatarUri = useMemo(() => {
+    if (authorAvatarUri) return authorAvatarUri;
+    const uri = authorProfile?.avatar ?? null;
+    if (!uri) return null;
+    const v = String(uri).trim();
+    return v ? v : null;
+  }, [authorAvatarUri, authorProfile?.avatar]);
+
+  const authorProfileFullName = useMemo(() => {
+    const clean = (value: unknown) => {
+      const v = String(value ?? '').trim();
+      if (!v) return '';
+      const lower = v.toLowerCase();
+      if (lower === 'null' || lower === 'undefined') return '';
+      return v;
+    };
+
+    const full = `${clean(authorProfile?.first_name)} ${clean(authorProfile?.last_name)}`.trim();
+    return full || null;
+  }, [authorProfile?.first_name, authorProfile?.last_name]);
+
+  const authorName = useMemo(() => {
+    const name =
+      travel?.userName ??
+      travel?.user?.name ??
+      travel?.authorName ??
+      authorProfileFullName ??
+      'Аноним';
+    const v = String(name ?? '').trim();
+    return v || 'Аноним';
+  }, [travel?.userName, travel?.user?.name, travel?.authorName, authorProfileFullName]);
+
+  const authorInitial = useMemo(() => {
+    const first = authorName.trim().slice(0, 1).toUpperCase();
+    return first || '?';
+  }, [authorName]);
 
   // LCP оптимизация для первой карточки
   useEffect(() => {
@@ -87,9 +166,29 @@ export const LCPOptimizedTravelCard = memo(function LCPOptimizedTravelCard({
           {travel.name}
         </Text>
         <View style={styles.meta}>
-          <Text style={styles.author}>
-            {travel.userName || 'Аноним'}
-          </Text>
+          <Pressable
+            onPress={handleAuthorPress}
+            disabled={!authorUserId}
+            accessibilityRole={authorUserId ? 'button' : undefined}
+            accessibilityLabel={authorUserId ? `Открыть профиль автора ${authorName}` : undefined}
+            style={[styles.authorRow, Platform.OS === 'web' && authorUserId ? ({ cursor: 'pointer' } as any) : null]}
+          >
+            <View style={styles.authorAvatar}>
+              {resolvedAuthorAvatarUri ? (
+                <ExpoImage
+                  source={{ uri: resolvedAuthorAvatarUri }}
+                  style={styles.authorAvatarImage}
+                  contentFit="cover"
+                  cachePolicy="disk"
+                />
+              ) : (
+                <Text style={styles.authorInitial}>{authorInitial}</Text>
+              )}
+            </View>
+            <Text style={styles.authorName} numberOfLines={1}>
+              {authorName}
+            </Text>
+          </Pressable>
           {travel.countUnicIpView > 0 && (
             <Text style={styles.views}>
               {travel.countUnicIpView} просмотров
@@ -154,9 +253,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  author: {
+  authorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  authorAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    overflow: 'hidden',
+    backgroundColor: '#eef2f7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authorAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  authorInitial: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  authorName: {
     fontSize: 14,
     color: '#6b7280',
+    flexShrink: 1,
   },
   views: {
     fontSize: 14,

@@ -2,6 +2,7 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import RenderRightMenu from '@/components/RenderRightMenu';
 import { router } from 'expo-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock dependencies
 jest.mock('expo-router', () => ({
@@ -62,6 +63,18 @@ const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockUseFavorites = useFavorites as jest.MockedFunction<typeof useFavorites>;
 const mockUseFilters = useFilters as jest.MockedFunction<typeof useFilters>;
 
+const renderWithClient = (ui: React.ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+};
+
 describe('RenderRightMenu', () => {
   const mockLogout = jest.fn();
   const mockUpdateFilters = jest.fn();
@@ -99,7 +112,7 @@ describe('RenderRightMenu', () => {
   });
 
   it('shows login and registration options when not authenticated', () => {
-    const { getByText } = render(<RenderRightMenu />);
+    const { getByText } = renderWithClient(<RenderRightMenu />);
 
     expect(getByText('Войти')).toBeTruthy();
     expect(getByText('Зарегистрироваться')).toBeTruthy();
@@ -121,7 +134,7 @@ describe('RenderRightMenu', () => {
       setNewPassword: jest.fn(),
     } as any);
 
-    const { getByText } = render(<RenderRightMenu />);
+    const { getByText } = renderWithClient(<RenderRightMenu />);
     expect(getByText('Добавить путешествие')).toBeTruthy();
   });
 
@@ -141,7 +154,7 @@ describe('RenderRightMenu', () => {
       setNewPassword: jest.fn(),
     } as any);
 
-    const { getByText } = render(<RenderRightMenu />);
+    const { getByText } = renderWithClient(<RenderRightMenu />);
     expect(getByText('testuser')).toBeTruthy();
   });
 
@@ -161,7 +174,7 @@ describe('RenderRightMenu', () => {
       setNewPassword: jest.fn(),
     } as any);
 
-    const { queryByText } = render(<RenderRightMenu />);
+    const { queryByText } = renderWithClient(<RenderRightMenu />);
     expect(queryByText('ghost-user')).toBeNull();
   });
 
@@ -191,16 +204,17 @@ describe('RenderRightMenu', () => {
       removeFavorite: jest.fn(),
       isFavorite: jest.fn(),
       addToHistory: jest.fn(),
+      clearFavorites: jest.fn(),
       clearHistory: jest.fn(),
       getRecommendations: jest.fn(),
     });
 
-    const { getByText } = render(<RenderRightMenu />);
+    const { getByText } = renderWithClient(<RenderRightMenu />);
     expect(getByText('Личный кабинет (2)')).toBeTruthy();
   });
 
   it('navigates to home when logo is pressed', () => {
-    const { getByTestId } = render(<RenderRightMenu />);
+    const { getByTestId } = renderWithClient(<RenderRightMenu />);
     // Logo press should navigate to home
     expect(router.push).not.toHaveBeenCalled();
   });
@@ -221,7 +235,7 @@ describe('RenderRightMenu', () => {
       setNewPassword: jest.fn(),
     } as any);
 
-    const { getByText } = render(<RenderRightMenu />);
+    const { getByText } = renderWithClient(<RenderRightMenu />);
 
     // Нажимаем на пункт меню "Выход"
     fireEvent.press(getByText('Выход'));
@@ -248,7 +262,7 @@ describe('RenderRightMenu', () => {
       setNewPassword: jest.fn(),
     } as any);
 
-    const { getByText } = render(<RenderRightMenu />);
+    const { getByText } = renderWithClient(<RenderRightMenu />);
 
     fireEvent.press(getByText('Мои путешествия'));
 
@@ -257,10 +271,18 @@ describe('RenderRightMenu', () => {
     });
   });
 
-  it('handles window resize for mobile/desktop layout', () => {
-    const { rerender } = render(<RenderRightMenu />);
+  it('handles window resize for mobile/desktop layout', async () => {
+    const { rerender } = renderWithClient(<RenderRightMenu />);
 
-    rerender(<RenderRightMenu />);
+    rerender(
+      <QueryClientProvider
+        client={new QueryClient({
+          defaultOptions: { queries: { retry: false } },
+        })}
+      >
+        <RenderRightMenu />
+      </QueryClientProvider>
+    );
     expect(rerender).toBeDefined();
   });
 });

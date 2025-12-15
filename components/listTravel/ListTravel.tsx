@@ -30,10 +30,10 @@ import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDes
 import { useAuth } from '@/context/AuthContext'
 import { fetchAllFiltersOptimized } from '@/src/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { TravelListSkeleton } from '@/components/SkeletonLoader'
 import EmptyState from '@/components/EmptyState'
 import ProgressIndicator from '@/components/ProgressIndicator'
 import type { Travel } from '@/src/types/types'
+import ListTravelSkeleton from './ListTravelSkeleton'
 import {
   BREAKPOINTS,
   FLATLIST_CONFIG,
@@ -979,7 +979,8 @@ function ListTravel({
     }, [showEmptyState, filter, options?.categories, options?.transports, options?.categoryTravelAddress, debSearch]); // ✅ ОПТИМИЗАЦИЯ: Более точные зависимости
 
     // ✅ АРХИТЕКТУРА: Централизованная конфигурация групп фильтров для переиспользования в десктоп и мобильной версии
-    const filterGroups = useMemo(() => [
+    const filterGroups = useMemo(
+      () => [
       // На странице travelsby страна всегда Беларуси, поэтому отдельный фильтр по странам прячем
       ...(!isTravelBy ? [
         {
@@ -1064,11 +1065,23 @@ function ListTravel({
         multiSelect: true,
         icon: 'moon',
       },
-    ], [options, isTravelBy]);
+    ],
+      [
+        isTravelBy,
+        options?.countries,
+        options?.categories,
+        options?.transports,
+        options?.categoryTravelAddress,
+        options?.companions,
+        options?.complexity,
+        options?.month,
+        options?.over_nights_stay,
+      ]
+    );
 
   return (
     <View style={[styles.root, isMobileDevice ? styles.rootMobile : undefined]}>
-      <Suspense fallback={<TravelListSkeleton count={6} columns={columns} />}>
+      <Suspense fallback={<ListTravelSkeleton />}>
         <SidebarFilters
           isMobile={isMobileDevice}
           filterGroups={filterGroups}
@@ -1079,7 +1092,7 @@ function ListTravel({
           setSearch={setSearch}
           resetFilters={resetFilters}
           isVisible={!isMobileDevice || showFilters}
-          onClose={isMobileDevice ? () => setShowFilters(false) : undefined}
+          onClose={() => setShowFilters(false)}
           containerStyle={isMobileDevice ? [styles.sidebar, styles.sidebarMobile] : styles.sidebar}
         />
 

@@ -47,6 +47,9 @@ jest.mock('@/components/SkeletonLoader', () => {
     TravelListSkeleton: function MockTravelListSkeleton() {
       return React.createElement(View, { testID: 'skeleton' }, 'Loading...');
     },
+    TravelCardSkeleton: function MockTravelCardSkeleton() {
+      return React.createElement(View, { testID: 'skeleton' }, 'Loading...');
+    },
   };
 });
 
@@ -169,12 +172,12 @@ describe('TravelContent', () => {
   });
 
   it('shows loading skeleton when showInitialLoading is true', () => {
-    const { getByTestId } = render(
+    const { getAllByTestId } = render(
       <TravelContent {...defaultProps} showInitialLoading={true} travels={[]} />,
       { wrapper: createWrapper() }
     );
 
-    expect(getByTestId('skeleton')).toBeTruthy();
+    expect(getAllByTestId('skeleton').length).toBeGreaterThan(0);
   });
 
   it('shows error state when isError is true', () => {

@@ -9,10 +9,12 @@ interface AuthContextType {
     username: string;
     isSuperuser: boolean;
     userId: string | null;
+    profileRefreshToken: number;
     setIsAuthenticated: (isAuthenticated: boolean) => void;
     setUsername: (username: string) => void;
     setIsSuperuser: (isSuperuser: boolean) => void;
     setUserId: (id: string | null) => void;
+    triggerProfileRefresh: () => void;
     logout: () => Promise<void>;
     login: (email: string, password: string) => Promise<boolean>;
     sendPassword: (email: string) => Promise<string>;
@@ -31,6 +33,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     const [username, setUsername] = useState('');
     const [isSuperuser, setIsSuperuser] = useState(false);
     const [userId, setUserId] = useState<string | null>(null);
+    const [profileRefreshToken, setProfileRefreshToken] = useState(0);
 
     // При первой загрузке проверяем данные аутентификации
     useEffect(() => {
@@ -151,6 +154,10 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
         return await setNewPasswordApi(token, newPassword);
     };
 
+    const triggerProfileRefresh = () => {
+        setProfileRefreshToken((v) => v + 1);
+    };
+
     // Отдаём контекстное значение во все дочерние компоненты
     return (
         <AuthContext.Provider
@@ -159,10 +166,12 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
                 username,
                 isSuperuser,
                 userId,
+                profileRefreshToken,
                 setIsAuthenticated,
                 setUsername,
                 setIsSuperuser,
                 setUserId,
+                triggerProfileRefresh,
                 login,
                 logout,
                 sendPassword,

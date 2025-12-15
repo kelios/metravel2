@@ -5,6 +5,7 @@ import {
     StyleSheet,
     TouchableOpacity,
     useWindowDimensions,
+    Image,
 } from 'react-native';
 import { Menu, Divider } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -12,17 +13,35 @@ import { useFilters } from '@/providers/FiltersProvider';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { router } from 'expo-router';
+import { useUserProfileCached } from '@/src/hooks/useUserProfileCached';
 
 function RenderRightMenu() {
-    const { isAuthenticated, username, logout, userId } = useAuth();
+    const { isAuthenticated, username, logout, userId, profileRefreshToken } = useAuth();
     const { favorites } = useFavorites();
     const { updateFilters } = useFilters();
     const [visible, setVisible] = useState(false);
     const { width } = useWindowDimensions();
     const isMobile = width <= 768;
 
+    const { profile } = useUserProfileCached(userId, {
+        enabled: isAuthenticated && !!userId,
+        cacheKeySuffix: profileRefreshToken,
+    });
+
+    const avatarUri = React.useMemo(() => {
+        const raw = profile?.avatar;
+        if (!raw) return null;
+        const separator = raw.includes('?') ? '&' : '?';
+        return `${raw}${separator}v=${profileRefreshToken}`;
+    }, [profile?.avatar, profileRefreshToken]);
+
     const openMenu = useCallback(() => setVisible(true), []);
     const closeMenu = useCallback(() => setVisible(false), []);
+
+    const handleOpenPublicProfile = useCallback(() => {
+        if (!userId) return;
+        router.push(`/user/${userId}` as any);
+    }, [userId]);
 
     const handleNavigate = useCallback(
         (path: string, extraAction?: () => void) => {
@@ -44,12 +63,21 @@ function RenderRightMenu() {
     return (
         <View style={styles.container}>
             {isAuthenticated && username && !isMobile && (
-                <View style={styles.userContainer}>
-                    <Icon name="account-circle" size={24} color="#333" />
+                <TouchableOpacity
+                    onPress={handleOpenPublicProfile}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Открыть публичный профиль ${username}`}
+                    style={styles.userContainer}
+                >
+                    {avatarUri ? (
+                        <Image key={avatarUri} source={{ uri: avatarUri }} style={styles.userAvatar} />
+                    ) : (
+                        <Icon name="account-circle" size={24} color="#333" />
+                    )}
                     <Text style={styles.username} numberOfLines={1}>
                         {username}
                     </Text>
-                </View>
+                </TouchableOpacity>
             )}
 
             <Menu
@@ -142,6 +170,11 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         borderRadius: 20,
         maxWidth: 180,
+    },
+    userAvatar: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
     },
     username: { fontSize: 16, color: '#333', marginLeft: 6 },
     menuButton: {

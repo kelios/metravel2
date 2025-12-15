@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView, TextInput, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView, TextInput, ActivityIndicator, Alert, Image, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -16,7 +16,10 @@ import { ApiError } from '@/src/api/client';
 
 export default function SettingsScreen() {
     const router = useRouter();
-    const { isAuthenticated, logout, username, userId } = useAuth();
+    const { isAuthenticated, logout, username, userId, triggerProfileRefresh } = useAuth();
+    const { width } = useWindowDimensions();
+    const isMobile = width <= 768;
+    const isWeb = Platform.OS === 'web';
     const favoritesContext = typeof useFavorites === 'function' ? useFavorites() : ({} as any);
     const { clearHistory, clearFavorites, favorites, viewHistory } = favoritesContext as any;
 
@@ -47,6 +50,19 @@ export default function SettingsScreen() {
         const full = `${cleanText(firstName)} ${cleanText(lastName)}`.trim();
         return full || username || 'Пользователь';
     }, [cleanText, firstName, lastName, username]);
+
+    const hasUnsavedChanges = useMemo(() => {
+        if (!profile) return false;
+        const normalize = (v: unknown) => String(v ?? '').trim();
+        return (
+            normalize(firstName) !== normalize(profile.first_name) ||
+            normalize(lastName) !== normalize(profile.last_name) ||
+            normalize(youtube) !== normalize(profile.youtube) ||
+            normalize(instagram) !== normalize(profile.instagram) ||
+            normalize(twitter) !== normalize(profile.twitter) ||
+            normalize(vk) !== normalize(profile.vk)
+        );
+    }, [firstName, instagram, lastName, profile, twitter, vk, youtube]);
 
     const loadProfile = useCallback(async () => {
         if (!userId) return;
@@ -160,6 +176,7 @@ export default function SettingsScreen() {
             setProfile(saved);
             setAvatarPreviewUrl(saved.avatar || avatarPreviewUrl);
             setAvatarFile(null);
+            triggerProfileRefresh();
             Alert.alert('Готово', 'Аватар обновлён');
         } catch (error) {
             const message = error instanceof ApiError ? error.message : 'Не удалось обновить аватар';
@@ -167,7 +184,7 @@ export default function SettingsScreen() {
         } finally {
             setAvatarSaving(false);
         }
-    }, [avatarFile, avatarPreviewUrl, userId]);
+    }, [avatarFile, avatarPreviewUrl, triggerProfileRefresh, userId]);
 
     const handleLogout = useCallback(async () => {
         try {
@@ -351,7 +368,7 @@ export default function SettingsScreen() {
                         <Button
                             label={profileSaving ? 'Сохранение…' : 'Сохранить'}
                             onPress={handleSaveProfile}
-                            disabled={profileSaving || profileLoading}
+                            disabled={profileSaving || profileLoading || !hasUnsavedChanges}
                             loading={profileSaving}
                             fullWidth
                             size="md"
@@ -375,17 +392,19 @@ export default function SettingsScreen() {
                                             label="Выбрать"
                                             onPress={handlePickAvatar}
                                             disabled={profileLoading || avatarSaving}
-                                            fullWidth
+                                            fullWidth={!isWeb}
                                             variant="secondary"
                                             size="sm"
+                                            style={isWeb ? styles.avatarButtonWeb : undefined}
                                         />
                                         <Button
                                             label={avatarSaving ? 'Загрузка…' : 'Загрузить'}
                                             onPress={handleUploadAvatar}
                                             disabled={profileLoading || avatarSaving || !avatarFile}
                                             loading={avatarSaving}
-                                            fullWidth
+                                            fullWidth={!isWeb}
                                             size="sm"
+                                            style={isWeb ? styles.avatarButtonWeb : undefined}
                                         />
                                     </View>
                                 </View>
@@ -498,7 +517,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         ...Platform.select({
             web: {
-                maxWidth: 920,
+                maxWidth: 760,
                 marginLeft: 'auto',
                 marginRight: 'auto',
                 paddingHorizontal: 20,
@@ -520,10 +539,9 @@ const styles = StyleSheet.create({
         color: DESIGN_TOKENS.colors.textMuted,
     },
     section: {
-        paddingHorizontal: 16,
         paddingTop: 6,
         paddingBottom: 24,
-        gap: 12,
+        gap: 14,
     },
     sectionTitle: {
         fontSize: 14,
@@ -537,6 +555,20 @@ const styles = StyleSheet.create({
         borderColor: DESIGN_TOKENS.colors.border,
         padding: 14,
         gap: 12,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            },
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.08,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 2,
+            },
+        }),
     },
     cardRow: {
         flexDirection: 'row',
@@ -580,7 +612,7 @@ const styles = StyleSheet.create({
         ...Platform.select({
             web: {
                 cursor: 'pointer',
-            },
+            } as any,
         }),
     },
     cardIcon: {
@@ -612,7 +644,7 @@ const styles = StyleSheet.create({
                 flexWrap: 'wrap',
                 columnGap: 12,
                 rowGap: 12,
-            },
+            } as any,
         }),
     },
     field: {
@@ -621,10 +653,10 @@ const styles = StyleSheet.create({
     fieldHalf: {
         ...Platform.select({
             web: {
-                flexBasis: 'calc(50% - 6px)',
+                flexBasis: 'calc(50% - 6px)' as any,
                 flexGrow: 1,
                 minWidth: 240,
-            },
+            } as any,
         }),
     },
     fieldLabel: {
@@ -653,7 +685,7 @@ const styles = StyleSheet.create({
             web: {
                 flexDirection: 'row',
                 alignItems: 'flex-end',
-            },
+            } as any,
         }),
     },
     avatarField: {
@@ -684,14 +716,17 @@ const styles = StyleSheet.create({
         resizeMode: 'cover',
     },
     avatarPickerButtons: {
-        flex: 1,
         gap: 10,
         ...Platform.select({
             web: {
                 flexDirection: 'row',
                 alignItems: 'center',
-            },
+                justifyContent: 'flex-start',
+            } as any,
         }),
+    },
+    avatarButtonWeb: {
+        minWidth: 160,
     },
     avatarAction: {
         ...Platform.select({

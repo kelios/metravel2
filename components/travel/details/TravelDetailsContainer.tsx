@@ -60,6 +60,7 @@ import { initPerformanceMonitoring } from '@/utils/performanceMonitoring';
 import { SectionSkeleton } from '@/components/SectionSkeleton';
 import { OptimizedLCPImage } from '@/components/OptimizedLCPImage';
 import { optimizeCriticalPath } from '@/utils/advancedPerformanceOptimization';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 
 /* ---------- LCP-компонент грузим СИНХРОННО ---------- */
 import Slider from "@/components/travel/Slider";
@@ -233,6 +234,58 @@ const PointListFallback = () => (
 const TravelListFallback = () => (
   <View style={styles.fallback}>
     <TravelListSkeleton count={3} />
+  </View>
+);
+
+const TravelDetailsLoadingSkeleton = () => (
+  <View
+    style={[
+      styles.wrapper,
+      Platform.OS === "web" &&
+        ({
+          // @ts-ignore - web-specific CSS property
+          backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f9f8f2 100%)",
+        } as any),
+    ]}
+  >
+    <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.mainContainer, styles.mainContainerMobile]}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            Platform.OS === "web" && { paddingTop: HEADER_OFFSET_MOBILE },
+          ]}
+          style={styles.scrollView}
+        >
+          <View style={styles.contentOuter} collapsable={false}>
+            <View style={[styles.contentWrapper, { paddingHorizontal: 16 }]} collapsable={false}>
+              <View style={[styles.sectionContainer, styles.contentStable]}>
+                <SkeletonLoader width="100%" height={320} borderRadius={16} />
+                <View style={{ marginTop: 14 }}>
+                  <SkeletonLoader width="70%" height={24} borderRadius={8} style={{ marginBottom: 10 }} />
+                  <SkeletonLoader width="90%" height={16} borderRadius={8} style={{ marginBottom: 8 }} />
+                  <SkeletonLoader width="82%" height={16} borderRadius={8} />
+                </View>
+              </View>
+
+              <View style={[styles.sectionContainer, styles.contentStable]}>
+                <Text style={styles.sectionHeaderText}>Описание</Text>
+                <View style={{ marginTop: 12 }}>
+                  <DescriptionSkeleton />
+                </View>
+              </View>
+
+              <View style={[styles.sectionContainer, styles.contentStable]}>
+                <Text style={styles.sectionHeaderText}>Карта маршрута</Text>
+                <View style={{ marginTop: 12 }}>
+                  <MapSkeleton />
+                </View>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   </View>
 );
 
@@ -912,12 +965,7 @@ export default function TravelDetails() {
             additionalTags={<meta name="theme-color" content="#f9f8f2" />}
           />
         )}
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} />
-          <Text style={{ marginTop: DESIGN_TOKENS.spacing.lg, color: "#6b7280", fontSize: DESIGN_TOKENS.typography.sizes.md }}>
-            Загружаем путешествие...
-          </Text>
-        </View>
+        <TravelDetailsLoadingSkeleton />
       </>
     );
   }
@@ -1333,6 +1381,14 @@ const TravelHeroSection: React.FC<{
       <View style={[styles.sectionContainer, styles.contentStable, styles.quickFactsContainer]}>
         <QuickFacts travel={travel} />
       </View>
+
+      <View style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}>
+        <Text style={styles.sectionHeaderText}>Автор</Text>
+        <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
+        <View style={{ marginTop: 12 }}>
+          <AuthorCard travel={travel} />
+        </View>
+      </View>
     </>
   );
 };
@@ -1736,10 +1792,6 @@ const TravelEngagementSection: React.FC<{ travel: Travel }> = ({ travel }) => (
 
     <View style={[styles.sectionContainer, styles.shareButtonsContainer]}>
       <ShareButtons travel={travel} />
-    </View>
-
-    <View style={[styles.sectionContainer, styles.authorCardContainer]}>
-      <AuthorCard travel={travel} />
     </View>
 
     <View style={[styles.sectionContainer, styles.ctaContainer]}>

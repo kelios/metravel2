@@ -1,6 +1,7 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 import { Linking, Platform } from 'react-native'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import AuthorCard from '@/components/travel/AuthorCard'
 
@@ -33,14 +34,26 @@ const baseTravel: any = {
   travel_image_thumb_small_url: null,
 }
 
+const renderWithClient = (ui: React.ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  })
+
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
+}
+
 describe('AuthorCard', () => {
   it('returns null when no author data', () => {
-    const { queryByText } = render(<AuthorCard travel={{} as any} />)
+    const { queryByText } = renderWithClient(<AuthorCard travel={{} as any} />)
     expect(queryByText('Аноним')).toBeNull()
   })
 
   it('renders author info with placeholder avatar when no image', () => {
-    const { getByText, getByLabelText } = render(<AuthorCard travel={baseTravel} />)
+    const { getByText, getByLabelText } = renderWithClient(<AuthorCard travel={baseTravel} />)
 
     expect(getByText('Test User')).toBeTruthy()
     expect(getByText('Беларусь')).toBeTruthy()
@@ -54,7 +67,7 @@ describe('AuthorCard', () => {
   it('calls onViewAuthorTravels when provided instead of navigation', () => {
     const onViewAuthorTravels = jest.fn()
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = renderWithClient(
       <AuthorCard travel={baseTravel} onViewAuthorTravels={onViewAuthorTravels} />,
     )
 
@@ -67,7 +80,7 @@ describe('AuthorCard', () => {
   })
 
   it('navigates with router.push on web when userId exists and no onViewAuthorTravels', () => {
-    const { getByLabelText } = render(<AuthorCard travel={baseTravel} />)
+    const { getByLabelText } = renderWithClient(<AuthorCard travel={baseTravel} />)
 
     const button = getByLabelText('Смотреть все путешествия автора Test User')
     fireEvent.press(button)

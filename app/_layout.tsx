@@ -269,10 +269,12 @@ function RootLayoutNav() {
                             <ConsentBanner />
 
                             {showFooter && (
-                              <Footer
-                                /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
-                                onDockHeight={(h) => setDockHeight(h)}
-                              />
+                              <View style={styles.footerWrapper}>
+                                <Footer
+                                  /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
+                                  onDockHeight={(h) => setDockHeight(h)}
+                                />
+                              </View>
                             )}
                       </View>
                   </FiltersProvider>
@@ -290,8 +292,10 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         position: 'relative',
+        flexDirection: 'column',
         // Белый корневой фон: отключаем просвечивание фоновой карты
         backgroundColor: DESIGN_TOKENS.colors.background,
+        ...(Platform.OS === 'web' ? ({ minHeight: '100vh' } as any) : null),
     },
     backgroundImage: {
         ...StyleSheet.absoluteFillObject,
@@ -300,7 +304,15 @@ const styles = StyleSheet.create({
         // Мягкая текстура: заметна, но не кричащая
         opacity: 0.45,
     },
-    content: { flex: 1 },
+    content: {
+        flex: 1,
+        flexBasis: 0,
+        ...(Platform.OS === 'web' ? ({ flexGrow: 1 } as any) : null),
+    },
+    footerWrapper: {
+        marginTop: 'auto',
+        flexShrink: 0,
+    },
     footerFallback: {
         padding: 12,
         alignItems: "center",

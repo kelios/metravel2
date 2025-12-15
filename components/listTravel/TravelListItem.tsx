@@ -370,6 +370,29 @@ function TravelListItem({
     }, [isSuperuser, currentUserId, travel]);
     const queryClient = useQueryClient();
 
+    const authorUserId = useMemo(() => {
+        const ownerId =
+            (travel as any).userIds ??
+            (travel as any).userId ??
+            (travel as any).user?.id ??
+            null;
+        if (ownerId == null) return null;
+        const v = String(ownerId).trim();
+        return v ? v : null;
+    }, [travel]);
+
+    const handleAuthorPress = useCallback(
+        (e?: any) => {
+            if (!authorUserId) return;
+            if (e) {
+                e.stopPropagation?.();
+                e.preventDefault?.();
+            }
+            router.push(`/user/${authorUserId}` as any);
+        },
+        [authorUserId, router]
+    );
+
     // ✅ ИСПРАВЛЕНИЕ: Предзагрузка данных только при клике (с небольшой задержкой)
     // Не делаем запрос при наведении - это вызывает множественные ненужные запросы
     const travelUrl = `/travels/${slug ?? id}`;
@@ -682,9 +705,23 @@ function TravelListItem({
                   color="#64748b"
                   style={{ marginRight: 4 }}
                 />
-                <Text style={styles.metaTxt}>
-                  {authorName || 'Аноним'}
-                </Text>
+                <Pressable
+                  onPress={handleAuthorPress}
+                  disabled={!authorUserId}
+                  accessibilityRole={authorUserId ? 'button' : undefined}
+                  accessibilityLabel={authorUserId ? `Открыть профиль автора ${authorName || 'Аноним'}` : undefined}
+                  {...(Platform.OS === 'web' && authorUserId
+                    ? {
+                        onClick: (e: any) => handleAuthorPress(e),
+                        onMouseDown: (e: any) => e.stopPropagation?.(),
+                        style: { cursor: 'pointer' } as any,
+                      }
+                    : {})}
+                >
+                  <Text style={styles.metaTxt}>
+                    {authorName || 'Аноним'}
+                  </Text>
+                </Pressable>
               </View>
               {views > 0 && (
                 <View
