@@ -2,77 +2,127 @@
  * Утилиты для оптимизации производительности
  */
 
+const pendingScriptLoads = new Map<string, Promise<void>>()
+const pendingStyleLoads = new Map<string, Promise<void>>()
+
+const getScriptKey = (src: string, id?: string) => id ?? src
+const getStylesheetKey = (href: string, id?: string) => id ?? href
+
 /**
  * Отложенная загрузка скрипта
  */
 export function loadScriptDeferred(src: string, id?: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (typeof document === 'undefined') {
-      resolve()
-      return
-    }
+  if (typeof document === 'undefined') {
+    return Promise.resolve()
+  }
 
-    // Проверяем, не загружен ли уже скрипт
-    if (id && document.getElementById(id)) {
-      resolve()
-      return
-    }
+  const key = getScriptKey(src, id)
+  const existingScript =
+    (id && document.getElementById(id)) ||
+    document.querySelector<HTMLScriptElement>(`script[src="${src}"]`)
 
+  if (existingScript) {
+    return Promise.resolve()
+  }
+
+  const pending = pendingScriptLoads.get(key)
+  if (pending) {
+    return pending
+  }
+
+  const promise = new Promise<void>((resolve, reject) => {
     const script = document.createElement('script')
     script.src = src
     script.async = true
     script.defer = true
     if (id) script.id = id
 
-    script.onload = () => resolve()
-    script.onerror = () => reject(new Error(`Failed to load script: ${src}`))
+    const cleanup = () => {
+      pendingScriptLoads.delete(key)
+    }
 
-    // Загружаем после idle
+    script.onload = () => {
+      cleanup()
+      resolve()
+    }
+    script.onerror = () => {
+      cleanup()
+      script.remove()
+      reject(new Error(`Failed to load script: ${src}`))
+    }
+
+    const append = () => {
+      document.head.appendChild(script)
+    }
+
     if ('requestIdleCallback' in window) {
-      ;(window as any).requestIdleCallback(() => {
-        document.head.appendChild(script)
-      })
+      ;(window as any).requestIdleCallback(append)
     } else {
-      setTimeout(() => {
-        document.head.appendChild(script)
-      }, 2000)
+      setTimeout(append, 2000)
     }
   })
+
+  pendingScriptLoads.set(key, promise)
+
+  return promise
 }
 
 /**
  * Отложенная загрузка стилей
  */
 export function loadStylesheetDeferred(href: string, id?: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (typeof document === 'undefined') {
-      resolve()
-      return
-    }
+  if (typeof document === 'undefined') {
+    return Promise.resolve()
+  }
 
-    if (id && document.getElementById(id)) {
-      resolve()
-      return
-    }
+  const key = getStylesheetKey(href, id)
+  const existingLink =
+    (id && document.getElementById(id)) ||
+    document.querySelector<HTMLLinkElement>(`link[href="${href}"]`)
 
+  if (existingLink) {
+    return Promise.resolve()
+  }
+
+  const pending = pendingStyleLoads.get(key)
+  if (pending) {
+    return pending
+  }
+
+  const promise = new Promise<void>((resolve, reject) => {
     const link = document.createElement('link')
     link.rel = 'stylesheet'
     link.href = href
     if (id) link.id = id
 
-    link.onload = () => resolve()
-    link.onerror = () => reject(new Error(`Failed to load stylesheet: ${href}`))
+    const cleanup = () => {
+      pendingStyleLoads.delete(key)
+    }
+
+    link.onload = () => {
+      cleanup()
+      resolve()
+    }
+    link.onerror = () => {
+      cleanup()
+      link.remove()
+      reject(new Error(`Failed to load stylesheet: ${href}`))
+    }
+
+    const append = () => {
+      document.head.appendChild(link)
+    }
 
     if ('requestIdleCallback' in window) {
-      ;(window as any).requestIdleCallback(() => {
-        document.head.appendChild(link)
-      })
+      ;(window as any).requestIdleCallback(append)
     } else {
-      setTimeout(() => {
-        document.head.appendChild(link)
-      }, 2000)
+      setTimeout(append, 2000)
     }
   })
+
+  pendingStyleLoads.set(key, promise)
+
+  return promise
 }
 
 /**
@@ -156,11 +206,10 @@ export function measurePerformance(name: string, fn: () => void): void {
   const startMark = `${name}-start`
   const endMark = `${name}-end`
 
-  performance.mark(startMark)
-  fn()
-  performance.mark(endMark)
-
   try {
+    performance.mark(startMark)
+    fn()
+    performance.mark(endMark)
     performance.measure(name, startMark, endMark)
     const measure = performance.getEntriesByName(name)[0]
     if (measure && measure.duration > 100) {
@@ -168,9 +217,16 @@ export function measurePerformance(name: string, fn: () => void): void {
     }
   } catch (e) {
     // Ignore
+  } finally {
+    if (performance.clearMarks) {
+      performance.clearMarks(startMark)
+      performance.clearMarks(endMark)
+    }
+    if (performance.clearMeasures) {
+      performance.clearMeasures(name)
+    }
   }
 }
-
 
 
 
