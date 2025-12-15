@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { METRICS } from '@/constants/layout';
 
 interface RouteHintProps {
   onDismiss: () => void;
@@ -9,7 +10,7 @@ interface RouteHintProps {
 
 export default function RouteHint({ onDismiss, routePointsCount }: RouteHintProps) {
   const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const isMobile = width <= METRICS.breakpoints.tablet;
 
   if (routePointsCount >= 2) return null; // Скрываем, если маршрут уже построен
 

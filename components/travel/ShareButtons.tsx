@@ -14,6 +14,7 @@ import { useSingleTravelExport } from '@/components/travel/hooks/useSingleTravel
 import { ExportStage } from '@/src/types/pdf-export';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { METRICS } from '@/constants/layout';
 
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
 
@@ -24,7 +25,7 @@ interface ShareButtonsProps {
 
 export default function ShareButtons({ travel, url }: ShareButtonsProps) {
   const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const isMobile = width <= METRICS.breakpoints.tablet;
 
   const [copied, setCopied] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);

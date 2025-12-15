@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { METRICS } from '@/constants/layout';
 
 interface RouteStatsProps {
   distance: number | null; // в метрах
@@ -10,7 +11,7 @@ interface RouteStatsProps {
 
 export default function RouteStats({ distance, pointsCount, mode }: RouteStatsProps) {
   const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const isMobile = width <= METRICS.breakpoints.tablet;
 
   // Приблизительное время в пути (в часах)
   const estimatedTime = React.useMemo(() => {

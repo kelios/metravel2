@@ -15,9 +15,6 @@ interface TravelWizardFooterProps {
     onLayout?: (event: LayoutChangeEvent) => void;
 }
 
-const windowWidth = Dimensions.get('window').width;
-const isMobileDefault = windowWidth <= 768;
-
 const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
     canGoBack = true,
     onBack,

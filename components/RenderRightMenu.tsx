@@ -14,6 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { router } from 'expo-router';
 import { useUserProfileCached } from '@/src/hooks/useUserProfileCached';
+import { METRICS } from '@/constants/layout';
 
 function RenderRightMenu() {
     const { isAuthenticated, username, logout, userId, profileRefreshToken } = useAuth();
@@ -21,7 +22,7 @@ function RenderRightMenu() {
     const { updateFilters } = useFilters();
     const [visible, setVisible] = useState(false);
     const { width } = useWindowDimensions();
-    const isMobile = width <= 768;
+    const isMobile = width <= METRICS.breakpoints.tablet;
 
     const { profile } = useUserProfileCached(userId, {
         enabled: isAuthenticated && !!userId,

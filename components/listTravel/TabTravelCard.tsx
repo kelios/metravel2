@@ -1,8 +1,11 @@
 import React, { memo, useMemo } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { View, Text, StyleSheet, Pressable, Image, useWindowDimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, useWindowDimensions, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image as ExpoImage } from 'expo-image';
+
+import { METRICS } from '@/constants/layout';
 
 import { TAB_CARD_TEMPLATE, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
 
@@ -30,7 +33,7 @@ type Props = {
 
 function TabTravelCard({ item, onPress, badge, testID, style }: Props) {
   const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const isMobile = width <= METRICS.breakpoints.tablet;
 
   const location = useMemo(() => {
     return [item?.city, item?.country].filter(Boolean).join(', ');
@@ -46,7 +49,13 @@ function TabTravelCard({ item, onPress, badge, testID, style }: Props) {
     >
       <View style={styles.imageContainer}>
         {item?.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.image} resizeMode="cover" />
+          <ExpoImage
+            source={{ uri: item.imageUrl }}
+            style={styles.image}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+          />
         ) : (
           <View style={styles.imagePlaceholder}>
             <MaterialIcons name="route" size={28} color="#9ca3af" />

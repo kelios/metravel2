@@ -12,11 +12,12 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { METRICS } from '@/constants/layout';
 
 export default function AIAssistantButton() {
     const router = useRouter();
     const { width } = useWindowDimensions();
-    const isMobile = width <= 768;
+    const isMobile = width <= METRICS.breakpoints.tablet;
     const [scaleAnim] = useState(new Animated.Value(1));
 
     const handlePress = () => {

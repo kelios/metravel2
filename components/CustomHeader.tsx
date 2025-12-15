@@ -10,6 +10,7 @@ import { useFavorites } from '@/context/FavoritesContext';
 import { useFilters } from '@/providers/FiltersProvider';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 // Навигационные элементы для быстрого доступа
@@ -27,7 +28,7 @@ export default React.memo(function CustomHeader() {
     const pathname = usePathname();
     const router = useRouter();
     const { width } = useWindowDimensions();
-    const isMobile = width <= 768;
+    const isMobile = width <= METRICS.breakpoints.tablet;
     const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
     const { isAuthenticated, username, logout, userId } = useAuth();
     const { favorites } = useFavorites();

@@ -8,6 +8,7 @@ import { View, Text, StyleSheet, useWindowDimensions, Pressable, Platform } from
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import type { Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 
 interface QuickFactsProps {
   travel: Travel;
@@ -16,7 +17,7 @@ interface QuickFactsProps {
 
 export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
   const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const isMobile = width <= METRICS.breakpoints.tablet;
 
   // Извлекаем данные о путешествии
   const monthName = (travel as any).monthName || '';
@@ -67,7 +68,6 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
   return (
     <View 
       style={[styles.container, isMobile && styles.containerMobile]}
-      accessibilityRole="group"
       accessibilityLabel="Ключевая информация о путешествии"
     >
       {/* Дата */}
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
       WebkitBackdropFilter: 'blur(20px)' as any,
     } : {}),
     borderRadius: DESIGN_TOKENS.radii.lg,
-    marginBottom: DESIGN_TOKENS.spacing.xxs4,
+    marginBottom: 4,
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
     shadowColor: '#1f1f1f',
     shadowOffset: { width: 0, height: 2 },
@@ -160,8 +160,8 @@ const styles = StyleSheet.create({
     }),
   },
   containerMobile: {
-    paddingVertical: DESIGN_TOKENS.spacing.xxs0,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
     gap: DESIGN_TOKENS.spacing.lg,
     borderRadius: 16,
   },

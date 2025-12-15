@@ -14,6 +14,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { type UserProfileDto } from '@/src/api/user';
 import { openExternalUrl } from '@/src/utils/externalLinks';
 import { useUserProfileCached } from '@/src/hooks/useUserProfileCached';
+import { METRICS } from '@/constants/layout';
 
 interface AuthorCardProps {
   travel: Travel;
@@ -23,7 +24,7 @@ interface AuthorCardProps {
 export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const isMobile = width <= METRICS.breakpoints.tablet;
 
   // Извлекаем и очищаем данные об авторе
   const userName = useMemo(() => {

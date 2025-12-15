@@ -210,8 +210,7 @@ const variantHoverStyles: Record<ButtonVariant, ViewStyle> = {
       web: {
       },
     }),
-  },
-  danger: {
+  },danger: {
     backgroundColor: palette.dangerDark,
     ...Platform.select({
       web: {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { METRICS } from '@/constants/layout';
 
 interface MapLegendProps {
   showRouteMode?: boolean;
@@ -8,7 +9,7 @@ interface MapLegendProps {
 
 export default function MapLegend({ showRouteMode = false }: MapLegendProps) {
   const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const isMobile = width <= METRICS.breakpoints.tablet;
 
   const legendItems = [
     {

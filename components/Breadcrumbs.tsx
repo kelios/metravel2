@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTravelBySlug, fetchTravel } from '@/src/api/travelsApi';
 import { getQuestById } from '@/components/quests/registry';
+import { METRICS } from '@/constants/layout';
 
 const MAX_BREADCRUMB_LENGTH = 50;
 
@@ -24,7 +25,7 @@ export default function Breadcrumbs({ items, showHome = true, travelName }: Brea
   const pathname = usePathname();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const isMobile = width <= METRICS.breakpoints.tablet;
 
   // ✅ ИСПРАВЛЕНИЕ: Получаем название статьи для страницы путешествия
   const isTravelPage = pathname?.startsWith('/travels/');

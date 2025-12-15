@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AIRY_COLORS } from '@/constants/airyColors'; // ✅ ИСПРАВЛЕНИЕ: Добавлен импорт AIRY_COLORS
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
+import { METRICS } from '@/constants/layout';
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
 
@@ -20,7 +21,7 @@ interface WeeklyHighlightsProps {
 function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true }: WeeklyHighlightsProps) {
     const router = useRouter();
     const { width } = useWindowDimensions();
-    const isMobile = width <= 768;
+    const isMobile = width <= METRICS.breakpoints.tablet;
     const { viewHistory } = useFavorites();
     
     const [isCollapsed, setIsCollapsed] = useState(false);

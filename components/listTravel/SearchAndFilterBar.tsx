@@ -18,6 +18,7 @@ import { DESIGN_TOKENS } from "@/constants/designSystem";
 import SearchAutocomplete from '@/components/SearchAutocomplete';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { METRICS } from '@/constants/layout';
 
 const palette = DESIGN_TOKENS.colors;
 const spacing = DESIGN_TOKENS.spacing;
@@ -51,7 +52,7 @@ function SearchAndFilterBar({
     placeholderOverride,
 }: Props) {
     const { width } = useWindowDimensions();
-    const isMobile = width <= 768;
+    const isMobile = width <= METRICS.breakpoints.tablet;
     
     const hasActiveSearchOrFilters = (search && search.trim().length > 0) || hasFilters;
     const showResultsInfo = resultsCount !== undefined && hasActiveSearchOrFilters;

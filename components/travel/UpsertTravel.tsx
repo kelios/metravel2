@@ -21,6 +21,7 @@ import TravelWizardStepDetails from '@/components/travel/TravelWizardStepDetails
 import TravelWizardStepExtras from '@/components/travel/TravelWizardStepExtras';
 import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 
 type StepMeta = {
     id: number;
@@ -91,7 +92,7 @@ export default function UpsertTravel() {
     
     // Responsive design with memoization
     const windowWidth = useMemo(() => Dimensions.get('window').width, []);
-    const isMobile = useMemo(() => windowWidth <= 768, [windowWidth]);
+    const isMobile = useMemo(() => windowWidth <= METRICS.breakpoints.tablet, [windowWidth]);
 
     const [currentStep, setCurrentStep] = useState(1);
     const totalSteps = 6;

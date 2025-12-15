@@ -13,6 +13,7 @@ import type { Travel } from '@/src/types/types';
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { METRICS } from '@/constants/layout';
 
 interface NavigationArrowsProps {
   currentTravel: Travel;
@@ -27,7 +28,7 @@ export default function NavigationArrows({
 }: NavigationArrowsProps) {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const isMobile = width <= METRICS.breakpoints.tablet;
 
   // Находим текущее путешествие в списке похожих
   const currentIndex = useMemo(() => {
@@ -180,7 +181,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     gap: DESIGN_TOKENS.spacing.lg,
-    marginTop: DESIGN_TOKENS.spacing.xxs4,
+    marginTop: 4,
     marginBottom: DESIGN_TOKENS.spacing.lg,
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
   },

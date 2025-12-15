@@ -8,7 +8,7 @@ import Toast from "react-native-toast-message";
 import { FiltersProvider } from "@/providers/FiltersProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SkipLinks from "@/components/SkipLinks";
 import { NetworkStatus } from "@/components/NetworkStatus";
@@ -16,6 +16,7 @@ import ConsentBanner from "@/components/ConsentBanner";
 import Footer from "@/components/Footer";
 import { useFonts } from "expo-font";
 import { DESIGN_TOKENS } from "@/constants/designSystem"; // ✅ ИСПРАВЛЕНИЕ: Импорт единой палитры
+import { createOptimizedQueryClient } from "@/src/utils/reactQueryConfig";
 
 // ✅ ИСПРАВЛЕНИЕ: Глобальный CSS для web (box-sizing fix)
 if (Platform.OS === 'web') {
@@ -57,28 +58,9 @@ const theme = {
     fonts: { ...DefaultTheme.fonts },
 } as const;
 
-const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            staleTime: 5 * 60 * 1000,
-            refetchOnWindowFocus: false,
-            retry: (failureCount, error: any) => {
-                // ✅ ИСПРАВЛЕНИЕ: Не повторяем запросы при сетевых ошибках или 4xx ошибках
-                if (failureCount >= 2) return false;
-                
-                // Не повторяем при ошибках клиента (4xx)
-                if (error?.status >= 400 && error?.status < 500) {
-                    return false;
-                }
-                
-                // Повторяем только при сетевых ошибках или ошибках сервера
-                return true;
-            },
-            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-        },
-        mutations: {
-            retry: false, // Мутации не повторяем автоматически
-        },
+const queryClient = createOptimizedQueryClient({
+    mutations: {
+        retry: false,
     },
 });
 

@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
+import { METRICS } from '@/constants/layout';
 
 export default React.memo(function Logo() {
     const { width } = useWindowDimensions();
-    const isMobile = width <= 768;
+    const isMobile = width <= METRICS.breakpoints.tablet;
 
     return (
         <TouchableOpacity

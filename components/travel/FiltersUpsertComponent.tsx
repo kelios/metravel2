@@ -18,9 +18,10 @@ import CheckboxComponent from '@/components/CheckboxComponent';
 import ImageUploadComponent from '@/components/imageUpload/ImageUploadComponent';
 import { TravelFormData, TravelFilters, Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 
 const { width } = Dimensions.get('window');
-const isMobile = width <= 768;
+const isMobile = width <= METRICS.breakpoints.tablet;
 const MultiSelectFieldAny: any = MultiSelectField;
 
 interface FiltersComponentProps {

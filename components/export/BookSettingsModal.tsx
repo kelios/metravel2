@@ -8,6 +8,7 @@ import PresetSelector from './PresetSelector';
 import GalleryLayoutSelector from './GalleryLayoutSelector';
 import type { BookPreset } from '@/src/types/pdf-presets';
 import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
+import { METRICS } from '@/constants/layout';
 // ✅ ИСПРАВЛЕНИЕ: Picker не используется в веб-версии модального окна
 // import { Picker } from '@react-native-picker/picker';
 
@@ -220,7 +221,7 @@ export default function BookSettingsModal({
           style={{
             backgroundColor: '#ffffff',
             borderRadius: '20px',
-            padding: window.innerWidth <= 768 ? '20px' : '28px',
+            padding: window.innerWidth <= METRICS.breakpoints.tablet ? '20px' : '28px',
             maxWidth: '800px',
             width: '95%',
             maxHeight: '92vh',
@@ -236,7 +237,7 @@ export default function BookSettingsModal({
           <h2
             id="modal-title"
             style={{
-              fontSize: window.innerWidth <= 768 ? '20px' : '24px',
+              fontSize: window.innerWidth <= METRICS.breakpoints.tablet ? '20px' : '24px',
               fontWeight: 600,
               margin: '0 0 20px 0',
               color: '#1f1f1f',

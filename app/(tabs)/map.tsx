@@ -38,6 +38,7 @@ import InstantSEO from '@/components/seo/InstantSEO';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/src/utils/filterQuery';
 import ErrorDisplay from '@/components/ErrorDisplay';
+import { METRICS } from '@/constants/layout';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
 
 interface Coordinates { latitude: number; longitude: number; }
@@ -61,7 +62,7 @@ export default function MapScreen() {
     const isFocused = useIsFocused();
     const { width } = useWindowDimensions();
     const insets = useSafeAreaInsets();
-    const isMobile = width <= 768;
+    const isMobile = width <= METRICS.breakpoints.tablet;
     const queryClient = useQueryClient();
 
     // State

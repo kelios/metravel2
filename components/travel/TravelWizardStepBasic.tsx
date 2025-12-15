@@ -8,9 +8,10 @@ import { TravelFormData } from '@/src/types/types';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 
 const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
-const isMobileDefault = windowWidth <= 768;
+const isMobileDefault = windowWidth <= METRICS.breakpoints.tablet;
 const FILTERS_SCROLL_MAX_HEIGHT = windowHeight * 0.8;
 
 interface TravelWizardStepBasicProps {

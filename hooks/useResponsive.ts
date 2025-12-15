@@ -1,102 +1,225 @@
-import { useWindowDimensions } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useEffect, useState } from 'react';
+import { Dimensions, ScaledSize } from 'react-native';
+import { METRICS } from '@/constants/layout';
+
+type Breakpoint = keyof typeof METRICS.breakpoints;
+type Orientation = 'portrait' | 'landscape';
+
+interface ResponsiveState {
+  // Screen size flags
+  isSmallPhone: boolean;
+  isPhone: boolean;
+  isLargePhone: boolean;
+  isTablet: boolean;
+  isLargeTablet: boolean;
+  isDesktop: boolean;
+  
+  // Screen dimensions
+  width: number;
+  height: number;
+  
+  // Orientation
+  isPortrait: boolean;
+  isLandscape: boolean;
+  orientation: Orientation;
+  
+  // Breakpoints
+  breakpoints: typeof METRICS.breakpoints;
+  
+  // Screen size helpers
+  isAtLeast: (breakpoint: Breakpoint) => boolean;
+  isAtMost: (breakpoint: Breakpoint) => boolean;
+  isBetween: (min: Breakpoint, max: Breakpoint) => boolean;
+}
 
 /**
- * Хук для работы с responsive breakpoints
- * Использует единую систему breakpoints из DESIGN_TOKENS
+ * Enhanced responsive hook that provides screen size and orientation information
+ * with TypeScript support and performance optimizations
  * 
- * @returns {Object} Объект с флагами для разных размеров экрана
+ * @returns {ResponsiveState} Object containing responsive state and helpers
  * 
  * @example
- * const { isMobile, isTablet, isDesktop, width } = useResponsive();
+ * const {
+ *   isMobile,
+ *   isTablet,
+ *   width,
+ *   isPortrait,
+ *   isAtLeast
+ * } = useResponsive();
  * 
- * if (isMobile) {
- *   return <MobileLayout />;
+ * if (isTablet) {
+ *   return <TabletLayout />;
  * }
  */
-export function useResponsive() {
-  const { width, height } = useWindowDimensions();
+export function useResponsive(): ResponsiveState {
+  const [dimensions, setDimensions] = useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions(window);
+    });
+
+    return () => subscription?.remove();
+  }, []);
+
+  const { width, height } = dimensions;
+  const isPortrait = height > width;
+  const orientation: Orientation = isPortrait ? 'portrait' : 'landscape';
+
+  // Breakpoint checks
+  const isSmallPhone = width < METRICS.breakpoints.phone;
+  const isPhone = width >= METRICS.breakpoints.phone && width < METRICS.breakpoints.largePhone;
+  const isLargePhone = width >= METRICS.breakpoints.largePhone && width < METRICS.breakpoints.tablet;
+  const isTablet = width >= METRICS.breakpoints.tablet && width < METRICS.breakpoints.largeTablet;
+  const isLargeTablet = width >= METRICS.breakpoints.largeTablet && width < METRICS.breakpoints.desktop;
+  const isDesktop = width >= METRICS.breakpoints.desktop;
+
+  // Helper functions
+  const isAtLeast = (breakpoint: Breakpoint): boolean => {
+    return width >= METRICS.breakpoints[breakpoint];
+  };
+
+  const isAtMost = (breakpoint: Breakpoint): boolean => {
+    return width <= METRICS.breakpoints[breakpoint];
+  };
+
+  const isBetween = (min: Breakpoint, max: Breakpoint): boolean => {
+    return width >= METRICS.breakpoints[min] && width <= METRICS.breakpoints[max];
+  };
 
   return {
-    // Флаги размеров экрана
-    isMobile: width < DESIGN_TOKENS.breakpoints.mobile, // < 768px
-    isTablet: width >= DESIGN_TOKENS.breakpoints.mobile && width < DESIGN_TOKENS.breakpoints.tablet, // 768-1024px
-    isDesktop: width >= DESIGN_TOKENS.breakpoints.desktop, // >= 1280px
-    isLargeDesktop: width >= 1920,
+    // Screen size flags
+    isSmallPhone,
+    isPhone,
+    isLargePhone,
+    isTablet,
+    isLargeTablet,
+    isDesktop,
     
-    // Размеры экрана
+    // Screen dimensions
     width,
     height,
     
-    // Ориентация
-    isPortrait: height > width,
-    isLandscape: width > height,
+    // Orientation
+    isPortrait,
+    isLandscape: !isPortrait,
+    orientation,
     
-    // Breakpoints для удобства
-    breakpoints: DESIGN_TOKENS.breakpoints,
+    // Breakpoints
+    breakpoints: METRICS.breakpoints,
+    
+    // Helper methods
+    isAtLeast,
+    isAtMost,
+    isBetween,
   };
 }
 
 /**
- * Хук для получения количества колонок в зависимости от ширины экрана
+ * Hook to get responsive column count based on screen width
  * 
- * @param {Object} config - Конфигурация колонок для разных размеров
- * @returns {number} Количество колонок
+ * @param {Object} config - Column configuration for different breakpoints
+ * @returns {number} Number of columns for the current screen size
  * 
  * @example
  * const columns = useResponsiveColumns({
- *   mobile: 1,
- *   tablet: 2,
- *   desktop: 3,
- *   largeDesktop: 4,
+ *   smallPhone: 1,   // 0-359px
+ *   phone: 1,        // 360-413px
+ *   largePhone: 1,   // 414-767px
+ *   tablet: 2,       // 768-1023px
+ *   largeTablet: 3,  // 1024-1279px
+ *   desktop: 4,      // 1280px+
+ *   default: 1,      // Fallback value
  * });
  */
 export function useResponsiveColumns(config: {
-  mobile?: number;
+  smallPhone?: number;
+  phone?: number;
+  largePhone?: number;
   tablet?: number;
+  largeTablet?: number;
   desktop?: number;
-  largeDesktop?: number;
-} = {}) {
-  const { isMobile, isTablet, isDesktop, isLargeDesktop } = useResponsive();
+  default: number; // Make default required
+}): number {
+  const { isSmallPhone, isPhone, isLargePhone, isTablet, isLargeTablet, isDesktop } = useResponsive();
 
   const defaults = {
-    mobile: 1,
+    smallPhone: 1,
+    phone: 1,
+    largePhone: 1,
     tablet: 2,
-    desktop: 3,
-    largeDesktop: 4,
+    largeTablet: 3,
+    desktop: 4,
   };
 
   const columns = { ...defaults, ...config };
 
-  if (isLargeDesktop) return columns.largeDesktop;
-  if (isDesktop) return columns.desktop;
-  if (isTablet) return columns.tablet;
-  return columns.mobile;
+  if (isDesktop) return columns.desktop ?? columns.default;
+  if (isLargeTablet) return columns.largeTablet ?? columns.default;
+  if (isTablet) return columns.tablet ?? columns.default;
+  if (isLargePhone) return columns.largePhone ?? columns.default;
+  if (isPhone) return columns.phone ?? columns.default;
+  if (isSmallPhone) return columns.smallPhone ?? columns.default;
+  return columns.default;
 }
 
 /**
- * Хук для получения значения в зависимости от размера экрана
+ * Hook to get responsive values based on screen size
  * 
- * @param {Object} values - Значения для разных размеров экрана
- * @returns {T} Значение для текущего размера экрана
+ * @template T - Type of the value to return
+ * @param {Object} values - Values for different breakpoints
+ * @param {T} [values.smallPhone] - Value for small phones (0-359px)
+ * @param {T} [values.phone] - Value for phones (360-413px)
+ * @param {T} [values.largePhone] - Value for large phones (414-767px)
+ * @param {T} [values.tablet] - Value for tablets (768-1023px)
+ * @param {T} [values.largeTablet] - Value for large tablets (1024-1279px)
+ * @param {T} [values.desktop] - Value for desktops (1280px+)
+ * @param {T} [values.default] - Default/fallback value
+ * @returns {T | undefined} Value for the current screen size
  * 
  * @example
  * const fontSize = useResponsiveValue({
- *   mobile: 14,
+ *   smallPhone: 12,
+ *   phone: 14,
+ *   largePhone: 14,
  *   tablet: 16,
- *   desktop: 18,
+ *   largeTablet: 18,
+ *   desktop: 20,
+ *   default: 14,
+ * });
+ * 
+ * const padding = useResponsiveValue({
+ *   phone: 16,
+ *   tablet: 24,
+ *   default: 16,
  * });
  */
 export function useResponsiveValue<T>(values: {
-  mobile?: T;
+  smallPhone?: T;
+  phone?: T;
+  largePhone?: T;
   tablet?: T;
+  largeTablet?: T;
   desktop?: T;
-  default?: T;
-}): T | undefined {
-  const { isMobile, isTablet, isDesktop } = useResponsive();
+  default: T; // Make default required
+}): T {
+  const { 
+    isSmallPhone, 
+    isPhone, 
+    isLargePhone, 
+    isTablet, 
+    isLargeTablet, 
+    isDesktop 
+  } = useResponsive();
 
   if (isDesktop && values.desktop !== undefined) return values.desktop;
+  if (isLargeTablet && values.largeTablet !== undefined) return values.largeTablet;
   if (isTablet && values.tablet !== undefined) return values.tablet;
-  if (isMobile && values.mobile !== undefined) return values.mobile;
+  if (isLargePhone && values.largePhone !== undefined) return values.largePhone;
+  if (isPhone && values.phone !== undefined) return values.phone;
+  if (isSmallPhone && values.smallPhone !== undefined) return values.smallPhone;
   return values.default;
 }

@@ -14,6 +14,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { MODERN_DESIGN_TOKENS } from '@/styles/modernRedesign';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 import { designTokens } from '@/constants/designTokens';
 
 const { colors, spacing, radii, typography, shadows, animations } = MODERN_DESIGN_TOKENS;
@@ -74,7 +75,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   onApply,
   onClose,
 }) => {
-  const isNarrowWeb = Platform.OS === 'web' && Dimensions.get('window').width <= 768;
+  const isNarrowWeb = Platform.OS === 'web' && Dimensions.get('window').width <= METRICS.breakpoints.tablet;
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set()
   );

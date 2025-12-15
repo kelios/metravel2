@@ -5,6 +5,7 @@ import TextInputComponent from '@/components/TextInputComponent';
 import ArticleEditor from '@/components/ArticleEditor';
 import { validateTravelForm, getFieldError, type ValidationError } from '@/utils/formValidation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 
 interface ContentUpsertSectionProps {
     formData: TravelFormData;
@@ -37,7 +38,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     const isMobile = useMemo(() => {
         if (Platform.OS === 'web') return false;
         const { width } = Dimensions.get('window');
-        return width <= 768;
+        return width <= METRICS.breakpoints.tablet;
     }, []);
 
     useEffect(() => {

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 
 export type SortOption = 'date' | 'popularity' | 'distance' | 'name';
 
@@ -19,7 +20,7 @@ const SORT_OPTIONS: { value: SortOption; label: string; icon: string }[] = [
 
 export default function SortSelector({ value, onChange, showDistance = false }: SortSelectorProps) {
   const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const isMobile = width <= METRICS.breakpoints.tablet;
 
   const options = showDistance
     ? [...SORT_OPTIONS, { value: 'distance' as SortOption, label: 'По расстоянию', icon: 'map-pin' }]

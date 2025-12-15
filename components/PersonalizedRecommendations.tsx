@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AIRY_COLORS } from '@/constants/airyColors';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
+import { METRICS } from '@/constants/layout';
 
 const COLLAPSED_KEY = 'personalization_collapsed';
 
@@ -24,7 +25,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
     const { isAuthenticated } = useAuth();
     const router = useRouter();
     const { width } = useWindowDimensions();
-    const isMobile = width <= 768;
+    const isMobile = width <= METRICS.breakpoints.tablet;
     
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);

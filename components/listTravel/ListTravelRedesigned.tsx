@@ -12,6 +12,7 @@ import FiltersPanelCollapsible from '@/components/FiltersPanelCollapsible';
 import SearchAndFilterBar from './SearchAndFilterBar';
 import { useBlockVisibility } from '@/hooks/useBlockVisibility';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 
 // Это пример интеграции - полная версия будет в основном файле
 // Показываю структуру новой страницы
@@ -20,12 +21,10 @@ interface ListTravelRedesignedProps {
   // Все пропсы из оригинального ListTravel
 }
 
-const palette = DESIGN_TOKENS.colors;
-
 export default function ListTravelRedesigned({}: ListTravelRedesignedProps) {
   const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
-  const [mode, setMode] = useState<'compact' | 'expanded' | 'smart'>('smart');
+  const isMobile = width <= METRICS.breakpoints.tablet;
+  const [mode] = useState<'compact' | 'expanded' | 'smart'>('smart');
   
   const {
     getBlockState,
@@ -39,7 +38,7 @@ export default function ListTravelRedesigned({}: ListTravelRedesignedProps) {
   }
 
   return (
-    <MainHubLayout mode={mode} onModeChange={setMode}>
+    <MainHubLayout>
       {/* Блок приветствия */}
       <CollapsibleBlock
         id="welcomeBanner"

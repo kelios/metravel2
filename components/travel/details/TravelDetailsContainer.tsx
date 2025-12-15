@@ -35,6 +35,7 @@ import { Image as ExpoImage } from "expo-image";
 import { useIsFocused } from "@react-navigation/native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from '@/context/AuthContext';
+import { METRICS } from '@/constants/layout';
 
 
 /* ✅ УЛУЧШЕНИЕ: Импорт компонентов навигации и поделиться */
@@ -364,7 +365,7 @@ const rIC = (cb: () => void, timeout = 900) => {
 /* -------------------- hooks -------------------- */
 const useResponsive = () => {
   const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const isMobile = width <= METRICS.breakpoints.tablet;
   return {
     isMobile,
     headerOffset: isMobile ? HEADER_OFFSET_MOBILE : HEADER_OFFSET_DESKTOP,

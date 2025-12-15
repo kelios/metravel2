@@ -12,6 +12,7 @@ import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { METRICS } from '@/constants/layout';
 
 interface CTASectionProps {
   travel: Travel;
@@ -21,7 +22,7 @@ interface CTASectionProps {
 export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const isMobile = width <= METRICS.breakpoints.tablet;
   const { isAuthenticated } = useAuth();
   const { favorites, addFavorite, removeFavorite, isFavorite: checkIsFavorite } = useFavorites();
 

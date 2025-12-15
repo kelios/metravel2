@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { METRICS } from '@/constants/layout';
 
 interface RoutePointControlsProps {
   routePoints: [number, number][];
@@ -14,7 +15,7 @@ export default function RoutePointControls({
   onClearRoute 
 }: RoutePointControlsProps) {
   const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const isMobile = width <= METRICS.breakpoints.tablet;
 
   if (routePoints.length === 0) return null;
 

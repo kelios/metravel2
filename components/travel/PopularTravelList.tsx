@@ -92,6 +92,16 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
       return list.slice(0, Platform.OS === 'web' ? 8 : list.length);
     }, [travelsPopular]);
 
+    const popularRows = useMemo(() => {
+      if (Platform.OS !== 'web') return [];
+
+      const rows: any[][] = [];
+      for (let i = 0; i < popularList.length; i += numColumns) {
+        rows.push(popularList.slice(i, i + numColumns));
+      }
+      return rows;
+    }, [popularList, numColumns]);
+
     // Оптимизированный рендер элемента с предотвращением лишних ререндеров
     const renderItem = useCallback(
       ({ item }: { item: any; index: number }) => (
@@ -103,6 +113,28 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
     );
 
     const keyExtractor = useCallback((item: any) => `${item.id}-${item.updated_at || ''}`, []);
+
+    const renderWebRow = useCallback(
+      ({ item: rowItems, index: rowIndex }: { item: any[]; index: number }) => {
+        return (
+          <View style={styles.webRow}>
+            {rowItems.map((item, itemIndex) => (
+              <View key={keyExtractor(item)} style={styles.webItemContainer}>
+                <TravelTmlRound travel={item as any} />
+              </View>
+            ))}
+
+            {rowItems.length < numColumns &&
+              Array(numColumns - rowItems.length)
+                .fill(null)
+                .map((_, i) => (
+                  <View key={`spacer-${rowIndex}-${i}`} style={styles.webItemContainer} />
+                ))}
+          </View>
+        );
+      },
+      [keyExtractor, numColumns]
+    );
 
     const handleContentChange = useCallback(() => {
       scrollToAnchor?.();
@@ -141,7 +173,7 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
           ? {
             justifyContent: "flex-start",
             alignItems: "stretch",
-            gap: DESIGN_TOKENS.spacing.xxs0,
+            gap: DESIGN_TOKENS.spacing.xxs,
             ...Platform.select({
               web: {
                 display: 'flex' as any,
@@ -186,26 +218,46 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
         )}
 
         <Animated.View style={{ opacity: fadeAnim }}>
-          <Animated.FlatList
-            key={`cols-${numColumns}`}
-            data={popularList as any[]}
-            renderItem={renderItem}
-            keyExtractor={keyExtractor}
-            numColumns={numColumns}
-            contentContainerStyle={styles.flatListContent}
-            columnWrapperStyle={numColumns > 1 ? columnWrapperStyle : undefined}
-            ItemSeparatorComponent={ItemSeparatorComponent}
-            showsVerticalScrollIndicator={false}
-            initialNumToRender={INITIAL_NUM_TO_RENDER}
-            maxToRenderPerBatch={4} // Уменьшено для производительности
-            windowSize={Platform.OS === "web" ? WEB_LIST_WINDOW_SIZE : 5}
-            removeClippedSubviews={Platform.OS !== "web"}
-            getItemLayout={getItemLayout}
-            onContentSizeChange={handleContentChange}
-            updateCellsBatchingPeriod={50} // Батчинг обновлений
-            disableVirtualization={false} // Всегда использовать виртуализацию
-            accessibilityRole="list"
-          />
+          {Platform.OS === 'web' ? (
+            <Animated.FlatList
+              key={`rows-${numColumns}`}
+              data={popularRows}
+              renderItem={renderWebRow}
+              keyExtractor={(_, index) => `row-${index}`}
+              contentContainerStyle={styles.flatListContent}
+              ItemSeparatorComponent={ItemSeparatorComponent}
+              showsVerticalScrollIndicator={false}
+              initialNumToRender={Math.min(INITIAL_NUM_TO_RENDER, popularRows.length)}
+              maxToRenderPerBatch={4}
+              windowSize={WEB_LIST_WINDOW_SIZE}
+              removeClippedSubviews={false}
+              onContentSizeChange={handleContentChange}
+              updateCellsBatchingPeriod={50}
+              disableVirtualization={false}
+              accessibilityRole="list"
+            />
+          ) : (
+            <Animated.FlatList
+              key={`cols-${numColumns}`}
+              data={popularList as any[]}
+              renderItem={renderItem}
+              keyExtractor={keyExtractor}
+              numColumns={numColumns}
+              contentContainerStyle={styles.flatListContent}
+              columnWrapperStyle={numColumns > 1 ? columnWrapperStyle : undefined}
+              ItemSeparatorComponent={ItemSeparatorComponent}
+              showsVerticalScrollIndicator={false}
+              initialNumToRender={INITIAL_NUM_TO_RENDER}
+              maxToRenderPerBatch={4} // Уменьшено для производительности
+              windowSize={5}
+              removeClippedSubviews={true}
+              getItemLayout={getItemLayout}
+              onContentSizeChange={handleContentChange}
+              updateCellsBatchingPeriod={50} // Батчинг обновлений
+              disableVirtualization={false} // Всегда использовать виртуализацию
+              accessibilityRole="list"
+            />
+          )}
         </Animated.View>
       </View>
     );
@@ -250,7 +302,7 @@ const styles = StyleSheet.create({
   loadingContainer: {
     justifyContent: "center",
     alignItems: "center",
-    padding: DESIGN_TOKENS.spacing.xs0,
+    padding: DESIGN_TOKENS.spacing.xs,
     minHeight: 300,
   },
   loadingText: {
@@ -275,7 +327,7 @@ const styles = StyleSheet.create({
     }),
     fontWeight: "800",
     color: "#1f2937",
-    marginBottom: DESIGN_TOKENS.spacing.xxs4,
+    marginBottom: DESIGN_TOKENS.spacing.xxs,
     textAlign: "center",
     letterSpacing: -0.5,
     ...Platform.select({
@@ -285,12 +337,22 @@ const styles = StyleSheet.create({
     }),
   },
   flatListContent: {
-    paddingBottom: DESIGN_TOKENS.spacing.xxs4,
+    paddingBottom: DESIGN_TOKENS.spacing.xxs,
     ...Platform.select({
       web: {
         paddingHorizontal: 0,
       },
+      default: {},
     }),
+  },
+  webRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: DESIGN_TOKENS.spacing.xxs,
+  },
+  webItemContainer: {
+    flex: 1,
+    minWidth: 0,
   },
   separator: {
     height: SEPARATOR_HEIGHT,

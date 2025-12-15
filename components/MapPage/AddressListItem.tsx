@@ -14,6 +14,8 @@ import { Text, IconButton } from 'react-native-paper';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 import { TravelCoords } from '@/src/types/types';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 import PopupContentComponent from './PopupContentComponent';
 
 type Props = {
@@ -65,16 +67,15 @@ const AddressListItem: React.FC<Props> = ({
         travelImageThumbUrl,
         articleUrl,
         urlTravel,
-        updated_at,
     } = travel;
 
     const [imgLoaded, setImgLoaded] = useState(false);
     const [hovered, setHovered] = useState(false);
 
     const { width } = useWindowDimensions();
-    const isMobile = isMobileProp ?? width <= 768;
+    const isMobile = isMobileProp ?? width <= METRICS.breakpoints.tablet;
     const isSmallScreen = width <= 480;
-    const isTablet = width > 480 && width <= 1024;
+    const isTablet = width > 480 && width <= METRICS.breakpoints.largeTablet;
 
     // показываем оверлеи всегда на мобиле и только при hover на web
     const showOverlays = isMobile || hovered;
@@ -158,8 +159,8 @@ const AddressListItem: React.FC<Props> = ({
     // Адаптивная высота в зависимости от размера экрана
     const getCardHeight = () => {
         if (width <= 480) return 240;      // Малые мобильные
-        if (width <= 768) return 280;      // Планшеты
-        if (width <= 1024) return 320;     // Небольшие десктопы
+        if (width <= METRICS.breakpoints.tablet) return 280;      // Планшеты
+        if (width <= METRICS.breakpoints.largeTablet) return 320;     // Небольшие десктопы
         return 360;                         // Большие экраны
     };
     const height = getCardHeight();
@@ -168,8 +169,8 @@ const AddressListItem: React.FC<Props> = ({
         return (
           <div style={{ padding: 8 }}>
             <PopupContentComponent travel={{
-              address,
-              coord,
+              address: address ?? '',
+              coord: coord ?? '',
               travelImageThumbUrl,
               categoryName,
               description: undefined,
@@ -181,15 +182,15 @@ const AddressListItem: React.FC<Props> = ({
     }
 
     return (
-      <View
+      <Pressable
         style={[styles.card, { height }]}
-        onMouseEnter={() => !isMobile && setHovered(true)}
-        onMouseLeave={() => !isMobile && setHovered(false)}
+        onHoverIn={() => !isMobile && setHovered(true)}
+        onHoverOut={() => !isMobile && setHovered(false)}
       >
               <ImageBackground
             source={
                 travelImageThumbUrl
-                  ? { uri: addVersion(travelImageThumbUrl, updated_at) }
+                  ? { uri: addVersion(travelImageThumbUrl, (travel as any).updated_at) }
                   : require('@/assets/no-data.webp')
             }
             style={styles.image}
@@ -280,21 +281,16 @@ const AddressListItem: React.FC<Props> = ({
                                 <Text style={styles.catText}>{cat}</Text>
                             </View>
                           ))}
-                          {categories.length > 3 && (
-                            <View style={styles.catChip}>
-                                <Text style={styles.catText}>+{categories.length - 3}</Text>
-                            </View>
-                          )}
                       </View>
                     )}
                 </View>
               )}
           </ImageBackground>
-      </View>
+      </Pressable>
     );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<Record<string, any>>({
     card: {
         marginVertical: 12,
         marginHorizontal: 8,
