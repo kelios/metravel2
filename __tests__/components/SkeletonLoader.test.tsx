@@ -1,12 +1,27 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { SkeletonLoader, TravelCardSkeleton, TravelListSkeleton } from '@/components/SkeletonLoader';
+import { StyleSheet } from 'react-native';
+import { TRAVEL_CARD_IMAGE_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
 
 describe('SkeletonLoader', () => {
   it('should render with default props', () => {
     const { toJSON } = render(<SkeletonLoader />);
     const tree = toJSON();
     expect(tree).toBeTruthy();
+  });
+
+  it('should apply width/height/borderRadius and expose testID', () => {
+    const { getByTestId } = render(
+      <SkeletonLoader testID="skeleton" width={123} height={45} borderRadius={7} />
+    );
+
+    const node = getByTestId('skeleton');
+    const flattened = StyleSheet.flatten(node.props.style);
+
+    expect(flattened.width).toBe(123);
+    expect(flattened.height).toBe(45);
+    expect(flattened.borderRadius).toBe(7);
   });
 
   it('should render with custom width', () => {
@@ -61,35 +76,33 @@ describe('TravelCardSkeleton', () => {
     expect(tree).toBeTruthy();
   });
 
-  it('should render multiple skeleton elements', () => {
-    const { toJSON } = render(<TravelCardSkeleton />);
-    const tree = toJSON();
-    const treeStr = JSON.stringify(tree);
-    
-    // Должно быть несколько элементов (изображение и текст)
-    expect(tree).toBeTruthy();
+  it('should render key elements with stable testIDs', () => {
+    const { getByTestId } = render(<TravelCardSkeleton />);
+    expect(getByTestId('travel-card-skeleton')).toBeTruthy();
+    expect(getByTestId('travel-card-skeleton-image')).toBeTruthy();
   });
 
   // ✅ NEW: Проверка соответствия размеров skeleton и реальных карточек
   it('should match real card image height on mobile', () => {
     const { getByTestId } = render(<TravelCardSkeleton />);
-    // На мобильных высота изображения должна быть 200px
-    // Это соответствует enhancedTravelCardStyles.imageContainer
-    expect(true).toBe(true); // Placeholder - реальная проверка требует testID
+    const image = getByTestId('travel-card-skeleton-image');
+    const flattened = StyleSheet.flatten(image.props.style);
+    expect(flattened.height).toBe(TRAVEL_CARD_IMAGE_HEIGHT);
   });
 
   it('should have correct card width', () => {
-    const { toJSON } = render(<TravelCardSkeleton />);
-    const tree = toJSON();
-    // Карточка должна занимать 100% ширины
-    expect(tree).toBeTruthy();
+    const { getByTestId } = render(<TravelCardSkeleton />);
+    const card = getByTestId('travel-card-skeleton');
+    const flattened = StyleSheet.flatten(card.props.style);
+    expect(flattened.width).toBe('100%');
   });
 
-  it('should have matching border radius with real cards', () => {
-    const { toJSON } = render(<TravelCardSkeleton />);
-    const tree = toJSON();
-    // Border radius должен быть 20px на mobile, 24px на web
-    expect(tree).toBeTruthy();
+  it('should have matching border radius with design tokens', () => {
+    const { getByTestId } = render(<TravelCardSkeleton />);
+    const card = getByTestId('travel-card-skeleton');
+    const flattened = StyleSheet.flatten(card.props.style);
+    expect(typeof flattened.borderRadius).toBe('number');
+    expect(flattened.borderRadius).toBeGreaterThan(0);
   });
 });
 
@@ -101,15 +114,13 @@ describe('TravelListSkeleton', () => {
   });
 
   it('should render specified count of skeletons', () => {
-    const { toJSON } = render(<TravelListSkeleton count={3} />);
-    const tree = toJSON();
-    expect(tree).toBeTruthy();
+    const { getAllByTestId } = render(<TravelListSkeleton count={3} />);
+    expect(getAllByTestId('travel-card-skeleton')).toHaveLength(3);
   });
 
   it('should render multiple card skeletons', () => {
-    const { toJSON } = render(<TravelListSkeleton count={5} />);
-    const tree = toJSON();
-    expect(tree).toBeTruthy();
+    const { getAllByTestId } = render(<TravelListSkeleton count={5} />);
+    expect(getAllByTestId('travel-card-skeleton')).toHaveLength(5);
   });
 
   it('should handle zero count', () => {

@@ -54,6 +54,7 @@ interface RightColumnProps {
   setSearch: (value: string) => void
   onClearAll?: () => void
   availableWidth?: number
+  topContent?: React.ReactNode
   isRecommendationsVisible: boolean
   handleRecommendationsVisibilityChange: (visible: boolean) => void
   activeFiltersCount: number
@@ -86,6 +87,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
      setSearch,
      onClearAll,
      availableWidth,
+     topContent,
      isRecommendationsVisible,
      handleRecommendationsVisibilityChange,
      activeFiltersCount,
@@ -165,18 +167,28 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     }, [cardsContainerStyle])
 
     const rows = useMemo(() => {
-      const cols = Math.max(1, gridColumns || 1)
+      const cols = Math.max(1, (isMobile ? 1 : gridColumns) || 1)
       const result: Travel[][] = []
       for (let i = 0; i < travels.length; i += cols) {
         result.push(travels.slice(i, i + cols))
       }
       return result
-    }, [travels, gridColumns])
+    }, [travels, gridColumns, isMobile])
+
+    const topContentNodes = useMemo(() => {
+      if (!topContent) return null
+      const nodes = React.Children.toArray(topContent).filter((child) => {
+        return !(typeof child === 'string' && child.trim().length === 0)
+      })
+      return nodes.length ? nodes : null
+    }, [topContent])
 
     const renderRow = useCallback((item: { item: Travel[]; index: number }) => { // Destructure properly for FlatList compatibility
         const { item: rowItems, index: rowIndex } = item;
+        const cols = Math.max(1, (isMobile ? 1 : gridColumns) || 1);
         return (
           <View
+            testID={`travel-row-${rowIndex}`}
             style={[
               cardsGridStyle,
               ({ flexWrap: 'nowrap' } as any),
@@ -185,21 +197,29 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             {rowItems.map((travel, itemIndex) => (
               <View
                 key={String(travel.id)}
+                testID={`travel-row-${rowIndex}-item-${itemIndex}`}
                 style={[
-                  Platform.select({
-                    web: {
-                      flexGrow: 1,
-                      flexShrink: 1,
-                      flexBasis: 320,
-                      minWidth: 320,
-                      maxWidth: 360,
-                    },
-                    default: {
-                      flex: 1,
-                      width: '100%',
-                      maxWidth: '100%',
-                    },
-                  }) as ViewStyle,
+                  (Platform.OS === 'web'
+                    ? (isMobile
+                        ? ({
+                            flex: 1,
+                            width: '100%',
+                            maxWidth: '100%',
+                            minWidth: 0,
+                            flexBasis: '100%',
+                          } as any)
+                        : ({
+                            flexGrow: 1,
+                            flexShrink: 1,
+                            flexBasis: 320,
+                            minWidth: 320,
+                            maxWidth: 360,
+                          } as any))
+                    : ({
+                        flex: 1,
+                        width: '100%',
+                        maxWidth: '100%',
+                      } as any)) as ViewStyle,
                   Platform.OS === 'web'
                     ? {
                         paddingBottom: cardSpacing,
@@ -212,7 +232,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                       },
                 ]}
               >
-                {renderItem(travel, rowIndex * Math.max(1, gridColumns || 1) + itemIndex)}
+                {renderItem(travel, rowIndex * cols + itemIndex)}
               </View>
             ))}
 
@@ -229,6 +249,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
         cardSpacing,
         renderItem,
         gridColumns,
+        isMobile,
         showNextPageLoading,
         rows.length,
         footerLoaderStyle,
@@ -286,8 +307,12 @@ const RightColumn: React.FC<RightColumnProps> = memo(
           />
         </View>
 
+        {topContentNodes ? (
+          <View style={{ paddingHorizontal: contentPadding }}>{topContentNodes}</View>
+        ) : null}
+
         {/* Cards + Recommendations */}
-        <View style={cardsWrapperStyle}>
+        <View testID="cards-scroll-container" style={cardsWrapperStyle}>
           {/* Initial Loading - Only show skeleton when actually loading initial data */}
           {showInitialLoading && travels.length === 0 && (
             <View
@@ -338,7 +363,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
               data={rows}
               renderItem={renderRow as any}
               extraData={gridColumns}
-              keyExtractor={(_, index) => `row-${gridColumns || 1}-${index}`}
+              keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
               ListHeaderComponent={ListHeader}
               onEndReached={onEndReached}
               onEndReachedThreshold={onEndReachedThreshold}

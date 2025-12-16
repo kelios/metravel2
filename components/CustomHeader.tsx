@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { View, StyleSheet, Platform, StatusBar, useWindowDimensions, Pressable, Text, Modal, ScrollView, LayoutChangeEvent } from 'react-native';
+import { View, StyleSheet, Platform, StatusBar, useWindowDimensions, Pressable, Text, Modal, ScrollView, LayoutChangeEvent, Image } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import RenderRightMenu from './RenderRightMenu';
@@ -12,6 +12,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { useUserProfileCached } from '@/src/hooks/useUserProfileCached';
 
 // Навигационные элементы для быстрого доступа
 const NAV_ITEMS = [
@@ -30,9 +31,34 @@ export default React.memo(function CustomHeader() {
     const { width } = useWindowDimensions();
     const isMobile = width <= METRICS.breakpoints.tablet;
     const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
-    const { isAuthenticated, username, logout, userId } = useAuth();
+    const { isAuthenticated, username, logout, userId, profileRefreshToken } = useAuth();
     const { favorites } = useFavorites();
     const { updateFilters } = useFilters();
+    const [avatarLoadError, setAvatarLoadError] = useState(false);
+
+    const { profile } = useUserProfileCached(userId, {
+        enabled: isAuthenticated && !!userId,
+        cacheKeySuffix: profileRefreshToken,
+    });
+
+    const avatarUri = useMemo(() => {
+        if (avatarLoadError) return null;
+        const raw = String(profile?.avatar ?? '').trim();
+        if (!raw) return null;
+        const lower = raw.toLowerCase();
+        if (lower === 'null' || lower === 'undefined') return null;
+
+        let normalized = raw;
+        if (raw.startsWith('/')) {
+            const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/?api\/?$/, '');
+            if (base) {
+                normalized = `${base}${raw}`;
+            }
+        }
+
+        const separator = normalized.includes('?') ? '&' : '?';
+        return `${normalized}${separator}v=${profileRefreshToken}`;
+    }, [avatarLoadError, profile?.avatar, profileRefreshToken]);
 
     const numericUserId = useMemo(() => {
         if (userId == null) return undefined;
@@ -110,11 +136,13 @@ export default React.memo(function CustomHeader() {
                                       accessibilityLabel={item.label}
                                       accessibilityState={{ selected: isActive }}
                                   >
-                                      <Feather 
-                                          name={item.icon as any} 
-                                          size={18} 
-                                          color={isActive ? palette.primary : palette.textMuted} 
-                                      />
+                                      <View style={styles.iconSlot18}>
+                                          <Feather
+                                              name={item.icon as any}
+                                              size={18}
+                                              color={isActive ? palette.primary : palette.textMuted}
+                                          />
+                                      </View>
                                       <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
                                           {item.label}
                                       </Text>
@@ -128,17 +156,43 @@ export default React.memo(function CustomHeader() {
                   <View style={styles.rightSection}>
                       {/* Мобильное меню - кнопка (только на мобильных) */}
                       {isMobile ? (
-                          <Pressable
-                              onPress={() => setMobileMenuVisible(true)}
-                              style={[
-                                  styles.mobileMenuButton,
-                                  globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                              ]}
-                              accessibilityRole="button"
-                              accessibilityLabel="Открыть меню"
-                          >
-                              <Feather name="menu" size={24} color="#1b1f23" />
-                          </Pressable>
+                          <>
+                              {isAuthenticated && username ? (
+                                  <Pressable
+                                      onPress={() => handleUserAction('/profile')}
+                                      style={[styles.mobileUserPill, globalFocusStyles.focusable]}
+                                      accessibilityRole="button"
+                                      accessibilityLabel={`Открыть профиль ${username}`}
+                                  >
+                                      {avatarUri ? (
+                                          <Image
+                                              source={{ uri: avatarUri }}
+                                              style={styles.mobileUserAvatar}
+                                              onError={() => setAvatarLoadError(true)}
+                                          />
+                                      ) : (
+                                          <Icon name="account-circle" size={24} color="#333" />
+                                      )}
+                                      <Text style={styles.mobileUserName} numberOfLines={1}>
+                                          {username}
+                                      </Text>
+                                  </Pressable>
+                              ) : null}
+
+                              <Pressable
+                                  onPress={() => setMobileMenuVisible(true)}
+                                  style={[
+                                      styles.mobileMenuButton,
+                                      globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                                  ]}
+                                  accessibilityRole="button"
+                                  accessibilityLabel="Открыть меню"
+                              >
+                                  <View style={styles.iconSlot24}>
+                                      <Feather name="menu" size={24} color="#1b1f23" />
+                                  </View>
+                              </Pressable>
+                          </>
                       ) : (
                           <RenderRightMenu />
                       )}
@@ -175,7 +229,9 @@ export default React.memo(function CustomHeader() {
                                   accessibilityRole="button"
                                   accessibilityLabel="Закрыть меню"
                               >
-                                  <Feather name="x" size={24} color="#1b1f23" />
+                                  <View style={styles.iconSlot24}>
+                                      <Feather name="x" size={24} color="#1b1f23" />
+                                  </View>
                               </Pressable>
                           </View>
                           
@@ -196,16 +252,20 @@ export default React.memo(function CustomHeader() {
                                           accessibilityLabel={item.label}
                                           accessibilityState={{ selected: isActive }}
                                       >
-                                          <Feather 
-                                              name={item.icon as any} 
-                                              size={20} 
-                                              color={isActive ? palette.primary : palette.textMuted} 
-                                          />
+                                          <View style={styles.iconSlot20}>
+                                              <Feather
+                                                  name={item.icon as any}
+                                                  size={20}
+                                                  color={isActive ? palette.primary : palette.textMuted}
+                                              />
+                                          </View>
                                           <Text style={[styles.modalNavLabel, isActive && styles.modalNavLabelActive]}>
                                               {item.label}
                                           </Text>
                                           {isActive && (
-                                              <Feather name="check" size={18} color={palette.primary} />
+                                              <View style={styles.iconSlot18}>
+                                                  <Feather name="check" size={18} color={palette.primary} />
+                                              </View>
                                           )}
                                       </Pressable>
                                   );
@@ -388,10 +448,52 @@ const styles = StyleSheet.create<Record<string, any>>({
         justifyContent: 'center',
         marginHorizontal: 16,
     },
+    iconSlot18: {
+        width: 18,
+        height: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+    },
+    iconSlot20: {
+        width: 20,
+        height: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+    },
+    iconSlot24: {
+        width: 24,
+        height: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+    },
     rightSection: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+    },
+    mobileUserPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f5f5f5',
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 20,
+        maxWidth: 180,
+        gap: 6,
+        minHeight: 44,
+    },
+    mobileUserAvatar: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+    },
+    mobileUserName: {
+        fontSize: 16,
+        color: '#333',
+        flexShrink: 1,
     },
     navItem: {
         flexDirection: 'row',

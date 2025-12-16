@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo, memo } from "react";
 import {
   View,
   Text,
@@ -35,17 +35,17 @@ type NavItem = {
 /** ========= Helpers ========= */
 const openURL = (url: string) => Linking.openURL(url).catch(() => {});
 
-const Item = ({
-                children,
-                onPress,
-                href,
-                label,
-              }: {
+const Item = memo(function Item({
+  children,
+  onPress,
+  href,
+  label,
+}: {
   children: React.ReactNode;
   onPress?: () => void;
   href?: Href;
   label: string;
-}) => {
+}) {
   const content = (
     <View style={styles.itemInner}>
       {children}
@@ -83,12 +83,12 @@ const Item = ({
       {content}
     </Pressable>
   );
-};
+});
 
 /** ========= Component ========= */
 const palette = DESIGN_TOKENS.colors;
 
-const MOBILE_DOCK_MIN_HEIGHT_WEB = 72;
+const MOBILE_DOCK_MIN_HEIGHT_WEB = 76;
 
 const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
   const { width } = useWindowDimensions();
@@ -96,27 +96,32 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
     Platform.OS === 'web' && width === 0 && typeof window !== 'undefined'
       ? window.innerWidth
       : width;
-  const isWebWidthUnknown = Platform.OS === 'web' && width === 0;
-  const isMobile = Platform.OS !== 'web' ? true : !isWebWidthUnknown && effectiveWidth <= 900;
+  const isMobile = Platform.OS !== 'web' ? true : effectiveWidth <= 900;
+  const isCompactDesktop = Platform.OS === 'web' && !isMobile && effectiveWidth < 1200;
   const iconColor = palette.primary;
 
-  const primary: NavItem[] = [
-    { key: "home",     label: "Путешествия", route: "/",          icon: <Feather name="home"   size={20} color={iconColor} /> },
-    { key: "by",       label: "Беларусь",    route: "/travelsby", icon: <Feather name="globe"  size={20} color={iconColor} /> },
-    { key: "map",      label: "Карта",       route: "/map",       icon: <Feather name="map"    size={20} color={iconColor} /> },
-    { key: "roulette", label: "Случайный маршрут", route: "/roulette",  icon: <Feather name="shuffle" size={20} color={iconColor} /> },
-    { key: "quests",   label: "Квесты",      route: "/quests",    icon: <Feather name="flag"   size={20} color={iconColor} /> },
-    { key: "about",  label: "О сайте",     route: "/about",     icon: <Feather name="info"  size={20} color={iconColor} /> },
-    { key: "privacy", label: "Политика конфиденциальности", route: "/privacy", icon: <Feather name="shield" size={20} color={iconColor} /> },
-    { key: "cookies", label: "Настройки cookies", route: "/cookies", icon: <Feather name="sliders" size={20} color={iconColor} /> },
-    { key: "blogby", label: "Пишут о BY",  route: "/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi", icon: <Feather name="list" size={20} color={iconColor} /> },
-  ];
+  const primary: NavItem[] = useMemo(
+    () => [
+      { key: "home",     label: "Путешествия", route: "/",          icon: <Feather name="home"   size={20} color={iconColor} /> },
+      { key: "by",       label: "Беларусь",    route: "/travelsby", icon: <Feather name="globe"  size={20} color={iconColor} /> },
+      { key: "map",      label: "Карта",       route: "/map",       icon: <Feather name="map"    size={20} color={iconColor} /> },
+      { key: "roulette", label: "Случайный маршрут", route: "/roulette",  icon: <Feather name="shuffle" size={20} color={iconColor} /> },
+      { key: "quests",   label: "Квесты",      route: "/quests",    icon: <Feather name="flag"   size={20} color={iconColor} /> },
+    ],
+    [iconColor]
+  );
 
-  const social: NavItem[] = [
-    { key: "tt", label: "TikTok",    externalUrl: "https://www.tiktok.com/@metravel.by",   icon: <FontAwesome5 name="tiktok"    size={18} color={iconColor} /> },
-    { key: "ig", label: "Instagram", externalUrl: "https://www.instagram.com/metravelby/", icon: <FontAwesome5 name="instagram" size={18} color={iconColor} /> },
-    { key: "yt", label: "YouTube",   externalUrl: "https://www.youtube.com/@metravelby",   icon: <FontAwesome5 name="youtube"   size={18} color={iconColor} /> },
-  ];
+  const social: NavItem[] = useMemo(
+    () => [
+      { key: "tt", label: "TikTok",    externalUrl: "https://www.tiktok.com/@metravel.by",   icon: <FontAwesome5 name="tiktok"    size={18} color={iconColor} /> },
+      { key: "ig", label: "Instagram", externalUrl: "https://www.instagram.com/metravelby/", icon: <FontAwesome5 name="instagram" size={18} color={iconColor} /> },
+      { key: "yt", label: "YouTube",   externalUrl: "https://www.youtube.com/@metravelby",   icon: <FontAwesome5 name="youtube"   size={18} color={iconColor} /> },
+    ],
+    [iconColor]
+  );
+
+  const allItems = useMemo(() => [...primary, ...social], [primary, social]);
+  const webMobileItems = useMemo(() => primary, [primary]);
 
   const Container = (Platform.OS === "ios" || Platform.OS === "android") ? SafeAreaView : View;
 
@@ -138,6 +143,8 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
 
   /** ======= Mobile: суперкомпактный «док» ======= */
   if (isMobile) {
+    const itemsToRender = Platform.OS === 'web' ? webMobileItems : allItems;
+
     return (
       <Container style={[styles.base, mobileStyles.container]}>
         <View
@@ -148,23 +155,39 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
         >
           {/* измеряем ровно эту область */}
           <View onLayout={handleDockLayout} testID="footer-dock-measure">
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={mobileStyles.dock}
-            >
-              {[...primary, ...social].map((item) =>
-                item.externalUrl ? (
-                  <Item key={item.key} onPress={() => openURL(item.externalUrl!)} label={item.label}>
-                    {item.icon}
-                  </Item>
-                ) : (
-                  <Item key={item.key} href={item.route} label={item.label}>
-                    {item.icon}
-                  </Item>
-                )
-              )}
-            </ScrollView>
+            {Platform.OS === 'web' ? (
+              <View style={[mobileStyles.dockBase, mobileStyles.dockNoWrapWeb]}>
+                {itemsToRender.map((item) =>
+                  item.externalUrl ? (
+                    <Item key={item.key} onPress={() => openURL(item.externalUrl!)} label={item.label}>
+                      {item.icon}
+                    </Item>
+                  ) : (
+                    <Item key={item.key} href={item.route} label={item.label}>
+                      {item.icon}
+                    </Item>
+                  )
+                )}
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={[mobileStyles.dockBase, mobileStyles.dockScroll]}
+              >
+                {itemsToRender.map((item) =>
+                  item.externalUrl ? (
+                    <Item key={item.key} onPress={() => openURL(item.externalUrl!)} label={item.label}>
+                      {item.icon}
+                    </Item>
+                  ) : (
+                    <Item key={item.key} href={item.route} label={item.label}>
+                      {item.icon}
+                    </Item>
+                  )
+                )}
+              </ScrollView>
+            )}
           </View>
         </View>
       </Container>
@@ -175,8 +198,8 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
 
   return (
     <Container style={[styles.base, desktopStyles.container]}>
-      <View style={desktopStyles.bar}>
-        <View style={desktopStyles.group}>
+      <View style={[desktopStyles.bar, isCompactDesktop && desktopStyles.barCompact]}>
+        <View style={[desktopStyles.group, isCompactDesktop && desktopStyles.groupCompact]}>
           {primary.map((item) => (
             <Item key={item.key} href={item.route} label={item.label}>
               {item.icon}
@@ -184,13 +207,13 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
           ))}
         </View>
 
-        <View style={desktopStyles.group}>
+        <View style={[desktopStyles.group, isCompactDesktop && desktopStyles.groupCompact]}>
           {social.map((s) => (
             <Item key={s.key} onPress={() => openURL(s.externalUrl!)} label={s.label}>
               {s.icon}
             </Item>
           ))}
-          <Text style={styles.copy}>© MeTravel 2020–{new Date().getFullYear()}</Text>
+          <Text style={[styles.copy, isCompactDesktop && styles.copyCompact]}>© MeTravel 2020–{new Date().getFullYear()}</Text>
         </View>
       </View>
     </Container>
@@ -244,6 +267,7 @@ const styles = StyleSheet.create({
   },
   logo: { width: 18, height: 18, marginRight: 8 },
   copy: { color: palette.textSubtle, fontSize: 13, lineHeight: 16, marginLeft: 12 },
+  copyCompact: { marginLeft: 0, marginTop: 6, textAlign: 'center' },
 });
 
 /** ========= Mobile ========= */
@@ -278,21 +302,30 @@ const mobileStyles = StyleSheet.create({
       },
     }),
   },
-  dock: {
+  dockBase: {
     flexDirection: 'row',
-    flexWrap: 'nowrap',
     alignItems: "center",
     gap: 2,               // Уменьшили расстояние между иконками
-    ...Platform.select({
-      web: {
-        flexShrink: 0,
-        // @ts-ignore - web-only
-        width: 'max-content',
-        // @ts-ignore - web-only
-        whiteSpace: 'nowrap',
-      } as any,
-      default: {},
-    }),
+  },
+  dockScroll: {
+    flexWrap: 'nowrap',
+  },
+  dockNoWrapWeb: {
+    flexWrap: 'nowrap',
+    justifyContent: 'center',
+    // @ts-ignore - web-only
+    width: '100%',
+  },
+  dockTwoRowsWeb: {
+    // @ts-ignore - web-only
+    width: '100%',
+    gap: 2 as any,
+  },
+  dockRowWeb: {
+    flexWrap: 'nowrap',
+    justifyContent: 'center',
+    // @ts-ignore - web-only
+    width: '100%',
   },
   // Убрали brandRow полностью
 });
@@ -317,13 +350,17 @@ const desktopStyles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     ...Platform.select({
       web: {
-        flexWrap: 'nowrap',
-        overflowX: 'auto',
-        overflowY: 'hidden',
-        // @ts-ignore
-        whiteSpace: 'nowrap',
+        flexWrap: 'wrap',
+        overflowX: 'hidden',
+        overflowY: 'visible',
       } as any,
     }),
+  },
+  barCompact: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    paddingVertical: 10,
+    gap: 8 as any,
   },
   group: {
     flexDirection: "row",
@@ -331,10 +368,15 @@ const desktopStyles = StyleSheet.create({
     gap: 20 as any,
     ...Platform.select({
       web: {
-        flexWrap: 'nowrap',
-        flexShrink: 0,
+        flexWrap: 'wrap',
+        flexShrink: 1,
       } as any,
     }),
+  },
+  groupCompact: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12 as any,
   },
 });
 

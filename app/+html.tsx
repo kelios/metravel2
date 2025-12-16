@@ -249,7 +249,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
 const criticalCSS = `
 *,*::before,*::after{box-sizing:border-box}
-html{scroll-behavior:smooth;height:100%}
+html{scroll-behavior:smooth;height:100%;scrollbar-gutter:stable}
 body{
   margin:0;
   min-height:100vh;
@@ -261,6 +261,7 @@ body{
   color:#1f2937;
   background:linear-gradient(180deg,rgba(246,244,239,0.9) 0%,rgba(249,248,244,0.8) 40%,rgba(255,255,255,0.9) 100%);
   padding-bottom:env(safe-area-inset-bottom);
+  overflow-y:scroll;
 }
 img,picture,video,canvas{display:block;max-width:100%}
  /* Prevent react-native-web ActivityIndicator SVG from stretching to full container size */

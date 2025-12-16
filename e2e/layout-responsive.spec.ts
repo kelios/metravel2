@@ -1,0 +1,225 @@
+import { test, expect } from '@playwright/test';
+
+function getNumberEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const v = Number(raw);
+  return Number.isFinite(v) ? v : fallback;
+}
+
+const SHOULD_CAPTURE_VISUAL = process.env.E2E_VISUAL === '1';
+
+async function preacceptCookies(page: any) {
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem(
+        'metravel_consent_v1',
+        JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
+      );
+    } catch {
+      // ignore
+    }
+  });
+}
+
+async function waitForTravelsListToRender(page: any) {
+  await page.waitForTimeout(500);
+  await Promise.race([
+    page.waitForSelector('[data-testid="travel-card-link"], [data-testid="travel-card-skeleton"]', {
+      timeout: 30_000,
+    }),
+    page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
+    page.waitForSelector('text=Найдено:', { timeout: 30_000 }),
+    page.waitForSelector('#search-input', { timeout: 30_000 }),
+  ]);
+}
+
+async function assertNoHorizontalScroll(page: any) {
+  const res = await page.evaluate(() => {
+    const docEl = document.documentElement;
+    const body = document.body;
+    const docScrollWidth = docEl?.scrollWidth ?? 0;
+    const docClientWidth = docEl?.clientWidth ?? 0;
+    const bodyScrollWidth = body?.scrollWidth ?? 0;
+    const bodyClientWidth = body?.clientWidth ?? 0;
+
+    return {
+      docScrollWidth,
+      docClientWidth,
+      bodyScrollWidth,
+      bodyClientWidth,
+      docOverflowX: getComputedStyle(docEl).overflowX,
+      bodyOverflowX: getComputedStyle(body).overflowX,
+    };
+  });
+
+  expect(
+    res.docScrollWidth,
+    `documentElement has horizontal overflow: scrollWidth=${res.docScrollWidth} clientWidth=${res.docClientWidth} overflowX=${res.docOverflowX}`
+  ).toBeLessThanOrEqual(res.docClientWidth);
+
+  expect(
+    res.bodyScrollWidth,
+    `body has horizontal overflow: scrollWidth=${res.bodyScrollWidth} clientWidth=${res.bodyClientWidth} overflowX=${res.bodyOverflowX}`
+  ).toBeLessThanOrEqual(res.bodyClientWidth);
+}
+
+async function countCardsInFirstRow(page: any): Promise<number> {
+  const cards = page.locator('[data-testid="travel-card-link"]');
+  const count = await cards.count();
+  if (count === 0) return 0;
+
+  // React Native Web can virtualize list items using positioning that makes Y-based
+  // "same row" detection flaky. A more stable proxy for "columns" is the number of
+  // distinct X positions among the first visible cards.
+  const boxes: Array<{ x: number; y: number; width: number; height: number }> = [];
+  for (let i = 0; i < Math.min(count, 12); i++) {
+    const box = await cards.nth(i).boundingBox();
+    if (!box) continue;
+    boxes.push({ x: box.x, y: box.y, width: box.width, height: box.height });
+  }
+  if (boxes.length === 0) return 0;
+
+  const minY = Math.min(...boxes.map((b) => b.y));
+  const EPS_Y = 3;
+  const topRow = boxes.filter((b) => Math.abs(b.y - minY) <= EPS_Y);
+
+  // Bucket X to avoid subpixel differences.
+  const bucket = (x: number) => Math.round(x / 8) * 8;
+  const xs = new Set(topRow.map((b) => bucket(b.x)));
+
+  // If virtualization causes too many items to have the exact same y, we can still
+  // safely infer columns by looking at unique X across the first few items.
+  if (xs.size <= 1) {
+    const xsAll = new Set(boxes.map((b) => bucket(b.x)));
+    return xsAll.size;
+  }
+
+  return xs.size;
+}
+
+test.describe('Responsive layout invariants', () => {
+  test('no horizontal scroll + grid breaks correctly (mobile/tablet/desktop)', async ({ page }) => {
+    // Thresholds derived from app constants:
+    // - mobile layout breakpoint is effectively 768 (METRICS.breakpoints.tablet)
+    // - grid expects 1/2/3 columns across mobile/tablet/desktop
+    const VIEWPORTS = [
+      { name: 'mobile', width: 375, height: 812, expectedColumns: 1 },
+      { name: 'tablet', width: 820, height: 1180, expectedColumns: 2 },
+      { name: 'desktop', width: 1440, height: 900, expectedColumns: 3 },
+    ];
+
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await preacceptCookies(page);
+
+      await page.goto('/', { waitUntil: 'domcontentloaded' });
+      await waitForTravelsListToRender(page);
+
+      await assertNoHorizontalScroll(page);
+
+      // Columns are asserted only if we actually have cards (in some envs data can be empty).
+      const columns = await countCardsInFirstRow(page);
+      if (columns > 0) {
+        expect(columns, `Unexpected number of cards in first row for ${vp.name}`).toBe(vp.expectedColumns);
+      }
+
+      if (SHOULD_CAPTURE_VISUAL) {
+        // Keep tolerance modest to avoid flaky diffs while still catching regressions.
+        await expect(page).toHaveScreenshot(`travels-${vp.name}.png`, {
+          fullPage: true,
+          maxDiffPixelRatio: 0.02,
+        });
+      }
+    }
+  });
+
+  test('layout stays stable after viewport resize (no scroll, grid adapts)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await preacceptCookies(page);
+
+    try {
+      await page.goto('/', { waitUntil: 'domcontentloaded' });
+    } catch (e: any) {
+      const msg = e?.message ? String(e.message) : String(e);
+      test.skip(true, `Dev server not reachable during strict layout check: ${msg}`);
+    }
+    await waitForTravelsListToRender(page);
+
+    await assertNoHorizontalScroll(page);
+
+    // Resize down to tablet, then mobile.
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await page.waitForTimeout(250);
+    await assertNoHorizontalScroll(page);
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.waitForTimeout(250);
+    await assertNoHorizontalScroll(page);
+  });
+
+  test('optional stricter CLS after render on travels (post-load stability)', async ({ page }) => {
+    test.skip(process.env.E2E_STRICT_LAYOUT !== '1', 'Strict layout CLS check is opt-in. Set E2E_STRICT_LAYOUT=1 to run it.');
+
+    // This is an additional guard complementary to existing cls-audit/web-vitals tests.
+    // It focuses on just '/', with a tunable threshold.
+    const CLS_AFTER_RENDER_MAX = getNumberEnv('E2E_CLS_AFTER_RENDER_MAX_TRAVELS', 0.02);
+
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem(
+          'metravel_consent_v1',
+          JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
+        );
+      } catch {
+        // ignore
+      }
+
+      (window as any).__e2eClsTravel = {
+        clsTotal: 0,
+        clsAfterRender: 0,
+        phase: 'total',
+        finalized: false,
+      };
+
+      try {
+        const obs = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries() as any[]) {
+            const state = (window as any).__e2eClsTravel;
+            if (!state || state.finalized) return;
+            if (!entry || entry.hadRecentInput || typeof entry.value !== 'number') continue;
+            state.clsTotal += entry.value;
+            if (state.phase === 'afterRender') state.clsAfterRender += entry.value;
+          }
+        });
+        obs.observe({ type: 'layout-shift', buffered: true } as any);
+      } catch {
+        // ignore
+      }
+    });
+
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await waitForTravelsListToRender(page);
+
+    await page.waitForTimeout(1500);
+
+    // Reset and measure only after initial render.
+    await page.evaluate(() => {
+      const s = (window as any).__e2eClsTravel;
+      if (!s) return;
+      s.phase = 'afterRender';
+      s.clsAfterRender = 0;
+    });
+
+    await page.waitForTimeout(1000);
+
+    const clsAfterRender = await page.evaluate(() => {
+      const s = (window as any).__e2eClsTravel;
+      if (!s) return 0;
+      s.finalized = true;
+      return typeof s.clsAfterRender === 'number' ? s.clsAfterRender : 0;
+    });
+
+    expect(clsAfterRender).toBeLessThanOrEqual(CLS_AFTER_RENDER_MAX);
+  });
+});

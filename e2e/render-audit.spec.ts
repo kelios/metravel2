@@ -1,0 +1,229 @@
+import { test, expect } from '@playwright/test';
+
+const VIEWPORTS = [
+  { name: 'mobile', width: 375, height: 812 },
+  { name: 'tablet', width: 820, height: 1180 },
+  { name: 'desktop', width: 1440, height: 900 },
+];
+
+async function preacceptCookiesAndStabilize(page: any) {
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem(
+        'metravel_consent_v1',
+        JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
+      );
+    } catch {
+      // ignore
+    }
+
+    // Reduce perf noise in audits: recommendations can be heavy and not critical for base layout.
+    try {
+      sessionStorage.setItem('recommendations_visible', 'false');
+    } catch {
+      // ignore
+    }
+  });
+}
+
+async function waitForAppShell(page: any) {
+  await page.waitForLoadState('domcontentloaded');
+  await expect(page.locator('body')).toBeVisible();
+}
+
+async function scrollDownToTriggerDeferredSections(page: any) {
+  // Travel details uses deferred/progressive rendering; scroll to ensure below-the-fold
+  // sections mount (Share/CTA/etc).
+  await page.mouse.wheel(0, 1200);
+  await page.waitForTimeout(250);
+  await page.mouse.wheel(0, 1600);
+  await page.waitForTimeout(250);
+}
+
+async function assertNoHorizontalScroll(page: any) {
+  const res = await page.evaluate(() => {
+    const docEl = document.documentElement;
+    const body = document.body;
+    const docScrollWidth = docEl?.scrollWidth ?? 0;
+    const docClientWidth = docEl?.clientWidth ?? 0;
+    const bodyScrollWidth = body?.scrollWidth ?? 0;
+    const bodyClientWidth = body?.clientWidth ?? 0;
+
+    return {
+      docScrollWidth,
+      docClientWidth,
+      bodyScrollWidth,
+      bodyClientWidth,
+      docOverflowX: getComputedStyle(docEl).overflowX,
+      bodyOverflowX: getComputedStyle(body).overflowX,
+    };
+  });
+
+  expect(
+    res.docScrollWidth,
+    `documentElement has horizontal overflow: scrollWidth=${res.docScrollWidth} clientWidth=${res.docClientWidth} overflowX=${res.docOverflowX}`
+  ).toBeLessThanOrEqual(res.docClientWidth);
+
+  expect(
+    res.bodyScrollWidth,
+    `body has horizontal overflow: scrollWidth=${res.bodyScrollWidth} clientWidth=${res.bodyClientWidth} overflowX=${res.bodyOverflowX}`
+  ).toBeLessThanOrEqual(res.bodyClientWidth);
+}
+
+async function installClsAfterRenderMeter(page: any) {
+  await page.addInitScript(() => {
+    (window as any).__e2eClsAudit = {
+      phase: 'total',
+      clsAfterRender: 0,
+      finalized: false,
+    };
+
+    try {
+      const obs = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries() as any[]) {
+          const s = (window as any).__e2eClsAudit;
+          if (!s || s.finalized) return;
+          if (!entry || entry.hadRecentInput || typeof entry.value !== 'number') continue;
+          if (s.phase === 'afterRender') s.clsAfterRender += entry.value;
+        }
+      });
+      obs.observe({ type: 'layout-shift', buffered: true } as any);
+    } catch {
+      // ignore
+    }
+  });
+}
+
+async function startClsAfterRenderPhase(page: any) {
+  await page.evaluate(() => {
+    const s = (window as any).__e2eClsAudit;
+    if (!s) return;
+    s.phase = 'afterRender';
+    s.clsAfterRender = 0;
+  });
+}
+
+async function finalizeClsAfterRender(page: any): Promise<number> {
+  return page.evaluate(() => {
+    const s = (window as any).__e2eClsAudit;
+    if (!s) return 0;
+    s.finalized = true;
+    return typeof s.clsAfterRender === 'number' ? s.clsAfterRender : 0;
+  });
+}
+
+test.describe('Render audit: main and travel details (responsive + perf)', () => {
+  for (const vp of VIEWPORTS) {
+    test(`main page renders key blocks (${vp.name})`, async ({ page }) => {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await preacceptCookiesAndStabilize(page);
+      await installClsAfterRenderMeter(page);
+
+      await page.goto('/', { waitUntil: 'domcontentloaded' });
+      await waitForAppShell(page);
+
+      // Core header/search should exist.
+      const search = page.getByRole('textbox', { name: /Поиск путешествий/i });
+      await expect(search).toBeVisible({ timeout: 30_000 });
+
+      // Either list skeleton, list content, or empty state should render.
+      await Promise.race([
+        page.waitForSelector('[data-testid="travel-card-link"]', { timeout: 30_000 }),
+        page.waitForSelector('[data-testid="travel-card-skeleton"]', { timeout: 30_000 }),
+        page.waitForSelector('[data-testid="list-travel-skeleton"]', { timeout: 30_000 }),
+        page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
+        page.waitForSelector('text=Найдено:', { timeout: 30_000 }),
+      ]);
+
+      await assertNoHorizontalScroll(page);
+
+      // CLS after initial render
+      await page.waitForTimeout(1000);
+      await startClsAfterRenderPhase(page);
+      await page.waitForTimeout(1000);
+      const cls = await finalizeClsAfterRender(page);
+      expect(cls, `CLS after render too high on main (${vp.name})`).toBeLessThanOrEqual(0.05);
+
+      // Basic interaction: type and clear search.
+      await search.fill('тест');
+      await page.waitForTimeout(350);
+      const clear = page.getByLabel('Очистить поиск');
+      if (await clear.isVisible().catch(() => false)) {
+        await clear.click();
+        await expect(search).toHaveValue('');
+      }
+    });
+
+    test(`travel details renders key blocks (${vp.name})`, async ({ page }) => {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await preacceptCookiesAndStabilize(page);
+      await installClsAfterRenderMeter(page);
+
+      // Go to list, open first card if available.
+      await page.goto('/', { waitUntil: 'domcontentloaded' });
+      await waitForAppShell(page);
+
+      const cards = page.locator('[data-testid="travel-card-link"]');
+      const count = await cards.count();
+      if (count === 0) {
+        test.skip(true, 'No travel cards available in this environment');
+      }
+
+      await cards.first().click();
+      await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 45_000 });
+
+      // Either error state or the page shell must render.
+      await Promise.race([
+        page.waitForSelector('[data-testid="travel-details-page"]', { timeout: 45_000 }),
+        page.waitForSelector('text=Не удалось загрузить путешествие', { timeout: 45_000 }),
+      ]);
+
+      // If error state, stop here (still validates render).
+      if (await page.locator('text=Не удалось загрузить путешествие').isVisible().catch(() => false)) {
+        await assertNoHorizontalScroll(page);
+        return;
+      }
+
+      // Must-have blocks (successful render)
+      await expect(page.locator('[data-testid="travel-details-page"]')).toBeVisible();
+      await expect(page.locator('[data-testid="travel-details-scroll"]')).toBeVisible();
+      await expect(page.locator('[data-testid="travel-details-section-gallery"]')).toBeVisible();
+      await expect(page.locator('[data-testid="travel-details-hero"]')).toHaveCount(1);
+      await expect(page.locator('[data-testid="travel-details-quick-facts"]')).toHaveCount(1);
+      await expect(page.locator('[data-testid="travel-details-author"]')).toHaveCount(1);
+
+      // At least one content anchor should exist (description/video/map/points).
+      await expect(
+        page.locator('[data-section-key="description"], [data-section-key="video"], [data-section-key="map"], [data-section-key="points"]')
+      ).toHaveCount(1, { timeout: 45_000 });
+
+      // Ensure the page is scrollable and stable.
+      await assertNoHorizontalScroll(page);
+
+      // Trigger deferred sections and assert engagement blocks render.
+      await scrollDownToTriggerDeferredSections(page);
+      await Promise.race([
+        page.waitForSelector('[data-testid="travel-details-share"]', { timeout: 8_000 }),
+        page.waitForSelector('[data-testid="travel-details-cta"]', { timeout: 8_000 }),
+      ]);
+
+      // Share/CTA blocks should be present on successful page.
+      // Telegram block can be environment-dependent (widget availability), so do not hard-fail on it.
+      await expect(page.locator('[data-testid="travel-details-share"]')).toHaveCount(1);
+      await expect(page.locator('[data-testid="travel-details-cta"]')).toHaveCount(1);
+
+      await page.waitForTimeout(1200);
+      await startClsAfterRenderPhase(page);
+      await page.waitForTimeout(1200);
+      const cls = await finalizeClsAfterRender(page);
+      expect(cls, `CLS after render too high on travel details (${vp.name})`).toBeLessThanOrEqual(0.05);
+
+      // Performance smoke: first meaningful interaction should be possible.
+      // There is a FAB on mobile labeled "Открыть меню разделов".
+      const sectionMenuBtn = page.getByRole('button', { name: /Открыть меню разделов/i });
+      if (vp.name !== 'desktop' && (await sectionMenuBtn.isVisible().catch(() => false))) {
+        await sectionMenuBtn.click();
+      }
+    });
+  }
+});

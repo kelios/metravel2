@@ -164,8 +164,18 @@ function RootLayoutNav() {
     // На web футер-док находится в потоке (position: sticky), поэтому дополнительная прокладка
     // приводит к поздним layout shifts при измерении высоты дока.
     // Прокладку используем только на native, где док может перекрывать контент.
-    const BottomGutter = () =>
-      !isWeb && showFooter && isMobile && dockHeight > 0 ? <View style={{ height: dockHeight }} /> : null;
+    const BottomGutter = () => {
+      if (!showFooter || !isMobile) return null;
+
+      // On web mobile the footer dock is position: fixed and can overlap content.
+      // Reserve space equal to the measured dock height (with a small fallback).
+      const webFallback = 76;
+      const h = isWeb ? Math.max(dockHeight || 0, webFallback) : dockHeight;
+
+      if (h <= 0) return null;
+
+      return <View testID="bottom-gutter" style={{ height: h }} />;
+    };
 
     // На web шрифты подгружаются через link + font-display: swap, поэтому
     // не блокируем рендер и не дергаем fontfaceobserver (во избежание timeout).
@@ -277,7 +287,13 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
         // Белый корневой фон: отключаем просвечивание фоновой карты
         backgroundColor: DESIGN_TOKENS.colors.background,
-        ...(Platform.OS === 'web' ? ({ minHeight: '100vh' } as any) : null),
+        ...(Platform.OS === 'web'
+          ? ({
+              height: '100vh',
+              maxHeight: '100vh',
+              overflow: 'hidden',
+            } as any)
+          : null),
     },
     backgroundImage: {
         ...StyleSheet.absoluteFillObject,
@@ -289,7 +305,13 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         flexBasis: 0,
-        ...(Platform.OS === 'web' ? ({ flexGrow: 1 } as any) : null),
+        ...(Platform.OS === 'web'
+          ? ({
+              flexGrow: 1,
+              overflow: 'hidden',
+              minHeight: 0,
+            } as any)
+          : null),
     },
     footerWrapper: {
         marginTop: 'auto',

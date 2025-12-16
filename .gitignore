@@ -30,6 +30,10 @@ junit.xml
 jest-results.json
 *.log
 
+# Playwright artifacts
+/test-results/
+/playwright-report/
+
 # Android sensitive files
 google-services.json
 google-play-service-account.json

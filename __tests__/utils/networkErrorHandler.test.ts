@@ -1,4 +1,6 @@
 // __tests__/utils/networkErrorHandler.test.ts
+import { Platform } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { 
   handleNetworkError, 
   isNetworkError,
@@ -9,7 +11,50 @@ import {
 } from '@/src/utils/networkErrorHandler';
 import { ApiError } from '@/src/api/client';
 
+jest.mock('react-native-toast-message', () => ({
+  __esModule: true,
+  default: {
+    show: jest.fn(),
+  },
+}));
+
 describe('networkErrorHandler', () => {
+  const originalPlatformOS = Platform.OS;
+  const originalNavigator = (globalThis as any).navigator;
+  const originalWindow = (globalThis as any).window;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    Object.defineProperty(Platform, 'OS', {
+      configurable: true,
+      value: 'web',
+    });
+
+    ;(globalThis as any).window = {
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    } as any;
+
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: {
+        onLine: true,
+      },
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', {
+      configurable: true,
+      value: originalPlatformOS,
+    });
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: originalNavigator,
+    });
+    ;(globalThis as any).window = originalWindow as any;
+  });
+
   describe('isNetworkError', () => {
     it('should identify network errors', () => {
       const networkError = new Error('Network request failed');
@@ -39,6 +84,16 @@ describe('networkErrorHandler', () => {
     it('should handle null and undefined', () => {
       expect(isNetworkError(null)).toBe(false);
       expect(isNetworkError(undefined)).toBe(false);
+    });
+
+    it('detects offline state via navigator.onLine on web', () => {
+      Object.defineProperty(globalThis, 'navigator', {
+        configurable: true,
+        value: {
+          onLine: false,
+        },
+      });
+      expect(isNetworkError(new Error('Some error'))).toBe(true);
     });
   });
 
@@ -86,14 +141,14 @@ describe('networkErrorHandler', () => {
       const error = new Error('Network request failed');
       const message = getUserFriendlyNetworkError(error);
       
-      expect(message).toContain('подключения' || 'интернет');
+      expect(message).toMatch(/подключ|интернет/i);
     });
 
     it('should return specific message for 401', () => {
       const error = new ApiError(401, 'Unauthorized');
       const message = getUserFriendlyNetworkError(error);
       
-      expect(message).toContain('авторизация' || 'войдите');
+      expect(message).toMatch(/авториза|войдите/i);
     });
 
     it('should return specific message for 403', () => {
@@ -121,6 +176,11 @@ describe('networkErrorHandler', () => {
       const message = getUserFriendlyNetworkError(null);
       expect(message).toBeTruthy();
     });
+
+    it('falls back to original message for ApiError with non-special status', () => {
+      const error = new ApiError(418, 'I am a teapot');
+      expect(getUserFriendlyNetworkError(error)).toContain('teapot');
+    });
   });
 
   describe('handleNetworkError', () => {
@@ -132,6 +192,7 @@ describe('networkErrorHandler', () => {
     it('should respect silent option', () => {
       const error = new Error('Network failed');
       expect(() => handleNetworkError(error, { silent: true })).not.toThrow();
+      expect((Toast as any).show).not.toHaveBeenCalled();
     });
 
     it('should call onRetry for network errors', () => {
@@ -140,6 +201,41 @@ describe('networkErrorHandler', () => {
       
       // handleNetworkError sets up event listener but doesn't call onRetry immediately
       expect(() => handleNetworkError(error, { onRetry })).not.toThrow();
+    });
+
+    it('shows toast on web for network errors when showToast is true', () => {
+      const error = new Error('Network request failed');
+      handleNetworkError(error);
+
+      expect((Toast as any).show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'error',
+          text1: 'Нет подключения',
+        })
+      );
+    });
+
+    it('does not show toast when showToast is false', () => {
+      const error = new Error('Network request failed');
+      handleNetworkError(error, { showToast: false });
+      expect((Toast as any).show).not.toHaveBeenCalled();
+    });
+
+    it('registers online listener and calls onRetry when online event fires', () => {
+      const error = new Error('Network request failed');
+      const onRetry = jest.fn();
+
+      handleNetworkError(error, { onRetry });
+
+      const add = (global.window as any).addEventListener as jest.Mock;
+      expect(add).toHaveBeenCalledWith('online', expect.any(Function));
+
+      const handler = add.mock.calls.find((c: any[]) => c[0] === 'online')?.[1];
+      expect(typeof handler).toBe('function');
+
+      handler();
+      expect((global.window as any).removeEventListener).toHaveBeenCalledWith('online', handler);
+      expect(onRetry).toHaveBeenCalledTimes(1);
     });
   });
 

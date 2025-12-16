@@ -21,6 +21,7 @@ function RenderRightMenu() {
     const { favorites } = useFavorites();
     const { updateFilters } = useFilters();
     const [visible, setVisible] = useState(false);
+    const [avatarLoadError, setAvatarLoadError] = useState(false);
     const { width } = useWindowDimensions();
     const isMobile = width <= METRICS.breakpoints.tablet;
 
@@ -30,11 +31,29 @@ function RenderRightMenu() {
     });
 
     const avatarUri = React.useMemo(() => {
-        const raw = profile?.avatar;
+        if (avatarLoadError) return null;
+        const raw = String(profile?.avatar ?? '').trim();
         if (!raw) return null;
-        const separator = raw.includes('?') ? '&' : '?';
-        return `${raw}${separator}v=${profileRefreshToken}`;
-    }, [profile?.avatar, profileRefreshToken]);
+        const lower = raw.toLowerCase();
+        if (lower === 'null' || lower === 'undefined') return null;
+
+        // Normalize relative avatar URLs to absolute ones on web.
+        // EXPO_PUBLIC_API_URL may include '/api' - strip it to get origin.
+        let normalized = raw;
+        if (raw.startsWith('/')) {
+            const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/?api\/?$/, '');
+            if (base) {
+                normalized = `${base}${raw}`;
+            }
+        }
+
+        const separator = normalized.includes('?') ? '&' : '?';
+        return `${normalized}${separator}v=${profileRefreshToken}`;
+    }, [avatarLoadError, profile?.avatar, profileRefreshToken]);
+
+    React.useEffect(() => {
+        setAvatarLoadError(false);
+    }, [profileRefreshToken, profile?.avatar]);
 
     const openMenu = useCallback(() => setVisible(true), []);
     const closeMenu = useCallback(() => setVisible(false), []);
@@ -71,7 +90,12 @@ function RenderRightMenu() {
                     style={styles.userContainer}
                 >
                     {avatarUri ? (
-                        <Image key={avatarUri} source={{ uri: avatarUri }} style={styles.userAvatar} />
+                        <Image
+                            key={avatarUri}
+                            source={{ uri: avatarUri }}
+                            style={styles.userAvatar}
+                            onError={() => setAvatarLoadError(true)}
+                        />
                     ) : (
                         <Icon name="account-circle" size={24} color="#333" />
                     )}

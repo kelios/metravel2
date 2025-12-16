@@ -86,6 +86,7 @@ const styles = StyleSheet.create({
     paddingTop: TOKENS.spacing.lg,
     overflowY: 'auto',
     overflowX: 'hidden',
+    ...(Platform.OS === 'web' ? ({ scrollbarGutter: 'stable' } as any) : null),
   },
   sidebarMobile: {
     width: '100%',
@@ -218,6 +219,7 @@ const styles = StyleSheet.create({
     flex: 1,
     overflowY: 'auto',
     overflowX: 'hidden',
+    ...(Platform.OS === 'web' ? ({ scrollbarGutter: 'stable' } as any) : null),
     // Горизонтальные отступы задаются динамически через contentPadding, чтобы избежать лишних белых полей
     paddingTop: TOKENS.spacing.lg,
     paddingBottom: TOKENS.spacing.md,
@@ -410,20 +412,38 @@ function ListTravel({
     const isTravelBy = (route as any).name === "travelsby";
     const isExport = (route as any).name === "export" || pathname?.includes('/export');
 
+    // ✅ CLS fix (web): useWindowDimensions() can report width/height=0 on the very first render
+    // (SSR/hydration). If we compute columns/gaps from 0, the grid reflows after mount causing huge CLS.
+    const windowWidth =
+      Platform.OS === 'web' && width === 0 && typeof window !== 'undefined' ? window.innerWidth : width;
+    const windowHeight =
+      Platform.OS === 'web' && height === 0 && typeof window !== 'undefined' ? window.innerHeight : height;
+
     // ✅ АДАПТИВНОСТЬ: Определяем устройство и ориентацию
     // На всех платформах считаем устройство "мобильным", если ширина меньше MOBILE breakpoint
-    const isMobileDevice = isMobile(width);
+    const isMobileDevice = isMobile(windowWidth);
     // Планшет: от MOBILE до TABLET_LANDSCAPE, всё, что шире, считаем десктопом (3 колонки)
-    const isTablet = width >= BREAKPOINTS.MOBILE && width < BREAKPOINTS.DESKTOP;
+    const isTablet = windowWidth >= BREAKPOINTS.MOBILE && windowWidth < BREAKPOINTS.DESKTOP;
     const isDesktop = !isMobileDevice && !isTablet;
-    const isPortrait = height > width;
+    const isPortrait = windowHeight > windowWidth;
 
     // ✅ ОПТИМИЗАЦИЯ: Базовое количество колонок для логики (от общей ширины окна)
     // На десктопе всегда 3 колонки, на планшетах/мобилках рассчитываем динамически
-    const baseColumns = isDesktop ? 3 : calculateColumns(width);
+    const baseColumns = isDesktop ? 3 : calculateColumns(windowWidth);
     const columns = isTablet && isPortrait && baseColumns > 2 ? 2 : baseColumns;
 
-    const gapSize = width < BREAKPOINTS.XS ? 12 : width < BREAKPOINTS.SM ? 14 : width < BREAKPOINTS.MOBILE ? 16 : width < BREAKPOINTS.TABLET ? 18 : width < BREAKPOINTS.DESKTOP ? 24 : 32;
+    const gapSize =
+      windowWidth < BREAKPOINTS.XS
+        ? 12
+        : windowWidth < BREAKPOINTS.SM
+          ? 14
+          : windowWidth < BREAKPOINTS.MOBILE
+            ? 16
+            : windowWidth < BREAKPOINTS.TABLET
+              ? 18
+              : windowWidth < BREAKPOINTS.DESKTOP
+                ? 24
+                : 32;
 
     const cardsGridDynamicStyle = useMemo(() => {
       const styleArray: ViewStyle[] = [styles.cardsGrid]
@@ -445,7 +465,7 @@ function ListTravel({
 
     // ✅ ОПТИМИЗАЦИЯ: Стабильные адаптивные отступы и ширина правой колонки
     // На мобильном layout используем полную ширину, на десктопе вычитаем ширину sidebar
-    const effectiveWidth = isMobileDevice ? width : width - 320; // 320px ~ ширина sidebar
+    const effectiveWidth = isMobileDevice ? windowWidth : windowWidth - 320; // 320px ~ ширина sidebar
 
     const contentPadding = useMemo(() => {
       // ✅ ОПТИМИЗАЦИЯ: Используем стабильные breakpoints для избежания лишних перерасчетов
@@ -460,7 +480,7 @@ function ListTravel({
 
     const gridColumns = useMemo(() => {
       if (isMobileDevice) {
-        return calculateColumns(width, isPortrait ? 'portrait' : 'landscape');
+        return calculateColumns(windowWidth, isPortrait ? 'portrait' : 'landscape');
       }
 
       if (!isTablet || !isPortrait) {
@@ -468,7 +488,7 @@ function ListTravel({
       }
 
       return calculateColumns(effectiveWidth, 'portrait');
-    }, [effectiveWidth, isMobileDevice, isTablet, isPortrait, width]);
+    }, [effectiveWidth, isMobileDevice, isTablet, isPortrait, windowWidth]);
 
     const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(() => {
         if (Platform.OS !== 'web') return false;
@@ -780,6 +800,16 @@ function ListTravel({
       : 'Выберите путешествия для экспорта';
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [settingsModalMode, setSettingsModalMode] = useState<'save' | 'preview'>('save');
+
+    const handleOpenSettingsForSave = useCallback(() => {
+      setSettingsModalMode('save');
+      setShowSettingsModal(true);
+    }, []);
+
+    const handleOpenSettingsForPreview = useCallback(() => {
+      setSettingsModalMode('preview');
+      setShowSettingsModal(true);
+    }, []);
 
 
     /* Loading helpers */
@@ -1140,6 +1170,50 @@ function ListTravel({
         cardSpacing={gapSize}
         footerLoaderStyle={styles.footerLoader}
         renderItem={renderTravelListItem}
+        topContent={
+          isExport ? (
+            <>
+              <ExportBar
+                isMobile={isMobileDevice}
+                selectedCount={selectionCount}
+                allCount={travels.length}
+                onToggleSelectAll={toggleSelectAll}
+                onClearSelection={clearSelection}
+                onPreview={handleOpenSettingsForPreview}
+                onSave={handleOpenSettingsForSave}
+                onSettings={handleOpenSettingsForSave}
+                isGenerating={pdfExport.isGenerating}
+                progress={pdfExport.progress}
+                settingsSummary={settingsSummary}
+                hasSelection={hasSelection}
+              />
+
+              <Modal
+                visible={showSettingsModal}
+                transparent
+                animationType={Platform.OS === 'web' ? 'none' : 'slide'}
+                onRequestClose={() => setShowSettingsModal(false)}
+              >
+                <BookSettingsModalLazy
+                  visible={showSettingsModal}
+                  onClose={() => setShowSettingsModal(false)}
+                  defaultSettings={lastSettings}
+                  travelCount={selectionCount}
+                  userName={userId ?? undefined}
+                  mode={settingsModalMode}
+                  onSave={async (settings: any) => {
+                    await handleSaveWithSettings(settings);
+                    setShowSettingsModal(false);
+                  }}
+                  onPreview={async (settings: any) => {
+                    await handlePreviewWithSettings(settings);
+                    setShowSettingsModal(false);
+                  }}
+                />
+              </Modal>
+            </>
+          ) : null
+        }
       />
     </View>
   );

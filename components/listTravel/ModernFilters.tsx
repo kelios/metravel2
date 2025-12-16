@@ -243,11 +243,13 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         style={styles.toggleAllButton}
       >
         <View style={styles.toggleAllButtonInner}>
-          <Feather
-            name={areAllGroupsExpanded ? 'chevrons-up' : 'chevrons-down'}
-            size={16}
-            color={colors.neutral[600]}
-          />
+          <View style={styles.iconSlot16}>
+            <Feather
+              name={areAllGroupsExpanded ? 'chevrons-up' : 'chevrons-down'}
+              size={16}
+              color={colors.neutral[600]}
+            />
+          </View>
           <Text style={styles.toggleAllButtonText}>
             {areAllGroupsExpanded ? 'Свернуть все' : 'Развернуть все'}
           </Text>
@@ -318,11 +320,13 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               >
                 <View style={styles.groupHeaderLeft}>
                   {group.icon && (
-                    <Feather 
-                      name={group.icon as any} 
-                      size={16} 
-                      color={colors.neutral[600]} 
-                    />
+                    <View style={styles.iconSlot16}>
+                      <Feather
+                        name={group.icon as any}
+                        size={16}
+                        color={colors.neutral[600]}
+                      />
+                    </View>
                   )}
                   <Text style={styles.groupTitle}>{group.title}</Text>
                   {selectedCount > 0 && (
@@ -331,11 +335,13 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                     </View>
                   )}
                 </View>
-                <Feather
-                  name={isExpanded ? "chevron-up" : "chevron-down"}
-                  size={18}
-                  color={colors.neutral[400]}
-                />
+                <View style={styles.iconSlot18}>
+                  <Feather
+                    name={isExpanded ? "chevron-up" : "chevron-down"}
+                    size={18}
+                    color={colors.neutral[400]}
+                  />
+                </View>
               </Pressable>
 
               {/* Group Options */}
@@ -507,6 +513,20 @@ const styles = StyleSheet.create<any>({
     alignItems: 'center',
     gap: spacing.sm,
     flex: 1,
+  },
+  iconSlot16: {
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  iconSlot18: {
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   headerRight: {
     flexDirection: 'row',

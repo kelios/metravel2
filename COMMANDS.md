@@ -117,6 +117,36 @@ npm run test:coverage
 
 ---
 
+## 🧭 E2E (Playwright) — Web Vitals
+
+```bash
+# 1) Start Expo Web (Terminal A)
+npm run web
+
+# 2) Run e2e in Chromium (Terminal B)
+# BASE_URL должен указывать на запущенный web (по умолчанию Playwright config использует http://localhost:19006)
+BASE_URL=http://localhost:19006 npm run e2e
+
+# Headed
+BASE_URL=http://localhost:19006 npm run e2e:headed
+
+# UI mode
+BASE_URL=http://localhost:19006 npm run e2e:ui
+```
+
+### Пороги (env)
+
+```bash
+# По умолчанию:
+# E2E_CLS_MAX=0.02
+# E2E_LCP_MAX_MS=3500
+# E2E_INP_MAX_MS=200
+
+E2E_CLS_MAX=0.05 E2E_LCP_MAX_MS=4500 E2E_INP_MAX_MS=250 BASE_URL=http://localhost:19006 npm run e2e
+```
+
+---
+
 ## 🛠 Utilities
 
 ```bash

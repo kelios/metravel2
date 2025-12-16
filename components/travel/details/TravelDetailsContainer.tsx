@@ -986,7 +986,12 @@ export default function TravelDetails() {
           />
         )}
         <View style={styles.errorContainer}>
-          <LazyMaterialIcons name="error-outline" size={64} color={DESIGN_TOKENS.colors.primary} />
+          <Suspense fallback={<View style={{ width: 64, height: 64 }} />}>
+            <LazyMaterialIcons
+              // @ts-ignore - MaterialIcons name prop
+              {...({ name: 'error-outline', size: 64, color: DESIGN_TOKENS.colors.primary } as any)}
+            />
+          </Suspense>
           <Text style={styles.errorTitle}>Не удалось загрузить путешествие</Text>
           <Text style={styles.errorText}>
             Возможно, страница была удалена или временно недоступна.
@@ -1043,13 +1048,17 @@ export default function TravelDetails() {
         />
       )}
 
-    <View style={[
-      styles.wrapper,
-      Platform.OS === "web" && {
-        // @ts-ignore - web-specific CSS property
-        backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f9f8f2 100%)",
-      } as any,
-    ]}>
+    <View
+      testID="travel-details-page"
+      style={[
+        styles.wrapper,
+        Platform.OS === "web" &&
+          ({
+            // @ts-ignore - web-specific CSS property
+            backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f9f8f2 100%)",
+          } as any),
+      ]}
+    >
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
           {/* ✅ РЕДИЗАЙН: Адаптивный spacer под меню */}
@@ -1058,6 +1067,7 @@ export default function TravelDetails() {
           {/* ✅ РЕДИЗАЙН: Адаптивное боковое меню */}
           <Defer when={deferAllowed}>
             <Animated.View
+              testID="travel-details-side-menu"
               style={[
                 styles.sideMenuBase,
                 sideMenuPlatformStyles,
@@ -1106,6 +1116,7 @@ export default function TravelDetails() {
                 )}
 
                 <TouchableOpacity
+                  testID="travel-details-fab"
                   onPress={handleFabPress}
                   style={[
                     styles.fab,
@@ -1135,6 +1146,7 @@ export default function TravelDetails() {
           )}
 
           <ScrollView
+            testID="travel-details-scroll"
             ref={scrollRef}
             contentContainerStyle={[
               styles.scrollContent,
@@ -1323,6 +1335,7 @@ const TravelHeroSection: React.FC<{
     <>
       <View
         ref={anchors.gallery}
+        testID="travel-details-section-gallery"
         collapsable={false}
         {...(Platform.OS === "web"
           ? {
@@ -1333,7 +1346,11 @@ const TravelHeroSection: React.FC<{
       />
 
       {!!firstImg && (
-        <View style={[styles.sectionContainer, styles.contentStable]} collapsable={false}>
+        <View
+          testID="travel-details-hero"
+          style={[styles.sectionContainer, styles.contentStable]}
+          collapsable={false}
+        >
           <View
             style={styles.sliderContainer}
             collapsable={false}
@@ -1378,11 +1395,17 @@ const TravelHeroSection: React.FC<{
         </View>
       )}
 
-      <View style={[styles.sectionContainer, styles.contentStable, styles.quickFactsContainer]}>
+      <View
+        testID="travel-details-quick-facts"
+        style={[styles.sectionContainer, styles.contentStable, styles.quickFactsContainer]}
+      >
         <QuickFacts travel={travel} />
       </View>
 
-      <View style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}>
+      <View
+        testID="travel-details-author"
+        style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
+      >
         <Text style={styles.sectionHeaderText}>Автор</Text>
         <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
         <View style={{ marginTop: 12 }}>
@@ -1670,6 +1693,7 @@ const TravelVisualSections: React.FC<{
 
       <View
         ref={anchors.map}
+        testID="travel-details-map"
         style={[styles.sectionContainer, styles.contentStable]}
         collapsable={false}
         {...(Platform.OS === "web" ? { "data-section-key": "map", "data-map-for-pdf": "1" } : {})}
@@ -1699,6 +1723,7 @@ const TravelVisualSections: React.FC<{
 
       <View
         ref={anchors.points}
+        testID="travel-details-points"
         style={[styles.sectionContainer, styles.contentStable]}
         collapsable={false}
         {...(Platform.OS === "web" ? { "data-section-key": "points" } : {})}
@@ -1786,15 +1811,15 @@ const TravelRelatedContent: React.FC<{
 
 const TravelEngagementSection: React.FC<{ travel: Travel }> = ({ travel }) => (
   <>
-    <View style={[styles.sectionContainer, styles.authorCardContainer]}>
+    <View testID="travel-details-telegram" style={[styles.sectionContainer, styles.authorCardContainer]}>
       <TelegramDiscussionSection travel={travel} />
     </View>
 
-    <View style={[styles.sectionContainer, styles.shareButtonsContainer]}>
+    <View testID="travel-details-share" style={[styles.sectionContainer, styles.shareButtonsContainer]}>
       <ShareButtons travel={travel} />
     </View>
 
-    <View style={[styles.sectionContainer, styles.ctaContainer]}>
+    <View testID="travel-details-cta" style={[styles.sectionContainer, styles.ctaContainer]}>
       <CTASection travel={travel} />
     </View>
   </>

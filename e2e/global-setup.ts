@@ -1,0 +1,59 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { chromium, type FullConfig } from '@playwright/test';
+
+const STORAGE_STATE_PATH = 'e2e/.auth/storageState.json';
+
+function ensureEnv(name: string): string | null {
+  const v = process.env[name];
+  return v && v.trim().length > 0 ? v.trim() : null;
+}
+
+export default async function globalSetup(config: FullConfig) {
+  const baseURL = config.projects[0]?.use?.baseURL as string | undefined;
+  const email = ensureEnv('E2E_EMAIL');
+  const password = ensureEnv('E2E_PASSWORD');
+
+  fs.mkdirSync(path.dirname(STORAGE_STATE_PATH), { recursive: true });
+
+  const browser = await chromium.launch();
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  if (!baseURL) {
+    await context.storageState({ path: STORAGE_STATE_PATH });
+    await browser.close();
+    return;
+  }
+
+  // Always visit the app once so we have a deterministic storage state file.
+  try {
+    await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 120_000 });
+  } catch (e: any) {
+    const message = e?.message ? String(e.message) : String(e);
+    throw new Error(
+      `E2E global setup could not reach baseURL (${baseURL}). ` +
+        `Is the Playwright webServer running? Underlying error: ${message}`
+    );
+  }
+
+  // If creds are not provided, keep anonymous state.
+  if (!email || !password) {
+    await context.storageState({ path: STORAGE_STATE_PATH });
+    await browser.close();
+    return;
+  }
+
+  await page.goto(`${baseURL}/login`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
+
+  await page.getByPlaceholder('Email').fill(email);
+  await page.getByPlaceholder('Пароль').fill(password);
+
+  await page.getByText('Войти', { exact: true }).click();
+
+  // After successful login app should redirect away from /login.
+  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30_000 });
+
+  await context.storageState({ path: STORAGE_STATE_PATH });
+  await browser.close();
+}

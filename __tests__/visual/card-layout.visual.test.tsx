@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { View, Platform } from 'react-native';
+import { View, Platform, StyleSheet } from 'react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { TravelCardSkeleton } from '@/components/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -43,11 +44,24 @@ describe('Card Layout Visual Tests', () => {
       const expectedMarginBottom = Platform.select({ default: 12, web: 16 });
       const spacingSm = DESIGN_TOKENS.spacing.sm; // 10px
       
-      // Это НЕ должно быть так:
-      const incorrectTotal = expectedMarginBottom + spacingSm;
-      
-      expect(incorrectTotal).toBe(22); // Текущая проблема
-      expect(expectedMarginBottom).toBe(12); // Ожидаемое значение
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+
+      const { getByTestId } = render(
+        <QueryClientProvider client={queryClient}>
+          <View>
+            <RenderTravelItem item={mockTravel as any} index={0} isMobile={true} />
+          </View>
+        </QueryClientProvider>
+      );
+
+      const card = getByTestId('travel-card-link');
+      const flattened = StyleSheet.flatten(card.props.style);
+      expect(flattened.marginBottom).toBeUndefined();
     });
   });
 

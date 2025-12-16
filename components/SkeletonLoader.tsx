@@ -4,6 +4,7 @@ import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDes
 import { TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
 
 interface SkeletonLoaderProps {
+  testID?: string;
   width?: number | string;
   height?: number | string;
   borderRadius?: number;
@@ -16,6 +17,7 @@ interface SkeletonLoaderProps {
  * ✅ УЛУЧШЕНИЕ: Мягкие оттенки с градиентом для лучшей выразительности
  */
 export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
+  testID,
   width = '100%',
   height = 20,
   borderRadius = 4,
@@ -23,6 +25,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 }) => {
   return (
     <View
+      testID={testID}
       {...(Platform.OS === 'web' ? { className: 'skeleton-pulse' } : {})}
       style={[
         styles.skeleton,
@@ -48,9 +51,15 @@ export const TravelCardSkeleton: React.FC = () => {
   const metaHeight = Platform.select({ default: 11, web: 12 });
   
   return (
-    <View style={styles.card}>
+    <View testID="travel-card-skeleton" style={styles.card}>
       {/* Изображение с aspectRatio 16/9 */}
-      <SkeletonLoader width="100%" height={imageHeight} borderRadius={12} style={styles.image} />
+      <SkeletonLoader
+        testID="travel-card-skeleton-image"
+        width="100%"
+        height={imageHeight}
+        borderRadius={12}
+        style={styles.image}
+      />
       <View style={styles.content}>
         {/* Заголовок - 2 строки */}
         <SkeletonLoader width="90%" height={titleHeight} style={styles.marginBottom} />

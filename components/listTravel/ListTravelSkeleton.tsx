@@ -183,7 +183,12 @@ export default function ListTravelSkeleton(props: ListTravelSkeletonProps = {}) 
     }, [effectiveWidth]);
 
     return (
-        <View style={styles.wrapper} accessibilityRole="progressbar" accessibilityLabel="Загрузка путешествий">
+        <View
+          testID="list-travel-skeleton"
+          style={styles.wrapper}
+          accessibilityRole="progressbar"
+          accessibilityLabel="Загрузка путешествий"
+        >
             {/* Filter Row Skeleton */}
             <View style={[styles.filterRow, isMobile && styles.filterRowMobile]}>
                 {!isMobile && (
@@ -209,6 +214,7 @@ export default function ListTravelSkeleton(props: ListTravelSkeletonProps = {}) 
                              style={[styles.cardWrapper, cardSlotStyle]}
                            >
                                <View
+                                 testID="list-travel-skeleton-card"
                                  style={[
                                    styles.card,
                                    effectiveWidth < METRICS.breakpoints.tablet && mobileCardMaxWidth != null && {

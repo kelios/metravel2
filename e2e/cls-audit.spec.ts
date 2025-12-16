@@ -1,0 +1,229 @@
+import { test, expect } from '@playwright/test';
+
+type ClsEntry = {
+  value: number;
+  hadRecentInput: boolean;
+  sources: string[];
+};
+
+type ClsAuditResult = {
+  route: string;
+  clsTotal: number;
+  clsAfterRender: number;
+  entries: ClsEntry[];
+  error?: string;
+};
+
+function getNumberEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const v = Number(raw);
+  return Number.isFinite(v) ? v : fallback;
+}
+
+const CLS_AFTER_RENDER_MAX = getNumberEnv('E2E_CLS_AFTER_RENDER_MAX', 0.02);
+const SHOULD_FAIL = process.env.E2E_CLS_AUDIT_FAIL === '1' || process.env.CI === 'true';
+const VERBOSE = process.env.CI === 'true' ? process.env.E2E_CLS_AUDIT_VERBOSE === '1' : true;
+
+
+function getRoutesToAudit(defaultRoutes: string[]): string[] {
+  const raw = process.env.E2E_CLS_AUDIT_ROUTES;
+  if (!raw) return defaultRoutes;
+
+  const routes = raw
+    .split(',')
+    .map((r) => r.trim())
+    .filter(Boolean);
+
+  return routes.length ? routes : defaultRoutes;
+}
+
+// Routes to audit.
+// Note: in this app, the main travels list is '/'.
+// In CI we audit a broader set; locally we keep it smaller so the test is actionable and less flaky.
+const ROUTES_FULL: string[] = [
+  '/',
+  '/travelsby',
+  '/map',
+  '/roulette',
+  '/quests',
+  '/about',
+  '/privacy',
+  '/cookies',
+  '/login',
+  '/registration',
+  '/settings',
+  '/history',
+  '/favorites',
+];
+
+const ROUTES_LOCAL_DEFAULT: string[] = ['/', '/travelsby', '/roulette'];
+
+test.describe('CLS audit', () => {
+  test('audit core routes (clsTotal / clsAfterRender)', async ({ page }) => {
+    // This audit can take a while on dev servers (cold start / heavy routes).
+    test.setTimeout(5 * 60_000);
+
+    const results: ClsAuditResult[] = [];
+
+    const routesToAudit = getRoutesToAudit(process.env.CI === 'true' ? ROUTES_FULL : ROUTES_LOCAL_DEFAULT);
+
+    for (const route of routesToAudit) {
+      const routePage = await page.context().newPage();
+
+      await routePage.addInitScript(() => {
+        // Hide cookie consent banner by pre-setting consent.
+        try {
+          window.localStorage.setItem(
+            'metravel_consent_v1',
+            JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
+          );
+        } catch {
+          // ignore
+        }
+
+        const describeNode = (node: any) => {
+          try {
+            if (!node) return 'unknown';
+            const el = node as Element;
+            const parts: string[] = [];
+            if ((el as any).tagName) parts.push(String((el as any).tagName).toLowerCase());
+            const testId = (el as any).getAttribute?.('data-testid');
+            if (testId) parts.push(`[data-testid="${testId}"]`);
+            const id = (el as any).id;
+            if (id) parts.push(`#${id}`);
+            const className = (el as any).className;
+            if (typeof className === 'string' && className.trim()) {
+              parts.push(`.${className.trim().split(/\s+/).slice(0, 3).join('.')}`);
+            }
+            return parts.join('');
+          } catch {
+            return 'unknown';
+          }
+        };
+
+        (window as any).__e2eCls = {
+          clsTotal: 0,
+          clsAfterRender: 0,
+          phase: 'total',
+          finalized: false,
+          entries: [] as any[],
+        };
+
+        try {
+          const obs = new PerformanceObserver((list) => {
+            for (const entry of list.getEntries() as any[]) {
+              const state = (window as any).__e2eCls;
+              if (!state || state.finalized) return;
+              if (!entry || entry.hadRecentInput || typeof entry.value !== 'number') continue;
+
+              state.clsTotal += entry.value;
+              if (state.phase === 'afterRender') state.clsAfterRender += entry.value;
+
+              try {
+                const sources = Array.isArray(entry.sources)
+                  ? entry.sources
+                      .map((s: any) => s?.node)
+                      .filter(Boolean)
+                      .map(describeNode)
+                  : [];
+
+                state.entries.push({
+                  value: entry.value,
+                  hadRecentInput: !!entry.hadRecentInput,
+                  sources,
+                });
+                state.entries.sort((a: any, b: any) => b.value - a.value);
+                state.entries = state.entries.slice(0, 8);
+              } catch {
+                // ignore
+              }
+            }
+          });
+
+          obs.observe({ type: 'layout-shift', buffered: true } as any);
+        } catch {
+          // ignore
+        }
+      });
+
+      try {
+        await routePage.goto(route, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+
+        // Allow initial render/hydration/async blocks to complete.
+        await routePage.waitForTimeout(3000);
+
+        // Start measuring post-render CLS separately.
+        await routePage.evaluate(() => {
+          const s = (window as any).__e2eCls;
+          if (!s) return;
+          s.phase = 'afterRender';
+          s.clsAfterRender = 0;
+        });
+
+        // Let the route settle (lazy components / images).
+        await routePage.waitForTimeout(2000);
+
+        // Finalize CLS collection.
+        const data = await routePage.evaluate(() => {
+          const s = (window as any).__e2eCls;
+          if (!s) return { clsTotal: 0, clsAfterRender: 0, entries: [] };
+          s.finalized = true;
+          return {
+            clsTotal: typeof s.clsTotal === 'number' ? s.clsTotal : 0,
+            clsAfterRender: typeof s.clsAfterRender === 'number' ? s.clsAfterRender : 0,
+            entries: Array.isArray(s.entries) ? s.entries : [],
+          };
+        });
+
+        results.push({
+          route,
+          clsTotal: data.clsTotal,
+          clsAfterRender: data.clsAfterRender,
+          entries: data.entries,
+        });
+      } catch (e: any) {
+        const message = e?.message ? String(e.message) : String(e);
+        results.push({ route, clsTotal: 0, clsAfterRender: 0, entries: [], error: message });
+      } finally {
+        await routePage.close().catch(() => undefined);
+      }
+    }
+
+    // Sort worst offenders first
+    results.sort((a, b) => b.clsAfterRender - a.clsAfterRender);
+
+    // eslint-disable-next-line no-console
+    console.log(
+      'CLS audit results (sorted by clsAfterRender):\n' +
+        results
+          .map((r) => {
+            const base = `${r.route}  clsAfterRender=${r.clsAfterRender.toFixed(4)}  clsTotal=${r.clsTotal.toFixed(4)}`;
+            return r.error ? `${base}  ERROR=${r.error}` : base;
+          })
+          .join('\n')
+    );
+
+    if (VERBOSE) {
+      // eslint-disable-next-line no-console
+      console.log(
+        'Top CLS entries per route:\n' +
+          results
+            .map((r) => {
+              const top = r.entries
+                .slice(0, 3)
+                .map((e) => `  - ${e.value.toFixed(4)}: ${Array.isArray(e.sources) ? e.sources.join(', ') : ''}`)
+                .join('\n');
+              return `${r.route}\n${top || '  (no entries captured)'}`;
+            })
+            .join('\n\n')
+      );
+    }
+
+    if (SHOULD_FAIL) {
+      for (const r of results) {
+        expect(r.clsAfterRender, `CLS too high on ${r.route}`).toBeLessThanOrEqual(CLS_AFTER_RENDER_MAX);
+      }
+    }
+  });
+});

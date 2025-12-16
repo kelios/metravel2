@@ -5,24 +5,24 @@
 
 import { Platform } from 'react-native';
 import { enhancedTravelCardStyles } from '@/components/listTravel/enhancedTravelCardStyles';
+import { TRAVEL_CARD_IMAGE_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
 
 describe('Card Dimensions Integration', () => {
   describe('Image Container Heights', () => {
     it('should have consistent image height between skeleton and real cards on mobile', () => {
       // Skeleton высота изображения (из SkeletonLoader.tsx)
-      const skeletonImageHeight = Platform.select({ default: 200, web: 240 });
-      
+      const skeletonImageHeight = TRAVEL_CARD_IMAGE_HEIGHT;
+
       // Реальная карточка высота изображения (из enhancedTravelCardStyles.ts)
-      const realCardImageHeight = Platform.select({ default: 200, web: 240 });
-      
+      const realCardImageHeight = (enhancedTravelCardStyles as any).imageContainer?.height;
+
       expect(skeletonImageHeight).toBe(realCardImageHeight);
     });
 
     it('should have consistent image height on web', () => {
       // На web обе должны быть 240px
-      const skeletonImageHeight = 240;
-      const realCardImageHeight = 240;
-      
+      const skeletonImageHeight = TRAVEL_CARD_IMAGE_HEIGHT;
+      const realCardImageHeight = (enhancedTravelCardStyles as any).imageContainer?.height;
       expect(skeletonImageHeight).toBe(realCardImageHeight);
     });
   });

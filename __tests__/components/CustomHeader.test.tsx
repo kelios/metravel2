@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { usePathname, useRouter } from 'expo-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CustomHeader from '@/components/CustomHeader';
 import * as ReactNative from 'react-native';
 
@@ -52,6 +53,13 @@ describe('CustomHeader', () => {
 
     const dimensionsSpy = jest.spyOn(ReactNative, 'useWindowDimensions');
 
+    const createTestQueryClient = () =>
+        new QueryClient({
+            defaultOptions: {
+                queries: { retry: false },
+            },
+        });
+
     beforeEach(() => {
         jest.clearAllMocks();
         mockAuthContext.logout.mockClear();
@@ -63,7 +71,14 @@ describe('CustomHeader', () => {
         dimensionsSpy.mockReturnValue({ width: 1024, height: 768, scale: 1, fontScale: 1 } as ReactNative.ScaledSize);
     });
 
-    const renderHeader = () => render(<CustomHeader />);
+    const renderHeader = () => {
+        const client = createTestQueryClient();
+        return render(
+            <QueryClientProvider client={client}>
+                <CustomHeader />
+            </QueryClientProvider>
+        );
+    };
 
     describe('Desktop navigation', () => {
         it('renders desktop navigation by default', () => {
