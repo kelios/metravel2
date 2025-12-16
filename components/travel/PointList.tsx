@@ -14,15 +14,13 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Image as ExpoImage } from 'expo-image';
-import {
-  MapPinned,
-  ChevronUp,
-  ChevronDown,
-  Copy,
-  Send,
-  Map,
-  Link as LinkIcon,
-} from 'lucide-react-native';
+import MapPinned from 'lucide-react-native/dist/esm/icons/map-pinned';
+import ChevronUp from 'lucide-react-native/dist/esm/icons/chevron-up';
+import ChevronDown from 'lucide-react-native/dist/esm/icons/chevron-down';
+import Copy from 'lucide-react-native/dist/esm/icons/copy';
+import Send from 'lucide-react-native/dist/esm/icons/send';
+import Map from 'lucide-react-native/dist/esm/icons/map';
+import LinkIcon from 'lucide-react-native/dist/esm/icons/link';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -132,8 +130,12 @@ const PointCard = React.memo(function PointCard({
   return (
     <View
       style={styles.card}
-      onMouseEnter={() => !isMobile && setHovered(true)}
-      onMouseLeave={() => !isMobile && setHovered(false)}
+      {...(Platform.OS === 'web'
+        ? ({
+            onMouseEnter: () => !isMobile && setHovered(true),
+            onMouseLeave: () => !isMobile && setHovered(false),
+          } as any)
+        : null)}
     >
       <Pressable 
         onPress={openMapFromLink} 
@@ -372,7 +374,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
       <View
         style={[
           styles.col,
-          numColumns === 3 ? styles.col3 : numColumns === 2 ? styles.col2 : styles.col1,
+          numColumns === 2 ? styles.col2 : styles.col1,
         ]}
       >
         {Platform.OS === 'web' ? (
@@ -414,12 +416,17 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
         accessibilityState={{ expanded: showList }}
       >
         <View style={styles.toggleRow}>
-          {/* ✅ ИСПРАВЛЕНИЕ: Используем единый цвет */}
-          <MapPinned size={22} color={DESIGN_TOKENS.colors.text} />
-          <Text style={[styles.toggleText, isMobile && styles.toggleTextSm]}>
-            {showList ? 'Скрыть координаты мест' : 'Показать координаты мест'}
-          </Text>
-          {showList ? <ChevronUp size={18} color={DESIGN_TOKENS.colors.text} /> : <ChevronDown size={18} color={DESIGN_TOKENS.colors.text} />} {/* ✅ ИСПРАВЛЕНИЕ: Используем единый цвет */}
+          {[
+            <MapPinned key="icon" size={22} color={DESIGN_TOKENS.colors.text} />,
+            <Text key="text" style={[styles.toggleText, isMobile && styles.toggleTextSm]}>
+              {showList ? 'Скрыть координаты мест' : 'Показать координаты мест'}
+            </Text>,
+            showList ? (
+              <ChevronUp key="chevron" size={18} color={DESIGN_TOKENS.colors.text} />
+            ) : (
+              <ChevronDown key="chevron" size={18} color={DESIGN_TOKENS.colors.text} />
+            ),
+          ]}
         </View>
       </Pressable>
 
@@ -430,7 +437,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           numColumns={numColumns}
-          removeClippedSubviews
+          removeClippedSubviews={Platform.OS !== 'web'}
           windowSize={7}
           initialNumToRender={numColumns * 3}
           maxToRenderPerBatch={numColumns * 3}
@@ -470,7 +477,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 
 /* ============================= styles ============================= */
 
-const styles = StyleSheet.create<Record<string, any>>({
+const styles = StyleSheet.create<any>({
   wrapper: { width: '100%', marginTop: DESIGN_TOKENS.spacing.lg },
 
   // ✅ ИСПРАВЛЕНИЕ: Современная кнопка переключения с улучшенной интерактивностью и единой палитрой
@@ -556,12 +563,6 @@ const styles = StyleSheet.create<Record<string, any>>({
         flexDirection: 'column' as any,
         height: '100%',
       },
-    }),
-  },
-  col3: { 
-    width: Platform.select({
-      web: 'calc(33.333% - 14px)' as any,
-      default: '32%',
     }),
   },
   col2: { 

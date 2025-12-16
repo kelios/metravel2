@@ -40,10 +40,27 @@ config.resolver = {
         type: 'sourceFile',
       };
     }
+
+    // Exclude Leaflet from the web entry bundle. We load Leaflet via CDN at runtime and
+    // provide it to code via a lightweight stub that proxies window.L.
+    const isWeb = platform === 'web' || (context && context.platform === 'web');
+    if (isWeb) {
+      const normalizedModuleName = moduleName.replace(/\\/g, '/');
+      const isLeaflet =
+        moduleName === 'leaflet' ||
+        normalizedModuleName === 'leaflet' ||
+        moduleName.startsWith('leaflet/') ||
+        normalizedModuleName.startsWith('leaflet/');
+
+      if (isLeaflet) {
+        return {
+          filePath: path.resolve(__dirname, 'metro-stubs/leaflet.js'),
+          type: 'sourceFile',
+        };
+      }
+    }
     // На веб заменяем react-native-maps на пустой stub
     // Проверяем platform напрямую и через context
-    const isWeb = platform === 'web' || (context && context.platform === 'web');
-    
     if (isWeb) {
       // Проверяем точное совпадение или вхождение react-native-maps
       // Это включает все подмодули react-native-maps
@@ -104,6 +121,7 @@ config.resolver = {
   extraNodeModules: {
     ...(config.resolver.extraNodeModules || {}),
     'html2canvas': path.resolve(__dirname, 'metro-stubs/html2canvas.js'),
+    'leaflet': path.resolve(__dirname, 'metro-stubs/leaflet.js'),
   },
 }
 

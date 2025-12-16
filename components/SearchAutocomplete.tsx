@@ -79,12 +79,14 @@ export default function SearchAutocomplete({
 }: SearchAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const selectedIndexRef = useRef(-1);
   const listRef = useRef<FlatList>(null);
 
   useEffect(() => {
     const newSuggestions = generateSuggestions(query);
     setSuggestions(newSuggestions.slice(0, maxSuggestions));
     setSelectedIndex(-1);
+    selectedIndexRef.current = -1;
   }, [query, maxSuggestions]);
 
   const handleSelect = useCallback((text: string) => {
@@ -95,19 +97,27 @@ export default function SearchAutocomplete({
   const handleKeyPress = useCallback((e: any) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex(prev => 
-        prev < suggestions.length - 1 ? prev + 1 : prev
-      );
+      const next =
+        selectedIndexRef.current < suggestions.length - 1
+          ? selectedIndexRef.current + 1
+          : selectedIndexRef.current;
+      selectedIndexRef.current = next;
+      setSelectedIndex(next);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedIndex(prev => prev > 0 ? prev - 1 : -1);
-    } else if (e.key === 'Enter' && selectedIndex >= 0) {
+      const next = selectedIndexRef.current > 0 ? selectedIndexRef.current - 1 : -1;
+      selectedIndexRef.current = next;
+      setSelectedIndex(next);
+    } else if (e.key === 'Enter' && selectedIndexRef.current >= 0) {
       e.preventDefault();
-      handleSelect(suggestions[selectedIndex].text);
+      const selected = suggestions[selectedIndexRef.current];
+      if (selected) {
+        handleSelect(selected.text);
+      }
     } else if (e.key === 'Escape') {
       onClose?.();
     }
-  }, [suggestions, selectedIndex, handleSelect, onClose]);
+  }, [suggestions, handleSelect, onClose]);
 
   // Прокрутка к выбранному элементу
   useEffect(() => {
@@ -134,9 +144,9 @@ export default function SearchAutocomplete({
           isSelected && styles.suggestionItemSelected,
         ]}
         onPress={() => handleSelect(item.text)}
+        {...(Platform.OS === 'web' ? ({ onKeyDown: handleKeyPress } as any) : null)}
         {...Platform.select({
           web: {
-            onKeyDown: handleKeyPress,
             cursor: 'pointer',
             // @ts-ignore
             ':hover': {

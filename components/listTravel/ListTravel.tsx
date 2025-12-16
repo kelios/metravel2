@@ -1,5 +1,5 @@
 // ListTravel.tsx
-import React, { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -33,7 +33,6 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import EmptyState from '@/components/EmptyState'
 import ProgressIndicator from '@/components/ProgressIndicator'
 import type { Travel } from '@/src/types/types'
-import ListTravelSkeleton from './ListTravelSkeleton'
 import {
   BREAKPOINTS,
   FLATLIST_CONFIG,
@@ -59,7 +58,6 @@ const styles = StyleSheet.create({
     overflowX: 'hidden',
     width: '100%',
     maxWidth: '100%',
-    height: '100%',
   },
   rootMobile: {
     flexDirection: 'column',
@@ -86,7 +84,6 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.colors.surface,
     paddingHorizontal: TOKENS.spacing.lg,
     paddingTop: TOKENS.spacing.lg,
-    height: '100%',
     overflowY: 'auto',
     overflowX: 'hidden',
   },
@@ -426,7 +423,7 @@ function ListTravel({
     const baseColumns = isDesktop ? 3 : calculateColumns(width);
     const columns = isTablet && isPortrait && baseColumns > 2 ? 2 : baseColumns;
 
-    const gapSize = width < 360 ? 12 : width < 480 ? 14 : width < 768 ? 16 : width < 1024 ? 18 : width < 1440 ? 24 : 32;
+    const gapSize = width < BREAKPOINTS.XS ? 12 : width < BREAKPOINTS.SM ? 14 : width < BREAKPOINTS.MOBILE ? 16 : width < BREAKPOINTS.TABLET ? 18 : width < BREAKPOINTS.DESKTOP ? 24 : 32;
 
     const cardsGridDynamicStyle = useMemo(() => {
       const styleArray: ViewStyle[] = [styles.cardsGrid]
@@ -452,12 +449,12 @@ function ListTravel({
 
     const contentPadding = useMemo(() => {
       // ✅ ОПТИМИЗАЦИЯ: Используем стабильные breakpoints для избежания лишних перерасчетов
-      if (effectiveWidth < 360) return 16;  // XS: компактные устройства
-      if (effectiveWidth < 480) return 12; // SM: чуть уже карточки на очень маленьких телефонах
-      if (effectiveWidth < 768) return 12; // Mobile: стандартные телефоны — синхронизировано
-      if (effectiveWidth < 1024) return 20; // Tablet
-      if (effectiveWidth < 1440) return 24; // Desktop
-      if (effectiveWidth < 1920) return 32; // Large Desktop
+      if (effectiveWidth < BREAKPOINTS.XS) return 16;  // XS: компактные устройства
+      if (effectiveWidth < BREAKPOINTS.SM) return 12; // SM: чуть уже карточки на очень маленьких телефонах
+      if (effectiveWidth < BREAKPOINTS.MOBILE) return 12; // Mobile: стандартные телефоны — синхронизировано
+      if (effectiveWidth < BREAKPOINTS.TABLET) return 20; // Tablet
+      if (effectiveWidth < BREAKPOINTS.DESKTOP) return 24; // Desktop
+      if (effectiveWidth < BREAKPOINTS.DESKTOP_LARGE) return 32; // Large Desktop
       return 40; // XXL
     }, [effectiveWidth]); // ✅ ОПТИМИЗАЦИЯ: Только эффективная ширина в зависимостях
 
@@ -467,37 +464,46 @@ function ListTravel({
       }
 
       if (!isTablet || !isPortrait) {
-        return 3;
+        return calculateColumns(effectiveWidth, 'landscape');
       }
 
-      return calculateColumns(width, 'portrait');
-    }, [isMobileDevice, isTablet, isPortrait, width]);
+      return calculateColumns(effectiveWidth, 'portrait');
+    }, [effectiveWidth, isMobileDevice, isTablet, isPortrait, width]);
 
-    const [recommendationsReady, setRecommendationsReady] = useState(Platform.OS !== 'web');
-    const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(false);
-    const [recommendationsVisibilityInitialized, setRecommendationsVisibilityInitialized] = useState(false);
+    const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(() => {
+        if (Platform.OS !== 'web') return false;
+        try {
+            const stored = sessionStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
+            return stored !== 'false';
+        } catch {
+            return false;
+        }
+    });
+    const [recommendationsReady, setRecommendationsReady] = useState(() => {
+        if (Platform.OS !== 'web') return true;
+        return isRecommendationsVisible;
+    });
+    const [recommendationsVisibilityInitialized, setRecommendationsVisibilityInitialized] = useState(
+        Platform.OS === 'web'
+    );
 
     useEffect(() => {
+        // ✅ CLS fix: on web we already initialize synchronously from sessionStorage
+        // to avoid a post-paint setState that shifts the list.
+        if (Platform.OS === 'web') {
+            return;
+        }
+
         let isMounted = true;
 
         const loadRecommendationsVisibility = async () => {
             try {
-                if (Platform.OS === 'web') {
-                    const stored = sessionStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
-                    const visible = stored !== 'false';
-                    if (!isMounted) return;
-                    setIsRecommendationsVisible(visible);
-                    if (visible) {
-                        setRecommendationsReady(true);
-                    }
-                } else {
-                    const stored = await AsyncStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
-                    if (!isMounted) return;
-                    const visible = stored !== 'false';
-                    setIsRecommendationsVisible(visible);
-                    if (visible) {
-                        setRecommendationsReady(true);
-                    }
+                const stored = await AsyncStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
+                if (!isMounted) return;
+                const visible = stored !== 'false';
+                setIsRecommendationsVisible(visible);
+                if (visible) {
+                    setRecommendationsReady(true);
                 }
             } catch (error) {
                 console.error('Error loading recommendations visibility:', error);
@@ -563,6 +569,7 @@ function ListTravel({
     const scrollY = useRef<number>(0);
     const saveScrollTimeoutRef = useRef<number | null>(null);
     const lastScrollOffsetRef = useRef<number>(0);
+    const deleteInFlightRef = useRef<number | null>(null);
 
     /* UI / dialogs */
     const [deleteId, setDelete] = useState<number | null>(null);
@@ -655,15 +662,19 @@ function ListTravel({
     /* Delete */
     const handleDelete = useCallback(async () => {
         if (!deleteId) return;
+        if (deleteInFlightRef.current === deleteId) return;
+        deleteInFlightRef.current = deleteId;
         try {
             await deleteTravel(String(deleteId));
             setDelete(null);
+            deleteInFlightRef.current = null;
             queryClient.invalidateQueries({ queryKey: ["travels"] });
             // ✅ УЛУЧШЕНИЕ: Показываем успешное сообщение
             if (Platform.OS === 'web') {
                 // Можно добавить Toast здесь, если нужно
             }
         } catch (error) {
+            deleteInFlightRef.current = null;
             // ✅ BUG-002: Обработка ошибок при удалении
             // ✅ UX-001: Улучшенные сообщения об ошибках
             let errorMessage = 'Не удалось удалить путешествие.';
@@ -1081,55 +1092,55 @@ function ListTravel({
 
   return (
     <View style={[styles.root, isMobileDevice ? styles.rootMobile : undefined]}>
-      <Suspense fallback={<ListTravelSkeleton />}>
-        <SidebarFilters
-          isMobile={isMobileDevice}
-          filterGroups={filterGroups}
-          filter={filter}
-          onSelect={onSelect}
-          total={total}
-          isSuper={isSuper}
-          setSearch={setSearch}
-          resetFilters={resetFilters}
-          isVisible={!isMobileDevice || showFilters}
-          onClose={() => setShowFilters(false)}
-          containerStyle={isMobileDevice ? [styles.sidebar, styles.sidebarMobile] : styles.sidebar}
-        />
+      <SidebarFilters
+        isMobile={isMobileDevice}
+        filterGroups={filterGroups}
+        filter={filter}
+        onSelect={onSelect}
+        total={total}
+        isSuper={isSuper}
+        setSearch={setSearch}
+        resetFilters={resetFilters}
+        isVisible={!isMobileDevice || showFilters}
+        onClose={() => setShowFilters(false)}
+        containerStyle={isMobileDevice ? [styles.sidebar, styles.sidebarMobile] : styles.sidebar}
+      />
 
-        <RightColumn
-          search={search}
-          setSearch={setSearch}
-          onClearAll={() => {
-            setSearch('')
-            resetFilters()
-            if (isMobileDevice) {
-              setShowFilters(false)
-            }
-          }}
-          isRecommendationsVisible={isRecommendationsVisible}
-          handleRecommendationsVisibilityChange={handleRecommendationsVisibilityChange}
-          activeFiltersCount={activeFiltersCount}
-          total={total}
-          contentPadding={contentPadding}
-          showInitialLoading={showInitialLoading}
-          isError={isError}
-          showEmptyState={showEmptyState}
-          getEmptyStateMessage={getEmptyStateMessage}
-          travels={travels}
-          gridColumns={gridColumns}
-          isMobile={isMobileDevice}
-          showNextPageLoading={showNextPageLoading}
-          refetch={refetch}
-          onFiltersPress={isMobileDevice ? () => setShowFilters(true) : undefined}
-          containerStyle={isMobileDevice ? [styles.rightColumn, styles.rightColumnMobile] : styles.rightColumn}
-          searchHeaderStyle={[styles.searchHeader, { paddingHorizontal: contentPadding }]}
-          cardsContainerStyle={isMobileDevice ? [styles.cardsContainer, styles.cardsContainerMobile] : styles.cardsContainer}
-          cardsGridStyle={cardsGridDynamicStyle}
-          cardSpacing={gapSize}
-          footerLoaderStyle={styles.footerLoader}
-          renderItem={renderTravelListItem}
-        />
-      </Suspense>
+      <RightColumn
+        search={search}
+        setSearch={setSearch}
+        availableWidth={effectiveWidth}
+        onClearAll={() => {
+          setSearch('')
+          resetFilters()
+          if (isMobileDevice) {
+            setShowFilters(false)
+          }
+        }}
+        isRecommendationsVisible={isRecommendationsVisible}
+        handleRecommendationsVisibilityChange={handleRecommendationsVisibilityChange}
+        activeFiltersCount={activeFiltersCount}
+        total={total}
+        contentPadding={contentPadding}
+        showInitialLoading={showInitialLoading}
+        isError={isError}
+        showEmptyState={showEmptyState}
+        getEmptyStateMessage={getEmptyStateMessage}
+        travels={travels}
+        gridColumns={gridColumns}
+        isMobile={isMobileDevice}
+        showNextPageLoading={showNextPageLoading}
+        refetch={refetch}
+        onEndReached={handleListEndReached}
+        onFiltersPress={isMobileDevice ? () => setShowFilters(true) : undefined}
+        containerStyle={isMobileDevice ? [styles.rightColumn, styles.rightColumnMobile] : styles.rightColumn}
+        searchHeaderStyle={[styles.searchHeader, { paddingHorizontal: contentPadding }]}
+        cardsContainerStyle={isMobileDevice ? [styles.cardsContainer, styles.cardsContainerMobile] : styles.cardsContainer}
+        cardsGridStyle={cardsGridDynamicStyle}
+        cardSpacing={gapSize}
+        footerLoaderStyle={styles.footerLoader}
+        renderItem={renderTravelListItem}
+      />
     </View>
   );
 }

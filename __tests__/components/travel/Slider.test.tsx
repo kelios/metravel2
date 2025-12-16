@@ -1,6 +1,11 @@
 import React from 'react'
-import { act, render, type RenderAPI } from '@testing-library/react-native'
+import { act, fireEvent, render, type RenderAPI } from '@testing-library/react-native'
+import { Platform } from 'react-native'
 import Slider, { type SliderImage } from '@/components/travel/Slider'
+
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ left: 0, right: 0, top: 0, bottom: 0 }),
+}))
 
 const portraitImage: SliderImage = {
   id: 'portrait',
@@ -33,6 +38,19 @@ const renderSlider = async (images: SliderImage[]): Promise<RenderAPI> => {
 }
 
 describe('Slider', () => {
+  const originalPlatform = Platform.OS
+  const RN = require('react-native')
+
+  beforeEach(() => {
+    // jest.clearAllMocks() runs globally in __tests__/setup.ts and wipes the mock implementation.
+    // Re-apply a safe default so Slider can render.
+    ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 1024, height: 768 })
+  })
+
+  afterEach(() => {
+    ;(Platform as any).OS = originalPlatform
+  })
+
   it('keeps image in contain mode and hides loader after load', async () => {
     const { getByTestId, queryByTestId } = await renderSlider([portraitImage])
     const image = getByTestId('slider-image-0')
@@ -66,5 +84,86 @@ describe('Slider', () => {
     expect(getByTestId('slider-placeholder-0')).toBeTruthy()
     expect(getByText('Фото не загрузилось')).toBeTruthy()
     expect(queryByTestId('slider-loading-overlay-0')).toBeNull()
+  })
+
+  it('renders arrows on desktop when enabled and hides them on mobile when hideArrowsOnMobile is true', async () => {
+    ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 1024, height: 900 })
+
+    const apiDesktop = render(
+      <Slider
+        images={[portraitImage, landscapeImage]}
+        showArrows
+        showDots={false}
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground={false}
+      />
+    )
+
+    expect(apiDesktop.getByLabelText('Previous slide')).toBeTruthy()
+    expect(apiDesktop.getByLabelText('Next slide')).toBeTruthy()
+
+    ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 360, height: 800 })
+
+    const apiMobile = render(
+      <Slider
+        images={[portraitImage, landscapeImage]}
+        showArrows
+        showDots={false}
+        hideArrowsOnMobile
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground={false}
+      />
+    )
+
+    expect(apiMobile.queryByLabelText('Previous slide')).toBeNull()
+    expect(apiMobile.queryByLabelText('Next slide')).toBeNull()
+  })
+
+  it('uses flat background for web first slide while not loaded, then shows blur background after load', async () => {
+    ;(Platform as any).OS = 'web'
+
+    const { getByTestId, queryByTestId } = render(
+      <Slider
+        images={[portraitImage, landscapeImage]}
+        showArrows={false}
+        showDots={false}
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground
+      />
+    )
+
+    // Web + first slide + status=loading => shouldRenderBlurBg=false
+    expect(getByTestId('slider-flat-bg-0')).toBeTruthy()
+    expect(queryByTestId('slider-blur-bg-0')).toBeNull()
+
+    const img = getByTestId('slider-image-0')
+    act(() => {
+      img.props.onLoad?.()
+    })
+
+    expect(queryByTestId('slider-flat-bg-0')).toBeNull()
+    expect(getByTestId('slider-blur-bg-0')).toBeTruthy()
+  })
+
+  it('updates counter when navigating to the next slide via arrow', async () => {
+    ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 1024, height: 900 })
+
+    const { getByLabelText, getByText } = render(
+      <Slider
+        images={[portraitImage, landscapeImage]}
+        showArrows
+        showDots={false}
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground={false}
+      />
+    )
+
+    expect(getByText('1/2')).toBeTruthy()
+    fireEvent.press(getByLabelText('Next slide'))
+    expect(getByText('2/2')).toBeTruthy()
   })
 })

@@ -40,16 +40,13 @@ export default function TabLayout() {
 
             {/* полностью скрытые из линкинга */}
             <Tabs.Screen name="about" options={HIDDEN_NOHREF} />
-            <Tabs.Screen name="articles" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="contact" options={HIDDEN_NOHREF} />
-            <Tabs.Screen name="article/[id]" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="login" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="registration" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="set-password" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="travel/new" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="travel/[id]" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="metravel" options={HIDDEN_NOHREF} />
-            <Tabs.Screen name="chat" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="profile" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="accountconfirmation" options={HIDDEN_NOHREF} />
         </Tabs>

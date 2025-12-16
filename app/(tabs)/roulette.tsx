@@ -7,7 +7,6 @@ import { useQuery } from '@tanstack/react-query';
 
 import InstantSEO from '@/components/seo/InstantSEO';
 import ModernFilters from '@/components/listTravel/ModernFilters';
-import SearchAndFilterBar from '@/components/listTravel/SearchAndFilterBar';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import UIButton from '@/components/ui/Button';
 

@@ -294,6 +294,7 @@ const styles = StyleSheet.create({
     footerWrapper: {
         marginTop: 'auto',
         flexShrink: 0,
+        ...(Platform.OS === 'web' ? ({ minHeight: 76 } as any) : null),
     },
     footerFallback: {
         padding: 12,

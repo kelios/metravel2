@@ -9,6 +9,7 @@
  */
 
 import { describe, test, expect } from '@jest/globals';
+import { METRICS } from '@/constants/layout';
 
 describe('Travel Card - Adaptive Values', () => {
   /**
@@ -67,7 +68,7 @@ describe('Travel Card - Adaptive Values', () => {
   describe('Browser Mobile Viewport - должны быть мобильные значения', () => {
     test('iPhone SE (375px) = мобильные значения', () => {
       const width = 375; // iPhone SE
-      const isMobile = width < 768;
+      const isMobile = width < METRICS.breakpoints.tablet;
       
       expect(isMobile).toBe(true);
       
@@ -85,21 +86,21 @@ describe('Travel Card - Adaptive Values', () => {
 
     test('iPhone 12 (390px) = мобильные значения', () => {
       const width = 390;
-      const isMobile = width < 768;
+      const isMobile = width < METRICS.breakpoints.tablet;
       
       expect(isMobile).toBe(true);
     });
 
     test('iPad (768px) = переходные значения', () => {
-      const width = 768;
-      const isMobile = width < 768;
+      const width = METRICS.breakpoints.tablet;
+      const isMobile = width < METRICS.breakpoints.tablet;
       
       expect(isMobile).toBe(false); // Уже не mobile
     });
 
     test('Desktop (1920px) = desktop значения', () => {
       const width = 1920;
-      const isMobile = width < 768;
+      const isMobile = width < METRICS.breakpoints.tablet;
       
       expect(isMobile).toBe(false);
     });
@@ -111,7 +112,7 @@ describe('Travel Card - Adaptive Values', () => {
    */
   describe('ItemSeparatorComponent - вертикальные отступы', () => {
     function getSeparatorHeight(width: number): number {
-      return width < 768 ? 20 : 24;
+      return width < METRICS.breakpoints.tablet ? 20 : 24;
     }
 
     test('Mobile (375px): separator 20px', () => {
@@ -125,7 +126,7 @@ describe('Travel Card - Adaptive Values', () => {
     });
 
     test('Desktop (768px): separator 24px', () => {
-      const separatorHeight = getSeparatorHeight(768);
+      const separatorHeight = getSeparatorHeight(METRICS.breakpoints.tablet);
       expect(separatorHeight).toBe(24);
     });
 
@@ -142,8 +143,8 @@ describe('Travel Card - Adaptive Values', () => {
     function getContentPadding(width: number): number {
       if (width < 360) return 16;
       if (width < 480) return 20; // iPhone SE попадает сюда!
-      if (width < 768) return 20;
-      if (width < 1024) return 20;
+      if (width < METRICS.breakpoints.tablet) return 20;
+      if (width < METRICS.breakpoints.largeTablet) return 20;
       if (width < 1440) return 24;
       if (width < 1920) return 32;
       return 40;
@@ -166,7 +167,7 @@ describe('Travel Card - Adaptive Values', () => {
     });
 
     test('iPad (768px): padding 20px', () => {
-      expect(getContentPadding(768)).toBe(20);
+      expect(getContentPadding(METRICS.breakpoints.tablet)).toBe(20);
     });
 
     test('Desktop (1920px): padding 32px', () => {
@@ -201,17 +202,17 @@ describe('Travel Card - Adaptive Values', () => {
       });
     });
 
-    test('Width-based логика должна использовать 768px breakpoint', () => {
-      const MOBILE_BREAKPOINT = 768;
+    test('Width-based логика должна использовать tablet breakpoint', () => {
+      const MOBILE_BREAKPOINT = METRICS.breakpoints.tablet;
       
       // Проверяем что breakpoint правильный
-      expect(MOBILE_BREAKPOINT).toBe(768);
+      expect(MOBILE_BREAKPOINT).toBe(METRICS.breakpoints.tablet);
       
       // Проверяем что логика работает
       const testCases = [
         { width: 375, expectedIsMobile: true },
         { width: 767, expectedIsMobile: true },
-        { width: 768, expectedIsMobile: false },
+        { width: METRICS.breakpoints.tablet, expectedIsMobile: false },
         { width: 1920, expectedIsMobile: false },
       ];
 
@@ -228,8 +229,8 @@ describe('Travel Card - Adaptive Values', () => {
    */
   describe('Skeleton grid - rowGap vs columnGap', () => {
     function getSkeletonGaps(width: number) {
-      const gapSize = width < 768 ? 12 : 16; // Горизонтальный
-      const rowGap = width < 768 ? 20 : 24; // Вертикальный
+      const gapSize = width < METRICS.breakpoints.tablet ? 12 : 16; // Горизонтальный
+      const rowGap = width < METRICS.breakpoints.tablet ? 20 : 24; // Вертикальный
       
       return {
         columnGap: gapSize,
@@ -297,7 +298,7 @@ describe('Travel Card - Integration Tests', () => {
    */
   describe('Width change - каскадное обновление', () => {
     function getResponsiveValues(width: number) {
-      const isMobile = width < 768;
+      const isMobile = width < METRICS.breakpoints.tablet;
       return {
         isMobile,
         padding: isMobile ? 12 : 24,
@@ -381,7 +382,7 @@ describe('Travel Card - Regression Tests', () => {
    */
   test('Bug #2: Должны быть отступы между карточками через ItemSeparator', () => {
     const width = 375;
-    const separatorHeight = width < 768 ? 20 : 24;
+    const separatorHeight = width < METRICS.breakpoints.tablet ? 20 : 24;
     
     expect(separatorHeight).toBe(20);
     expect(separatorHeight).toBeGreaterThan(0);
@@ -428,8 +429,8 @@ describe('Travel Card - Best Practices Examples', () => {
 
   test('✅ ПРАВИЛЬНО: Width-based логика', () => {
     const getValues = (width: number) => ({
-      padding: width < 768 ? 12 : 24,
-      fontSize: width < 768 ? 16 : 20,
+      padding: width < METRICS.breakpoints.tablet ? 12 : 24,
+      fontSize: width < METRICS.breakpoints.tablet ? 16 : 20,
     });
     
     const mobile = getValues(375);
@@ -441,7 +442,7 @@ describe('Travel Card - Best Practices Examples', () => {
 
   test('✅ ПРАВИЛЬНО: ItemSeparatorComponent для отступов', () => {
     const ItemSeparator = (width: number) => {
-      return { height: width < 768 ? 20 : 24 };
+      return { height: width < METRICS.breakpoints.tablet ? 20 : 24 };
     };
     
     const mobileSeparator = ItemSeparator(375);

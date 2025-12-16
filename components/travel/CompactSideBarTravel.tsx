@@ -13,7 +13,7 @@ import {
   Alert,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
-import { MaterialIcons, Feather } from "@expo/vector-icons";
+import { MaterialIcons, MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import { Text } from "react-native-paper";
 import type { Travel } from "@/src/types/types";
 import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/travel/sectionLinks";
@@ -309,7 +309,7 @@ function CompactSideBarTravel({
                     disabled={!authorUserId}
                     accessibilityRole={authorUserId ? 'button' : undefined}
                     accessibilityLabel={authorUserId ? `Открыть профиль автора ${userName || 'Пользователь'}` : undefined}
-                    style={({ pressed }) => [pressed && authorUserId ? { opacity: 0.9 } : null]}
+                    style={({ pressed }) => [styles.userNameWrap, pressed && authorUserId ? { opacity: 0.9 } : null]}
                     {...Platform.select({ web: authorUserId ? { cursor: 'pointer' } : {} })}
                   >
                     <Text style={styles.userName} numberOfLines={1}>
@@ -326,26 +326,33 @@ function CompactSideBarTravel({
                       hitSlop={6}
                       accessibilityRole="button"
                       accessibilityLabel="Редактировать путешествие"
+                      style={({ pressed }) => [
+                        styles.actionBtn,
+                        pressed && styles.actionBtnPressed,
+                      ]}
                     >
                       <MaterialIcons name="edit" size={18} color="#2F332E" />
                     </Pressable>
                   )}
+
                   {Platform.OS === 'web' && (
                     <Pressable
                       onPress={handleOpenExport}
-                      hitSlop={6}
+                      hitSlop={8}
                       disabled={pdfExport.isGenerating}
                       accessibilityRole="button"
                       accessibilityLabel="Экспорт в PDF"
+                      style={({ pressed }) => [
+                        styles.actionBtn,
+                        styles.actionBtnPdf,
+                        pressed && !pdfExport.isGenerating ? styles.actionBtnPressed : null,
+                        pdfExport.isGenerating ? styles.actionBtnDisabled : null,
+                      ]}
                     >
                       {pdfExport.isGenerating ? (
                         <ActivityIndicator size="small" color="#b83a3a" />
                       ) : (
-                        <MaterialIcons
-                          name="picture-as-pdf"
-                          size={18}
-                          color="#b83a3a"
-                        />
+                        <MaterialCommunityIcons name="file-pdf-box" size={18} color="#b83a3a" />
                       )}
                     </Pressable>
                   )}
@@ -704,12 +711,49 @@ const styles = StyleSheet.create({
     flexDirection: "row", 
     alignItems: "center", 
     justifyContent: "space-between", 
+    flexWrap: 'wrap',
+    rowGap: 6,
     marginBottom: DESIGN_TOKENS.spacing.xs, // Уменьшено с 8
   },
   actionsRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: DESIGN_TOKENS.spacing.sm,
+    marginLeft: 'auto',
+    flexShrink: 0,
+    alignSelf: 'flex-end',
+  },
+  actionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+      },
+      default: {},
+    }),
+  },
+  actionBtnPdf: {
+    backgroundColor: 'rgba(185, 28, 28, 0.06)',
+    borderColor: 'rgba(185, 28, 28, 0.2)',
+  },
+  actionBtnPressed: {
+    transform: [{ scale: 0.96 }],
+    opacity: 0.9,
+  },
+  actionBtnDisabled: {
+    opacity: 0.6,
+  },
+  userNameWrap: {
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
   },
   userName: { 
     fontSize: DESIGN_TOKENS.typography.sizes.sm, // Уменьшено с 16

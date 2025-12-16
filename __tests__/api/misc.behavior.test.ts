@@ -15,7 +15,7 @@ const mockFetchWithTimeout = jest.fn()
 const mockSafeJsonParse = jest.fn()
 const mockValidateImageFile = jest.fn()
 const mockValidateAIMessage = jest.fn()
-const mockSanitizeInput = jest.fn((v: string) => v)
+const mockSanitizeInput = jest.fn((...args: any[]) => args[0])
 const mockDevError = jest.fn()
 
 jest.mock('@/src/utils/secureStorage', () => ({
@@ -43,8 +43,8 @@ jest.mock('@/src/utils/logger', () => ({
   devError: (...args: any[]) => mockDevError(...args),
 }))
 
-const baseForm: TravelFormData = {
-  id: 1,
+const baseForm = ({
+  id: '1',
   slug: 'trip',
   name: 'Trip',
   travel_image_thumb_url: '',
@@ -67,7 +67,7 @@ const baseForm: TravelFormData = {
   number_days: 0,
   companions: [],
   countryCode: '',
-}
+} as unknown) as TravelFormData
 
 describe('api/misc', () => {
   beforeEach(() => {
@@ -122,6 +122,21 @@ describe('api/misc', () => {
     expect(result).toEqual({ ok: true })
   })
 
+  it('uploadImage throws error text on non-200 responses', async () => {
+    mockGetSecureItem.mockResolvedValue('token')
+    mockValidateImageFile.mockReturnValue({ valid: true })
+
+    mockFetchWithTimeout.mockResolvedValue({
+      status: 500,
+      text: () => Promise.resolve('server failed'),
+    })
+
+    const fd = new FormData()
+    fd.append('file', new File([], 'a.png'))
+
+    await expect(uploadImage(fd)).rejects.toThrow('server failed')
+  })
+
   it('deleteImage enforces auth and success status', async () => {
     mockGetSecureItem.mockResolvedValue(null)
     await expect(deleteImage('1')).rejects.toThrow('Пользователь не авторизован')
@@ -154,6 +169,14 @@ describe('api/misc', () => {
     await expect(sendFeedback('A', 'b@c.com', 'Hi')).rejects.toThrow('oops')
   })
 
+  it('sendFeedback prefers field-specific validation errors when present', async () => {
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockFetchWithTimeout.mockResolvedValue({ ok: false })
+    mockSafeJsonParse.mockResolvedValue({ email: ['bad email'], detail: 'fallback' })
+
+    await expect(sendFeedback('A', 'b@c.com', 'Hi')).rejects.toThrow('bad email')
+  })
+
   it('sendAIMessage validates input and handles success', async () => {
     mockValidateAIMessage.mockReturnValue({ valid: false, error: 'bad' })
     await expect(sendAIMessage(' ')).rejects.toThrow('bad')
@@ -164,5 +187,12 @@ describe('api/misc', () => {
 
     const res = await sendAIMessage('hello')
     expect(res).toEqual({ answer: 'hi' })
+  })
+
+  it('sendAIMessage throws when server responds non-ok', async () => {
+    mockValidateAIMessage.mockReturnValue({ valid: true })
+    mockFetchWithTimeout.mockResolvedValue({ ok: false, statusText: 'Bad Request' })
+
+    await expect(sendAIMessage('hello')).rejects.toThrow('AI request failed: Bad Request')
   })
 })

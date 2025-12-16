@@ -201,6 +201,8 @@ jest.mock('@expo/vector-icons', () => {
       React.createElement(View, { testID: `fa5-${name}`, ...props }),
     MaterialIcons: ({ name, size, color, ...props }: any) =>
       React.createElement(View, { testID: `material-${name}`, ...props }),
+    MaterialCommunityIcons: ({ name, size, color, ...props }: any) =>
+      React.createElement(View, { testID: `mci-${name}`, ...props }),
   }
 })
 

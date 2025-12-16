@@ -19,7 +19,7 @@ import * as MediaLibrary from 'expo-media-library';
 type StepPoint = { lat: number; lng: number; title?: string };
 
 type Mods = {
-    L: typeof import('leaflet');
+    L: any;
     MapContainer: any;
     TileLayer: any;
     Marker: any;
@@ -93,6 +93,33 @@ function downloadText(filename: string, text: string, type = 'text/plain') {
     URL.revokeObjectURL(url);
 }
 
+async function ensureDomToImage(): Promise<any> {
+    const w = window as any;
+    if (w.domtoimage) return w.domtoimage;
+
+    if (!(ensureDomToImage as any)._loader) {
+        (ensureDomToImage as any)._loader = new Promise<void>((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/dom-to-image-more@3.3.0/dist/dom-to-image-more.min.js';
+            script.async = true;
+            script.onload = () => resolve();
+            script.onerror = (err) => {
+                (ensureDomToImage as any)._loader = null;
+                reject(err);
+            };
+            document.body.appendChild(script);
+        });
+    }
+
+    await (ensureDomToImage as any)._loader;
+
+    if (!w.domtoimage) {
+        throw new Error('dom-to-image failed to load from CDN');
+    }
+
+    return w.domtoimage;
+}
+
 export default function QuestFullMap({
                                          steps,
                                          height = 520,
@@ -111,16 +138,50 @@ export default function QuestFullMap({
     useEffect(() => {
         (async () => {
             try {
-                const L = await import('leaflet');
+                const ensureLeafletCSS = () => {
+                    const href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                    if (!document.querySelector(`link[href="${href}"]`)) {
+                        const link = document.createElement('link');
+                        link.rel = 'stylesheet';
+                        link.href = href;
+                        document.head.appendChild(link);
+                    }
+                };
+
+                const ensureLeaflet = async (): Promise<any> => {
+                    const w = window as any;
+                    if (w.L) return w.L;
+
+                    ensureLeafletCSS();
+
+                    if (!(ensureLeaflet as any)._loader) {
+                        (ensureLeaflet as any)._loader = new Promise<void>((resolve, reject) => {
+                            const script = document.createElement('script');
+                            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                            script.async = true;
+                            script.onload = () => resolve();
+                            script.onerror = (err) => {
+                                (ensureLeaflet as any)._loader = null;
+                                reject(err);
+                            };
+                            document.body.appendChild(script);
+                        });
+                    }
+
+                    await (ensureLeaflet as any)._loader;
+                    return w.L;
+                };
+
+                const L = await ensureLeaflet();
                 const RL = await import('react-leaflet');
 
                 // default marker images (not used for numberIcon, but keep leaflet happy)
                 // @ts-ignore
                 delete L.Icon.Default.prototype._getIconUrl;
                 L.Icon.Default.mergeOptions({
-                    iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
-                    iconUrl: require('leaflet/dist/images/marker-icon.png'),
-                    shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
+                    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+                    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
                 });
 
                 // CSS загружается через CDN в других компонентах
@@ -239,7 +300,7 @@ export default function QuestFullMap({
 
     const exportPNG = async () => {
         try {
-            const domtoimage = await import('dom-to-image');
+            const domtoimage = await ensureDomToImage();
             const node = mapDivRef.current;
             if (!node) return;
             const dataUrl = await (domtoimage as any).toPng(node, { quality: 1 });

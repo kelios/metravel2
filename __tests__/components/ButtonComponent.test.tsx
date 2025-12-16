@@ -1,11 +1,11 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
-import ButtonComponent from '@/components/ButtonComponent'
+import Button from '@/components/ui/Button'
 
-describe('ButtonComponent', () => {
+describe('Button', () => {
   it('renders correctly with label', () => {
     const { getByText } = render(
-      <ButtonComponent label="Test Button" onPress={() => {}} />
+      <Button label="Test Button" onPress={() => {}} />
     )
     expect(getByText('Test Button')).toBeTruthy()
   })
@@ -13,7 +13,7 @@ describe('ButtonComponent', () => {
   it('calls onPress when pressed', () => {
     const onPress = jest.fn()
     const { getByText } = render(
-      <ButtonComponent label="Test Button" onPress={onPress} />
+      <Button label="Test Button" onPress={onPress} />
     )
     fireEvent.press(getByText('Test Button'))
     expect(onPress).toHaveBeenCalledTimes(1)
@@ -22,7 +22,7 @@ describe('ButtonComponent', () => {
   it('does not call onPress when disabled', () => {
     const onPress = jest.fn()
     const { getByText } = render(
-      <ButtonComponent label="Test Button" onPress={onPress} disabled />
+      <Button label="Test Button" onPress={onPress} disabled />
     )
     fireEvent.press(getByText('Test Button'))
     expect(onPress).not.toHaveBeenCalled()
@@ -30,7 +30,7 @@ describe('ButtonComponent', () => {
 
   it('applies disabled styles when disabled', () => {
     const { getByText } = render(
-      <ButtonComponent label="Test Button" onPress={() => {}} disabled />
+      <Button label="Test Button" onPress={() => {}} disabled />
     )
     const button = getByText('Test Button').parent
     expect(button).toBeTruthy()

@@ -35,11 +35,9 @@ describe('Routes Existence Tests', () => {
     '/login',
     '/registration',
     '/metravel',
-    '/chat',
     '/export',
     '/set-password',
     '/accountconfirmation',
-    '/articles',
   ];
 
   const hasIndexFile = (dir: string) =>
@@ -119,7 +117,6 @@ describe('Routes Existence Tests', () => {
     const dynamicRoutes = [
       '/travels/[param]',
       '/travel/[id]',
-      '/article/[id]',
       '/quests/[city]/[questId]',
     ];
 
@@ -192,15 +189,12 @@ describe('Routes Existence Tests', () => {
       'map',
       'travels/[param]',
       'about',
-      'articles',
-      'article/[id]',
       'login',
       'registration',
       'set-password',
       'travel/new',
       'travel/[id]',
       'metravel',
-      'chat',
       'profile',
       'accountconfirmation',
     ];

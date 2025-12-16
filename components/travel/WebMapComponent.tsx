@@ -1,45 +1,10 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 // CSS загружается через CDN в Map.web.tsx
-import L from 'leaflet';
 import MarkersListComponent from '../MarkersListComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
-// Используем стандартный оранжевый маркер Leaflet
-const markerIcon = new L.Icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
-    iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [0, -41],
-    shadowSize: [41, 41],
-    shadowAnchor: [12, 41],
-});
-
-const FitBounds = ({ markers }: { markers: any[] }) => {
-    const map = useMap();
-    const hasFit = useRef(false);
-
-    useEffect(() => {
-        if (!hasFit.current && markers.length > 0) {
-            const bounds = L.latLngBounds(markers.map((m: any) => [m.lat, m.lng]));
-            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6 });
-            hasFit.current = true;
-        }
-    }, [markers, map]);
-
-    return null;
-};
-
-const MapClickHandler = ({ addMarker }: { addMarker: (latlng: any) => void }) => {
-    useMapEvents({
-        click(e: any) {
-            addMarker(e.latlng);
-        }
-    });
-    return null;
-};
+type LeafletNS = any;
+type ReactLeafletNS = typeof import('react-leaflet');
 
 const reverseGeocode = async (latlng: any) => {
     const response = await fetch(
@@ -67,6 +32,70 @@ const WebMapComponent = ({
     onCountryDeselect,
     travelId,
 }: WebMapComponentProps) => {
+    const [L, setL] = useState<LeafletNS | null>(null);
+    const [rl, setRl] = useState<ReactLeafletNS | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (typeof window === 'undefined') return;
+
+        const ensureLeafletCSS = () => {
+            const href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+            if (!document.querySelector(`link[href="${href}"]`)) {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = href;
+                document.head.appendChild(link);
+            }
+        };
+
+        const ensureLeaflet = async (): Promise<any> => {
+            const w = window as any;
+            if (w.L) return w.L;
+
+            ensureLeafletCSS();
+
+            if (!(ensureLeaflet as any)._loader) {
+                (ensureLeaflet as any)._loader = new Promise<void>((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                    script.async = true;
+                    script.onload = () => resolve();
+                    script.onerror = (err) => {
+                        (ensureLeaflet as any)._loader = null;
+                        reject(err);
+                    };
+                    document.body.appendChild(script);
+                });
+            }
+
+            await (ensureLeaflet as any)._loader;
+            return w.L;
+        };
+
+        const load = async () => {
+            try {
+                const L = await ensureLeaflet();
+                const rlMod = await import('react-leaflet');
+                if (!cancelled) {
+                    setL(L);
+                    setRl(rlMod);
+                }
+            } catch {
+                if (!cancelled) {
+                    setL(null);
+                    setRl(null);
+                }
+            }
+        };
+
+        load();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -134,6 +163,20 @@ const WebMapComponent = ({
     const isValidCoordinates = ({ lat, lng }: { lat: number; lng: number }) =>
         lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 
+    const markerIcon = useMemo(() => {
+        if (!L) return null;
+        return new (L as any).Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
+            iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [0, -41],
+            shadowSize: [41, 41],
+            shadowAnchor: [12, 41],
+        });
+    }, [L]);
+
     const addMarker = async (latlng: any) => {
         if (!isValidCoordinates(latlng)) return;
 
@@ -192,6 +235,45 @@ const WebMapComponent = ({
         }
 
         if (editingIndex === index) setEditingIndex(null);
+    };
+
+    if (!L || !rl || !markerIcon) {
+        return (
+            <div style={{ padding: DESIGN_TOKENS.spacing.lg, color: DESIGN_TOKENS.colors.textMuted }}>
+                Загрузка карты…
+            </div>
+        );
+    }
+
+    const MapContainer: any = (rl as any).MapContainer;
+    const TileLayer: any = (rl as any).TileLayer;
+    const Marker: any = (rl as any).Marker;
+    const Popup: any = (rl as any).Popup;
+    const useMap: any = (rl as any).useMap;
+    const useMapEvents: any = (rl as any).useMapEvents;
+
+    const FitBounds = ({ markers }: { markers: any[] }) => {
+        const map = useMap();
+        const hasFit = useRef(false);
+
+        useEffect(() => {
+            if (!hasFit.current && markers.length > 0) {
+                const bounds = (L as any).latLngBounds(markers.map((m: any) => [m.lat, m.lng]));
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6 });
+                hasFit.current = true;
+            }
+        }, [markers, map]);
+
+        return null;
+    };
+
+    const MapClickHandler = ({ addMarker }: { addMarker: (latlng: any) => void }) => {
+        useMapEvents({
+            click(e: any) {
+                addMarker(e.latlng);
+            }
+        });
+        return null;
     };
 
     return (

@@ -62,8 +62,17 @@ function TravelsGridComponent<T>({
   const columns = numColumns === 'responsive' ? responsiveColumns : numColumns;
 
   const itemContainerStyle = useMemo(() => {
-    return [styles.itemContainer, { minWidth: itemMinWidth }];
-  }, [itemMinWidth]);
+    const percent = `${100 / columns}%`;
+    return [
+      styles.itemContainer,
+      {
+        minWidth: itemMinWidth,
+        flexBasis: percent as any,
+        maxWidth: percent as any,
+        width: percent as any,
+      },
+    ];
+  }, [columns, itemMinWidth]);
 
   // Group items into rows for the grid
   const rows = useMemo(() => {
@@ -143,7 +152,7 @@ function TravelsGridComponent<T>({
         onEndReachedThreshold={onEndReachedThreshold}
         refreshing={refreshing}
         onRefresh={onRefresh}
-        removeClippedSubviews={listOptimizations.removeClippedSubviews}
+        removeClippedSubviews={false}
         initialNumToRender={listOptimizations.initialNumToRender}
         maxToRenderPerBatch={listOptimizations.maxToRenderPerBatch}
         updateCellsBatchingPeriod={listOptimizations.updateCellsBatchingPeriod}
@@ -165,11 +174,11 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     marginBottom: getSpacing('m'),
   },
   itemContainer: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 0,
     padding: getSpacing('s'),
   },
 });

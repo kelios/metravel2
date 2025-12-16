@@ -183,9 +183,66 @@ export async function generateLeafletRouteSnapshot(
   const height = options.height ?? 480;
   const zoom = options.zoom ?? 10;
 
-  // Динамически импортируем Leaflet только в браузере
-  const leafletMod: any = await import('leaflet');
-  const L = leafletMod.default || leafletMod;
+  const ensureLeaflet = async (): Promise<any> => {
+    const w = window as any;
+    if (w.L) {
+      return w.L;
+    }
+
+    const isTestEnv =
+      typeof process !== 'undefined' &&
+      (process as any).env &&
+      (process as any).env.NODE_ENV === 'test';
+
+    if (isTestEnv) {
+      try {
+        // In Jest we mock 'leaflet', so prefer synchronous require to avoid hanging on CDN.
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        // Use an indirect require so Metro doesn't statically include Leaflet in the web entry bundle.
+        const req = (0, eval)('require') as NodeRequire;
+        const leafletMod = req('leaflet');
+        w.L = leafletMod?.default ?? leafletMod;
+        return w.L;
+      } catch {
+        return null;
+      }
+    }
+
+    if (!(ensureLeaflet as any)._loader) {
+      (ensureLeaflet as any)._loader = new Promise<void>((resolve, reject) => {
+        const cssHref = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        if (!document.querySelector(`link[href="${cssHref}"]`)) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = cssHref;
+          document.head.appendChild(link);
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = (err) => {
+          (ensureLeaflet as any)._loader = null;
+          reject(err);
+        };
+        document.body.appendChild(script);
+      });
+    }
+
+    await (ensureLeaflet as any)._loader;
+
+    if (!w.L) {
+      throw new Error('Leaflet failed to load from CDN');
+    }
+
+    return w.L;
+  };
+
+  const L: any = await ensureLeaflet();
+  if (!L) {
+    return null;
+  }
 
   // Создаем off-screen контейнер
   const container = document.createElement('div');

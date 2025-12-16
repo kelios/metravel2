@@ -1,17 +1,10 @@
 // components/MapPage/MapRoute.tsx
 import React, { useEffect, useMemo, useRef } from 'react'
 import { Platform } from 'react-native'
-import { useMap } from 'react-leaflet'
 
 const isWeb = Platform.OS === 'web' && typeof window !== 'undefined'
 
-// Нежно получаем L так, чтобы не упасть из-за ESM/CJS
-function getLeaflet() {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('leaflet')
-    // @ts-ignore
-    return mod.default || mod
-}
+type LeafletNS = any
 
 type Point = {
     id: number
@@ -22,6 +15,7 @@ interface MapRouteProps {
     data?: Point[]
     /** driving | bike | foot */
     profile?: 'driving' | 'bike' | 'foot'
+    map: any
 }
 
 const getLatLng = (coord?: string): [number, number] | null => {
@@ -40,13 +34,14 @@ const getORSProfile = (p: 'driving' | 'bike' | 'foot') =>
 const getOSRMProfile = (p: 'driving' | 'bike' | 'foot') =>
     p === 'bike' ? 'bike' : p === 'foot' ? 'foot' : 'driving'
 
-export default function MapRoute({ data = [], profile = 'driving' }: MapRouteProps) {
+export default function MapRoute({ data = [], profile = 'driving', map }: MapRouteProps) {
     if (!isWeb) {
         console.warn('⚠ Компонент `MapRoute` работает только в браузере.')
         return null
     }
 
-    const map = useMap()
+    const [L, setL] = React.useState<LeafletNS | null>(null)
+
     const polylineRef = useRef<any>(null)
     const markersRef = useRef<any[]>([])
     const abortRef = useRef<AbortController | null>(null)
@@ -65,27 +60,70 @@ export default function MapRoute({ data = [], profile = 'driving' }: MapRoutePro
         }
     }, [])
 
+    // Динамически подгружаем Leaflet только в браузере (без require, чтобы не тянуть в entry)
+    useEffect(() => {
+        let cancelled = false
+        const load = async () => {
+            try {
+                const ensureLeaflet = async (): Promise<any> => {
+                    const w = window as any
+                    if (w.L) return w.L
+
+                    if (!(ensureLeaflet as any)._loader) {
+                        ;(ensureLeaflet as any)._loader = new Promise<void>((resolve, reject) => {
+                            const script = document.createElement('script')
+                            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+                            script.async = true
+                            script.onload = () => resolve()
+                            script.onerror = err => {
+                                ;(ensureLeaflet as any)._loader = null
+                                reject(err)
+                            }
+                            document.body.appendChild(script)
+                        })
+                    }
+
+                    await (ensureLeaflet as any)._loader
+                    return w.L
+                }
+
+                const leaflet = await ensureLeaflet()
+                if (!cancelled) setL(leaflet)
+            } catch {
+                if (!cancelled) setL(null)
+            }
+        }
+        load()
+        return () => {
+            cancelled = true
+        }
+    }, [])
+
     // скрываем стандартные контролы, как у тебя в исходнике
     useEffect(() => {
         const style = document.createElement('style')
         style.innerHTML = `.leaflet-top, .leaflet-right { display: none !important; }`
         document.head.appendChild(style)
-        return () => document.head.removeChild(style)
+        return () => {
+            try {
+                document.head.removeChild(style)
+            } catch {}
+        }
     }, [])
 
     // готовим точки
     const waypointsLatLng = useMemo(() => {
-        const L = getLeaflet()
+        if (!L) return []
         return data
             .map(p => getLatLng(p.coord))
             .filter((x): x is [number, number] => x !== null)
             .map(([lat, lng]) => L.latLng(lat, lng))
-    }, [data])
+    }, [data, L])
 
     // иконка MeTravel
     const meTravelIcon = useMemo(() => {
         try {
-            const L = getLeaflet()
+            if (!L) return null
             return new L.Icon({
                 iconUrl: require('@/assets/icons/logo_yellow.ico'),
                 iconSize: [27, 30],
@@ -96,10 +134,10 @@ export default function MapRoute({ data = [], profile = 'driving' }: MapRoutePro
             console.error('❌ Ошибка загрузки иконки:', e)
             return null
         }
-    }, [])
+    }, [L])
 
     useEffect(() => {
-        const L = getLeaflet()
+        if (!L) return
         if (!map || !map.getContainer()) return
 
         // очистка прошлой линии и маркеров
@@ -205,7 +243,7 @@ export default function MapRoute({ data = [], profile = 'driving' }: MapRoutePro
             }
             clearLayers()
         }
-    }, [map, waypointsLatLng, profile, ORS_API_KEY])
+    }, [map, waypointsLatLng, profile, ORS_API_KEY, L])
 
     return null
 }

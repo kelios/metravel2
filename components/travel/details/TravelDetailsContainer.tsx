@@ -33,7 +33,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import { useIsFocused } from "@react-navigation/native";
-import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
 
@@ -987,7 +986,7 @@ export default function TravelDetails() {
           />
         )}
         <View style={styles.errorContainer}>
-          <MaterialIcons name="error-outline" size={64} color={DESIGN_TOKENS.colors.primary} />
+          <LazyMaterialIcons name="error-outline" size={64} color={DESIGN_TOKENS.colors.primary} />
           <Text style={styles.errorTitle}>Не удалось загрузить путешествие</Text>
           <Text style={styles.errorText}>
             Возможно, страница была удалена или временно недоступна.

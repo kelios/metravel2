@@ -236,8 +236,13 @@ describe('ListTravel', () => {
 
     renderComponent();
 
+    const confirmSpy = (globalThis as any).confirm as jest.Mock;
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalled();
+      expect(confirmSpy).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Превышено время ожидания'));
     });
 
     // Restore original values
@@ -266,8 +271,13 @@ describe('ListTravel', () => {
 
     renderComponent();
 
+    const confirmSpy = (globalThis as any).confirm as jest.Mock;
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalled();
+      expect(confirmSpy).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Нет доступа'));
     });
 
     // Restore original values

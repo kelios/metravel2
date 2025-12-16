@@ -47,7 +47,7 @@ const ensureLeafletCSS = () => {
   document.head.appendChild(link);
 };
 
-type LeafletNS = typeof import('leaflet');
+type LeafletNS = any;
 type RL = typeof import('react-leaflet');
 
 const MapClientSideComponent: React.FC<MapClientSideProps> = ({
@@ -66,14 +66,36 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   useEffect(() => {
     let cancelled = false;
 
+    const ensureLeaflet = async (): Promise<any> => {
+      const w = window as any;
+      if (w.L) return w.L;
+
+      ensureLeafletCSS();
+
+      if (!(ensureLeaflet as any)._loader) {
+        (ensureLeaflet as any)._loader = new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+          script.async = true;
+          script.onload = () => resolve();
+          script.onerror = (err) => {
+            (ensureLeaflet as any)._loader = null;
+            reject(err);
+          };
+          document.body.appendChild(script);
+        });
+      }
+
+      await (ensureLeaflet as any)._loader;
+      return w.L;
+    };
+
     const load = async () => {
       try {
-        const [leafletMod, rlMod] = await Promise.all([
-          import('leaflet'),
-          import('react-leaflet'),
-        ]);
+        const L = await ensureLeaflet();
+        const rlMod = await import('react-leaflet');
         if (!cancelled) {
-          setL(leafletMod);
+          setL(L);
           setRl(rlMod);
         }
       } catch {
@@ -131,12 +153,39 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       if (typeof window !== 'undefined') {
         (window as any).__metravelLeafletMap = map;
       }
-      const coords = data.map((p) => getLatLng(p.coord)).filter(Boolean) as [number, number][];
+      const coords = data
+        .map((p) => getLatLng(p.coord))
+        .filter(
+          (c): c is [number, number] =>
+            Array.isArray(c) &&
+            c.length === 2 &&
+            Number.isFinite(c[0]) &&
+            Number.isFinite(c[1])
+        );
+
       if (!coords.length) return;
-      const bounds = L.latLngBounds(coords);
-      if (bounds.isValid()) {
-        // малый padding, чтобы не было резких анимаций
-        map.fitBounds(bounds, { padding: [32, 32] });
+
+      const run = () => {
+        if (coords.length === 1) {
+          map.setView(coords[0], map.getZoom(), { animate: false });
+          return;
+        }
+
+        const bounds = L.latLngBounds(coords);
+        if (!bounds.isValid()) return;
+
+        try {
+          // малый padding, чтобы не было резких анимаций
+          map.fitBounds(bounds, { padding: [32, 32], animate: false });
+        } catch {
+          // noop
+        }
+      };
+
+      if (typeof map.whenReady === 'function') {
+        map.whenReady(run);
+      } else {
+        run();
       }
     }, [map, data]);
     return null;

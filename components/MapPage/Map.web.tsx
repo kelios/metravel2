@@ -2,16 +2,8 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import * as Location from 'expo-location';
-import L from 'leaflet';
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  Circle,
-  useMap,
-  useMapEvents,
-} from 'react-leaflet';
+type LeafletNS = any;
+type ReactLeafletNS = typeof import('react-leaflet');
 // CSS загружается через CDN ниже в коде
 import RoutingMachine from '@/components/MapPage/RoutingMachine';
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
@@ -137,6 +129,8 @@ const MapPageComponent: React.FC<Props> = ({
                                              setFullRouteCoords,
                                              radius,
                                            }) => {
+  const [L, setL] = useState<any>(null);
+  const [rl, setRl] = useState<any>(null);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [errors, setErrors] = useState({
     location: false,
@@ -171,7 +165,82 @@ const MapPageComponent: React.FC<Props> = ({
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+
+    const ensureLeafletCSS = () => {
+      const href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      if (!document.querySelector(`link[href="${href}"]`)) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = href;
+        document.head.appendChild(link);
+      }
+    };
+
+    const ensureLeaflet = async (): Promise<any> => {
+      const w = window as any;
+      if (w.L) return w.L;
+
+      ensureLeafletCSS();
+
+      if (!(ensureLeaflet as any)._loader) {
+        (ensureLeaflet as any)._loader = new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+          script.async = true;
+          script.onload = () => resolve();
+          script.onerror = (err) => {
+            (ensureLeaflet as any)._loader = null;
+            reject(err);
+          };
+          document.body.appendChild(script);
+        });
+      }
+
+      await (ensureLeaflet as any)._loader;
+      return w.L;
+    };
+
+    const load = async () => {
+      try {
+        const L = await ensureLeaflet();
+        const rlMod = await import('react-leaflet');
+        if (!cancelled) {
+          setL(L);
+          setRl(rlMod);
+        }
+      } catch {
+        if (!cancelled) {
+          setErrors((prev) => ({ ...prev, loadingModules: true }));
+        }
+      }
+    };
+
+    if (isTestEnv) {
+      load();
+    } else if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(load, { timeout: 2000 });
+    } else {
+      const t = setTimeout(load, 1200);
+      return () => clearTimeout(t);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const ORS_API_KEY = process.env.EXPO_PUBLIC_ROUTE_SERVICE;
+
+  const RoutingMachineWithMapInner: React.FC<any> = (props) => {
+    const useMap = (rl as any).useMap;
+    const map = useMap();
+    return <RoutingMachine map={map} {...props} />;
+  };
 
   const customIcons = useMemo(() => {
     // Защита от отсутствия Leaflet в тестовой/серверной среде
@@ -246,14 +315,14 @@ const MapPageComponent: React.FC<Props> = ({
       start: greenMarkerIcon,
       end: redMarkerIcon,
     };
-  }, []);
+  }, [L]);
 
   useEffect(() => {
     const requestLocation = async () => {
       try {
         setLoading(true);
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') throw new Error();
+        if (status !== 'granted') throw new globalThis.Error();
         const loc = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.BestForNavigation,
         });
@@ -311,13 +380,19 @@ const MapPageComponent: React.FC<Props> = ({
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (mode === 'route' && routePoints.length >= 1) {
-      (window as any).lastMarkerClickHandler = (e: any) => {
+      (globalThis as any).lastMarkerClickHandler = (e: any) => {
         e?.originalEvent?.stopPropagation?.();
       };
     }
   }, [mode, routePoints.length]);
 
   if (loading) return <Loader message="Loading map..." />;
+
+  if (!L || !rl) {
+    return <Loader message={errors.loadingModules ? 'Loading map modules failed' : 'Loading map...'} />;
+  }
+
+  const { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } = rl as ReactLeafletNS;
 
   // Компонент для управления закрытием попапа (внутри MapContainer)
   const PopupWithClose: React.FC<{ point: Point }> = ({ point }) => {
@@ -424,8 +499,8 @@ const MapPageComponent: React.FC<Props> = ({
       
       // ✅ ИСПРАВЛЕНИЕ: Не добавляем местоположение пользователя при установке точек маршрута
       // Это предотвращает нежелательный зум к текущему местоположению
-      // Добавляем местоположение пользователя ТОЛЬКО если нет других точек И режим не route
-      if (allPoints.length === 0 && userLocation && mode !== 'route') {
+      // Добавляем местоположение пользователя ТОЛЬКО если нет других точек
+      if (allPoints.length === 0 && userLocation) {
         allPoints.push([userLocation.longitude, userLocation.latitude]);
       }
 
@@ -533,13 +608,13 @@ const MapPageComponent: React.FC<Props> = ({
               />
           )}
 
-          {routePoints.length >= 1 && customIcons && (
+          {routePoints.length >= 1 && customIcons?.start && (
               <Marker 
                 position={[routePoints[0][1], routePoints[0][0]]} 
                 icon={customIcons.start}
                 eventHandlers={{
                   // ✅ ИСПРАВЛЕНИЕ: Отключаем зум при клике на маркер старт
-                  click: (e) => {
+                  click: (e: any) => {
                     e.originalEvent?.stopPropagation();
                   }
                 }}
@@ -548,13 +623,13 @@ const MapPageComponent: React.FC<Props> = ({
               </Marker>
           )}
 
-          {routePoints.length === 2 && customIcons && (
+          {routePoints.length === 2 && customIcons?.end && (
               <Marker 
                 position={[routePoints[1][1], routePoints[1][0]]} 
                 icon={customIcons.end}
                 eventHandlers={{
                   // ✅ ИСПРАВЛЕНИЕ: Отключаем зум при клике на маркер финиш
-                  click: (e) => {
+                  click: (e: any) => {
                     e.originalEvent?.stopPropagation();
                   }
                 }}
@@ -563,8 +638,8 @@ const MapPageComponent: React.FC<Props> = ({
               </Marker>
           )}
 
-          {mode === 'route' && routePoints.length >= 2 && ORS_API_KEY && (
-              <RoutingMachine
+          {mode === 'route' && routePoints.length >= 2 && ORS_API_KEY && rl && (
+              <RoutingMachineWithMapInner
                   routePoints={routePoints}
                   transportMode={transportMode}
                   setRoutingLoading={setRoutingLoading}
@@ -575,7 +650,7 @@ const MapPageComponent: React.FC<Props> = ({
               />
           )}
 
-          {userLocation && customIcons && (
+          {userLocation && customIcons?.userLocation && (
               <Marker
                   position={[userLocation.latitude, userLocation.longitude]}
                   icon={customIcons.userLocation}

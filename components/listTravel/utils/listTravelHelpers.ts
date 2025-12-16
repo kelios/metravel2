@@ -61,8 +61,8 @@ export function deduplicateTravels(travels: Travel[]): Travel[] {
 }
 
 // ✅ B1.2: Улучшенный расчет количества колонок на основе минимальной ширины карточки
-const MIN_CARD_WIDTH = 300; // Минимальная комфортная ширина карточки
-const MAX_CARD_WIDTH = 400; // Максимальная ширина карточки
+const MIN_CARD_WIDTH = 320; // Минимальная комфортная ширина карточки
+const MAX_CARD_WIDTH = 360; // Максимальная ширина карточки
 const GAP = 16; // Отступ между карточками
 
 // Функция для расчета padding контейнера
@@ -83,21 +83,12 @@ export function calculateColumns(width: number, orientation: 'portrait' | 'lands
   }
   
   // Рассчитываем доступную ширину с учетом padding
-  const containerPadding = getContainerPadding(width);
-  const availableWidth = width - (containerPadding * 2);
+  const containerPadding = width >= BREAKPOINTS.DESKTOP ? 0 : getContainerPadding(width);
+  const availableWidth = width - containerPadding * 2;
   
   // Рассчитываем максимальное количество колонок на основе минимальной ширины карточки
   let columns = Math.floor((availableWidth + GAP) / (MIN_CARD_WIDTH + GAP));
-  
-  // Ограничения для разных устройств - максимум 3 колонки
-  if (width < BREAKPOINTS.TABLET) {
-    // Планшеты в портретной ориентации - максимум 2 колонки
-    columns = Math.min(columns, 2);
-  } else {
-    // Все остальные - максимум 3 колонки
-    columns = Math.min(columns, 3);
-  }
-  
+
   // Учитываем ориентацию для планшетов
   if (orientation === 'portrait' && width >= BREAKPOINTS.MOBILE && width < BREAKPOINTS.DESKTOP) {
     columns = Math.min(columns, 2);

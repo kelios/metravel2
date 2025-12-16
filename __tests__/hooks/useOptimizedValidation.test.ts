@@ -289,6 +289,8 @@ describe('useOptimizedValidation', () => {
   });
 
   it('debounces validation correctly', async () => {
+    jest.useFakeTimers();
+
     mockValidateTravelForm.mockReturnValue({
       isValid: true,
       errors: [],
@@ -306,10 +308,17 @@ describe('useOptimizedValidation', () => {
     rerender({ data: { ...testData, name: 'Changed 2' } });
     rerender({ data: { ...testData, name: 'Changed 3' } });
 
+    // Flush debounce timer
+    await act(async () => {
+      jest.advanceTimersByTime(120);
+    });
+
     await waitFor(() => {
       expect(mockValidateTravelForm).toHaveBeenCalledTimes(1);
     }, { timeout: 200 });
 
     expect(result.current.lastValidated).toBeInstanceOf(Date);
+
+    jest.useRealTimers();
   });
 });

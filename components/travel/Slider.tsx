@@ -37,6 +37,7 @@ import Animated, {
 import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl } from "@/utils/imageOptimization";
 import { Feather } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 
 /* -------------------------------------------------------------------------- */
 /*                                  Types                                     */
@@ -269,7 +270,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
 
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
-  const isMobile = winW < 768;
+  const isMobile = winW < METRICS.breakpoints.tablet;
 
   const [containerW, setContainerW] = useState(winW);
   const [containerH, setContainerH] = useState<number | null>(null);

@@ -160,13 +160,11 @@ describe('Breadcrumbs', () => {
       { path: '/login', expected: 'Вход' },
       { path: '/registration', expected: 'Регистрация' },
       { path: '/metravel', expected: 'Мои путешествия' },
-      { path: '/chat', expected: 'Чат' },
       { path: '/about', expected: 'О сайте' },
       { path: '/export', expected: 'Экспорт' },
       { path: '/settings', expected: 'Настройки' },
       { path: '/history', expected: 'История просмотров' },
       { path: '/favorites', expected: 'Избранное' },
-      { path: '/articles', expected: 'Статьи' },
     ];
 
     testCases.forEach(({ path, expected }) => {

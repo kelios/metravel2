@@ -56,6 +56,8 @@ interface RecommendationsTabsProps {
 }
 
 const TAB_CONTENT_HEIGHT = 320;
+const TAB_HEADER_HEIGHT = 56;
+const TAB_TOTAL_HEIGHT = TAB_HEADER_HEIGHT + TAB_CONTENT_HEIGHT;
 
 const AuthGate = ({ message, onLogin }: { message: string; onLogin: () => void }) => (
   <View style={styles.gateContainer}>
@@ -183,14 +185,18 @@ const RecommendationsTabs = memo(
       onVisibilityChange?.(!newCollapsed);
     };
 
-    // Если принудительно скрыто — ничего не рендерим
+    // ✅ CLS fix: never unmount / collapse height to 0.
+    // We keep a stable container height so the list below does not shift.
     if (!forceVisible && collapsed) {
       return (
-        <View style={styles.collapsedContainer}>
-          <Pressable onPress={toggleCollapse} style={styles.expandButton}>
-            <Feather name="chevron-down" size={20} color={DESIGN_TOKENS.colors.primary} />
-            <Text style={styles.expandText}>Показать рекомендации</Text>
-          </Pressable>
+        <View style={[styles.container, styles.containerFixedHeight]}>
+          <View style={styles.collapsedHeader}>
+            <Pressable onPress={toggleCollapse} style={styles.expandButton} accessibilityRole="button">
+              <Feather name="chevron-down" size={20} color={DESIGN_TOKENS.colors.primary} />
+              <Text style={styles.expandText}>Показать рекомендации</Text>
+            </Pressable>
+          </View>
+          <View style={styles.collapsedSpacer} />
         </View>
       );
     }
@@ -365,7 +371,7 @@ const RecommendationsTabs = memo(
     };
 
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, styles.containerFixedHeight]}>
         <View style={styles.header}>
           <ScrollView
             ref={scrollRef}
@@ -455,11 +461,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
   },
+  containerFixedHeight: {
+    height: TAB_TOTAL_HEIGHT,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    minHeight: TAB_HEADER_HEIGHT,
   },
   tabsContainer: {
     paddingHorizontal: 8,
@@ -513,6 +523,17 @@ const styles = StyleSheet.create({
   content: {
     height: TAB_CONTENT_HEIGHT,
     paddingVertical: 8,
+  },
+  collapsedHeader: {
+    height: TAB_HEADER_HEIGHT,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  collapsedSpacer: {
+    height: TAB_CONTENT_HEIGHT,
   },
   tabPane: {
     height: TAB_CONTENT_HEIGHT,

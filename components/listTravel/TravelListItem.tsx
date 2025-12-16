@@ -13,6 +13,8 @@ import { generateSrcSet, optimizeImageUrl } from "@/utils/imageOptimization";
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
 import { enhancedTravelCardStyles, getResponsiveCardValues } from './enhancedTravelCardStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { formatViewCount } from "@/components/travel/utils/travelHelpers";
+import { TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT } from './utils/listTravelConstants';
 
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
@@ -103,11 +105,13 @@ const WebImageOptimized = memo(function WebImageOptimized({
                 display: "block",
                 opacity: priority ? 1 : (isLoaded ? 1 : 0),
                 transition: priority ? undefined : 'opacity 0.3s ease',
+                // Prevent layout shifts
+                aspectRatio: `${width} / ${height}`,
             }}
             loading={priority ? "eager" : "lazy"}
             decoding="async"
             onLoad={() => setIsLoaded(true)}
-            fetchPriority={priority ? 'high' : 'auto'}
+            {...({ fetchpriority: priority ? 'high' : 'auto' } as any)}
         />
     );
 });
@@ -239,22 +243,18 @@ function TravelListItem({
         return '';
     }, [userName, travel.user?.name, travel.user?.first_name, travel.user?.last_name]);
 
-    // Отладка: выводим результат
-    if (__DEV__) {
-        console.log('Author name result:', authorName, 'Raw userName:', userName, 'User object:', travel.user);
-    }
-
     const views = Number(countUnicIpView) || 0;
+
+    const viewsFormatted = useMemo(() => formatViewCount(views), [views]);
 
     // ✅ УЛУЧШЕНИЕ: Оптимизация превью под карточку с использованием новых утилит
     const imgUrl = useMemo(() => {
         if (!travel_image_thumb_url) return null;
-        
+
         // Упрощенная обработка - меньше вычислений при скролле
         return travel_image_thumb_url;
     }, [travel_image_thumb_url]);
 
-    // ✅ PRELOAD: для первой карточки на web добавляем link rel="preload" для её изображения
     useEffect(() => {
         if (!isFirst || Platform.OS !== 'web' || !imgUrl) return;
         if (typeof document === 'undefined') return;
@@ -268,8 +268,8 @@ function TravelListItem({
         const assumedCardWidth =
           typeof cardWidth === 'number'
             ? Math.round(cardWidth)
-            : 360; // соответствует maxWidth карточки на web в RightColumn
-        const assumedImageHeight = 220; // соответствует styles.imageContainer
+            : 360;
+        const assumedImageHeight = TRAVEL_CARD_IMAGE_HEIGHT; // соответствует styles.imageContainer
 
         const preloadUrl =
           optimizeImageUrl(imgUrl, {
@@ -289,24 +289,11 @@ function TravelListItem({
         document.head.appendChild(link);
 
         return () => {
-            // При анмаунте можно убрать, но это не обязательно критично
             if (link.parentNode) {
                 link.parentNode.removeChild(link);
             }
         };
     }, [isFirst, imgUrl, id, cardWidth]);
-
-    const viewsFormatted = useMemo(() => {
-        try {
-            // Компактный формат: 1,2K / 3,4M
-            return new Intl.NumberFormat('ru-RU', {
-                notation: 'compact',
-                compactDisplay: 'short',
-            }).format(views);
-        } catch {
-            return String(views);
-        }
-    }, [views]);
 
     const countries = useMemo(
         () => (countryName || "").split(",").map((c) => c.trim()).filter(Boolean),
@@ -369,6 +356,8 @@ function TravelListItem({
         return !!ownerId && String(currentUserId) === ownerId;
     }, [isSuperuser, currentUserId, travel]);
     const queryClient = useQueryClient();
+    const anchorRef = useRef<any>(null);
+    const hasPrefetchedRef = useRef(false);
 
     const authorUserId = useMemo(() => {
         const ownerId =
@@ -396,6 +385,51 @@ function TravelListItem({
     // ✅ ИСПРАВЛЕНИЕ: Предзагрузка данных только при клике (с небольшой задержкой)
     // Не делаем запрос при наведении - это вызывает множественные ненужные запросы
     const travelUrl = `/travels/${slug ?? id}`;
+
+    const prefetchTravelDetails = useCallback(() => {
+        const travelId = slug ?? id;
+        const isId = !isNaN(Number(travelId));
+
+        const cachedData = queryClient.getQueryData(['travel', travelId]);
+        if (cachedData) return;
+
+        queryClient.prefetchQuery({
+            queryKey: ['travel', travelId],
+            queryFn: () => isId ? fetchTravel(Number(travelId)) : fetchTravelBySlug(travelId as string),
+            staleTime: 5 * 60 * 1000,
+        });
+    }, [slug, id, queryClient]);
+
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        if (hasPrefetchedRef.current) return;
+
+        const el = anchorRef.current;
+        if (!el) return;
+
+        if (typeof window === 'undefined') return;
+        if (typeof (window as any).IntersectionObserver === 'undefined') return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const entry = entries[0];
+                if (!entry?.isIntersecting) return;
+                if (hasPrefetchedRef.current) return;
+                hasPrefetchedRef.current = true;
+                prefetchTravelDetails();
+                observer.disconnect();
+            },
+            {
+                root: null,
+                // Небольшой запас, чтобы прогреть данные до клика
+                rootMargin: '200px',
+                threshold: 0.01,
+            }
+        );
+
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [prefetchTravelDetails]);
 
     const handlePress = useCallback(() => {
         if (selectable) {
@@ -516,7 +550,7 @@ function TravelListItem({
                 alt={name}
                 priority={!!isFirst}
                 width={typeof cardWidth === 'number' ? Math.round(cardWidth) : 360}
-                height={220}
+                height={TRAVEL_CARD_IMAGE_HEIGHT}
               />
             ) : (
               <NativeImageOptimized uri={imgUrl} />
@@ -805,6 +839,7 @@ function TravelListItem({
           <a
             href={travelUrl}
             {...(Platform.OS === 'web' ? { 'data-testid': 'travel-card-link' } : {})}
+            ref={anchorRef}
             style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
             onClick={(e: any) => {
               // Не даём событию дойти до внутренних Pressable
@@ -859,7 +894,7 @@ const styles = StyleSheet.create({
     // Фиксированная высота на web, чтобы все карточки в ряду были одной высоты
     ...(Platform.OS === 'web'
       ? {
-          height: 360,
+          height: TRAVEL_CARD_WEB_HEIGHT,
         }
       : {}),
     // Минимальные тени для глубины - разделены по платформам
@@ -873,7 +908,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '100%',
     // Фиксированная высота для предсказуемого layout и отсутствия прыжков при загрузке изображений
-    height: 220,
+    height: TRAVEL_CARD_IMAGE_HEIGHT,
     backgroundColor: TOKENS.colors.backgroundSecondary,
     overflow: 'hidden',
   },

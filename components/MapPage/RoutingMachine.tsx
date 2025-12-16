@@ -1,8 +1,8 @@
 // components/MapPage/RoutingMachine.tsx
 import { useEffect, useMemo, useRef } from 'react'
-import { useMap } from 'react-leaflet'
 
 interface RoutingMachineProps {
+    map: any
     routePoints: [number, number][]
     transportMode: 'car' | 'bike' | 'foot'
     setRoutingLoading: (loading: boolean) => void
@@ -34,6 +34,7 @@ const getOSRMProfile = (mode: 'car' | 'bike' | 'foot') => {
  * 2) Если ключа нет — фоллбэк на публичный OSRM (без ключа).
  */
 const RoutingMachine: React.FC<RoutingMachineProps> = ({
+                                                           map,
                                                            routePoints,
                                                            transportMode,
                                                            setRoutingLoading,
@@ -42,7 +43,6 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                                                            setFullRouteCoords,
                                                            ORS_API_KEY,
                                                        }) => {
-    const map = useMap()
     const polylineRef = useRef<any>(null)
     const abortRef = useRef<AbortController | null>(null)
 

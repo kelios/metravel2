@@ -27,6 +27,7 @@ import TravelTmlRound from '@/components/travel/TravelTmlRound';
 import MapClientSideComponent from '@/components/Map';
 import { useLazyMap } from '@/hooks/useLazyMap';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 const brandOrange = '#ff8c49'; // Оставляем для обратной совместимости, но используем DESIGN_TOKENS где возможно
@@ -159,9 +160,9 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     const listRef = useRef<FlatList>(null);
     const scrollViewRef = useRef<ScrollView>(null);
 
-    const isMobile = width < 768;
-    const isTablet = width >= 768 && width < 1024;
-    const isDesktop = width >= 1024;
+    const isMobile = width < METRICS.breakpoints.tablet;
+    const isTablet = width >= METRICS.breakpoints.tablet && width < METRICS.breakpoints.largeTablet;
+    const isDesktop = width >= METRICS.breakpoints.largeTablet;
 
     // Адаптивные высоты для карты
     const mapHeight = useMemo(() => {

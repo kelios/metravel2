@@ -256,6 +256,20 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         const removed = prev.filter(id => !next.includes(id));
 
         added.forEach(onCountrySelect);
+
+        if (removed.length) {
+            const removedSet = new Set(removed.map(String));
+            const updatedMarkers = (markers || []).filter((m: any) => {
+                const markerCountry = m?.country;
+                if (markerCountry == null) return true;
+                return !removedSet.has(String(markerCountry));
+            });
+
+            if (updatedMarkers.length !== (markers || []).length) {
+                setMarkers(updatedMarkers);
+            }
+        }
+
         removed.forEach(onCountryDeselect);
     };
 

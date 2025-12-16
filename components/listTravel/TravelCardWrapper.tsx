@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, useWindowDimensions, StyleSheet } from 'react-native';
+import { METRICS } from '@/constants/layout';
 
 /**
  * Wrapper для карточки путешествия с адаптивными отступами
@@ -10,7 +11,7 @@ export function TravelCardWrapper({ children }: { children: React.ReactNode }) {
   
   // ✅ Вычисляем marginBottom на основе ШИРИНЫ, а не Platform
   const marginBottom = useMemo(() => {
-    if (width < 768) return 20; // Mobile
+    if (width < METRICS.breakpoints.tablet) return 20; // Mobile
     return 24; // Desktop
   }, [width]);
   

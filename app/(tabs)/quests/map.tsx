@@ -1,5 +1,5 @@
 // app/quests/map.tsx
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
     Platform,
@@ -12,13 +12,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Asset } from 'expo-asset';
 import { ALL_QUESTS_META, getQuestById, QuestMeta } from '@/components/quests/registry';
-
-let MapPageComponent: React.ComponentType<any> | null = null;
-if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    // web-only компонент карты
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    MapPageComponent = require('@/components/MapPage/Map').default;
-}
 
 type Point = {
     id?: number;
@@ -56,6 +49,28 @@ function assetUri(mod: any): string {
 export default function QuestsMapScreen() {
     const router = useRouter();
 
+    const [MapPageComponent, setMapPageComponent] = useState<React.ComponentType<any> | null>(null);
+    const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
+
+    useEffect(() => {
+        let mounted = true;
+        if (!isWeb) return;
+
+        (async () => {
+            try {
+                const mod = await import('@/components/MapPage/Map');
+                const Comp = (mod as any).default ?? (mod as any);
+                if (mounted) setMapPageComponent(() => Comp);
+            } catch {
+                if (mounted) setMapPageComponent(null);
+            }
+        })();
+
+        return () => {
+            mounted = false;
+        };
+    }, [isWeb]);
+
     const travel = useMemo(() => {
         const data: Point[] = ALL_QUESTS_META.map((m: QuestMeta) => {
             const bundle = getQuestById(m.id);
@@ -91,7 +106,7 @@ export default function QuestsMapScreen() {
         router.replace('/quests'); // всегда уходим на страницу квестов
     };
 
-    if (!MapPageComponent) {
+    if (!isWeb || !MapPageComponent) {
         return (
             <View style={styles.fallback}>
                 <Text style={styles.fallbackText}>Карта доступна в веб-версии</Text>

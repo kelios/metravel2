@@ -3,6 +3,11 @@ import {
   deduplicateTravels,
   calculateCategoriesWithCount,
   calculateIsEmpty,
+  calculateBadges,
+  getContainerPadding,
+  calculateColumns,
+  isMobile,
+  isTablet,
 } from '@/components/listTravel/utils/listTravelHelpers'
 import type { Travel } from '@/src/types/types'
 
@@ -205,6 +210,91 @@ describe('listTravelHelpers', () => {
           baseParams.data
         )
       ).toBe(true)
+    })
+  })
+
+  describe('calculateBadges', () => {
+    afterEach(() => {
+      jest.restoreAllMocks()
+    })
+
+    it('returns Popular when views exceed threshold', () => {
+      const travel = createTravel({ countUnicIpView: '5000' })
+      const badges = calculateBadges(travel)
+      expect(badges.find(b => b.label === 'Популярное')).toBeTruthy()
+    })
+
+    it('returns New when created within threshold days', () => {
+      const now = new Date('2025-01-10T00:00:00Z').getTime()
+      jest.spyOn(Date, 'now').mockReturnValue(now)
+
+      const travel = createTravel({ created_at: '2025-01-07T00:00:00Z', countUnicIpView: '0' })
+      const badges = calculateBadges(travel)
+      expect(badges.map(b => b.label)).toContain('Новое')
+    })
+
+    it('returns Trend when updated recently and views exceed threshold, but does not add Trend when New is present', () => {
+      const now = new Date('2025-01-10T00:00:00Z').getTime()
+      jest.spyOn(Date, 'now').mockReturnValue(now)
+
+      const newTravel = createTravel({
+        countUnicIpView: '2000',
+        created_at: '2025-01-08T00:00:00Z',
+        updated_at: '2025-01-09T00:00:00Z',
+      })
+      const newBadges = calculateBadges(newTravel)
+      expect(newBadges.map(b => b.label)).toContain('Новое')
+      expect(newBadges.map(b => b.label)).not.toContain('Тренд')
+
+      const trendingTravel = createTravel({
+        countUnicIpView: '2000',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2025-01-09T00:00:00Z',
+      })
+      const trendingBadges = calculateBadges(trendingTravel)
+      expect(trendingBadges.map(b => b.label)).toContain('Тренд')
+    })
+  })
+
+  describe('getContainerPadding', () => {
+    it('returns non-decreasing padding as width increases', () => {
+      const values = [320, 480, 767, 768, 1024, 1440, 1920].map(w => getContainerPadding(w))
+      for (let i = 1; i < values.length; i += 1) {
+        expect(values[i]).toBeGreaterThanOrEqual(values[i - 1])
+      }
+    })
+  })
+
+  describe('calculateColumns', () => {
+    it('forces 1 column below mobile breakpoint', () => {
+      expect(calculateColumns(320)).toBe(1)
+      expect(calculateColumns(767)).toBe(1)
+    })
+
+    it('limits to max 2 columns on portrait tablet widths', () => {
+      const columns = calculateColumns(900, 'portrait')
+      expect(columns).toBeLessThanOrEqual(2)
+      expect(columns).toBeGreaterThanOrEqual(1)
+    })
+
+    it('returns at least as many columns in landscape as in portrait for same width (tablet range)', () => {
+      const width = 900
+      const portrait = calculateColumns(width, 'portrait')
+      const landscape = calculateColumns(width, 'landscape')
+      expect(landscape).toBeGreaterThanOrEqual(portrait)
+    })
+  })
+
+  describe('isMobile / isTablet', () => {
+    it('classifies widths correctly around breakpoints', () => {
+      expect(isMobile(320)).toBe(true)
+      expect(isTablet(320)).toBe(false)
+
+      expect(isMobile(800)).toBe(false)
+      expect(isTablet(800)).toBe(true)
+
+      expect(isMobile(1200)).toBe(false)
+      expect(isTablet(1200)).toBe(false)
     })
   })
 })

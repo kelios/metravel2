@@ -157,15 +157,6 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
       }
     }, [isLoading, popularList.length, fadeAnim]);
 
-    const getItemLayout = useCallback(
-      (_: unknown, index: number) => ({
-        length: ITEM_HEIGHT + SEPARATOR_HEIGHT,
-        offset: (ITEM_HEIGHT + SEPARATOR_HEIGHT) * index,
-        index,
-      }),
-      []
-    );
-
     // ✅ УЛУЧШЕНИЕ: Улучшенное выравнивание с одинаковой высотой карточек
     const columnWrapperStyle: any = useMemo(
       () =>
@@ -250,8 +241,7 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
               initialNumToRender={INITIAL_NUM_TO_RENDER}
               maxToRenderPerBatch={4} // Уменьшено для производительности
               windowSize={5}
-              removeClippedSubviews={true}
-              getItemLayout={getItemLayout}
+              removeClippedSubviews={false}
               onContentSizeChange={handleContentChange}
               updateCellsBatchingPeriod={50} // Батчинг обновлений
               disableVirtualization={false} // Всегда использовать виртуализацию

@@ -53,7 +53,42 @@ describe('OptimizedImage', () => {
     expect((image as any).props.fetchpriority).toBe('high')
     expect((image as any).props.alt).toBe('demo')
 
-    expect(generateSrcSet('https://cdn.example.com/image')).toContain('w=320')
-    expect(generateSizes({ desktop: '25vw' })).toContain('25vw')
+    const srcset = generateSrcSet('https://cdn.example.com/image', [320, 640])
+    expect(srcset.split(',').length).toBe(2)
+    expect(srcset).toContain('w=320')
+    expect(srcset).toContain('w=640')
+
+    const sizes = generateSizes({ desktop: '25vw' })
+    expect(sizes).toContain('25vw')
+  })
+
+  it('maps fetchpriority based on priority prop', () => {
+    const { getByTestId, rerender } = render(
+      <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} priority="low" />
+    )
+
+    expect((getByTestId('expo-image') as any).props.fetchpriority).toBe('low')
+
+    rerender(
+      <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} priority="normal" />
+    )
+    expect((getByTestId('expo-image') as any).props.fetchpriority).toBe('auto')
+
+    rerender(
+      <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} priority="high" />
+    )
+    expect((getByTestId('expo-image') as any).props.fetchpriority).toBe('high')
+  })
+
+  it('generateSizes uses defaults and allows overriding breakpoints', () => {
+    const value = generateSizes()
+    expect(value).toContain('100vw')
+    expect(value).toContain('50vw')
+    expect(value).toContain('33vw')
+
+    const overridden = generateSizes({ mobile: '90vw', tablet: '60vw', desktop: '20vw' })
+    expect(overridden).toContain('90vw')
+    expect(overridden).toContain('60vw')
+    expect(overridden).toContain('20vw')
   })
 })

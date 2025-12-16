@@ -16,6 +16,7 @@ module.exports = {
     ...moduleNameMapper,
     '^@/(.*)$': '<rootDir>/$1',
     '^expo-modules-core(/.*)?$': '<rootDir>/__mocks__/expo-modules-core.js',
+    '^lucide-react-native/dist/esm/icons/.*$': '<rootDir>/__mocks__/lucideIconMock.js',
     '\\.(svg|png|jpe?g|gif|webp)$': '<rootDir>/__mocks__/fileMock.js',
     '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
   },

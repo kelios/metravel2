@@ -141,7 +141,6 @@ export default function Breadcrumbs({ items, showHome = true, travelName }: Brea
           'login': 'Вход',
           'registration': 'Регистрация',
           'metravel': 'Мои путешествия',
-          'chat': 'Чат',
           'about': 'О сайте',
           'export': 'Экспорт',
           'settings': 'Настройки',
@@ -149,7 +148,6 @@ export default function Breadcrumbs({ items, showHome = true, travelName }: Brea
           'favorites': 'Избранное',
           'accountconfirmation': 'Подтверждение аккаунта',
           'set-password': 'Установка пароля',
-          'articles': 'Статьи',
           'new': 'Новое путешествие',
         };
 

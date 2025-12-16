@@ -139,7 +139,19 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
       {/* Leaflet CSS for Maps */}
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      <link rel="preload" as="style" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        media="print"
+        onLoad={(e) => {
+          const el = e.currentTarget as HTMLLinkElement
+          el.media = 'all'
+        }}
+      />
+      <noscript>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      </noscript>
 
       {/* LCP image - предзагрузка главного изображения */}
       <link

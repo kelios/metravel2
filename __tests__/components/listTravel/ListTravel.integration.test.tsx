@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-
 import { ThemeProvider } from '@/context/ThemeContext';
 import ListTravel from '@/components/listTravel/ListTravel';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Platform } from 'react-native';
 
 // Mock all necessary dependencies
 jest.mock('@/hooks/useDebouncedValue', () => ({
@@ -40,7 +41,7 @@ jest.mock('@/components/SkeletonLoader', () => {
 
 jest.mock('@react-navigation/native', () => ({
   useRoute: () => ({
-    name: 'travels',
+    name: (global as any).__mockRouteName ?? 'travels',
   }),
   useNavigation: () => ({
     navigate: jest.fn(),
@@ -48,13 +49,42 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => ({}),
-  usePathname: () => '/travels',
+  useLocalSearchParams: () => ((global as any).__mockLocalSearchParams ?? {}),
+  usePathname: () => ((global as any).__mockPathname ?? '/travels'),
   useRouter: () => ({
     push: jest.fn(),
     replace: jest.fn(),
   }),
 }));
+
+jest.mock('@/components/listTravel/RenderTravelItem', () => {
+  const React = require('react');
+  const { Pressable, Text, View } = require('react-native');
+
+  return function MockRenderTravelItem({
+    item,
+    selectable,
+    onDeletePress,
+    onToggle,
+  }: any) {
+    return (
+      <View>
+        <Text>{item?.name ?? 'Travel'}</Text>
+        <Pressable
+          testID={`mock-delete-${String(item?.id)}`}
+          onPress={() => onDeletePress?.(item?.id)}
+        >
+          <Text>delete</Text>
+        </Pressable>
+        {selectable && (
+          <Pressable testID={`mock-toggle-${String(item?.id)}`} onPress={() => onToggle?.()}>
+            <Text>toggle</Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  };
+});
 
 jest.mock('@/src/api/miscOptimized', () => ({
   fetchAllFiltersOptimized: jest.fn(() => Promise.resolve({
@@ -179,6 +209,12 @@ describe('ListTravel Integration Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
+    (global as any).__mockRouteName = 'travels';
+    (global as any).__mockPathname = '/travels';
+    (global as any).__mockLocalSearchParams = {};
+
+    Platform.OS = 'web';
+
     // Setup default mocks
     mockUseListTravelFilters.mockReturnValue({
       filter: {},
@@ -229,6 +265,80 @@ describe('ListTravel Integration Tests', () => {
     });
   });
 
+  it('renders export mode UI and allows selecting all items', async () => {
+    (global as any).__mockRouteName = 'export';
+    (global as any).__mockPathname = '/export';
+
+    const toggleSelect = jest.fn();
+    const isSelected = jest.fn(() => false);
+
+    mockUseListTravelExport.mockReturnValue({
+      toggleSelect,
+      toggleSelectAll: jest.fn(),
+      clearSelection: jest.fn(),
+      isSelected,
+      hasSelection: false,
+      selectionCount: 0,
+      pdfExport: { openPrintBook: jest.fn() },
+      lastSettings: { template: 'minimal', colorTheme: 'blue' },
+      handleSaveWithSettings: jest.fn(),
+      handlePreviewWithSettings: jest.fn(),
+      settingsSummary: 'minimal • тема: blue',
+    });
+
+    renderWithProviders(<ListTravel />);
+
+    // In export mode, travel cards become selectable (RenderTravelItem receives selectable=true)
+    const toggleButton = await screen.findByTestId('mock-toggle-1');
+    fireEvent.press(toggleButton);
+    expect(toggleSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles web delete confirm flow (confirm true calls DELETE, confirm false cancels)', async () => {
+    const confirmSpy = jest
+      .spyOn(globalThis as any, 'confirm')
+      .mockImplementationOnce(() => true)
+      .mockImplementationOnce(() => false);
+
+    if (!(globalThis as any).fetch) {
+      (globalThis as any).fetch = jest.fn();
+    }
+    const fetchMock = jest
+      .mocked((globalThis as any).fetch)
+      .mockResolvedValue({ ok: true, statusText: 'OK' } as any);
+
+    renderWithProviders(<ListTravel />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Mountain Trip')).toBeTruthy();
+    });
+
+    // First: confirm true -> should call delete
+    fireEvent.press(screen.getByTestId('mock-delete-1'));
+
+    await waitFor(() => {
+      expect(confirmSpy).toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalled();
+    });
+
+    // Second: confirm false -> should not call fetch again
+    fireEvent.press(screen.getByTestId('mock-delete-2'));
+
+    await waitFor(() => {
+      expect(confirmSpy).toHaveBeenCalledTimes(2);
+    });
+    // Depending on environment, other hooks may trigger additional fetches.
+    // We only require that a DELETE request for travel was issued once.
+    const deleteCalls = (fetchMock as jest.Mock).mock.calls.filter((call) => {
+      const url = String(call[0] ?? '');
+      const opts = call[1] as any;
+      return url.includes('/api/travels/') && opts?.method === 'DELETE';
+    });
+    expect(deleteCalls).toHaveLength(1);
+
+    confirmSpy.mockRestore();
+  });
+
   it('displays search bar, filters, and travel cards correctly', async () => {
     renderWithProviders(<ListTravel />);
 
@@ -260,8 +370,10 @@ describe('ListTravel Integration Tests', () => {
     // Expand all groups to render category options
     fireEvent.press(screen.getByTestId('toggle-all-groups'));
 
-    expect(screen.getByText('Горы')).toBeTruthy();
-    expect(screen.getByText('Море')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText('Горы')).toBeTruthy();
+      expect(screen.getByText('Море')).toBeTruthy();
+    });
   });
 
   it('hides sidebar filters on mobile', () => {

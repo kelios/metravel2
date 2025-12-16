@@ -10,9 +10,10 @@ describe('Adaptive Layout Tests', () => {
 
     expect(calculateColumns(360)).toBe(1); // Mobile
     expect(calculateColumns(768)).toBe(2); // Tablet
-    expect(calculateColumns(1024)).toBe(3); // Desktop
-    expect(calculateColumns(1440)).toBe(3); // Large desktop (max 3)
-    expect(calculateColumns(2560)).toBe(3); // XXL (max 3)
+    // Desktop: количество колонок зависит от доступной ширины и min ширины карточки
+    expect(calculateColumns(1024)).toBe(2);
+    expect(calculateColumns(1440)).toBeGreaterThanOrEqual(3);
+    expect(calculateColumns(2560)).toBeGreaterThanOrEqual(4);
   });
 
   it('should render without errors', () => {

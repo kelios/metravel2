@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, Pressable, Text, useWindowDimensions, ActivityIndicator } from 'react-native';
-import { ChevronDown, ChevronUp, MapPinned } from 'lucide-react-native';
+import { View, StyleSheet, Pressable, Text, useWindowDimensions, ActivityIndicator, Platform } from 'react-native';
+import ChevronDown from 'lucide-react-native/dist/esm/icons/chevron-down';
+import ChevronUp from 'lucide-react-native/dist/esm/icons/chevron-up';
+import MapPinned from 'lucide-react-native/dist/esm/icons/map-pinned';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type ToggleableMapSectionProps = {
@@ -48,7 +50,7 @@ const ToggleableMapSection = ({
                 <View style={[styles.mapContainer, isMobile && styles.mapContainerMobile]}>
                     {isLoading ? (
                         <View style={styles.loadingState}>
-                            <ActivityIndicator color="#ff9f5a" />
+                            {Platform.OS === 'web' ? <View style={styles.loadingSkeleton} /> : <ActivityIndicator color="#ff9f5a" />}
                             <Text style={styles.loadingText}>{loadingLabel}</Text>
                         </View>
                     ) : (
@@ -118,5 +120,13 @@ const styles = StyleSheet.create({
     loadingText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: '#475569',
+    },
+    loadingSkeleton: {
+        width: 52,
+        height: 52,
+        borderRadius: 14,
+        backgroundColor: '#f1f5f9',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
     },
 });

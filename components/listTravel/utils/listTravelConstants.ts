@@ -4,6 +4,7 @@
  */
 
 import type { FilterState } from "./listTravelTypes";
+import { METRICS } from "@/constants/layout";
 
 // ✅ АРХИТЕКТУРА: Начальное состояние фильтров
 export const INITIAL_FILTER: FilterState = {};
@@ -25,10 +26,10 @@ export const RECOMMENDATIONS_VISIBLE_KEY = 'recommendations_visible';
 export const BREAKPOINTS = {
   XS: 360,  // Очень маленькие телефоны
   SM: 480,  // Маленькие телефоны
-  MOBILE: 768, // Планшеты портрет
+  MOBILE: METRICS.breakpoints.tablet, // Планшеты портрет
   MD: 900,  // Маленькие планшеты
-  TABLET: 1024, // Планшеты ландшафт
-  TABLET_LANDSCAPE: 1280,
+  TABLET: METRICS.breakpoints.largeTablet, // Планшеты ландшафт
+  TABLET_LANDSCAPE: METRICS.breakpoints.desktop,
   DESKTOP: 1440,
   DESKTOP_LARGE: 1920,
   XXL: 2560, // Очень большие мониторы
@@ -43,6 +44,9 @@ export const GRID_COLUMNS = {
   DESKTOP: 3,
   DESKTOP_LARGE: 3,
 } as const;
+
+export const TRAVEL_CARD_IMAGE_HEIGHT = 220;
+export const TRAVEL_CARD_WEB_HEIGHT = 360;
 
 // ✅ АРХИТЕКТУРА: Время кеширования для React Query (staleTime)
 export const STALE_TIME = {

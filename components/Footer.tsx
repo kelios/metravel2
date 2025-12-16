@@ -88,9 +88,16 @@ const Item = ({
 /** ========= Component ========= */
 const palette = DESIGN_TOKENS.colors;
 
+const MOBILE_DOCK_MIN_HEIGHT_WEB = 72;
+
 const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
   const { width } = useWindowDimensions();
-  const isMobile = width <= 900 || Platform.OS !== "web";
+  const effectiveWidth =
+    Platform.OS === 'web' && width === 0 && typeof window !== 'undefined'
+      ? window.innerWidth
+      : width;
+  const isWebWidthUnknown = Platform.OS === 'web' && width === 0;
+  const isMobile = Platform.OS !== 'web' ? true : !isWebWidthUnknown && effectiveWidth <= 900;
   const iconColor = palette.primary;
 
   const primary: NavItem[] = [
@@ -133,7 +140,12 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
   if (isMobile) {
     return (
       <Container style={[styles.base, mobileStyles.container]}>
-        <View style={mobileStyles.dockWrapper}>
+        <View
+          style={[
+            mobileStyles.dockWrapper,
+            Platform.OS === 'web' ? ({ minHeight: MOBILE_DOCK_MIN_HEIGHT_WEB } as any) : null,
+          ]}
+        >
           {/* измеряем ровно эту область */}
           <View onLayout={handleDockLayout} testID="footer-dock-measure">
             <ScrollView
@@ -238,8 +250,11 @@ const styles = StyleSheet.create({
 const mobileStyles = StyleSheet.create({
   container: {
     // @ts-ignore
-    position: Platform.OS === "web" ? "sticky" : "relative",
+    position: Platform.OS === "web" ? "fixed" : "relative",
     bottom: 0,
+    ...(Platform.OS === 'web'
+      ? ({ left: 0, right: 0, width: '100%' } as any)
+      : null),
     zIndex: 50,
     marginTop: -1, // Дополнительное перекрытие для мобильных устройств
   },
@@ -264,8 +279,20 @@ const mobileStyles = StyleSheet.create({
     }),
   },
   dock: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
     alignItems: "center",
     gap: 2,               // Уменьшили расстояние между иконками
+    ...Platform.select({
+      web: {
+        flexShrink: 0,
+        // @ts-ignore - web-only
+        width: 'max-content',
+        // @ts-ignore - web-only
+        whiteSpace: 'nowrap',
+      } as any,
+      default: {},
+    }),
   },
   // Убрали brandRow полностью
 });
@@ -280,6 +307,7 @@ const desktopStyles = StyleSheet.create({
     paddingHorizontal: 24,
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: 'center',
     backgroundColor: palette.surface,
     borderRadius: 24,
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
@@ -287,11 +315,26 @@ const desktopStyles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },
+    ...Platform.select({
+      web: {
+        flexWrap: 'nowrap',
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        // @ts-ignore
+        whiteSpace: 'nowrap',
+      } as any,
+    }),
   },
   group: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 20 as any,
+    ...Platform.select({
+      web: {
+        flexWrap: 'nowrap',
+        flexShrink: 0,
+      } as any,
+    }),
   },
 });
 

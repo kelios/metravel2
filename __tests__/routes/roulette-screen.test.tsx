@@ -10,6 +10,14 @@ import { useListTravelFilters } from '@/components/listTravel/hooks/useListTrave
 jest.mock('@/components/listTravel/hooks/useListTravelFilters');
 jest.mock('@/components/listTravel/hooks/useListTravelData');
 
+jest.mock('@tanstack/react-query', () => {
+  const actual = jest.requireActual('@tanstack/react-query')
+  return {
+    ...actual,
+    useQuery: jest.fn(() => ({ data: {}, isLoading: false })),
+  }
+})
+
 jest.mock('expo-router', () => ({
   usePathname: () => '/roulette',
 }));
@@ -37,7 +45,14 @@ jest.mock('react-native', () => {
   };
 });
 
-jest.mock('@/components/listTravel/ModernFilters', () => 'ModernFilters');
+jest.mock('@/components/listTravel/ModernFilters', () => {
+  const React = require('react')
+  const { Text } = require('react-native')
+  return {
+    __esModule: true,
+    default: () => React.createElement(Text, null, 'ModernFilters'),
+  }
+});
 jest.mock('@/components/listTravel/SearchAndFilterBar', () => 'SearchAndFilterBar');
 jest.mock('@/components/listTravel/RenderTravelItem', () => {
   const React = require('react');
@@ -53,10 +68,18 @@ jest.mock('@/components/listTravel/RenderTravelItem', () => {
 });
 jest.mock('@/components/seo/InstantSEO', () => 'InstantSEO');
 
-jest.mock('@/src/api/misc', () => ({
-  fetchFilters: jest.fn().mockResolvedValue({}),
-  fetchFiltersCountry: jest.fn().mockResolvedValue([]),
+jest.mock('@/src/api/miscOptimized', () => ({
   fetchAllCountries: jest.fn().mockResolvedValue([]),
+  fetchAllFiltersOptimized: jest.fn().mockResolvedValue({
+    countries: [],
+    categories: [],
+    categoryTravelAddress: [],
+    transports: [],
+    companions: [],
+    complexity: [],
+    month: [],
+    over_nights_stay: [],
+  }),
 }));
 
 const mockedUseRandomTravelData = useRandomTravelData as jest.MockedFunction<typeof useRandomTravelData>;
@@ -184,21 +207,50 @@ describe('RouletteScreen', () => {
     jest.clearAllMocks();
   });
 
-  it('calls refetch when central roulette circle is pressed', async () => {
-    const { unmount } = setupWeb();
-    
-    // Basic test - component renders without crashing
-    expect(true).toBe(true);
+  it('calls refetch when roulette center is pressed on desktop web', async () => {
+    const { getByText, refetch, unmount } = setupWeb();
+
+    fireEvent.press(getByText('Случайный маршрут'));
+
+    await waitFor(() => {
+      expect(refetch).toHaveBeenCalled();
+    });
+
     unmount();
   });
 
-  it('shows roulette hint when there are travels but no selection yet', async () => {
-    const { unmount } = setupWeb();
-    
-    // Basic test - component renders without crashing
-    expect(true).toBe(true);
+  it('shows hint when there are travels but no selection yet', async () => {
+    const { getByText, unmount } = setupWeb();
+
+    await waitFor(() => {
+      expect(getByText('Готов к случайному путешествию?')).toBeTruthy();
+    });
+
     unmount();
   });
 
-  // Мобильные сценарии рулетки больше не покрываются здесь, так как UI сильно изменён
+  it('clears filters via reset button on mobile web when there are active filters', async () => {
+    const { getByTestId, resetFilters, unmount } = setupMobileWeb();
+
+    fireEvent.press(getByTestId('mobile-reset-filters'));
+
+    await waitFor(() => {
+      expect(resetFilters).toHaveBeenCalledTimes(1);
+    });
+
+    unmount();
+  });
+
+  it('toggles filters modal on mobile web', async () => {
+    const { getByTestId, queryByText, unmount } = setupMobileWeb();
+
+    expect(queryByText('ModernFilters')).toBeNull();
+    fireEvent.press(getByTestId('mobile-filters-button'));
+
+    await waitFor(() => {
+      expect(queryByText('ModernFilters')).toBeTruthy();
+    });
+
+    unmount();
+  });
 });

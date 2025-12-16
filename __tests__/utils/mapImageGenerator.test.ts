@@ -103,6 +103,7 @@ describe('generateLeafletRouteSnapshot', () => {
     mockFitBounds.mockClear()
     mockTileLayerOn.mockClear()
     delete (window as any).html2canvas
+    delete (window as any).L
   })
 
   it('returns null when no points provided', async () => {
@@ -111,6 +112,7 @@ describe('generateLeafletRouteSnapshot', () => {
 
   it('creates off-screen map snapshot and cleans up DOM', async () => {
     jest.useFakeTimers()
+    ;(window as any).L = mockLeaflet
     ;(window as any).html2canvas = jest.fn(() =>
       Promise.resolve({
         toDataURL: () => 'data:image/png;base64,leaflet',

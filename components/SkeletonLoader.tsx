@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
+import { TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
 
 interface SkeletonLoaderProps {
   width?: number | string;
@@ -42,7 +43,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
  */
 export const TravelCardSkeleton: React.FC = () => {
   // ✅ FIX: Унифицированная высота изображения с реальными карточками и учетом маленьких экранов
-  const imageHeight = 220;
+  const imageHeight = TRAVEL_CARD_IMAGE_HEIGHT;
   const titleHeight = Platform.select({ default: 14, web: 16 });
   const metaHeight = Platform.select({ default: 11, web: 12 });
   
@@ -115,7 +116,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...(Platform.OS === 'web'
       ? {
-          height: 360,
+          height: TRAVEL_CARD_WEB_HEIGHT,
         }
       : {}),
     // Высота теперь определяется содержимым, чтобы совпадать с реальной карточкой

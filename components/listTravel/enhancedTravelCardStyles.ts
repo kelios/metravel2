@@ -1,5 +1,6 @@
 import { StyleSheet, Platform } from 'react-native';
 import { designTokens } from '../../constants/designTokens';
+import { METRICS } from '@/constants/layout';
 
 // Создаем отдельные стили для web и native с правильными типами
 const webStyles: any = {
@@ -91,7 +92,7 @@ type ResponsiveCacheKey = 'mobile' | 'desktop';
 const responsiveValuesCache = new Map<ResponsiveCacheKey, ReturnType<typeof calculateResponsiveValues>>();
 
 function calculateResponsiveValues(width: number) {
-  const isMobile = width < 768;
+  const isMobile = width < METRICS.breakpoints.tablet;
   return {
     borderRadius: isMobile ? 16 : 20,
     marginBottom: isMobile ? 20 : 24,
@@ -111,7 +112,7 @@ function calculateResponsiveValues(width: number) {
 
 export function getResponsiveCardValues(width: number) {
   // ✅ ОПТИМИЗАЦИЯ: Используем кэширование для избежания перерасчетов
-  const cacheKey: ResponsiveCacheKey = width < 768 ? 'mobile' : 'desktop';
+  const cacheKey: ResponsiveCacheKey = width < METRICS.breakpoints.tablet ? 'mobile' : 'desktop';
   if (responsiveValuesCache.has(cacheKey)) {
     return responsiveValuesCache.get(cacheKey)!;
   }

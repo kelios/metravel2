@@ -46,7 +46,6 @@ function RenderTravelItem({
     if (!item) return null;
 
     const { width } = useWindowDimensions();
-    const isTablet = width >= 768 && width < 1024;
 
     const containerStyle = useMemo<ContainerStyle>(() => {
         const base: ContainerStyle = {

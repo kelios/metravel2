@@ -13,12 +13,14 @@ import {
 } from 'react-native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 
 interface StickySearchBarProps {
   search: string;
   onSearchChange: (value: string) => void;
   onFiltersPress?: () => void;
   hasActiveFilters: boolean;
+  availableWidth?: number;
   primaryAction?: {
     label: string
     onPress: () => void
@@ -44,6 +46,7 @@ function StickySearchBar({
   onSearchChange,
   onFiltersPress,
   hasActiveFilters,
+  availableWidth,
   primaryAction,
   resultsCount,
   sortOptions = [],
@@ -56,12 +59,20 @@ function StickySearchBar({
   activeFiltersCount,
 }: StickySearchBarProps) {
   const { width } = useWindowDimensions();
-  const isMobile = width < 768;
+  const isMobileByWindow = width < METRICS.breakpoints.tablet;
+  const isCompactByAvailableWidth =
+    typeof availableWidth === 'number' && availableWidth > 0
+      ? availableWidth < 860
+      : false;
+  const isMobile = isMobileByWindow || isCompactByAvailableWidth;
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
   
   // ✅ UX УЛУЧШЕНИЕ: Показываем счетчик только если есть результаты
   const showResultsCount = resultsCount !== undefined && resultsCount > 0 && !isMobile;
+  const shouldReserveDesktopResultsSlot = Platform.OS === 'web' && !isMobile;
+  const shouldReserveDesktopClearAllSlot = Platform.OS === 'web' && !isMobile && !!onClearAll;
+  const showClearAll = !!onClearAll && (hasActiveFilters || search.length > 0) && !isMobile;
 
   // Keyboard shortcut для фокуса (Ctrl+K / Cmd+K)
   useEffect(() => {
@@ -130,10 +141,22 @@ function StickySearchBar({
 
           {/* Действия */}
           <View style={[styles.actions, !isMobile && styles.actionsDesktop, isMobile && styles.actionsMobile]}>
-          {showResultsCount && (
-            <View style={styles.resultsInline} testID="results-count-wrapper">
+          {(showResultsCount || shouldReserveDesktopResultsSlot) && (
+            <View
+              style={[
+                styles.resultsInline,
+                !showResultsCount ? ({ opacity: 0 } as any) : null,
+              ]}
+              pointerEvents={showResultsCount ? 'auto' : 'none'}
+              testID="results-count-wrapper"
+            >
               <Text style={styles.resultsText} testID="results-count-text">
-                Найдено: {resultsCount} {resultsCount === 1 ? 'путешествие' : resultsCount < 5 ? 'путешествия' : 'путешествий'}
+                Найдено: {resultsCount ?? 0}{' '}
+                {resultsCount === 1
+                  ? 'путешествие'
+                  : (resultsCount ?? 0) < 5
+                    ? 'путешествия'
+                    : 'путешествий'}
               </Text>
             </View>
           )}
@@ -209,16 +232,18 @@ function StickySearchBar({
           )}
 
           {/* Сбросить все (если есть активные фильтры или поиск) */}
-          {onClearAll && (hasActiveFilters || search.length > 0) && (
-             <Pressable
-               testID="clear-all-button"
-               onPress={onClearAll}
-               style={styles.clearAllButton}
-               accessibilityLabel="Сбросить все фильтры и поиск"
-             >
-               <Feather name="x-circle" size={14} color={palette.textMuted} />
-               {!isMobile && <Text style={styles.clearAllText}>Сбросить</Text>}
-             </Pressable>
+          {(showClearAll || shouldReserveDesktopClearAllSlot) && (
+            <Pressable
+              testID="clear-all-button"
+              onPress={showClearAll ? onClearAll : undefined}
+              disabled={!showClearAll}
+              pointerEvents={showClearAll ? 'auto' : 'none'}
+              style={[styles.clearAllButton, !showClearAll ? ({ opacity: 0 } as any) : null]}
+              accessibilityLabel="Сбросить все фильтры и поиск"
+            >
+              <Feather name="x-circle" size={14} color={palette.textMuted} />
+              {!isMobile && <Text style={styles.clearAllText}>Сбросить</Text>}
+            </Pressable>
           )}
         </View>
       </View>
@@ -337,10 +362,12 @@ const styles = StyleSheet.create({
   },
   actionsDesktop: {
     flexShrink: 0,
+    flexWrap: 'nowrap',
   },
   resultsInline: {
     paddingHorizontal: 10,
     height: Platform.select({ default: 36, web: 44 }),
+    minWidth: Platform.select({ default: 0, web: 150 }),
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: palette.surfaceMuted,
