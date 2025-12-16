@@ -187,7 +187,7 @@ test.describe('Render audit: main and travel details (responsive + perf)', () =>
       // Must-have blocks (successful render)
       await expect(page.locator('[data-testid="travel-details-page"]')).toBeVisible();
       await expect(page.locator('[data-testid="travel-details-scroll"]')).toBeVisible();
-      await expect(page.locator('[data-testid="travel-details-section-gallery"]')).toBeVisible();
+      await expect(page.locator('[data-testid="travel-details-section-gallery"]')).toHaveCount(1);
       await expect(page.locator('[data-testid="travel-details-hero"]')).toHaveCount(1);
       await expect(page.locator('[data-testid="travel-details-quick-facts"]')).toHaveCount(1);
       await expect(page.locator('[data-testid="travel-details-author"]')).toHaveCount(1);

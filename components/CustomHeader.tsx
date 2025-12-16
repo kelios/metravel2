@@ -363,6 +363,28 @@ export default React.memo(function CustomHeader() {
                                       </Pressable>
                                   </>
                               )}
+
+                              <View style={styles.modalDivider} />
+
+                              <Pressable
+                                  onPress={() => handleUserAction('/privacy')}
+                                  style={styles.modalNavItem}
+                                  accessibilityRole="button"
+                                  accessibilityLabel="Политика конфиденциальности"
+                              >
+                                  <Icon name="shield" size={20} color="#667085" />
+                                  <Text style={styles.modalNavLabel}>Политика конфиденциальности</Text>
+                              </Pressable>
+
+                              <Pressable
+                                  onPress={() => handleUserAction('/cookies')}
+                                  style={styles.modalNavItem}
+                                  accessibilityRole="button"
+                                  accessibilityLabel="Настройки cookies"
+                              >
+                                  <Icon name="cookie" size={20} color="#667085" />
+                                  <Text style={styles.modalNavLabel}>Настройки cookies</Text>
+                              </Pressable>
                           </ScrollView>
                       </Pressable>
                   </Pressable>

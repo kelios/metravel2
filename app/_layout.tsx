@@ -170,7 +170,7 @@ function RootLayoutNav() {
       // On web mobile the footer dock is position: fixed and can overlap content.
       // Reserve space equal to the measured dock height (with a small fallback).
       const webFallback = 76;
-      const h = isWeb ? Math.max(dockHeight || 0, webFallback) : dockHeight;
+      const h = isWeb ? webFallback : dockHeight;
 
       if (h <= 0) return null;
 

@@ -498,12 +498,9 @@ function TravelListItem({
             accessibilityHint: selectable ? 'Двойное нажатие для выбора' : 'Двойное нажатие для просмотра деталей',
             // ✅ B5.1: Дополнительные ARIA атрибуты для web
             // @ts-ignore - aria attributes for web accessibility
-            'aria-label': Platform.OS === 'web' ? `Путешествие: ${name}. ${countries.length > 0 ? `Страны: ${countries.join(', ')}. ` : ''}Просмотров: ${viewsFormatted}` : undefined,
-            // @ts-ignore
-            'aria-pressed': selectable ? isSelected : undefined,
         };
 
-    const cardTestId = 'travel-card-link';
+    const cardTestId = 'travel-card';
     const card = (
       <CardWrapper
         {...cardWrapperProps}
@@ -520,6 +517,25 @@ function TravelListItem({
           selectable && isSelected && styles.selected,
         ]}
       >
+    {selectable && (
+      <View
+        pointerEvents="none"
+        style={[
+          {
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: isSelected ? "rgba(5,150,105,0.12)" : "rgba(96,165,250,0.08)",
+            zIndex: 2,
+            opacity: 1,
+            transitionDuration: "150ms",
+            pointerEvents: "none",
+          } as any,
+        ]}
+      />
+    )}
         {selectable && (
           <View
             pointerEvents="none"

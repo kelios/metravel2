@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, ViewStyle, StyleProp } from 'react-native';
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
 import { TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
 
@@ -77,7 +77,11 @@ export const TravelCardSkeleton: React.FC = () => {
 /**
  * Skeleton для списка путешествий
  */
-export const TravelListSkeleton: React.FC<{ count?: number; columns?: number }> = ({ count = 6, columns = 1 }) => {
+export const TravelListSkeleton: React.FC<{
+  count?: number;
+  columns?: number;
+  rowStyle?: StyleProp<ViewStyle>;
+}> = ({ count = 6, columns = 1, rowStyle }) => {
   const isWeb = Platform.OS === 'web';
   const itemsCount = Math.max(0, count ?? 0);
 
@@ -87,13 +91,45 @@ export const TravelListSkeleton: React.FC<{ count?: number; columns?: number }> 
 
   // На web делаем сетку по колонкам, чтобы скелетоны совпадали с реальными карточками
   if (isWeb) {
-    const itemWidth = `${100 / columns}%`;
+    const cols = Math.max(1, columns || 1);
+
+    // Important: match real card slot sizing used in listTravel/RightColumn.tsx
+    // Real cards on desktop use flexBasis/minWidth/maxWidth (not percentage width).
+    const itemContainerStyle =
+      cols <= 1
+        ? ({
+            flex: 1,
+            width: '100%',
+            maxWidth: '100%',
+            minWidth: 0,
+            flexBasis: '100%',
+          } as any)
+        : ({
+            flexGrow: 1,
+            flexShrink: 1,
+            flexBasis: 320,
+            minWidth: 320,
+            maxWidth: 360,
+          } as any);
+
+    const rowsCount = Math.ceil(itemsCount / cols);
 
     return (
       <>
-        {Array.from({ length: itemsCount }).map((_, index) => (
-          <View key={index} style={{ width: itemWidth } as any}>
-            <TravelCardSkeleton />
+        {Array.from({ length: rowsCount }).map((_, rowIndex) => (
+          <View
+            key={`skeleton-row-${rowIndex}`}
+            style={[rowStyle, { flexDirection: 'row', flexWrap: 'nowrap' } as any]}
+          >
+            {Array.from({ length: cols }).map((__, colIndex) => {
+              const index = rowIndex * cols + colIndex;
+              if (index >= itemsCount) return null;
+              return (
+                <View key={`skeleton-${rowIndex}-${colIndex}`} style={itemContainerStyle}>
+                  <TravelCardSkeleton />
+                </View>
+              );
+            })}
           </View>
         ))}
       </>

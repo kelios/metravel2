@@ -127,6 +127,17 @@ function RenderRightMenu() {
                             title="Зарегистрироваться"
                             leadingIcon="account-plus"
                         />
+                        <Divider />
+                        <Menu.Item
+                            onPress={() => handleNavigate('/privacy')}
+                            title="Политика конфиденциальности"
+                            leadingIcon="shield"
+                        />
+                        <Menu.Item
+                            onPress={() => handleNavigate('/cookies')}
+                            title="Настройки cookies"
+                            leadingIcon="cookie"
+                        />
                     </>
                 ) : (
                     <>
@@ -172,6 +183,21 @@ function RenderRightMenu() {
                             title="Выход"
                             leadingIcon={({ size }) => (
                                 <Icon name="logout" size={size} color="#6aaaaa" />
+                            )}
+                        />
+                        <Divider />
+                        <Menu.Item
+                            onPress={() => handleNavigate('/privacy')}
+                            title="Политика конфиденциальности"
+                            leadingIcon={({ size }) => (
+                                <Icon name="shield" size={size} color="#667085" />
+                            )}
+                        />
+                        <Menu.Item
+                            onPress={() => handleNavigate('/cookies')}
+                            title="Настройки cookies"
+                            leadingIcon={({ size }) => (
+                                <Icon name="cookie" size={size} color="#667085" />
                             )}
                         />
                     </>

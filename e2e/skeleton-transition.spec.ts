@@ -3,6 +3,15 @@ import { test, expect } from '@playwright/test';
 async function preacceptCookies(page: any) {
   await page.addInitScript(() => {
     try {
+      // Ensure no cached UI/state prevents skeleton from showing.
+      window.sessionStorage.clear();
+      // Keep localStorage mostly intact, but clear likely non-critical caches.
+      // Do not clear consent key we set below.
+    } catch {
+      // ignore
+    }
+
+    try {
       window.localStorage.setItem(
         'metravel_consent_v1',
         JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
@@ -41,46 +50,86 @@ test.describe('Skeleton transition (no layout shift)', () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await preacceptCookies(page);
 
-    // Delay the travels list request so the skeleton is guaranteed to appear.
-    let delayedOnce = false;
+    // Deterministic skeleton: delay and then mock the very first travels list response.
+    // This guarantees we see the skeleton and then transition to a real card.
+    let fulfilledOnce = false;
     await page.route('**/api/travels/**', async (route: any, request: any) => {
       const url = request.url();
       const isListRequest =
+        !fulfilledOnce &&
         request.method() === 'GET' &&
-        url.includes('/api/travels') &&
+        /\/api\/travels\/?\?/.test(url) &&
         url.includes('where=') &&
         url.includes('perPage=');
 
-      if (!delayedOnce && isListRequest) {
-        delayedOnce = true;
-        await new Promise((r) => setTimeout(r, 1200));
+      if (!isListRequest) {
+        await route.continue();
+        return;
       }
 
-      await route.continue();
+      fulfilledOnce = true;
+      await new Promise((r) => setTimeout(r, 1500));
+
+      const mocked = {
+        data: [
+          {
+            id: 999999,
+            name: 'E2E Skeleton Travel',
+            slug: 'e2e-skeleton-travel',
+            url: '/travels/e2e-skeleton-travel',
+            travel_image_thumb_url:
+              'https://metravelprod.s3.eu-north-1.amazonaws.com/6880/conversions/p9edKtQrl2wM0xC1yRrkzVJEi4B4qxkxWqSADDLM-webpTravelMainImage_400.webp',
+            travel_image_thumb_small_url:
+              'https://metravelprod.s3.eu-north-1.amazonaws.com/6880/conversions/p9edKtQrl2wM0xC1yRrkzVJEi4B4qxkxWqSADDLM-webpTravelMainImage_400.webp',
+            userName: 'E2E',
+            cityName: 'E2E',
+            countryName: 'E2E',
+            countryCode: 'EE',
+            gallery: [],
+            travelAddress: [],
+            year: '2025',
+            monthName: 'Январь',
+            number_days: 1,
+            companions: [],
+            youtube_link: '',
+            description: '',
+            recommendation: '',
+            plus: '',
+            minus: '',
+            countUnicIpView: '0',
+            userIds: '',
+          },
+        ],
+        total: 1,
+      };
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mocked),
+      });
     });
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-    const listSkeleton = page.locator('[data-testid="list-travel-skeleton"]');
-    await expect(listSkeleton).toBeVisible({ timeout: 30_000 });
+    const search = page.getByRole('textbox', { name: /Поиск путешествий/i });
+    await expect(search).toBeVisible({ timeout: 30_000 });
 
-    const skeletonCard = page.locator('[data-testid="list-travel-skeleton-card"]').first();
+    // Main page uses TravelListSkeleton -> TravelCardSkeleton.
+    const skeletonCard = page.locator('[data-testid="travel-card-skeleton"]').first();
     await expect(skeletonCard).toBeVisible({ timeout: 30_000 });
 
     const skeletonBox = await skeletonCard.boundingBox();
     expect(skeletonBox).not.toBeNull();
 
-    // Now wait for real content OR empty state.
-    await Promise.race([
-      page.waitForSelector('[data-testid="travel-card-link"]', { timeout: 45_000 }),
-      page.waitForSelector('text=Пока нет путешествий', { timeout: 45_000 }),
-    ]);
+    // Now wait for real content.
+    await page.waitForSelector('[data-testid="travel-card-link"]', { timeout: 45_000 });
 
-    // Skeleton should be gone once content is ready (we allow brief overlap, but final state should hide it).
-    await expect(listSkeleton).toHaveCount(0, { timeout: 45_000 });
+    // Skeleton should be gone once content is ready (final state should hide it).
+    await expect(page.locator('[data-testid="travel-card-skeleton"]')).toHaveCount(0, { timeout: 45_000 });
 
     // If there are cards, compare dimensions between skeleton and the first real card.
-    const cards = page.locator('[data-testid="travel-card-link"]');
+    const cards = page.locator('[data-testid="travel-card"]');
     const cardCount = await cards.count();
 
     if (cardCount > 0 && skeletonBox) {

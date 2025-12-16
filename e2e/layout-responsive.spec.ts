@@ -65,7 +65,7 @@ async function assertNoHorizontalScroll(page: any) {
 }
 
 async function countCardsInFirstRow(page: any): Promise<number> {
-  const cards = page.locator('[data-testid="travel-card-link"]');
+  const cards = page.locator('[data-testid="travel-card"]');
   const count = await cards.count();
   if (count === 0) return 0;
 

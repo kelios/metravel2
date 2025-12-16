@@ -97,16 +97,25 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
       ? window.innerWidth
       : width;
   const isMobile = Platform.OS !== 'web' ? true : effectiveWidth <= 900;
-  const isCompactDesktop = Platform.OS === 'web' && !isMobile && effectiveWidth < 1200;
   const iconColor = palette.primary;
 
-  const primary: NavItem[] = useMemo(
+  const headerNav: NavItem[] = useMemo(
     () => [
       { key: "home",     label: "Путешествия", route: "/",          icon: <Feather name="home"   size={20} color={iconColor} /> },
       { key: "by",       label: "Беларусь",    route: "/travelsby", icon: <Feather name="globe"  size={20} color={iconColor} /> },
       { key: "map",      label: "Карта",       route: "/map",       icon: <Feather name="map"    size={20} color={iconColor} /> },
       { key: "roulette", label: "Случайный маршрут", route: "/roulette",  icon: <Feather name="shuffle" size={20} color={iconColor} /> },
       { key: "quests",   label: "Квесты",      route: "/quests",    icon: <Feather name="flag"   size={20} color={iconColor} /> },
+    ],
+    [iconColor]
+  );
+
+  const extra: NavItem[] = useMemo(
+    () => [
+      { key: "about",  label: "О сайте",     route: "/about",     icon: <Feather name="info"  size={20} color={iconColor} /> },
+      { key: "privacy", label: "Политика конфиденциальности", route: "/privacy", icon: <Feather name="shield" size={20} color={iconColor} /> },
+      { key: "cookies", label: "Настройки cookies", route: "/cookies", icon: <Feather name="sliders" size={20} color={iconColor} /> },
+      { key: "blogby", label: "Пишут о BY",  route: "/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi", icon: <Feather name="list" size={20} color={iconColor} /> },
     ],
     [iconColor]
   );
@@ -120,8 +129,12 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
     [iconColor]
   );
 
-  const allItems = useMemo(() => [...primary, ...social], [primary, social]);
-  const webMobileItems = useMemo(() => primary, [primary]);
+  const allItems = useMemo(() => [...headerNav, ...extra, ...social], [headerNav, extra, social]);
+  const webMobileAllItemsWithoutLegal = useMemo(
+    () => [...headerNav, ...extra.filter((x) => x.key !== 'privacy' && x.key !== 'cookies'), ...social],
+    [headerNav, extra, social]
+  );
+  const webMobileFallbackItems = useMemo(() => [...extra, ...social], [extra, social]);
 
   const Container = (Platform.OS === "ios" || Platform.OS === "android") ? SafeAreaView : View;
 
@@ -141,10 +154,41 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
       }
   }, [isMobile, onDockHeight]);
 
+  const itemsToRender = useMemo(() => {
+    if (!isMobile) return [];
+
+    if (Platform.OS !== 'web') {
+      // Native: one scrollable row, show everything.
+      return allItems;
+    }
+
+    // Web: one row, no scroll. Show everything only if it fits.
+    const estimateItemWidth = 60;
+    const estimateGap = 2;
+    const estimatedMinWidth =
+      allItems.length * estimateItemWidth + Math.max(0, allItems.length - 1) * estimateGap;
+
+    const canFitAll = effectiveWidth >= estimatedMinWidth + 24;
+    if (canFitAll) {
+      // If everything fits, hide legal links here (they're available in the header menu).
+      return webMobileAllItemsWithoutLegal;
+    }
+
+    // If doesn't fit - remove items that duplicate header nav.
+    const fallbackItems = webMobileFallbackItems;
+
+    const fallbackEstimatedMinWidth =
+      fallbackItems.length * estimateItemWidth + Math.max(0, fallbackItems.length - 1) * estimateGap;
+
+    if (effectiveWidth >= fallbackEstimatedMinWidth + 24) return fallbackItems;
+
+    // As a last resort, slice to what can fit.
+    const maxFit = Math.max(1, Math.floor((effectiveWidth - 24) / (estimateItemWidth + estimateGap)));
+    return fallbackItems.slice(0, maxFit);
+  }, [allItems, effectiveWidth, isMobile, webMobileAllItemsWithoutLegal, webMobileFallbackItems]);
+
   /** ======= Mobile: суперкомпактный «док» ======= */
   if (isMobile) {
-    const itemsToRender = Platform.OS === 'web' ? webMobileItems : allItems;
-
     return (
       <Container style={[styles.base, mobileStyles.container]}>
         <View
@@ -198,22 +242,22 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
 
   return (
     <Container style={[styles.base, desktopStyles.container]}>
-      <View style={[desktopStyles.bar, isCompactDesktop && desktopStyles.barCompact]}>
-        <View style={[desktopStyles.group, isCompactDesktop && desktopStyles.groupCompact]}>
-          {primary.map((item) => (
+      <View style={desktopStyles.bar}>
+        <View style={desktopStyles.group}>
+          {extra.map((item) => (
             <Item key={item.key} href={item.route} label={item.label}>
               {item.icon}
             </Item>
           ))}
         </View>
 
-        <View style={[desktopStyles.group, isCompactDesktop && desktopStyles.groupCompact]}>
+        <View style={desktopStyles.group}>
           {social.map((s) => (
             <Item key={s.key} onPress={() => openURL(s.externalUrl!)} label={s.label}>
               {s.icon}
             </Item>
           ))}
-          <Text style={[styles.copy, isCompactDesktop && styles.copyCompact]}>© MeTravel 2020–{new Date().getFullYear()}</Text>
+          <Text style={styles.copy}>© MeTravel 2020–{new Date().getFullYear()}</Text>
         </View>
       </View>
     </Container>
@@ -289,6 +333,7 @@ const mobileStyles = StyleSheet.create({
     backgroundColor: palette.dockBackground,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
+    overflow: 'hidden',
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
     shadowColor: "#1f1f1f",
     shadowOpacity: 0.12,
@@ -350,7 +395,7 @@ const desktopStyles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     ...Platform.select({
       web: {
-        flexWrap: 'wrap',
+        flexWrap: 'nowrap',
         overflowX: 'hidden',
         overflowY: 'visible',
       } as any,
@@ -368,7 +413,7 @@ const desktopStyles = StyleSheet.create({
     gap: 20 as any,
     ...Platform.select({
       web: {
-        flexWrap: 'wrap',
+        flexWrap: 'nowrap',
         flexShrink: 1,
       } as any,
     }),

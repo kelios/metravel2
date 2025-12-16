@@ -1,4 +1,4 @@
-import React, { memo, Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react'
+import React, { memo, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Platform,
@@ -275,6 +275,21 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       );
     }, [isRecommendationsVisible, handleRecommendationsLayout]);
 
+    const [showDelayedSkeleton, setShowDelayedSkeleton] = useState(false)
+
+    useEffect(() => {
+      if (!showInitialLoading || travels.length !== 0) {
+        setShowDelayedSkeleton(false)
+        return
+      }
+
+      const t = setTimeout(() => setShowDelayedSkeleton(true), 250)
+      return () => {
+        clearTimeout(t)
+        setShowDelayedSkeleton(false)
+      }
+    }, [showInitialLoading, travels.length])
+
     return (
       <View style={containerStyle}>
         {/* Search Header - Sticky */}
@@ -313,8 +328,20 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
         {/* Cards + Recommendations */}
         <View testID="cards-scroll-container" style={cardsWrapperStyle}>
+          {showDelayedSkeleton && isRecommendationsVisible ? (
+            <View
+              style={{
+                height: RECOMMENDATIONS_TOTAL_HEIGHT,
+                marginBottom: 24,
+                overflow: 'hidden',
+              }}
+            >
+              <RecommendationsPlaceholder />
+            </View>
+          ) : null}
+
           {/* Initial Loading - Only show skeleton when actually loading initial data */}
-          {showInitialLoading && travels.length === 0 && (
+          {showDelayedSkeleton && (
             <View
               style={[
                 cardsGridStyle,
@@ -325,7 +352,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 } as any,
               ]}
             >
-              <TravelListSkeleton count={PER_PAGE} columns={gridColumns} />
+              <TravelListSkeleton count={PER_PAGE} columns={gridColumns} rowStyle={cardsGridStyle} />
             </View>
           )}
 

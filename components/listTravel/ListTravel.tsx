@@ -465,7 +465,7 @@ function ListTravel({
 
     // ✅ ОПТИМИЗАЦИЯ: Стабильные адаптивные отступы и ширина правой колонки
     // На мобильном layout используем полную ширину, на десктопе вычитаем ширину sidebar
-    const effectiveWidth = isMobileDevice ? windowWidth : windowWidth - 320; // 320px ~ ширина sidebar
+    const effectiveWidth = isDesktop ? windowWidth - 320 : windowWidth; // 320px ~ ширина sidebar (только когда sidebar реально видим)
 
     const contentPadding = useMemo(() => {
       // ✅ ОПТИМИЗАЦИЯ: Используем стабильные breakpoints для избежания лишних перерасчетов

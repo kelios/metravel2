@@ -22,8 +22,9 @@ function getNumberEnv(name: string, fallback: number): number {
 }
 
 const CLS_AFTER_RENDER_MAX = getNumberEnv('E2E_CLS_AFTER_RENDER_MAX', 0.02);
-const SHOULD_FAIL = process.env.E2E_CLS_AUDIT_FAIL === '1' || process.env.CI === 'true';
+const CLS_TOTAL_MAX = getNumberEnv('E2E_CLS_TOTAL_MAX', 0.35);
 const VERBOSE = process.env.CI === 'true' ? process.env.E2E_CLS_AUDIT_VERBOSE === '1' : true;
+const ENFORCE_TOTAL = process.env.E2E_CLS_AUDIT_ENFORCE_TOTAL === '1';
 
 
 function getRoutesToAudit(defaultRoutes: string[]): string[] {
@@ -60,7 +61,7 @@ const ROUTES_FULL: string[] = [
 const ROUTES_LOCAL_DEFAULT: string[] = ['/', '/travelsby', '/roulette'];
 
 test.describe('CLS audit', () => {
-  test('audit core routes (clsTotal / clsAfterRender)', async ({ page }) => {
+  test('audit core routes (clsTotal / clsAfterRender)', async ({ page }, testInfo) => {
     // This audit can take a while on dev servers (cold start / heavy routes).
     test.setTimeout(5 * 60_000);
 
@@ -70,6 +71,11 @@ test.describe('CLS audit', () => {
 
     for (const route of routesToAudit) {
       const routePage = await page.context().newPage();
+
+      // Keep viewport deterministic for CLS collection.
+      // Otherwise Playwright/CI defaults can fall into web-mobile breakpoints (e.g. fixed footer dock),
+      // inflating clsTotal with breakpoint-related relayout.
+      await routePage.setViewportSize({ width: 1440, height: 900 });
 
       await routePage.addInitScript(() => {
         // Hide cookie consent banner by pre-setting consent.
@@ -153,6 +159,14 @@ test.describe('CLS audit', () => {
         // Allow initial render/hydration/async blocks to complete.
         await routePage.waitForTimeout(3000);
 
+        try {
+          const beforePath = testInfo.outputPath(`cls-${route.replace(/\W+/g, '_')}-before.png`);
+          await routePage.screenshot({ path: beforePath, fullPage: true });
+          await testInfo.attach(`cls-${route}-before`, { path: beforePath, contentType: 'image/png' });
+        } catch {
+          // ignore screenshot errors
+        }
+
         // Start measuring post-render CLS separately.
         await routePage.evaluate(() => {
           const s = (window as any).__e2eCls;
@@ -163,6 +177,14 @@ test.describe('CLS audit', () => {
 
         // Let the route settle (lazy components / images).
         await routePage.waitForTimeout(2000);
+
+        try {
+          const afterPath = testInfo.outputPath(`cls-${route.replace(/\W+/g, '_')}-after.png`);
+          await routePage.screenshot({ path: afterPath, fullPage: true });
+          await testInfo.attach(`cls-${route}-after`, { path: afterPath, contentType: 'image/png' });
+        } catch {
+          // ignore screenshot errors
+        }
 
         // Finalize CLS collection.
         const data = await routePage.evaluate(() => {
@@ -220,10 +242,33 @@ test.describe('CLS audit', () => {
       );
     }
 
-    if (SHOULD_FAIL) {
-      for (const r of results) {
-        expect(r.clsAfterRender, `CLS too high on ${r.route}`).toBeLessThanOrEqual(CLS_AFTER_RENDER_MAX);
-      }
+    const failing = results.filter((r) => {
+      if (r.error) return false;
+      const totalFail = ENFORCE_TOTAL && r.clsTotal > CLS_TOTAL_MAX;
+      const afterFail = r.clsAfterRender > CLS_AFTER_RENDER_MAX;
+      return totalFail || afterFail;
+    });
+
+    if (failing.length) {
+      const details = failing
+        .map((r) => {
+          const top = r.entries
+            .slice(0, 3)
+            .map((e) => `    - ${e.value.toFixed(4)}: ${Array.isArray(e.sources) ? e.sources.join(', ') : ''}`)
+            .join('\n');
+          return [
+            `  ${r.route}`,
+            `    clsTotal=${r.clsTotal.toFixed(4)} (max ${CLS_TOTAL_MAX.toFixed(4)})${ENFORCE_TOTAL ? '' : ' (not enforced)'}`,
+            `    clsAfterRender=${r.clsAfterRender.toFixed(4)} (max ${CLS_AFTER_RENDER_MAX.toFixed(4)})`,
+            top ? `    topEntries:\n${top}` : '    topEntries: (no entries captured)',
+          ].join('\n');
+        })
+        .join('\n\n');
+
+      expect(
+        failing,
+        `CLS audit failed (routes above limits).\n\n${details}`
+      ).toHaveLength(0);
     }
   });
 });

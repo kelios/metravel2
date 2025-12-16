@@ -1,17 +1,21 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.BASE_URL || 'http://127.0.0.1:8081';
+const E2E_WEB_PORT = Number(process.env.E2E_WEB_PORT || '8081');
+const baseURL = process.env.BASE_URL || `http://localhost:${E2E_WEB_PORT}`;
+const USE_EXISTING_SERVER = process.env.E2E_NO_WEBSERVER === '1';
 
 export default defineConfig({
   testDir: './e2e',
   timeout: 120_000,
   globalSetup: './e2e/global-setup.ts',
-  webServer: {
-    command: 'npm run web -- --port 8081',
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: USE_EXISTING_SERVER
+    ? undefined
+    : {
+        command: `npx expo start --web --port ${E2E_WEB_PORT} --non-interactive`,
+        url: baseURL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      },
   expect: {
     timeout: 15_000,
   },

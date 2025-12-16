@@ -27,7 +27,22 @@ test.describe('Footer dock (web mobile)', () => {
       }
     });
 
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    // Expo dev server can occasionally return transient ERR_EMPTY_RESPONSE while hot reloading.
+    // Retry navigation to reduce flakiness.
+    let lastError: any = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30_000 });
+        lastError = null;
+        break;
+      } catch (e) {
+        lastError = e;
+        // eslint-disable-next-line no-await-in-loop
+        await page.waitForTimeout(500);
+      }
+    }
+    if (lastError) throw lastError;
 
     // Wait for footer dock to mount.
     const dock = page.getByTestId('footer-dock-measure');

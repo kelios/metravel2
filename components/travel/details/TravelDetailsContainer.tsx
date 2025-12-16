@@ -239,6 +239,7 @@ const TravelListFallback = () => (
 
 const TravelDetailsLoadingSkeleton = () => (
   <View
+    testID="travel-details-loading"
     style={[
       styles.wrapper,
       Platform.OS === "web" &&
