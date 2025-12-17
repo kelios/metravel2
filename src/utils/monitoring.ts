@@ -2,6 +2,7 @@
 // ✅ Утилита для интеграции с системами мониторинга (Sentry, LogRocket и т.д.)
 
 import { setMonitoringService, MonitoringService } from './logger';
+import { devLog, devError } from './logger';
 
 /**
  * Инициализирует Sentry (если установлен)
@@ -28,10 +29,10 @@ export const initSentry = async (): Promise<void> => {
       };
       
       setMonitoringService(sentryService);
-      console.log('[Monitoring] Sentry initialized');
+      devLog('[Monitoring] Sentry initialized');
     }
   } catch (error) {
-    console.error('[Monitoring] Failed to initialize Sentry:', error);
+    devError('[Monitoring] Failed to initialize Sentry:', error);
   }
 };
 
@@ -65,10 +66,10 @@ export const initLogRocket = async (): Promise<void> => {
       };
       
       setMonitoringService(logRocketService);
-      console.log('[Monitoring] LogRocket initialized');
+      devLog('[Monitoring] LogRocket initialized');
     }
   } catch (error) {
-    console.error('[Monitoring] Failed to initialize LogRocket:', error);
+    devError('[Monitoring] Failed to initialize LogRocket:', error);
   }
 };
 

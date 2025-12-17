@@ -165,6 +165,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
       {/* Preload критичных ресурсов */}
       <link rel="modulepreload" href="/_expo/static/js/web/index.js" />
 
+      {/* Preload Feather icon font to prevent CLS */}
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
+
       {/* Critical CSS */}
       <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />
 
@@ -255,6 +259,7 @@ body{
   min-height:100vh;
   min-height:-webkit-fill-available;
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  font-display:swap;
   line-height:1.6;
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeSpeed;

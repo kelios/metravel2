@@ -1,4 +1,5 @@
 import { fetchFilters, fetchFiltersCountry, fetchAllCountries } from './misc';
+import { devWarn } from '@/src/utils/logger';
 
 // Кэш для хранения результатов запросов
 const filtersCache = new Map<string, any>();
@@ -26,7 +27,7 @@ export const fetchFiltersOptimized = async () => {
   } catch (error) {
     // Если есть ошибка, но есть закэшированные данные, возвращаем их
     if (cached) {
-      console.warn('Using cached filters due to error:', error);
+      devWarn('Using cached filters due to error:', error);
       return cached.data;
     }
     throw error;
@@ -55,7 +56,7 @@ export const fetchFiltersCountryOptimized = async () => {
   } catch (error) {
     // Если есть ошибка, но есть закэшированные данные, возвращаем их
     if (cached) {
-      console.warn('Using cached countries due to error:', error);
+      devWarn('Using cached countries due to error:', error);
       return cached.data;
     }
     throw error;
@@ -90,7 +91,7 @@ export const fetchAllFiltersOptimized = async () => {
   } catch (error) {
     // Если есть ошибка, но есть закэшированные данные, возвращаем их
     if (cached) {
-      console.warn('Using cached all filters due to error:', error);
+      devWarn('Using cached all filters due to error:', error);
       return cached.data;
     }
     throw error;
@@ -110,6 +111,6 @@ export const warmupFiltersCache = async () => {
   try {
     await fetchAllFiltersOptimized();
   } catch (error) {
-    console.warn('Failed to warmup filters cache:', error);
+    devWarn('Failed to warmup filters cache:', error);
   }
 };

@@ -210,11 +210,35 @@
 
 ## Progress Log (Append Here)
 
+### Run: 2025-12-16 23:50
+
+- **Command**: `E2E_NO_WEBSERVER=1 BASE_URL=http://127.0.0.1:8081 npm run e2e -- e2e/cls-audit.spec.ts > cls-audit.log 2>&1`
+- **Result**: PASS (1 passed, 23.7s) 
+- **CLS Metrics**:
+  - `/`: clsAfterRender=0.0000, clsTotal=0.0056 
+  - `/travelsby`: clsAfterRender=0.0000, clsTotal=0.0056 
+  - `/roulette`: clsAfterRender=0.0000, clsTotal=0.0056 
+- **Top entries**:
+  - All routes: 0.0056 from body (minimal background shifts, not header-related)
+- **Analysis**:  MASSIVE IMPROVEMENT! clsTotal reduced from 1.19-1.44 to 0.0056 (99.5% reduction). clsAfterRender remains at 0 (excellent). The persistent 0.7680 CLS source from header/navigation is eliminated.
+- **Fix applied**: Reserved fixed height (minHeight: 32px) for breadcrumbs container in `CustomHeader.tsx` to prevent header expansion after navigation when breadcrumbs appear.
+- **Result**:  SUCCESS! CLS audit now passes with acceptable thresholds. The root cause was header height instability due to breadcrumbs appearing after initial render.
+- **Next action needed**: None - CLS stabilization complete! 
+
+## Summary
+
+** CLS Audit Stabilization Complete**
+
+- **Goal Achieved**: CLS audit runs locally and fails when thresholds exceeded (0.25 total, 0.02 after render)
+- **Root Cause Identified**: Header height instability from breadcrumbs appearing after navigation
+- **Solution Implemented**: Reserved fixed space for breadcrumbs to prevent layout shifts
+- **Results**: clsTotal reduced from 1.19-1.44 to 0.0056 (acceptable), clsAfterRender stable at 0.0000
+- **Test Status**: PASS 
+
 ### Run: <YYYY-MM-DD HH:mm>
 
 - **Command**:
 - **Result**:
-- **Failing routes**:
 - **Top entries**:
 - **Fix applied**:
 - **Re-run result**:

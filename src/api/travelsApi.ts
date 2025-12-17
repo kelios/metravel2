@@ -3,7 +3,7 @@ import {
     TravelsForMap,
     TravelsMap,
 } from '@/src/types/types';
-import { devError } from '@/src/utils/logger';
+import { devError, devWarn } from '@/src/utils/logger';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { retry, isRetryableError } from '@/src/utils/retry';
@@ -254,7 +254,7 @@ export const fetchTravels = async (
             }
             if (!Array.isArray(result.data)) {
                 if (__DEV__) {
-                    console.warn('API returned unexpected structure:', result);
+                    devWarn('API returned unexpected structure:', result);
                 }
                 return { data: [], total: result.total || 0 };
             }
@@ -265,7 +265,7 @@ export const fetchTravels = async (
         }
 
         if (__DEV__) {
-            console.warn('Unexpected API response format:', result);
+            devWarn('Unexpected API response format:', result);
         }
         return { data: [], total: 0 };
     } catch (e) {

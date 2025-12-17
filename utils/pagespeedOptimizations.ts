@@ -136,12 +136,10 @@ export function optimizeMainThreadWork() {
     // Schedule non-critical work during idle time
     scheduler.postTask(() => {
       // Load analytics and tracking scripts
-      console.log('Loading analytics in background...');
     }, { priority: 'background' });
 
     scheduler.postTask(() => {
       // Initialize non-critical UI components
-      console.log('Initializing UI components...');
     }, { priority: 'user-blocking' });
   }
 
@@ -265,19 +263,4 @@ export function applyPageSpeedOptimizations() {
   optimizeJavaScriptLoading(); // 478KB savings
   optimizeCSS(); // 12KB savings
   optimizeNetworkRequests(); // Network optimization
-
-  console.log('[Performance] PageSpeed optimizations applied');
 }
-
-// Export individual functions for selective use
-export {
-  eliminateRenderBlockingResources,
-  optimizeFontLoading,
-  createOptimizedImageSrc,
-  addImageDimensions,
-  optimizeMainThreadWork,
-  optimizeJavaScriptLoading,
-  optimizeCSS,
-  addPreconnectHints,
-  optimizeNetworkRequests,
-};

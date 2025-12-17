@@ -88,7 +88,7 @@ const Item = memo(function Item({
 /** ========= Component ========= */
 const palette = DESIGN_TOKENS.colors;
 
-const MOBILE_DOCK_MIN_HEIGHT_WEB = 76;
+const MOBILE_DOCK_MIN_HEIGHT_WEB = 64;
 
 const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
   const { width } = useWindowDimensions();
@@ -96,7 +96,7 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
     Platform.OS === 'web' && width === 0 && typeof window !== 'undefined'
       ? window.innerWidth
       : width;
-  const isMobile = Platform.OS !== 'web' ? true : effectiveWidth <= 900;
+  const isMobile = Platform.OS !== 'web' ? true : effectiveWidth <= DESIGN_TOKENS.breakpoints.mobile;
   const iconColor = palette.primary;
 
   const headerNav: NavItem[] = useMemo(

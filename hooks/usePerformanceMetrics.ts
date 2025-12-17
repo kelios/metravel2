@@ -1,6 +1,7 @@
 // Хук для отслеживания метрик производительности (Web Vitals)
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
+import { devWarn } from '@/src/utils/logger';
 
 interface PerformanceMetrics {
   lcp?: number; // Largest Contentful Paint
@@ -51,7 +52,7 @@ export function usePerformanceMetrics(onMetrics?: (metrics: PerformanceMetrics) 
           observer.observe({ entryTypes: ['largest-contentful-paint'] });
           return () => observer.disconnect();
         } catch (e) {
-          console.warn('LCP observer not supported:', e);
+          devWarn('LCP observer not supported:', e);
         }
       }
     };
@@ -75,7 +76,7 @@ export function usePerformanceMetrics(onMetrics?: (metrics: PerformanceMetrics) 
           observer.observe({ entryTypes: ['layout-shift'] });
           return () => observer.disconnect();
         } catch (e) {
-          console.warn('CLS observer not supported:', e);
+          devWarn('CLS observer not supported:', e);
         }
       }
     };
@@ -96,7 +97,7 @@ export function usePerformanceMetrics(onMetrics?: (metrics: PerformanceMetrics) 
           observer.observe({ entryTypes: ['first-input'] });
           return () => observer.disconnect();
         } catch (e) {
-          console.warn('FID observer not supported:', e);
+          devWarn('FID observer not supported:', e);
         }
       }
     };

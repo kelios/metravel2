@@ -1,3 +1,5 @@
+import { devWarn } from '@/src/utils/logger';
+
 /**
  * Утилита для очистки некорректных данных favorites
  */
@@ -15,13 +17,13 @@ export const cleanupInvalidFavorites = (favorites: any[]): any[] => {
     const numericId = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
     
     if (typeof numericId === 'number' && commonErrorCodes.includes(numericId)) {
-      console.warn(`Removing invalid favorite item with ID: ${item.id} (appears to be HTTP error code)`);
+      devWarn(`Removing invalid favorite item with ID: ${item.id} (appears to be HTTP error code)`);
       return false;
     }
     
     // Проверяем, что у item есть необходимые поля
     if (!item.id || !item.type || !['travel', 'article'].includes(item.type)) {
-      console.warn(`Removing invalid favorite item:`, item);
+      devWarn(`Removing invalid favorite item:`, item);
       return false;
     }
     

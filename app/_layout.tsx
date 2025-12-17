@@ -169,8 +169,8 @@ function RootLayoutNav() {
 
       // On web mobile the footer dock is position: fixed and can overlap content.
       // Reserve space equal to the measured dock height (with a small fallback).
-      const webFallback = 76;
-      const h = isWeb ? webFallback : dockHeight;
+      const webFallback = 64;
+      const h = isWeb ? (dockHeight > 0 ? dockHeight : webFallback) : dockHeight;
 
       if (h <= 0) return null;
 
@@ -316,7 +316,6 @@ const styles = StyleSheet.create({
     footerWrapper: {
         marginTop: 'auto',
         flexShrink: 0,
-        ...(Platform.OS === 'web' ? ({ minHeight: 76 } as any) : null),
     },
     footerFallback: {
         padding: 12,

@@ -3,6 +3,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
+import { devWarn } from '@/src/utils/logger';
 
 export interface PerformanceMetrics {
     lcp?: number; // Largest Contentful Paint
@@ -40,7 +41,7 @@ export function usePerformanceMonitoring(
 
         // Проверяем поддержку PerformanceObserver
         if (!('PerformanceObserver' in window)) {
-            console.warn('PerformanceObserver не поддерживается');
+            devWarn('PerformanceObserver не поддерживается');
             return;
         }
 
@@ -60,7 +61,7 @@ export function usePerformanceMonitoring(
             lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
             observersRef.current.push(lcpObserver);
         } catch (e) {
-            console.warn('LCP observer не поддерживается:', e);
+            devWarn('LCP observer не поддерживается:', e);
         }
 
         // FCP (First Contentful Paint)
@@ -78,7 +79,7 @@ export function usePerformanceMonitoring(
             fcpObserver.observe({ entryTypes: ['paint'] });
             observersRef.current.push(fcpObserver);
         } catch (e) {
-            console.warn('FCP observer не поддерживается:', e);
+            devWarn('FCP observer не поддерживается:', e);
         }
 
         // FID (First Input Delay)
@@ -96,7 +97,7 @@ export function usePerformanceMonitoring(
             fidObserver.observe({ entryTypes: ['first-input'] });
             observersRef.current.push(fidObserver);
         } catch (e) {
-            console.warn('FID observer не поддерживается:', e);
+            devWarn('FID observer не поддерживается:', e);
         }
 
         // CLS (Cumulative Layout Shift)
@@ -121,7 +122,7 @@ export function usePerformanceMonitoring(
             clsObserver.observe({ entryTypes: ['layout-shift'] });
             observersRef.current.push(clsObserver);
         } catch (e) {
-            console.warn('CLS observer не поддерживается:', e);
+            devWarn('CLS observer не поддерживается:', e);
         }
 
         // TTFB (Time to First Byte) - из navigation timing
@@ -131,14 +132,14 @@ export function usePerformanceMonitoring(
                 if (navigation) {
                     metrics.ttfb = navigation.responseStart - navigation.requestStart;
                     metricsRef.current.ttfb = metrics.ttfb;
-                    metrics.domContentLoaded = navigation.domContentLoadedEventEnd - navigation.navigationStart;
+                    metrics.domContentLoaded = navigation.domContentLoadedEventEnd - navigation.startTime;
                     metricsRef.current.domContentLoaded = metrics.domContentLoaded;
-                    metrics.loadComplete = navigation.loadEventEnd - navigation.navigationStart;
+                    metrics.loadComplete = navigation.loadEventEnd - navigation.startTime;
                     metricsRef.current.loadComplete = metrics.loadComplete;
                     callbackRef.current?.(metricsRef.current);
                 }
             } catch (e) {
-                console.warn('Navigation timing не поддерживается:', e);
+                devWarn('Navigation timing не поддерживается:', e);
             }
         }
 

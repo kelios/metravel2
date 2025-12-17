@@ -190,15 +190,7 @@ export function useImprovedAutoSave<T>(
   useEffect(() => {
     // Нет изменений относительно последнего успешного сохранения — ничего не планируем.
     const isEqual = _isEqual(data, lastSavedDataRef.current);
-    
-    // Debug logging
-    if (!isEqual) {
-      console.log('[useImprovedAutoSave] Data changed, scheduling save', {
-        hasId: !!(data as any)?.id,
-        dataKeys: Object.keys(data || {}),
-      });
-    }
-    
+
     if (isEqual) {
       return;
     }
@@ -296,9 +288,6 @@ export function useImprovedAutoSave<T>(
   const updateBaseline = useCallback((newBaseline: T) => {
     lastSavedDataRef.current = newBaseline;
     latestDataRef.current = newBaseline;
-    console.log('[useImprovedAutoSave] Baseline updated', {
-      hasId: !!(newBaseline as any)?.id,
-    });
   }, []);
 
   return {

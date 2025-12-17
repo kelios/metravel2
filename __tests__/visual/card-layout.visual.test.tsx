@@ -41,6 +41,9 @@ describe('Card Layout Visual Tests', () => {
       // к уже существующему marginBottom из enhancedTravelCardStyles (12px)
       // Итого: 22px вместо 12px
       
+      const originalOS = Platform.OS;
+      (Platform as any).OS = 'web';
+
       const expectedMarginBottom = Platform.select({ default: 12, web: 16 });
       const spacingSm = DESIGN_TOKENS.spacing.sm; // 10px
       
@@ -52,16 +55,18 @@ describe('Card Layout Visual Tests', () => {
       });
 
       const { getByTestId } = render(
-        <QueryClientProvider client={queryClient}>
-          <View>
-            <RenderTravelItem item={mockTravel as any} index={0} isMobile={true} />
-          </View>
-        </QueryClientProvider>
-      );
+          <QueryClientProvider client={queryClient}>
+            <View>
+              <RenderTravelItem item={mockTravel as any} index={0} isMobile={true} />
+            </View>
+          </QueryClientProvider>
+        );
 
       const card = getByTestId('travel-card-link');
       const flattened = StyleSheet.flatten(card.props.style);
       expect(flattened.marginBottom).toBeUndefined();
+
+      (Platform as any).OS = originalOS;
     });
   });
 

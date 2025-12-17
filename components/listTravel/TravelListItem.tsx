@@ -468,7 +468,6 @@ function TravelListItem({
                 e.preventDefault();
             }
         }
-        console.log('Edit travel ID:', id, typeof id);
         router.push(`/travel/${id}`);
     }, [id]);
 
@@ -851,39 +850,50 @@ function TravelListItem({
       selectable ? (
         card
       ) : (
-        <>
-          <a
-            href={travelUrl}
-            {...(Platform.OS === 'web' ? { 'data-testid': 'travel-card-link' } : {})}
+        <> 
+          <View
+            testID="travel-card-link"
             ref={anchorRef}
-            style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-            onClick={(e: any) => {
-              // Не даём событию дойти до внутренних Pressable
-              e.stopPropagation();
+            style={{}}
+            {...(Platform.OS === 'web'
+              ? (
+                  {
+                    'data-testid': 'travel-card-link',
+                    onClick: (e: any) => {
+                      // Не даём событию дойти до внутренних Pressable
+                      e.stopPropagation();
 
-              const hasModifier =
-                e.metaKey ||
-                e.ctrlKey ||
-                e.shiftKey ||
-                e.altKey ||
-                e.button === 1;
+                      const hasModifier =
+                        e.metaKey ||
+                        e.ctrlKey ||
+                        e.shiftKey ||
+                        e.altKey ||
+                        e.button === 1;
 
-              if (hasModifier) {
-                // Открываем ТОЛЬКО в новой вкладке, текущую не трогаем
-                e.preventDefault();
-                if (typeof window !== 'undefined') {
-                  window.open(travelUrl, '_blank', 'noopener,noreferrer');
-                }
-                return;
-              }
+                      if (hasModifier) {
+                        // Открываем ТОЛЬКО в новой вкладке, текущую не трогаем
+                        e.preventDefault();
+                        if (typeof window !== 'undefined') {
+                          window.open(travelUrl, '_blank', 'noopener,noreferrer');
+                        }
+                        return;
+                      }
 
-              // Обычный клик: SPA-навигация в текущей вкладке
-              e.preventDefault();
-              handlePress();
-            }}
+                      // Обычный клик: SPA-навигация в текущей вкладке
+                      e.preventDefault();
+                      handlePress();
+                    },
+                  } as any
+                )
+              : {})}
           >
-            {card}
-          </a>
+            <a
+              href={travelUrl}
+              style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+            >
+              {card}
+            </a>
+          </View>
         </>
       )
     ) : (

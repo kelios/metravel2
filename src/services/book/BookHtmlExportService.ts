@@ -32,10 +32,6 @@ export class BookHtmlExportService {
     // Дополнительная защита: убеждаемся, что в документе есть страницы книги
     const hasPages = /class=["'][^"']*pdf-page[^"']*["']/.test(html);
     if (!hasPages) {
-      // Логируем первые символы HTML для диагностики в консоли браузера
-      if (typeof console !== 'undefined') {
-        console.error('[BOOK_HTML_PREVIEW] HTML без .pdf-page, первые 500 символов:', html.slice(0, 500));
-      }
       throw new Error('Книга не содержит ни одной страницы для печати. Попробуйте выбрать другие путешествия или изменить настройки.');
     }
 
