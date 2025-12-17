@@ -146,8 +146,11 @@ function StickySearchBar({
               style={[
                 styles.resultsInline,
                 !showResultsCount ? ({ opacity: 0 } as any) : null,
+                Platform.OS === 'web' && ({ pointerEvents: showResultsCount ? 'auto' : 'none' } as any),
               ]}
-              pointerEvents={showResultsCount ? 'auto' : 'none'}
+              {...(Platform.OS !== 'web'
+                ? ({ pointerEvents: showResultsCount ? 'auto' : 'none' } as any)
+                : {})}
               testID="results-count-wrapper"
             >
               <Text style={styles.resultsText} testID="results-count-text">
@@ -237,8 +240,14 @@ function StickySearchBar({
               testID="clear-all-button"
               onPress={showClearAll ? onClearAll : undefined}
               disabled={!showClearAll}
-              pointerEvents={showClearAll ? 'auto' : 'none'}
-              style={[styles.clearAllButton, !showClearAll ? ({ opacity: 0 } as any) : null]}
+              style={[
+                styles.clearAllButton,
+                !showClearAll ? ({ opacity: 0 } as any) : null,
+                Platform.OS === 'web' && ({ pointerEvents: showClearAll ? 'auto' : 'none' } as any),
+              ]}
+              {...(Platform.OS !== 'web'
+                ? ({ pointerEvents: showClearAll ? 'auto' : 'none' } as any)
+                : {})}
               accessibilityLabel="Сбросить все фильтры и поиск"
             >
               <Feather name="x-circle" size={14} color={palette.textMuted} />

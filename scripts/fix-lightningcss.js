@@ -57,7 +57,7 @@ let content = fs.readFileSync(lightningcssPath, 'utf8');
 // Check if already patched
 if (content.includes('On macOS, always prefer ARM64 if available')) {
   console.log('✓ lightningcss already patched');
-  process.exit(0);
+  // Continue: this script also applies other postinstall patches.
 }
 
 // Apply the patch - replace the loading logic section
@@ -106,5 +106,151 @@ if (content.includes(originalCode)) {
   console.log('✓ lightningcss already patched');
 } else {
   console.log('⚠ Could not find expected code pattern, file may already be patched or modified');
+}
+
+const patchIfPresent = (filePath, transform) => {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return false;
+    }
+    const prev = fs.readFileSync(filePath, 'utf8');
+    const next = transform(prev);
+    if (next && next !== prev) {
+      fs.writeFileSync(filePath, next, 'utf8');
+      return true;
+    }
+    return false;
+  } catch (_err) {
+    return false;
+  }
+};
+
+const rnSvgModulePreparePath = path.join(
+  __dirname,
+  '..',
+  'node_modules',
+  'react-native-svg',
+  'lib',
+  'module',
+  'web',
+  'utils',
+  'prepare.js'
+);
+
+const rnSvgCommonjsPreparePath = path.join(
+  __dirname,
+  '..',
+  'node_modules',
+  'react-native-svg',
+  'lib',
+  'commonjs',
+  'web',
+  'utils',
+  'prepare.js'
+);
+
+const rnSvgModuleWebShapePath = path.join(
+  __dirname,
+  '..',
+  'node_modules',
+  'react-native-svg',
+  'lib',
+  'module',
+  'web',
+  'WebShape.js'
+);
+
+const rnSvgCommonjsWebShapePath = path.join(
+  __dirname,
+  '..',
+  'node_modules',
+  'react-native-svg',
+  'lib',
+  'commonjs',
+  'web',
+  'WebShape.js'
+);
+
+const patchPrepareEsm = (src) => {
+  if (src.includes('const hasTouchableProperty = typeof _hasTouchableProperty')) {
+    return src;
+  }
+  const fallback =
+    "const hasTouchableProperty = typeof _hasTouchableProperty === 'function' ? _hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);";
+  const next = src
+    .replace(
+      /import\s+\{\s*hasTouchableProperty\s*,\s*parseTransformProp\s*\}\s+from\s+['\"]\.['\"];?/,
+      "import { hasTouchableProperty as _hasTouchableProperty, parseTransformProp } from '.';\n" + fallback
+    )
+    .replace(
+      /import\s+\{\s*parseTransformProp\s*,\s*hasTouchableProperty\s*\}\s+from\s+['\"]\.['\"];?/,
+      "import { parseTransformProp, hasTouchableProperty as _hasTouchableProperty } from '.';\n" + fallback
+    );
+
+  return next;
+};
+
+const patchPrepareCjs = (src) => {
+  if (src.includes("const _hasTouchableProperty = typeof _.hasTouchableProperty")) {
+    return src;
+  }
+  const requireLine = "var _ = require(\".\");";
+  let next = src;
+  if (next.includes(requireLine)) {
+    next = next.replace(
+      requireLine,
+      requireLine +
+        "\nconst _hasTouchableProperty = typeof _.hasTouchableProperty === 'function' ? _.hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);"
+    );
+  }
+  next = next.replace(/\(0, _\.hasTouchableProperty\)\(props\)/g, '(0, _hasTouchableProperty)(props)');
+  return next;
+};
+
+const patchWebShapeEsm = (src) => {
+  if (src.includes('const hasTouchableProperty = typeof _hasTouchableProperty')) {
+    return src;
+  }
+  const fallback =
+    "const hasTouchableProperty = typeof _hasTouchableProperty === 'function' ? _hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);";
+  const next = src
+    .replace(
+      /import\s+\{\s*camelCaseToDashed\s*,\s*hasTouchableProperty\s*,\s*remeasure\s*\}\s+from\s+['\"]\.\/utils['\"];?/,
+      "import { camelCaseToDashed, hasTouchableProperty as _hasTouchableProperty, remeasure } from './utils';\n" + fallback
+    )
+    .replace(
+      /import\s+\{\s*hasTouchableProperty\s*,\s*camelCaseToDashed\s*,\s*remeasure\s*\}\s+from\s+['\"]\.\/utils['\"];?/,
+      "import { hasTouchableProperty as _hasTouchableProperty, camelCaseToDashed, remeasure } from './utils';\n" + fallback
+    );
+
+  return next;
+};
+
+const patchWebShapeCjs = (src) => {
+  if (src.includes('var _hasTouchableProperty =')) {
+    return src;
+  }
+  const from = "var _utils = require(\"./utils\");";
+  if (!src.includes(from)) {
+    return src;
+  }
+  let next = src.replace(
+    from,
+    from +
+      "\nvar _hasTouchableProperty = typeof _utils.hasTouchableProperty === 'function' ? _utils.hasTouchableProperty : function (props) { return props.onPress || props.onPressIn || props.onPressOut || props.onLongPress; };"
+  );
+  next = next.replace(/\(0, _utils\.hasTouchableProperty\)\(props\)/g, '(0, _hasTouchableProperty)(props)');
+  return next;
+};
+
+const svgPatched = [
+  patchIfPresent(rnSvgModulePreparePath, patchPrepareEsm),
+  patchIfPresent(rnSvgCommonjsPreparePath, patchPrepareCjs),
+  patchIfPresent(rnSvgModuleWebShapePath, patchWebShapeEsm),
+  patchIfPresent(rnSvgCommonjsWebShapePath, patchWebShapeCjs),
+].some(Boolean);
+
+if (svgPatched) {
+  console.log('✓ Patched react-native-svg web touchable helpers');
 }
 

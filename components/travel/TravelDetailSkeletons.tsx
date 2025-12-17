@@ -7,21 +7,19 @@ import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import ReservedSpace from '@/components/ReservedSpace';
 
 /**
  * Skeleton для текстового описания
  */
 export const DescriptionSkeleton: React.FC = () => {
+  const lineH = 18;
+  const lines = 8;
+  const gap = 8;
+  const reservedH = lines * lineH + Math.max(0, lines - 1) * gap;
   return (
     <View style={styles.descriptionContainer}>
-      <SkeletonLoader width="85%" height={24} borderRadius={4} style={styles.marginBottom} />
-      <SkeletonLoader width="100%" height={18} borderRadius={4} style={styles.marginBottom} />
-      <SkeletonLoader width="95%" height={18} borderRadius={4} style={styles.marginBottom} />
-      <SkeletonLoader width="90%" height={18} borderRadius={4} style={styles.marginBottom} />
-      <SkeletonLoader width="100%" height={18} borderRadius={4} style={styles.marginBottom} />
-      <SkeletonLoader width="88%" height={18} borderRadius={4} style={styles.marginBottom} />
-      <SkeletonLoader width="92%" height={20} borderRadius={4} style={styles.marginBottom} />
-      <SkeletonLoader width="80%" height={18} borderRadius={4} />
+      <ReservedSpace testID="travel-details-description-reserved" height={reservedH} />
     </View>
   );
 };
@@ -88,17 +86,12 @@ export const VideoSkeleton: React.FC = () => {
  * Универсальный skeleton для секций
  */
 export const SectionSkeleton: React.FC<{ lines?: number }> = ({ lines = 4 }) => {
+  const lineH = 18;
+  const gap = 8;
+  const reservedH = lines * lineH + Math.max(0, lines - 1) * gap;
   return (
     <View style={styles.sectionContainer}>
-      {Array.from({ length: lines }).map((_, index) => (
-        <SkeletonLoader
-          key={index}
-          width={index === 0 ? '85%' : index === lines - 1 ? '70%' : '100%'}
-          height={18}
-          borderRadius={4}
-          style={index < lines - 1 ? styles.marginBottom : undefined}
-        />
-      ))}
+      <ReservedSpace testID="travel-details-section-reserved" height={reservedH} />
     </View>
   );
 };

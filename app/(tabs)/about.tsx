@@ -556,14 +556,23 @@ const styles: any = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 24,
     padding: 32,
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 8,
     ...(Platform.OS === 'web' && {
       backdropFilter: 'blur(10px)',
       WebkitBackdropFilter: 'blur(10px)',
+    }),
+    ...Platform.select({
+      web: {
+        boxShadow: '0 24px 60px rgba(15, 23, 42, 0.10), 0 8px 24px rgba(15, 23, 42, 0.06)',
+      },
+      ios: {
+        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.12,
+        shadowRadius: 24,
+      },
+      android: {
+        elevation: 8,
+      },
     }),
   },
   headerSection: {
@@ -629,13 +638,22 @@ const styles: any = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 20,
     padding: 28,
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.04)',
+    ...Platform.select({
+      web: {
+        boxShadow: '0 10px 26px rgba(15, 23, 42, 0.08)',
+      },
+      ios: {
+        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   cardHeader: {
     marginBottom: 20,
@@ -677,11 +695,20 @@ const styles: any = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: DESIGN_TOKENS.colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 10px 18px rgba(255, 159, 90, 0.28)',
+      },
+      ios: {
+        shadowColor: DESIGN_TOKENS.colors.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   stepNumberText: {
     color: DESIGN_TOKENS.colors.surface,
@@ -858,16 +885,20 @@ const styles: any = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 20,
     padding: 28,
-    shadowColor: '#1f1f1f',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
     borderWidth: 1,
     borderColor: DESIGN_TOKENS.colors.border,
     ...Platform.select({
       web: {
         boxShadow: '0 2px 8px rgba(31, 31, 31, 0.06), 0 1px 2px rgba(31, 31, 31, 0.04)',
+      },
+      ios: {
+        shadowColor: '#1f1f1f',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
       },
     }),
   },
@@ -1028,12 +1059,21 @@ const styles: any = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
-    shadowColor: DESIGN_TOKENS.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
     minHeight: 52,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 12px 24px rgba(255, 159, 90, 0.28)',
+      },
+      ios: {
+        shadowColor: DESIGN_TOKENS.colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   submitButtonDisabled: {
     backgroundColor: '#d1d5db',
@@ -1084,13 +1124,22 @@ const styles: any = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 20,
     padding: 28,
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.04)',
+    ...Platform.select({
+      web: {
+        boxShadow: '0 10px 26px rgba(15, 23, 42, 0.08)',
+      },
+      ios: {
+        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   featureCardHeader: {
     flexDirection: 'row',

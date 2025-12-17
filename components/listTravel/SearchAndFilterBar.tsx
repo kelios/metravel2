@@ -52,7 +52,11 @@ function SearchAndFilterBar({
     placeholderOverride,
 }: Props) {
     const { width } = useWindowDimensions();
-    const isMobile = width <= METRICS.breakpoints.tablet;
+    const effectiveWidth =
+        Platform.OS === 'web' && width === 0 && typeof window !== 'undefined'
+            ? window.innerWidth
+            : width;
+    const isMobile = effectiveWidth <= METRICS.breakpoints.tablet;
     
     const hasActiveSearchOrFilters = (search && search.trim().length > 0) || hasFilters;
     const showResultsInfo = resultsCount !== undefined && hasActiveSearchOrFilters;
@@ -217,8 +221,12 @@ function SearchAndFilterBar({
                             {Icons.search}
                         </View>
                         <View
-                            style={[styles.searchDivider, isMobile && styles.searchDividerMobile]}
-                            pointerEvents="none"
+                            style={[
+                                styles.searchDivider,
+                                isMobile && styles.searchDividerMobile,
+                                Platform.OS === 'web' && ({ pointerEvents: 'none' } as any),
+                            ]}
+                            {...(Platform.OS !== 'web' ? ({ pointerEvents: 'none' } as any) : {})}
                         />
 
                         <TextInput

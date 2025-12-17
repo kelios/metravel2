@@ -80,7 +80,13 @@ export default function ConsentBanner() {
   if (!visible || !isWeb) return null;
 
   return (
-    <View style={styles.wrapper} pointerEvents="box-none">
+    <View
+      style={[
+        styles.wrapper,
+        Platform.OS === 'web' && ({ pointerEvents: 'box-none' } as any),
+      ]}
+      {...(Platform.OS !== 'web' ? ({ pointerEvents: 'box-none' } as any) : {})}
+    >
       <View style={styles.container}>
         <View style={styles.textBlock}>
           <Text style={styles.title}>Мы ценим вашу приватность</Text>
@@ -143,10 +149,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: 'rgba(31, 41, 55, 0.94)',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
+    ...Platform.select({
+      web: {
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.20)',
+      },
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
   },
   textBlock: {
     marginBottom: 10,

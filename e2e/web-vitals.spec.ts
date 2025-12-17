@@ -19,6 +19,36 @@ function getNumberEnv(name: string, fallback: number): number {
   return Number.isFinite(v) ? v : fallback;
 }
 
+async function gotoWithRetry(page: any, url: string) {
+  let lastError: any = null;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120_000 });
+      lastError = null;
+      break;
+    } catch (e) {
+      lastError = e;
+      const msg = String((e as any)?.message ?? e ?? '');
+      const isTransient =
+        msg.includes('ERR_CONNECTION_REFUSED') ||
+        msg.includes('ERR_EMPTY_RESPONSE') ||
+        msg.includes('NS_ERROR_NET_RESET') ||
+        msg.includes('net::');
+
+      if (typeof page?.isClosed === 'function' && page.isClosed()) break;
+
+      // eslint-disable-next-line no-await-in-loop
+      try {
+        await page.waitForTimeout(isTransient ? Math.min(1200 + attempt * 600, 8000) : 500);
+      } catch {
+        break;
+      }
+    }
+  }
+  if (lastError) throw lastError;
+}
+
 const CLS_MAX = getNumberEnv('E2E_CLS_MAX', 0.02);
 const LCP_MAX_MS = process.env.CI
   ? getNumberEnv('E2E_LCP_MAX_MS', 3500)
@@ -156,7 +186,7 @@ test.describe('Web Vitals (CLS/LCP/INP)', () => {
 
     // NOTE: In this app, the travels list route is '/'.
     // '/travels/[param]' is the details page.
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await gotoWithRetry(page, '/');
 
     // Wait for some travel cards or skeletons to render.
     // The list can be empty in local/dev environments.
@@ -213,7 +243,7 @@ test.describe('Web Vitals (CLS/LCP/INP)', () => {
 
     // Helpful debug output in CI / local runs
     // eslint-disable-next-line no-console
-    console.log('E2E Web Vitals:', vitals);
+    console.log('E2E Web Vitals:\n' + JSON.stringify(vitals, null, 2));
 
     // Hard assertions (regression guards)
     expect(vitals.clsAfterRender).toBeLessThanOrEqual(CLS_MAX);

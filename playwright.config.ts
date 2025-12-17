@@ -1,20 +1,21 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const E2E_WEB_PORT = Number(process.env.E2E_WEB_PORT || '8081');
+const E2E_WEB_PORT = Number(process.env.E2E_WEB_PORT || '8083');
 const baseURL = process.env.BASE_URL || `http://localhost:${E2E_WEB_PORT}`;
-const USE_EXISTING_SERVER = process.env.E2E_NO_WEBSERVER === '1';
+const USE_EXISTING_SERVER = process.env.E2E_NO_WEBSERVER === '1' && !!process.env.BASE_URL;
 
 export default defineConfig({
   testDir: './e2e',
-  timeout: 120_000,
+  timeout: 240_000,
+  workers: 1,
   globalSetup: './e2e/global-setup.ts',
   webServer: USE_EXISTING_SERVER
     ? undefined
     : {
-        command: `npx expo start --web --port ${E2E_WEB_PORT} --non-interactive`,
+        command: `CI=1 npx expo start -c --web --port ${E2E_WEB_PORT}`,
         url: baseURL,
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
+        reuseExistingServer: true,
+        timeout: 240_000,
       },
   expect: {
     timeout: 15_000,

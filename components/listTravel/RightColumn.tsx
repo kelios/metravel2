@@ -277,7 +277,14 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
     const [showDelayedSkeleton, setShowDelayedSkeleton] = useState(false)
 
+    const shouldShowSkeleton =
+      Platform.OS === 'web'
+        ? showInitialLoading && travels.length === 0
+        : showDelayedSkeleton
+
     useEffect(() => {
+      if (Platform.OS === 'web') return
+
       if (!showInitialLoading || travels.length !== 0) {
         setShowDelayedSkeleton(false)
         return
@@ -328,7 +335,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
         {/* Cards + Recommendations */}
         <View testID="cards-scroll-container" style={cardsWrapperStyle}>
-          {showDelayedSkeleton && isRecommendationsVisible ? (
+          {shouldShowSkeleton && isRecommendationsVisible ? (
             <View
               style={{
                 height: RECOMMENDATIONS_TOTAL_HEIGHT,
@@ -341,7 +348,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
           ) : null}
 
           {/* Initial Loading - Only show skeleton when actually loading initial data */}
-          {showDelayedSkeleton && (
+          {shouldShowSkeleton && (
             <View
               style={[
                 cardsGridStyle,
@@ -352,7 +359,12 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 } as any,
               ]}
             >
-              <TravelListSkeleton count={PER_PAGE} columns={gridColumns} rowStyle={cardsGridStyle} />
+              <TravelListSkeleton
+                count={PER_PAGE}
+                columns={gridColumns}
+                rowStyle={cardsGridStyle}
+                variant={Platform.OS === 'web' ? 'detailed' : isMobile ? 'reserve' : 'detailed'}
+              />
             </View>
           )}
 

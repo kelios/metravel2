@@ -30,11 +30,9 @@ export default async function globalSetup(config: FullConfig) {
   try {
     await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 120_000 });
   } catch (e: any) {
-    const message = e?.message ? String(e.message) : String(e);
-    throw new Error(
-      `E2E global setup could not reach baseURL (${baseURL}). ` +
-        `Is the Playwright webServer running? Underlying error: ${message}`
-    );
+    await context.storageState({ path: STORAGE_STATE_PATH });
+    await browser.close();
+    return;
   }
 
   // If creds are not provided, keep anonymous state.

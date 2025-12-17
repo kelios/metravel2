@@ -2,7 +2,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { SkeletonLoader, TravelCardSkeleton, TravelListSkeleton } from '@/components/SkeletonLoader';
 import { StyleSheet } from 'react-native';
-import { TRAVEL_CARD_IMAGE_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
+import { TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_MOBILE_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
 
 describe('SkeletonLoader', () => {
   it('should render with default props', () => {
@@ -103,6 +103,11 @@ describe('TravelCardSkeleton', () => {
     const flattened = StyleSheet.flatten(card.props.style);
     expect(typeof flattened.borderRadius).toBe('number');
     expect(flattened.borderRadius).toBeGreaterThan(0);
+  });
+
+  it('should expose a stable web-mobile card height constant', () => {
+    expect(typeof TRAVEL_CARD_WEB_MOBILE_HEIGHT).toBe('number');
+    expect(TRAVEL_CARD_WEB_MOBILE_HEIGHT).toBeGreaterThan(0);
   });
 });
 

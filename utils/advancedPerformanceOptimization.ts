@@ -13,26 +13,13 @@ export function preloadCriticalResources() {
   const lcpImage = document.querySelector('img[data-lcp]') || document.querySelector('img[src*="travel"]');
   if (lcpImage) {
     const href = (lcpImage as HTMLImageElement).currentSrc || (lcpImage as HTMLImageElement).src;
-    if (href && !document.querySelector(`link[rel="preload"][as="image"][href="${href}"]`)) {
+    if (href && !document.querySelector(`link[rel="prefetch"][as="image"][href="${href}"]`)) {
       const preloadLink = document.createElement('link');
-      preloadLink.rel = 'preload';
+      preloadLink.rel = 'prefetch';
       preloadLink.as = 'image';
       preloadLink.href = href;
-      preloadLink.fetchPriority = 'high';
       document.head.appendChild(preloadLink);
     }
-  }
-
-  // Preload critical fonts once
-  const fontHref = '/fonts/inter-v12-latin-regular.woff2';
-  if (!document.querySelector(`link[rel="preload"][href="${fontHref}"]`)) {
-    const fontPreload = document.createElement('link');
-    fontPreload.rel = 'preload';
-    fontPreload.as = 'font';
-    fontPreload.type = 'font/woff2';
-    fontPreload.href = fontHref;
-    fontPreload.crossOrigin = 'anonymous';
-    document.head.appendChild(fontPreload);
   }
 }
 
@@ -119,17 +106,6 @@ export function optimizeJavaScriptLoading() {
 // 6. Layout Shift Prevention
 export function preventLayoutShift() {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-
-  // Add font-display: swap to prevent FOIT
-  const style = document.createElement('style');
-  style.textContent = `
-    @font-face {
-      font-family: 'Inter';
-      src: url('/fonts/inter-v12-latin-regular.woff2') format('woff2');
-      font-display: swap;
-    }
-  `;
-  document.head.appendChild(style);
 
   // Reserve space for dynamic content
   const dynamicElements = document.querySelectorAll('[data-dynamic]');

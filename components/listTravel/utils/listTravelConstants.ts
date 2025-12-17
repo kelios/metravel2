@@ -46,6 +46,7 @@ export const GRID_COLUMNS = {
 } as const;
 
 export const TRAVEL_CARD_IMAGE_HEIGHT = 220;
+export const TRAVEL_CARD_WEB_MOBILE_HEIGHT = 320;
 export const TRAVEL_CARD_WEB_HEIGHT = 360;
 
 // ✅ АРХИТЕКТУРА: Время кеширования для React Query (staleTime)

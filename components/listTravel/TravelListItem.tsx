@@ -247,6 +247,11 @@ function TravelListItem({
 
     const viewsFormatted = useMemo(() => formatViewCount(views), [views]);
 
+    const travelUrl = useMemo(() => {
+        const key = slug ?? id;
+        return `/travels/${key}`;
+    }, [id, slug]);
+
     // ✅ УЛУЧШЕНИЕ: Оптимизация превью под карточку с использованием новых утилит
     const imgUrl = useMemo(() => {
         if (!travel_image_thumb_url) return null;
@@ -281,11 +286,12 @@ function TravelListItem({
 
         const link = document.createElement('link');
         link.id = linkId;
-        link.rel = 'preload';
+        // Use prefetch (instead of preload) to avoid "preloaded but not used" warnings when the first card
+        // image is lazily mounted/updated.
+        link.rel = 'prefetch';
         link.as = 'image';
         link.href = preloadUrl;
-        // Небольшой hint для браузера
-        (link as any).fetchpriority = 'high';
+        link.crossOrigin = 'anonymous';
         document.head.appendChild(link);
 
         return () => {
@@ -382,11 +388,10 @@ function TravelListItem({
         [authorUserId, router]
     );
 
-    // ✅ ИСПРАВЛЕНИЕ: Предзагрузка данных только при клике (с небольшой задержкой)
-    // Не делаем запрос при наведении - это вызывает множественные ненужные запросы
-    const travelUrl = `/travels/${slug ?? id}`;
+    const ENABLE_TRAVEL_DETAILS_PREFETCH = false;
 
     const prefetchTravelDetails = useCallback(() => {
+        if (!ENABLE_TRAVEL_DETAILS_PREFETCH) return;
         const travelId = slug ?? id;
         const isId = !isNaN(Number(travelId));
 
@@ -401,6 +406,7 @@ function TravelListItem({
     }, [slug, id, queryClient]);
 
     useEffect(() => {
+        if (!ENABLE_TRAVEL_DETAILS_PREFETCH) return;
         if (Platform.OS !== 'web') return;
         if (hasPrefetchedRef.current) return;
 
@@ -438,9 +444,7 @@ function TravelListItem({
             const travelId = slug ?? id;
             const isId = !isNaN(Number(travelId));
             
-            // ✅ Предзагружаем данные только при клике (если данных еще нет в кеше)
-            // Используем небольшую задержку, чтобы навигация была плавной
-            if (Platform.OS === 'web') {
+            if (ENABLE_TRAVEL_DETAILS_PREFETCH && Platform.OS === 'web') {
                 // Проверяем наличие в кеше перед prefetch
                 const cachedData = queryClient.getQueryData(['travel', travelId]);
                 if (!cachedData) {
@@ -458,7 +462,7 @@ function TravelListItem({
             // На всякий: если слуг нет — откроем по ID
             router.push(`/travels/${slug ?? id}`);
         }
-    }, [selectable, onToggle, slug, id, router, queryClient]);
+    }, [selectable, onToggle, slug, id, router, queryClient, ENABLE_TRAVEL_DETAILS_PREFETCH]);
 
     const handleEdit = useCallback((e?: any) => {
         // Предотвращаем всплытие и стандартное поведение на веб-платформе
@@ -518,7 +522,6 @@ function TravelListItem({
       >
     {selectable && (
       <View
-        pointerEvents="none"
         style={[
           {
             position: "absolute",
@@ -530,14 +533,14 @@ function TravelListItem({
             zIndex: 2,
             opacity: 1,
             transitionDuration: "150ms",
-            pointerEvents: "none",
           } as any,
+          Platform.OS === 'web' && ({ pointerEvents: 'none' } as any),
         ]}
+        {...(Platform.OS !== 'web' ? ({ pointerEvents: 'none' } as any) : {})}
       />
     )}
         {selectable && (
           <View
-            pointerEvents="none"
             style={[
               {
                 position: "absolute",
@@ -549,9 +552,10 @@ function TravelListItem({
                 zIndex: 2,
                 opacity: 1,
                 transitionDuration: "150ms",
-                pointerEvents: "none",
               } as any,
+              Platform.OS === 'web' && ({ pointerEvents: 'none' } as any),
             ]}
+            {...(Platform.OS !== 'web' ? ({ pointerEvents: 'none' } as any) : {})}
           />
         )}
 
@@ -579,8 +583,11 @@ function TravelListItem({
           {/* Избранное (сердечко) в правом верхнем углу */}
           {!selectable && (
             <View
-              style={styles.favoriteButtonContainer}
-              pointerEvents="box-none"
+              style={[
+                styles.favoriteButtonContainer,
+                Platform.OS === 'web' && ({ pointerEvents: 'box-none' } as any),
+              ]}
+              {...(Platform.OS !== 'web' ? ({ pointerEvents: 'box-none' } as any) : {})}
               {...(Platform.OS === 'web' && {
                 onClick: (e: any) => {
                   e.stopPropagation();
@@ -604,8 +611,11 @@ function TravelListItem({
           {/* Кнопки управления (Top Left) - перенесены сюда, чтобы не мешать бейджам внизу */}
           {canEdit && !selectable && (
             <View
-              style={styles.adminActionsContainer}
-              pointerEvents="box-none"
+              style={[
+                styles.adminActionsContainer,
+                Platform.OS === 'web' && ({ pointerEvents: 'box-none' } as any),
+              ]}
+              {...(Platform.OS !== 'web' ? ({ pointerEvents: 'box-none' } as any) : {})}
               {...(Platform.OS === "web" && {
                 onClick: (e: any) => {
                   e.stopPropagation();
@@ -676,7 +686,13 @@ function TravelListItem({
 
           {/* Только бейдж локации на фото - полупрозрачный */}
           {countries.length > 0 && countries[0] && (
-            <View style={styles.topBadges} pointerEvents="none">
+            <View
+              style={[
+                styles.topBadges,
+                Platform.OS === 'web' && ({ pointerEvents: 'none' } as any),
+              ]}
+              {...(Platform.OS !== 'web' ? ({ pointerEvents: 'none' } as any) : {})}
+            >
               <View style={styles.infoBadge}>
                 <Feather name="map-pin" size={Platform.select({ default: 10, web: 11 })} color="#0f172a" />
                 <Text style={styles.infoBadgeText} numberOfLines={1}>

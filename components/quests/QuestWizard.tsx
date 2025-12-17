@@ -306,8 +306,16 @@ const StepCard = memo((props: StepCardProps) => {
 
             {/* Оверлей сообщения на пике flip */}
             <Animated.View
-                pointerEvents="none"
-                style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', opacity: flip.interpolate({ inputRange: [0.35, 0.5, 0.65], outputRange: [0, 1, 0] }) }]}
+                style={[
+                    StyleSheet.absoluteFill,
+                    {
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: flip.interpolate({ inputRange: [0.35, 0.5, 0.65], outputRange: [0, 1, 0] }),
+                    },
+                    Platform.OS === 'web' && ({ pointerEvents: 'none' } as any),
+                ]}
+                {...(Platform.OS !== 'web' ? ({ pointerEvents: 'none' } as any) : {})}
             >
                 <View style={styles.flipBadge}><Text style={styles.flipText}>✓ Правильно!</Text></View>
             </Animated.View>

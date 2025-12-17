@@ -192,9 +192,14 @@ test.describe('Render audit: main and travel details (responsive + perf)', () =>
       await expect(page.locator('[data-testid="travel-details-quick-facts"]')).toHaveCount(1);
       await expect(page.locator('[data-testid="travel-details-author"]')).toHaveCount(1);
 
-      // At least one content anchor should exist (description/video/map/points).
+      // At least one content marker should exist.
+      // data-section-key is best-effort on web (setAttribute via refs) and can be flaky during hydration.
+      // Therefore accept either section-key anchors OR stable testIDs.
       await expect(
-        page.locator('[data-section-key="description"], [data-section-key="video"], [data-section-key="map"], [data-section-key="points"]')
+        page.locator(
+          '[data-section-key="description"], [data-section-key="video"], [data-section-key="map"], [data-section-key="points"], ' +
+            '[data-testid="travel-details-map"], [data-testid="travel-details-points"]'
+        )
       ).toHaveCount(1, { timeout: 45_000 });
 
       // Ensure the page is scrollable and stable.

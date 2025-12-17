@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import ReservedSpace from '@/components/ReservedSpace';
 
 interface SectionSkeletonProps {
   lines?: number;
@@ -8,18 +9,11 @@ interface SectionSkeletonProps {
 }
 
 export function SectionSkeleton({ lines = 3, height = 20 }: SectionSkeletonProps) {
+  const lineH = height || 20;
+  const totalH = lines * lineH + Math.max(0, lines - 1) * DESIGN_TOKENS.spacing.sm;
   return (
     <View style={styles.container}>
-      {Array.from({ length: lines }).map((_, index) => (
-        <View 
-          key={index} 
-          style={[
-            styles.skeletonLine,
-            { height: height || 20 },
-            index === lines - 1 && { width: '60%' }
-          ]} 
-        />
-      ))}
+      <ReservedSpace testID="section-skeleton-reserved" height={totalH} />
     </View>
   );
 }
@@ -27,11 +21,5 @@ export function SectionSkeleton({ lines = 3, height = 20 }: SectionSkeletonProps
 const styles = StyleSheet.create({
   container: {
     padding: DESIGN_TOKENS.spacing.md,
-  },
-  skeletonLine: {
-    width: '100%',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 4,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
   },
 });

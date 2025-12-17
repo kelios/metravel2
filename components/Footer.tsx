@@ -9,10 +9,11 @@ import {
   Linking,
   Platform,
   SafeAreaView,
+  Modal,
   ScrollView,
   LayoutChangeEvent,
 } from "react-native";
-import { Link, type Href } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { globalFocusStyles } from "@/styles/globalFocus"; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
@@ -40,15 +41,19 @@ const Item = memo(function Item({
   onPress,
   href,
   label,
+  testID,
 }: {
   children: React.ReactNode;
   onPress?: () => void;
   href?: Href;
   label: string;
+  testID?: string;
 }) {
+  const router = useRouter();
+
   const content = (
     <View style={styles.itemInner}>
-      {children}
+      <View style={styles.iconBox}>{children}</View>
       <Text style={styles.itemText} numberOfLines={1} ellipsizeMode="tail">
         {label}
       </Text>
@@ -57,14 +62,20 @@ const Item = memo(function Item({
 
   if (href) {
     return (
-      <Link 
-        href={href} 
-        accessibilityRole="link" 
-        accessibilityLabel={label} 
-        style={[styles.item, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+      <Pressable
+        onPress={() => router.push(href as any)}
+        accessibilityRole="link"
+        accessibilityLabel={label}
+        hitSlop={6}
+        testID={testID}
+        style={({ pressed }) => [
+          styles.item,
+          pressed && styles.pressed,
+          globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+        ]}
       >
         {content}
-      </Link>
+      </Pressable>
     );
   }
 
@@ -74,6 +85,7 @@ const Item = memo(function Item({
       accessibilityRole="link"
       accessibilityLabel={label}
       hitSlop={6}
+      testID={testID}
       style={({ pressed }) => [
         styles.item, 
         pressed && styles.pressed,
@@ -88,16 +100,121 @@ const Item = memo(function Item({
 /** ========= Component ========= */
 const palette = DESIGN_TOKENS.colors;
 
-const MOBILE_DOCK_MIN_HEIGHT_WEB = 64;
+const MOBILE_DOCK_HEIGHT_WEB = 80;
+
+const SUPPORT_EMAIL = 'metraveldev@gmail.com';
 
 const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
+  const [isClientReady, setIsClientReady] = React.useState(
+    Platform.OS !== 'web' || typeof window !== 'undefined'
+  );
   const { width } = useWindowDimensions();
+  const [webMobileMQ, setWebMobileMQ] = React.useState(() => {
+    if (Platform.OS !== 'web') return false;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+    return window.matchMedia(`(max-width: ${DESIGN_TOKENS.breakpoints.mobile - 1}px)`).matches;
+  });
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (isClientReady) return;
+    setIsClientReady(true);
+  }, [isClientReady]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+
+    const mql = window.matchMedia(`(max-width: ${DESIGN_TOKENS.breakpoints.mobile - 1}px)`);
+    const handler = (e: MediaQueryListEvent) => setWebMobileMQ(e.matches);
+
+    setWebMobileMQ(mql.matches);
+
+    if ('addEventListener' in mql) {
+      // @ts-ignore
+      mql.addEventListener('change', handler);
+      return () => {
+        // @ts-ignore
+        mql.removeEventListener('change', handler);
+      };
+    }
+
+    // @ts-ignore
+    mql.addListener(handler);
+    return () => {
+      // @ts-ignore
+      mql.removeListener(handler);
+    };
+  }, []);
+
+  if (!isClientReady && Platform.OS === 'web') {
+    return <View style={[styles.base, { height: 96 }]} testID="footer-ssr-placeholder" />;
+  }
+
   const effectiveWidth =
-    Platform.OS === 'web' && width === 0 && typeof window !== 'undefined'
-      ? window.innerWidth
+    Platform.OS === 'web'
+      ? width === 0
+        ? typeof window !== 'undefined'
+          ? window.innerWidth
+          : DESIGN_TOKENS.breakpoints.mobile
+        : width
       : width;
-  const isMobile = Platform.OS !== 'web' ? true : effectiveWidth <= DESIGN_TOKENS.breakpoints.mobile;
+  const isMobile = Platform.OS !== 'web'
+    ? true
+    : (webMobileMQ || effectiveWidth < DESIGN_TOKENS.breakpoints.mobile);
   const iconColor = palette.primary;
+
+  const [isMoreOpen, setIsMoreOpen] = React.useState(false);
+
+  const lastFocusedElRef = useRef<HTMLElement | null>(null);
+  const moreSheetRef = useRef<any>(null);
+  const moreCloseBtnRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!isMoreOpen) return;
+
+    try {
+      lastFocusedElRef.current = (document.activeElement as HTMLElement) || null;
+    } catch {
+      lastFocusedElRef.current = null;
+    }
+
+    const id = window.setTimeout(() => {
+      try {
+        const closeBtn = moreCloseBtnRef.current as HTMLElement | null;
+        const sheet = moreSheetRef.current as HTMLElement | null;
+        (closeBtn || sheet)?.focus?.();
+      } catch {
+        // ignore
+      }
+    }, 0);
+
+    return () => {
+      window.clearTimeout(id);
+    };
+  }, [isMoreOpen]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (isMoreOpen) return;
+
+    const el = lastFocusedElRef.current;
+    if (!el) return;
+
+    const id = window.setTimeout(() => {
+      try {
+        el.focus?.();
+      } catch {
+        // ignore
+      }
+      lastFocusedElRef.current = null;
+    }, 0);
+
+    return () => {
+      window.clearTimeout(id);
+    };
+  }, [isMoreOpen]);
 
   const headerNav: NavItem[] = useMemo(
     () => [
@@ -120,6 +237,18 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
     [iconColor]
   );
 
+  const support: NavItem[] = useMemo(
+    () => [
+      {
+        key: 'support-email',
+        label: 'Связаться с нами',
+        externalUrl: `mailto:${SUPPORT_EMAIL}`,
+        icon: <Feather name="mail" size={20} color={iconColor} />,
+      },
+    ],
+    [iconColor]
+  );
+
   const social: NavItem[] = useMemo(
     () => [
       { key: "tt", label: "TikTok",    externalUrl: "https://www.tiktok.com/@metravel.by",   icon: <FontAwesome5 name="tiktok"    size={18} color={iconColor} /> },
@@ -135,12 +264,23 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
     [headerNav, extra, social]
   );
   const webMobileFallbackItems = useMemo(() => [...extra, ...social], [extra, social]);
+  const webMobileModalItems = useMemo(
+    () => {
+      const about = extra.find((x) => x.key === 'about');
+      const blogby = extra.find((x) => x.key === 'blogby');
+      const privacy = extra.find((x) => x.key === 'privacy');
+      const cookies = extra.find((x) => x.key === 'cookies');
+      return [about, blogby, privacy, cookies, ...support].filter(Boolean) as NavItem[];
+    },
+    [extra, support]
+  );
 
   const Container = (Platform.OS === "ios" || Platform.OS === "android") ? SafeAreaView : View;
 
   /** ======= измеряем только ДОК (иконки) ======= */
   const lastDockH = useRef(0);
   const handleDockLayout = (e: LayoutChangeEvent) => {
+    if (Platform.OS === 'web') return;
     const h = Math.round(e.nativeEvent.layout.height);
     if (h > 0 && h !== lastDockH.current) {
       lastDockH.current = h;
@@ -154,6 +294,12 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
       }
   }, [isMobile, onDockHeight]);
 
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!isMobile) return;
+    onDockHeight?.(MOBILE_DOCK_HEIGHT_WEB);
+  }, [isMobile, onDockHeight]);
+
   const itemsToRender = useMemo(() => {
     if (!isMobile) return [];
 
@@ -165,26 +311,28 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
     // Web: one row, no scroll. Show everything only if it fits.
     const estimateItemWidth = 60;
     const estimateGap = 2;
-    const estimatedMinWidth =
-      allItems.length * estimateItemWidth + Math.max(0, allItems.length - 1) * estimateGap;
+    const moreItem: NavItem = {
+      key: 'more',
+      label: 'Ещё',
+      icon: <Feather name="more-horizontal" size={20} color={iconColor} />,
+    };
 
-    const canFitAll = effectiveWidth >= estimatedMinWidth + 24;
-    if (canFitAll) {
-      // If everything fits, hide legal links here (they're available in the header menu).
-      return webMobileAllItemsWithoutLegal;
-    }
+    const canFit = (items: NavItem[]) => {
+      const estimatedMinWidth =
+        items.length * estimateItemWidth + Math.max(0, items.length - 1) * estimateGap;
+      return effectiveWidth >= estimatedMinWidth + 24;
+    };
 
-    // If doesn't fit - remove items that duplicate header nav.
-    const fallbackItems = webMobileFallbackItems;
+    const primary = [...webMobileAllItemsWithoutLegal, moreItem];
+    if (canFit(primary)) return primary;
 
-    const fallbackEstimatedMinWidth =
-      fallbackItems.length * estimateItemWidth + Math.max(0, fallbackItems.length - 1) * estimateGap;
+    const fallback = [...webMobileFallbackItems.filter((x) => x.key !== 'privacy' && x.key !== 'cookies'), moreItem];
+    if (canFit(fallback)) return fallback;
 
-    if (effectiveWidth >= fallbackEstimatedMinWidth + 24) return fallbackItems;
+    const minimal = [...social, moreItem];
+    if (canFit(minimal)) return minimal;
 
-    // As a last resort, slice to what can fit.
-    const maxFit = Math.max(1, Math.floor((effectiveWidth - 24) / (estimateItemWidth + estimateGap)));
-    return fallbackItems.slice(0, maxFit);
+    return [moreItem];
   }, [allItems, effectiveWidth, isMobile, webMobileAllItemsWithoutLegal, webMobileFallbackItems]);
 
   /** ======= Mobile: суперкомпактный «док» ======= */
@@ -194,25 +342,126 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
         <View
           style={[
             mobileStyles.dockWrapper,
-            Platform.OS === 'web' ? ({ minHeight: MOBILE_DOCK_MIN_HEIGHT_WEB } as any) : null,
+            Platform.OS === 'web' ? ({ height: MOBILE_DOCK_HEIGHT_WEB } as any) : null,
           ]}
+          testID="footer-dock-wrapper"
         >
           {/* измеряем ровно эту область */}
-          <View onLayout={handleDockLayout} testID="footer-dock-measure">
+          <View
+            onLayout={handleDockLayout}
+            testID="footer-dock-measure"
+            style={
+              Platform.OS === 'web'
+                ? ({ maxHeight: 96, overflow: 'hidden' } as any)
+                : undefined
+            }
+          >
             {Platform.OS === 'web' ? (
-              <View style={[mobileStyles.dockBase, mobileStyles.dockNoWrapWeb]}>
-                {itemsToRender.map((item) =>
-                  item.externalUrl ? (
-                    <Item key={item.key} onPress={() => openURL(item.externalUrl!)} label={item.label}>
-                      {item.icon}
-                    </Item>
-                  ) : (
-                    <Item key={item.key} href={item.route} label={item.label}>
-                      {item.icon}
-                    </Item>
-                  )
-                )}
-              </View>
+              <>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={[mobileStyles.dockBase, mobileStyles.dockNoWrapWeb]}
+                  testID="footer-dock-row"
+                >
+                  {itemsToRender.map((item) =>
+                    item.key === 'more' ? (
+                      <Item
+                        key={item.key}
+                        testID={`footer-item-${item.key}`}
+                        onPress={() => {
+                          if (Platform.OS === 'web' && typeof document !== 'undefined') {
+                            try {
+                              lastFocusedElRef.current = document.activeElement as HTMLElement;
+                            } catch {
+                              lastFocusedElRef.current = null;
+                            }
+                          }
+                          setIsMoreOpen(true);
+                        }}
+                        label={item.label}
+                      >
+                        {item.icon}
+                      </Item>
+                    ) : item.externalUrl ? (
+                      <Item key={item.key} testID={`footer-item-${item.key}`} onPress={() => openURL(item.externalUrl!)} label={item.label}>
+                        {item.icon}
+                      </Item>
+                    ) : (
+                      <Item key={item.key} testID={`footer-item-${item.key}`} href={item.route} label={item.label}>
+                        {item.icon}
+                      </Item>
+                    )
+                  )}
+                </ScrollView>
+
+                <Modal
+                  visible={isMoreOpen}
+                  transparent
+                  animationType="fade"
+                  onRequestClose={() => setIsMoreOpen(false)}
+                >
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Закрыть"
+                    onPress={() => setIsMoreOpen(false)}
+                    style={modalStyles.backdrop}
+                    testID="footer-more-backdrop"
+                  >
+                    <Pressable
+                      ref={moreSheetRef}
+                      style={modalStyles.sheet}
+                      onPress={() => {}}
+                      testID="footer-more-sheet"
+                      {...(Platform.OS === 'web'
+                        ? ({ tabIndex: -1, role: 'dialog', 'aria-modal': 'true' } as any)
+                        : {})}
+                    >
+                      <View style={modalStyles.headerRow}>
+                        <Text style={modalStyles.title}>Ещё</Text>
+                        <Pressable
+                          ref={moreCloseBtnRef}
+                          accessibilityRole="button"
+                          accessibilityLabel="Закрыть"
+                          onPress={() => setIsMoreOpen(false)}
+                          hitSlop={8}
+                          style={({ pressed }) => [modalStyles.closeBtn, pressed && styles.pressed]}
+                          {...(Platform.OS === 'web' ? ({ tabIndex: 0 } as any) : {})}
+                        >
+                          <Feather name="x" size={18} color={palette.textMuted} />
+                        </Pressable>
+                      </View>
+
+                      <View style={modalStyles.list} testID="footer-more-list">
+                        {webMobileModalItems.map((item) =>
+                          item.externalUrl ? (
+                            <Item
+                              key={item.key}
+                              testID={`footer-item-modal-${item.key}`}
+                              onPress={() => {
+                                setIsMoreOpen(false);
+                                openURL(item.externalUrl!);
+                              }}
+                              label={item.label}
+                            >
+                              {item.icon}
+                            </Item>
+                          ) : (
+                            <Item
+                              key={item.key}
+                              testID={`footer-item-modal-${item.key}`}
+                              href={item.route}
+                              label={item.label}
+                            >
+                              {item.icon}
+                            </Item>
+                          )
+                        )}
+                      </View>
+                    </Pressable>
+                  </Pressable>
+                </Modal>
+              </>
             ) : (
               <ScrollView
                 horizontal
@@ -221,11 +470,11 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
               >
                 {itemsToRender.map((item) =>
                   item.externalUrl ? (
-                    <Item key={item.key} onPress={() => openURL(item.externalUrl!)} label={item.label}>
+                    <Item key={item.key} testID={`footer-item-${item.key}`} onPress={() => openURL(item.externalUrl!)} label={item.label}>
                       {item.icon}
                     </Item>
                   ) : (
-                    <Item key={item.key} href={item.route} label={item.label}>
+                    <Item key={item.key} testID={`footer-item-${item.key}`} href={item.route} label={item.label}>
                       {item.icon}
                     </Item>
                   )
@@ -242,10 +491,10 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
 
   return (
     <Container style={[styles.base, desktopStyles.container]}>
-      <View style={desktopStyles.bar}>
+      <View style={desktopStyles.bar} testID="footer-desktop-bar">
         <View style={desktopStyles.group}>
           {extra.map((item) => (
-            <Item key={item.key} href={item.route} label={item.label}>
+            <Item key={item.key} testID={`footer-item-${item.key}`} href={item.route} label={item.label}>
               {item.icon}
             </Item>
           ))}
@@ -253,7 +502,7 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
 
         <View style={desktopStyles.group}>
           {social.map((s) => (
-            <Item key={s.key} onPress={() => openURL(s.externalUrl!)} label={s.label}>
+            <Item key={s.key} testID={`footer-item-${s.key}`} onPress={() => openURL(s.externalUrl!)} label={s.label}>
               {s.icon}
             </Item>
           ))}
@@ -275,6 +524,8 @@ const styles = StyleSheet.create({
   item: {
     alignItems: "center",
     justifyContent: "center",
+    flexGrow: 0,
+    flexShrink: 0,
     paddingHorizontal: 8,
     paddingVertical: 4,
     minWidth: 60,
@@ -283,6 +534,7 @@ const styles = StyleSheet.create({
     // ✅ ИСПРАВЛЕНИЕ: Добавлены hover-состояния для веб
     ...Platform.select({
       web: {
+        display: 'flex',
         transition: 'all 0.2s ease',
         cursor: 'pointer',
         // @ts-ignore
@@ -293,7 +545,7 @@ const styles = StyleSheet.create({
         ':active': {
           transform: 'scale(1)',
         },
-      },
+      } as any,
     }),
   },
   pressed: { opacity: 0.7 },
@@ -301,6 +553,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 2,               // Уменьшили расстояние между иконкой и текстом
+  },
+  iconBox: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   itemText: {
     color: palette.textMuted,
@@ -342,6 +600,7 @@ const mobileStyles = StyleSheet.create({
     elevation: 12,
     ...Platform.select({
       web: {
+        maxHeight: 96,
         // @ts-ignore
         backdropFilter: "blur(14px)",
       },
@@ -356,8 +615,13 @@ const mobileStyles = StyleSheet.create({
     flexWrap: 'nowrap',
   },
   dockNoWrapWeb: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flexWrap: 'nowrap',
     justifyContent: 'center',
+    overflow: 'hidden',
+    flexGrow: 0,
+    flexShrink: 0,
     // @ts-ignore - web-only
     width: '100%',
   },
@@ -420,8 +684,48 @@ const desktopStyles = StyleSheet.create({
   },
   groupCompact: {
     justifyContent: 'center',
+  },
+});
+
+const modalStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: palette.surface,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 14,
+  },
+  headerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 12 as any,
+    justifyContent: 'space-between',
+    paddingHorizontal: 6,
+    paddingBottom: 8,
+  },
+  title: {
+    color: palette.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  list: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8 as any,
+    paddingTop: 4,
   },
 });
 

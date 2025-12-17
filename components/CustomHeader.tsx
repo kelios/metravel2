@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { View, StyleSheet, Platform, StatusBar, useWindowDimensions, Pressable, Text, Image } from 'react-native';
+import { View, StyleSheet, Platform, StatusBar, useWindowDimensions, Pressable, Text, Image, Modal, ScrollView } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import RenderRightMenu from './RenderRightMenu';
@@ -27,10 +27,22 @@ export default function CustomHeader() {
     const pathname = usePathname();
     const router = useRouter();
     const { width } = useWindowDimensions();
-    const isMobile = width <= METRICS.breakpoints.tablet;
+    const effectiveWidth =
+        Platform.OS === 'web' && width === 0 && typeof window !== 'undefined'
+            ? window.innerWidth
+            : width;
+    const isMobile = effectiveWidth <= METRICS.breakpoints.tablet;
     const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
     const { isAuthenticated, username, logout, userId, profileRefreshToken } = useAuth();
     const [avatarLoadError, setAvatarLoadError] = useState(false);
+
+    const resolvedPathname =
+        Platform.OS === 'web' && typeof window !== 'undefined'
+            ? window.location.pathname || pathname
+            : pathname;
+
+    const breadcrumbsVisible = resolvedPathname !== '/' && resolvedPathname !== '/index' && !!resolvedPathname;
+    const breadcrumbsReserved = breadcrumbsVisible;
 
     const { profile } = useUserProfileCached(userId, {
         enabled: isAuthenticated && !!userId,
@@ -165,6 +177,7 @@ export default function CustomHeader() {
                                   ]}
                                   accessibilityRole="button"
                                   accessibilityLabel="Открыть меню"
+                                  testID="mobile-menu-open"
                               >
                                   <View style={styles.iconSlot24}>
                                       <Feather name="menu" size={24} color="#1b1f23" />
@@ -178,8 +191,69 @@ export default function CustomHeader() {
               </View>
           
           {/* Хлебные крошки - показываем на всех страницах кроме главной */}
-          {pathname !== '/' && pathname !== '/index' && (
-            <Breadcrumbs />
+          {breadcrumbsReserved ? (
+            <View style={styles.breadcrumbsContainer}>
+              {breadcrumbsVisible ? <Breadcrumbs /> : null}
+            </View>
+          ) : null}
+
+          {isMobile && (
+            <Modal
+              visible={mobileMenuVisible}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setMobileMenuVisible(false)}
+            >
+              <Pressable
+                style={styles.modalOverlay}
+                onPress={() => setMobileMenuVisible(false)}
+                testID="mobile-menu-overlay"
+              >
+                <Pressable
+                  style={styles.modalContent}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                  }}
+                  testID="mobile-menu-panel"
+                  {...(Platform.OS === 'web'
+                    ? ({ role: 'dialog', 'aria-modal': 'true' } as any)
+                    : {})}
+                >
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Меню</Text>
+                    <Pressable
+                      onPress={() => setMobileMenuVisible(false)}
+                      style={styles.modalCloseButton}
+                      accessibilityRole="button"
+                      accessibilityLabel="Закрыть меню"
+                      testID="mobile-menu-close"
+                    >
+                      <Feather name="x" size={22} color={palette.text} />
+                    </Pressable>
+                  </View>
+                  <ScrollView style={styles.modalNavContainer}>
+                    {NAV_ITEMS.map((item) => {
+                      const isActive = activePath === item.path;
+                      return (
+                        <Pressable
+                          key={item.path}
+                          onPress={() => handleNavPress(item.path)}
+                          style={[styles.modalNavItem, isActive && styles.modalNavItemActive]}
+                          accessibilityRole="button"
+                          accessibilityLabel={item.label}
+                          accessibilityState={{ selected: isActive }}
+                        >
+                          <View style={styles.iconSlot20}>
+                            <Feather name={item.icon as any} size={20} color={isActive ? palette.primary : palette.textMuted} />
+                          </View>
+                          <Text style={[styles.modalNavLabel, isActive && styles.modalNavLabelActive]}>{item.label}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                </Pressable>
+              </Pressable>
+            </Modal>
           )}
       </View>
       </View>

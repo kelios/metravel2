@@ -30,3 +30,51 @@ body {
   box-sizing: border-box !important;
   max-width: 100% !important;
 }
+
+/* Footer layout guard (web): prevent vertical stacking in the mobile dock and desktop bar */
+[data-testid="footer-dock-row"],
+[data-testid="footer-desktop-bar"] {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+}
+
+[data-testid="footer-dock-row"] {
+  justify-content: center !important;
+}
+
+[data-testid^="footer-item-"] {
+  display: inline-flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+}
+
+/* Extra SSR/hydration safety: if RN-web styles aren't attached yet, enforce dock layout by wrapper */
+[data-testid="footer-dock-wrapper"],
+[data-testid="footer-dock-measure"] {
+  max-height: 96px !important;
+  overflow: hidden !important;
+}
+
+[data-testid="footer-dock-wrapper"] [data-testid="footer-dock-row"],
+[data-testid="footer-dock-wrapper"] [data-testid="footer-dock-measure"] > div {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+[data-testid="footer-dock-wrapper"] a,
+[data-testid="footer-dock-wrapper"] button,
+[data-testid="footer-dock-wrapper"] [role="link"],
+[data-testid="footer-dock-wrapper"] [role="button"] {
+  display: inline-flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+}

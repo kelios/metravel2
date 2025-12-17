@@ -15,6 +15,7 @@ import { NetworkStatus } from "@/components/NetworkStatus";
 import ConsentBanner from "@/components/ConsentBanner";
 import Footer from "@/components/Footer";
 import { useFonts } from "expo-font";
+import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from "@/constants/designSystem"; // ✅ ИСПРАВЛЕНИЕ: Импорт единой палитры
 import { createOptimizedQueryClient } from "@/src/utils/reactQueryConfig";
 
@@ -130,7 +131,17 @@ function RootLayoutNav() {
     const pathname = usePathname();
     const { width } = useWindowDimensions();
     // ✅ ИСПРАВЛЕНИЕ: Используем единый breakpoint из DESIGN_TOKENS
-    const isMobile = width < DESIGN_TOKENS.breakpoints.mobile || Platform.OS !== "web";
+    // На web useWindowDimensions() может вернуть width=0 на первом рендере.
+    // Это приводит к первичной отрисовке в mobile-режиме и резкому переключению (layout shift).
+    const effectiveWidth =
+      Platform.OS === 'web'
+        ? width === 0
+          ? typeof window !== 'undefined'
+            ? window.innerWidth
+            : DESIGN_TOKENS.breakpoints.mobile
+          : width
+        : width;
+    const isMobile = Platform.OS !== "web" ? true : effectiveWidth < DESIGN_TOKENS.breakpoints.mobile;
 
     const SITE = process.env.EXPO_PUBLIC_SITE_URL || "https://metravel.by";
     const canonical = `${SITE}${pathname || "/"}`;
@@ -168,17 +179,19 @@ function RootLayoutNav() {
       if (!showFooter || !isMobile) return null;
 
       // On web mobile the footer dock is position: fixed and can overlap content.
-      // Reserve space equal to the measured dock height (with a small fallback).
-      const webFallback = 64;
-      const h = isWeb ? (dockHeight > 0 ? dockHeight : webFallback) : dockHeight;
+      // Reserve deterministic space to avoid layout shifts caused by late measurement.
+      const webFixed = 80;
+      const h = isWeb ? webFixed : dockHeight;
 
       if (h <= 0) return null;
 
       return <View testID="bottom-gutter" style={{ height: h }} />;
     };
 
-    // На web шрифты подгружаются через link + font-display: swap, поэтому
-    // не блокируем рендер и не дергаем fontfaceobserver (во избежание timeout).
+    // Fonts:
+    // - On native we must load app fonts before rendering.
+    // - On web we do not load fonts via expo-font here. @expo/vector-icons manages its own
+    //   web font injection; attempting to load via expo-font can cause timeouts and missing glyphs.
     const [fontsLoaded, fontError] = useFonts(
       isWeb
         ? {}
@@ -186,8 +199,33 @@ function RootLayoutNav() {
             SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
             "Roboto-Regular": require("../assets/fonts/Roboto-Regular.ttf"),
             "Roboto-Medium": require("../assets/fonts/Roboto-Medium.ttf"),
+            ...(Feather as any).font,
+            ...(FontAwesome5 as any).font,
           }
     );
+
+    useEffect(() => {
+      if (!isWeb) return;
+      const onUnhandled = (e: PromiseRejectionEvent) => {
+        const reason = (e as any)?.reason;
+        const msg = String(reason?.message ?? reason ?? '');
+        const stack = typeof reason?.stack === 'string' ? reason.stack : '';
+
+        // On web, font loading (expo-font / FontFaceObserver) can reject with timeout exceeded.
+        // Do not let this crash the app.
+        const isFontTimeout =
+          msg.includes('timeout exceeded') &&
+          (String(msg).toLowerCase().includes('fontfaceobserver') ||
+            String(stack).toLowerCase().includes('fontfaceobserver') ||
+            msg.includes('6000ms timeout exceeded'));
+
+        if (isFontTimeout) {
+          e.preventDefault();
+        }
+      };
+      window.addEventListener('unhandledrejection', onUnhandled);
+      return () => window.removeEventListener('unhandledrejection', onUnhandled);
+    }, []);
 
     useEffect(() => {
       if (fontError && !isWeb) {

@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: 16,
-    color: DESIGN_TOKENS.colors.textSecondary,
+    color: DESIGN_TOKENS.colors.textMuted,
     marginBottom: 24,
     textAlign: 'center',
     lineHeight: 24,

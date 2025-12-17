@@ -172,7 +172,13 @@ const PointCard = React.memo(function PointCard({
 
           {/* ✅ РЕДИЗАЙН: Современные кнопки действий */}
           {showActions && (
-            <View pointerEvents="box-none" style={styles.actionsWrap}>
+            <View
+              style={[
+                styles.actionsWrap,
+                Platform.OS === 'web' && ({ pointerEvents: 'box-none' } as any),
+              ]}
+              {...(Platform.OS !== 'web' ? ({ pointerEvents: 'box-none' } as any) : {})}
+            >
               <View style={styles.actionsRow}>
                 <Pressable
                   style={styles.actionBtn}

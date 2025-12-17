@@ -1,7 +1,12 @@
 import React from 'react';
-import { View, StyleSheet, Platform, ViewStyle, StyleProp } from 'react-native';
+import { View, StyleSheet, Platform, ViewStyle, StyleProp, useWindowDimensions } from 'react-native';
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
-import { TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
+import {
+  BREAKPOINTS,
+  TRAVEL_CARD_IMAGE_HEIGHT,
+  TRAVEL_CARD_WEB_HEIGHT,
+  TRAVEL_CARD_WEB_MOBILE_HEIGHT,
+} from '@/components/listTravel/utils/listTravelConstants';
 
 interface SkeletonLoaderProps {
   testID?: string;
@@ -10,6 +15,8 @@ interface SkeletonLoaderProps {
   borderRadius?: number;
   style?: any;
 }
+
+type SkeletonVariant = 'detailed' | 'reserve';
 
 /**
  * Компонент skeleton loader для улучшения воспринимаемой производительности
@@ -45,14 +52,22 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
  * ✅ ИСПРАВЛЕНИЕ: Высоты должны совпадать с реальными карточками
  */
 export const TravelCardSkeleton: React.FC = () => {
+  const { width } = useWindowDimensions();
+
   // ✅ FIX: Унифицированная высота изображения с реальными карточками и учетом маленьких экранов
   const imageHeight = TRAVEL_CARD_IMAGE_HEIGHT;
   const titleHeight = Platform.select({ default: 14, web: 16 });
   const metaHeight = Platform.select({ default: 11, web: 12 });
+
+  const cardHeight =
+    Platform.OS === 'web'
+      ? width > 0 && width < BREAKPOINTS.MOBILE
+        ? TRAVEL_CARD_WEB_MOBILE_HEIGHT
+        : TRAVEL_CARD_WEB_HEIGHT
+      : undefined;
   
   return (
-    <View testID="travel-card-skeleton" style={styles.card}>
-      {/* Изображение с aspectRatio 16/9 */}
+    <View testID="travel-card-skeleton" style={[styles.card, cardHeight != null ? ({ height: cardHeight } as any) : null]}>
       <SkeletonLoader
         testID="travel-card-skeleton-image"
         width="100%"
@@ -61,15 +76,30 @@ export const TravelCardSkeleton: React.FC = () => {
         style={styles.image}
       />
       <View style={styles.content}>
-        {/* Заголовок - 2 строки */}
         <SkeletonLoader width="90%" height={titleHeight} style={styles.marginBottom} />
         <SkeletonLoader width="75%" height={titleHeight} style={styles.marginBottomLarge} />
-        {/* Метаинформация */}
         <View style={styles.metaRow}>
           <SkeletonLoader width="30%" height={metaHeight} />
           <SkeletonLoader width="25%" height={metaHeight} />
         </View>
       </View>
+    </View>
+  );
+};
+
+export const TravelCardReserveSkeleton: React.FC = () => {
+  const { width } = useWindowDimensions();
+
+  const cardHeight =
+    Platform.OS === 'web'
+      ? width > 0 && width < BREAKPOINTS.MOBILE
+        ? TRAVEL_CARD_WEB_MOBILE_HEIGHT
+        : TRAVEL_CARD_WEB_HEIGHT
+      : 320;
+
+  return (
+    <View testID="travel-card-skeleton" style={[styles.card, { height: cardHeight } as any]}>
+      <SkeletonLoader testID="travel-card-skeleton-image" width="100%" height={cardHeight} borderRadius={12} />
     </View>
   );
 };
@@ -81,7 +111,8 @@ export const TravelListSkeleton: React.FC<{
   count?: number;
   columns?: number;
   rowStyle?: StyleProp<ViewStyle>;
-}> = ({ count = 6, columns = 1, rowStyle }) => {
+  variant?: SkeletonVariant;
+}> = ({ count = 6, columns = 1, rowStyle, variant = 'detailed' }) => {
   const isWeb = Platform.OS === 'web';
   const itemsCount = Math.max(0, count ?? 0);
 
@@ -126,7 +157,7 @@ export const TravelListSkeleton: React.FC<{
               if (index >= itemsCount) return null;
               return (
                 <View key={`skeleton-${rowIndex}-${colIndex}`} style={itemContainerStyle}>
-                  <TravelCardSkeleton />
+                  {variant === 'reserve' ? <TravelCardReserveSkeleton /> : <TravelCardSkeleton />}
                 </View>
               );
             })}
@@ -140,7 +171,7 @@ export const TravelListSkeleton: React.FC<{
   return (
     <>
       {Array.from({ length: itemsCount }).map((_, index) => (
-        <TravelCardSkeleton key={index} />
+        variant === 'reserve' ? <TravelCardReserveSkeleton key={index} /> : <TravelCardSkeleton key={index} />
       ))}
     </>
   );
@@ -159,11 +190,6 @@ const styles = StyleSheet.create({
     borderRadius: TOKENS.radii.lg,
     backgroundColor: TOKENS.colors.surface,
     overflow: 'hidden',
-    ...(Platform.OS === 'web'
-      ? {
-          height: TRAVEL_CARD_WEB_HEIGHT,
-        }
-      : {}),
     // Высота теперь определяется содержимым, чтобы совпадать с реальной карточкой
     borderWidth: Platform.OS === 'web' ? 1 : 0,
     borderColor: TOKENS.colors.border,

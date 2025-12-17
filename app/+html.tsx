@@ -155,11 +155,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
       {/* LCP image - предзагрузка главного изображения */}
       <link
-        rel="preload"
+        rel="prefetch"
         href="/images/hero.avif"
         as="image"
-        type="image/avif"
-        fetchPriority="high"
       />
       
       {/* Preload критичных ресурсов */}
@@ -182,22 +180,39 @@ export default function Root({ children }: { children: React.ReactNode }) {
       {/* Suppress known react-native-svg console errors */}
       <script
         dangerouslySetInnerHTML={{
-          __html: `
-(function() {
-  if (typeof window !== 'undefined') {
-    const originalError = console.error;
-    console.error = function(...args) {
-      // Suppress known react-native-svg CSS error that doesn't affect functionality
-      if (args[0] && typeof args[0] === 'string' && 
-          args[0].includes('CSSStyleDeclaration') && 
-          args[0].includes('Indexed property setter is not supported')) {
-        return;
-      }
-      originalError.apply(console, args);
-    };
-  }
-})();
-`,
+          __html:
+            '(function() {\n'
+            + "  if (typeof window !== 'undefined') {\n"
+            + '    const shouldSuppress = (args) => {\n'
+            + '      const msg = args && args[0];\n'
+            + "      if (!msg || typeof msg !== 'string') return false;\n"
+            + "      if (msg.includes('CSSStyleDeclaration') && msg.includes('Indexed property setter is not supported')) {\n"
+            + '        return true;\n'
+            + '      }\n'
+            + '      if (\n'
+            + '        msg.includes("\\"shadow*\\" style props are deprecated") ||\n'
+            + '        msg.includes("\\"textShadow*\\" style props are deprecated") ||\n'
+            + "        msg.includes('props.pointerEvents is deprecated')\n"
+            + '      ) {\n'
+            + '        return true;\n'
+            + '      }\n'
+            + "      if (msg.includes('Animated:') && msg.includes('useNativeDriver') && msg.includes('native animated module is missing')) {\n"
+            + '        return true;\n'
+            + '      }\n'
+            + '      return false;\n'
+            + '    };\n'
+            + '    const originalError = console.error;\n'
+            + '    console.error = function(...args) {\n'
+            + '      if (shouldSuppress(args)) return;\n'
+            + '      originalError.apply(console, args);\n'
+            + '    };\n'
+            + '    const originalWarn = console.warn;\n'
+            + '    console.warn = function(...args) {\n'
+            + '      if (shouldSuppress(args)) return;\n'
+            + '      originalWarn.apply(console, args);\n'
+            + '    };\n'
+            + '  }\n'
+            + '})();\n',
         }}
       />
     </head>
@@ -304,4 +319,9 @@ img[fetchpriority="high"]{content-visibility:auto;will-change:auto}
 @supports (padding-bottom: env(safe-area-inset-bottom)){
   body{padding-bottom:env(safe-area-inset-bottom)}
 }
+[data-testid="footer-dock-row"],
+[data-testid="footer-desktop-bar"]{display:flex !important;flex-direction:row !important;flex-wrap:nowrap !important;align-items:center !important}
+[data-testid="footer-dock-row"]{justify-content:center !important}
+[data-testid="footer-desktop-bar"]{justify-content:space-between !important}
+[data-testid^="footer-item-"]{display:inline-flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;flex:0 0 auto !important}
 `;

@@ -27,19 +27,26 @@ test.describe('Footer dock (web mobile)', () => {
       }
     });
 
-    // Expo dev server can occasionally return transient ERR_EMPTY_RESPONSE while hot reloading.
-    // Retry navigation to reduce flakiness.
+    // Expo dev server can occasionally return transient ERR_EMPTY_RESPONSE / ERR_CONNECTION_REFUSED while starting.
+    // Retry navigation with backoff to reduce flakiness.
     let lastError: any = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 10; attempt++) {
       try {
         // eslint-disable-next-line no-await-in-loop
-        await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30_000 });
+        await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60_000 });
         lastError = null;
         break;
       } catch (e) {
         lastError = e;
+        const msg = String((e as any)?.message ?? e);
+        const isTransient =
+          msg.includes('ERR_EMPTY_RESPONSE') ||
+          msg.includes('ERR_CONNECTION_REFUSED') ||
+          msg.includes('ECONNREFUSED') ||
+          msg.includes('net::');
+        const backoffMs = isTransient ? Math.min(1000 + attempt * 600, 8000) : 500;
         // eslint-disable-next-line no-await-in-loop
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(backoffMs);
       }
     }
     if (lastError) throw lastError;

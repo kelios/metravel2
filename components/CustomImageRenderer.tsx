@@ -129,7 +129,14 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
     <View style={[styles.container, { width: boxWidth }]}>
       <View style={{ width: boxWidth, height: boxHeight, position: 'relative' }}>
         {!imageLoaded && !err && (
-          <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.skeleton]}>
+          <View
+            style={[
+              StyleSheet.absoluteFillObject,
+              styles.skeleton,
+              Platform.OS === 'web' && ({ pointerEvents: 'none' } as any),
+            ]}
+            {...(Platform.OS !== 'web' ? ({ pointerEvents: 'none' } as any) : {})}
+          >
             <View style={[styles.placeholder, { width: boxWidth, height: boxHeight }]} />
           </View>
         )}

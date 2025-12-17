@@ -61,6 +61,7 @@ import { SectionSkeleton } from '@/components/SectionSkeleton';
 import { OptimizedLCPImage } from '@/components/OptimizedLCPImage';
 import { optimizeCriticalPath } from '@/utils/advancedPerformanceOptimization';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import ReservedSpace from '@/components/ReservedSpace';
 
 /* ---------- LCP-компонент грузим СИНХРОННО ---------- */
 import Slider from "@/components/travel/Slider";
@@ -261,12 +262,25 @@ const TravelDetailsLoadingSkeleton = () => (
           <View style={styles.contentOuter} collapsable={false}>
             <View style={[styles.contentWrapper, { paddingHorizontal: 16 }]} collapsable={false}>
               <View style={[styles.sectionContainer, styles.contentStable]}>
-                <SkeletonLoader width="100%" height={320} borderRadius={16} />
-                <View style={{ marginTop: 14 }}>
-                  <SkeletonLoader width="70%" height={24} borderRadius={8} style={{ marginBottom: 10 }} />
-                  <SkeletonLoader width="90%" height={16} borderRadius={8} style={{ marginBottom: 8 }} />
-                  <SkeletonLoader width="82%" height={16} borderRadius={8} />
-                </View>
+                {Platform.OS === 'web' ? (
+                  <>
+                    <SkeletonLoader width="100%" height={320} borderRadius={16} />
+                    <View style={{ marginTop: 14 }}>
+                      <SkeletonLoader width="70%" height={24} borderRadius={8} style={{ marginBottom: 10 }} />
+                      <SkeletonLoader width="90%" height={16} borderRadius={8} style={{ marginBottom: 8 }} />
+                      <SkeletonLoader width="82%" height={16} borderRadius={8} />
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <ReservedSpace testID="travel-details-loading-hero-reserved" height={320} style={{ borderRadius: 16 }} />
+                    <View style={{ marginTop: 14 }}>
+                      <ReservedSpace testID="travel-details-loading-title-reserved" height={24} width="70%" style={{ borderRadius: 8, marginBottom: 10 }} />
+                      <ReservedSpace testID="travel-details-loading-subtitle-reserved" height={16} width="90%" style={{ borderRadius: 8, marginBottom: 8 }} />
+                      <ReservedSpace testID="travel-details-loading-subtitle2-reserved" height={16} width="82%" style={{ borderRadius: 8 }} />
+                    </View>
+                  </>
+                )}
               </View>
 
               <View style={[styles.sectionContainer, styles.contentStable]}>
@@ -396,13 +410,13 @@ const useLCPPreload = (travel?: Travel) => {
         fit: "contain",
       }) || versionedHref;
 
-    // Preload the exact URL that will be used for LCP (optimized), otherwise the preload can be wasted.
-    if (!document.querySelector(`link[rel="preload"][as="image"][href="${optimizedHref}"]`)) {
+    // Use prefetch (instead of preload) to avoid "preloaded but not used" warnings when the hero image
+    // isn't consumed immediately (e.g. route transitions / hydration timing).
+    if (!document.querySelector(`link[rel="prefetch"][as="image"][href="${optimizedHref}"]`)) {
       const link = document.createElement("link");
-      link.rel = "preload";
+      link.rel = "prefetch";
       link.as = "image";
       link.href = optimizedHref;
-      link.setAttribute("fetchpriority", "high");
       link.setAttribute("referrerpolicy", "no-referrer");
       document.head.appendChild(link);
     }

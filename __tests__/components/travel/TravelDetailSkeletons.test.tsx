@@ -9,6 +9,7 @@ import {
   SectionSkeleton,
   VideoSkeleton,
 } from '@/components/travel/TravelDetailSkeletons';
+import { StyleSheet } from 'react-native';
 
 // We only care about the structure and the sizing invariants.
 // Mock SkeletonLoader to make counting deterministic.
@@ -30,9 +31,14 @@ jest.mock('@/components/SkeletonLoader', () => {
 });
 
 describe('TravelDetailSkeletons', () => {
-  it('DescriptionSkeleton renders stable number of lines', () => {
-    const { getAllByTestId } = render(<DescriptionSkeleton />);
-    expect(getAllByTestId('skeleton-loader')).toHaveLength(8);
+  it('DescriptionSkeleton reserves stable space', () => {
+    const { getByTestId, queryAllByTestId } = render(<DescriptionSkeleton />);
+    expect(queryAllByTestId('skeleton-loader')).toHaveLength(0);
+
+    const reserved = getByTestId('travel-details-description-reserved');
+    const flattened = StyleSheet.flatten(reserved.props.style);
+    expect(typeof flattened.height).toBe('number');
+    expect(flattened.height).toBeGreaterThan(0);
   });
 
   it('MapSkeleton renders exactly one block', () => {
@@ -62,8 +68,13 @@ describe('TravelDetailSkeletons', () => {
     expect(getAllByTestId('skeleton-loader')).toHaveLength(1);
   });
 
-  it('SectionSkeleton renders correct number of lines', () => {
-    const { getAllByTestId } = render(<SectionSkeleton lines={5} />);
-    expect(getAllByTestId('skeleton-loader')).toHaveLength(5);
+  it('SectionSkeleton reserves stable space', () => {
+    const { getByTestId, queryAllByTestId } = render(<SectionSkeleton lines={5} />);
+    expect(queryAllByTestId('skeleton-loader')).toHaveLength(0);
+
+    const reserved = getByTestId('travel-details-section-reserved');
+    const flattened = StyleSheet.flatten(reserved.props.style);
+    expect(typeof flattened.height).toBe('number');
+    expect(flattened.height).toBeGreaterThan(0);
   });
 });

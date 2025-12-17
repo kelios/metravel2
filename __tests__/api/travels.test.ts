@@ -43,6 +43,8 @@ jest.mock('@/src/utils/safeJsonParse', () => ({
 
 jest.mock('@/src/utils/logger', () => ({
   devError: jest.fn(),
+  devWarn: jest.fn(),
+  devLog: jest.fn(),
 }));
 
 jest.mock('@/src/utils/retry', () => ({

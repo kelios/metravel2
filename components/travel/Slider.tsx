@@ -624,8 +624,11 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
 
               {status === "loading" && (
                 <View
-                  style={styles.loadingOverlay}
-                  pointerEvents="none"
+                  style={[
+                    styles.loadingOverlay,
+                    Platform.OS === "web" && ({ pointerEvents: "none" } as any),
+                  ]}
+                  {...(Platform.OS !== "web" ? ({ pointerEvents: "none" } as any) : {})}
                   testID={`slider-loading-overlay-${index}`}
                 >
                   <ActivityIndicator color="#0f172a" />
@@ -730,8 +733,9 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
             style={[
               styles.counter,
               isMobile && styles.counterMobile,
+              Platform.OS === "web" && ({ pointerEvents: "none" } as any),
             ]}
-            pointerEvents="none"
+            {...(Platform.OS !== "web" ? ({ pointerEvents: "none" } as any) : {})}
           >
             <View style={styles.counterContainer}>
               <Text style={styles.counterText}>
@@ -747,8 +751,9 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
             style={[
               styles.dots,
               isMobile && styles.dotsMobile,
+              Platform.OS === "web" && ({ pointerEvents: "none" } as any),
             ]}
-            pointerEvents="none"
+            {...(Platform.OS !== "web" ? ({ pointerEvents: "none" } as any) : {})}
           >
             <View style={styles.dotsContainer}>
               {images.map((_, i) => (

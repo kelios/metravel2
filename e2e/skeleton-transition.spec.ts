@@ -45,6 +45,36 @@ async function assertNoHorizontalScroll(page: any) {
   expect(res.bodyScrollWidth).toBeLessThanOrEqual(res.bodyClientWidth);
 }
 
+async function gotoWithRetry(page: any, url: string) {
+  let lastError: any = null;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120_000 });
+      lastError = null;
+      break;
+    } catch (e) {
+      lastError = e;
+      const msg = String((e as any)?.message ?? e ?? '');
+      const isTransient =
+        msg.includes('ERR_CONNECTION_REFUSED') ||
+        msg.includes('ERR_EMPTY_RESPONSE') ||
+        msg.includes('NS_ERROR_NET_RESET') ||
+        msg.includes('net::');
+
+      if (typeof page?.isClosed === 'function' && page.isClosed()) break;
+
+      // eslint-disable-next-line no-await-in-loop
+      try {
+        await page.waitForTimeout(isTransient ? Math.min(1200 + attempt * 600, 8000) : 500);
+      } catch {
+        break;
+      }
+    }
+  }
+  if (lastError) throw lastError;
+}
+
 test.describe('Skeleton transition (no layout shift)', () => {
   test('main list shows skeleton, then replaces it with cards without big size jump', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
@@ -110,7 +140,7 @@ test.describe('Skeleton transition (no layout shift)', () => {
       });
     });
 
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await gotoWithRetry(page, '/');
 
     const search = page.getByRole('textbox', { name: /Поиск путешествий/i });
     await expect(search).toBeVisible({ timeout: 30_000 });
@@ -119,8 +149,58 @@ test.describe('Skeleton transition (no layout shift)', () => {
     const skeletonCard = page.locator('[data-testid="travel-card-skeleton"]').first();
     await expect(skeletonCard).toBeVisible({ timeout: 30_000 });
 
-    const skeletonBox = await skeletonCard.boundingBox();
+    // Capture skeleton dimensions immediately (avoid flakiness if skeleton disappears quickly).
+    const skeletonHandle = await skeletonCard.elementHandle();
+    const skeletonBox = skeletonHandle ? await skeletonHandle.boundingBox() : null;
     expect(skeletonBox).not.toBeNull();
+
+    // Invariant during loading: web-mobile footer dock must not render as a vertical list.
+    // This guards against SSR/hydration/layout flashes where footer items stack.
+    const dock = page.getByTestId('footer-dock-wrapper');
+    await expect(dock).toBeVisible({ timeout: 30_000 });
+    // Stroboscopic guard: catch transient oversized/vertical dock during the first second.
+    for (let i = 0; i < 10; i++) {
+      // Desktop footer must not flash on mobile during loading.
+      // eslint-disable-next-line no-await-in-loop
+      await expect(page.getByTestId('footer-desktop-bar')).toHaveCount(0);
+
+      // eslint-disable-next-line no-await-in-loop
+      const h = await dock.boundingBox().then((b: any) => (b ? b.height : 0));
+      expect(h, `footer dock must be compact during loading (height=${h}px, sample=${i})`).toBeLessThanOrEqual(120);
+
+      const dockInteractive = dock.locator('[role="link"], [role="button"]');
+      // eslint-disable-next-line no-await-in-loop
+      const cnt = await dockInteractive.count();
+      if (cnt >= 2) {
+        // eslint-disable-next-line no-await-in-loop
+        const [b0, b1] = await Promise.all([
+          dockInteractive.nth(0).boundingBox(),
+          dockInteractive.nth(1).boundingBox(),
+        ]);
+        expect(b0, 'expected first dock item to have a bounding box during loading').not.toBeNull();
+        expect(b1, 'expected second dock item to have a bounding box during loading').not.toBeNull();
+        if (b0 && b1) {
+          const yDiff = Math.abs(b0.y - b1.y);
+          expect(yDiff, `footer dock must be single-row during loading (yDiff=${yDiff}px, sample=${i})`).toBeLessThanOrEqual(10);
+        }
+      }
+
+      // eslint-disable-next-line no-await-in-loop
+      await page.waitForTimeout(100);
+    }
+
+    // Performance invariant: on web-mobile the skeleton card must not be excessively tall.
+    // This catches regressions where skeleton height is wrong and causes large layout shifts.
+    if (skeletonBox) {
+      expect(
+        skeletonBox.height,
+        `Unexpected skeleton card height on mobile: ${skeletonBox.height}px`
+      ).toBeLessThanOrEqual(360);
+      expect(
+        skeletonBox.height,
+        `Unexpected skeleton card height on mobile: ${skeletonBox.height}px`
+      ).toBeGreaterThanOrEqual(280);
+    }
 
     // Now wait for real content.
     await page.waitForSelector('[data-testid="travel-card-link"]', { timeout: 45_000 });
@@ -145,8 +225,9 @@ test.describe('Skeleton transition (no layout shift)', () => {
         // Not pixel-perfect: just prevent major jumps.
         // Width should be close (mobile is single-column full width).
         expect(widthDiff, `Width jump too large: ${widthDiff}px`).toBeLessThanOrEqual(40);
-        // Height can vary due to text length; allow more slack.
-        expect(heightDiff, `Height jump too large: ${heightDiff}px`).toBeLessThanOrEqual(120);
+        // Height should be very close. Big jumps here usually indicate wrong skeleton height,
+        // which increases CLS and hurts perceived performance.
+        expect(heightDiff, `Height jump too large: ${heightDiff}px`).toBeLessThanOrEqual(60);
       }
     }
 

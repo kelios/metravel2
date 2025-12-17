@@ -238,14 +238,23 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
     }, []);
 
     const inner = (
-      <View style={styles.inner} pointerEvents="box-none">
+      <View
+        style={[
+          styles.inner,
+          Platform.OS === "web" && ({ pointerEvents: "box-none" } as any),
+        ]}
+        {...(Platform.OS !== "web" ? ({ pointerEvents: "box-none" } as any) : {})}
+      >
           {/* Декоративный штамп — не участвует в доступности и не перехватывает клики */}
           <ExpoImage
             source={require("@/assets/travel-stamp.webp")}
-            style={styles.stamp}
             accessibilityIgnoresInvertColors
             accessible={false}
-            pointerEvents="none"
+            style={[
+              styles.stamp,
+              Platform.OS === "web" && ({ pointerEvents: "none" } as any),
+            ]}
+            {...(Platform.OS !== "web" ? ({ pointerEvents: "none" } as any) : {})}
             cachePolicy="memory-disk"
             priority="low"
             contentFit="contain"

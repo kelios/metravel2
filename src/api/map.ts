@@ -1,6 +1,6 @@
 import { Filters, TravelsForMap, TravelsMap } from '@/src/types/types';
 import { normalizeNumericArray } from '@/src/utils/filterQuery';
-import { devError, devLog } from '@/src/utils/logger';
+import { devError, devWarn } from '@/src/utils/logger';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 
@@ -34,7 +34,7 @@ export const fetchTravelsNear = async (travel_id: number, signal?: AbortSignal) 
     if (e.name === 'AbortError') {
       throw e;
     }
-    devLog('Error fetching travels near:', e);
+    devWarn('Error fetching travels near:', e);
     return [];
   }
 };
@@ -45,7 +45,7 @@ export const fetchTravelsPopular = async (): Promise<TravelsMap> => {
     const res = await fetchWithTimeout(urlTravel, {}, DEFAULT_TIMEOUT);
     return await safeJsonParse<TravelsMap>(res, {} as TravelsMap);
   } catch (e) {
-    devLog('Error fetching fetchTravelsPopular:', e);
+    devWarn('Error fetching fetchTravelsPopular:', e);
     return {} as TravelsMap;
   }
 };
@@ -56,7 +56,7 @@ export const fetchTravelsOfMonth = async (): Promise<TravelsMap> => {
     const res = await fetchWithTimeout(urlTravel, {}, DEFAULT_TIMEOUT);
     return await safeJsonParse<TravelsMap>(res, {} as TravelsMap);
   } catch (e) {
-    devLog('Error fetching fetchTravelsOfMonth:', e);
+    devWarn('Error fetching fetchTravelsOfMonth:', e);
     return {} as TravelsMap;
   }
 };
@@ -106,7 +106,7 @@ export const fetchTravelsForMap = async (
     const res = await fetchWithTimeout(urlTravel, {}, LONG_TIMEOUT);
     return await safeJsonParse<TravelsForMap>(res, [] as unknown as TravelsForMap);
   } catch (e) {
-    devLog('Error fetching fetchTravelsForMap:', e);
+    devWarn('Error fetching fetchTravelsForMap:', e);
     return [] as unknown as TravelsForMap;
   }
 };
@@ -134,14 +134,14 @@ export const fetchTravelsNearRoute = async (
     if (!res.ok) {
       const errorText = __DEV__ ? await res.text().catch(() => 'Unknown error') : '';
       if (__DEV__) {
-        devLog('Ошибка при загрузке маршрута:', errorText);
+        devWarn('Ошибка при загрузке маршрута:', errorText);
       }
       return [] as unknown as TravelsForMap;
     }
 
     return await safeJsonParse<TravelsForMap>(res, [] as unknown as TravelsForMap);
   } catch (e) {
-    devLog('Error fetching fetchTravelsNearRoute:', e);
+    devWarn('Error fetching fetchTravelsNearRoute:', e);
     return [] as unknown as TravelsForMap;
   }
 };
@@ -151,7 +151,7 @@ export const fetchFiltersMap = async (): Promise<Filters> => {
     const res = await fetchWithTimeout(GET_FILTER_FOR_MAP, {}, DEFAULT_TIMEOUT);
     return await safeJsonParse<Filters>(res, [] as unknown as Filters);
   } catch (e) {
-    devLog('Error fetching filters:', e);
+    devWarn('Error fetching filters:', e);
     return [] as unknown as Filters;
   }
 };

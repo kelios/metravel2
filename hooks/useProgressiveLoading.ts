@@ -202,21 +202,11 @@ export function optimizeFontLoading(fonts: Array<{
     return;
   }
 
-  fonts.forEach(font => {
-    const fontFace = new FontFace(
-      font.family,
-      `url(/fonts/${font.family}-${font.weight || 'regular'}.woff2)`,
-      {
-        weight: font.weight || '400',
-        style: font.style || 'normal',
-        display: font.display || 'swap',
-      }
-    );
-
-    fontFace.load().then(() => {
-      document.fonts.add(fontFace);
-    }).catch(console.error);
-  });
+  // NOTE: This project does not ship web-served .woff2 files under /fonts.
+  // Loading FontFace from /fonts/*.woff2 can return HTML (404) and triggers OTS decode errors.
+  // Keep this function as a no-op on web unless/until real font assets are added.
+  void fonts;
+  return;
 }
 
 // Measure and optimize Core Web Vitals

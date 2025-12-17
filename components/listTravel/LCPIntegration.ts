@@ -18,13 +18,16 @@ export const useLCPOptimizations = (travel: any, isFirst: boolean = false) => {
     if (travel?.travel_image_thumb_url) {
       const optimizedSrc = optimizeLCPImage(travel.travel_image_thumb_url);
       
-      // Создаем preload link с высоким приоритетом
-      const preloadLink = document.createElement('link');
-      preloadLink.rel = 'preload';
-      preloadLink.as = 'image';
-      preloadLink.href = optimizedSrc;
-      preloadLink.fetchPriority = 'high';
-      document.head.appendChild(preloadLink);
+      // Use prefetch (instead of preload) to avoid "preloaded but not used" warnings when the first card
+      // image is mounted/updated lazily.
+      if (!document.querySelector(`link[rel="prefetch"][as="image"][href="${optimizedSrc}"]`)) {
+        const preloadLink = document.createElement('link');
+        preloadLink.rel = 'prefetch';
+        preloadLink.as = 'image';
+        preloadLink.href = optimizedSrc;
+        preloadLink.crossOrigin = 'anonymous';
+        document.head.appendChild(preloadLink);
+      }
 
       // Добавляем resource hints
       const preconnectLink = document.createElement('link');
@@ -97,12 +100,12 @@ export const LCPOptimizedWrapper = memo(function LCPOptimizedWrapper({
 }) {
   useLCPOptimizations(travel, isFirst);
 
-  return (
-    <div 
-      className={isFirst ? 'travel-card-lcp' : ''}
-      style={{ width: '100%' }}
-    >
-      {children}
-    </div>
+  return React.createElement(
+    'div',
+    {
+      className: isFirst ? 'travel-card-lcp' : '',
+      style: { width: '100%' },
+    } as any,
+    children
   );
 });

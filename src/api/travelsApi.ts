@@ -52,6 +52,58 @@ const travelDef: Travel = {
 const travelCache = new Map<number, Travel>();
 const TOKEN_KEY = 'userToken';
 
+const normalizeTravelItem = (input: any): Travel => {
+    const t = (input && typeof input === 'object') ? input : {};
+    const out: any = { ...t };
+
+    if (typeof t.id !== 'undefined') {
+        out.id = Number(t.id) || 0;
+    }
+    if (typeof t.slug !== 'undefined') {
+        out.slug = String(t.slug);
+    }
+
+    if (typeof t.youtube_link === 'undefined' && typeof t.youtubeLink !== 'undefined') {
+        out.youtube_link = String(t.youtubeLink ?? '');
+    }
+    if (typeof t.userName === 'undefined' && typeof t.user_name !== 'undefined') {
+        out.userName = String(t.user_name ?? '');
+    }
+    if (typeof t.cityName === 'undefined' && typeof t.city_name !== 'undefined') {
+        out.cityName = String(t.city_name ?? '');
+    }
+    if (typeof t.countryName === 'undefined' && typeof t.country_name !== 'undefined') {
+        out.countryName = String(t.country_name ?? '');
+    }
+
+    if (typeof t.countUnicIpView !== 'undefined' || typeof t.count_unic_ip_view !== 'undefined') {
+        out.countUnicIpView = String(t.countUnicIpView ?? t.count_unic_ip_view ?? '0');
+    }
+
+    if (typeof t.travel_image_thumb_url === 'undefined' && typeof t.travelImageThumbUrl !== 'undefined') {
+        out.travel_image_thumb_url = String(t.travelImageThumbUrl ?? '');
+    }
+    if (
+        typeof t.travel_image_thumb_small_url === 'undefined' &&
+        typeof t.travelImageThumbSmallUrl !== 'undefined'
+    ) {
+        out.travel_image_thumb_small_url = String(t.travelImageThumbSmallUrl ?? '');
+    }
+    if (
+        typeof out.travel_image_thumb_small_url === 'undefined' &&
+        typeof out.travel_image_thumb_url !== 'undefined'
+    ) {
+        out.travel_image_thumb_small_url = out.travel_image_thumb_url;
+    }
+
+    return out as Travel;
+};
+
+const coerceTotal = (value: any, fallback = 0): number => {
+    const n = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(n) ? n : fallback;
+};
+
 const buildAuthHeaders = async (): Promise<HeadersInit | undefined> => {
     const token = await getSecureItem(TOKEN_KEY);
     if (!token) {
@@ -111,6 +163,34 @@ const buildWhereQueryParams = (params: {
     }
 
     return new URLSearchParams(searchParams).toString();
+};
+
+const unwrapTravelsList = (
+    payload: any
+): { items: any[]; total: number } => {
+    if (!payload) return { items: [], total: 0 };
+
+    if (Array.isArray(payload)) {
+        return { items: payload, total: payload.length };
+    }
+
+    if (payload && typeof payload === 'object') {
+        if (Array.isArray((payload as any).results)) {
+            return {
+                items: (payload as any).results,
+                total: typeof (payload as any).count === 'number' ? (payload as any).count : (payload as any).results.length,
+            };
+        }
+
+        if (Array.isArray((payload as any).data)) {
+            return {
+                items: (payload as any).data,
+                total: typeof (payload as any).total === 'number' ? (payload as any).total : (payload as any).data.length,
+            };
+        }
+    }
+
+    return { items: [], total: 0 };
 };
 
 const applyPublishModeration = (
@@ -231,6 +311,8 @@ export const fetchTravels = async (
         const result = await safeJsonParse<{
             data?: Travel[];
             total?: number;
+            results?: Travel[];
+            count?: number;
             detail?: string;
         } | Travel[]>(res, []);
 
@@ -243,31 +325,24 @@ export const fetchTravels = async (
             return { data: [], total: 0 };
         }
 
-        if (Array.isArray(result)) {
-            return { data: result, total: result.length };
+        const { items, total } = unwrapTravelsList(result);
+
+        if (result && typeof result === 'object' && !Array.isArray(result) && (result as any).detail === "Invalid page.") {
+            devError('Invalid page in response:', page + 1);
+            return { data: [], total: typeof (result as any).total === 'number' ? (result as any).total : total };
         }
 
-        if (result && typeof result === 'object' && !Array.isArray(result)) {
-            if (result.detail === "Invalid page.") {
-                devError('Invalid page in response:', page + 1);
-                return { data: [], total: result.total || 0 };
+        if (items.length === 0 && result && typeof result === 'object' && !Array.isArray(result)) {
+            if (__DEV__) {
+                devWarn('API returned unexpected structure:', result);
             }
-            if (!Array.isArray(result.data)) {
-                if (__DEV__) {
-                    devWarn('API returned unexpected structure:', result);
-                }
-                return { data: [], total: result.total || 0 };
-            }
-            return {
-                data: result.data || [],
-                total: result.total || 0
-            };
+            return { data: [], total: coerceTotal((result as any).total, 0) };
         }
 
-        if (__DEV__) {
-            devWarn('Unexpected API response format:', result);
-        }
-        return { data: [], total: 0 };
+        return {
+            data: items.map(normalizeTravelItem),
+            total: coerceTotal(total, 0),
+        };
     } catch (e) {
         devError('Error fetching Travels:', e);
         return { data: [], total: 0 };
@@ -332,6 +407,8 @@ export const fetchRandomTravels = async (
         const result = await safeJsonParse<{
             data?: Travel[];
             total?: number;
+            results?: Travel[];
+            count?: number;
             detail?: string;
         } | Travel[]>(res, []);
 
@@ -345,30 +422,28 @@ export const fetchRandomTravels = async (
         }
 
         if (Array.isArray(result)) {
-            return { data: result, total: result.length };
+            const data = result.map(normalizeTravelItem);
+            return { data, total: data.length };
         }
 
-        if (result && typeof result === 'object' && !Array.isArray(result)) {
-            if (result.detail === "Invalid page.") {
-                devError('Invalid random page in response:', page + 1);
-                return { data: [], total: result.total || 0 };
-            }
-            if (!Array.isArray(result.data)) {
-                if (__DEV__) {
-                    console.warn('API returned unexpected random structure:', result);
-                }
-                return { data: [], total: result.total || 0 };
-            }
-            return {
-                data: result.data || [],
-                total: result.total || 0,
-            };
+        const { items, total } = unwrapTravelsList(result);
+
+        if (result && typeof result === 'object' && !Array.isArray(result) && (result as any).detail === "Invalid page.") {
+            devError('Invalid random page in response:', page + 1);
+            return { data: [], total: coerceTotal((result as any).total, 0) };
         }
 
-        if (__DEV__) {
-            console.warn('Unexpected random API response format:', result);
+        if (items.length === 0 && result && typeof result === 'object' && !Array.isArray(result)) {
+            if (__DEV__) {
+                console.warn('API returned unexpected random structure:', result);
+            }
+            return { data: [], total: coerceTotal((result as any).total, 0) };
         }
-        return { data: [], total: 0 };
+
+        return {
+            data: items.map(normalizeTravelItem),
+            total: coerceTotal(total, 0),
+        };
     } catch (e) {
         devError('Error fetching Random Travels:', e);
         return { data: [], total: 0 };

@@ -78,7 +78,7 @@ npm run ios:build:prod     # Production build
 npm run ios:submit:latest
 ```
 
-**📖 Full iOS documentation**: See [docs/IOS-README.md](../docs/IOS-README.md)
+**📖 Documentation**: See [docs/INDEX.md](./docs/INDEX.md)
 
 ### Android
 
@@ -96,7 +96,7 @@ npm run android:build:prod     # Production build (AAB)
 npm run android:submit:latest
 ```
 
-**📖 Full Android documentation**: See [ANDROID-README.md](./ANDROID-README.md) and [docs/ANDROID-BUILD-GUIDE.md](../docs/ANDROID-BUILD-GUIDE.md)
+**📖 Documentation**: See [docs/INDEX.md](./docs/INDEX.md)
 
 ### Multi-Platform
 
@@ -151,24 +151,19 @@ metravel2/
 
 ## 📚 Documentation
 
-### General
-- [README.md](./README.md) - This file
-- [MIGRATION-GUIDE.md](../docs/MIGRATION-GUIDE.md)
-- [TESTING-IMPROVEMENTS.md](../docs/TESTING-IMPROVEMENTS.md)
-- [PLATFORM-COMPARISON.md](../docs/PLATFORM-COMPARISON.md) - iOS vs Android comparison
+Start here:
 
-### iOS Build & Deploy
-- [IOS-README.md](../docs/IOS-README.md) - Overview
-- [IOS-QUICK-START.md](../docs/IOS-QUICK-START.md) - Quick start guide
-- [IOS-BUILD-GUIDE.md](../docs/IOS-BUILD-GUIDE.md) - Complete guide
-- [APP-STORE-CHECKLIST.md](../docs/APP-STORE-CHECKLIST.md) - Pre-publish checklist
-- [IOS-SETUP-SUMMARY.md](../docs/IOS-SETUP-SUMMARY.md) - Setup summary
-- [IOS-RESOURCES.md](../docs/IOS-RESOURCES.md) - Useful resources
+- [docs/INDEX.md](./docs/INDEX.md)
+- [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)
+- [docs/RELEASE.md](./docs/RELEASE.md)
+- [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)
 
-### Android Build & Deploy
-- [ANDROID-README.md](./ANDROID-README.md) - Overview
-- [ANDROID-QUICK-START.md](../docs/ANDROID-QUICK-START.md) - Quick start guide
-- [ANDROID-BUILD-GUIDE.md](../docs/ANDROID-BUILD-GUIDE.md) - Complete guide
+## 🔌 Backend API
+
+- **Base URL**: configure via `EXPO_PUBLIC_API_URL`
+- **Redoc**: `${EXPO_PUBLIC_API_URL}/api/schema/redoc/`
+- **OpenAPI schema**: `${EXPO_PUBLIC_API_URL}/api/schema/`
+- **Auth header**: `Authorization: Token <token>`
 
 ## 🌐 SEO & Indexing
 
@@ -199,10 +194,9 @@ Create environment-specific files:
 ## 📞 Support
 
 - **Issues**: Create an issue in the repository
-- **iOS Build Help**: See [IOS-BUILD-GUIDE.md](../docs/IOS-BUILD-GUIDE.md)
-- **Android Build Help**: See [ANDROID-BUILD-GUIDE.md](../docs/ANDROID-BUILD-GUIDE.md)
+- **Build/Release docs**: See [docs/RELEASE.md](./docs/RELEASE.md)
 - **Expo Forums**: https://forums.expo.dev/
-- **Platform Comparison**: See [PLATFORM-COMPARISON.md](../docs/PLATFORM-COMPARISON.md)
+- **Troubleshooting**: See [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)
 
 ## 📄 License
 
