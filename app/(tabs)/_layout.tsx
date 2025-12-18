@@ -50,6 +50,7 @@ export default function TabLayout() {
             }}
         >
             <Tabs.Screen name="index" />
+            <Tabs.Screen name="search" options={HIDDEN} />
 
             {/* адресуемые, но скрытые в таббаре */}
             <Tabs.Screen name="travelsby" options={HIDDEN} />

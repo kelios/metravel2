@@ -24,6 +24,7 @@ import { Formik, FormikHelpers } from 'formik';
 import FormFieldWithValidation from '@/components/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { sendAnalyticsEvent } from '@/src/utils/analytics';
 
 const { height } = Dimensions.get('window');
 
@@ -41,7 +42,7 @@ export default function Login() {
     const navigation = useNavigation();
     const router = useRouter();
     const { login, sendPassword } = useAuth();
-    const { redirect } = useLocalSearchParams<{ redirect?: string }>();
+    const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
 
     const isFocused = useIsFocused();
     const pathname = usePathname();
@@ -49,6 +50,12 @@ export default function Login() {
     const canonical = `${SITE}${pathname || '/login'}`;
 
     const showMsg = (text: string, error = false) => setMsg({ text, error });
+
+    React.useEffect(() => {
+        if (!isFocused) return;
+        if (!intent) return;
+        sendAnalyticsEvent('AuthViewed', { source: 'home', intent });
+    }, [intent, isFocused]);
 
     /* ---------- actions ---------- */
     const handleResetPassword = async (email: string) => {
@@ -83,6 +90,9 @@ export default function Login() {
             showMsg('');
             const ok = await login(values.email.trim(), values.password);
             if (ok) {
+                if (intent) {
+                    sendAnalyticsEvent('AuthSuccess', { source: 'home', intent });
+                }
                 // ✅ ИСПРАВЛЕНИЕ: Используем router вместо navigation для Expo Router
                 if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
                     router.replace(redirect as any);
@@ -231,7 +241,13 @@ export default function Login() {
                                             <View style={styles.registerContainer}>
                                                 <Text style={styles.registerText}>Нет аккаунта? </Text>
                                                 <TouchableOpacity 
-                                                    onPress={() => router.push((redirect && typeof redirect === 'string') ? (`/registration?redirect=${encodeURIComponent(redirect)}` as any) : ('/registration' as any))} 
+                                                    onPress={() =>
+                                                        router.push(
+                                                            (redirect && typeof redirect === 'string')
+                                                                ? (`/registration?redirect=${encodeURIComponent(redirect)}${intent ? `&intent=${encodeURIComponent(intent)}` : ''}` as any)
+                                                                : (`/registration${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
+                                                        )
+                                                    }
                                                     disabled={isSubmitting}
                                                 >
                                                     <Text style={styles.registerLink}>Зарегистрируйтесь</Text>

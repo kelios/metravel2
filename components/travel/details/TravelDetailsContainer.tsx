@@ -29,7 +29,6 @@ import {
 } from "react-native";
 
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import { useIsFocused } from "@react-navigation/native";
@@ -53,14 +52,12 @@ import ScrollToTopButton from "@/components/ScrollToTopButton";
 import ReadingProgressBar from "@/components/ReadingProgressBar";
 import TravelSectionTabs from "@/components/travel/TravelSectionTabs";
 import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/travel/sectionLinks";
-import usePerformanceOptimization from '@/hooks/usePerformanceOptimization';
 import { useProgressiveLoad, ProgressiveWrapper } from '@/hooks/useProgressiveLoading';
 import { useLazyMap } from '@/hooks/useLazyMap';
-import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl as buildVersionedImageUrlLCP } from "@/utils/imageOptimization";
+import { optimizeImageUrl, buildVersionedImageUrl as buildVersionedImageUrlLCP } from "@/utils/imageOptimization";
 import { injectCriticalStyles } from '@/styles/criticalCSS';
 import { initPerformanceMonitoring } from '@/utils/performanceMonitoring';
 import { SectionSkeleton } from '@/components/SectionSkeleton';
-import { OptimizedLCPImage } from '@/components/OptimizedLCPImage';
 import { optimizeCriticalPath } from '@/utils/advancedPerformanceOptimization';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import ReservedSpace from '@/components/ReservedSpace';
@@ -1205,7 +1202,6 @@ export default function TravelDetails() {
 
           {/* ✅ РЕДИЗАЙН: Оптимизированная FAB кнопка (отступ от низа 80px)
               На мобильном скрываем FAB, когда открыто боковое меню, чтобы оно не перекрывалось. */}
-          {false}
 
           {/* Прогресс-бар чтения */}
           {contentHeight > viewportHeight && (
@@ -1250,14 +1246,16 @@ export default function TravelDetails() {
                       setHeroBlockHeight((prev) => (prev === h ? prev : h));
                     }}
                   >
-                    <TravelHeroSection
-                      travel={travel}
-                      anchors={anchors}
-                      isMobile={isMobile}
-                      renderSlider={Platform.OS !== "web" ? true : lcpLoaded}
-                      onFirstImageLoad={() => setLcpLoaded(true)}
-                    />
-                  </View>
+                  <TravelHeroSection
+                    travel={travel}
+                    anchors={anchors}
+                    isMobile={isMobile}
+                    renderSlider={Platform.OS !== "web" ? true : lcpLoaded}
+                    onFirstImageLoad={() => setLcpLoaded(true)}
+                    sectionLinks={sectionLinks}
+                    onQuickJump={scrollToWithMenuClose}
+                  />
+                </View>
 
                   {isMobile && showMobileSectionTabs && sectionLinks.length > 0 && (
                     <View style={styles.sectionTabsContainer}>
@@ -1283,6 +1281,8 @@ export default function TravelDetails() {
                         anchors={anchors}
                         relatedTravels={relatedTravels}
                         setRelatedTravels={setRelatedTravels}
+                        scrollY={scrollY}
+                        viewportHeight={viewportHeight}
                       />
                       <TravelEngagementSection travel={travel} isMobile={isMobile} />
                     </ProgressiveWrapper>
@@ -1350,7 +1350,9 @@ const TravelDeferredSections: React.FC<{
   anchors: AnchorsMap;
   relatedTravels: Travel[];
   setRelatedTravels: React.Dispatch<React.SetStateAction<Travel[]>>;
-}> = ({ travel, isMobile, forceOpenKey, anchors, relatedTravels, setRelatedTravels }) => {
+  scrollY: Animated.Value;
+  viewportHeight: number;
+}> = ({ travel, isMobile, forceOpenKey, anchors, relatedTravels, setRelatedTravels, scrollY, viewportHeight }) => {
   const [canRenderHeavy, setCanRenderHeavy] = useState(false);
   const [showExcursions] = useState(true);
 
@@ -1390,6 +1392,8 @@ const TravelDeferredSections: React.FC<{
         anchors={anchors}
         relatedTravels={relatedTravels}
         setRelatedTravels={setRelatedTravels}
+        scrollY={scrollY}
+        viewportHeight={viewportHeight}
       />
 
       <TravelEngagementSection travel={travel} isMobile={isMobile} />
@@ -1397,13 +1401,25 @@ const TravelDeferredSections: React.FC<{
   );
 };
 
+const HERO_QUICK_JUMP_KEYS = ["map", "description", "points"] as const;
+
 const TravelHeroSection: React.FC<{
   travel: Travel;
   anchors: AnchorsMap;
   isMobile: boolean;
   renderSlider?: boolean;
   onFirstImageLoad: () => void;
-}> = ({ travel, anchors, isMobile, renderSlider = true, onFirstImageLoad }) => {
+  sectionLinks: TravelSectionLink[];
+  onQuickJump: (key: string) => void;
+}> = ({
+  travel,
+  anchors,
+  isMobile,
+  renderSlider = true,
+  onFirstImageLoad,
+  sectionLinks,
+  onQuickJump,
+}) => {
   const { width: winW, height: winH } = useWindowDimensions();
   const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(null);
   const firstImg = (travel?.gallery?.[0] ?? null) as unknown as ImgLike | null;
@@ -1430,6 +1446,11 @@ const TravelHeroSection: React.FC<{
   );
   const heroAlt = travel?.name ? `Фотография маршрута «${travel.name}»` : "Фото путешествия";
   const shouldShowOptimizedHero = Platform.OS === "web" && !!firstImg;
+  const quickJumpLinks = useMemo(() => {
+    return HERO_QUICK_JUMP_KEYS.map((key) => sectionLinks.find((link) => link.key === key)).filter(
+      Boolean
+    ) as TravelSectionLink[];
+  }, [sectionLinks]);
 
   return (
     <>
@@ -1502,6 +1523,23 @@ const TravelHeroSection: React.FC<{
         <QuickFacts travel={travel} />
       </View>
 
+      {quickJumpLinks.length > 0 && (
+        <View style={[styles.sectionContainer, styles.contentStable, styles.quickJumpWrapper]}>
+          {quickJumpLinks.map((link) => (
+            <Pressable
+              key={link.key}
+              onPress={() => onQuickJump(link.key)}
+              style={({ pressed }) => [styles.quickJumpChip, pressed && styles.quickJumpChipPressed]}
+              accessibilityRole="button"
+              accessibilityLabel={`Перейти к разделу ${link.label}`}
+            >
+              <Icon name={link.icon} size={18} color={DESIGN_TOKENS.colors.primary} />
+              <Text style={styles.quickJumpLabel}>{link.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
       {isMobile && (
         <View
           testID="travel-details-primary-actions"
@@ -1534,6 +1572,22 @@ const TravelContentSections: React.FC<{
   forceOpenKey: string | null;
 }> = ({ travel, isMobile, anchors, forceOpenKey }) => {
   type InsightKey = "recommendation" | "plus" | "minus";
+
+  const stripHtml = useCallback((value?: string | null) => {
+    if (!value) return "";
+    return value
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }, []);
+
+  const extractSnippets = useCallback((value?: string | null, maxSentences = 1) => {
+    const text = stripHtml(value);
+    if (!text) return "";
+    const matches = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [];
+    const parts = matches.map((p) => p.trim()).filter(Boolean);
+    return parts.slice(0, Math.max(1, maxSentences)).join(" ");
+  }, [stripHtml]);
 
   const hasRecommendation = Boolean(travel.recommendation?.trim());
   const hasPlus = Boolean(travel.plus?.trim());
@@ -1600,6 +1654,19 @@ const TravelContentSections: React.FC<{
     [mobileInsightKey, shouldUseMobileInsights]
   );
 
+  const decisionSummary = useMemo(() => {
+    const items: Array<{ label: string; text: string }> = [];
+    const rec = extractSnippets(travel.recommendation, 2);
+    const plus = extractSnippets(travel.plus, 1);
+    const minus = extractSnippets(travel.minus, 1);
+
+    if (rec) items.push({ label: "Совет", text: rec });
+    if (plus) items.push({ label: "Плюс", text: plus });
+    if (minus) items.push({ label: "Минус", text: minus });
+
+    return items.slice(0, 3);
+  }, [extractSnippets, travel.minus, travel.plus, travel.recommendation]);
+
   return (
     <>
       {travel.description && (
@@ -1625,6 +1692,23 @@ const TravelContentSections: React.FC<{
                     {travel.monthName ? ` · лучший сезон: ${travel.monthName.toLowerCase()}` : ""}
                   </Text>
                 </View>
+
+                {decisionSummary.length > 0 && (
+                  <View style={styles.decisionSummaryBox}>
+                    <Text style={styles.decisionSummaryTitle}>Коротко по делу</Text>
+                    <View style={styles.decisionSummaryList}>
+                      {decisionSummary.map((item, idx) => (
+                        <View key={`${item.label}-${idx}`} style={styles.decisionSummaryRow}>
+                          <View style={styles.decisionSummaryBadge}>
+                            <Text style={styles.decisionSummaryBadgeText}>{item.label}</Text>
+                          </View>
+                          <Text style={styles.decisionSummaryText}>{item.text}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
                 <TravelDescription title={travel.name} htmlContent={travel.description} noBox />
                 {Platform.OS === "web" && (
                   <Pressable
@@ -1792,7 +1876,7 @@ const TravelVisualSections: React.FC<{
                 {...(Platform.OS === "web" ? { "data-section-key": "excursions" } : {})}
               >
                 <Text style={styles.sectionHeaderText}>Экскурсии</Text>
-                <View style={{ marginTop: 12 }}>
+                <View style={{ marginTop: 12, minHeight: 600 }}>
                   <BelkrajWidgetComponent
                     countryCode={travel.countryCode}
                     points={travel.travelAddress as any}
@@ -1870,19 +1954,55 @@ const TravelRelatedContent: React.FC<{
   anchors: AnchorsMap;
   relatedTravels: Travel[];
   setRelatedTravels: React.Dispatch<React.SetStateAction<Travel[]>>;
-}> = ({ travel, anchors, relatedTravels, setRelatedTravels }) => {
-  const { shouldLoad: shouldLoadNear, setElementRef: setNearRef } = useProgressiveLoad({
+  scrollY: Animated.Value;
+  viewportHeight: number;
+}> = ({ travel, anchors, relatedTravels, setRelatedTravels, scrollY, viewportHeight }) => {
+  const isWeb = Platform.OS === 'web';
+  const preloadMargin = 200;
+
+  const { shouldLoad: shouldLoadNearWeb, setElementRef: setNearRefWeb } = useProgressiveLoad({
     priority: 'low',
-    rootMargin: '200px',
+    rootMargin: `${preloadMargin}px`,
     threshold: 0.1,
     fallbackDelay: 1500,
   });
-  const { shouldLoad: shouldLoadPopular, setElementRef: setPopularRef } = useProgressiveLoad({
+  const { shouldLoad: shouldLoadPopularWeb, setElementRef: setPopularRefWeb } = useProgressiveLoad({
     priority: 'low',
-    rootMargin: '200px',
+    rootMargin: `${preloadMargin}px`,
     threshold: 0.1,
     fallbackDelay: 1500,
   });
+
+  const [nearTop, setNearTop] = useState<number | null>(null);
+  const [popularTop, setPopularTop] = useState<number | null>(null);
+  const [shouldLoadNearNative, setShouldLoadNearNative] = useState(false);
+  const [shouldLoadPopularNative, setShouldLoadPopularNative] = useState(false);
+
+  useEffect(() => {
+    if (isWeb) return;
+    if (!viewportHeight || viewportHeight <= 0) return;
+
+    const id = scrollY.addListener(({ value }) => {
+      const bottomY = value + viewportHeight + preloadMargin;
+
+      if (nearTop != null) {
+        const nextNear = bottomY >= nearTop;
+        setShouldLoadNearNative((prev) => (prev === nextNear ? prev : nextNear));
+      }
+
+      if (popularTop != null) {
+        const nextPopular = bottomY >= popularTop;
+        setShouldLoadPopularNative((prev) => (prev === nextPopular ? prev : nextPopular));
+      }
+    });
+
+    return () => {
+      scrollY.removeListener(id);
+    };
+  }, [isWeb, nearTop, popularTop, preloadMargin, scrollY, viewportHeight]);
+
+  const shouldLoadNear = isWeb ? shouldLoadNearWeb : shouldLoadNearNative;
+  const shouldLoadPopular = isWeb ? shouldLoadPopularWeb : shouldLoadPopularNative;
 
   return (
     <>
@@ -1890,6 +2010,10 @@ const TravelRelatedContent: React.FC<{
       ref={anchors.near}
       style={[styles.sectionContainer, styles.contentStable]}
       collapsable={false}
+      onLayout={isWeb ? undefined : (e: LayoutChangeEvent) => {
+        const y = e.nativeEvent.layout.y;
+        setNearTop((prev) => (prev === y ? prev : y));
+      }}
       {...(Platform.OS === "web" ? { "data-section-key": "near" } : {})}
     >
       {Platform.OS === 'web' ? (
@@ -1898,11 +2022,11 @@ const TravelRelatedContent: React.FC<{
           // @ts-ignore - ref callback for RNW
           ref={(node: any) => {
             const target = node?._nativeNode || node?._domNode || node || null;
-            setNearRef(target);
+            setNearRefWeb(target);
           }}
         />
       ) : (
-        <View ref={setNearRef as any} />
+        <View />
       )}
       <Text style={styles.sectionHeaderText}>Рядом (~60км)</Text>
       <Text style={[styles.sectionSubtitle, styles.nearSubtitle]}>
@@ -1942,6 +2066,10 @@ const TravelRelatedContent: React.FC<{
       ref={anchors.popular}
       style={[styles.sectionContainer, styles.contentStable]}
       collapsable={false}
+      onLayout={isWeb ? undefined : (e: LayoutChangeEvent) => {
+        const y = e.nativeEvent.layout.y;
+        setPopularTop((prev) => (prev === y ? prev : y));
+      }}
       {...(Platform.OS === "web" ? { "data-section-key": "popular" } : {})}
     >
       {Platform.OS === 'web' ? (
@@ -1950,11 +2078,11 @@ const TravelRelatedContent: React.FC<{
           // @ts-ignore - ref callback for RNW
           ref={(node: any) => {
             const target = node?._nativeNode || node?._domNode || node || null;
-            setPopularRef(target);
+            setPopularRefWeb(target);
           }}
         />
       ) : (
-        <View ref={setPopularRef as any} />
+        <View />
       )}
       <Text style={styles.sectionHeaderText}>Популярные путешествия</Text>
       <Text style={[styles.sectionSubtitle, styles.popularSubtitle]}>
@@ -2130,6 +2258,33 @@ const styles = StyleSheet.create({
   quickFactsContainer: {
     marginBottom: DESIGN_TOKENS.spacing.md,
   },
+
+  quickJumpWrapper: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: DESIGN_TOKENS.spacing.md,
+  },
+  quickJumpChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(148, 163, 184, 0.4)",
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    marginRight: DESIGN_TOKENS.spacing.sm,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+  },
+  quickJumpChipPressed: {
+    opacity: 0.75,
+  },
+  quickJumpLabel: {
+    fontSize: 14,
+    fontWeight: "600" as any,
+    color: DESIGN_TOKENS.colors.text,
+    marginLeft: 8,
+  },
   
   descriptionIntroWrapper: {
     marginBottom: DESIGN_TOKENS.spacing.lg,
@@ -2146,6 +2301,49 @@ const styles = StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     color: DESIGN_TOKENS.colors.textMuted,
     lineHeight: 24,
+  },
+
+  decisionSummaryBox: {
+    marginBottom: DESIGN_TOKENS.spacing.lg,
+    padding: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    borderWidth: 1,
+    borderColor: 'rgba(15, 23, 42, 0.10)',
+    backgroundColor: 'rgba(15, 23, 42, 0.02)',
+  },
+  decisionSummaryTitle: {
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontWeight: '800' as any,
+    color: DESIGN_TOKENS.colors.text,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+  },
+  decisionSummaryList: {
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  decisionSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  decisionSummaryBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(74, 140, 140, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(74, 140, 140, 0.20)',
+  },
+  decisionSummaryBadgeText: {
+    fontSize: 12,
+    fontWeight: '800' as any,
+    color: DESIGN_TOKENS.colors.primary,
+  },
+  decisionSummaryText: {
+    flex: 1,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    lineHeight: 20,
+    color: DESIGN_TOKENS.colors.text,
+    fontWeight: '600' as any,
   },
   
   backToTopWrapper: {

@@ -11,7 +11,8 @@ describe('Routes Existence Tests', () => {
   
   // Получаем все пути из компонентов
   const navItems = [
-    { path: '/', label: 'Путешествия' },
+    { path: '/', label: 'Главная' },
+    { path: '/search', label: 'Поиск' },
     { path: '/travelsby', label: 'Беларусь' },
     { path: '/map', label: 'Карта' },
     { path: '/quests', label: 'Квесты' },
@@ -28,6 +29,7 @@ describe('Routes Existence Tests', () => {
 
   const breadcrumbPaths = [
     '/',
+    '/search',
     '/travelsby',
     '/map',
     '/quests',

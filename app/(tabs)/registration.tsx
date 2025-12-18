@@ -32,7 +32,7 @@ const { height } = Dimensions.get('window');
 export default function RegisterForm() {
     const [showPass, setShowPass] = useState(false);
     const [generalMsg, setMsg] = useState<{ text: string; error: boolean }>({ text: '', error: false });
-    const { redirect } = useLocalSearchParams<{ redirect?: string }>();
+    const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
     const router = useRouter();
 
     const isFocused = useIsFocused();
@@ -279,8 +279,8 @@ export default function RegisterForm() {
                                                 onPress={() =>
                                                     router.push(
                                                         (redirect && typeof redirect === 'string')
-                                                            ? (`/login?redirect=${encodeURIComponent(redirect)}` as any)
-                                                            : ('/login' as any)
+                                                            ? (`/login?redirect=${encodeURIComponent(redirect)}${intent ? `&intent=${encodeURIComponent(intent)}` : ''}` as any)
+                                                            : (`/login${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
                                                     )
                                                 }
                                                 disabled={isSubmitting}

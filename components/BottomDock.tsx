@@ -104,15 +104,15 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
     () => [
       {
         key: "home",
-        label: "Путешествия",
+        label: "Главная",
         route: "/" as any,
-        icon: <Feather name="compass" size={18} color={iconColor} />,
+        icon: <Feather name="home" size={18} color={iconColor} />,
       },
       {
-        key: "belarus",
-        label: "Беларусь",
-        route: "/travelsby" as any,
-        icon: <Feather name="map" size={18} color={iconColor} />,
+        key: "search",
+        label: "Поиск",
+        route: "/search" as any,
+        icon: <Feather name="search" size={18} color={iconColor} />,
       },
       {
         key: "map",

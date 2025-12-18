@@ -8,7 +8,8 @@ export interface HeaderNavItem {
 }
 
 export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
-  { path: '/', label: 'Путешествия', icon: 'compass', priority: 'primary' },
+  { path: '/', label: 'Главная', icon: 'home', priority: 'primary' },
+  { path: '/search', label: 'Поиск', icon: 'search', priority: 'primary' },
   { path: '/travelsby', label: 'Беларусь', icon: 'map', priority: 'primary' },
   { path: '/map', label: 'Карта', icon: 'map-pin', priority: 'primary' },
   { path: '/roulette', label: 'Случайный маршрут', icon: 'shuffle', priority: 'primary' },

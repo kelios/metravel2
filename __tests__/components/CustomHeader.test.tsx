@@ -86,14 +86,15 @@ describe('CustomHeader', () => {
         it('renders desktop navigation by default', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
-            expect(utils.getByLabelText('Путешествия')).toBeTruthy();
+            expect(utils.getByLabelText('Главная')).toBeTruthy();
         });
 
         it('shows navigation items on desktop', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
             
-            expect(utils.getByLabelText('Путешествия')).toBeTruthy();
+            expect(utils.getByLabelText('Главная')).toBeTruthy();
+            expect(utils.getByLabelText('Поиск')).toBeTruthy();
             expect(utils.getByLabelText('Беларусь')).toBeTruthy();
             expect(utils.getByLabelText('Карта')).toBeTruthy();
             expect(utils.getByLabelText('Случайный маршрут')).toBeTruthy();
@@ -133,8 +134,8 @@ describe('CustomHeader', () => {
             (usePathname as jest.Mock).mockReturnValue('/travels/some-travel');
             const utils = renderHeader();
             
-            const travelsItem = utils.getByLabelText('Путешествия');
-            expect(travelsItem.props.accessibilityState?.selected).toBe(true);
+            const homeItem = utils.getByLabelText('Главная');
+            expect(homeItem.props.accessibilityState?.selected).toBe(true);
         });
 
         it('correctly identifies active path for quest routes', () => {

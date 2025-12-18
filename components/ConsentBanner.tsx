@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Link } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LAYOUT, METRICS } from '@/constants/layout';
 
 const CONSENT_KEY = 'metravel_consent_v1';
@@ -43,11 +44,13 @@ function writeConsent(consent: ConsentState) {
 export default function ConsentBanner() {
   const [visible, setVisible] = useState(false);
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isMobile = width <= METRICS.breakpoints.tablet;
   const bottomOffset = useMemo(() => {
     if (!isMobile) return 0;
-    return LAYOUT.tabBarHeight + 8;
-  }, [isMobile]);
+    // On mobile we keep it above the bottom tab bar and respect safe-area.
+    return (insets?.bottom || 0) + LAYOUT.tabBarHeight + 8;
+  }, [insets?.bottom, isMobile]);
 
   useEffect(() => {
     if (!isWeb || typeof window === 'undefined') return;

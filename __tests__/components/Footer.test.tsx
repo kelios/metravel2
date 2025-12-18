@@ -21,7 +21,8 @@ describe('Footer', () => {
 
   it('renders mobile dock correctly', () => {
     const { getByText } = render(<Footer />)
-    expect(getByText('Путешествия')).toBeTruthy()
+    expect(getByText('Главная')).toBeTruthy()
+    expect(getByText('Поиск')).toBeTruthy()
     expect(getByText('Карта')).toBeTruthy()
     expect(getByText('Избранное')).toBeTruthy()
     expect(getByText('Создать')).toBeTruthy()
