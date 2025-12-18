@@ -34,6 +34,7 @@ jest.mock('@/components/SkeletonLoader', () => {
   const React = require('react');
   const { Text } = require('react-native');
   return {
+    SkeletonLoader: () => React.createElement(Text, { testID: 'skeleton-loader-mock' }, 'SkeletonLoader'),
     TravelListSkeleton: () =>
       React.createElement(Text, { testID: 'travel-list-skeleton-mock' }, 'TravelListSkeleton'),
   };

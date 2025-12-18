@@ -169,7 +169,7 @@ describe('AccountMenu', () => {
     } as any);
 
     const { getByText } = renderWithClient(<RenderRightMenu />);
-    expect(getByText('Добавить путешествие')).toBeTruthy();
+    expect(getByText('Поделиться путешествием')).toBeTruthy();
   });
 
   it('displays username when authenticated', () => {

@@ -181,19 +181,13 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                                   globalFocusStyles.focusable,
                               ]}
                               accessibilityRole="button"
-                              accessibilityLabel="Добавить путешествие"
+                              accessibilityLabel="Поделиться маршрутом и историей"
                               testID="header-create"
                           >
-                              <View style={styles.createIconComposite}>
-                                  <Feather name="book" size={18} color={palette.surface} />
-                                  <View style={styles.createIconPlus}>
-                                      <Feather name="plus" size={10} color={palette.surface} />
-                                  </View>
-                                  <View style={styles.createIconPin}>
-                                      <Feather name="map-pin" size={10} color={palette.surface} />
-                                  </View>
+                              <View style={styles.iconSlot18}>
+                                  <Feather name="share-2" size={18} color={palette.surface} />
                               </View>
-                              <Text style={styles.createLabel}>Добавить</Text>
+                              <Text style={styles.createLabel}>Поделиться путешествием</Text>
                           </Pressable>
                       )}
 
@@ -383,12 +377,12 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                                 onPress={handleCreate}
                                 style={styles.modalNavItem}
                                 accessibilityRole="button"
-                                accessibilityLabel="Добавить путешествие"
+                                accessibilityLabel="Поделиться маршрутом и историей"
                             >
                                 <View style={styles.iconSlot20}>
-                                    <Feather name="book" size={20} color={palette.textMuted} />
+                                    <Feather name="share-2" size={20} color={palette.textMuted} />
                                 </View>
-                                <Text style={styles.modalNavLabel}>Добавить путешествие</Text>
+                                <Text style={styles.modalNavLabel}>Поделиться путешествием</Text>
                             </Pressable>
                             <Pressable
                                 onPress={() => handleUserAction('/export')}
@@ -662,7 +656,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: palette.primary,
-        paddingHorizontal: 14,
+        paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 999,
         gap: 8,
@@ -674,16 +668,21 @@ const styles = StyleSheet.create({
                 transition: 'transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease' as any,
                 // @ts-ignore: web-only styles
                 cursor: 'pointer' as any,
+                // @ts-ignore: web-only style
+                boxShadow: '0 4px 12px rgba(47, 94, 80, 0.14)' as any,
             },
         }),
     },
     createButtonHover: {
+        opacity: 0.96,
         ...Platform.select({
             web: {
                 // @ts-ignore: web-only style
                 transform: 'translateY(-1px)' as any,
                 // @ts-ignore: web-only style
                 boxShadow: '0 8px 16px rgba(47, 94, 80, 0.18)' as any,
+                // @ts-ignore: web-only style
+                filter: 'brightness(0.98)' as any,
             },
         }),
     },

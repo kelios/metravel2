@@ -40,7 +40,6 @@ jest.mock('@/providers/FiltersProvider', () => ({
 }));
 
 jest.mock('../../components/AccountMenu', () => () => null);
-jest.mock('../../components/Breadcrumbs', () => () => null);
 
 // Моки для expo-router
 jest.mock('expo-router', () => ({

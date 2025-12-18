@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchUserProfile, type UserProfileDto } from '@/src/api/user';
+import { ApiError } from '@/src/api/client';
 
 type Options = {
   enabled?: boolean;
@@ -17,15 +18,30 @@ export function useUserProfileCached(userId: string | number | null | undefined,
     return v ? v : null;
   }, [userId]);
 
-  const query = useQuery({
+  const query = useQuery<UserProfileDto | null>({
     queryKey: ['user-profile', normalizedUserId, options.cacheKeySuffix],
-    queryFn: () => fetchUserProfile(String(normalizedUserId)),
+    queryFn: async () => {
+      try {
+        return await fetchUserProfile(String(normalizedUserId));
+      } catch (e) {
+        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
+          return null;
+        }
+        throw e;
+      }
+    },
     enabled: enabled && !!normalizedUserId,
     staleTime: options.staleTimeMs ?? 10 * 60 * 1000,
+    retry: (failureCount, error) => {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 
   const fullName = useMemo(() => {
-    const p: UserProfileDto | undefined = query.data;
+    const p: UserProfileDto | null | undefined = query.data;
     if (!p) return '';
 
     const clean = (value: unknown) => {

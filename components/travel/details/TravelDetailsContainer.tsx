@@ -453,6 +453,8 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
                                                                                            alt,
                                                                                            onLoad,
                                                                                          }) => {
+  const [loadError, setLoadError] = useState(false);
+  const [retryToken, setRetryToken] = useState(0);
   const baseSrc = buildVersionedImageUrlLCP(
     buildVersioned(img.url, img.updated_at ?? null, img.id),
     img.updated_at ?? null,
@@ -469,25 +471,113 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
       fit: "contain",
     }) || baseSrc;
 
+  const srcWithRetry = useMemo(() => {
+    if (!retryToken) return optimizedSrc;
+    const sep = optimizedSrc.includes("?") ? "&" : "?";
+    return `${optimizedSrc}${sep}retry=${retryToken}`;
+  }, [optimizedSrc, retryToken]);
+
+  const handleRetry = useCallback(() => {
+    setLoadError(false);
+    setRetryToken((t) => t + 1);
+  }, []);
+
   if (Platform.OS !== "web") {
     return (
       <View style={{ width: "100%", height: "100%" }}>
-        <ExpoImage
-          source={{ uri: optimizedSrc }}
-          style={{ width: "100%", height: "100%", borderRadius: 12 }}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          priority="high"
-          onLoad={onLoad}
-        />
+        {loadError ? (
+          <View
+            style={{
+              width: "100%",
+              height: "100%",
+              borderRadius: 12,
+              backgroundColor: "#e9e7df",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16,
+            }}
+          >
+            <Text style={{ color: "#0f172a", fontWeight: "600", marginBottom: 6 }}>
+              Фото не загрузилось
+            </Text>
+            <Text style={{ color: "#475569", textAlign: "center", marginBottom: 12 }}>
+              Проверьте подключение или попробуйте позже
+            </Text>
+            <Pressable
+              onPress={handleRetry}
+              accessibilityRole="button"
+              accessibilityLabel="Повторить загрузку фото"
+              style={({ pressed }) => [
+                {
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  borderRadius: 999,
+                  backgroundColor: "#0f172a",
+                },
+                pressed && { opacity: 0.9 },
+              ]}
+            >
+              <Text style={{ color: "#ffffff", fontWeight: "600" }}>Повторить</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <ExpoImage
+            source={{ uri: srcWithRetry }}
+            style={{ width: "100%", height: "100%", borderRadius: 12 }}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            priority="high"
+            onLoad={() => {
+              setLoadError(false);
+              onLoad?.();
+            }}
+            onError={() => setLoadError(true)}
+          />
+        )}
       </View>
     );
   }
 
   return (
     <div style={{ width: "100%", height: "100%", contain: "layout style paint" as any }}>
-      <img
-        src={optimizedSrc}
+      {loadError ? (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            borderRadius: 12,
+            backgroundColor: "#e9e7df",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            padding: 16,
+            boxSizing: "border-box",
+          }}
+        >
+          <div style={{ fontWeight: 600, color: "#0f172a", marginBottom: 6 }}>Фото не загрузилось</div>
+          <div style={{ color: "#475569", textAlign: "center", marginBottom: 12 }}>
+            Проверьте подключение или попробуйте позже
+          </div>
+          <button
+            type="button"
+            onClick={handleRetry as any}
+            style={{
+              padding: "10px 14px",
+              borderRadius: 999,
+              border: "none",
+              background: "#0f172a",
+              color: "#ffffff",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Повторить
+          </button>
+        </div>
+      ) : (
+        <img
+          src={srcWithRetry}
         alt={alt || ""}
         width={img.width || 1200}
         height={img.height || Math.round(1200 / ratio)}
@@ -505,8 +595,10 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
         fetchpriority="high"
         referrerPolicy="no-referrer"
         data-lcp
-        onLoad={onLoad as any}
-      />
+          onLoad={onLoad as any}
+          onError={() => setLoadError(true)}
+        />
+      )}
     </div>
   );
 };
@@ -817,6 +909,7 @@ export default function TravelDetails() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const [contentHeight, setContentHeight] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(0);
+  const [showMobileSectionTabs, setShowMobileSectionTabs] = useState(false);
   
   // ✅ АРХИТЕКТУРА: activeSection теперь управляется через useActiveSection
   
@@ -835,6 +928,22 @@ export default function TravelDetails() {
   const handleLayout = useCallback((e: any) => {
     setViewportHeight(e.nativeEvent.layout.height);
   }, []);
+
+  useEffect(() => {
+    if (!isMobile) {
+      if (showMobileSectionTabs) setShowMobileSectionTabs(false);
+      return;
+    }
+
+    const threshold = 140;
+    const id = scrollY.addListener(({ value }) => {
+      const next = value > threshold;
+      setShowMobileSectionTabs((prev) => (prev === next ? prev : next));
+    });
+    return () => {
+      scrollY.removeListener(id);
+    };
+  }, [isMobile, scrollY, showMobileSectionTabs]);
 
   // ✅ АРХИТЕКТУРА: Intersection Observer логика теперь в useActiveSection
   // Остается только логика установки data-section-key атрибутов
@@ -1079,76 +1188,40 @@ export default function TravelDetails() {
           {!isMobile && <View style={{ width: menuWidthNum }} />}
 
           {/* ✅ РЕДИЗАЙН: Адаптивное боковое меню */}
-          <Defer when={deferAllowed}>
-            <Animated.View
-              testID="travel-details-side-menu"
-              style={[
-                styles.sideMenuBase,
-                sideMenuPlatformStyles,
-                {
-                  transform: [{ translateX: animatedX }],
-                  width: menuWidth as any,
-                  zIndex: 1000,
-                },
-              ]}
-            >
-              <Suspense fallback={<SectionSkeleton lines={8} />}>
-                <CompactSideBarTravel
-                  travel={travel}
-                  isSuperuser={isSuperuser}
-                  storedUserId={userId}
-                  isMobile={isMobile}
-                  refs={anchors}
-                  links={sectionLinks}
-                  closeMenu={closeMenu}
-                  onNavigate={scrollToWithMenuClose}
-                  activeSection={activeSection}
-                />
-              </Suspense>
-            </Animated.View>
-          </Defer>
+          {!isMobile && (
+            <Defer when={deferAllowed}>
+              <Animated.View
+                testID="travel-details-side-menu"
+                style={[
+                  styles.sideMenuBase,
+                  sideMenuPlatformStyles,
+                  {
+                    transform: [{ translateX: animatedX }],
+                    width: menuWidth as any,
+                    zIndex: 1000,
+                  },
+                ]}
+              >
+                <Suspense fallback={<SectionSkeleton lines={8} />}>
+                  <CompactSideBarTravel
+                    travel={travel}
+                    isSuperuser={isSuperuser}
+                    storedUserId={userId}
+                    isMobile={isMobile}
+                    refs={anchors}
+                    links={sectionLinks}
+                    closeMenu={closeMenu}
+                    onNavigate={scrollToWithMenuClose}
+                    activeSection={activeSection}
+                  />
+                </Suspense>
+              </Animated.View>
+            </Defer>
+          )}
 
           {/* ✅ РЕДИЗАЙН: Оптимизированная FAB кнопка (отступ от низа 80px)
               На мобильном скрываем FAB, когда открыто боковое меню, чтобы оно не перекрывалось. */}
-          {isMobile && !menuOpen && (
-            <Defer when={deferAllowed}>
-              <>
-                {showFabHint && (
-                  <Pressable
-                    onPress={dismissFabHint}
-                    style={[
-                      styles.fabHintBubble,
-                      { top: Math.max(16, fabTop - 64) },
-                      Platform.OS === "web" && styles.fabHintBubbleWeb,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Подсказка: меню разделов"
-                  >
-                    <Text style={styles.fabHintTitle}>Меню разделов</Text>
-                    <Text style={styles.fabHintText}>Нажмите, чтобы увидеть содержание страницы</Text>
-                  </Pressable>
-                )}
-
-                <TouchableOpacity
-                  testID="travel-details-fab"
-                  onPress={handleFabPress}
-                  style={[
-                    styles.fab,
-                    { top: fabTop },
-                    Platform.OS === "web" && styles.fabWeb,
-                  ]}
-                  hitSlop={16}
-                  accessibilityRole="button"
-                  accessibilityLabel="Открыть меню разделов"
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.fabInner}>
-                    <Icon name={menuOpen ? "close" : "menu"} size={26} color={DESIGN_TOKENS.colors.surface} />
-                  </View>
-                </TouchableOpacity>
-              </>
-            </Defer>
-          )}
+          {false}
 
           {/* Прогресс-бар чтения */}
           {contentHeight > viewportHeight && (
@@ -1193,7 +1266,7 @@ export default function TravelDetails() {
                     onFirstImageLoad={() => setLcpLoaded(true)}
                   />
 
-                  {isMobile && sectionLinks.length > 0 && (
+                  {isMobile && showMobileSectionTabs && sectionLinks.length > 0 && (
                     <View style={styles.sectionTabsContainer}>
                       <TravelSectionTabs
                         links={sectionLinks}
@@ -1218,6 +1291,7 @@ export default function TravelDetails() {
                         relatedTravels={relatedTravels}
                         setRelatedTravels={setRelatedTravels}
                       />
+                      <TravelEngagementSection travel={travel} isMobile={isMobile} />
                     </ProgressiveWrapper>
                   </Defer>
                 </SList>
@@ -1305,7 +1379,7 @@ const TravelDeferredSections: React.FC<{
         setRelatedTravels={setRelatedTravels}
       />
 
-      <TravelEngagementSection travel={travel} />
+      <TravelEngagementSection travel={travel} isMobile={isMobile} />
     </>
   );
 };
@@ -1415,16 +1489,27 @@ const TravelHeroSection: React.FC<{
         <QuickFacts travel={travel} />
       </View>
 
-      <View
-        testID="travel-details-author"
-        style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
-      >
-        <Text style={styles.sectionHeaderText}>Автор</Text>
-        <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
-        <View style={{ marginTop: 12 }}>
-          <AuthorCard travel={travel} />
+      {isMobile && (
+        <View
+          testID="travel-details-primary-actions"
+          style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
+        >
+          <ShareButtons travel={travel} />
         </View>
-      </View>
+      )}
+
+      {!isMobile && (
+        <View
+          testID="travel-details-author"
+          style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
+        >
+          <Text style={styles.sectionHeaderText}>Автор</Text>
+          <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
+          <View style={{ marginTop: 12 }}>
+            <AuthorCard travel={travel} />
+          </View>
+        </View>
+      )}
     </>
   );
 };
@@ -1822,15 +1907,30 @@ const TravelRelatedContent: React.FC<{
   </>
 );
 
-const TravelEngagementSection: React.FC<{ travel: Travel }> = ({ travel }) => (
+const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boolean }> = ({ travel, isMobile }) => (
   <>
     <View testID="travel-details-telegram" style={[styles.sectionContainer, styles.authorCardContainer]}>
       <TelegramDiscussionSection travel={travel} />
     </View>
 
-    <View testID="travel-details-share" style={[styles.sectionContainer, styles.shareButtonsContainer]}>
-      <ShareButtons travel={travel} />
-    </View>
+    {!isMobile && (
+      <View testID="travel-details-share" style={[styles.sectionContainer, styles.shareButtonsContainer]}>
+        <ShareButtons travel={travel} />
+      </View>
+    )}
+
+    {isMobile && (
+      <View
+        testID="travel-details-author"
+        style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
+      >
+        <Text style={styles.sectionHeaderText}>Автор</Text>
+        <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
+        <View style={{ marginTop: 12 }}>
+          <AuthorCard travel={travel} />
+        </View>
+      </View>
+    )}
 
     <View testID="travel-details-cta" style={[styles.sectionContainer, styles.ctaContainer]}>
       <CTASection travel={travel} />

@@ -479,7 +479,7 @@ export const fetchTravelBySlug = async (slug: string): Promise<Travel> => {
     try {
         const authHeaders = await buildAuthHeaders();
         const res = await fetchWithTimeout(
-            `${GET_TRAVELS_BY_SLUG}/${slug}`,
+            `${GET_TRAVELS_BY_SLUG}/${slug}/`,
             authHeaders ? { headers: authHeaders } : {},
             DEFAULT_TIMEOUT,
         );

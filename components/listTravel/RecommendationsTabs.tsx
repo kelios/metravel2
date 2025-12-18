@@ -24,6 +24,7 @@ import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 import { TAB_CARD_TEMPLATE } from './recommendationsCardTemplate';
@@ -78,19 +79,28 @@ const AuthGate = ({ message, onLogin }: { message: string; onLogin: () => void }
 
 /* ---------------- Skeletons ---------------- */
 
-const CardSkeleton = () => (
-  <View style={styles.skeletonCard}>
-    <View style={styles.skeletonImage} />
-    <View style={styles.skeletonContent}>
-      <View style={[styles.skeletonLine, { width: '80%' }]} />
-      <View style={[styles.skeletonLine, { width: '60%', marginTop: 8 }]} />
+const CardSkeleton = () => {
+  const imageHeight = (TAB_CARD_TEMPLATE.imageContainer as any)?.height ?? 136;
+  const contentPaddingV = (TAB_CARD_TEMPLATE.content as any)?.paddingVertical ?? 12;
+  const contentPaddingH = (TAB_CARD_TEMPLATE.content as any)?.paddingHorizontal ?? 12;
+
+  return (
+    <View style={styles.skeletonCard}>
+      <SkeletonLoader width="100%" height={imageHeight} borderRadius={0} style={styles.skeletonImage} />
+      <View style={[styles.skeletonContent, { paddingVertical: contentPaddingV, paddingHorizontal: contentPaddingH }]}>
+        <SkeletonLoader width="80%" height={14} borderRadius={6} style={styles.skeletonLine} />
+        <SkeletonLoader width="60%" height={14} borderRadius={6} style={[styles.skeletonLine, { marginTop: 8 }]} />
+        <View style={styles.skeletonMetaRow}>
+          <SkeletonLoader width={72} height={12} borderRadius={6} />
+        </View>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const RecommendationsPlaceholder = () => (
   <View style={styles.placeholderContainer}>
-    <View style={[styles.skeletonLine, { width: 160, height: 20, marginBottom: 12 }]} />
+    <SkeletonLoader width={160} height={20} borderRadius={8} style={{ marginBottom: 12 }} />
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
       {[1, 2, 3, 4].map((i) => (
         <CardSkeleton key={i} />
@@ -649,18 +659,43 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   skeletonImage: {
-    height: TAB_CARD_TEMPLATE.imageContainer.height || 136,
-    backgroundColor: '#eee',
+    height: (TAB_CARD_TEMPLATE.imageContainer as any).height || 136,
+    backgroundColor: '#f3f4f6',
   },
   skeletonContent: {
-    padding: 12,
+    padding: (TAB_CARD_TEMPLATE.content as any).padding || 12,
   },
   skeletonLine: {
-    height: 12,
-    backgroundColor: '#eee',
-    borderRadius: 6,
+    height: 14,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 7,
   },
-
+  skeletonMetaRow: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#999',
+  },
+  errorContainer: {
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorText: {
+    marginTop: 12,
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+  },
   horizontalList: {
     marginBottom: 8,
   },
@@ -733,28 +768,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: DESIGN_TOKENS.colors.danger,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  emptyText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#999',
-  },
-  errorContainer: {
-    padding: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorText: {
-    marginTop: 12,
-    fontSize: 15,
-    color: '#666',
-    textAlign: 'center',
   },
 });
 

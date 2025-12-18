@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useMemo, useState, useCallback } from "react"
 import {
   ScrollView,
   StyleSheet,
@@ -6,10 +6,13 @@ import {
   Pressable,
   Text,
   Platform,
+  Modal,
+  useWindowDimensions,
 } from "react-native"
 import { MaterialIcons } from "@expo/vector-icons"
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { METRICS } from "@/constants/layout"
 
 interface TravelSectionTabsProps {
   links: TravelSectionLink[]
@@ -26,6 +29,28 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
 }) => {
   if (!links.length) return null
 
+  const { width } = useWindowDimensions()
+  const isMobile = width <= METRICS.breakpoints.tablet
+  const [moreOpen, setMoreOpen] = useState(false)
+
+  const { visibleLinks, overflowLinks } = useMemo(() => {
+    if (!isMobile) return { visibleLinks: links, overflowLinks: [] as TravelSectionLink[] }
+    const maxVisible = 6
+    if (links.length <= maxVisible) return { visibleLinks: links, overflowLinks: [] as TravelSectionLink[] }
+    return {
+      visibleLinks: links.slice(0, maxVisible - 1),
+      overflowLinks: links.slice(maxVisible - 1),
+    }
+  }, [isMobile, links])
+
+  const handleNavigate = useCallback(
+    (key: string) => {
+      setMoreOpen(false)
+      onNavigate(key)
+    },
+    [onNavigate]
+  )
+
   const stickyStyles =
     Platform.OS === "web" && typeof stickyOffset === "number"
       ? ({ position: "sticky", top: stickyOffset, zIndex: DESIGN_TOKENS.zIndex.sticky } as const)
@@ -38,12 +63,12 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.tabsContent}
       >
-        {links.map(({ key, icon, label }) => {
+        {visibleLinks.map(({ key, icon, label }) => {
           const isActive = key === activeSection
           return (
             <Pressable
               key={key}
-              onPress={() => onNavigate(key)}
+              onPress={() => handleNavigate(key)}
               style={({ pressed }) => [
                 styles.tab,
                 isActive && styles.tabActive,
@@ -70,7 +95,77 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
             </Pressable>
           )
         })}
+
+        {overflowLinks.length > 0 && (
+          <Pressable
+            key="more"
+            onPress={() => setMoreOpen(true)}
+            style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Еще разделы"
+          >
+            <MaterialIcons
+              name={"more-horiz" as any}
+              size={Platform.select({ default: 16, web: 18 })}
+              color="#2f332e"
+            />
+            <Text style={styles.tabLabel} numberOfLines={1}>
+              Еще
+            </Text>
+          </Pressable>
+        )}
       </ScrollView>
+
+      {overflowLinks.length > 0 && (
+        <Modal
+          visible={moreOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setMoreOpen(false)}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setMoreOpen(false)}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Разделы</Text>
+                <Pressable
+                  onPress={() => setMoreOpen(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Закрыть"
+                  style={styles.modalCloseBtn}
+                >
+                  <MaterialIcons name={"close" as any} size={20} color="#1f2937" />
+                </Pressable>
+              </View>
+              {overflowLinks.map(({ key, icon, label }) => {
+                const isActive = key === activeSection
+                return (
+                  <Pressable
+                    key={key}
+                    onPress={() => handleNavigate(key)}
+                    style={({ pressed }) => [
+                      styles.modalItem,
+                      isActive && styles.modalItemActive,
+                      pressed && styles.modalItemPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={label}
+                    accessibilityState={{ selected: isActive }}
+                  >
+                    <MaterialIcons
+                      name={icon as any}
+                      size={18}
+                      color={isActive ? "#1f2937" : "#2f332e"}
+                    />
+                    <Text style={[styles.modalItemText, isActive && styles.modalItemTextActive]} numberOfLines={1}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                )
+              })}
+            </View>
+          </Pressable>
+        </Modal>
+      )}
     </View>
   )
 }
@@ -136,5 +231,57 @@ const styles = StyleSheet.create({
   tabLabelActive: {
     color: "#1f2937", // ✅ УЛУЧШЕНИЕ: Нейтральный темно-серый
     fontWeight: "700",
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.28)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 12,
+    maxHeight: "70%" as any,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 4,
+    paddingBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1f2937",
+  },
+  modalCloseBtn: {
+    padding: 8,
+    borderRadius: 999,
+  },
+  modalItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  modalItemActive: {
+    backgroundColor: "rgba(0, 0, 0, 0.06)",
+  },
+  modalItemPressed: {
+    opacity: 0.9,
+  },
+  modalItemText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2f332e",
+    flex: 1,
+  },
+  modalItemTextActive: {
+    color: "#1f2937",
   },
 })

@@ -124,20 +124,52 @@ function AccountMenu() {
     >
       {!isAuthenticated ? (
         <>
-          <Menu.Item onPress={() => handleNavigate('/login')} title="Войти" leadingIcon="login" />
-          <Menu.Item onPress={() => handleNavigate('/registration')} title="Зарегистрироваться" leadingIcon="account-plus" />
-          <Divider />
-          <Menu.Item onPress={() => handleNavigate('/privacy')} title="Политика конфиденциальности" leadingIcon="shield" />
-          <Menu.Item onPress={() => handleNavigate('/cookies')} title="Настройки cookies" leadingIcon="cookie" />
+          <Menu.Item
+            onPress={() => handleNavigate('/login')}
+            title="Войти"
+            leadingIcon={({ size }) => <Icon name="login" size={size} color={styles.iconMuted.color} />}
+            style={styles.menuItem}
+            titleStyle={styles.menuItemTitle}
+          />
+          <Menu.Item
+            onPress={() => handleNavigate('/registration')}
+            title="Зарегистрироваться"
+            leadingIcon={({ size }) => <Icon name="account-plus" size={size} color={styles.iconMuted.color} />}
+            style={styles.menuItem}
+            titleStyle={styles.menuItemTitle}
+          />
+
+          <View style={styles.sectionDivider} />
+          <Text style={styles.sectionTitle}>Документы</Text>
+
+          <Menu.Item
+            onPress={() => handleNavigate('/privacy')}
+            title="Политика конфиденциальности"
+            leadingIcon={({ size }) => <Icon name="shield" size={size} color={styles.iconMuted.color} />}
+            style={styles.menuItem}
+            titleStyle={styles.menuItemTitle}
+          />
+          <Menu.Item
+            onPress={() => handleNavigate('/cookies')}
+            title="Настройки cookies"
+            leadingIcon={({ size }) => <Icon name="cookie" size={size} color={styles.iconMuted.color} />}
+            style={styles.menuItem}
+            titleStyle={styles.menuItemTitle}
+          />
         </>
       ) : (
         <>
           <Menu.Item
             onPress={() => handleNavigate('/profile')}
             title={`Личный кабинет${favorites.length > 0 ? ` (${favorites.length})` : ''}`}
-            leadingIcon={({ size }) => <Icon name="account-circle" size={size} color="#6b8e7f" />}
+            leadingIcon={({ size }) => <Icon name="account-circle" size={size} color={styles.iconPrimary.color} />}
+            style={styles.menuItem}
+            titleStyle={styles.menuItemTitleStrong}
           />
-          <Divider />
+
+          <View style={styles.sectionDivider} />
+          <Text style={styles.sectionTitle}>Путешествия</Text>
+
           <Menu.Item
             onPress={() =>
               handleNavigate('/metravel', () => {
@@ -146,42 +178,59 @@ function AccountMenu() {
               })
             }
             title="Мои путешествия"
-            leadingIcon={({ size }) => <Icon name="earth" size={size} color="#6aaaaa" />}
+            leadingIcon={({ size }) => <Icon name="earth" size={size} color={styles.iconMuted.color} />}
+            style={styles.menuItem}
+            titleStyle={styles.menuItemTitle}
           />
-          <Divider />
           <Menu.Item
             onPress={() => handleNavigate('/travel/new')}
-            title="Добавить путешествие"
-            leadingIcon={({ size }) => <Icon name="map-plus" size={size} color="#6aaaaa" />}
+            title="Поделиться путешествием"
+            leadingIcon={({ size }) => <Icon name="share-variant" size={size} color={styles.iconPrimary.color} />}
+            style={styles.menuItemPrimary}
+            titleStyle={styles.menuItemTitlePrimary}
           />
-          <Divider />
+
+          <View style={styles.sectionDivider} />
+          <Text style={styles.sectionTitle}>Аккаунт</Text>
+
           <Menu.Item
             onPress={() => handleNavigate('/export')}
             title="Экспорт в PDF"
             leadingIcon={({ size }) => <Icon name="file-pdf-box" size={size} color="#b83a3a" />}
+            style={styles.menuItem}
+            titleStyle={styles.menuItemTitle}
           />
-          <Divider />
           <Menu.Item
             onPress={handleOpenPublicProfile}
             title="Публичный профиль"
-            leadingIcon={({ size }) => <Icon name="account" size={size} color="#667085" />}
+            leadingIcon={({ size }) => <Icon name="account" size={size} color={styles.iconMuted.color} />}
+            style={styles.menuItem}
+            titleStyle={styles.menuItemTitle}
           />
-          <Divider />
           <Menu.Item
             onPress={handleLogout}
             title="Выход"
-            leadingIcon={({ size }) => <Icon name="logout" size={size} color="#6aaaaa" />}
+            leadingIcon={({ size }) => <Icon name="logout" size={size} color={styles.iconMuted.color} />}
+            style={styles.menuItem}
+            titleStyle={styles.menuItemTitle}
           />
-          <Divider />
+
+          <View style={styles.sectionDivider} />
+          <Text style={styles.sectionTitle}>Документы</Text>
+
           <Menu.Item
             onPress={() => handleNavigate('/privacy')}
             title="Политика конфиденциальности"
-            leadingIcon={({ size }) => <Icon name="shield" size={size} color="#667085" />}
+            leadingIcon={({ size }) => <Icon name="shield" size={size} color={styles.iconMuted.color} />}
+            style={styles.menuItem}
+            titleStyle={styles.menuItemTitle}
           />
           <Menu.Item
             onPress={() => handleNavigate('/cookies')}
             title="Настройки cookies"
-            leadingIcon={({ size }) => <Icon name="cookie" size={size} color="#667085" />}
+            leadingIcon={({ size }) => <Icon name="cookie" size={size} color={styles.iconMuted.color} />}
+            style={styles.menuItem}
+            titleStyle={styles.menuItemTitle}
           />
         </>
       )}
@@ -251,17 +300,73 @@ const styles = StyleSheet.create({
   },
   menuContent: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingVertical: 4,
-    elevation: 5,
-    minWidth: 220,
-    borderColor: '#e0e0e0',
+    borderRadius: 16,
+    paddingVertical: 8,
+    minWidth: 280,
+    borderColor: 'rgba(17, 24, 39, 0.10)',
     borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    ...(Platform.OS === 'web' ? { marginTop: METRICS.spacing.xs } : null),
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 22,
+    elevation: 8,
+    ...(Platform.OS === 'web'
+      ? ({
+          marginTop: METRICS.spacing.xs,
+          // @ts-ignore
+          boxShadow: '0 18px 40px rgba(17, 24, 39, 0.16), 0 6px 14px rgba(17, 24, 39, 0.10)' as any,
+        } as any)
+      : null),
+  },
+  sectionTitle: {
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 6,
+    fontSize: 12,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: '#667085',
+    fontWeight: '600',
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: 'rgba(17, 24, 39, 0.08)',
+    marginVertical: 6,
+    marginHorizontal: 12,
+  },
+  menuItem: {
+    borderRadius: 12,
+    marginHorizontal: 8,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  menuItemPrimary: {
+    borderRadius: 12,
+    marginHorizontal: 8,
+    minHeight: 44,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(93, 140, 124, 0.14)',
+  },
+  menuItemTitle: {
+    fontSize: 16,
+    color: '#101828',
+    fontWeight: '500',
+  },
+  menuItemTitleStrong: {
+    fontSize: 16,
+    color: '#101828',
+    fontWeight: '600',
+  },
+  menuItemTitlePrimary: {
+    fontSize: 16,
+    color: '#2f5e50',
+    fontWeight: '700',
+  },
+  iconMuted: {
+    color: '#667085',
+  },
+  iconPrimary: {
+    color: '#2f5e50',
   },
 });
 

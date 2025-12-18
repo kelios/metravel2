@@ -177,6 +177,12 @@ const NAV_BTN_OFFSET = 16;
 const MOBILE_HEIGHT_PERCENT = 0.7;
 const GLASS_BORDER = "rgba(255,255,255,0.35)";
 
+const appendCacheBust = (uri: string, token: number) => {
+  if (!token) return uri;
+  const sep = uri.includes("?") ? "&" : "?";
+  return `${uri}${sep}retry=${token}`;
+};
+
 const buildUri = (img: SliderImage, containerWidth?: number, containerHeight?: number, isFirst: boolean = false) => {
   const versionedUrl = buildVersionedImageUrl(img.url, img.updated_at, img.id);
 
@@ -283,11 +289,13 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   const [loadStatuses, setLoadStatuses] = useState<LoadStatus[]>(() =>
     images.map(() => "loading")
   );
+  const [retryTokens, setRetryTokens] = useState<number[]>(() => images.map(() => 0));
   const [showSwipeHint, setShowSwipeHint] = useState(images.length > 1);
   const [prefetchEnabled, setPrefetchEnabled] = useState(Platform.OS !== "web");
 
   useEffect(() => {
     setLoadStatuses(images.map(() => "loading"));
+    setRetryTokens(images.map(() => 0));
     setShowSwipeHint(images.length > 1);
     setPrefetchEnabled(Platform.OS !== "web");
   }, [images]);
@@ -300,6 +308,24 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
       return next;
     });
   }, []);
+
+  const retryImage = useCallback(
+    (idx: number) => {
+      setRetryTokens((prev) => {
+        const next = [...prev];
+        next[idx] = (next[idx] ?? 0) + 1;
+        return next;
+      });
+      updateLoadStatus(idx, "loading");
+      if (idx === 0) {
+        onFirstImageLoad?.();
+        if (!prefetchEnabled) {
+          setPrefetchEnabled(true);
+        }
+      }
+    },
+    [onFirstImageLoad, prefetchEnabled, updateLoadStatus]
+  );
   const dismissSwipeHint = useCallback(() => setShowSwipeHint(false), []);
   useEffect(() => {
     if (!showSwipeHint) return;
@@ -331,8 +357,17 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   // ✅ УЛУЧШЕНИЕ: Оптимизированные URL изображений с учетом размеров контейнера
   // Теперь computeHeight доступен, так как определен выше
   const uriMap = useMemo(
-    () => images.map((img, idx) => buildUri(img, containerW, containerH ?? computeHeight(containerW), idx === 0)),
-    [images, containerW, containerH, computeHeight]
+    () =>
+      images.map((img, idx) => {
+        const base = buildUri(
+          img,
+          containerW,
+          containerH ?? computeHeight(containerW),
+          idx === 0
+        );
+        return appendCacheBust(base, retryTokens[idx] ?? 0);
+      }),
+    [images, containerW, containerH, computeHeight, retryTokens]
   );
 
   // начальная высота по AR, потом обновляется при layout
@@ -588,6 +623,16 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
                   <Text style={styles.placeholderSubtitle}>
                     Проверьте подключение или попробуйте позже
                   </Text>
+                  <TouchableOpacity
+                    onPress={() => retryImage(index)}
+                    style={styles.retryBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Повторить загрузку фото"
+                    hitSlop={10}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.retryBtnText}>Повторить</Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <ExpoImage
@@ -901,6 +946,23 @@ const styles = StyleSheet.create<Record<string, any>>({
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     marginTop: 4,
     textAlign: "center",
+  },
+  retryBtn: {
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: "#0f172a",
+    ...Platform.select({
+      web: {
+        cursor: "pointer",
+      },
+    }),
+  },
+  retryBtnText: {
+    color: "#ffffff",
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: "600",
   },
   loadingOverlay: {
     position: "absolute",
