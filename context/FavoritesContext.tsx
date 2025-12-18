@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -11,9 +11,9 @@ import {
     fetchUserRecommendedTravels,
 } from '@/src/api/user';
 import { markTravelAsFavorite, unmarkTravelAsFavorite } from '@/src/api/travelsFavorites';
-import { safeJsonParseString } from '@/src/utils/safeJsonParse';
 import { devError } from '@/src/utils/logger';
 import { getStorageBatch } from '@/src/utils/storageBatch';
+import { safeJsonParseString } from '@/src/utils/safeJsonParse';
 import { cleanupInvalidFavorites, isValidFavoriteId } from '@/src/utils/favoritesCleanup';
 
 const FAVORITES_KEY = 'metravel_favorites';
@@ -48,22 +48,32 @@ export type ViewHistoryItem = {
 interface FavoritesContextType {
     favorites: FavoriteItem[];
     viewHistory: ViewHistoryItem[];
+    recommended: FavoriteItem[];
+    isFavorite: (id: number | string, type: FavoriteItem['type']) => boolean;
     addFavorite: (item: Omit<FavoriteItem, 'addedAt'>) => Promise<void>;
-    removeFavorite: (id: string | number, type: 'travel' | 'article') => Promise<void>;
-    isFavorite: (id: string | number, type: 'travel' | 'article') => boolean;
+    removeFavorite: (id: number | string, type?: FavoriteItem['type']) => Promise<void>;
     addToHistory: (item: Omit<ViewHistoryItem, 'viewedAt'>) => Promise<void>;
-    clearFavorites: () => Promise<void>;
-    clearHistory: () => Promise<void>;
+    clearHistory?: () => Promise<void>;
+    clearFavorites?: () => Promise<void>;
     getRecommendations: () => FavoriteItem[];
+    ensureServerData?: (kind: 'favorites' | 'history' | 'recommendations' | 'all') => Promise<void>;
 }
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
-export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { userId, isAuthenticated } = useAuth();
+export const FavoritesProvider = ({ children }: { children: React.ReactNode }) => {
+    const { isAuthenticated, userId } = useAuth();
     const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
     const [viewHistory, setViewHistory] = useState<ViewHistoryItem[]>([]);
     const [recommended, setRecommended] = useState<FavoriteItem[]>([]);
+
+    const fetchedRef = useRef({
+        favorites: false,
+        history: false,
+        recommendations: false,
+        all: false,
+        userId: null as string | null,
+    });
 
     const saveFavorites = useCallback(
         async (newFavorites: FavoriteItem[]) => {
@@ -188,88 +198,143 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
         }
     }, [isAuthenticated, userId]);
 
-    const refreshFromServer = useCallback(async () => {
-        if (!isAuthenticated || !userId) {
-            return;
-        }
+    const refreshFromServer = useCallback(
+        async (kind: 'favorites' | 'history' | 'recommendations' | 'all' = 'all') => {
+            if (!isAuthenticated || !userId) {
+                return;
+            }
 
-        try {
-            const [favDto, historyDto, recDto] = await Promise.all([
-                fetchUserFavoriteTravels(userId),
-                fetchUserHistory(userId),
-                fetchUserRecommendedTravels(userId),
-            ]);
+            try {
+                const needAll = kind === 'all';
+                const needFavorites = needAll || kind === 'favorites';
+                const needHistory = needAll || kind === 'history';
+                const needRecommendations = needAll || kind === 'recommendations';
 
-            const favArr = Array.isArray(favDto) ? favDto : [];
-            const historyArr = Array.isArray(historyDto) ? historyDto : [];
-            const recArr = Array.isArray(recDto) ? recDto : [];
+                const [favDto, historyDto, recDto] = await Promise.all([
+                    needFavorites ? fetchUserFavoriteTravels(userId) : Promise.resolve(null),
+                    needHistory ? fetchUserHistory(userId) : Promise.resolve(null),
+                    needRecommendations ? fetchUserRecommendedTravels(userId) : Promise.resolve(null),
+                ]);
 
-            const userFavorites: FavoriteItem[] = favArr.map((t) => ({
-                id: t.id,
-                type: 'travel',
-                title: t.name || 'Без названия',
-                url: t.url || `/travels/${t.slug || t.id}`,
-                imageUrl: t.travel_image_thumb_url,
-                addedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
-                country: t.countryName,
-            }));
+                const favoritesKey = userId ? `${SERVER_FAVORITES_CACHE_KEY}_${userId}` : SERVER_FAVORITES_CACHE_KEY;
+                const historyKey = userId ? `${SERVER_HISTORY_CACHE_KEY}_${userId}` : SERVER_HISTORY_CACHE_KEY;
+                const recommendationsKey =
+                    userId ? `${SERVER_RECOMMENDATIONS_CACHE_KEY}_${userId}` : SERVER_RECOMMENDATIONS_CACHE_KEY;
 
-            const userHistory: ViewHistoryItem[] = historyArr.map((t) => ({
-                id: t.id,
-                type: 'travel',
-                title: t.name || 'Без названия',
-                url: t.url || `/travels/${t.slug || t.id}`,
-                imageUrl: t.travel_image_thumb_url,
-                viewedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
-                country: t.countryName,
-            }));
+                if (needFavorites) {
+                    const favArr = Array.isArray(favDto) ? favDto : [];
+                    const userFavorites: FavoriteItem[] = favArr.map((t) => ({
+                        id: t.id,
+                        type: 'travel',
+                        title: t.name || 'Без названия',
+                        url: t.url || `/travels/${t.slug || t.id}`,
+                        imageUrl: t.travel_image_thumb_url,
+                        addedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
+                        country: t.countryName,
+                    }));
 
-            const userRecommended: FavoriteItem[] = recArr.map((t) => ({
-                id: t.id,
-                type: 'travel',
-                title: t.name || 'Без названия',
-                url: t.url || `/travels/${t.slug || t.id}`,
-                imageUrl: t.travel_image_thumb_url,
-                addedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
-                country: t.countryName,
-            }));
+                    setFavorites((prev) => {
+                        if (userFavorites.length === 0 && prev.length > 0) return prev;
+                        return userFavorites;
+                    });
+                    await AsyncStorage.setItem(favoritesKey, JSON.stringify(userFavorites));
+                }
 
-            setFavorites((prev) => {
-                if (userFavorites.length === 0 && prev.length > 0) return prev;
-                return userFavorites;
-            });
-            setViewHistory((prev) => {
-                if (userHistory.length === 0 && prev.length > 0) return prev;
-                return userHistory;
-            });
-            setRecommended((prev) => {
-                if (userRecommended.length === 0 && prev.length > 0) return prev;
-                return userRecommended;
-            });
+                if (needHistory) {
+                    const historyArr = Array.isArray(historyDto) ? historyDto : [];
+                    const userHistory: ViewHistoryItem[] = historyArr.map((t) => ({
+                        id: t.id,
+                        type: 'travel',
+                        title: t.name || 'Без названия',
+                        url: t.url || `/travels/${t.slug || t.id}`,
+                        imageUrl: t.travel_image_thumb_url,
+                        viewedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
+                        country: t.countryName,
+                    }));
 
-            const favoritesKey = userId ? `${SERVER_FAVORITES_CACHE_KEY}_${userId}` : SERVER_FAVORITES_CACHE_KEY;
-            const historyKey = userId ? `${SERVER_HISTORY_CACHE_KEY}_${userId}` : SERVER_HISTORY_CACHE_KEY;
-            const recommendationsKey = userId ? `${SERVER_RECOMMENDATIONS_CACHE_KEY}_${userId}` : SERVER_RECOMMENDATIONS_CACHE_KEY;
+                    setViewHistory((prev) => {
+                        if (userHistory.length === 0 && prev.length > 0) return prev;
+                        return userHistory;
+                    });
+                    await AsyncStorage.setItem(historyKey, JSON.stringify(userHistory));
+                }
 
-            await AsyncStorage.setItem(favoritesKey, JSON.stringify(userFavorites));
-            await AsyncStorage.setItem(historyKey, JSON.stringify(userHistory));
-            await AsyncStorage.setItem(recommendationsKey, JSON.stringify(userRecommended));
-        } catch (error) {
-            devError('Ошибка обновления данных с сервера:', error);
-        }
-    }, [isAuthenticated, userId]);
+                if (needRecommendations) {
+                    const recArr = Array.isArray(recDto) ? recDto : [];
+                    const userRecommended: FavoriteItem[] = recArr.map((t) => ({
+                        id: t.id,
+                        type: 'travel',
+                        title: t.name || 'Без названия',
+                        url: t.url || `/travels/${t.slug || t.id}`,
+                        imageUrl: t.travel_image_thumb_url,
+                        addedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
+                        country: t.countryName,
+                    }));
+
+                    setRecommended((prev) => {
+                        if (userRecommended.length === 0 && prev.length > 0) return prev;
+                        return userRecommended;
+                    });
+                    await AsyncStorage.setItem(recommendationsKey, JSON.stringify(userRecommended));
+                }
+            } catch (error) {
+                devError('Ошибка обновления данных с сервера:', error);
+            }
+        },
+        [isAuthenticated, userId]
+    );
+
+    const ensureServerData = useCallback(
+        async (kind: 'favorites' | 'history' | 'recommendations' | 'all') => {
+            if (!isAuthenticated || !userId) {
+                return;
+            }
+
+            if (fetchedRef.current.userId !== userId) {
+                fetchedRef.current = {
+                    favorites: false,
+                    history: false,
+                    recommendations: false,
+                    all: false,
+                    userId,
+                };
+            }
+
+            if (kind === 'all') {
+                if (fetchedRef.current.all) return;
+                fetchedRef.current.all = true;
+                fetchedRef.current.favorites = true;
+                fetchedRef.current.history = true;
+                fetchedRef.current.recommendations = true;
+                await refreshFromServer('all');
+                return;
+            }
+
+            if (fetchedRef.current[kind]) return;
+            fetchedRef.current[kind] = true;
+            await refreshFromServer(kind);
+        },
+        [isAuthenticated, refreshFromServer, userId]
+    );
 
     useEffect(() => {
         if (isAuthenticated && userId) {
             loadServerCached();
-            const timeout = setTimeout(() => {
-                refreshFromServer();
-            }, 0);
-            return () => clearTimeout(timeout);
+            fetchedRef.current.userId = userId;
+            fetchedRef.current.all = false;
+            fetchedRef.current.favorites = false;
+            fetchedRef.current.history = false;
+            fetchedRef.current.recommendations = false;
+            return;
         }
 
+        fetchedRef.current.userId = null;
+        fetchedRef.current.all = false;
+        fetchedRef.current.favorites = false;
+        fetchedRef.current.history = false;
+        fetchedRef.current.recommendations = false;
         loadFavoritesAndHistory();
-    }, [isAuthenticated, userId, loadFavoritesAndHistory, loadServerCached, refreshFromServer]);
+    }, [isAuthenticated, loadFavoritesAndHistory, loadServerCached, userId]);
 
     const addFavorite = useCallback(async (item: Omit<FavoriteItem, 'addedAt'>) => {
         if (isAuthenticated && userId && item.type === 'travel') {
@@ -286,7 +351,8 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
             setFavorites((prev) => [...prev, optimistic]);
             try {
                 await markTravelAsFavorite(item.id);
-                await refreshFromServer();
+                await refreshFromServer('favorites');
+                fetchedRef.current.favorites = true;
             } catch (error) {
                 setFavorites((prev) => prev.filter((f) => !(f.id === item.id && f.type === item.type)));
                 throw error;
@@ -333,15 +399,18 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
             }
             throw error;
         }
-    }, [favorites, userId, isAuthenticated, refreshFromServer]);
+    }, [favorites, isAuthenticated, refreshFromServer, userId]);
 
-    const removeFavorite = useCallback(async (id: string | number, type: 'travel' | 'article') => {
-        if (isAuthenticated && userId && type === 'travel') {
+    const removeFavorite = useCallback(async (id: number | string, type: FavoriteItem['type'] = 'travel') => {
+        if (isAuthenticated && userId) {
             const before = favorites;
             setFavorites((prev) => prev.filter((f) => !(f.id === id && f.type === type)));
             try {
-                await unmarkTravelAsFavorite(id);
-                await refreshFromServer();
+                if (type === 'travel') {
+                    await unmarkTravelAsFavorite(id);
+                }
+                await refreshFromServer('favorites');
+                fetchedRef.current.favorites = true;
             } catch (error) {
                 setFavorites(before);
                 throw error;
@@ -373,11 +442,14 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
             console.error('Ошибка удаления из избранного:', error);
             throw error;
         }
-    }, [favorites, userId, isAuthenticated, refreshFromServer]);
+    }, [favorites, isAuthenticated, refreshFromServer, userId]);
 
-    const isFavorite = useCallback((id: string | number, type: 'travel' | 'article') => {
-        return favorites.some(f => f.id === id && f.type === type);
-    }, [favorites]);
+    const isFavorite = useCallback(
+        (id: number | string, type: FavoriteItem['type']) => {
+            return favorites.some((f) => f.id === id && f.type === type);
+        },
+        [favorites]
+    );
 
     const addToHistory = useCallback(async (item: Omit<ViewHistoryItem, 'viewedAt'>) => {
         if (isAuthenticated && userId) {
@@ -448,13 +520,15 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
             value={{
                 favorites,
                 viewHistory,
+                recommended,
+                isFavorite,
                 addFavorite,
                 removeFavorite,
-                isFavorite,
                 addToHistory,
-                clearFavorites,
                 clearHistory,
+                clearFavorites,
                 getRecommendations,
+                ensureServerData,
             }}
         >
             {children}

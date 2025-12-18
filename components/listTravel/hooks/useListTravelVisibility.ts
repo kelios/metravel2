@@ -41,8 +41,26 @@ export function useListTravelVisibility({
   onToggleWeeklyHighlights,
 }: UseListTravelVisibilityProps): UseListTravelVisibilityReturn {
   // Внутреннее состояние видимости (если не передано извне)
-  const [internalPersonalizationVisible, setInternalPersonalizationVisible] = useState(true);
-  const [internalWeeklyHighlightsVisible, setInternalWeeklyHighlightsVisible] = useState(true);
+  const [internalPersonalizationVisible, setInternalPersonalizationVisible] = useState(() => {
+    if (externalPersonalizationVisible !== undefined || externalWeeklyHighlightsVisible !== undefined) return true;
+    if (Platform.OS !== 'web') return true;
+    if (typeof window === 'undefined') return true;
+    try {
+      return sessionStorage.getItem(PERSONALIZATION_VISIBLE_KEY) !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [internalWeeklyHighlightsVisible, setInternalWeeklyHighlightsVisible] = useState(() => {
+    if (externalPersonalizationVisible !== undefined || externalWeeklyHighlightsVisible !== undefined) return true;
+    if (Platform.OS !== 'web') return true;
+    if (typeof window === 'undefined') return true;
+    try {
+      return sessionStorage.getItem(WEEKLY_HIGHLIGHTS_VISIBLE_KEY) !== 'false';
+    } catch {
+      return true;
+    }
+  });
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Используем внешнее состояние, если передано, иначе внутреннее
@@ -64,9 +82,10 @@ export function useListTravelVisibility({
     const loadVisibility = async () => {
       try {
         if (Platform.OS === 'web') {
+          // Values are initialized synchronously in useState; keep effect as a safety net.
           const personalizationVisible = sessionStorage.getItem(PERSONALIZATION_VISIBLE_KEY);
           const weeklyHighlightsVisible = sessionStorage.getItem(WEEKLY_HIGHLIGHTS_VISIBLE_KEY);
-          
+
           setInternalPersonalizationVisible(personalizationVisible !== 'false');
           setInternalWeeklyHighlightsVisible(weeklyHighlightsVisible !== 'false');
         } else {

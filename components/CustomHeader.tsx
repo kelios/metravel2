@@ -2,24 +2,17 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { View, StyleSheet, Platform, StatusBar, useWindowDimensions, Pressable, Text, Image, Modal, ScrollView } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import RenderRightMenu from './RenderRightMenu';
+import AccountMenu from './AccountMenu';
 import Breadcrumbs from './Breadcrumbs';
 import Logo from './Logo';
 import { useAuth } from '@/context/AuthContext';
+import { useFavorites } from '@/context/FavoritesContext';
+import { useFilters } from '@/providers/FiltersProvider';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { globalFocusStyles } from '@/styles/globalFocus'; 
-import { useUserProfileCached } from '@/src/hooks/useUserProfileCached';
-
-// Навигационные элементы для быстрого доступа
-const NAV_ITEMS = [
-    { path: '/', label: 'Путешествия', icon: 'home' },
-    { path: '/travelsby', label: 'Беларусь', icon: 'globe' },
-    { path: '/map', label: 'Карта', icon: 'map' },
-    { path: '/roulette', label: 'Случайный маршрут', icon: 'shuffle' },
-    { path: '/quests', label: 'Квесты', icon: 'flag' },
-];
+import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 
 const palette = DESIGN_TOKENS.colors;
 
@@ -28,13 +21,31 @@ export default function CustomHeader() {
     const router = useRouter();
     const { width } = useWindowDimensions();
     const effectiveWidth =
-        Platform.OS === 'web' && width === 0 && typeof window !== 'undefined'
-            ? window.innerWidth
+        Platform.OS === 'web' && width === 0
+            ? typeof window !== 'undefined'
+                ? window.innerWidth
+                : METRICS.breakpoints.tablet + 1
             : width;
     const isMobile = effectiveWidth <= METRICS.breakpoints.tablet;
     const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
-    const { isAuthenticated, username, logout, userId, profileRefreshToken } = useAuth();
+    const { isAuthenticated, username, logout, userAvatar, profileRefreshToken, userId } = useAuth();
+    const { favorites } = useFavorites();
+    const { updateFilters } = useFilters();
     const [avatarLoadError, setAvatarLoadError] = useState(false);
+
+    React.useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        if (!mobileMenuVisible) return;
+
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setMobileMenuVisible(false);
+            }
+        };
+
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [mobileMenuVisible]);
 
     const resolvedPathname =
         Platform.OS === 'web' && typeof window !== 'undefined'
@@ -44,14 +55,9 @@ export default function CustomHeader() {
     const breadcrumbsVisible = resolvedPathname !== '/' && resolvedPathname !== '/index' && !!resolvedPathname;
     const breadcrumbsReserved = breadcrumbsVisible;
 
-    const { profile } = useUserProfileCached(userId, {
-        enabled: isAuthenticated && !!userId,
-        cacheKeySuffix: profileRefreshToken,
-    });
-
     const avatarUri = useMemo(() => {
         if (avatarLoadError) return null;
-        const raw = String(profile?.avatar ?? '').trim();
+        const raw = String(userAvatar ?? '').trim();
         if (!raw) return null;
         const lower = raw.toLowerCase();
         if (lower === 'null' || lower === 'undefined') return null;
@@ -66,7 +72,11 @@ export default function CustomHeader() {
 
         const separator = normalized.includes('?') ? '&' : '?';
         return `${normalized}${separator}v=${profileRefreshToken}`;
-    }, [avatarLoadError, profile?.avatar, profileRefreshToken]);
+    }, [avatarLoadError, userAvatar, profileRefreshToken]);
+
+    React.useEffect(() => {
+        setAvatarLoadError(false);
+    }, [profileRefreshToken, userAvatar]);
 
     // Определяем активную страницу
     const activePath = useMemo(() => {
@@ -81,19 +91,28 @@ export default function CustomHeader() {
         setMobileMenuVisible(false);
     };
 
-    const handleUserAction = useCallback((path: string, extraAction?: () => void) => {
-        requestAnimationFrame(() => {
+    const handleUserAction = useCallback(
+        (path: string, extraAction?: () => void) => {
             extraAction?.();
             router.push(path as any);
             setMobileMenuVisible(false);
-        });
-    }, [router]);
+        },
+        [router]
+    );
 
     const handleLogout = useCallback(async () => {
         await logout();
         setMobileMenuVisible(false);
         router.push('/');
     }, [logout, router]);
+
+    const handleCreate = useCallback(() => {
+        if (!isAuthenticated) {
+            router.push('/login' as any);
+            return;
+        }
+        router.push('/travel/new' as any);
+    }, [isAuthenticated, router]);
 
     return (
       <View 
@@ -108,8 +127,14 @@ export default function CustomHeader() {
                   
                   {/* Навигация - в центре, показываем только на десктопе и планшетах */}
                   {!isMobile && (
-                      <View style={styles.navContainer}>
-                          {NAV_ITEMS.map((item) => {
+                      <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          contentContainerStyle={styles.navContainer}
+                          style={styles.navScroll}
+                          alwaysBounceHorizontal={false}
+                      >
+                          {PRIMARY_HEADER_NAV_ITEMS.map((item) => {
                               const isActive = activePath === item.path;
                               return (
                                   <Pressable
@@ -137,11 +162,26 @@ export default function CustomHeader() {
                                   </Pressable>
                               );
                           })}
-                      </View>
+                      </ScrollView>
                   )}
                   
                   {/* Элементы пользователя - справа */}
                   <View style={styles.rightSection}>
+                      {!isMobile && (
+                          <Pressable
+                              onPress={handleCreate}
+                              style={[styles.createButton, globalFocusStyles.focusable]}
+                              accessibilityRole="button"
+                              accessibilityLabel="Создать путешествие"
+                              testID="header-create"
+                          >
+                              <View style={styles.iconSlot18}>
+                                  <Feather name="plus" size={18} color={palette.surface} />
+                              </View>
+                              <Text style={styles.createLabel}>Создать</Text>
+                          </Pressable>
+                      )}
+
                       {/* Мобильное меню - кнопка (только на мобильных) */}
                       {isMobile ? (
                           <>
@@ -167,7 +207,16 @@ export default function CustomHeader() {
                                           {username}
                                       </Text>
                                   </Pressable>
-                              ) : null}
+                              ) : (
+                                  <View style={styles.mobileUserPillPlaceholder} pointerEvents="none">
+                                      <View style={styles.mobileUserAvatarContainer}>
+                                          <Icon name="account-circle" size={24} color="#333" />
+                                      </View>
+                                      <Text style={styles.mobileUserName} numberOfLines={1}>
+                                          {' '}
+                                      </Text>
+                                  </View>
+                              )}
 
                               <Pressable
                                   onPress={() => setMobileMenuVisible(true)}
@@ -185,7 +234,7 @@ export default function CustomHeader() {
                               </Pressable>
                           </>
                       ) : (
-                          <RenderRightMenu />
+                          <AccountMenu />
                       )}
                   </View>
               </View>
@@ -232,24 +281,142 @@ export default function CustomHeader() {
                     </Pressable>
                   </View>
                   <ScrollView style={styles.modalNavContainer}>
-                    {NAV_ITEMS.map((item) => {
-                      const isActive = activePath === item.path;
-                      return (
-                        <Pressable
-                          key={item.path}
-                          onPress={() => handleNavPress(item.path)}
-                          style={[styles.modalNavItem, isActive && styles.modalNavItemActive]}
-                          accessibilityRole="button"
-                          accessibilityLabel={item.label}
-                          accessibilityState={{ selected: isActive }}
-                        >
-                          <View style={styles.iconSlot20}>
-                            <Feather name={item.icon as any} size={20} color={isActive ? palette.primary : palette.textMuted} />
-                          </View>
-                          <Text style={[styles.modalNavLabel, isActive && styles.modalNavLabelActive]}>{item.label}</Text>
-                        </Pressable>
-                      );
+                    <Text style={styles.modalSectionTitle}>Навигация</Text>
+                    {PRIMARY_HEADER_NAV_ITEMS.map((item) => {
+                        const isActive = activePath === item.path;
+                        return (
+                            <Pressable
+                                key={item.path}
+                                onPress={() => handleNavPress(item.path)}
+                                style={[styles.modalNavItem, isActive && styles.modalNavItemActive]}
+                                accessibilityRole="button"
+                                accessibilityLabel={item.label}
+                                accessibilityState={{ selected: isActive }}
+                            >
+                                <View style={styles.iconSlot20}>
+                                    <Feather
+                                        name={item.icon as any}
+                                        size={20}
+                                        color={isActive ? palette.primary : palette.textMuted}
+                                    />
+                                </View>
+                                <Text style={[styles.modalNavLabel, isActive && styles.modalNavLabelActive]}>
+                                    {item.label}
+                                </Text>
+                            </Pressable>
+                        );
                     })}
+
+                    <View style={styles.modalDivider} />
+                    <Text style={styles.modalSectionTitle}>Аккаунт</Text>
+                    {!isAuthenticated ? (
+                        <>
+                            <Pressable
+                                onPress={() => handleUserAction('/login')}
+                                style={styles.modalNavItem}
+                                accessibilityRole="button"
+                                accessibilityLabel="Войти"
+                            >
+                                <View style={styles.iconSlot20}>
+                                    <Feather name="log-in" size={20} color={palette.textMuted} />
+                                </View>
+                                <Text style={styles.modalNavLabel}>Войти</Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={() => handleUserAction('/registration')}
+                                style={styles.modalNavItem}
+                                accessibilityRole="button"
+                                accessibilityLabel="Зарегистрироваться"
+                            >
+                                <View style={styles.iconSlot20}>
+                                    <Feather name="user-plus" size={20} color={palette.textMuted} />
+                                </View>
+                                <Text style={styles.modalNavLabel}>Зарегистрироваться</Text>
+                            </Pressable>
+                        </>
+                    ) : (
+                        <>
+                            <Pressable
+                                onPress={() => handleUserAction('/profile')}
+                                style={styles.modalNavItem}
+                                accessibilityRole="button"
+                                accessibilityLabel="Личный кабинет"
+                            >
+                                <View style={styles.iconSlot20}>
+                                    <Feather name="user" size={20} color={palette.textMuted} />
+                                </View>
+                                <Text style={styles.modalNavLabel}>
+                                    {`Личный кабинет${favorites.length > 0 ? ` (${favorites.length})` : ''}`}
+                                </Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={() =>
+                                    handleUserAction('/metravel', () => {
+                                        const numericUserId = userId ? Number(userId) : undefined;
+                                        updateFilters({ user_id: numericUserId });
+                                    })
+                                }
+                                style={styles.modalNavItem}
+                                accessibilityRole="button"
+                                accessibilityLabel="Мои путешествия"
+                            >
+                                <View style={styles.iconSlot20}>
+                                    <Feather name="map" size={20} color={palette.textMuted} />
+                                </View>
+                                <Text style={styles.modalNavLabel}>Мои путешествия</Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={handleCreate}
+                                style={styles.modalNavItem}
+                                accessibilityRole="button"
+                                accessibilityLabel="Добавить путешествие"
+                            >
+                                <View style={styles.iconSlot20}>
+                                    <Feather name="plus" size={20} color={palette.textMuted} />
+                                </View>
+                                <Text style={styles.modalNavLabel}>Добавить путешествие</Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={() => handleUserAction('/export')}
+                                style={styles.modalNavItem}
+                                accessibilityRole="button"
+                                accessibilityLabel="Экспорт в PDF"
+                            >
+                                <View style={styles.iconSlot20}>
+                                    <Feather name="file-text" size={20} color={palette.textMuted} />
+                                </View>
+                                <Text style={styles.modalNavLabel}>Экспорт в PDF</Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={handleLogout}
+                                style={styles.modalNavItem}
+                                accessibilityRole="button"
+                                accessibilityLabel="Выход"
+                            >
+                                <View style={styles.iconSlot20}>
+                                    <Feather name="log-out" size={20} color={palette.textMuted} />
+                                </View>
+                                <Text style={styles.modalNavLabel}>Выход</Text>
+                            </Pressable>
+                        </>
+                    )}
+
+                    <View style={styles.modalDivider} />
+                    <Text style={styles.modalSectionTitle}>Документы</Text>
+                    {DOCUMENT_NAV_ITEMS.map((item) => (
+                        <Pressable
+                            key={item.path}
+                            onPress={() => handleUserAction(item.path)}
+                            style={styles.modalNavItem}
+                            accessibilityRole="button"
+                            accessibilityLabel={item.label}
+                        >
+                            <View style={styles.iconSlot20}>
+                                <Feather name={item.icon as any} size={20} color={palette.textMuted} />
+                            </View>
+                            <Text style={styles.modalNavLabel}>{item.label}</Text>
+                        </Pressable>
+                    ))}
                   </ScrollView>
                 </Pressable>
               </Pressable>
@@ -341,9 +508,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        flex: 1,
+        paddingHorizontal: 8,
         justifyContent: 'center',
-        marginHorizontal: 16,
+    },
+    navScroll: {
+        flex: 1,
+        marginHorizontal: 12,
+        minHeight: 44,
     },
     iconSlot18: {
         width: 18,
@@ -382,6 +553,18 @@ const styles = StyleSheet.create({
         gap: 6,
         minHeight: 44,
     },
+    mobileUserPillPlaceholder: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f5f5f5',
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 20,
+        maxWidth: 180,
+        gap: 6,
+        minHeight: 44,
+        opacity: 0,
+    },
     mobileUserAvatarContainer: {
         width: 24,
         height: 24,
@@ -407,11 +590,10 @@ const styles = StyleSheet.create({
         borderRadius: DESIGN_TOKENS.radii.sm,
         gap: 8,
         backgroundColor: 'transparent',
-        // CLS FIX: Fixed width to prevent shifts during font/icon loading
-        width: 120,
         justifyContent: 'center',
         minHeight: 44,
         minWidth: 44,
+        flexShrink: 0,
         // Улучшенные hover-состояния с лучшей визуальной иерархией
         ...Platform.select({
             web: {
@@ -453,6 +635,23 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    createButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: palette.primary,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        gap: 8,
+        minHeight: 44,
+        minWidth: 44,
+    },
+    createLabel: {
+        color: palette.surface,
+        fontSize: 14,
+        fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
+        letterSpacing: -0.1,
+    },
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -484,6 +683,15 @@ const styles = StyleSheet.create({
     },
     modalNavContainer: {
         paddingVertical: 8,
+    },
+    modalSectionTitle: {
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        fontSize: 13,
+        color: palette.textMuted,
+        fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
+        textTransform: 'uppercase',
+        letterSpacing: 0.6,
     },
     modalNavItem: {
         flexDirection: 'row',

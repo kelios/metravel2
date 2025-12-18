@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import * as Location from 'expo-location';
+import 'leaflet/dist/leaflet.css';
 type LeafletNS = any;
 type ReactLeafletNS = typeof import('react-leaflet');
 // CSS загружается через CDN ниже в коде
@@ -415,6 +416,40 @@ const MapPageComponent: React.FC<Props> = ({
       mapRef.current = map;
     }, [map]);
 
+    useEffect(() => {
+      if (!map) return;
+
+      const invalidate = () => {
+        try {
+          map.invalidateSize?.(true);
+        } catch {
+          // noop
+        }
+      };
+
+      map.whenReady?.(() => {
+        invalidate();
+        requestAnimationFrame(invalidate);
+        setTimeout(invalidate, 50);
+        setTimeout(invalidate, 250);
+      });
+
+      const onResize = () => invalidate();
+      window.addEventListener('resize', onResize);
+
+      const container: HTMLElement | undefined = map.getContainer?.();
+      let ro: ResizeObserver | null = null;
+      if (container && typeof ResizeObserver !== 'undefined') {
+        ro = new ResizeObserver(() => invalidate());
+        ro.observe(container);
+      }
+
+      return () => {
+        window.removeEventListener('resize', onResize);
+        ro?.disconnect();
+      };
+    }, [map]);
+
     // Сохраняем текущую позицию карты при изменении (только в режиме route)
     useEffect(() => {
       if (!map || mode !== 'route') return;
@@ -583,9 +618,39 @@ const MapPageComponent: React.FC<Props> = ({
                 : (userLocation ? [userLocation.latitude, userLocation.longitude] : [coordinates.latitude, coordinates.longitude])
             }
             zoom={mode === 'route' ? 13 : (userLocation ? 11 : 13)}
-            style={styles.map}
+            // NOTE: react-leaflet expects a plain DOM style object.
+            // Passing a React Native StyleSheet value here can result in an invalid style
+            // (e.g. a numeric StyleSheet id), which makes the map container collapse.
+            // Also, relying on `flex: 1` for DOM nodes is fragile with React Native Web parents.
+            // Use absolute positioning to guarantee the map fills the wrapper.
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' } as any}
             zoomAnimation={false}
             markerZoomAnimation={false}
+            whenReady={(e: any) => {
+              const map = e?.target;
+              if (map) {
+                mapRef.current = map;
+                try {
+                  map.invalidateSize?.(true);
+                } catch {
+                  // noop
+                }
+                requestAnimationFrame(() => {
+                  try {
+                    map.invalidateSize?.(true);
+                  } catch {
+                    // noop
+                  }
+                });
+                setTimeout(() => {
+                  try {
+                    map.invalidateSize?.(true);
+                  } catch {
+                    // noop
+                  }
+                }, 300);
+              }
+            }}
         >
           <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -734,8 +799,16 @@ const Error: React.FC<{ message: string }> = ({ message }) => (
 );
 
 const styles = StyleSheet.create({
-  wrapper: { flex: 1, borderRadius: 16, overflow: 'hidden', backgroundColor: '#f5f5f5', position: 'relative' },
-  map: { width: '100%', height: '100%', minHeight: 300 },
+  wrapper: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#f5f5f5',
+    position: 'relative',
+  },
+  map: { flex: 1, width: '100%', height: '100%', minHeight: 300 },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   errorText: { color: '#d32f2f', textAlign: 'center' },
   myLocationButton: {

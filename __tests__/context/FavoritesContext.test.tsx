@@ -128,19 +128,6 @@ describe('FavoritesContext', () => {
       },
     ];
 
-    fetchUserFavoriteTravels.mockResolvedValueOnce([
-      {
-        id: 10,
-        name: 'Cached Travel',
-        url: '/travels/10',
-        slug: '10',
-        countryName: 'Test Country',
-        travel_image_thumb_small_url: '',
-        travel_image_thumb_url: '',
-        updated_at: new Date().toISOString(),
-      },
-    ]);
-
     (AsyncStorage.multiGet as jest.Mock).mockResolvedValue([
       [serverFavoritesKey, JSON.stringify(cachedFavorites)],
       [serverHistoryKey, JSON.stringify([])],
@@ -160,6 +147,9 @@ describe('FavoritesContext', () => {
     await waitFor(() => {
       expect(contextValue.favorites).toHaveLength(1);
     });
+
+    // Lazy fetching: should NOT hit backend just by mounting provider
+    expect(fetchUserFavoriteTravels).not.toHaveBeenCalled();
 
     await act(async () => {
       await contextValue.clearFavorites();

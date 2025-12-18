@@ -6,6 +6,7 @@ import EmptyState from '@/components/EmptyState';
 import { TravelCardSkeleton } from '@/components/SkeletonLoader';
 import MemoizedTravelItem from './TravelListItem';
 import type { Travel } from '@/src/types/types';
+import { TRAVEL_CARD_WEB_HEIGHT, TRAVEL_CARD_WEB_MOBILE_HEIGHT } from './utils/listTravelConstants';
 
 interface TravelContentProps {
   // Search props
@@ -111,6 +112,7 @@ const TravelContent: React.FC<TravelContentProps> = ({
                       flexBasis: 300,
                       minWidth: 300,
                       maxWidth: 360,
+                      minHeight: isMobile ? TRAVEL_CARD_WEB_MOBILE_HEIGHT : TRAVEL_CARD_WEB_HEIGHT,
                     },
                     default: {
                       width: '100%',
@@ -167,6 +169,7 @@ const TravelContent: React.FC<TravelContentProps> = ({
                       flexBasis: 300,
                       minWidth: 300,
                       maxWidth: 360,
+                      minHeight: isMobile ? TRAVEL_CARD_WEB_MOBILE_HEIGHT : TRAVEL_CARD_WEB_HEIGHT,
                     },
                     default: {
                       width: '100%',

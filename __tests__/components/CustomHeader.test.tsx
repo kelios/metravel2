@@ -7,8 +7,11 @@ import * as ReactNative from 'react-native';
 
 const mockAuthContext = {
     isAuthenticated: false,
-    user: null,
+    username: '',
     logout: jest.fn(),
+    userAvatar: null,
+    profileRefreshToken: 0,
+    userId: null,
 };
 
 const mockFavoritesContext = {
@@ -36,7 +39,7 @@ jest.mock('@/providers/FiltersProvider', () => ({
     useFilters: () => mockFiltersContext,
 }));
 
-jest.mock('../../components/RenderRightMenu', () => () => null);
+jest.mock('../../components/AccountMenu', () => () => null);
 jest.mock('../../components/Breadcrumbs', () => () => null);
 
 // Моки для expo-router
@@ -94,6 +97,7 @@ describe('CustomHeader', () => {
             expect(utils.getByText('Путешествия')).toBeTruthy();
             expect(utils.getByText('Беларусь')).toBeTruthy();
             expect(utils.getByText('Карта')).toBeTruthy();
+            expect(utils.getByText('Случайный маршрут')).toBeTruthy();
             expect(utils.getByText('Квесты')).toBeTruthy();
         });
 
@@ -115,6 +119,17 @@ describe('CustomHeader', () => {
             expect(mockPush).toHaveBeenCalledWith('/map');
         });
 
+        it('redirects guest to login when create is pressed', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            mockAuthContext.isAuthenticated = false;
+            const utils = renderHeader();
+
+            const createButton = utils.getByTestId('header-create');
+            fireEvent.press(createButton);
+
+            expect(mockPush).toHaveBeenCalledWith('/login');
+        });
+
         it('correctly identifies active path for nested routes', () => {
             (usePathname as jest.Mock).mockReturnValue('/travels/some-travel');
             const utils = renderHeader();
@@ -129,6 +144,56 @@ describe('CustomHeader', () => {
             
             const questsItem = utils.getByLabelText('Квесты');
             expect(questsItem.props.accessibilityState?.selected).toBe(true);
+        });
+
+        it('does not render mobile burger button on desktop', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const utils = renderHeader();
+            expect(utils.queryByTestId('mobile-menu-open')).toBeNull();
+        });
+    });
+
+    describe('Mobile menu modal', () => {
+        beforeEach(() => {
+            dimensionsSpy.mockReturnValue({ width: 390, height: 844, scale: 1, fontScale: 1 } as ReactNative.ScaledSize);
+        });
+
+        it('opens and closes mobile menu modal', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const utils = renderHeader();
+
+            const open = utils.getByTestId('mobile-menu-open');
+            fireEvent.press(open);
+            expect(utils.getByTestId('mobile-menu-panel')).toBeTruthy();
+
+            const close = utils.getByTestId('mobile-menu-close');
+            fireEvent.press(close);
+            expect(utils.queryByTestId('mobile-menu-panel')).toBeNull();
+        });
+
+        it('closes when overlay is pressed', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const utils = renderHeader();
+
+            fireEvent.press(utils.getByTestId('mobile-menu-open'));
+            expect(utils.getByTestId('mobile-menu-panel')).toBeTruthy();
+
+            fireEvent.press(utils.getByTestId('mobile-menu-overlay'));
+            expect(utils.queryByTestId('mobile-menu-panel')).toBeNull();
+        });
+
+        it('shows navigation and documents sections in mobile modal', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const utils = renderHeader();
+
+            fireEvent.press(utils.getByTestId('mobile-menu-open'));
+
+            expect(utils.getByText('Навигация')).toBeTruthy();
+            expect(utils.getByText('Аккаунт')).toBeTruthy();
+            expect(utils.getByText('Документы')).toBeTruthy();
+
+            expect(utils.getByText('Политика конфиденциальности')).toBeTruthy();
+            expect(utils.getByText('Настройки cookies')).toBeTruthy();
         });
     });
 });

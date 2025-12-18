@@ -16,23 +16,31 @@ import {
   StatusBar,
 } from 'react-native';
 import { Title, Paragraph } from 'react-native-paper';
-import { usePathname } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import InstantSEO from '@/components/seo/InstantSEO';
 import { sendFeedback } from '@/src/api/misc';
 import { useIsFocused } from '@react-navigation/native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { FontAwesome5 } from '@expo/vector-icons';
 
 const EMAIL = 'metraveldev@gmail.com';
 const MAIL_SUBJECT = 'Info metravel.by';
 const MAIL_BODY = 'Добрый день!';
 const YT_URL = 'https://www.youtube.com/watch?v=K0oV4Y-i8hY';
 const YT_THUMB = 'https://img.youtube.com/vi/K0oV4Y-i8hY/hqdefault.jpg';
+const SOCIAL_LINKS = {
+  instagram: 'https://www.instagram.com/metravelby/',
+  tiktok: 'https://www.tiktok.com/@metravel.by',
+  youtube: 'https://www.youtube.com/@metravelby',
+};
 
 function AboutAndContactScreen() {
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
+
+  const router = useRouter();
 
   const pathname = usePathname();
   const isFocused = useIsFocused();
@@ -223,6 +231,59 @@ function AboutAndContactScreen() {
                           <Text style={styles.emailIcon}>✉</Text>
                           <Text style={styles.emailText}>{EMAIL}</Text>
                         </Pressable>
+
+                        <View style={styles.linksBlock}>
+                          <View style={styles.socialRow}>
+                            <Pressable
+                              onPress={() => openUrl(SOCIAL_LINKS.tiktok)}
+                              accessibilityRole="link"
+                              accessibilityLabel="MeTravel в TikTok"
+                              hitSlop={8}
+                              style={({ pressed }) => [styles.iconLink, pressed && styles.iconLinkPressed, globalFocusStyles.focusable]}
+                            >
+                              <FontAwesome5 name="tiktok" size={18} color={DESIGN_TOKENS.colors.primary} />
+                            </Pressable>
+                            <Pressable
+                              onPress={() => openUrl(SOCIAL_LINKS.instagram)}
+                              accessibilityRole="link"
+                              accessibilityLabel="MeTravel в Instagram"
+                              hitSlop={8}
+                              style={({ pressed }) => [styles.iconLink, pressed && styles.iconLinkPressed, globalFocusStyles.focusable]}
+                            >
+                              <FontAwesome5 name="instagram" size={18} color={DESIGN_TOKENS.colors.primary} />
+                            </Pressable>
+                            <Pressable
+                              onPress={() => openUrl(SOCIAL_LINKS.youtube)}
+                              accessibilityRole="link"
+                              accessibilityLabel="MeTravel на YouTube"
+                              hitSlop={8}
+                              style={({ pressed }) => [styles.iconLink, pressed && styles.iconLinkPressed, globalFocusStyles.focusable]}
+                            >
+                              <FontAwesome5 name="youtube" size={18} color={DESIGN_TOKENS.colors.primary} />
+                            </Pressable>
+                          </View>
+
+                          <View style={styles.utilityLinksRow}>
+                            <Pressable
+                              onPress={() => router.push('/privacy' as any)}
+                              accessibilityRole="link"
+                              accessibilityLabel="Политика конфиденциальности"
+                              hitSlop={8}
+                              style={({ pressed }) => [styles.textLink, pressed && styles.textLinkPressed, globalFocusStyles.focusable]}
+                            >
+                              <Text style={styles.textLinkLabel}>Политика конфиденциальности</Text>
+                            </Pressable>
+                            <Pressable
+                              onPress={() => router.push('/cookies' as any)}
+                              accessibilityRole="link"
+                              accessibilityLabel="Настройки cookies"
+                              hitSlop={8}
+                              style={({ pressed }) => [styles.textLink, pressed && styles.textLinkPressed, globalFocusStyles.focusable]}
+                            >
+                              <Text style={styles.textLinkLabel}>Настройки cookies</Text>
+                            </Pressable>
+                          </View>
+                        </View>
                       </View>
                     </View>
 
@@ -759,6 +820,51 @@ const styles: any = StyleSheet.create({
   emailText: {
     fontSize: 16,
     color: DESIGN_TOKENS.colors.primary,
+    fontWeight: '600',
+  },
+  linksBlock: {
+    marginTop: 12,
+    gap: 10,
+  },
+  socialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  iconLink: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 159, 90, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 159, 90, 0.16)',
+  },
+  iconLinkPressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.98 }],
+  },
+  utilityLinksRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 10,
+  },
+  textLink: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+  },
+  textLinkPressed: {
+    opacity: 0.75,
+  },
+  textLinkLabel: {
+    fontSize: 13,
+    color: '#374151',
     fontWeight: '600',
   },
   videoCard: {

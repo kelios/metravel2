@@ -6,6 +6,7 @@ import AnimatedCard from "../AnimatedCard";
 import type { Travel } from "@/src/types/types";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { router } from 'expo-router';
+import { TRAVEL_CARD_WEB_HEIGHT, TRAVEL_CARD_WEB_MOBILE_HEIGHT } from './utils/listTravelConstants';
 
 const { spacing, radii, shadows } = DESIGN_TOKENS;
 
@@ -47,6 +48,15 @@ function RenderTravelItem({
 
     const { width } = useWindowDimensions();
 
+    const cardWidthNumber = useMemo(() => {
+        if (typeof cardWidth === 'number') return cardWidth;
+        if (typeof cardWidth === 'string') {
+            const v = Number(cardWidth);
+            return Number.isFinite(v) ? v : undefined;
+        }
+        return undefined;
+    }, [cardWidth]);
+
     const containerStyle = useMemo<ContainerStyle>(() => {
         const base: ContainerStyle = {
             borderRadius: radii.lg,
@@ -54,7 +64,10 @@ function RenderTravelItem({
             backgroundColor: 'white',
             // Platform-specific shadows
             ...(Platform.OS === 'web' 
-                ? { boxShadow: shadows.medium } as any
+                ? ({
+                    boxShadow: shadows.medium,
+                    minHeight: isMobile ? TRAVEL_CARD_WEB_MOBILE_HEIGHT : TRAVEL_CARD_WEB_HEIGHT,
+                  } as any)
                 : DESIGN_TOKENS.shadowsNative.medium
             ),
         };
@@ -113,7 +126,7 @@ function RenderTravelItem({
                 onToggle={onToggle}
                 isMobile={isMobile}
                 viewportWidth={width}
-                cardWidth={cardWidth}
+                cardWidth={cardWidthNumber}
             />
         </AnimatedCard>
     );

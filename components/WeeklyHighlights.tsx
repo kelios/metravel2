@@ -16,9 +16,10 @@ interface WeeklyHighlightsProps {
     forceVisible?: boolean;
     onVisibilityChange?: (visible: boolean) => void;
     showHeader?: boolean;
+    enabled?: boolean;
 }
 
-function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true }: WeeklyHighlightsProps) {
+function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true, enabled = true }: WeeklyHighlightsProps) {
     const router = useRouter();
     const { width } = useWindowDimensions();
     const isMobile = width <= METRICS.breakpoints.tablet;
@@ -91,6 +92,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true 
         queryKey: ['travelsOfMonth'],
         queryFn: fetchTravelsOfMonth,
         staleTime: 3600000, // 1 час
+        enabled,
     });
 
     // Фильтруем те, которые пользователь еще не видел

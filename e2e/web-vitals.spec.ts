@@ -8,7 +8,7 @@ type WebVitalsResult = {
   clsEntries: Array<{
     value: number;
     hadRecentInput: boolean;
-    sources: string[];
+    sources: any[];
   }>;
 };
 
@@ -94,17 +94,40 @@ test.describe('Web Vitals (CLS/LCP/INP)', () => {
           try {
             if (!node) return 'unknown';
             const el = node as Element;
-            const parts: string[] = [];
-            if ((el as any).tagName) parts.push(String((el as any).tagName).toLowerCase());
-            const testId = (el as any).getAttribute?.('data-testid');
-            if (testId) parts.push(`[data-testid="${testId}"]`);
-            const id = (el as any).id;
-            if (id) parts.push(`#${id}`);
-            const className = (el as any).className;
-            if (typeof className === 'string' && className.trim()) {
-              parts.push(`.${className.trim().split(/\s+/).slice(0, 3).join('.')}`);
+            const tag = (el as any).tagName ? String((el as any).tagName).toLowerCase() : 'unknown';
+            const testId = (el as any).getAttribute?.('data-testid') || '';
+            const id = (el as any).id || '';
+            const className = typeof (el as any).className === 'string' ? String((el as any).className) : '';
+
+            let text = '';
+            try {
+              const raw = (el as any).innerText || (el as any).textContent || '';
+              text = String(raw).replace(/\s+/g, ' ').trim().slice(0, 80);
+            } catch {
+              text = '';
             }
-            return parts.join('');
+
+            let rect: any = null;
+            try {
+              const r = (el as any).getBoundingClientRect?.();
+              if (r) rect = { x: r.x, y: r.y, w: r.width, h: r.height };
+            } catch {
+              rect = null;
+            }
+
+            const parts: string[] = [tag];
+            if (testId) parts.push(`[data-testid="${testId}"]`);
+            if (id) parts.push(`#${id}`);
+            if (className.trim()) parts.push(`.${className.trim().split(/\s+/).slice(0, 3).join('.')}`);
+
+            return {
+              label: parts.join(''),
+              testId,
+              id,
+              className: className.trim().split(/\s+/).slice(0, 6).join(' '),
+              text,
+              rect,
+            };
           } catch {
             return 'unknown';
           }
@@ -228,36 +251,67 @@ test.describe('Web Vitals (CLS/LCP/INP)', () => {
     await searchBox.click({ timeout: 15_000 });
     await searchBox.type('тест', { delay: 25 });
 
-    await page.waitForTimeout(500);
+  await page.waitForTimeout(500);
 
-    const vitals = await page.evaluate(() => {
-      const v = (window as any).__e2eVitals;
-      return {
-        clsTotal: typeof v?.clsTotal === 'number' ? v.clsTotal : 0,
-        clsAfterRender: typeof v?.clsAfterRender === 'number' ? v.clsAfterRender : 0,
-        lcp: typeof v?.lcp === 'number' ? v.lcp : null,
-        inp: typeof v?.inp === 'number' ? v.inp : null,
-        clsEntries: Array.isArray(v?._clsEntries) ? v._clsEntries : [],
-      } as WebVitalsResult;
-    });
-
-    // Helpful debug output in CI / local runs
-    // eslint-disable-next-line no-console
-    console.log('E2E Web Vitals:\n' + JSON.stringify(vitals, null, 2));
-
-    // Hard assertions (regression guards)
-    expect(vitals.clsAfterRender).toBeLessThanOrEqual(CLS_MAX);
-
-    // LCP can be null in some environments (e.g. if observer unsupported), but in Chromium it should exist.
-    expect(vitals.lcp).not.toBeNull();
-    if (vitals.lcp != null) {
-      expect(vitals.lcp).toBeLessThanOrEqual(LCP_MAX_MS);
-    }
-
-    // INP can be null if no event entries; after click it should generally exist.
-    expect(vitals.inp).not.toBeNull();
-    if (vitals.inp != null) {
-      expect(vitals.inp).toBeLessThanOrEqual(INP_MAX_MS);
-    }
+  const vitals = await page.evaluate(() => {
+    const v = (window as any).__e2eVitals;
+    return {
+      clsTotal: typeof v?.clsTotal === 'number' ? v.clsTotal : 0,
+      clsAfterRender: typeof v?.clsAfterRender === 'number' ? v.clsAfterRender : 0,
+      lcp: typeof v?.lcp === 'number' ? v.lcp : null,
+      inp: typeof v?.inp === 'number' ? v.inp : null,
+      clsEntries: Array.isArray(v?._clsEntries) ? v._clsEntries : [],
+    };
   });
+
+  const result: WebVitalsResult = {
+    clsTotal: vitals.clsTotal,
+    clsAfterRender: vitals.clsAfterRender,
+    lcp: vitals.lcp,
+    inp: vitals.inp,
+    clsEntries: vitals.clsEntries,
+  };
+
+  // eslint-disable-next-line no-console
+  console.log('E2E Web Vitals:');
+  // eslint-disable-next-line no-console
+  console.log(
+    JSON.stringify(
+      {
+        ...result,
+        clsEntries: (result.clsEntries || []).map((e) => ({
+          ...e,
+          sources: Array.isArray(e.sources)
+            ? e.sources.slice(0, 5).map((s: any) => {
+                if (typeof s === 'string') return s;
+                const label = String((s as any)?.label ?? 'unknown');
+                const rect = (s as any)?.rect;
+                const rectStr = rect
+                  ? ` @(${Number(rect.x).toFixed(0)},${Number(rect.y).toFixed(0)} ${Number(rect.w).toFixed(0)}x${Number(rect.h).toFixed(0)})`
+                  : '';
+                const text = (s as any)?.text ? ` "${String((s as any).text)}"` : '';
+                return `${label}${rectStr}${text}`;
+              })
+            : [],
+        })),
+      },
+      null,
+      2
+    )
+  );
+
+  // Assert CLS (post-render) stays low.
+  expect(result.clsAfterRender).toBeLessThanOrEqual(CLS_MAX);
+
+  if (result.lcp != null) {
+    expect(result.lcp).toBeLessThanOrEqual(LCP_MAX_MS);
+  }
+
+  // INP can be null if no event entries; after click it should generally exist.
+  expect(result.inp).not.toBeNull();
+  if (result.inp != null) {
+    expect(result.inp).toBeLessThanOrEqual(INP_MAX_MS);
+  }
+});
+
 });

@@ -177,17 +177,29 @@ const patchPrepareEsm = (src) => {
   }
   const fallback =
     "const hasTouchableProperty = typeof _hasTouchableProperty === 'function' ? _hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);";
-  const next = src
+  const rewritten = src
     .replace(
       /import\s+\{\s*hasTouchableProperty\s*,\s*parseTransformProp\s*\}\s+from\s+['\"]\.['\"];?/,
-      "import { hasTouchableProperty as _hasTouchableProperty, parseTransformProp } from '.';\n" + fallback
+      "import { hasTouchableProperty as _hasTouchableProperty, parseTransformProp } from '.';"
     )
     .replace(
       /import\s+\{\s*parseTransformProp\s*,\s*hasTouchableProperty\s*\}\s+from\s+['\"]\.['\"];?/,
-      "import { parseTransformProp, hasTouchableProperty as _hasTouchableProperty } from '.';\n" + fallback
+      "import { parseTransformProp, hasTouchableProperty as _hasTouchableProperty } from '.';"
     );
 
-  return next;
+  // IMPORTANT: never insert non-import code between imports in ESM.
+  // Insert the fallback *after* the last import statement.
+  const lastImportIdx = rewritten.lastIndexOf('import ');
+  if (lastImportIdx === -1) {
+    return rewritten;
+  }
+  const lastImportLineEnd = rewritten.indexOf('\n', lastImportIdx);
+  if (lastImportLineEnd === -1) {
+    return rewritten + "\n" + fallback + "\n";
+  }
+  const before = rewritten.slice(0, lastImportLineEnd + 1);
+  const after = rewritten.slice(lastImportLineEnd + 1);
+  return before + fallback + "\n" + after;
 };
 
 const patchPrepareCjs = (src) => {
@@ -213,17 +225,27 @@ const patchWebShapeEsm = (src) => {
   }
   const fallback =
     "const hasTouchableProperty = typeof _hasTouchableProperty === 'function' ? _hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);";
-  const next = src
+  const rewritten = src
     .replace(
       /import\s+\{\s*camelCaseToDashed\s*,\s*hasTouchableProperty\s*,\s*remeasure\s*\}\s+from\s+['\"]\.\/utils['\"];?/,
-      "import { camelCaseToDashed, hasTouchableProperty as _hasTouchableProperty, remeasure } from './utils';\n" + fallback
+      "import { camelCaseToDashed, hasTouchableProperty as _hasTouchableProperty, remeasure } from './utils';"
     )
     .replace(
       /import\s+\{\s*hasTouchableProperty\s*,\s*camelCaseToDashed\s*,\s*remeasure\s*\}\s+from\s+['\"]\.\/utils['\"];?/,
-      "import { hasTouchableProperty as _hasTouchableProperty, camelCaseToDashed, remeasure } from './utils';\n" + fallback
+      "import { hasTouchableProperty as _hasTouchableProperty, camelCaseToDashed, remeasure } from './utils';"
     );
 
-  return next;
+  const lastImportIdx = rewritten.lastIndexOf('import ');
+  if (lastImportIdx === -1) {
+    return rewritten;
+  }
+  const lastImportLineEnd = rewritten.indexOf('\n', lastImportIdx);
+  if (lastImportLineEnd === -1) {
+    return rewritten + "\n" + fallback + "\n";
+  }
+  const before = rewritten.slice(0, lastImportLineEnd + 1);
+  const after = rewritten.slice(lastImportLineEnd + 1);
+  return before + fallback + "\n" + after;
 };
 
 const patchWebShapeCjs = (src) => {

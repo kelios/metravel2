@@ -72,6 +72,7 @@ jest.mock('@/components/MapPage/TravelListPanel', () => {
 
 // Мокаем expo-location, чтобы не дёргать реальные разрешения
 jest.mock('expo-location', () => ({
+  Accuracy: { Balanced: 3 },
   requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
   getCurrentPositionAsync: jest.fn().mockResolvedValue({
     coords: { latitude: 53.9, longitude: 27.56 },
@@ -180,6 +181,11 @@ describe('MapScreen (map tab)', () => {
 
     const { getByText } = renderWithClient();
 
+    // Запрос на данные карты начинается только после получения геолокации
+    await waitFor(() => {
+      expect(mockFetchTravelsForMap).toHaveBeenCalled();
+    });
+
     // Переключаемся на вкладку "Список"
     const listTab = getByText('Список');
     fireEvent.press(listTab);
@@ -193,6 +199,11 @@ describe('MapScreen (map tab)', () => {
 
   it('shows correct travels count in list tab after data is loaded', async () => {
     const { getByText, getByTestId } = renderWithClient();
+
+    // Запрос на данные карты начинается только после получения геолокации
+    await waitFor(() => {
+      expect(mockFetchTravelsForMap).toHaveBeenCalled();
+    });
 
     // Переключаемся на вкладку "Список"
     const listTab = getByText('Список');

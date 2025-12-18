@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi } from '@/src/api/auth';
 import { getSecureItem, setSecureItem, removeSecureItems } from '@/src/utils/secureStorage';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/src/utils/storageBatch';
+import { fetchUserProfile } from '@/src/api/user';
 
 jest.mock('@react-native-async-storage/async-storage');
 jest.mock('@/src/api/auth', () => ({
@@ -24,6 +25,10 @@ jest.mock('@/src/utils/storageBatch', () => ({
   getStorageBatch: jest.fn(),
   setStorageBatch: jest.fn(),
   removeStorageBatch: jest.fn(),
+}));
+
+jest.mock('@/src/api/user', () => ({
+  fetchUserProfile: jest.fn(),
 }));
 
 const TestComponent: React.FC<{ onContext?: (ctx: any) => void }> = ({ onContext }) => {
@@ -92,6 +97,8 @@ describe('AuthContext', () => {
       expect(contextValue.username).toBe('John');
       expect(contextValue.isSuperuser).toBe(true);
     });
+
+    expect(fetchUserProfile).not.toHaveBeenCalled();
   });
 
   it('resets auth state on checkAuthentication error', async () => {
@@ -123,6 +130,18 @@ describe('AuthContext', () => {
       is_superuser: true,
     });
 
+    (fetchUserProfile as jest.Mock).mockResolvedValueOnce({
+      id: 78,
+      first_name: 'Юлия',
+      last_name: '',
+      youtube: '',
+      instagram: '',
+      twitter: '',
+      vk: '',
+      avatar: 'https://example.com/avatar.webp?X-Amz-Expires=3600',
+      user: 7,
+    });
+
     (getSecureItem as jest.Mock).mockResolvedValueOnce('token-123');
     (getStorageBatch as jest.Mock).mockResolvedValueOnce({
       userId: '7',
@@ -148,16 +167,45 @@ describe('AuthContext', () => {
     });
 
     expect(setSecureItem).toHaveBeenCalledWith('userToken', 'token-123');
+
+    expect(fetchUserProfile).toHaveBeenCalledWith('7');
     expect(setStorageBatch).toHaveBeenCalledWith([
       ['userId', '7'],
-      ['userName', 'User Name'],
+      ['userName', 'Юлия'],
       ['isSuperuser', 'true'],
+      ['userAvatar', 'https://example.com/avatar.webp?X-Amz-Expires=3600'],
     ]);
 
     expect(contextValue.isAuthenticated).toBe(true);
     expect(contextValue.userId).toBe('7');
-    expect(contextValue.username).toBe('User Name');
+    expect(contextValue.username).toBe('Юлия');
     expect(contextValue.isSuperuser).toBe(true);
+    expect(contextValue.userAvatar).toBe('https://example.com/avatar.webp?X-Amz-Expires=3600');
+  });
+
+  it('does not request profile on provider mount (only on login)', async () => {
+    (getSecureItem as jest.Mock).mockResolvedValueOnce('token-123');
+    (getStorageBatch as jest.Mock).mockResolvedValueOnce({
+      userId: '7',
+      userName: 'Юлия',
+      isSuperuser: 'false',
+      userAvatar: 'https://example.com/avatar.webp?X-Amz-Expires=3600',
+    });
+
+    let contextValue: any;
+
+    render(
+      <AuthProvider>
+        <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(contextValue.isAuthenticated).toBe(true);
+      expect(contextValue.username).toBe('Юлия');
+    });
+
+    expect(fetchUserProfile).not.toHaveBeenCalled();
   });
 
   it('login failure keeps unauthenticated', async () => {
@@ -214,7 +262,7 @@ describe('AuthContext', () => {
     });
 
     expect(removeSecureItems).toHaveBeenCalledWith(['userToken', 'refreshToken']);
-    expect(removeStorageBatch).toHaveBeenCalledWith(['userName', 'isSuperuser', 'userId']);
+    expect(removeStorageBatch).toHaveBeenCalledWith(['userName', 'isSuperuser', 'userId', 'userAvatar']);
     expect(contextValue.isAuthenticated).toBe(false);
     expect(contextValue.userId).toBeNull();
     expect(contextValue.username).toBe('');

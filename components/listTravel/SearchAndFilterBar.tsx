@@ -292,6 +292,7 @@ function SearchAndFilterBar({
                             onPress={onToggleRecommendations}
                             style={[
                                 styles.recommendationsToggle,
+                                isMobile && styles.recommendationsToggleMobile,
                                 isRecommendationsVisible && styles.recommendationsToggleActive,
                                 globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                             ]}
@@ -418,11 +419,14 @@ const styles = StyleSheet.create({
     },
     wrapMobile: { 
         paddingHorizontal: spacing.xs,
-        paddingVertical: spacing.xs,
+        paddingVertical: spacing.xxs,
         marginBottom: 0,
         marginTop: 0, 
         gap: spacing.xs,
         borderRadius: DESIGN_TOKENS.radii.md,
+        width: '34%',
+        maxWidth: 360,
+        alignSelf: 'center',
     },
     searchBox: {
         flex: 1,
@@ -472,9 +476,9 @@ const styles = StyleSheet.create({
         }),
     },
     searchBoxMobile: {
-        height: 52,
-        paddingHorizontal: 16,
-        gap: 8,
+        height: 44,
+        paddingHorizontal: 12,
+        gap: 6,
     },
     input: {
         flex: 1,
@@ -492,7 +496,7 @@ const styles = StyleSheet.create({
         }),
     },
     inputMobile: {
-        fontSize: 15,
+        fontSize: 14,
         paddingVertical: 1,
         lineHeight: 20,
     },
@@ -664,6 +668,14 @@ const styles = StyleSheet.create({
                 },
             },
         }),
+    },
+    recommendationsToggleMobile: {
+        width: 40,
+        height: 40,
+        minWidth: 40,
+        minHeight: 40,
+        borderRadius: 12,
+        borderWidth: 1,
     },
     recommendationsToggleActive: {
         backgroundColor: palette.primarySoft,

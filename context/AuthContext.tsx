@@ -3,17 +3,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi,} from '@/src/api/auth';
 import { setSecureItem, getSecureItem, removeSecureItems } from '@/src/utils/secureStorage';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/src/utils/storageBatch';
+import { fetchUserProfile } from '@/src/api/user';
 
 interface AuthContextType {
     isAuthenticated: boolean;
     username: string;
     isSuperuser: boolean;
     userId: string | null;
+    userAvatar: string | null;
     profileRefreshToken: number;
     setIsAuthenticated: (isAuthenticated: boolean) => void;
     setUsername: (username: string) => void;
     setIsSuperuser: (isSuperuser: boolean) => void;
     setUserId: (id: string | null) => void;
+    setUserAvatar: (avatar: string | null) => void;
     triggerProfileRefresh: () => void;
     logout: () => Promise<void>;
     login: (email: string, password: string) => Promise<boolean>;
@@ -33,7 +36,16 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     const [username, setUsername] = useState('');
     const [isSuperuser, setIsSuperuser] = useState(false);
     const [userId, setUserId] = useState<string | null>(null);
+    const [userAvatar, setUserAvatar] = useState<string | null>(null);
     const [profileRefreshToken, setProfileRefreshToken] = useState(0);
+
+    const normalizeAvatar = (value: unknown): string | null => {
+        const raw = String(value ?? '').trim();
+        if (!raw) return null;
+        const lower = raw.toLowerCase();
+        if (lower === 'null' || lower === 'undefined') return null;
+        return raw;
+    };
 
     // При первой загрузке проверяем данные аутентификации
     useEffect(() => {
@@ -47,7 +59,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
             // ✅ FIX-004: Используем батчинг для остальных данных
             const [token, storageData] = await Promise.all([
                 getSecureItem('userToken'),
-                getStorageBatch(['userId', 'userName', 'isSuperuser']),
+                getStorageBatch(['userId', 'userName', 'isSuperuser', 'userAvatar']),
             ]);
 
             // Если токена нет, считаем пользователя полностью разлогиненным,
@@ -57,6 +69,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
                 setUserId(null);
                 setUsername('');
                 setIsSuperuser(false);
+                setUserAvatar(null);
                 return;
             }
 
@@ -64,6 +77,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
             setUserId(storageData.userId);
             setUsername(storageData.userName || '');
             setIsSuperuser(storageData.isSuperuser === 'true');
+            setUserAvatar(normalizeAvatar(storageData.userAvatar));
         } catch (error) {
             // ✅ ИСПРАВЛЕНИЕ: Логируем ошибку и сбрасываем состояние при ошибке
             if (__DEV__) {
@@ -74,6 +88,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
             setUserId(null);
             setUsername('');
             setIsSuperuser(false);
+            setUserAvatar(null);
         }
     };
 
@@ -81,21 +96,42 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
         try {
             const userData = await loginApi(email, password);
             if (userData) {
-                // ✅ FIX-001: Токен сохраняем в безопасное хранилище
+                // Save token first so apiClient will include Authorization header for profile fetch.
+                await setSecureItem('userToken', userData.token);
+
+                let profile: any = null;
+                try {
+                    profile = await fetchUserProfile(String(userData.id));
+                } catch (e) {
+                    if (__DEV__) {
+                        console.warn('Не удалось загрузить профиль пользователя:', e);
+                    }
+                }
+
+                const normalizedFirstName = String(profile?.first_name ?? '').trim();
+                const displayName = normalizedFirstName || userData.name?.trim() || userData.email;
+                const avatar = normalizeAvatar(profile?.avatar);
+
                 // ✅ FIX-004: Используем батчинг для остальных данных
-                await Promise.all([
-                    setSecureItem('userToken', userData.token),
-                    setStorageBatch([
-                        ['userId', String(userData.id)],
-                        ['userName', userData.name?.trim() || userData.email],
-                        ['isSuperuser', userData.is_superuser ? 'true' : 'false'],
-                    ]),
-                ]);
+                const items: Array<[string, string]> = [
+                    ['userId', String(userData.id)],
+                    ['userName', displayName],
+                    ['isSuperuser', userData.is_superuser ? 'true' : 'false'],
+                ];
+                if (avatar) {
+                    items.push(['userAvatar', avatar]);
+                }
+
+                await setStorageBatch(items);
+                if (!avatar) {
+                    await removeStorageBatch(['userAvatar']);
+                }
 
                 setIsAuthenticated(true);
                 setUserId(String(userData.id));
-                setUsername(userData.name?.trim() || userData.email);
+                setUsername(displayName);
                 setIsSuperuser(userData.is_superuser);
+                setUserAvatar(avatar);
 
                 return true;
             }
@@ -110,25 +146,25 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     };
 
     const logout = async () => {
+        // IMPORTANT: clear in-memory auth state immediately to prevent any
+        // authenticated actions during an in-flight logoutApi request.
+        setIsAuthenticated(false);
+        setUserId(null);
+        setUsername('');
+        setIsSuperuser(false);
+        setUserAvatar(null);
+
         try {
-            // Всегда удаляем локальные данные, даже если api не сработал
             await logoutApi();
         } catch (e) {
-            // ✅ ИСПРАВЛЕНИЕ: Логируем только в dev режиме
             if (__DEV__) {
                 console.warn('Ошибка при логауте с сервера:', e);
             }
         } finally {
-            // ✅ FIX-001: Удаляем токен из безопасного хранилища
-            // ✅ FIX-004: Используем батчинг для удаления остальных данных
             await Promise.all([
                 removeSecureItems(['userToken', 'refreshToken']),
-                removeStorageBatch(['userName', 'isSuperuser', 'userId']),
+                removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar']),
             ]);
-            setIsAuthenticated(false);
-            setUserId(null);
-            setUsername('');
-            setIsSuperuser(false);
         }
     };
 
@@ -166,11 +202,13 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
                 username,
                 isSuperuser,
                 userId,
+                userAvatar,
                 profileRefreshToken,
                 setIsAuthenticated,
                 setUsername,
                 setIsSuperuser,
                 setUserId,
+                setUserAvatar,
                 triggerProfileRefresh,
                 login,
                 logout,

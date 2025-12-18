@@ -59,7 +59,9 @@ function StickySearchBar({
   activeFiltersCount,
 }: StickySearchBarProps) {
   const { width } = useWindowDimensions();
-  const isMobileByWindow = width < METRICS.breakpoints.tablet;
+  const effectiveWidth =
+    Platform.OS === 'web' && width === 0 && typeof window !== 'undefined' ? window.innerWidth : width;
+  const isMobileByWindow = effectiveWidth < METRICS.breakpoints.tablet;
   const isCompactByAvailableWidth =
     typeof availableWidth === 'number' && availableWidth > 0
       ? availableWidth < 860
@@ -90,8 +92,21 @@ function StickySearchBar({
   }, []);
 
   return (
-    <View style={[styles.container, isFocused && styles.containerFocused]}>
-      <View style={[styles.inner, isMobile && Platform.OS === 'web' ? { maxWidth: '100%', marginLeft: 0, marginRight: 0 } : null]}>
+    <View
+      style={[
+        styles.container,
+        isMobile && Platform.OS === 'web' ? styles.containerMobileWeb : null,
+        isFocused && styles.containerFocused,
+      ]}
+    >
+      <View
+        style={[
+          styles.inner,
+          isMobile && Platform.OS === 'web'
+            ? ({ width: '34%', maxWidth: 360, alignSelf: 'center', marginLeft: 0, marginRight: 0 } as any)
+            : null,
+        ]}
+      >
         <View style={[styles.contentRow, isMobile && styles.contentRowMobile]}>
           <View
             style={[
@@ -164,31 +179,6 @@ function StickySearchBar({
             </View>
           )}
 
-          {primaryAction && !isMobile && (
-            <Pressable
-              onPress={primaryAction.onPress}
-              style={styles.primaryActionButton}
-              accessibilityRole="button"
-              accessibilityLabel={primaryAction.accessibilityLabel ?? primaryAction.label}
-            >
-              <Feather name="plus" size={18} color={palette.primary} />
-              <Text style={styles.primaryActionText}>{primaryAction.label}</Text>
-            </Pressable>
-          )}
-
-          {/* Создать (mobile): иконка + в одну строку с остальными действиями */}
-          {primaryAction && isMobile && (
-            <Pressable
-              testID="create-button"
-              onPress={primaryAction.onPress}
-              style={styles.actionButton}
-              accessibilityLabel={primaryAction.accessibilityLabel ?? primaryAction.label}
-              accessibilityRole="button"
-            >
-              <Feather name="plus" size={16} color={palette.primary} />
-            </Pressable>
-          )}
-
           {/* Рекомендации */}
           {onToggleRecommendations && (
             <Pressable
@@ -196,6 +186,7 @@ function StickySearchBar({
               onPress={onToggleRecommendations}
               style={[
                 styles.actionButton,
+                isMobile && Platform.OS === 'web' ? styles.actionButtonMobileWeb : null,
                 isRecommendationsVisible && styles.actionButtonActive,
               ]}
               accessibilityLabel={isRecommendationsVisible ? "Скрыть рекомендации" : "Показать рекомендации"}
@@ -216,6 +207,7 @@ function StickySearchBar({
               onPress={onFiltersPress}
               style={[
                 styles.actionButton,
+                isMobile && Platform.OS === 'web' ? styles.actionButtonMobileWeb : null,
                 hasActiveFilters && styles.actionButtonActive,
               ]}
               accessibilityLabel="Открыть фильтры"
@@ -276,6 +268,11 @@ const styles = StyleSheet.create({
         boxShadow: 'none',
       },
     }),
+  },
+  containerMobileWeb: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    minHeight: 0,
   },
   inner: {
     width: '100%',
@@ -434,6 +431,11 @@ const styles = StyleSheet.create({
         },
       },
     }),
+  },
+  actionButtonMobileWeb: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
   },
   actionButtonActive: {
     backgroundColor: palette.primarySoft,

@@ -138,7 +138,7 @@ function RootLayoutNav() {
         ? width === 0
           ? typeof window !== 'undefined'
             ? window.innerWidth
-            : DESIGN_TOKENS.breakpoints.mobile
+            : 0
           : width
         : width;
     const isMobile = Platform.OS !== "web" ? true : effectiveWidth < DESIGN_TOKENS.breakpoints.mobile;
@@ -162,6 +162,8 @@ function RootLayoutNav() {
     const defaultTitle = "MeTravel — путешествия и маршруты";
     const defaultDescription = "Маршруты, места и впечатления от путешественников.";
 
+    const WEB_FOOTER_RESERVE_HEIGHT = 72;
+
     /** === динамическая высота ДОКА футера (только иконки) === */
     const [dockHeight, setDockHeight] = useState(0);
     
@@ -178,9 +180,11 @@ function RootLayoutNav() {
     const BottomGutter = () => {
       if (!showFooter || !isMobile) return null;
 
+      if (isWeb) return null;
+
       // On web mobile the footer dock is position: fixed and can overlap content.
       // Reserve deterministic space to avoid layout shifts caused by late measurement.
-      const webFixed = 80;
+      const webFixed = 64;
       const h = isWeb ? webFixed : dockHeight;
 
       if (h <= 0) return null;
@@ -286,7 +290,7 @@ function RootLayoutNav() {
                             {/* ✅ FIX-005: Индикатор статуса сети */}
                             <NetworkStatus position="top" />
 
-                            <View style={styles.content}>
+                            <View style={[styles.content, isWeb ? ({ paddingBottom: WEB_FOOTER_RESERVE_HEIGHT } as any) : null]}>
                                 <Stack screenOptions={{ headerShown: false }}>
                                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                                 </Stack>
@@ -298,8 +302,8 @@ function RootLayoutNav() {
                             {/* Баннер согласия с компактным интерфейсом (web only) */}
                             <ConsentBanner />
 
-                            {showFooter && (
-                              <View style={styles.footerWrapper}>
+                            {showFooter && (!isWeb || isMounted) && (
+                              <View style={[styles.footerWrapper, isWeb ? ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 100 } as any) : null]}>
                                 <Footer
                                   /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
                                   onDockHeight={(h) => setDockHeight(h)}

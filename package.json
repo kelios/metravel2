@@ -21,7 +21,7 @@
     "clean": "npx expo start --clear",
     "reset": "EXPO_RESET_CACHE=true npx expo start --clear",
     "prod:web": "NODE_ENV=production npx expo export -p web",
-    "postinstall": "node scripts/fix-lightningcss.js",
+    "postinstall": "node scripts/fix-lightningcss.js && patch-package",
     "ios:prebuild": "./scripts/ios-prebuild.sh",
     "ios:build": "./scripts/ios-build.sh",
     "ios:submit": "./scripts/ios-submit.sh",

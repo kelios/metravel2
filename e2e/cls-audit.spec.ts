@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 type ClsEntry = {
   value: number;
   hadRecentInput: boolean;
-  sources: string[];
+  sources: any[];
 };
 
 type ClsAuditResult = {
@@ -92,17 +92,44 @@ test.describe('CLS audit', () => {
           try {
             if (!node) return 'unknown';
             const el = node as Element;
-            const parts: string[] = [];
-            if ((el as any).tagName) parts.push(String((el as any).tagName).toLowerCase());
-            const testId = (el as any).getAttribute?.('data-testid');
+            const tag = (el as any).tagName ? String((el as any).tagName).toLowerCase() : 'unknown';
+            const testId = (el as any).getAttribute?.('data-testid') || '';
+            const id = (el as any).id || '';
+            const className = typeof (el as any).className === 'string' ? String((el as any).className) : '';
+
+            let text = '';
+            try {
+              const raw = (el as any).innerText || (el as any).textContent || '';
+              text = String(raw).replace(/\s+/g, ' ').trim().slice(0, 80);
+            } catch {
+              text = '';
+            }
+
+            let rect: any = null;
+            try {
+              const r = (el as any).getBoundingClientRect?.();
+              if (r) {
+                rect = { x: r.x, y: r.y, w: r.width, h: r.height };
+              }
+            } catch {
+              rect = null;
+            }
+
+            const parts: string[] = [tag];
             if (testId) parts.push(`[data-testid="${testId}"]`);
-            const id = (el as any).id;
             if (id) parts.push(`#${id}`);
-            const className = (el as any).className;
-            if (typeof className === 'string' && className.trim()) {
+            if (className.trim()) {
               parts.push(`.${className.trim().split(/\s+/).slice(0, 3).join('.')}`);
             }
-            return parts.join('');
+
+            return {
+              label: parts.join(''),
+              testId,
+              id,
+              className: className.trim().split(/\s+/).slice(0, 6).join(' '),
+              text,
+              rect,
+            };
           } catch {
             return 'unknown';
           }
@@ -234,7 +261,22 @@ test.describe('CLS audit', () => {
             .map((r) => {
               const top = r.entries
                 .slice(0, 3)
-                .map((e) => `  - ${e.value.toFixed(4)}: ${Array.isArray(e.sources) ? e.sources.join(', ') : ''}`)
+                .map((e) => {
+                  const src = Array.isArray(e.sources)
+                    ? e.sources
+                        .slice(0, 5)
+                        .map((s: any) => {
+                          if (typeof s === 'string') return s;
+                          const label = String((s as any)?.label ?? 'unknown');
+                          const rect = (s as any)?.rect;
+                          const rectStr = rect ? ` @(${Number(rect.x).toFixed(0)},${Number(rect.y).toFixed(0)} ${Number(rect.w).toFixed(0)}x${Number(rect.h).toFixed(0)})` : '';
+                          const text = (s as any)?.text ? ` "${String((s as any).text)}"` : '';
+                          return `${label}${rectStr}${text}`;
+                        })
+                        .join(' | ')
+                    : '';
+                  return `  - ${e.value.toFixed(4)}: ${src}`;
+                })
                 .join('\n');
               return `${r.route}\n${top || '  (no entries captured)'}`;
             })
@@ -254,21 +296,35 @@ test.describe('CLS audit', () => {
         .map((r) => {
           const top = r.entries
             .slice(0, 3)
-            .map((e) => `    - ${e.value.toFixed(4)}: ${Array.isArray(e.sources) ? e.sources.join(', ') : ''}`)
+            .map((e) => {
+              const src = Array.isArray(e.sources)
+                ? e.sources
+                    .slice(0, 5)
+                    .map((s: any) => {
+                      if (typeof s === 'string') return s;
+                      const label = String((s as any)?.label ?? 'unknown');
+                      const rect = (s as any)?.rect;
+                      const rectStr = rect
+                        ? ` @(${Number(rect.x).toFixed(0)},${Number(rect.y).toFixed(0)} ${Number(rect.w).toFixed(0)}x${Number(rect.h).toFixed(0)})`
+                        : '';
+                      const text = (s as any)?.text ? ` "${String((s as any).text)}"` : '';
+                      return `${label}${rectStr}${text}`;
+                    })
+                    .join(' | ')
+                : '';
+              return `    - ${e.value.toFixed(4)}: ${src}`;
+            })
             .join('\n');
           return [
             `  ${r.route}`,
-            `    clsTotal=${r.clsTotal.toFixed(4)} (max ${CLS_TOTAL_MAX.toFixed(4)})${ENFORCE_TOTAL ? '' : ' (not enforced)'}`,
-            `    clsAfterRender=${r.clsAfterRender.toFixed(4)} (max ${CLS_AFTER_RENDER_MAX.toFixed(4)})`,
-            top ? `    topEntries:\n${top}` : '    topEntries: (no entries captured)',
+            `    clsAfterRender=${r.clsAfterRender.toFixed(4)} (max=${CLS_AFTER_RENDER_MAX})`,
+            ENFORCE_TOTAL ? `    clsTotal=${r.clsTotal.toFixed(4)} (max=${CLS_TOTAL_MAX})` : `    clsTotal=${r.clsTotal.toFixed(4)} (ignored)`,
+            top ? `    top entries:\n${top}` : '    (no entries captured)',
           ].join('\n');
         })
         .join('\n\n');
 
-      expect(
-        failing,
-        `CLS audit failed (routes above limits).\n\n${details}`
-      ).toHaveLength(0);
+      expect(failing, `CLS audit failed (routes above limits).\n\n${details}`).toHaveLength(0);
     }
   });
 });

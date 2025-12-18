@@ -14,9 +14,21 @@ jest.mock('expo-router', () => ({
 jest.mock('@/context/AuthContext', () => ({
   useAuth: jest.fn(() => ({
     isAuthenticated: false,
-    username: null,
+    username: '',
     logout: jest.fn(),
-    user: null,
+    userId: null,
+    userAvatar: null,
+    profileRefreshToken: 0,
+    triggerProfileRefresh: jest.fn(),
+    setIsAuthenticated: jest.fn(),
+    setUsername: jest.fn(),
+    setIsSuperuser: jest.fn(),
+    setUserId: jest.fn(),
+    setUserAvatar: jest.fn(),
+    isSuperuser: false,
+    login: jest.fn(),
+    sendPassword: jest.fn(),
+    setNewPassword: jest.fn(),
   })),
 }));
 
@@ -37,8 +49,11 @@ jest.mock('react-native-paper', () => {
   const React = require('react');
   const { View, Text, TouchableOpacity } = require('react-native');
 
-  const Menu: any = ({ children }: any) => (
-    <View testID="menu">{children}</View>
+  const Menu: any = ({ anchor, children }: any) => (
+    <View testID="menu">
+      <View testID="menu-anchor">{anchor}</View>
+      <View testID="menu-children">{children}</View>
+    </View>
   );
 
   Menu.Item = ({ title, onPress }: any) => (
@@ -55,9 +70,27 @@ jest.mock('react-native-paper', () => {
 // Mock image
 jest.mock('../assets/icons/logo_yellow_60x60.png', () => 'logo.png', { virtual: true });
 
+jest.mock('react-native', () => {
+  const React = require('react');
+  const RN = jest.requireActual('react-native');
+
+  const MockImage = (props: any) => {
+    (global as any).__lastImageSourceUri = props?.source?.uri ?? null;
+    return React.createElement('Image', props);
+  };
+
+  return {
+    ...RN,
+    Image: MockImage,
+  };
+});
+
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useFilters } from '@/providers/FiltersProvider';
+import AccountMenu from '@/components/AccountMenu';
+
+const getLastImageSourceUri = () => (global as any).__lastImageSourceUri as string | null;
 
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockUseFavorites = useFavorites as jest.MockedFunction<typeof useFavorites>;
@@ -75,12 +108,13 @@ const renderWithClient = (ui: React.ReactElement) => {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 };
 
-describe('RenderRightMenu', () => {
+describe('AccountMenu', () => {
   const mockLogout = jest.fn();
   const mockUpdateFilters = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (global as any).__lastImageSourceUri = null;
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
       username: '',
@@ -199,6 +233,7 @@ describe('RenderRightMenu', () => {
         { id: '1', type: 'travel', title: 'Test', url: '/test', addedAt: Date.now() },
         { id: '2', type: 'travel', title: 'Test 2', url: '/test2', addedAt: Date.now() },
       ],
+      recommended: [],
       viewHistory: [],
       addFavorite: jest.fn(),
       removeFavorite: jest.fn(),
@@ -213,10 +248,56 @@ describe('RenderRightMenu', () => {
     expect(getByText('Личный кабинет (2)')).toBeTruthy();
   });
 
-  it('navigates to home when logo is pressed', () => {
-    const { getByTestId } = renderWithClient(<RenderRightMenu />);
-    // Logo press should navigate to home
-    expect(router.push).not.toHaveBeenCalled();
+  it('does not append cache-buster param to signed S3 avatar url', () => {
+    const signed =
+      'https://metravellocal.s3.amazonaws.com/profile/78/avatar/x.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=3600&X-Amz-Signature=abc';
+
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      username: 'Юлия',
+      logout: mockLogout,
+      userId: '1',
+      userAvatar: signed,
+      profileRefreshToken: 5,
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      setUserAvatar: jest.fn(),
+      triggerProfileRefresh: jest.fn(),
+      isSuperuser: false,
+      login: jest.fn(),
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn(),
+    } as any);
+
+    renderWithClient(<RenderRightMenu />);
+    expect(getLastImageSourceUri()).toBe(signed);
+  });
+
+  it('appends cache-buster param to non-signed avatar url', () => {
+    const plain = 'https://example.com/avatar.webp';
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      username: 'Юлия',
+      logout: mockLogout,
+      userId: '1',
+      userAvatar: plain,
+      profileRefreshToken: 7,
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      setUserAvatar: jest.fn(),
+      triggerProfileRefresh: jest.fn(),
+      isSuperuser: false,
+      login: jest.fn(),
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn(),
+    } as any);
+
+    renderWithClient(<RenderRightMenu />);
+    expect(getLastImageSourceUri()).toBe(`${plain}?v=7`);
   });
 
   it('calls logout and navigates when logout is pressed', async () => {
@@ -262,7 +343,7 @@ describe('RenderRightMenu', () => {
       setNewPassword: jest.fn(),
     } as any);
 
-    const { getByText } = renderWithClient(<RenderRightMenu />);
+    const { getByText } = renderWithClient(<AccountMenu />);
 
     fireEvent.press(getByText('Мои путешествия'));
 

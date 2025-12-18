@@ -270,7 +270,7 @@ export default function RouletteScreen() {
   } = useRandomTravelData({
     queryParams: rouletteQueryParams,
     search,
-    isQueryEnabled: true,
+    isQueryEnabled: false,
   });
 
   const [spinning, setSpinning] = useState(false);
@@ -406,7 +406,7 @@ export default function RouletteScreen() {
                 <UIButton
                   label={spinning ? 'Подбираем маршруты…' : (result.length > 0 ? 'Подобрать ещё варианты' : 'Подобрать маршруты')}
                   onPress={handleSpin}
-                  disabled={showLoading || (!travels || travels.length === 0)}
+                  disabled={showLoading}
                 />
               </View>
             )}
@@ -445,7 +445,7 @@ export default function RouletteScreen() {
                       ? 'Подбираем…'
                       : (result.length > 0 ? 'Ещё' : 'Подобрать')}
                     onPress={handleSpin}
-                    disabled={showLoading || (!travels || travels.length === 0)}
+                    disabled={showLoading}
                   />
                 </View>
               </View>

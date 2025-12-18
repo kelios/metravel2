@@ -66,7 +66,7 @@ export default function MapScreen() {
     const queryClient = useQueryClient();
 
     // State
-    const [coordinates, setCoordinates] = useState<Coordinates>(DEFAULT_COORDINATES);
+    const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
     const [filters, setFilters] = useState<Filters>({ categories: [], radius: [], address: '' });
     const [filterValues, setFilterValues] = useState<FilterValues>({
         categories: [],
@@ -120,8 +120,8 @@ export default function MapScreen() {
 
     const mapQueryDescriptor = useMemo(
         () => ({
-            lat: debouncedCoordinates.latitude,
-            lng: debouncedCoordinates.longitude,
+            lat: debouncedCoordinates?.latitude,
+            lng: debouncedCoordinates?.longitude,
             radius: debouncedFilterValues.radius || '60',
             address: debouncedFilterValues.address || '',
             mode,
@@ -131,8 +131,8 @@ export default function MapScreen() {
             filters: backendFilters,
         }),
         [
-            debouncedCoordinates.latitude,
-            debouncedCoordinates.longitude,
+            debouncedCoordinates?.latitude,
+            debouncedCoordinates?.longitude,
             debouncedFilterValues.radius,
             debouncedFilterValues.address,
             mode,
@@ -199,14 +199,16 @@ export default function MapScreen() {
         enabled:
             isFocused &&
             (mode === 'radius' || (mode === 'route' && debouncedRoutePoints.length >= 2)) &&
+            typeof debouncedCoordinates?.latitude === 'number' &&
+            typeof debouncedCoordinates?.longitude === 'number' &&
             !isNaN(debouncedCoordinates.latitude) &&
             !isNaN(debouncedCoordinates.longitude),
         queryFn: async ({ queryKey }): Promise<any[]> => {
             const [, params] = queryKey as [
                 string,
                 {
-                    lat: number;
-                    lng: number;
+                    lat?: number;
+                    lng?: number;
                     radius: string;
                     address: string;
                     mode: 'radius' | 'route';
@@ -216,6 +218,10 @@ export default function MapScreen() {
                     filters: Record<string, any>;
                 },
             ];
+
+            if (typeof params.lat !== 'number' || typeof params.lng !== 'number') {
+                return [];
+            }
 
             let data: any[] = [];
 
@@ -254,7 +260,11 @@ export default function MapScreen() {
         const getLocation = async () => {
             try {
                 const { status } = await Location.requestForegroundPermissionsAsync();
-                if (status !== 'granted') return;
+                if (status !== 'granted') {
+                    // If user denied permissions, fall back to default coords explicitly.
+                    setCoordinates(DEFAULT_COORDINATES);
+                    return;
+                }
 
                 const location = await Location.getCurrentPositionAsync({
                     accuracy: Location.Accuracy.Balanced,
@@ -266,6 +276,8 @@ export default function MapScreen() {
                 });
             } catch (error) {
                 console.error('Error getting location:', error);
+                // If geolocation fails, fall back to default coords explicitly.
+                setCoordinates(DEFAULT_COORDINATES);
             }
         };
 
@@ -385,7 +397,7 @@ export default function MapScreen() {
                         <Suspense fallback={mapPanelPlaceholder}>
                             <LazyMapPanel
                                 travelsData={travelsData}
-                                coordinates={coordinates}
+                                coordinates={coordinates ?? DEFAULT_COORDINATES}
                                 routePoints={routePoints}
                                 mode={mode}
                                 setRoutePoints={setRoutePoints}
@@ -588,10 +600,12 @@ export default function MapScreen() {
 const getStyles = (isMobile: boolean, insetTop: number) => StyleSheet.create({
     container: {
         flex: 1,
+        ...(Platform.OS === 'web' ? ({ height: '100vh', minHeight: '100vh' } as any) : null),
         backgroundColor: '#f5f5f5',
     },
     content: {
         flex: 1,
+        ...(Platform.OS === 'web' ? ({ height: '100vh', minHeight: '100vh' } as any) : null),
         position: 'relative',
     },
     togglePanelButton: {

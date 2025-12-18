@@ -140,15 +140,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
       {/* Leaflet CSS for Maps */}
       <link rel="preload" as="style" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        media="print"
-        onLoad={(e) => {
-          const el = e.currentTarget as HTMLLinkElement
-          el.media = 'all'
-        }}
-      />
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       <noscript>
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       </noscript>

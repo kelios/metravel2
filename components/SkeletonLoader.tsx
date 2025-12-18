@@ -30,10 +30,30 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   borderRadius = 4,
   style,
 }) => {
+  const [reduceMotion, setReduceMotion] = React.useState(false);
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const update = () => setReduceMotion(!!media.matches);
+    update();
+
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', update);
+      return () => media.removeEventListener('change', update);
+    }
+
+    media.addListener(update);
+    return () => media.removeListener(update);
+  }, []);
+
   return (
     <View
       testID={testID}
-      {...(Platform.OS === 'web' ? { className: 'skeleton-pulse' } : {})}
+      {...(Platform.OS === 'web' && !reduceMotion ? { className: 'skeleton-pulse' } : {})}
       style={[
         styles.skeleton,
         {
@@ -54,6 +74,9 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 export const TravelCardSkeleton: React.FC = () => {
   const { width } = useWindowDimensions();
 
+  const effectiveWidth =
+    Platform.OS === 'web' && width === 0 && typeof window !== 'undefined' ? window.innerWidth : width;
+
   // ✅ FIX: Унифицированная высота изображения с реальными карточками и учетом маленьких экранов
   const imageHeight = TRAVEL_CARD_IMAGE_HEIGHT;
   const titleHeight = Platform.select({ default: 14, web: 16 });
@@ -61,7 +84,7 @@ export const TravelCardSkeleton: React.FC = () => {
 
   const cardHeight =
     Platform.OS === 'web'
-      ? width > 0 && width < BREAKPOINTS.MOBILE
+      ? effectiveWidth > 0 && effectiveWidth < BREAKPOINTS.MOBILE
         ? TRAVEL_CARD_WEB_MOBILE_HEIGHT
         : TRAVEL_CARD_WEB_HEIGHT
       : undefined;
@@ -90,9 +113,12 @@ export const TravelCardSkeleton: React.FC = () => {
 export const TravelCardReserveSkeleton: React.FC = () => {
   const { width } = useWindowDimensions();
 
+  const effectiveWidth =
+    Platform.OS === 'web' && width === 0 && typeof window !== 'undefined' ? window.innerWidth : width;
+
   const cardHeight =
     Platform.OS === 'web'
-      ? width > 0 && width < BREAKPOINTS.MOBILE
+      ? effectiveWidth > 0 && effectiveWidth < BREAKPOINTS.MOBILE
         ? TRAVEL_CARD_WEB_MOBILE_HEIGHT
         : TRAVEL_CARD_WEB_HEIGHT
       : 320;
@@ -136,8 +162,8 @@ export const TravelListSkeleton: React.FC<{
             flexBasis: '100%',
           } as any)
         : ({
-            flexGrow: 1,
-            flexShrink: 1,
+            flexGrow: 0,
+            flexShrink: 0,
             flexBasis: 320,
             minWidth: 320,
             maxWidth: 360,

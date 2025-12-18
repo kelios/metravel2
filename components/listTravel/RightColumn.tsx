@@ -175,6 +175,10 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       return result
     }, [travels, gridColumns, isMobile])
 
+    const RowSeparator = useCallback(() => {
+      return <View style={{ height: cardSpacing }} />
+    }, [cardSpacing])
+
     const topContentNodes = useMemo(() => {
       if (!topContent) return null
       const nodes = React.Children.toArray(topContent).filter((child) => {
@@ -186,6 +190,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     const renderRow = useCallback((item: { item: Travel[]; index: number }) => { // Destructure properly for FlatList compatibility
         const { item: rowItems, index: rowIndex } = item;
         const cols = Math.max(1, (isMobile ? 1 : gridColumns) || 1);
+        const missingSlots = Math.max(0, cols - rowItems.length);
         return (
           <View
             testID={`travel-row-${rowIndex}`}
@@ -209,8 +214,9 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                             flexBasis: '100%',
                           } as any)
                         : ({
-                            flexGrow: 1,
-                            flexShrink: 1,
+                            // Keep cards within min/max width and don't stretch a single card to full row width.
+                            flexGrow: 0,
+                            flexShrink: 0,
                             flexBasis: 320,
                             minWidth: 320,
                             maxWidth: 360,
@@ -221,11 +227,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                         maxWidth: '100%',
                       } as any)) as ViewStyle,
                   Platform.OS === 'web'
-                    ? {
-                        paddingBottom: cardSpacing,
-                        paddingRight: cardSpacing / 2,
-                        paddingLeft: cardSpacing / 2,
-                      }
+                    ? null
                     : {
                         paddingHorizontal: cardSpacing / 2,
                         paddingBottom: cardSpacing,
@@ -235,6 +237,33 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 {renderItem(travel, rowIndex * cols + itemIndex)}
               </View>
             ))}
+
+            {Platform.OS === 'web' && !isMobile && missingSlots > 0
+              ? Array.from({ length: missingSlots }).map((_, placeholderIndex) => (
+                  <View
+                    // eslint-disable-next-line react/no-array-index-key
+                    key={`placeholder-${rowIndex}-${placeholderIndex}`}
+                    testID={`travel-row-${rowIndex}-placeholder-${placeholderIndex}`}
+                    pointerEvents="none"
+                    style={[
+                      ({
+                        flexGrow: 0,
+                        flexShrink: 0,
+                        flexBasis: 320,
+                        minWidth: 320,
+                        maxWidth: 360,
+                        opacity: 0,
+                      } as any) as ViewStyle,
+                      Platform.OS === 'web'
+                        ? null
+                        : {
+                            paddingHorizontal: cardSpacing / 2,
+                            paddingBottom: cardSpacing,
+                          },
+                    ]}
+                  />
+                ))
+              : null}
 
             {showNextPageLoading && rowIndex === rows.length - 1 && (
               <View style={footerLoaderStyle}>
@@ -404,6 +433,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
               extraData={gridColumns}
               keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
               ListHeaderComponent={ListHeader}
+              ItemSeparatorComponent={Platform.OS === 'web' ? RowSeparator : undefined}
               onEndReached={onEndReached}
               onEndReachedThreshold={onEndReachedThreshold}
               removeClippedSubviews={false}

@@ -120,6 +120,14 @@ export default React.memo(MapPanel);
 const styles = StyleSheet.create({
     mapContainer: {
         flex: 1,
+        ...(Platform.OS === 'web'
+            ? ({
+                  width: '100%',
+                  height: '100%',
+                  minHeight: 0,
+                  position: 'relative',
+              } as any)
+            : null),
         borderRadius: 16,
         overflow: 'hidden',
         backgroundColor: '#fff',

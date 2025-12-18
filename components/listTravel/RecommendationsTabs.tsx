@@ -108,8 +108,29 @@ const RecommendationsTabs = memo(
     const [refreshing, setRefreshing] = useState(false);
 
     const router = useRouter();
-    const { favorites = [], viewHistory = [], clearFavorites, clearHistory } = useFavorites() as any;
+    const { favorites = [], viewHistory = [], clearFavorites, clearHistory, ensureServerData } = useFavorites() as any;
     const { isAuthenticated } = useAuth();
+
+    const isTabsVisible = forceVisible || !collapsed;
+
+    useEffect(() => {
+      if (!isTabsVisible) return;
+      if (!isAuthenticated) return;
+      if (typeof ensureServerData !== 'function') return;
+
+      if (activeTab === 'favorites') {
+        ensureServerData('favorites');
+        return;
+      }
+      if (activeTab === 'history') {
+        ensureServerData('history');
+        return;
+      }
+      if (activeTab === 'recommendations') {
+        ensureServerData('recommendations');
+        return;
+      }
+    }, [activeTab, ensureServerData, isAuthenticated, isTabsVisible]);
 
     const handleClearFavorites = useCallback(async () => {
       try {
@@ -191,7 +212,7 @@ const RecommendationsTabs = memo(
       return (
         <View style={[styles.container, styles.containerFixedHeight]}>
           <View style={styles.collapsedHeader}>
-            <Pressable onPress={toggleCollapse} style={styles.expandButton} accessibilityRole="button">
+            <Pressable testID="recommendations-tabs-expand" onPress={toggleCollapse} style={styles.expandButton} accessibilityRole="button">
               <Feather name="chevron-down" size={20} color={DESIGN_TOKENS.colors.primary} />
               <Text style={styles.expandText}>Показать рекомендации</Text>
             </Pressable>
@@ -219,7 +240,7 @@ const RecommendationsTabs = memo(
         case 'highlights':
           return renderTabPane(
             <Suspense fallback={<RecommendationsPlaceholder />}>
-              <WeeklyHighlights showHeader={false} />
+              <WeeklyHighlights showHeader={false} enabled={isTabsVisible && activeTab === 'highlights'} />
             </Suspense>
           );
         case 'recommendations':
@@ -426,7 +447,7 @@ const RecommendationsTabs = memo(
             />
           </ScrollView>
 
-          <Pressable onPress={toggleCollapse} hitSlop={10} style={styles.collapseButton}>
+          <Pressable testID="recommendations-tabs-collapse" onPress={toggleCollapse} hitSlop={10} style={styles.collapseButton}>
             <Feather name="chevron-up" size={20} color="#666" />
           </Pressable>
         </View>

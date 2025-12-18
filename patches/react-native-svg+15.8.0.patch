@@ -1,0 +1,70 @@
+diff --git a/node_modules/react-native-svg/lib/commonjs/web/WebShape.js b/node_modules/react-native-svg/lib/commonjs/web/WebShape.js
+index a78bff9..fb50431 100644
+--- a/node_modules/react-native-svg/lib/commonjs/web/WebShape.js
++++ b/node_modules/react-native-svg/lib/commonjs/web/WebShape.js
+@@ -9,6 +9,7 @@ var _reactNative = require("react-native");
+ var _prepare = require("./utils/prepare");
+ var _convertInt32Color = require("./utils/convertInt32Color");
+ var _utils = require("./utils");
++var _hasTouchableProperty = typeof _utils.hasTouchableProperty === 'function' ? _utils.hasTouchableProperty : function (props) { return props.onPress || props.onPressIn || props.onPressOut || props.onLongPress; };
+ var _SvgTouchableMixin = _interopRequireDefault(require("../lib/SvgTouchableMixin"));
+ function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
+ class WebShape extends _react.default.Component {
+@@ -65,7 +66,7 @@ class WebShape extends _react.default.Component {
+     super(props);
+ 
+     // Do not attach touchable mixin handlers if SVG element doesn't have a touchable prop
+-    if ((0, _utils.hasTouchableProperty)(props)) {
++    if ((0, _hasTouchableProperty)(props)) {
+       (0, _SvgTouchableMixin.default)(this);
+     }
+     this._remeasureMetricsOnActivation = _utils.remeasure.bind(this);
+diff --git a/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js b/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
+index 32b5db7..aace074 100644
+--- a/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
++++ b/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
+@@ -5,6 +5,7 @@ Object.defineProperty(exports, "__esModule", {
+ });
+ exports.prepare = void 0;
+ var _ = require(".");
++const _hasTouchableProperty = typeof _.hasTouchableProperty === 'function' ? _.hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);
+ var _resolve = require("../../lib/resolve");
+ var _resolveAssetUri2 = require("../../lib/resolveAssetUri");
+ /**
+@@ -34,7 +35,7 @@ const prepare = (self, props = self.props) => {
+     ...rest
+   } = props;
+   const clean = {
+-    ...((0, _.hasTouchableProperty)(props) ? {
++    ...((0, _hasTouchableProperty)(props) ? {
+       onStartShouldSetResponder: self.touchableHandleStartShouldSetResponder,
+       onResponderTerminationRequest: self.touchableHandleResponderTerminationRequest,
+       onResponderGrant: self.touchableHandleResponderGrant,
+diff --git a/node_modules/react-native-svg/lib/module/web/WebShape.js b/node_modules/react-native-svg/lib/module/web/WebShape.js
+index 64801fc..bd46e49 100644
+--- a/node_modules/react-native-svg/lib/module/web/WebShape.js
++++ b/node_modules/react-native-svg/lib/module/web/WebShape.js
+@@ -4,8 +4,9 @@ import {
+ unstable_createElement as createElement } from 'react-native';
+ import { prepare } from './utils/prepare';
+ import { convertInt32ColorToRGBA } from './utils/convertInt32Color';
+-import { camelCaseToDashed, hasTouchableProperty, remeasure } from './utils';
++import { camelCaseToDashed, hasTouchableProperty as _hasTouchableProperty, remeasure } from './utils';
+ import SvgTouchableMixin from '../lib/SvgTouchableMixin';
++const hasTouchableProperty = typeof _hasTouchableProperty === 'function' ? _hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);
+ export class WebShape extends React.Component {
+   prepareProps(props) {
+     return props;
+diff --git a/node_modules/react-native-svg/lib/module/web/utils/prepare.js b/node_modules/react-native-svg/lib/module/web/utils/prepare.js
+index 796b489..9286795 100644
+--- a/node_modules/react-native-svg/lib/module/web/utils/prepare.js
++++ b/node_modules/react-native-svg/lib/module/web/utils/prepare.js
+@@ -1,6 +1,7 @@
+-import { hasTouchableProperty, parseTransformProp } from '.';
++import { hasTouchableProperty as _hasTouchableProperty, parseTransformProp } from './index';
+ import { resolve } from '../../lib/resolve';
+ import { resolveAssetUri } from '../../lib/resolveAssetUri';
++const hasTouchableProperty = typeof _hasTouchableProperty === 'function' ? _hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);
+ /**
+  * `react-native-svg` supports additional props that aren't defined in the spec.
+  * This function replaces them in a spec conforming manner.

@@ -298,11 +298,23 @@ jest.mock('react-native/Libraries/Settings/NativeSettingsManager', () => ({
 
 // Mock window dimensions and native modules
 jest.mock('react-native', () => {
+  const React = require('react')
   const RN = jest.requireActual('react-native')
+
+  const MockImage = React.forwardRef((props: any, ref: any) => {
+    try {
+      ;(global as any).__lastImageSourceUri = props?.source?.uri ?? null
+    } catch {
+      // ignore
+    }
+    return React.createElement('Image', { ...props, ref })
+  })
+
   return {
     ...RN,
     // Desktop-like default; individual tests can override via jest.fn mock
     useWindowDimensions: jest.fn(() => ({ width: 1024, height: 768 })),
+    Image: MockImage,
     Settings: {
       get: jest.fn(),
       set: jest.fn(),
