@@ -17,9 +17,9 @@ export const MODERN_MATTE_PALETTE = {
   // ==========================================
   // ФОНЫ (матовые, слегка теплые, с большей глубиной)
   // ==========================================
-  background: '#f8f7f5', // Более насыщенный теплый матовый фон (контраст с #1f1f1f: ~15.5:1 ✅)
-  backgroundSecondary: '#f3f2f0', // Более выраженный вторичный фон для глубины
-  backgroundTertiary: '#eeedeb', // Для вложенных секций с четкой иерархией
+  background: '#fdfcfb', // Очень светлый теплый фон для воздушности
+  backgroundSecondary: '#f9f8f6', // Легкий вторичный фон
+  backgroundTertiary: '#f5f4f2', // Для вложенных секций
   
   surface: '#ffffff', // Чистый белый для карточек
   surfaceElevated: '#ffffff', // Для модалок и всплывающих окон
@@ -28,63 +28,63 @@ export const MODERN_MATTE_PALETTE = {
   // ==========================================
   // ТЕКСТ (высококонтрастный, но мягкий)
   // ==========================================
-  text: '#1f1f1f', // Мягкий черный (контраст с #faf9f7: ~15.8:1 ✅)
-  textSecondary: '#4a4946', // Средний серый (контраст: ~8.2:1 ✅)
-  textTertiary: '#6b6a67', // Светлый серый (контраст: ~5.1:1 ✅)
-  textMuted: '#8a8986', // Очень светлый серый (контраст: ~3.8:1, только для крупного текста)
+  text: '#3a3a3a', // Мягкий темно-серый для основного текста
+  textSecondary: '#6a6a6a', // Приглушенный серый для вторичного текста
+  textTertiary: '#8a8a8a', // Светлый серый для подписей
+  textMuted: '#ababab', // Очень светлый серый для деталей
   textInverse: '#ffffff', // Белый текст на темных фонах
   
   // ==========================================
   // АКЦЕНТНЫЕ ЦВЕТА (мягкие, матовые, более живые)
   // ==========================================
-  primary: '#5d8c7c', // Более насыщенный зелено-бирюзовый (контраст с белым: ~4.9:1 ✅)
-  primaryDark: '#4d7566', // Темнее для hover/active с лучшей глубиной
-  primaryLight: '#eaf2ef', // Более выразительный светлый оттенок для фонов
-  primarySoft: 'rgba(93, 140, 124, 0.12)', // Более заметная подсветка
+  primary: '#7a9d8f', // Матовый серо-зеленый акцент
+  primaryDark: '#6a8d7f', // Темнее для hover/active
+  primaryLight: '#f0f5f3', // Очень светлый оттенок для фонов
+  primarySoft: 'rgba(122, 157, 143, 0.06)', // Едва заметная подсветка
   
-  accent: '#7c8fa0', // Более насыщенный серо-голубой (контраст: ~4.3:1 ✅)
-  accentDark: '#6c7f90',
-  accentLight: '#eaeef2',
-  accentSoft: 'rgba(124, 143, 160, 0.12)',
+  accent: '#8a9aa8', // Матовый серо-голубой
+  accentDark: '#7a8a98',
+  accentLight: '#f2f4f6',
+  accentSoft: 'rgba(138, 154, 168, 0.08)',
   
   // ==========================================
   // ФУНКЦИОНАЛЬНЫЕ ЦВЕТА (мягкие, не агрессивные)
   // ==========================================
-  success: '#5b9a7a', // Мягкий зеленый (контраст: ~4.6:1 ✅)
-  successDark: '#4a7a64',
-  successLight: '#e8f0ed',
-  successSoft: 'rgba(91, 154, 122, 0.12)',
+  success: '#7a9d8a', // Матовый приглушенный зеленый
+  successDark: '#6a8d7a',
+  successLight: '#f0f5f2',
+  successSoft: 'rgba(122, 157, 138, 0.08)',
   
-  warning: '#b89a6b', // Мягкий бежево-желтый (контраст: ~4.3:1 ✅)
-  warningDark: '#a08a5b',
-  warningLight: '#f5f0e8',
-  warningSoft: 'rgba(184, 154, 107, 0.12)',
+  warning: '#b5a88a', // Матовый бежевый
+  warningDark: '#a5987a',
+  warningLight: '#f5f3f0',
+  warningSoft: 'rgba(181, 168, 138, 0.08)',
   
-  danger: '#c47a7a', // Мягкий розово-красный (контраст: ~4.5:1 ✅)
-  dangerDark: '#b46a6a',
-  dangerLight: '#f5e8e8',
-  dangerSoft: 'rgba(196, 122, 122, 0.12)',
+  danger: '#b89090', // Матовый приглушенный розовый
+  dangerDark: '#a88080',
+  dangerLight: '#f5f0f0',
+  dangerSoft: 'rgba(184, 144, 144, 0.08)',
   
-  info: '#7a9ab8', // Мягкий голубой (контраст: ~4.1:1 ✅)
-  infoDark: '#6a8aa8',
-  infoLight: '#e8edf5',
-  infoSoft: 'rgba(122, 154, 184, 0.12)',
+  info: '#8a9db0', // Матовый серо-голубой
+  infoDark: '#7a8da0',
+  infoLight: '#f0f3f5',
+  infoSoft: 'rgba(138, 157, 176, 0.08)',
   
   // ==========================================
   // ГРАНИЦЫ (мягкие, матовые, с лучшей четкостью)
   // ==========================================
-  border: 'rgba(31, 31, 31, 0.1)', // Более четкая граница (10% непрозрачности)
-  borderLight: 'rgba(31, 31, 31, 0.06)', // Легкая граница с лучшей видимостью
-  borderStrong: 'rgba(31, 31, 31, 0.15)', // Более заметная граница для акцентов
-  borderAccent: 'rgba(93, 140, 124, 0.25)', // Более выразительная акцентная граница
+  border: 'rgba(58, 58, 58, 0.06)', // Очень легкая граница
+  borderLight: 'rgba(58, 58, 58, 0.03)', // Едва заметная граница
+  borderStrong: 'rgba(58, 58, 58, 0.10)', // Заметная граница для акцентов
+  borderAccent: 'rgba(122, 157, 143, 0.15)', // Мягкая акцентная граница
   
   // ==========================================
   // ТЕНИ (мягкие, рассеянные, создающие глубину)
   // ==========================================
-  shadowLight: 'rgba(31, 31, 31, 0.06)', // Легкая тень с лучшей видимостью
-  shadowMedium: 'rgba(31, 31, 31, 0.08)', // Средняя тень с большей глубиной
-  shadowHeavy: 'rgba(31, 31, 31, 0.14)', // Более выраженная тень для модалок
-  shadowHover: 'rgba(31, 31, 31, 0.12)', // Более заметная тень при hover
+  shadowLight: 'rgba(45, 45, 45, 0.04)', // Очень легкая тень
+  shadowMedium: 'rgba(45, 45, 45, 0.06)', // Средняя тень
+  shadowHeavy: 'rgba(45, 45, 45, 0.1)', // Выраженная тень для модалок
+  shadowHover: 'rgba(45, 45, 45, 0.08)', // Тень при hover
   
   // ==========================================
   // FOCUS И ИНТЕРАКТИВНОСТЬ
@@ -108,9 +108,9 @@ export const MODERN_MATTE_PALETTE = {
   // ==========================================
   // СПЕЦИАЛЬНЫЕ ЦВЕТА
   // ==========================================
-  badgePopular: '#5b8a7a',
-  badgeNew: '#5b9a7a',
-  badgeTrend: '#7a9ab8',
+  badgePopular: '#8a9d90',
+  badgeNew: '#8a9d8a',
+  badgeTrend: '#8a9db0',
 } as const;
 
 /**
@@ -118,32 +118,32 @@ export const MODERN_MATTE_PALETTE = {
  */
 export const MODERN_MATTE_SHADOWS = {
   light: {
-    shadowColor: '#1f1f1f',
+    shadowColor: '#2d2d2d',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
     elevation: 1,
   },
   medium: {
-    shadowColor: '#1f1f1f',
+    shadowColor: '#2d2d2d',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  heavy: {
+    shadowColor: '#2d2d2d',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  hover: {
+    shadowColor: '#2d2d2d',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 2,
-  },
-  heavy: {
-    shadowColor: '#1f1f1f',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  hover: {
-    shadowColor: '#1f1f1f',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 3,
   },
 } as const;
 
@@ -151,12 +151,12 @@ export const MODERN_MATTE_SHADOWS = {
  * Box shadows для web (мягкие, рассеянные, создающие глубину)
  */
 export const MODERN_MATTE_BOX_SHADOWS = {
-  light: '0 1px 4px rgba(31, 31, 31, 0.06), 0 1px 2px rgba(31, 31, 31, 0.04)',
-  medium: '0 2px 8px rgba(31, 31, 31, 0.08), 0 1px 3px rgba(31, 31, 31, 0.05)',
-  heavy: '0 4px 16px rgba(31, 31, 31, 0.14), 0 2px 6px rgba(31, 31, 31, 0.08)',
-  hover: '0 3px 10px rgba(31, 31, 31, 0.12), 0 1px 4px rgba(31, 31, 31, 0.06)',
-  card: '0 2px 10px rgba(31, 31, 31, 0.08), 0 1px 3px rgba(31, 31, 31, 0.05)',
-  modal: '0 8px 32px rgba(31, 31, 31, 0.16), 0 2px 8px rgba(31, 31, 31, 0.1)',
+  light: '0 1px 3px rgba(45, 45, 45, 0.04), 0 1px 2px rgba(45, 45, 45, 0.02)',
+  medium: '0 2px 6px rgba(45, 45, 45, 0.06), 0 1px 3px rgba(45, 45, 45, 0.03)',
+  heavy: '0 4px 12px rgba(45, 45, 45, 0.1), 0 2px 4px rgba(45, 45, 45, 0.05)',
+  hover: '0 2px 8px rgba(45, 45, 45, 0.08), 0 1px 3px rgba(45, 45, 45, 0.04)',
+  card: '0 2px 8px rgba(45, 45, 45, 0.06), 0 1px 2px rgba(45, 45, 45, 0.03)',
+  modal: '0 8px 24px rgba(45, 45, 45, 0.12), 0 2px 6px rgba(45, 45, 45, 0.06)',
 } as const;
 
 /**

@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions, Platform, LayoutChangeEvent, useWindowDimensions } from 'react-native';
-import { Button } from 'react-native-paper';
+import { View, StyleSheet, Platform, LayoutChangeEvent, useWindowDimensions, Text, Pressable } from 'react-native';
+import { Button, IconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface TravelWizardFooterProps {
@@ -36,75 +37,84 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
             style={[
                 styles.footer,
                 isMobile && (isWeb ? styles.footerMobileWeb : styles.footerMobileNative),
-                isMobile && !isWeb ? { paddingBottom: 12 + insets.bottom } : null,
+                isMobile && !isWeb ? { paddingBottom: 8 + insets.bottom } : null,
             ]}
             onLayout={onLayout}
         >
             {isMobile ? (
                 <>
-                    <View style={isNarrowMobile ? styles.mobileColumn : styles.mobileRow}>
-                        {canGoBack ? (
-                            <Button
-                                mode="outlined"
+                    <View style={styles.mobileMainRow}>
+                        {canGoBack && onBack ? (
+                            <Pressable
                                 onPress={onBack}
-                                style={isNarrowMobile ? styles.mobileButtonFull : styles.mobileButton}
+                                style={styles.backButtonMobile}
+                                {...Platform.select({ web: { cursor: 'pointer' } })}
                             >
-                                Назад
-                            </Button>
-                        ) : (
-                            <View style={styles.footerButtonPlaceholder} />
-                        )}
+                                <Feather name="arrow-left" size={18} color={DESIGN_TOKENS.colors.text} />
+                            </Pressable>
+                        ) : null}
 
                         <Button
                             mode="contained"
                             onPress={onPrimary}
-                            style={isNarrowMobile ? styles.mobileButtonFull : styles.mobileButton}
+                            style={styles.primaryButtonMobile}
                             disabled={primaryDisabled}
+                            icon="arrow-right"
+                            contentStyle={styles.primaryButtonContent}
+                        >
+                            {primaryLabel}
+                        </Button>
+
+                        {onSave ? (
+                            <IconButton
+                                icon="content-save"
+                                size={20}
+                                onPress={onSave}
+                                style={styles.saveIconButton}
+                            />
+                        ) : null}
+                    </View>
+                </>
+            ) : (
+                <>
+                    <View style={styles.leftSection}>
+                        {canGoBack && onBack ? (
+                            <Pressable
+                                onPress={onBack}
+                                style={styles.backButton}
+                                {...Platform.select({ web: { cursor: 'pointer' } })}
+                            >
+                                <Feather name="arrow-left" size={16} color={DESIGN_TOKENS.colors.text} />
+                                <Text style={styles.backButtonText}>Назад</Text>
+                            </Pressable>
+                        ) : null}
+                    </View>
+
+                    <View style={styles.centerSection}>
+                        <Button
+                            mode="contained"
+                            onPress={onPrimary}
+                            style={styles.primaryButton}
+                            disabled={primaryDisabled}
+                            icon="arrow-right"
+                            contentStyle={styles.primaryButtonContent}
                         >
                             {primaryLabel}
                         </Button>
                     </View>
 
-                    <Button
-                        mode="text"
-                        onPress={onSave}
-                        style={styles.footerSaveButtonMobile}
-                        disabled={!onSave}
-                    >
-                        {saveLabel}
-                    </Button>
-                </>
-            ) : (
-                <>
-                    {canGoBack ? (
-                        <Button
-                            mode="outlined"
-                            onPress={onBack}
-                            style={styles.footerButton}
-                        >
-                            Назад
-                        </Button>
-                    ) : (
-                        <View style={styles.footerButtonPlaceholder} />
-                    )}
-
-                    <Button
-                        mode="contained"
-                        onPress={onPrimary}
-                        style={styles.footerButton}
-                        disabled={primaryDisabled}
-                    >
-                        {primaryLabel}
-                    </Button>
-
-                    <Button
-                        mode="text"
-                        onPress={onSave}
-                        style={styles.footerSaveButton}
-                        disabled={!onSave}
-                    >
-                        {saveLabel}
-                    </Button>
+                    <View style={styles.rightSection}>
+                        {onSave ? (
+                            <Pressable
+                                onPress={onSave}
+                                style={styles.saveButton}
+                                {...Platform.select({ web: { cursor: 'pointer' } })}
+                            >
+                                <Feather name="save" size={16} color={DESIGN_TOKENS.colors.textMuted} />
+                                <Text style={styles.saveButtonText}>{saveLabel}</Text>
+                            </Pressable>
+                        ) : null}
+                    </View>
                 </>
             )}
         </View>
@@ -116,12 +126,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-        paddingVertical: 12,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
         borderTopWidth: 1,
         borderColor: DESIGN_TOKENS.colors.border,
         backgroundColor: DESIGN_TOKENS.colors.surface,
         zIndex: DESIGN_TOKENS.zIndex.sticky,
+        ...(Platform.OS === 'web'
+            ? ({ boxShadow: '0 -2px 8px rgba(0,0,0,0.06)' } as any)
+            : {}),
     },
     footerMobileNative: {
         position: 'absolute',
@@ -135,39 +148,72 @@ const styles = StyleSheet.create({
         right: 0,
         bottom: 0,
     },
-    footerButton: {
+    leftSection: {
         flex: 1,
-        marginHorizontal: 4,
+        alignItems: 'flex-start',
     },
-    footerSaveButton: {
-        marginLeft: 4,
+    centerSection: {
+        flex: 2,
+        alignItems: 'center',
     },
-    mobileRow: {
+    rightSection: {
+        flex: 1,
+        alignItems: 'flex-end',
+    },
+    backButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        width: '100%',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
     },
-    mobileColumn: {
-        flexDirection: 'column',
-        width: '100%',
-        gap: 8,
+    backButtonText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: '600',
+        color: DESIGN_TOKENS.colors.text,
     },
-    mobileButton: {
+    backButtonMobile: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+    },
+    primaryButton: {
+        minWidth: 200,
+    },
+    primaryButtonMobile: {
         flex: 1,
-        marginHorizontal: 4,
+        marginHorizontal: DESIGN_TOKENS.spacing.xs,
     },
-    mobileButtonFull: {
+    primaryButtonContent: {
+        flexDirection: 'row-reverse',
+    },
+    saveButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: DESIGN_TOKENS.radii.pill,
+    },
+    saveButtonText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: '600',
+        color: DESIGN_TOKENS.colors.textMuted,
+    },
+    saveIconButton: {
+        margin: 0,
+        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+    },
+    mobileMainRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
         width: '100%',
-        marginHorizontal: 0,
-    },
-    footerSaveButtonMobile: {
-        marginTop: 6,
-        alignSelf: 'center',
-    },
-    footerButtonPlaceholder: {
-        flex: 1,
-        marginHorizontal: 4,
+        gap: DESIGN_TOKENS.spacing.xs,
     },
 });
 

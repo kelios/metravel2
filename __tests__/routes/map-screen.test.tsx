@@ -224,6 +224,11 @@ describe('MapScreen (map tab)', () => {
 
     const { getByText, getByTestId } = renderWithClient();
 
+    // Запрос на данные карты начинается только после получения геолокации
+    await waitFor(() => {
+      expect(mockFetchTravelsForMap).toHaveBeenCalled();
+    });
+
     // Переключаемся на вкладку "Список"
     const listTab = getByText('Список');
     fireEvent.press(listTab);

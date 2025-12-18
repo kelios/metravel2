@@ -279,28 +279,23 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.lg,
     padding: Platform.select({
-      default: 20, // Мобильные
-      web: 24, // Десктоп
+      default: DESIGN_TOKENS.spacing.xl,
+      web: DESIGN_TOKENS.spacing.xxl,
     }),
-    marginBottom: Platform.select({
-      default: 24, // Мобильные
-      web: 32, // Десктоп
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
+    ...Platform.select({
+      web: {
+        boxShadow: DESIGN_TOKENS.shadows.card,
+      } as any,
+      default: DESIGN_TOKENS.shadowsNative.medium,
     }),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02, // ✅ УЛУЧШЕНИЕ: Упрощенная тень
-    shadowRadius: 4,
-    elevation: 1, // ✅ УЛУЧШЕНИЕ: Уменьшено с 2
-    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 1
-    borderColor: 'rgba(0, 0, 0, 0.06)',
   },
   containerMobile: {
-    padding: DESIGN_TOKENS.spacing.xxs,
-    marginBottom: DESIGN_TOKENS.spacing.xxs,
-    borderRadius: 12,
+    padding: DESIGN_TOKENS.spacing.lg,
   },
   content: {
     flexDirection: 'row',
@@ -313,24 +308,25 @@ const styles = StyleSheet.create({
   },
   avatar: {
     width: Platform.select({
-      default: 64, // Мобильные
-      web: 80, // Десктоп
+      default: 72,
+      web: 96,
     }),
     height: Platform.select({
-      default: 64, // Мобильные
-      web: 80, // Десктоп
+      default: 72,
+      web: 96,
     }),
     borderRadius: Platform.select({
-      default: 32, // Мобильные
-      web: 40, // Десктоп
+      default: 36,
+      web: 48,
     }),
-    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 3
-    borderColor: 'rgba(0, 0, 0, 0.06)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02, // ✅ УЛУЧШЕНИЕ: Упрощенная тень
-    shadowRadius: 2,
-    elevation: 1, // ✅ УЛУЧШЕНИЕ: Уменьшено с 3
+    borderWidth: 2,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
+    ...Platform.select({
+      web: {
+        boxShadow: DESIGN_TOKENS.shadows.light,
+      } as any,
+      default: DESIGN_TOKENS.shadowsNative.light,
+    }),
   },
   avatarMobile: {
     width: 64,
@@ -424,26 +420,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.sm,
     paddingVertical: Platform.select({
-      default: 10, // Мобильные
-      web: 12, // Десктоп
+      default: 12,
+      web: 14,
     }),
     paddingHorizontal: Platform.select({
-      default: 16, // Мобильные
-      web: 20, // Десктоп
+      default: 20,
+      web: 24,
     }),
-    borderRadius: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.02)', // ✅ УЛУЧШЕНИЕ: Нейтральный фон
-    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 1
-    borderColor: 'rgba(0, 0, 0, 0.06)',
+    borderRadius: 999,
+    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
         transition: 'all 0.2s ease' as any,
+        boxShadow: DESIGN_TOKENS.shadows.light,
         ':hover': {
-          backgroundColor: 'rgba(0, 0, 0, 0.04)',
-          borderColor: '#1f2937',
-          transform: 'translateY(-2px) scale(1.02)' as any,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)' as any,
+          backgroundColor: DESIGN_TOKENS.colors.primary,
+          borderColor: DESIGN_TOKENS.colors.primary,
+          boxShadow: DESIGN_TOKENS.shadows.hover,
         } as any,
       },
     }),
@@ -458,11 +454,11 @@ const styles = StyleSheet.create({
   },
   viewButtonText: {
     fontSize: Platform.select({
-      default: 14, // Мобильные
-      web: 15, // Десктоп
+      default: 14,
+      web: 15,
     }),
     fontWeight: '600',
-    color: '#6b7280', // ✅ УЛУЧШЕНИЕ: Нейтральный серый
+    color: DESIGN_TOKENS.colors.primary,
   },
   viewButtonTextMobile: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,

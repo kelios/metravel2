@@ -236,7 +236,8 @@ export class EnhancedPdfGenerator {
   }
 
   /**
-   * Строит inline-галерею для текстовой страницы (1 большое фото или 2–4 в сетке)
+   * Строит inline-галерею для текстовой страницы (1-4 фото встраиваются компактно)
+   * Для 5+ фото рекомендуется отдельная страница галереи
    */
   private buildInlineGallerySection(
     travel: TravelForBook,
@@ -254,81 +255,142 @@ export class EnhancedPdfGenerator {
 
     if (!photos.length) return '';
 
-    // Журнальная раскладка: используем повторяющийся шаблон групп [1,3,4]
-    const pattern = [1, 3, 4];
-    let patternIndex = 0;
-    let cursor = 0;
-    const blocks: string[] = [];
-
-    while (cursor < photos.length) {
-      let groupSize = pattern[patternIndex % pattern.length];
-      const remaining = photos.length - cursor;
-
-      // Если оставшихся фото меньше, чем запланированный размер группы,
-      // используем оставшееся количество, но не даём группе быть пустой.
-      if (remaining < groupSize) {
-        groupSize = remaining;
-      }
-
-      const group = photos.slice(cursor, cursor + groupSize);
-      cursor += groupSize;
-      patternIndex++;
-
-      if (group.length === 1) {
-        const photo = this.escapeHtml(group[0]);
-        blocks.push(`
+    // Для 5+ фото показываем только превью с указанием на отдельную страницу галереи
+    if (photos.length >= 5) {
+      const previewPhotos = photos.slice(0, 4);
+      const remaining = photos.length - 4;
+      
+      return `
+        <div style="margin-bottom: ${spacing.sectionSpacing};">
           <div style="
-            margin-bottom: ${spacing.sectionSpacing};
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: ${spacing.elementSpacing};
+            padding-bottom: 8px;
+            border-bottom: 2px solid ${colors.accentSoft};
           ">
-            <div style="
-              border-radius: ${this.theme.blocks.borderRadius};
-              overflow: hidden;
-              box-shadow: ${this.theme.blocks.shadow};
-              background: ${colors.surfaceAlt};
-            ">
-              <img src="${photo}" alt="Фото путешествия"
-                style="width: 100%; height: 90mm; object-fit: cover; display: block;"
-                crossorigin="anonymous"
-                onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
-            </div>
+            <span style="font-size: 20pt; line-height: 1;">📸</span>
+            <h2 style="
+              font-size: ${typography.h2.size};
+              font-weight: ${typography.h2.weight};
+              color: ${colors.accent};
+              margin: 0;
+              font-family: ${typography.headingFont};
+            ">Фотогалерея</h2>
+            <span style="
+              font-size: ${typography.small.size};
+              color: ${colors.textMuted};
+              font-family: ${typography.bodyFont};
+            ">(${photos.length} ${this.getPhotoLabel(photos.length)})</span>
           </div>
-        `);
-        continue;
-      }
+          <div style="
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4mm;
+            position: relative;
+          ">
+            ${previewPhotos.map((photo, index) => `
+              <div style="
+                border-radius: ${this.theme.blocks.borderRadius};
+                overflow: hidden;
+                background: ${colors.surfaceAlt};
+                box-shadow: ${this.theme.blocks.shadow};
+                position: relative;
+                ${index === 3 ? `
+                  &::after {
+                    content: '+${remaining}';
+                    position: absolute;
+                    inset: 0;
+                    background: rgba(0,0,0,0.7);
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 24pt;
+                    font-weight: 700;
+                  }
+                ` : ''}
+              ">
+                <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
+                  style="width: 100%; height: 45mm; object-fit: cover; display: block;"
+                  crossorigin="anonymous"
+                  onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+                ${index === 3 && remaining > 0 ? `
+                  <div style="
+                    position: absolute;
+                    inset: 0;
+                    background: rgba(0,0,0,0.7);
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 24pt;
+                    font-weight: 700;
+                    font-family: ${typography.headingFont};
+                  ">+${remaining}</div>
+                ` : ''}
+              </div>
+            `).join('')}
+          </div>
+          <p style="
+            margin-top: ${spacing.elementSpacing};
+            font-size: ${typography.small.size};
+            color: ${colors.textMuted};
+            text-align: center;
+            font-style: italic;
+            font-family: ${typography.bodyFont};
+          ">Полная галерея на следующей странице</p>
+        </div>
+      `;
+    }
 
-      const gridColumns = group.length === 2 ? 2 : group.length === 3 ? 3 : 4;
-      const imageHeight = group.length === 2 ? '70mm' : group.length === 3 ? '65mm' : '55mm';
-
-      const itemsHtml = group
-        .map((photo) => `
+    // Для 1-4 фото: компактная встроенная галерея
+    if (photos.length === 1) {
+      return `
+        <div style="margin-bottom: ${spacing.sectionSpacing};">
           <div style="
             border-radius: ${this.theme.blocks.borderRadius};
             overflow: hidden;
-            background: ${colors.surfaceAlt};
             box-shadow: ${this.theme.blocks.shadow};
+            background: ${colors.surfaceAlt};
           ">
-            <img src="${this.escapeHtml(photo)}" alt="Фото путешествия"
-              style="width: 100%; height: ${imageHeight}; object-fit: cover; display: block;"
+            <img src="${this.escapeHtml(photos[0])}" alt="Фото путешествия"
+              style="width: 100%; height: 85mm; object-fit: cover; display: block;"
               crossorigin="anonymous"
               onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
           </div>
-        `)
-        .join('');
-
-      blocks.push(`
-        <div style="margin-bottom: ${spacing.sectionSpacing};">
-          <div style="
-            display: grid;
-            grid-template-columns: repeat(${gridColumns}, 1fr);
-            gap: 6mm;
-          ">
-            ${itemsHtml}
-          </div>
         </div>
-      `);
+      `;
     }
 
-    return blocks.join('');
+    // Для 2-4 фото: сетка
+    const gridColumns = photos.length === 2 ? 2 : photos.length === 3 ? 3 : 2;
+    const imageHeight = photos.length === 2 ? '65mm' : photos.length === 3 ? '55mm' : '50mm';
+
+    return `
+      <div style="margin-bottom: ${spacing.sectionSpacing};">
+        <div style="
+          display: grid;
+          grid-template-columns: repeat(${gridColumns}, 1fr);
+          gap: 5mm;
+        ">
+          ${photos.map((photo, index) => `
+            <div style="
+              border-radius: ${this.theme.blocks.borderRadius};
+              overflow: hidden;
+              background: ${colors.surfaceAlt};
+              box-shadow: ${this.theme.blocks.shadow};
+            ">
+              <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
+                style="width: 100%; height: ${imageHeight}; object-fit: cover; display: block;"
+                crossorigin="anonymous"
+                onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
   }
 
   /**
@@ -622,15 +684,26 @@ export class EnhancedPdfGenerator {
         
         ${descriptionBlocks.length > 0 ? `
           <div style="margin-bottom: ${spacing.sectionSpacing};">
-            <h2 style="
-              font-size: ${typography.h2.size};
-              font-weight: ${typography.h2.weight};
-              color: ${colors.accent};
+            <div style="
+              display: flex;
+              align-items: center;
+              gap: 10px;
               margin-bottom: ${spacing.elementSpacing};
-              border-left: 4px solid ${colors.accent};
-              padding-left: ${spacing.elementSpacing};
-              font-family: ${typography.headingFont};
-            ">Описание</h2>
+              padding-bottom: 8px;
+              border-bottom: 2px solid ${colors.accentSoft};
+            ">
+              <span style="
+                font-size: 20pt;
+                line-height: 1;
+              ">📝</span>
+              <h2 style="
+                font-size: ${typography.h2.size};
+                font-weight: ${typography.h2.weight};
+                color: ${colors.accent};
+                margin: 0;
+                font-family: ${typography.headingFont};
+              ">Описание</h2>
+            </div>
             <div style="
               font-size: ${typography.body.size};
               line-height: ${typography.body.lineHeight};
@@ -640,15 +713,26 @@ export class EnhancedPdfGenerator {
           </div>
         ` : `
           <div style="margin-bottom: ${spacing.sectionSpacing};">
-            <h2 style="
-              font-size: ${typography.h2.size};
-              font-weight: ${typography.h2.weight};
-              color: ${colors.accent};
+            <div style="
+              display: flex;
+              align-items: center;
+              gap: 10px;
               margin-bottom: ${spacing.elementSpacing};
-              border-left: 4px solid ${colors.accent};
-              padding-left: ${spacing.elementSpacing};
-              font-family: ${typography.headingFont};
-            ">Описание</h2>
+              padding-bottom: 8px;
+              border-bottom: 2px solid ${colors.accentSoft};
+            ">
+              <span style="
+                font-size: 20pt;
+                line-height: 1;
+              ">📝</span>
+              <h2 style="
+                font-size: ${typography.h2.size};
+                font-weight: ${typography.h2.weight};
+                color: ${colors.accent};
+                margin: 0;
+                font-family: ${typography.headingFont};
+              ">Описание</h2>
+            </div>
             <p style="
               color: ${colors.textMuted};
               font-style: italic;
@@ -662,15 +746,26 @@ export class EnhancedPdfGenerator {
 
         ${recommendationBlocks.length > 0 ? `
           <div style="margin-bottom: ${spacing.sectionSpacing};">
-            <h2 style="
-              font-size: ${typography.h2.size};
-              font-weight: ${typography.h2.weight};
-              color: ${colors.accent};
+            <div style="
+              display: flex;
+              align-items: center;
+              gap: 10px;
               margin-bottom: ${spacing.elementSpacing};
-              border-left: 4px solid ${colors.accent};
-              padding-left: ${spacing.elementSpacing};
-              font-family: ${typography.headingFont};
-            ">Рекомендации</h2>
+              padding-bottom: 8px;
+              border-bottom: 2px solid ${colors.accentSoft};
+            ">
+              <span style="
+                font-size: 20pt;
+                line-height: 1;
+              ">💡</span>
+              <h2 style="
+                font-size: ${typography.h2.size};
+                font-weight: ${typography.h2.weight};
+                color: ${colors.accent};
+                margin: 0;
+                font-family: ${typography.headingFont};
+              ">Рекомендации</h2>
+            </div>
             <div style="
               font-size: ${typography.body.size};
               line-height: ${typography.body.lineHeight};
@@ -695,13 +790,21 @@ export class EnhancedPdfGenerator {
                 border: ${this.theme.blocks.borderWidth} solid ${colors.tipBlock.border};
                 box-shadow: ${this.theme.blocks.shadow};
               ">
-                <h3 style="
-                  margin: 0 0 ${spacing.elementSpacing} 0;
-                  color: ${colors.tipBlock.text};
-                  font-size: ${typography.h4.size};
-                  font-weight: ${typography.h4.weight};
-                  font-family: ${typography.headingFont};
-                ">Плюсы</h3>
+                <div style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  margin-bottom: ${spacing.elementSpacing};
+                ">
+                  <span style="font-size: 18pt; line-height: 1;">✨</span>
+                  <h3 style="
+                    margin: 0;
+                    color: ${colors.tipBlock.text};
+                    font-size: ${typography.h4.size};
+                    font-weight: ${typography.h4.weight};
+                    font-family: ${typography.headingFont};
+                  ">Плюсы</h3>
+                </div>
                 <div style="
                   font-size: ${typography.small.size};
                   line-height: ${typography.small.lineHeight};
@@ -718,13 +821,21 @@ export class EnhancedPdfGenerator {
                 border: ${this.theme.blocks.borderWidth} solid ${colors.dangerBlock.border};
                 box-shadow: ${this.theme.blocks.shadow};
               ">
-                <h3 style="
-                  margin: 0 0 ${spacing.elementSpacing} 0;
-                  color: ${colors.dangerBlock.text};
-                  font-size: ${typography.h4.size};
-                  font-weight: ${typography.h4.weight};
-                  font-family: ${typography.headingFont};
-                ">Минусы</h3>
+                <div style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  margin-bottom: ${spacing.elementSpacing};
+                ">
+                  <span style="font-size: 18pt; line-height: 1;">⚠️</span>
+                  <h3 style="
+                    margin: 0;
+                    color: ${colors.dangerBlock.text};
+                    font-size: ${typography.h4.size};
+                    font-weight: ${typography.h4.weight};
+                    font-family: ${typography.headingFont};
+                  ">Минусы</h3>
+                </div>
                 <div style="
                   font-size: ${typography.small.size};
                   line-height: ${typography.small.lineHeight};

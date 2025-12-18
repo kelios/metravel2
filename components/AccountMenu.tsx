@@ -3,11 +3,13 @@ import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native
 import { Divider, Menu } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { router } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useFilters } from '@/providers/FiltersProvider';
 import { METRICS } from '@/constants/layout';
+import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 
 function AccountMenu() {
   const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth();
@@ -72,6 +74,20 @@ function AccountMenu() {
   }, [userId]);
 
   const anchorLabel = isAuthenticated && username ? username : 'Аккаунт';
+
+  const navLinks = useMemo(
+    () => [
+      ...PRIMARY_HEADER_NAV_ITEMS.map((item) => ({
+        key: `nav-${item.path}`,
+        title: item.label,
+        path: item.path,
+        icon: item.icon,
+      })),
+      { key: 'nav-favorites', title: 'Избранное', path: '/favorites', icon: 'heart' },
+      { key: 'nav-about', title: 'О сайте', path: '/about', icon: 'info' },
+    ],
+    []
+  );
 
   return (
     <Menu
@@ -140,6 +156,20 @@ function AccountMenu() {
           />
 
           <View style={styles.sectionDivider} />
+          <Text style={styles.sectionTitle}>Навигация</Text>
+
+          {navLinks.map((item) => (
+            <Menu.Item
+              key={item.key}
+              onPress={() => handleNavigate(item.path)}
+              title={item.title}
+              leadingIcon={({ size }) => <Feather name={item.icon as any} size={size} color={styles.iconMuted.color} />}
+              style={styles.menuItem}
+              titleStyle={styles.menuItemTitle}
+            />
+          ))}
+
+          <View style={styles.sectionDivider} />
           <Text style={styles.sectionTitle}>Документы</Text>
 
           <Menu.Item
@@ -166,6 +196,20 @@ function AccountMenu() {
             style={styles.menuItem}
             titleStyle={styles.menuItemTitleStrong}
           />
+
+          <View style={styles.sectionDivider} />
+          <Text style={styles.sectionTitle}>Навигация</Text>
+
+          {navLinks.map((item) => (
+            <Menu.Item
+              key={item.key}
+              onPress={() => handleNavigate(item.path)}
+              title={item.title}
+              leadingIcon={({ size }) => <Feather name={item.icon as any} size={size} color={styles.iconMuted.color} />}
+              style={styles.menuItem}
+              titleStyle={styles.menuItemTitle}
+            />
+          ))}
 
           <View style={styles.sectionDivider} />
           <Text style={styles.sectionTitle}>Путешествия</Text>

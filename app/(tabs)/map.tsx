@@ -40,6 +40,7 @@ import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/src/utils/filte
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { METRICS } from '@/constants/layout';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 
 interface Coordinates { latitude: number; longitude: number; }
 interface FilterValues { categories: string[]; radius: string; address: string; }

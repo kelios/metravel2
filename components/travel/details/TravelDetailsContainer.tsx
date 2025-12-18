@@ -13,7 +13,6 @@ import React, {
 import {
   ActivityIndicator,
   Animated,
-  Easing,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -790,7 +789,7 @@ export default function TravelDetails() {
   const { isMobile, headerOffset, width } = useResponsive();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   // ✅ УЛУЧШЕНИЕ: Состояние для похожих путешествий (для навигации)
   const [relatedTravels, setRelatedTravels] = useState<Travel[]>([]);
   
@@ -813,7 +812,6 @@ export default function TravelDetails() {
         ? styles.sideMenuWebMobile
         : styles.sideMenuWebDesktop
       : styles.sideMenuNative;
-  const fabTop = headerOffset + insets.top + 12;
 
   useLCPPreload(travel);
 
@@ -914,9 +912,9 @@ export default function TravelDetails() {
 
   const stickyActionsBottomOffset = useMemo(() => {
     if (!isMobile) return 0;
-    return Platform.OS === 'web'
-      ? insets.bottom + 8
-      : insets.bottom + LAYOUT.tabBarHeight + 8;
+    // На мобильных (включая mobile web) держим sticky-панель над нижней док/таб-панелью
+    // и учитываем safe-area.
+    return insets.bottom + LAYOUT.tabBarHeight + 8;
   }, [insets.bottom, isMobile]);
 
   const scrollBottomPadding = useMemo(() => {
@@ -1292,7 +1290,8 @@ export default function TravelDetails() {
             </View>
           </ScrollView>
 
-          {isMobile && showStickyActions && (
+          {/* ✅ Sticky-панель действий отключена на мобильных, чтобы не мешать чтению */}
+          {/* {isMobile && showStickyActions && (
             <View
               testID="travel-details-sticky-actions"
               pointerEvents="box-none"
@@ -1313,7 +1312,7 @@ export default function TravelDetails() {
                 <ShareButtons travel={travel} variant="sticky" />
               </View>
             </View>
-          )}
+          )} */}
             
           {/* ✅ Кнопка "Наверх" */}
           <ScrollToTopButton
@@ -1525,18 +1524,40 @@ const TravelHeroSection: React.FC<{
 
       {quickJumpLinks.length > 0 && (
         <View style={[styles.sectionContainer, styles.contentStable, styles.quickJumpWrapper]}>
-          {quickJumpLinks.map((link) => (
-            <Pressable
-              key={link.key}
-              onPress={() => onQuickJump(link.key)}
-              style={({ pressed }) => [styles.quickJumpChip, pressed && styles.quickJumpChipPressed]}
-              accessibilityRole="button"
-              accessibilityLabel={`Перейти к разделу ${link.label}`}
+          {isMobile ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickJumpScrollContent}
+              style={styles.quickJumpScroll}
             >
-              <Icon name={link.icon} size={18} color={DESIGN_TOKENS.colors.primary} />
-              <Text style={styles.quickJumpLabel}>{link.label}</Text>
-            </Pressable>
-          ))}
+              {quickJumpLinks.map((link) => (
+                <Pressable
+                  key={link.key}
+                  onPress={() => onQuickJump(link.key)}
+                  style={({ pressed }) => [styles.quickJumpChip, pressed && styles.quickJumpChipPressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Перейти к разделу ${link.label}`}
+                >
+                  <Icon name={link.icon} size={18} color={DESIGN_TOKENS.colors.primary} />
+                  <Text style={styles.quickJumpLabel}>{link.label}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          ) : (
+            quickJumpLinks.map((link) => (
+              <Pressable
+                key={link.key}
+                onPress={() => onQuickJump(link.key)}
+                style={({ pressed }) => [styles.quickJumpChip, pressed && styles.quickJumpChipPressed]}
+                accessibilityRole="button"
+                accessibilityLabel={`Перейти к разделу ${link.label}`}
+              >
+                <Icon name={link.icon} size={18} color={DESIGN_TOKENS.colors.primary} />
+                <Text style={styles.quickJumpLabel}>{link.label}</Text>
+              </Pressable>
+            ))
+          )}
         </View>
       )}
 
@@ -1655,14 +1676,14 @@ const TravelContentSections: React.FC<{
   );
 
   const decisionSummary = useMemo(() => {
-    const items: Array<{ label: string; text: string }> = [];
+    const items: Array<{ label: string; text: string; tone: "info" | "positive" | "negative" }> = [];
     const rec = extractSnippets(travel.recommendation, 2);
     const plus = extractSnippets(travel.plus, 1);
     const minus = extractSnippets(travel.minus, 1);
 
-    if (rec) items.push({ label: "Совет", text: rec });
-    if (plus) items.push({ label: "Плюс", text: plus });
-    if (minus) items.push({ label: "Минус", text: minus });
+    if (rec) items.push({ label: "Совет", text: rec, tone: "info" });
+    if (plus) items.push({ label: "Плюс", text: plus, tone: "positive" });
+    if (minus) items.push({ label: "Минус", text: minus, tone: "negative" });
 
     return items.slice(0, 3);
   }, [extractSnippets, travel.minus, travel.plus, travel.recommendation]);
@@ -1699,8 +1720,24 @@ const TravelContentSections: React.FC<{
                     <View style={styles.decisionSummaryList}>
                       {decisionSummary.map((item, idx) => (
                         <View key={`${item.label}-${idx}`} style={styles.decisionSummaryRow}>
-                          <View style={styles.decisionSummaryBadge}>
-                            <Text style={styles.decisionSummaryBadgeText}>{item.label}</Text>
+                          <View
+                            style={[
+                              styles.decisionSummaryBadge,
+                              item.tone === "positive" && styles.decisionSummaryBadgePositive,
+                              item.tone === "negative" && styles.decisionSummaryBadgeNegative,
+                              item.tone === "info" && styles.decisionSummaryBadgeInfo,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.decisionSummaryBadgeText,
+                                item.tone === "positive" && styles.decisionSummaryBadgeTextPositive,
+                                item.tone === "negative" && styles.decisionSummaryBadgeTextNegative,
+                                item.tone === "info" && styles.decisionSummaryBadgeTextInfo,
+                              ]}
+                            >
+                              {item.label}
+                            </Text>
                           </View>
                           <Text style={styles.decisionSummaryText}>{item.text}</Text>
                         </View>
@@ -2042,14 +2079,16 @@ const TravelRelatedContent: React.FC<{
       <View style={{ marginTop: 12 }}>
         {travel.travelAddress &&
           (shouldLoadNear ? (
-            <Suspense fallback={<TravelListFallback />}>
-              <NearTravelList
-                travel={travel}
-                onTravelsLoaded={(travels) => setRelatedTravels(travels)}
-              />
-            </Suspense>
+            <View testID="travel-details-near-loaded">
+              <Suspense fallback={<TravelListFallback />}>
+                <NearTravelList
+                  travel={travel}
+                  onTravelsLoaded={(travels) => setRelatedTravels(travels)}
+                />
+              </Suspense>
+            </View>
           ) : (
-            <View style={styles.lazySectionReserved}>
+            <View testID="travel-details-near-placeholder" style={styles.lazySectionReserved}>
               <TravelListSkeleton count={3} />
             </View>
           ))}
@@ -2097,11 +2136,13 @@ const TravelRelatedContent: React.FC<{
       </View>
       <View style={{ marginTop: 12 }}>
         {shouldLoadPopular ? (
-          <Suspense fallback={<TravelListFallback />}>
-            <PopularTravelList />
-          </Suspense>
+          <View testID="travel-details-popular-loaded">
+            <Suspense fallback={<TravelListFallback />}>
+              <PopularTravelList />
+            </Suspense>
+          </View>
         ) : (
-          <View style={styles.lazySectionReserved}>
+          <View testID="travel-details-popular-placeholder" style={styles.lazySectionReserved}>
             <TravelListSkeleton count={3} />
           </View>
         )}
@@ -2143,14 +2184,11 @@ const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boolean }> =
 );
 
 /* -------------------- styles -------------------- */
-const ANDROID_ELEVATION_CARD = Platform.select({ android: 2, default: 0 });
-const ANDROID_ELEVATION_MENU = Platform.select({ android: 5, default: 0 });
-
 const styles = StyleSheet.create({
-  // ✅ РЕДИЗАЙН: Современный градиентный фон
+  // ✅ РЕДИЗАЙН: Светлый современный фон
   wrapper: { 
     flex: 1, 
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: DESIGN_TOKENS.colors.background,
   },
   safeArea: { flex: 1 },
   mainContainer: { 
@@ -2195,16 +2233,11 @@ const styles = StyleSheet.create({
     }),
   },
 
-  // ✅ РЕДИЗАЙН: Адаптивное боковое меню с glassmorphism
+  // ✅ РЕДИЗАЙН: Адаптивное боковое меню
   sideMenuBase: {
     backgroundColor: DESIGN_TOKENS.colors.surface,
-    shadowColor: DESIGN_TOKENS.colors.text,
-    borderRightColor: "rgba(0, 0, 0, 0.06)",
-  },
-  
-  root: {
-    flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.background,
+    borderRightWidth: 1,
+    borderRightColor: DESIGN_TOKENS.colors.borderLight,
   },
   scrollView: {
     flex: 1,
@@ -2215,25 +2248,10 @@ const styles = StyleSheet.create({
       web: DESIGN_TOKENS.spacing.xl,
     }),
   },
-  
-  contentContainer: {
-    maxWidth: MAX_CONTENT_WIDTH,
-    width: "100%",
-    alignSelf: "center",
-    paddingHorizontal: Platform.select({
-      default: DESIGN_TOKENS.spacing.md,
-      web: DESIGN_TOKENS.spacing.xl,
-    }),
-    paddingTop: Platform.select({
-      default: DESIGN_TOKENS.spacing.sm,
-      web: DESIGN_TOKENS.spacing.lg,
-    }),
-  },
-  
   sectionContainer: {
-    marginBottom: DESIGN_TOKENS.spacing.xl,
+    marginBottom: DESIGN_TOKENS.spacing.xxl,
     paddingHorizontal: Platform.select({
-      default: DESIGN_TOKENS.spacing.md,
+      default: DESIGN_TOKENS.spacing.lg,
       web: 0,
     }),
   },
@@ -2264,20 +2282,33 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     marginTop: DESIGN_TOKENS.spacing.md,
   },
+  quickJumpScroll: {
+    flexGrow: 0,
+  },
+  quickJumpScrollContent: {
+    paddingRight: DESIGN_TOKENS.spacing.md,
+  },
   quickJumpChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(148, 163, 184, 0.4)",
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
     backgroundColor: DESIGN_TOKENS.colors.surface,
     marginRight: DESIGN_TOKENS.spacing.sm,
     marginBottom: DESIGN_TOKENS.spacing.sm,
+    ...Platform.select({
+      web: {
+        boxShadow: DESIGN_TOKENS.shadows.light,
+      } as any,
+      default: DESIGN_TOKENS.shadowsNative.light,
+    }),
   },
   quickJumpChipPressed: {
-    opacity: 0.75,
+    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
+    borderColor: DESIGN_TOKENS.colors.borderAccent,
   },
   quickJumpLabel: {
     fontSize: 14,
@@ -2304,16 +2335,22 @@ const styles = StyleSheet.create({
   },
 
   decisionSummaryBox: {
-    marginBottom: DESIGN_TOKENS.spacing.lg,
-    padding: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
+    marginBottom: DESIGN_TOKENS.spacing.xl,
+    padding: DESIGN_TOKENS.spacing.xl,
+    borderRadius: DESIGN_TOKENS.radii.lg,
     borderWidth: 1,
-    borderColor: 'rgba(15, 23, 42, 0.10)',
-    backgroundColor: 'rgba(15, 23, 42, 0.02)',
+    borderColor: DESIGN_TOKENS.colors.borderLight,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    ...Platform.select({
+      web: {
+        boxShadow: DESIGN_TOKENS.shadows.card,
+      } as any,
+      default: DESIGN_TOKENS.shadowsNative.medium,
+    }),
   },
   decisionSummaryTitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: '800' as any,
+    fontSize: DESIGN_TOKENS.typography.sizes.lg,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
     color: DESIGN_TOKENS.colors.text,
     marginBottom: DESIGN_TOKENS.spacing.sm,
   },
@@ -2329,21 +2366,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: 'rgba(74, 140, 140, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(74, 140, 140, 0.20)',
+  },
+  decisionSummaryBadgeInfo: {
+    backgroundColor: 'rgba(59, 130, 246, 0.10)',
+    borderColor: 'rgba(59, 130, 246, 0.18)',
+  },
+  decisionSummaryBadgePositive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.10)',
+    borderColor: 'rgba(34, 197, 94, 0.18)',
+  },
+  decisionSummaryBadgeNegative: {
+    backgroundColor: 'rgba(239, 68, 68, 0.10)',
+    borderColor: 'rgba(239, 68, 68, 0.18)',
   },
   decisionSummaryBadgeText: {
     fontSize: 12,
     fontWeight: '800' as any,
-    color: DESIGN_TOKENS.colors.primary,
+    letterSpacing: 0.2,
+  },
+  decisionSummaryBadgeTextInfo: {
+    color: '#1d4ed8',
+  },
+  decisionSummaryBadgeTextPositive: {
+    color: '#15803d',
+  },
+  decisionSummaryBadgeTextNegative: {
+    color: '#b91c1c',
   },
   decisionSummaryText: {
     flex: 1,
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    lineHeight: 20,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    lineHeight: Platform.select({ default: 24, web: 22 }),
     color: DESIGN_TOKENS.colors.text,
-    fontWeight: '600' as any,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
   },
   
   backToTopWrapper: {
@@ -2397,53 +2453,31 @@ const styles = StyleSheet.create({
     paddingTop: HEADER_OFFSET_MOBILE + 32,
   },
 
-  pdfButtonContainer: {
-    position: "absolute",
-    right: 16,
-    bottom: 32,
-    zIndex: 900,
-  },
-  pdfButton: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
-    borderRadius: 999,
-    backgroundColor: "#111827",
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.16,
-    shadowRadius: 8,
-  },
-  pdfButtonText: {
-    color: DESIGN_TOKENS.colors.surface,
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: "600",
-    letterSpacing: 0.3,
-  },
-
   // ✅ РЕДИЗАЙН: Современные карточки с улучшенными тенями
   // ✅ РЕДИЗАЙН: Унифицированные карточки с единой системой радиусов (12px)
   sectionHeaderBtn: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: Platform.select({
-      default: DESIGN_TOKENS.spacing.md,
-      web: DESIGN_TOKENS.spacing.lg,
+      default: DESIGN_TOKENS.spacing.lg,
+      web: DESIGN_TOKENS.spacing.xl,
     }),
     paddingHorizontal: Platform.select({
-      default: DESIGN_TOKENS.spacing.md,
-      web: DESIGN_TOKENS.spacing.lg,
+      default: DESIGN_TOKENS.spacing.lg,
+      web: DESIGN_TOKENS.spacing.xl,
     }),
     backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.md,
+    borderRadius: DESIGN_TOKENS.radii.lg,
     justifyContent: "space-between",
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: DESIGN_TOKENS.colors.borderLight,
-    minHeight: 56,
+    minHeight: 64,
+    ...Platform.select({
+      web: {
+        boxShadow: DESIGN_TOKENS.shadows.card,
+      } as any,
+      default: DESIGN_TOKENS.shadowsNative.medium,
+    }),
   },
   sectionHeaderPositive: {
     backgroundColor: "rgba(16, 185, 129, 0.12)",
@@ -2495,23 +2529,23 @@ const styles = StyleSheet.create({
 
   sectionHeaderText: { 
     fontSize: Platform.select({
-      default: 18,
-      web: 20,
+      default: 20,
+      web: 24,
     }),
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    fontWeight: '700' as any,
     color: DESIGN_TOKENS.colors.text,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
     lineHeight: Platform.select({
-      default: 24,
-      web: 28,
+      default: 28,
+      web: 32,
     }),
     flex: 1,
   },
   sectionSubtitle: {
-    fontSize: Platform.select({ default: 13, web: 14 }),
+    fontSize: Platform.select({ default: 14, web: 16 }),
     color: DESIGN_TOKENS.colors.textMuted,
-    marginTop: DESIGN_TOKENS.spacing.xs,
-    lineHeight: Platform.select({ default: 18, web: 20 }),
+    marginTop: DESIGN_TOKENS.spacing.sm,
+    lineHeight: Platform.select({ default: 22, web: 24 }),
   },
 
   sliderContainer: { 
@@ -2519,21 +2553,14 @@ const styles = StyleSheet.create({
     borderRadius: DESIGN_TOKENS.radii.lg,
     overflow: "hidden",
     marginBottom: Platform.select({
-      default: DESIGN_TOKENS.spacing.md,
-      web: DESIGN_TOKENS.spacing.lg,
+      default: DESIGN_TOKENS.spacing.lg,
+      web: DESIGN_TOKENS.spacing.xl,
     }),
-    // Объединенные стили теней
     ...Platform.select({
       web: {
-        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-      },
-      default: {
-        shadowColor: DESIGN_TOKENS.colors.text,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.10,
-        shadowRadius: 12,
-        elevation: 4,
-      },
+        boxShadow: DESIGN_TOKENS.shadows.heavy,
+      } as any,
+      default: DESIGN_TOKENS.shadowsNative.heavy,
     }),
   },
 
@@ -2576,18 +2603,19 @@ const styles = StyleSheet.create({
   descriptionContainer: {
     width: "100%",
     backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.md,
+    borderRadius: DESIGN_TOKENS.radii.lg,
     padding: Platform.select({
-      default: DESIGN_TOKENS.spacing.md,
-      web: DESIGN_TOKENS.spacing.lg,
+      default: DESIGN_TOKENS.spacing.lg,
+      web: DESIGN_TOKENS.spacing.xl,
     }),
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: DESIGN_TOKENS.colors.borderLight,
+    ...Platform.select({
+      web: {
+        boxShadow: DESIGN_TOKENS.shadows.card,
+      } as any,
+      default: DESIGN_TOKENS.shadowsNative.medium,
+    }),
   },
 
   mobileInsightTabsWrapper: {
@@ -2685,12 +2713,6 @@ const styles = StyleSheet.create({
       default: 520,
     }),
     justifyContent: 'center',
-  },
-  center: { 
-    flex: 1, 
-    justifyContent: "center", 
-    alignItems: "center", 
-    backgroundColor: DESIGN_TOKENS.colors.transparent,
   },
   
   // ✅ УЛУЧШЕНИЕ: Стили для страницы ошибки

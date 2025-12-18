@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -10,11 +10,18 @@ import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/src/utils/confirmAction';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 
 export default function FavoritesScreen() {
     const router = useRouter();
     const { isAuthenticated } = useAuth();
     const { favorites, removeFavorite, clearFavorites } = useFavorites() as any;
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 300);
+        return () => clearTimeout(timer);
+    }, [favorites]);
 
     const handleClearAll = useCallback(async () => {
         try {
@@ -55,6 +62,27 @@ export default function FavoritesScreen() {
                         onPress: () => router.push('/login'),
                     }}
                 />
+            </SafeAreaView>
+        );
+    }
+
+    if (isLoading) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <View style={styles.headerRow}>
+                        <View style={styles.headerTitleBlock}>
+                            <Text style={styles.title}>Избранное</Text>
+                        </View>
+                    </View>
+                </View>
+                <View style={styles.listContent}>
+                    {Array.from({ length: 3 }).map((_, index) => (
+                        <View key={index} style={styles.cardWrap}>
+                            <SkeletonLoader width="100%" height={280} borderRadius={12} style={styles.card} />
+                        </View>
+                    ))}
+                </View>
             </SafeAreaView>
         );
     }

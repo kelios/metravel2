@@ -31,6 +31,7 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
 
   const [copied, setCopied] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const {
     pdfExport,
     lastSettings,
@@ -154,6 +155,11 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
     }
   }, [shareUrl, shareTitle, shareText]);
 
+  // Переключение видимости панели
+  const toggleCollapse = useCallback(() => {
+    setIsCollapsed(prev => !prev);
+  }, []);
+
   // Обработчик "Сохранить PDF" — переводим на новый HTML-поток печати
   const handleExport = useCallback(
     async (settings: BookSettings) => {
@@ -233,6 +239,24 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
     });
   }
 
+  // Если панель свернута на мобильном, показываем только компактную кнопку
+  if (isMobile && isCollapsed) {
+    return (
+      <Pressable
+        onPress={toggleCollapse}
+        style={({ pressed }) => [
+          styles.collapsedIndicator,
+          isSticky && styles.collapsedIndicatorSticky,
+          pressed && styles.collapsedIndicatorPressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel="Показать панель действий"
+      >
+        <MaterialIcons name="more-horiz" size={24} color="#667085" />
+      </Pressable>
+    );
+  }
+
   return (
     <>
       <View
@@ -242,55 +266,95 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
           isSticky && styles.containerSticky,
         ]}
       >
-        {!isSticky && <Text style={styles.title}>Поделиться</Text>}
-        <View
-          style={[
-            styles.buttonsContainer,
-            isMobile && styles.buttonsContainerMobile,
-            isSticky && styles.buttonsContainerSticky,
-          ]}
-        >
-          {shareButtons.map((button) => (
-            <Pressable
-              key={button.key}
-              onPress={button.onPress}
-              disabled={button.disabled}
-              style={({ pressed }) => [
-                styles.button,
-                isSticky && styles.buttonSticky,
-                pressed && styles.buttonPressed,
-                button.key === 'copy' && copied && styles.buttonCopied,
-                button.disabled && styles.buttonDisabled,
-                globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={button.label}
-              android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
-            >
-              {button.key === 'export' ? (
-                <MaterialCommunityIcons name={button.icon as any} size={20} color={button.color} />
-              ) : (
-                <MaterialIcons name={button.icon as any} size={20} color={button.color} />
-              )}
-              {!isMobile && !isSticky && <Text style={styles.buttonText}>{button.label}</Text>}
-              {button.key === 'copy' && copied && (
-                <Text style={styles.copiedText}>✓</Text>
-              )}
-            </Pressable>
-          ))}
-        </View>
-        {isGenerating && Platform.OS === 'web' && (
-          <View style={styles.progressContainer}>
-            <View style={[styles.progressBar, { width: `${progress}%` }]} />
-            <Text style={styles.progressText}>
-              {currentStage === ExportStage.VALIDATING && 'Проверка данных...'}
-              {currentStage === ExportStage.TRANSFORMING && 'Подготовка путешествия...'}
-              {currentStage === ExportStage.GENERATING_HTML && 'Генерация страниц книги...'}
-              {currentStage === ExportStage.LOADING_IMAGES && 'Загрузка фотографий...'}
-              {currentStage === ExportStage.RENDERING && 'Подготовка к печати...'}
-              {currentStage === ExportStage.COMPLETE && 'Готово! Открываем книгу...'}
-            </Text>
+        {!isSticky && (
+          <View style={styles.header}>
+            <Text style={styles.title}>Поделиться</Text>
+            {isMobile && (
+              <Pressable
+                onPress={toggleCollapse}
+                style={({ pressed }) => [
+                  styles.collapseButton,
+                  pressed && styles.collapseButtonPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={isCollapsed ? 'Показать панель действий' : 'Скрыть панель действий'}
+              >
+                <MaterialIcons 
+                  name={isCollapsed ? 'expand-more' : 'expand-less'} 
+                  size={24} 
+                  color="#667085" 
+                />
+              </Pressable>
+            )}
           </View>
+        )}
+        {!isCollapsed && (
+          <>
+            <View
+              style={[
+                styles.buttonsContainer,
+                isMobile && styles.buttonsContainerMobile,
+                isSticky && styles.buttonsContainerSticky,
+              ]}
+            >
+              {isMobile && isSticky && (
+                <Pressable
+                  onPress={toggleCollapse}
+                  style={({ pressed }) => [
+                    styles.button,
+                    styles.buttonSticky,
+                    styles.closeButton,
+                    pressed && styles.buttonPressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Скрыть панель действий"
+                >
+                  <MaterialIcons name="close" size={20} color="#667085" />
+                </Pressable>
+              )}
+              {shareButtons.map((button) => (
+                <Pressable
+                  key={button.key}
+                  onPress={button.onPress}
+                  disabled={button.disabled}
+                  style={({ pressed }) => [
+                    styles.button,
+                    isSticky && styles.buttonSticky,
+                    pressed && styles.buttonPressed,
+                    button.key === 'copy' && copied && styles.buttonCopied,
+                    button.disabled && styles.buttonDisabled,
+                    globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={button.label}
+                  android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
+                >
+                  {button.key === 'export' ? (
+                    <MaterialCommunityIcons name={button.icon as any} size={20} color={button.color} />
+                  ) : (
+                    <MaterialIcons name={button.icon as any} size={20} color={button.color} />
+                  )}
+                  {!isMobile && !isSticky && <Text style={styles.buttonText}>{button.label}</Text>}
+                  {button.key === 'copy' && copied && (
+                    <Text style={styles.copiedText}>✓</Text>
+                  )}
+                </Pressable>
+              ))}
+            </View>
+            {isGenerating && Platform.OS === 'web' && (
+              <View style={styles.progressContainer}>
+                <View style={[styles.progressBar, { width: `${progress}%` }]} />
+                <Text style={styles.progressText}>
+                  {currentStage === ExportStage.VALIDATING && 'Проверка данных...'}
+                  {currentStage === ExportStage.TRANSFORMING && 'Подготовка путешествия...'}
+                  {currentStage === ExportStage.GENERATING_HTML && 'Генерация страниц книги...'}
+                  {currentStage === ExportStage.LOADING_IMAGES && 'Загрузка фотографий...'}
+                  {currentStage === ExportStage.RENDERING && 'Подготовка к печати...'}
+                  {currentStage === ExportStage.COMPLETE && 'Готово! Открываем книгу...'}
+                </Text>
+              </View>
+            )}
+          </>
         )}
       </View>
       {Platform.OS === 'web' && (
@@ -343,13 +407,85 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2,
   },
+  containerCollapsed: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   title: {
     fontSize: 20, // ✅ UX: Увеличено для лучшей иерархии
     fontWeight: '700',
     color: '#1a202c',
-    marginBottom: 16,
+    marginBottom: 0,
     fontFamily: 'Georgia',
     letterSpacing: -0.3,
+  },
+  collapseButton: {
+    padding: 4,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+    minHeight: 32,
+    minWidth: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+        transition: 'all 0.2s ease' as any,
+      },
+    }),
+  },
+  collapseButtonPressed: {
+    backgroundColor: '#e5e7eb',
+    transform: [{ scale: 0.95 }],
+  },
+  closeButton: {
+    backgroundColor: '#f3f4f6',
+  },
+  collapsedIndicator: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: Platform.OS === 'web' ? 'rgba(255, 255, 255, 0.9)' : '#fff',
+    ...(Platform.OS === 'web' ? {
+      backdropFilter: 'blur(20px)' as any,
+      WebkitBackdropFilter: 'blur(20px)' as any,
+    } : {}),
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: '#1f1f1f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+        transition: 'all 0.2s ease' as any,
+      },
+    }),
+  },
+  collapsedIndicatorSticky: {
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    marginBottom: 0,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+    minHeight: 40,
+    minWidth: 40,
+  },
+  collapsedIndicatorPressed: {
+    backgroundColor: '#e5e7eb',
+    transform: [{ scale: 0.98 }],
   },
   buttonsContainer: {
     flexDirection: 'row',

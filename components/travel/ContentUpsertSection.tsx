@@ -88,12 +88,24 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             return 'Опишите, для кого этот маршрут, что в нём главное и чего ожидать. Минимум 50 символов.';
         }
         if (descriptionPlainLength < 50) {
-            return 'Описание пока слишком короткое. Дополните текст (минимум 50 символов).';
+            const remaining = 50 - descriptionPlainLength;
+            return `Осталось ${remaining} ${remaining === 1 ? 'символ' : remaining < 5 ? 'символа' : 'символов'} до минимума`;
         }
         if (descriptionPlainLength <= 150) {
             return 'Хорошее краткое описание. Можно добавить чуть больше деталей (по желанию).';
         }
-        return 'Описание выглядит достаточно подробным.';
+        return 'Отличное подробное описание!';
+    }, [descriptionPlainLength]);
+
+    const descriptionProgress = useMemo(() => {
+        const progress = Math.min((descriptionPlainLength / 50) * 100, 100);
+        return progress;
+    }, [descriptionPlainLength]);
+
+    const descriptionProgressColor = useMemo(() => {
+        if (descriptionPlainLength < 50) return DESIGN_TOKENS.colors.dangerLight;
+        if (descriptionPlainLength <= 150) return '#FFD93D';
+        return DESIGN_TOKENS.colors.successDark;
     }, [descriptionPlainLength]);
 
     const handleChange = useCallback(
@@ -222,10 +234,31 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                         />
                     )}
                     {isDescription && (
-                        <View style={styles.descriptionStatusRow}>
-                            <Text style={styles.descriptionStatusText}>{descriptionStatusText}</Text>
-                            <Text style={styles.descriptionCounterText}>{descriptionPlainLength} символов</Text>
-                        </View>
+                        <>
+                            <View style={styles.descriptionProgressContainer}>
+                                <View style={styles.descriptionProgressTrack}>
+                                    <View 
+                                        style={[
+                                            styles.descriptionProgressFill, 
+                                            { 
+                                                width: `${descriptionProgress}%`,
+                                                backgroundColor: descriptionProgressColor 
+                                            }
+                                        ]} 
+                                    />
+                                </View>
+                            </View>
+                            <View style={styles.descriptionStatusRow}>
+                                <Text style={[
+                                    styles.descriptionStatusText,
+                                    descriptionPlainLength < 50 && styles.descriptionStatusTextWarning,
+                                    descriptionPlainLength >= 50 && styles.descriptionStatusTextSuccess
+                                ]}>
+                                    {descriptionStatusText}
+                                </Text>
+                                <Text style={styles.descriptionCounterText}>{descriptionPlainLength} символов</Text>
+                            </View>
+                        </>
                     )}
                     {isDescription && autosaveStatus && (
                         <View style={styles.autosaveRow}>
@@ -464,8 +497,21 @@ const styles = StyleSheet.create({
             ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
             : (DESIGN_TOKENS.shadowsNative.light as any)),
     },
-    descriptionStatusRow: {
+    descriptionProgressContainer: {
         marginTop: 8,
+    },
+    descriptionProgressTrack: {
+        height: 4,
+        backgroundColor: DESIGN_TOKENS.colors.borderLight,
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        overflow: 'hidden',
+    },
+    descriptionProgressFill: {
+        height: '100%',
+        borderRadius: DESIGN_TOKENS.radii.pill,
+    },
+    descriptionStatusRow: {
+        marginTop: 6,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -475,6 +521,13 @@ const styles = StyleSheet.create({
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: DESIGN_TOKENS.colors.textMuted,
         marginRight: 8,
+    },
+    descriptionStatusTextWarning: {
+        color: DESIGN_TOKENS.colors.dangerDark,
+        fontWeight: '600',
+    },
+    descriptionStatusTextSuccess: {
+        color: DESIGN_TOKENS.colors.successDark,
     },
     descriptionCounterText: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,

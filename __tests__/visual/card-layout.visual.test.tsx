@@ -28,12 +28,12 @@ describe('Card Layout Visual Tests', () => {
     it('should have correct marginBottom on mobile', () => {
       // ✅ ИСПРАВЛЕНО: marginBottom теперь только из enhancedTravelCardStyles
       const expectedMarginBottom = 12; // mobile
-      const spacingSm = DESIGN_TOKENS.spacing.sm; // 10px
+      const spacingSm = DESIGN_TOKENS.spacing.sm; // 12px
       
-      // Раньше было: 12px + 10px = 22px (ПРОБЛЕМА)
+      // Раньше было: 12px + 12px = 24px (ПРОБЛЕМА)
       // Теперь: 12px (ПРАВИЛЬНО)
       expect(expectedMarginBottom).toBe(12);
-      expect(spacingSm).toBe(10);
+      expect(spacingSm).toBe(12);
     });
 
     it('should not have double marginBottom', () => {
@@ -155,22 +155,22 @@ describe('Card Layout Visual Tests', () => {
 
   describe('Content Padding', () => {
     it('should have correct horizontal padding on mobile', () => {
-      // listContentMobile должен иметь paddingHorizontal: spacing.md (14px)
+      // listContentMobile должен иметь paddingHorizontal: spacing.md (16px)
       const expectedPaddingHorizontal = DESIGN_TOKENS.spacing.md;
-      expect(expectedPaddingHorizontal).toBe(14);
+      expect(expectedPaddingHorizontal).toBe(16);
     });
 
     it('should not have double padding', () => {
       // Проверяем, что padding не дублируется
       // main: paddingHorizontal: 0 на мобильных
-      // listContentMobile: paddingHorizontal: 14px
-      // Итого: 14px (правильно)
+      // listContentMobile: paddingHorizontal: 16px
+      // Итого: 16px (правильно)
       
       const mainPadding = 0;
-      const listPadding = 14;
+      const listPadding = 16;
       const totalPadding = mainPadding + listPadding;
       
-      expect(totalPadding).toBe(14);
+      expect(totalPadding).toBe(16);
     });
   });
 
@@ -214,15 +214,15 @@ describe('Card Layout Visual Tests', () => {
 
   describe('Problem Detection', () => {
     it('should detect double marginBottom issue', () => {
-      // ❌ ПРОБЛЕМА: RenderTravelItem добавляет marginBottom: spacing.sm (10px)
+      // ❌ ПРОБЛЕМА: RenderTravelItem добавляет marginBottom: spacing.sm (12px)
       // к уже существующему marginBottom из enhancedTravelCardStyles (12px)
       
       const cardMarginBottom = 12; // из enhancedTravelCardStyles
-      const containerMarginBottom = 10; // из RenderTravelItem (spacing.sm)
+      const containerMarginBottom = 12; // из RenderTravelItem (spacing.sm)
       const totalMarginBottom = cardMarginBottom + containerMarginBottom;
       
       // Это проблема!
-      expect(totalMarginBottom).toBe(22);
+      expect(totalMarginBottom).toBe(24);
       
       // Должно быть:
       expect(cardMarginBottom).toBe(12);
@@ -263,7 +263,7 @@ export const VISUAL_TEST_CONSTANTS = {
   WEB_IMAGE_HEIGHT: 240,
   MOBILE_BORDER_RADIUS: 20,
   WEB_BORDER_RADIUS: 24,
-  MOBILE_PADDING: 14,
+  MOBILE_PADDING: 16,
   WEB_PADDING: 20,
   MOBILE_MARGIN_BOTTOM: 12,
   WEB_MARGIN_BOTTOM: 16,

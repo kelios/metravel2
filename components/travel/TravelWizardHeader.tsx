@@ -30,43 +30,37 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     const { width } = useWindowDimensions();
     const isMobile = width <= DESIGN_TOKENS.breakpoints.mobile;
     const clamped = Math.min(Math.max(progressPercent, 0), 100);
+    
+    // Определяем цвет прогресс-бара на основе процента
+    const progressColor = useMemo(() => {
+        if (clamped < 33) return DESIGN_TOKENS.colors.dangerLight;
+        if (clamped < 67) return '#FFD93D'; // warning yellow
+        return DESIGN_TOKENS.colors.successDark;
+    }, [clamped]);
 
     const [isTipOpen, setIsTipOpen] = useState(false);
     const hasTip = !!tipBody && tipBody.trim().length > 0;
     const resolvedTipTitle = useMemo(() => tipTitle ?? 'Совет', [tipTitle]);
 
     const TipTrigger = hasTip ? (
-        isMobile ? (
-            <Pressable
-                onPress={() => setIsTipOpen(v => !v)}
-                style={[styles.tipIconButton, isTipOpen && styles.tipIconButtonActive]}
-                accessibilityRole="button"
-                accessibilityLabel={isTipOpen ? 'Скрыть совет' : 'Показать совет'}
-            >
-                <Feather
-                    name="info"
-                    size={16}
-                    color={isTipOpen ? DESIGN_TOKENS.colors.primary : DESIGN_TOKENS.colors.textSubtle}
-                />
-            </Pressable>
-        ) : (
-            <Pressable
-                onPress={() => setIsTipOpen(v => !v)}
-                style={[styles.tipToggleButton, isTipOpen && styles.tipToggleButtonActive]}
-                accessibilityRole="button"
-                accessibilityLabel={isTipOpen ? 'Скрыть совет' : 'Показать совет'}
-                {...Platform.select({ web: { cursor: 'pointer' } })}
-            >
-                <Feather
-                    name="info"
-                    size={16}
-                    color={isTipOpen ? DESIGN_TOKENS.colors.primary : DESIGN_TOKENS.colors.textSubtle}
-                />
+        <Pressable
+            onPress={() => setIsTipOpen(v => !v)}
+            style={[styles.tipToggleButton, isTipOpen && styles.tipToggleButtonActive]}
+            accessibilityRole="button"
+            accessibilityLabel={isTipOpen ? 'Скрыть совет' : 'Показать совет'}
+            {...Platform.select({ web: { cursor: 'pointer' } })}
+        >
+            <Feather
+                name="help-circle"
+                size={isMobile ? 14 : 16}
+                color={isTipOpen ? DESIGN_TOKENS.colors.primary : DESIGN_TOKENS.colors.textSubtle}
+            />
+            {!isMobile && (
                 <Text style={[styles.tipToggleText, isTipOpen && styles.tipToggleTextActive]} numberOfLines={1}>
                     {resolvedTipTitle}
                 </Text>
-            </Pressable>
-        )
+            )}
+        </Pressable>
     ) : null;
 
     const BackButton = canGoBack ? (
@@ -88,40 +82,34 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
             <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
                 {BackButton}
                 <View style={styles.titleColumn}>
-                    <Text style={[styles.headerTitle, isMobile && styles.headerTitleMobile]} numberOfLines={2}>
-                        {title}
-                    </Text>
-                    <Text style={[styles.headerSubtitle, isMobile && styles.headerSubtitleMobile]} numberOfLines={2}>
-                        {subtitle}
-                    </Text>
+                    {isMobile ? (
+                        <>
+                            <Text style={styles.headerTitleMobile} numberOfLines={1}>
+                                {title}
+                            </Text>
+                            <Text style={styles.headerSubtitleMobile} numberOfLines={1}>
+                                {subtitle}
+                            </Text>
+                        </>
+                    ) : (
+                        <>
+                            <Text style={styles.headerTitle} numberOfLines={1}>
+                                {title}
+                            </Text>
+                            <Text style={styles.headerSubtitle} numberOfLines={1}>
+                                {subtitle} • {clamped}% готово
+                            </Text>
+                        </>
+                    )}
                 </View>
-                {!isMobile ? (
-                    <View style={styles.headerRightRow}>
-                        {TipTrigger}
-                        {autosaveBadge ? (
-                            <View style={styles.autosaveBadge}>
-                                <Text style={styles.autosaveBadgeText}>{autosaveBadge}</Text>
-                            </View>
-                        ) : null}
-                    </View>
-                ) : null}
-            </View>
-
-            {isMobile && (autosaveBadge || TipTrigger) ? (
-                <View style={styles.mobileMetaRow}>
-                    {autosaveBadge ? (
-                        <View style={styles.autosaveBadge}>
-                            <Text style={styles.autosaveBadgeText}>{autosaveBadge}</Text>
-                        </View>
-                    ) : null}
+                <View style={styles.headerRightRow}>
                     {TipTrigger}
                 </View>
-            ) : null}
+            </View>
 
             <View style={styles.progressBarTrack}>
-                <View style={[styles.progressBarFill, { width: `${clamped}%` }]} />
+                <View style={[styles.progressBarFill, { width: `${clamped}%`, backgroundColor: progressColor }]} />
             </View>
-            {!isMobile && <Text style={styles.progressLabel}>Готово на {clamped}%</Text>}
 
             {hasTip && isTipOpen ? (
                 <View style={styles.tipPanel}>
@@ -138,19 +126,16 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
 const styles = StyleSheet.create({
     headerWrapper: {
         paddingHorizontal: DESIGN_TOKENS.spacing.md,
-        paddingTop: 8,
-        paddingBottom: 8,
+        paddingTop: DESIGN_TOKENS.spacing.sm,
+        paddingBottom: DESIGN_TOKENS.spacing.sm,
         backgroundColor: DESIGN_TOKENS.colors.surface,
         borderBottomWidth: 1,
         borderBottomColor: DESIGN_TOKENS.colors.borderLight,
     },
     headerWrapperMobile: {
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-        paddingTop: 6,
-        paddingBottom: 6,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        borderBottomWidth: 1,
-        borderBottomColor: DESIGN_TOKENS.colors.borderLight,
+        paddingTop: DESIGN_TOKENS.spacing.xs,
+        paddingBottom: DESIGN_TOKENS.spacing.xs,
     },
     headerRow: {
         flexDirection: 'row',
@@ -188,21 +173,25 @@ const styles = StyleSheet.create({
         minWidth: 0,
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 17,
         fontWeight: '700',
         color: DESIGN_TOKENS.colors.text,
-        marginBottom: 4,
+        marginBottom: 2,
     },
     headerTitleMobile: {
-        fontSize: 17,
+        fontSize: 16,
+        fontWeight: '700',
+        color: DESIGN_TOKENS.colors.text,
         marginBottom: 2,
     },
     headerSubtitle: {
-        fontSize: 12,
+        fontSize: 13,
         color: DESIGN_TOKENS.colors.textMuted,
+        fontWeight: '500',
     },
     headerSubtitleMobile: {
         fontSize: 12,
+        color: DESIGN_TOKENS.colors.textMuted,
     },
     autosaveBadge: {
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
@@ -222,26 +211,12 @@ const styles = StyleSheet.create({
         color: DESIGN_TOKENS.colors.primaryDark,
         fontWeight: '600',
     },
-    tipIconButton: {
-        width: 28,
-        height: 28,
-        borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
-        borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
-    },
-    tipIconButtonActive: {
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-        borderColor: DESIGN_TOKENS.colors.primary,
-    },
     tipToggleButton: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
         paddingHorizontal: 10,
-        height: 34,
+        height: 32,
         borderRadius: DESIGN_TOKENS.radii.pill,
         backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
         borderWidth: 1,
@@ -260,21 +235,16 @@ const styles = StyleSheet.create({
         color: DESIGN_TOKENS.colors.primary,
     },
     progressBarTrack: {
-        marginTop: 6,
+        marginTop: DESIGN_TOKENS.spacing.xs,
         width: '100%',
-        height: 4,
+        height: 6,
         borderRadius: DESIGN_TOKENS.radii.pill,
         backgroundColor: DESIGN_TOKENS.colors.borderLight,
+        overflow: 'hidden',
     },
     progressBarFill: {
-        height: 4,
+        height: '100%',
         borderRadius: DESIGN_TOKENS.radii.pill,
-        backgroundColor: DESIGN_TOKENS.colors.primary,
-    },
-    progressLabel: {
-        marginTop: 6,
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.textMuted,
     },
     tipPanel: {
         marginTop: DESIGN_TOKENS.spacing.sm,

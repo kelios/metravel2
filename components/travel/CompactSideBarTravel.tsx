@@ -236,7 +236,7 @@ function CompactSideBarTravel({
   
   return (
     <View style={styles.root}>
-        <ScrollView
+      <ScrollView
         style={[
           styles.menu,
           { 
@@ -252,244 +252,250 @@ function CompactSideBarTravel({
         }}
         showsHorizontalScrollIndicator={false}
       >
-        {isMobile && (
-          <View style={styles.closeTopBar}>
-            <Pressable
-              onPress={closeMenu}
-              style={({ pressed }) => [
-                styles.closeTopBtn,
-                pressed && styles.closeTopBtnPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Закрыть меню"
-              hitSlop={8}
-            >
-              <MaterialIcons name="close" size={20} color="#111827" />
-            </Pressable>
-          </View>
-        )}
-        {/* ✅ РЕДИЗАЙН: Компактная карточка автора */}
-        <View style={styles.card}>
-          <View style={styles.cardRow}>
-            <View style={styles.avatarWrap}>
-              {avatarUri ? (
-                <ExpoImage
-                  source={{ uri: avatarUri }}
-                  style={styles.avatar}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                  priority="low"
-                  transition={200}
-                  placeholder={require("@/assets/placeholder.webp")}
-                  // ✅ УЛУЧШЕНИЕ: Lazy loading для web
-                  {...(Platform.OS === "web"
-                    ? ({ loading: "lazy" } as any)
-                    : {})}
-                />
-              ) : (
-                <MaterialIcons name="image" size={60} color="#ccc" />
-              )}
-              {/* ✅ РЕДИЗАЙН: Компактное отображение просмотров */}
-              {viewsSafe != null && Number.isFinite(viewsSafe) && (
-                <View style={styles.viewsRow}>
-                  {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
-                  <Feather name="eye" size={12} color="#6b7280" />
-                  <Text style={styles.viewsTxt}>
-                    {new Intl.NumberFormat("ru-RU").format(viewsSafe)}
-                  </Text>
-                </View>
-              )}
+        {[
+          isMobile ? (
+            <View key="close-top" style={styles.closeTopBar}>
+              <Pressable
+                onPress={closeMenu}
+                style={({ pressed }) => [styles.closeTopBtn, pressed && styles.closeTopBtnPressed]}
+                accessibilityRole="button"
+                accessibilityLabel="Закрыть меню"
+                hitSlop={8}
+              >
+                <MaterialIcons name="close" size={20} color="#111827" />
+              </Pressable>
             </View>
+          ) : null,
 
-            <View style={{ flex: 1 }}>
-              <View style={styles.userRow}>
-                {titleLine ? (
-                  <Pressable
-                    onPress={handleOpenAuthorProfile}
-                    disabled={!authorUserId}
-                    accessibilityRole={authorUserId ? 'button' : undefined}
-                    accessibilityLabel={authorUserId ? `Открыть профиль автора ${userName || 'Пользователь'}` : undefined}
-                    style={({ pressed }) => [styles.userNameWrap, pressed && authorUserId ? { opacity: 0.9 } : null]}
-                    {...Platform.select({ web: authorUserId ? { cursor: 'pointer' } : {} })}
-                  >
-                    <Text style={styles.userName} numberOfLines={1}>
-                      {titleLine}
-                    </Text>
-                  </Pressable>
+          <View key="author-card" style={styles.card}>
+            <View style={styles.cardRow}>
+              <View style={styles.avatarWrap}>
+                {avatarUri ? (
+                  <ExpoImage
+                    source={{ uri: avatarUri }}
+                    style={styles.avatar}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    priority="low"
+                    transition={200}
+                    placeholder={require("@/assets/placeholder.webp")}
+                    {...(Platform.OS === "web" ? ({ loading: "lazy" } as any) : {})}
+                  />
                 ) : (
-                  <View />
+                  <MaterialIcons name="image" size={60} color="#ccc" />
                 )}
-                <View style={styles.actionsRow}>
-                  {canEdit && (
-                    <Pressable
-                      onPress={handleEdit}
-                      hitSlop={6}
-                      accessibilityRole="button"
-                      accessibilityLabel="Редактировать путешествие"
-                      style={({ pressed }) => [
-                        styles.actionBtn,
-                        pressed && styles.actionBtnPressed,
-                      ]}
-                    >
-                      <MaterialIcons name="edit" size={18} color="#2F332E" />
-                    </Pressable>
-                  )}
-
-                  {Platform.OS === 'web' && (
-                    <Pressable
-                      onPress={handleOpenExport}
-                      hitSlop={8}
-                      disabled={pdfExport.isGenerating}
-                      accessibilityRole="button"
-                      accessibilityLabel="Экспорт в PDF"
-                      style={({ pressed }) => [
-                        styles.actionBtn,
-                        styles.actionBtnPdf,
-                        pressed && !pdfExport.isGenerating ? styles.actionBtnPressed : null,
-                        pdfExport.isGenerating ? styles.actionBtnDisabled : null,
-                      ]}
-                    >
-                      {pdfExport.isGenerating ? (
-                        <ActivityIndicator size="small" color="#b83a3a" />
-                      ) : (
-                        <MaterialCommunityIcons name="file-pdf-box" size={18} color="#b83a3a" />
-                      )}
-                    </Pressable>
-                  )}
-                </View>
+                {viewsSafe != null && Number.isFinite(viewsSafe) && (
+                  <View style={styles.viewsRow}>
+                    <Feather name="eye" size={12} color="#6b7280" />
+                    <Text style={styles.viewsTxt}>
+                      {new Intl.NumberFormat("ru-RU").format(viewsSafe)}
+                    </Text>
+                  </View>
+                )}
               </View>
 
-              {/* ✅ РЕДИЗАЙН: Компактная ключевая информация */}
-              {whenLine && (
-                <View style={styles.keyInfoRow}>
-                  {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
-                  <MaterialIcons name="calendar-today" size={14} color="#6b7280" />
-                  <Text style={styles.userYear}>{whenLine}</Text>
-                </View>
-              )}
-
-              {daysText && (
-                <View style={styles.keyInfoRow}>
-                  {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
-                  <MaterialIcons name="schedule" size={14} color="#6b7280" />
-                  <Text style={styles.userDays}>{daysText}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-
-          {/* Ключевая информация */}
-          <View style={styles.infoSection}>
-            {/* ✅ РЕДИЗАЙН: Компактная информация - убираем лишние элементы для максимальной компактности */}
-            {categories.length > 0 && (
-              <View style={styles.infoRow}>
-                {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
-                <MaterialIcons name="category" size={14} color="#6b7280" />
-                <View style={[styles.categoriesWrap, { marginLeft: DESIGN_TOKENS.spacing.xs, flex: 1 }]}>
-                  {categories.slice(0, 2).map((cat, idx) => (
-                    <View key={idx} style={styles.categoryTagWrapper}>
-                      <Text style={styles.categoryTag} numberOfLines={1}>
-                        {cat}
+              <View style={{ flex: 1 }}>
+                <View style={styles.userRow}>
+                  {titleLine ? (
+                    <Pressable
+                      onPress={handleOpenAuthorProfile}
+                      disabled={!authorUserId}
+                      accessibilityRole={authorUserId ? 'button' : undefined}
+                      accessibilityLabel={
+                        authorUserId
+                          ? `Открыть профиль автора ${userName || 'Пользователь'}`
+                          : undefined
+                      }
+                      style={({ pressed }) => [
+                        styles.userNameWrap,
+                        pressed && authorUserId ? { opacity: 0.9 } : null,
+                      ]}
+                      {...Platform.select({ web: authorUserId ? { cursor: 'pointer' } : {} })}
+                    >
+                      <Text style={styles.userName} numberOfLines={1}>
+                        {titleLine}
                       </Text>
-                    </View>
-                  ))}
-                  {categories.length > 2 && (
-                    <Text style={styles.categoryMore}>+{categories.length - 2}</Text>
+                    </Pressable>
+                  ) : (
+                    <View />
                   )}
+                  <View style={styles.actionsRow}>
+                    {canEdit && (
+                      <Pressable
+                        onPress={handleEdit}
+                        hitSlop={6}
+                        accessibilityRole="button"
+                        accessibilityLabel="Редактировать путешествие"
+                        style={({ pressed }) => [
+                          styles.actionBtn,
+                          pressed && styles.actionBtnPressed,
+                        ]}
+                      >
+                        <MaterialIcons name="edit" size={18} color="#2F332E" />
+                      </Pressable>
+                    )}
+
+                    {Platform.OS === 'web' && (
+                      <Pressable
+                        onPress={handleOpenExport}
+                        hitSlop={8}
+                        disabled={pdfExport.isGenerating}
+                        accessibilityRole="button"
+                        accessibilityLabel="Экспорт в PDF"
+                        style={({ pressed }) => [
+                          styles.actionBtn,
+                          styles.actionBtnPdf,
+                          pressed && !pdfExport.isGenerating ? styles.actionBtnPressed : null,
+                          pdfExport.isGenerating ? styles.actionBtnDisabled : null,
+                        ]}
+                      >
+                        {pdfExport.isGenerating ? (
+                          <ActivityIndicator size="small" color="#b83a3a" />
+                        ) : (
+                          <MaterialCommunityIcons name="file-pdf-box" size={18} color="#b83a3a" />
+                        )}
+                      </Pressable>
+                    )}
+                  </View>
                 </View>
+
+                {whenLine ? (
+                  <View style={styles.keyInfoRow}>
+                    <MaterialIcons name="calendar-today" size={14} color="#6b7280" />
+                    <Text style={styles.userYear}>{whenLine}</Text>
+                  </View>
+                ) : null}
+
+                {daysText ? (
+                  <View style={styles.keyInfoRow}>
+                    <MaterialIcons name="schedule" size={14} color="#6b7280" />
+                    <Text style={styles.userDays}>{daysText}</Text>
+                  </View>
+                ) : null}
               </View>
-            )}
-            
-            {/* Координаты и город показываем только если нет категорий или если места достаточно */}
-            {!categories.length && firstCoord && (
-              <Pressable
-                style={styles.infoRow}
-                onPress={() => {
-                  if (Platform.OS === "web") {
-                    navigator.clipboard?.writeText(firstCoord).then(() => {
-                      alert("Координаты скопированы!");
-                    });
-                  }
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Координаты"
-              >
-                {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
-                <MaterialIcons name="place" size={14} color="#6b7280" />
-                <Text style={[styles.infoText, { marginLeft: DESIGN_TOKENS.spacing.xs, flex: 1 }]} numberOfLines={1}>
-                  {firstCoord}
-                </Text>
-                {Platform.OS === "web" && (
-                  <MaterialIcons name="content-copy" size={12} color="#9ca3af" style={{ marginLeft: DESIGN_TOKENS.spacing.xs }} />
-                )}
-              </Pressable>
-            )}
-          </View>
-        </View>
+            </View>
 
-        {/* ✅ УЛУЧШЕНИЕ: Группировка пунктов меню с разделителями */}
-        {navLinks.map(({ key, icon, label }, index) => {
-          // Определяем, нужно ли добавить разделитель перед пунктом
-          const shouldAddDivider = 
-            (index > 0 && 
-             // Разделитель между галереей/видео/описанием и рекомендациями/плюсами/минусами
-             ((key === "recommendation" || key === "plus") && 
-              navLinks[index - 1]?.key !== "description" && 
-              navLinks[index - 1]?.key !== "recommendation")) ||
-            // Разделитель перед навигацией (карта, координаты)
-            (key === "map" && index > 0) ||
-            // Разделитель перед "Популярное"
-            (key === "popular" && index > 0);
+            <View style={styles.infoSection}>
+              {categories.length > 0 ? (
+                <View style={styles.infoRow}>
+                  <MaterialIcons name="category" size={14} color="#6b7280" />
+                  <View
+                    style={[
+                      styles.categoriesWrap,
+                      { marginLeft: DESIGN_TOKENS.spacing.xs, flex: 1 },
+                    ]}
+                  >
+                    {categories.slice(0, 2).map((cat, idx) => (
+                      <View key={idx} style={styles.categoryTagWrapper}>
+                        <Text style={styles.categoryTag} numberOfLines={1}>
+                          {cat}
+                        </Text>
+                      </View>
+                    ))}
+                    {categories.length > 2 ? (
+                      <Text style={styles.categoryMore}>+{categories.length - 2}</Text>
+                    ) : null}
+                  </View>
+                </View>
+              ) : null}
 
-          return (
-            <React.Fragment key={key}>
-              {shouldAddDivider && <View style={styles.linkDivider} />}
-              <Pressable
-                style={({ pressed }) => [
-                  styles.link,
-                  currentActive === key && styles.linkActive, // ✅ Используем currentActive
-                  pressed && styles.linkPressed,
-                ]}
-                onPress={() => setActiveNavigateAndOpen(key as keyof typeof refs)}
-                android_ripple={{ color: "#E7DAC6" }}
-                accessibilityRole="button"
-                accessibilityLabel={label}
-                accessibilityState={{ selected: currentActive === key }}
-              >
-                {/* ✅ УЛУЧШЕНИЕ: Нейтральный темно-серый для активного */}
-                <MaterialIcons
-                  name={icon as any}
-                  size={Platform.select({
-                    default: 18, // Мобильные
-                    web: isTablet ? 20 : 18, // Планшеты и десктоп
-                  })}
-                  color={currentActive === key ? "#1f2937" : "#2F332E"}
-                />
-                <Text style={[
-                  styles.linkTxt, 
-                  isTablet && { fontSize: DESIGN_TOKENS.typography.sizes.sm }, // Уменьшено с 15
-                  currentActive === key && styles.linkTxtActive,
-                ]}>
-                  {label}
-                </Text>
-              </Pressable>
-            </React.Fragment>
-          );
-        })}
+              {!categories.length && firstCoord ? (
+                <Pressable
+                  style={styles.infoRow}
+                  onPress={() => {
+                    if (Platform.OS === "web") {
+                      navigator.clipboard?.writeText(firstCoord).then(() => {
+                        alert("Координаты скопированы!");
+                      });
+                    }
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Координаты"
+                >
+                  <MaterialIcons name="place" size={14} color="#6b7280" />
+                  <Text
+                    style={[
+                      styles.infoText,
+                      { marginLeft: DESIGN_TOKENS.spacing.xs, flex: 1 },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {firstCoord}
+                  </Text>
+                  {Platform.OS === "web" ? (
+                    <MaterialIcons
+                      name="content-copy"
+                      size={12}
+                      color="#9ca3af"
+                      style={{ marginLeft: DESIGN_TOKENS.spacing.xs }}
+                    />
+                  ) : null}
+                </Pressable>
+              ) : null}
+            </View>
+          </View>,
 
-        {userName ? (
-          <Pressable
-            onPress={handleUserTravels}
-            accessibilityRole="link"
-            accessibilityLabel={`Путешествия автора ${userName}`}
-          >
-            <Text style={styles.allTravels}>Путешествия {userName}</Text>
-          </Pressable>
-        ) : null}
+          ...navLinks.map(({ key, icon, label }, index) => {
+            const shouldAddDivider =
+              (index > 0 &&
+                ((key === "recommendation" || key === "plus") &&
+                  navLinks[index - 1]?.key !== "description" &&
+                  navLinks[index - 1]?.key !== "recommendation")) ||
+              (key === "map" && index > 0) ||
+              (key === "popular" && index > 0);
 
-        <Suspense fallback={<Fallback />}>
-          <WeatherWidget points={travel.travelAddress as any} />
-        </Suspense>
+            return (
+              <React.Fragment key={key}>
+                {shouldAddDivider ? <View style={styles.linkDivider} /> : null}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.link,
+                    currentActive === key && styles.linkActive,
+                    pressed && styles.linkPressed,
+                  ]}
+                  onPress={() => setActiveNavigateAndOpen(key as keyof typeof refs)}
+                  android_ripple={{ color: "#E7DAC6" }}
+                  accessibilityRole="button"
+                  accessibilityLabel={label}
+                  accessibilityState={{ selected: currentActive === key }}
+                >
+                  <MaterialIcons
+                    name={icon as any}
+                    size={Platform.select({
+                      default: 18,
+                      web: isTablet ? 20 : 18,
+                    })}
+                    color={currentActive === key ? "#1f2937" : "#2F332E"}
+                  />
+                  <Text
+                    style={[
+                      styles.linkTxt,
+                      isTablet && { fontSize: DESIGN_TOKENS.typography.sizes.sm },
+                      currentActive === key && styles.linkTxtActive,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              </React.Fragment>
+            );
+          }),
+
+          userName ? (
+            <Pressable
+              key="all-travels"
+              onPress={handleUserTravels}
+              accessibilityRole="link"
+              accessibilityLabel={`Путешествия автора ${userName}`}
+            >
+              <Text style={styles.allTravels}>Путешествия {userName}</Text>
+            </Pressable>
+          ) : null,
+
+          <Suspense key="weather" fallback={<Fallback />}>
+            <WeatherWidget points={travel.travelAddress as any} />
+          </Suspense>,
+        ]}
       </ScrollView>
 
       {Platform.OS === "web" && (

@@ -11,9 +11,9 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'outline';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps {
@@ -59,7 +59,7 @@ const ButtonComponent = ({
       onPress={onPress}
       style={({ pressed, hovered }) => [
         styles.base,
-        globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+        globalFocusStyles.focusable, // ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
         sizeStyles[size],
         variantStyles[variant],
         fullWidth && styles.fullWidth,
@@ -73,7 +73,7 @@ const ButtonComponent = ({
         {loading && (
           <ActivityIndicator
             size="small"
-            color={variant === 'secondary' || variant === 'ghost' ? palette.primary : palette.surface}
+            color={variant === 'secondary' || variant === 'ghost' || variant === 'outline' ? palette.primary : palette.surface}
             style={styles.icon}
           />
         )}
@@ -81,7 +81,7 @@ const ButtonComponent = ({
         <Text
           style={[
             styles.label,
-            variant === 'secondary' || variant === 'ghost' ? styles.labelSecondary : styles.labelPrimary,
+            variant === 'secondary' || variant === 'ghost' || variant === 'outline' ? styles.labelSecondary : styles.labelPrimary,
             variant === 'danger' && styles.labelDanger,
           ]}
           numberOfLines={1}
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+    minHeight: 44, // ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     gap: spacing.xs,
@@ -185,6 +185,11 @@ const variantStyles: Record<ButtonVariant, ViewStyle> = {
     shadowRadius: 8,
     elevation: 3,
   },
+  outline: {
+    backgroundColor: 'transparent',
+    borderColor: palette.primary,
+    borderWidth: 2,
+  },
 };
 
 const variantHoverStyles: Record<ButtonVariant, ViewStyle> = {
@@ -210,11 +215,19 @@ const variantHoverStyles: Record<ButtonVariant, ViewStyle> = {
       web: {
       },
     }),
-  },danger: {
+  },
+  danger: {
     backgroundColor: palette.dangerDark,
     ...Platform.select({
       web: {
         boxShadow: '0 4px 12px rgba(31, 31, 31, 0.15), 0 2px 4px rgba(31, 31, 31, 0.1)',
+      },
+    }),
+  },
+  outline: {
+    backgroundColor: palette.primarySoft,
+    ...Platform.select({
+      web: {
       },
     }),
   },
@@ -259,7 +272,15 @@ const variantPressedStyles: Record<ButtonVariant, ViewStyle> = {
       },
     }),
   },
+  outline: {
+    transform: [{ scale: 0.99 }],
+    ...Platform.select({
+      web: {
+        // @ts-ignore
+        transform: 'translateY(0)',
+      },
+    }),
+  },
 };
 
 export default memo(ButtonComponent);
-

@@ -14,6 +14,7 @@ export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
   { path: '/map', label: 'Карта', icon: 'map-pin', priority: 'primary' },
   { path: '/roulette', label: 'Случайный маршрут', icon: 'shuffle', priority: 'primary' },
   { path: '/quests', label: 'Квесты', icon: 'target', priority: 'primary' },
+  { path: '/export', label: 'Экспорт', icon: 'download', priority: 'primary' },
 ];
 
 export const DOCUMENT_NAV_ITEMS: HeaderNavItem[] = [

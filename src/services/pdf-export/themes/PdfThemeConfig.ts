@@ -123,9 +123,9 @@ export const minimalTheme: PdfThemeConfig = {
   description: 'Чистое и простое оформление с акцентом на контент',
   
   colors: {
-    text: '#111827',
-    textSecondary: '#374151',
-    textMuted: '#6b7280',
+    text: '#0f172a',
+    textSecondary: '#334155',
+    textMuted: '#64748b',
     // Мягкий «бумажный» фон и светлые поверхности
     background: '#f5f5f7',
     surface: '#ffffff',
@@ -143,8 +143,8 @@ export const minimalTheme: PdfThemeConfig = {
     infoBlock: {
       background: '#f3f4f6',
       border: '#e5e7eb',
-      text: '#374151',
-      icon: '#9ca3af',
+      text: '#334155',
+      icon: '#64748b',
     },
     warningBlock: {
       background: '#fef3c7',
@@ -167,7 +167,7 @@ export const minimalTheme: PdfThemeConfig = {
     
     cover: {
       background: '#f3f4f6',
-      backgroundGradient: ['#111827', '#4b5563'],
+      backgroundGradient: ['#0f172a', '#334155'],
       text: '#f9fafb',
       textSecondary: '#e5e7eb',
     },
@@ -183,9 +183,9 @@ export const minimalTheme: PdfThemeConfig = {
     h3: { size: '18pt', weight: 600, lineHeight: 1.4, marginBottom: '10pt' },
     h4: { size: '14pt', weight: 600, lineHeight: 1.4, marginBottom: '8pt' },
     
-    body: { size: '11pt', lineHeight: 1.7, marginBottom: '12pt' },
-    small: { size: '10pt', lineHeight: 1.6 },
-    caption: { size: '9pt', lineHeight: 1.5 },
+    body: { size: '12pt', lineHeight: 1.8, marginBottom: '12pt' },
+    small: { size: '11pt', lineHeight: 1.7 },
+    caption: { size: '10pt', lineHeight: 1.6 },
   },
   
   spacing: {
@@ -213,9 +213,9 @@ export const lightTheme: PdfThemeConfig = {
   description: 'Много воздуха, мягкие цвета, комфортное чтение',
   
   colors: {
-    text: '#1f2937',
-    textSecondary: '#4b5563',
-    textMuted: '#9ca3af',
+    text: '#0f172a',
+    textSecondary: '#334155',
+    textMuted: '#64748b',
     background: '#ffffff',
     surface: '#f9fafb',
     surfaceAlt: '#f3f4f6',
@@ -271,9 +271,9 @@ export const lightTheme: PdfThemeConfig = {
     h3: { size: '18pt', weight: 600, lineHeight: 1.4, marginBottom: '10pt' },
     h4: { size: '14pt', weight: 600, lineHeight: 1.4, marginBottom: '8pt' },
     
-    body: { size: '11pt', lineHeight: 1.7, marginBottom: '12pt' },
-    small: { size: '10pt', lineHeight: 1.6 },
-    caption: { size: '9pt', lineHeight: 1.5 },
+    body: { size: '12pt', lineHeight: 1.8, marginBottom: '12pt' },
+    small: { size: '11pt', lineHeight: 1.7 },
+    caption: { size: '10pt', lineHeight: 1.6 },
   },
   
   spacing: {
@@ -359,9 +359,9 @@ export const darkTheme: PdfThemeConfig = {
     h3: { size: '18pt', weight: 600, lineHeight: 1.4, marginBottom: '10pt' },
     h4: { size: '14pt', weight: 600, lineHeight: 1.4, marginBottom: '8pt' },
     
-    body: { size: '11pt', lineHeight: 1.7, marginBottom: '12pt' },
-    small: { size: '10pt', lineHeight: 1.6 },
-    caption: { size: '9pt', lineHeight: 1.5 },
+    body: { size: '12pt', lineHeight: 1.8, marginBottom: '12pt' },
+    small: { size: '11pt', lineHeight: 1.7 },
+    caption: { size: '10pt', lineHeight: 1.6 },
   },
   
   spacing: {
@@ -389,9 +389,9 @@ export const travelMagazineTheme: PdfThemeConfig = {
   description: 'Журнальная вёрстка с яркими акцентами',
   
   colors: {
-    text: '#0c0a09',
-    textSecondary: '#44403c',
-    textMuted: '#78716c',
+    text: '#0a0a0a',
+    textSecondary: '#3a3a3a',
+    textMuted: '#6a6a6a',
     background: '#fafaf9',
     surface: '#ffffff',
     surfaceAlt: '#f5f5f4',
@@ -447,9 +447,9 @@ export const travelMagazineTheme: PdfThemeConfig = {
     h3: { size: '20pt', weight: 600, lineHeight: 1.3, marginBottom: '12pt' },
     h4: { size: '16pt', weight: 600, lineHeight: 1.4, marginBottom: '10pt' },
     
-    body: { size: '11pt', lineHeight: 1.8, marginBottom: '14pt' },
-    small: { size: '10pt', lineHeight: 1.6 },
-    caption: { size: '9pt', lineHeight: 1.5 },
+    body: { size: '12pt', lineHeight: 1.9, marginBottom: '14pt' },
+    small: { size: '11pt', lineHeight: 1.7 },
+    caption: { size: '10pt', lineHeight: 1.6 },
   },
   
   spacing: {
@@ -535,9 +535,9 @@ export const classicTheme: PdfThemeConfig = {
     h3: { size: '20pt', weight: 600, lineHeight: 1.4, marginBottom: '12pt' },
     h4: { size: '16pt', weight: 600, lineHeight: 1.5, marginBottom: '10pt' },
     
-    body: { size: '12pt', lineHeight: 1.8, marginBottom: '14pt' },
-    small: { size: '10pt', lineHeight: 1.7 },
-    caption: { size: '9pt', lineHeight: 1.6 },
+    body: { size: '12pt', lineHeight: 1.9, marginBottom: '14pt' },
+    small: { size: '11pt', lineHeight: 1.8 },
+    caption: { size: '10pt', lineHeight: 1.7 },
   },
   
   spacing: {
@@ -623,9 +623,9 @@ export const modernTheme: PdfThemeConfig = {
     h3: { size: '20pt', weight: 600, lineHeight: 1.3, marginBottom: '12pt' },
     h4: { size: '16pt', weight: 600, lineHeight: 1.4, marginBottom: '10pt' },
     
-    body: { size: '11pt', lineHeight: 1.7, marginBottom: '12pt' },
-    small: { size: '10pt', lineHeight: 1.6 },
-    caption: { size: '9pt', lineHeight: 1.5 },
+    body: { size: '12pt', lineHeight: 1.8, marginBottom: '12pt' },
+    small: { size: '11pt', lineHeight: 1.7 },
+    caption: { size: '10pt', lineHeight: 1.6 },
   },
   
   spacing: {
@@ -711,9 +711,9 @@ export const romanticTheme: PdfThemeConfig = {
     h3: { size: '22pt', weight: 500, lineHeight: 1.4, marginBottom: '12pt' },
     h4: { size: '18pt', weight: 500, lineHeight: 1.5, marginBottom: '10pt' },
     
-    body: { size: '12pt', lineHeight: 1.9, marginBottom: '14pt' },
-    small: { size: '10pt', lineHeight: 1.7 },
-    caption: { size: '9pt', lineHeight: 1.6 },
+    body: { size: '12pt', lineHeight: 2.0, marginBottom: '14pt' },
+    small: { size: '11pt', lineHeight: 1.8 },
+    caption: { size: '10pt', lineHeight: 1.7 },
   },
   
   spacing: {
@@ -799,9 +799,9 @@ export const adventureTheme: PdfThemeConfig = {
     h3: { size: '22pt', weight: 700, lineHeight: 1.3, marginBottom: '12pt' },
     h4: { size: '18pt', weight: 700, lineHeight: 1.4, marginBottom: '10pt' },
     
-    body: { size: '11pt', lineHeight: 1.7, marginBottom: '12pt' },
-    small: { size: '10pt', lineHeight: 1.6 },
-    caption: { size: '9pt', lineHeight: 1.5 },
+    body: { size: '12pt', lineHeight: 1.8, marginBottom: '12pt' },
+    small: { size: '11pt', lineHeight: 1.7 },
+    caption: { size: '10pt', lineHeight: 1.6 },
   },
   
   spacing: {
@@ -888,9 +888,9 @@ export const illustratedTheme: PdfThemeConfig = {
     h3: { size: '22pt', weight: 600, lineHeight: 1.4, marginBottom: '14pt' },
     h4: { size: '18pt', weight: 600, lineHeight: 1.4, marginBottom: '12pt' },
     
-    body: { size: '12pt', lineHeight: 1.8, marginBottom: '14pt' },
-    small: { size: '10pt', lineHeight: 1.7 },
-    caption: { size: '9pt', lineHeight: 1.6 },
+    body: { size: '12pt', lineHeight: 1.9, marginBottom: '14pt' },
+    small: { size: '11pt', lineHeight: 1.8 },
+    caption: { size: '10pt', lineHeight: 1.7 },
   },
   
   spacing: {

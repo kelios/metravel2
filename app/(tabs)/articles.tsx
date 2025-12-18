@@ -1,9 +1,9 @@
-import {ActivityIndicator, Dimensions, FlatList, SafeAreaView, StyleSheet,} from 'react-native'
+import {ActivityIndicator, Dimensions, FlatList, SafeAreaView, StyleSheet, View, Text} from 'react-native'
 import ArticleListItem from '@/components/ArticleListItem'
 import React, {useEffect, useState} from 'react'
 import {Articles} from '@/src/types/types'
+import { SkeletonLoader } from '@/components/SkeletonLoader'
 import {fetchArticles} from '@/src/api/articles'
-import {View} from '@/components/Themed'
 import {DataTable} from 'react-native-paper'
 import {useLocalSearchParams} from 'expo-router'
 import ErrorDisplay from '@/components/ErrorDisplay'
@@ -63,8 +63,15 @@ export default function TabOneScreen() {
     return (
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
-          <View style={[styles.content, styles.centerContent]}>
-            <ActivityIndicator size="large" color="#4a8c8c" />
+          <View style={styles.content}>
+            <View style={{ padding: 16 }}>
+              <SkeletonLoader width={200} height={32} borderRadius={4} style={{ marginBottom: 24 }} />
+              {Array.from({ length: 5 }).map((_, index) => (
+                <View key={index} style={{ marginBottom: 16 }}>
+                  <SkeletonLoader width="100%" height={120} borderRadius={12} />
+                </View>
+              ))}
+            </View>
           </View>
         </View>
       </SafeAreaView>

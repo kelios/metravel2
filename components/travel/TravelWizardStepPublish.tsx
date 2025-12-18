@@ -295,7 +295,14 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     </View>
 
                     <View style={[styles.card, styles.checklistCard]}>
-                        <Text style={styles.cardTitle}>Чек-лист готовности</Text>
+                        <View style={styles.checklistHeader}>
+                            <Text style={styles.cardTitle}>Чек-лист готовности</Text>
+                            <View style={styles.progressRing}>
+                                <Text style={styles.progressRingText}>
+                                    {checklist.filter(item => item.ok).length}/{checklist.length}
+                                </Text>
+                            </View>
+                        </View>
                     {checklist.map(item => {
                         const issue = moderationIssuesByKey.get(item.key);
                         const isClickable = !item.ok && !!issue && !!onNavigateToIssue;
@@ -304,13 +311,18 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         return (
                             <RowWrapper
                                 key={item.key}
-                                style={[styles.checklistRow, isClickable && styles.checklistRowClickable]}
+                                style={[
+                                    styles.checklistRow,
+                                    isClickable && styles.checklistRowClickable,
+                                    item.ok && styles.checklistRowComplete
+                                ]}
                                 onPress={
                                     isClickable
                                         ? () => onNavigateToIssue?.(issue)
                                         : undefined
                                 }
                                 disabled={!isClickable}
+                                activeOpacity={0.7}
                             >
                                 <View
                                     style={[
@@ -319,19 +331,32 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                     ]}
                                 >
                                     <Icon
-                                        source={item.ok ? 'check' : 'alert'}
-                                        size={14}
+                                        source={item.ok ? 'check' : 'alert-circle'}
+                                        size={16}
                                         color={item.ok ? DESIGN_TOKENS.colors.successDark : DESIGN_TOKENS.colors.dangerDark}
                                     />
                                 </View>
-                                <Text
-                                    style={[
-                                        styles.checklistLabel,
-                                        isClickable && styles.checklistLabelClickable,
-                                    ]}
-                                >
-                                    {item.label}
-                                </Text>
+                                <View style={styles.checklistTextColumn}>
+                                    <Text
+                                        style={[
+                                            styles.checklistLabel,
+                                            isClickable && styles.checklistLabelClickable,
+                                            item.ok && styles.checklistLabelComplete
+                                        ]}
+                                    >
+                                        {item.label}
+                                    </Text>
+                                    {isClickable && !item.ok && (
+                                        <Text style={styles.checklistHint}>Нажмите, чтобы перейти к полю</Text>
+                                    )}
+                                </View>
+                                {isClickable && !item.ok && (
+                                    <Icon
+                                        source="chevron-right"
+                                        size={16}
+                                        color={DESIGN_TOKENS.colors.textMuted}
+                                    />
+                                )}
                             </RowWrapper>
                         );
                     })}
@@ -471,24 +496,57 @@ const styles = StyleSheet.create({
         lineHeight: 16,
     },
     checklistCard: {},
-    checklistRow: {
+    checklistHeader: {
         flexDirection: 'row',
-        alignItems: 'flex-start',
-        paddingVertical: 8,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: DESIGN_TOKENS.spacing.sm,
     },
-    checklistRowClickable: {
-        borderRadius: DESIGN_TOKENS.radii.md,
-        paddingHorizontal: 8,
-    },
-    checkBadge: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
+    progressRing: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        borderWidth: 3,
+        borderColor: DESIGN_TOKENS.colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 10,
-        marginTop: 1,
+    },
+    progressRingText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: DESIGN_TOKENS.colors.primary,
+    },
+    checklistRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        marginBottom: 6,
+        borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,
+        borderColor: 'transparent',
+    },
+    checklistRowClickable: {
+        borderColor: DESIGN_TOKENS.colors.borderLight,
+        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+    },
+    checklistRowComplete: {
+        backgroundColor: DESIGN_TOKENS.colors.successSoft,
+        borderColor: DESIGN_TOKENS.colors.successLight,
+    },
+    checklistTextColumn: {
+        flex: 1,
+        minWidth: 0,
+    },
+    checkBadge: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+        borderWidth: 0,
     },
     checkBadgeOk: {
         backgroundColor: DESIGN_TOKENS.colors.successSoft,
@@ -501,11 +559,19 @@ const styles = StyleSheet.create({
     checklistLabel: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: DESIGN_TOKENS.colors.text,
-        flex: 1,
-        lineHeight: 18,
+        lineHeight: 20,
+        fontWeight: '500',
+    },
+    checklistLabelComplete: {
+        color: DESIGN_TOKENS.colors.successDark,
     },
     checklistLabelClickable: {
-        textDecorationLine: 'underline',
+        fontWeight: '600',
+    },
+    checklistHint: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: DESIGN_TOKENS.colors.textMuted,
+        marginTop: 2,
     },
     bannerError: {
         backgroundColor: DESIGN_TOKENS.colors.errorSoft,

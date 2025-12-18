@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, Linking, Platform, ScrollView } from
 import { useRouter, type Href } from "expo-router";
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from "@/constants/designSystem";
+import { PRIMARY_HEADER_NAV_ITEMS } from "@/constants/headerNavigation";
 import { globalFocusStyles } from "@/styles/globalFocus";
 
 type FooterDesktopProps = {
@@ -100,12 +101,22 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
     </View>
   );
 
-  const quickActions: LinkItem[] = [
-    { key: "home", label: "Путешествия", route: "/" as any, icon: <Feather name="compass" size={16} color={iconColor} /> },
-    { key: "belarus", label: "Беларусь", route: "/travelsby" as any, icon: <Feather name="map" size={16} color={iconColor} /> },
-    { key: "map", label: "Карта", route: "/map" as any, icon: <Feather name="map-pin" size={16} color={iconColor} /> },
+  const headerNavActions: LinkItem[] = PRIMARY_HEADER_NAV_ITEMS.map((item) => {
+    const safePathKey = item.path
+      .replace(/[^a-z0-9]+/gi, "-")
+      .replace(/^-+/, "")
+      .replace(/-+$/, "");
+
+    return {
+      key: `header-${safePathKey || "root"}`,
+      label: item.label,
+      route: item.path as any,
+      icon: <Feather name={item.icon as any} size={16} color={iconColor} />,
+    };
+  });
+
+  const extraActions: LinkItem[] = [
     { key: "favorites", label: "Избранное", route: "/favorites" as any, icon: <Feather name="heart" size={16} color={iconColor} /> },
-    { key: "create", label: "Создать", route: "/travel/new" as any, icon: <Feather name="plus" size={16} color={iconColor} /> },
     { key: "profile", label: "Профиль", route: "/profile" as any, icon: <Feather name="user" size={16} color={iconColor} /> },
   ];
 
@@ -115,6 +126,32 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
     route: "/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi" as any,
     icon: InstagramBelarusIcon,
   };
+
+  const shareAction: LinkItem = {
+    key: "share",
+    label: "Поделиться путешествием",
+    route: "/travel/new" as any,
+    icon: <Feather name="share-2" size={16} color={iconColor} />,
+  };
+
+  const dedupeByRoute = (items: LinkItem[]) =>
+    items.filter((item, index, arr) => {
+      if (!item.route) return true;
+      const routeKey = String(item.route);
+      return arr.findIndex((i) => (i.route ? String(i.route) : "") === routeKey) === index;
+    });
+
+  const primaryIconActions: LinkItem[] = dedupeByRoute(headerNavActions);
+  const primaryRouteKeys = new Set(primaryIconActions.map((i) => (i.route ? String(i.route) : "")));
+
+  const secondaryIconActions: LinkItem[] = dedupeByRoute([
+    ...extraActions,
+    shareAction,
+    featureLink,
+  ]).filter((i) => {
+    if (!i.route) return true;
+    return !primaryRouteKeys.has(String(i.route));
+  });
 
   const utilityLinks: LinkItem[] = [
     { key: "about", label: "О сайте", route: "/about" as any },
@@ -176,8 +213,10 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
         >
           <View style={styles.topRow}>
             <View style={styles.leftGroup}>
-              {quickActions.map((i) => renderItem(i, { showLabel: false }))}
-              {renderItem(featureLink, { showLabel: false })}
+              <View style={styles.iconRow}>
+                {primaryIconActions.map((i) => renderItem(i, { showLabel: false }))}
+                {secondaryIconActions.map((i) => renderItem(i, { showLabel: false }))}
+              </View>
             </View>
 
             <View style={styles.topRight}>
@@ -232,7 +271,7 @@ const styles = StyleSheet.create({
   },
   topRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     flexWrap: "nowrap",
     width: "100%",
@@ -268,11 +307,22 @@ const styles = StyleSheet.create({
     flexWrap: "nowrap",
   },
   leftGroup: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+    flexShrink: 1,
+  },
+  iconRows: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+    gap: 2 as any,
+  },
+  iconRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6 as any,
     flexWrap: "nowrap",
-    flexShrink: 1,
   },
   item: {
     alignItems: "center",

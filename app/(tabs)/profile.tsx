@@ -23,6 +23,7 @@ import { ApiError } from '@/src/api/client';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { openExternalUrl } from '@/src/utils/externalLinks';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 
 interface UserStats {
   travelsCount: number;
@@ -173,9 +174,24 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loader}>
-          <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} /> {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
-        </View>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+          <View style={styles.header}>
+            <View style={styles.headerRow}>
+              <SkeletonLoader width={72} height={72} borderRadius={36} />
+              <View style={styles.headerTextBlock}>
+                <SkeletonLoader width={150} height={24} borderRadius={4} style={{ marginBottom: 8 }} />
+                <SkeletonLoader width={200} height={16} borderRadius={4} />
+              </View>
+            </View>
+          </View>
+          <View style={styles.dashboardSections}>
+            {Array.from({ length: 4 }).map((_, index) => (
+              <View key={index} style={{ marginBottom: 12 }}>
+                <SkeletonLoader width="100%" height={120} borderRadius={12} />
+              </View>
+            ))}
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }

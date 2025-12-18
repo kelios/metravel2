@@ -93,12 +93,16 @@ export default function Login() {
                 if (intent) {
                     sendAnalyticsEvent('AuthSuccess', { source: 'home', intent });
                 }
-                // ✅ ИСПРАВЛЕНИЕ: Используем router вместо navigation для Expo Router
-                if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
-                    router.replace(redirect as any);
-                } else {
-                    router.replace('/');
+                // ✅ Intent-редирект: обработка разных сценариев
+                let targetPath = '/';
+                if (intent === 'create-book') {
+                    targetPath = '/travel/new';
+                } else if (intent === 'build-pdf') {
+                    targetPath = '/export';
+                } else if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
+                    targetPath = redirect;
                 }
+                router.replace(targetPath as any);
             } else {
                 showMsg('Неверный email или пароль.', true);
             }

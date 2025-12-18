@@ -452,7 +452,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 paddingTop: 8,
                 paddingBottom: 28,
               }}
-              scrollEventThrottle={16}
+              scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
             />
           )}
         </View>

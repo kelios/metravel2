@@ -123,47 +123,38 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
 }
 
 const styles = StyleSheet.create({
-  // ✅ РЕДИЗАЙН: Современная карточка с glassmorphism и улучшенными тенями
+  // ✅ РЕДИЗАЙН: Светлая современная карточка с generous spacing
   container: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: Platform.select({
-      default: 16, // Мобильные
-      web: 20, // Десктоп
+      default: DESIGN_TOKENS.spacing.lg,
+      web: DESIGN_TOKENS.spacing.xl,
     }),
     paddingVertical: Platform.select({
-      default: 20, // Мобильные
-      web: 24, // Десктоп
+      default: DESIGN_TOKENS.spacing.xl,
+      web: DESIGN_TOKENS.spacing.xxl,
     }),
     paddingHorizontal: Platform.select({
-      default: 20, // Мобильные
-      web: 28, // Десктоп
+      default: DESIGN_TOKENS.spacing.xl,
+      web: DESIGN_TOKENS.spacing.xxl,
     }),
     backgroundColor: DESIGN_TOKENS.colors.surface,
-    ...(Platform.OS === 'web' ? {
-      backdropFilter: 'blur(20px)' as any,
-      WebkitBackdropFilter: 'blur(20px)' as any,
-    } : {}),
     borderRadius: DESIGN_TOKENS.radii.lg,
-    marginBottom: 4,
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-    shadowColor: '#1f1f1f',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
     ...Platform.select({
       web: {
         boxShadow: DESIGN_TOKENS.shadows.card,
-      },
+      } as any,
+      default: DESIGN_TOKENS.shadowsNative.medium,
     }),
   },
   containerMobile: {
-    paddingVertical: 0,
-    paddingHorizontal: 0,
-    gap: DESIGN_TOKENS.spacing.lg,
-    borderRadius: 16,
+    paddingVertical: DESIGN_TOKENS.spacing.lg,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    gap: DESIGN_TOKENS.spacing.md,
   },
   factItem: {
     flexDirection: 'row',
@@ -173,13 +164,12 @@ const styles = StyleSheet.create({
   },
   factText: {
     fontSize: Platform.select({
-      default: 14, // Мобильные
-      web: 16, // Десктоп
+      default: 15,
+      web: 17,
     }),
-    fontWeight: '600',
+    fontWeight: '500',
     color: DESIGN_TOKENS.colors.text,
-    fontFamily: 'Georgia',
-    letterSpacing: -0.2,
+    letterSpacing: -0.1,
   },
   categoriesContainer: {
     flex: 1,
@@ -194,42 +184,40 @@ const styles = StyleSheet.create({
     gap: DESIGN_TOKENS.spacing.sm,
     flex: 1,
   },
-  // ✅ РЕДИЗАЙН: Улучшенные теги категорий с hover эффектами
+  // ✅ РЕДИЗАЙН: Легкие теги категорий
   categoryTag: {
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
+    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
     paddingHorizontal: Platform.select({
-      default: 10, // Мобильные
-      web: 12, // Десктоп
+      default: 12,
+      web: 16,
     }),
     paddingVertical: Platform.select({
-      default: 5, // Мобильные
-      web: 6, // Десктоп
+      default: 6,
+      web: 8,
     }),
-    borderRadius: 16,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' as any,
+        transition: 'all 0.2s ease' as any,
         ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.primaryLight,
+          backgroundColor: DESIGN_TOKENS.colors.primary,
           borderColor: DESIGN_TOKENS.colors.primary,
-          transform: 'translateY(-2px) scale(1.05)' as any,
-          boxShadow: '0 2px 8px rgba(31, 31, 31, 0.08)' as any,
+          boxShadow: DESIGN_TOKENS.shadows.hover,
         } as any,
       },
     }),
   },
   categoryText: {
     fontSize: Platform.select({
-      default: 12, // Мобильные
-      web: 13, // Десктоп
+      default: 13,
+      web: 14,
     }),
-    fontWeight: '700',
-    color: '#6b7280', // ✅ УЛУЧШЕНИЕ: Нейтральный серый
-    fontFamily: 'Georgia',
-    letterSpacing: -0.1,
+    fontWeight: '600',
+    color: DESIGN_TOKENS.colors.primary,
+    letterSpacing: 0,
   },
 });
 

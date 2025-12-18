@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList, Pressable, Platform, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -10,12 +10,19 @@ import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/src/utils/confirmAction';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 
 export default function HistoryScreen() {
     const router = useRouter();
     const { width } = useWindowDimensions();
     const { isAuthenticated } = useAuth();
     const { viewHistory, clearHistory } = useFavorites() as any;
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 300);
+        return () => clearTimeout(timer);
+    }, [viewHistory]);
 
     const horizontalPadding = 16;
     const columnGap = 14;
@@ -57,6 +64,25 @@ export default function HistoryScreen() {
                         onPress: () => router.push('/login'),
                     }}
                 />
+            </SafeAreaView>
+        );
+    }
+
+    if (isLoading) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <View style={styles.headerTitleBlock}>
+                        <Text style={styles.title}>История</Text>
+                    </View>
+                </View>
+                <View style={styles.gridContent}>
+                    {Array.from({ length: numColumns > 1 ? 4 : 3 }).map((_, index) => (
+                        <View key={index} style={styles.gridItem}>
+                            <SkeletonLoader width="100%" height={280} borderRadius={12} style={styles.card} />
+                        </View>
+                    ))}
+                </View>
             </SafeAreaView>
         );
     }

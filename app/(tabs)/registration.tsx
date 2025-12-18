@@ -26,6 +26,7 @@ import { registrationSchema } from '@/utils/validation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import FormFieldWithValidation from '@/components/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
+import { sendAnalyticsEvent } from '@/src/utils/analytics';
 
 const { height } = Dimensions.get('window');
 
@@ -48,7 +49,24 @@ export default function RegisterForm() {
         try {
             const res = await registration(values);
             setMsg({ text: res, error: /ошиб|fail|invalid/i.test(res) });
-            if (!/ошиб|fail|invalid/i.test(res)) resetForm();
+            if (!/ошиб|fail|invalid/i.test(res)) {
+                resetForm();
+                if (intent) {
+                    sendAnalyticsEvent('AuthSuccess', { source: 'home', intent });
+                }
+                // ✅ Intent-редирект: обработка разных сценариев
+                let targetPath = '/';
+                if (intent === 'create-book') {
+                    targetPath = '/travel/new';
+                } else if (intent === 'build-pdf') {
+                    targetPath = '/export';
+                } else if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
+                    targetPath = redirect;
+                }
+                setTimeout(() => {
+                    router.replace(targetPath as any);
+                }, 1000);
+            }
         } catch (e: any) {
             setMsg({ text: e?.message || 'Не удалось зарегистрироваться.', error: true });
         } finally {
