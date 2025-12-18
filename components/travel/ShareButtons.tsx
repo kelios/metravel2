@@ -21,11 +21,13 @@ const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSetting
 interface ShareButtonsProps {
   travel: Travel;
   url?: string;
+  variant?: 'default' | 'sticky';
 }
 
-export default function ShareButtons({ travel, url }: ShareButtonsProps) {
+export default function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
   const { width } = useWindowDimensions();
   const isMobile = width <= METRICS.breakpoints.tablet;
+  const isSticky = variant === 'sticky';
 
   const [copied, setCopied] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -233,9 +235,21 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
 
   return (
     <>
-      <View style={[styles.container, isMobile && styles.containerMobile]}>
-        <Text style={styles.title}>Поделиться</Text>
-        <View style={[styles.buttonsContainer, isMobile && styles.buttonsContainerMobile]}>
+      <View
+        style={[
+          styles.container,
+          isMobile && styles.containerMobile,
+          isSticky && styles.containerSticky,
+        ]}
+      >
+        {!isSticky && <Text style={styles.title}>Поделиться</Text>}
+        <View
+          style={[
+            styles.buttonsContainer,
+            isMobile && styles.buttonsContainerMobile,
+            isSticky && styles.buttonsContainerSticky,
+          ]}
+        >
           {shareButtons.map((button) => (
             <Pressable
               key={button.key}
@@ -243,6 +257,7 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
               disabled={button.disabled}
               style={({ pressed }) => [
                 styles.button,
+                isSticky && styles.buttonSticky,
                 pressed && styles.buttonPressed,
                 button.key === 'copy' && copied && styles.buttonCopied,
                 button.disabled && styles.buttonDisabled,
@@ -257,7 +272,7 @@ export default function ShareButtons({ travel, url }: ShareButtonsProps) {
               ) : (
                 <MaterialIcons name={button.icon as any} size={20} color={button.color} />
               )}
-              {!isMobile && <Text style={styles.buttonText}>{button.label}</Text>}
+              {!isMobile && !isSticky && <Text style={styles.buttonText}>{button.label}</Text>}
               {button.key === 'copy' && copied && (
                 <Text style={styles.copiedText}>✓</Text>
               )}
@@ -319,6 +334,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 16,
   },
+  containerSticky: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    marginBottom: 0,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+  },
   title: {
     fontSize: 20, // ✅ UX: Увеличено для лучшей иерархии
     fontWeight: '700',
@@ -336,6 +360,12 @@ const styles = StyleSheet.create({
   buttonsContainerMobile: {
     gap: 10,
     rowGap: 10,
+  },
+  buttonsContainerSticky: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    gap: 8,
+    rowGap: 0,
   },
   // ✅ РЕДИЗАЙН: Современные кнопки с улучшенными стилями
   button: {
@@ -355,6 +385,13 @@ const styles = StyleSheet.create({
         transition: 'all 0.2s ease' as any,
       },
     }),
+  },
+  buttonSticky: {
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    minHeight: 40,
+    minWidth: 40,
   },
   buttonPressed: {
     backgroundColor: '#e5e7eb',

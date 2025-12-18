@@ -35,6 +35,7 @@ import { Image as ExpoImage } from "expo-image";
 import { useIsFocused } from "@react-navigation/native";
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
+import { LAYOUT } from '@/constants/layout';
 
 
 /* ✅ УЛУЧШЕНИЕ: Импорт компонентов навигации и поделиться */
@@ -54,6 +55,7 @@ import TravelSectionTabs from "@/components/travel/TravelSectionTabs";
 import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/travel/sectionLinks";
 import usePerformanceOptimization from '@/hooks/usePerformanceOptimization';
 import { useProgressiveLoad, ProgressiveWrapper } from '@/hooks/useProgressiveLoading';
+import { useLazyMap } from '@/hooks/useLazyMap';
 import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl as buildVersionedImageUrlLCP } from "@/utils/imageOptimization";
 import { injectCriticalStyles } from '@/styles/criticalCSS';
 import { initPerformanceMonitoring } from '@/utils/performanceMonitoring';
@@ -233,7 +235,7 @@ const PointListFallback = () => (
 );
 
 const TravelListFallback = () => (
-  <View style={styles.fallback}>
+  <View style={styles.travelListFallback}>
     <TravelListSkeleton count={3} />
   </View>
 );
@@ -578,23 +580,23 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
       ) : (
         <img
           src={srcWithRetry}
-        alt={alt || ""}
-        width={img.width || 1200}
-        height={img.height || Math.round(1200 / ratio)}
-        style={{
-          width: "100%",
-          height: "100%",
-          borderRadius: 12,
-          display: "block",
-          backgroundColor: "#e9e7df",
-          objectFit: "cover",
-        }}
-        loading="eager"
-        decoding="async"
-        // @ts-ignore
-        fetchpriority="high"
-        referrerPolicy="no-referrer"
-        data-lcp
+          alt={alt || ""}
+          width={img.width || 1200}
+          height={img.height || Math.round(1200 / ratio)}
+          style={{
+            width: "100%",
+            height: "100%",
+            borderRadius: 12,
+            display: "block",
+            backgroundColor: "#e9e7df",
+            objectFit: "cover",
+          }}
+          loading="eager"
+          decoding="async"
+          // @ts-ignore
+          fetchpriority="high"
+          referrerPolicy="no-referrer"
+          data-lcp
           onLoad={onLoad as any}
           onError={() => setLoadError(true)}
         />
@@ -794,14 +796,12 @@ export default function TravelDetails() {
   const [isPending, startTransition] = useTransition();
   // ✅ УЛУЧШЕНИЕ: Состояние для похожих путешествий (для навигации)
   const [relatedTravels, setRelatedTravels] = useState<Travel[]>([]);
-  const [showFabHint, setShowFabHint] = useState(false);
-
+  
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
   const { travel, isLoading, isError, slug, isId } = useTravelDetails();
   const { anchors, scrollTo, scrollRef } = useScrollNavigation() as { anchors: AnchorsMap; scrollTo: any; scrollRef: any };
   const { activeSection, setActiveSection } = useActiveSection(anchors, headerOffset);
-  const { menuOpen, toggleMenu, closeMenu, animatedX, menuWidth, menuWidthNum, openMenuOnDesktop } =
-    useMenuState(isMobile);
+  const { closeMenu, animatedX, menuWidth, menuWidthNum, openMenuOnDesktop } = useMenuState(isMobile);
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
   const contentHorizontalPadding = useMemo(() => {
     if (width >= 1600) return 80;
@@ -845,43 +845,6 @@ export default function TravelDetails() {
     }, 2600);
   }, []);
 
-  useEffect(() => {
-    let mounted = true;
-    AsyncStorage.getItem(FAB_HINT_STORAGE_KEY)
-      .then((value) => {
-        if (mounted && value !== "true") {
-          setShowFabHint(true);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const dismissFabHint = useCallback(() => {
-    setShowFabHint(false);
-    AsyncStorage.setItem(FAB_HINT_STORAGE_KEY, "true").catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!showFabHint) return;
-    const t = setTimeout(() => {
-      dismissFabHint();
-    }, 6500);
-    return () => clearTimeout(t);
-  }, [showFabHint, dismissFabHint]);
-
-  // Обработчик плавающей кнопки меню (FAB) на мобильных
-  const handleFabPress = useCallback(() => {
-    // При нажатии всегда скрываем подсказку
-    if (showFabHint) {
-      dismissFabHint();
-    }
-    // Переключаем состояние бокового меню
-    toggleMenu();
-  }, [showFabHint, dismissFabHint, toggleMenu]);
-
   /* ---- user flags ---- */
   const { isSuperuser, userId } = useAuth();
 
@@ -910,6 +873,9 @@ export default function TravelDetails() {
   const [contentHeight, setContentHeight] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(0);
   const [showMobileSectionTabs, setShowMobileSectionTabs] = useState(false);
+  const [showStickyActions, setShowStickyActions] = useState(false);
+  const [stickyActionsHeight, setStickyActionsHeight] = useState(0);
+  const [heroBlockHeight, setHeroBlockHeight] = useState(0);
   
   // ✅ АРХИТЕКТУРА: activeSection теперь управляется через useActiveSection
   
@@ -932,18 +898,36 @@ export default function TravelDetails() {
   useEffect(() => {
     if (!isMobile) {
       if (showMobileSectionTabs) setShowMobileSectionTabs(false);
+      if (showStickyActions) setShowStickyActions(false);
       return;
     }
 
-    const threshold = 140;
+    // Порог появления навигации/действий — сразу после hero-блока (измеряется по факту)
+    // Фоллбек 140px — если измерение ещё не произошло.
+    const threshold = Math.max(140, (heroBlockHeight || 0) - 24);
     const id = scrollY.addListener(({ value }) => {
       const next = value > threshold;
       setShowMobileSectionTabs((prev) => (prev === next ? prev : next));
+      setShowStickyActions((prev) => (prev === next ? prev : next));
     });
     return () => {
       scrollY.removeListener(id);
     };
-  }, [isMobile, scrollY, showMobileSectionTabs]);
+  }, [heroBlockHeight, isMobile, scrollY, showMobileSectionTabs, showStickyActions]);
+
+  const stickyActionsBottomOffset = useMemo(() => {
+    if (!isMobile) return 0;
+    return Platform.OS === 'web'
+      ? insets.bottom + 8
+      : insets.bottom + LAYOUT.tabBarHeight + 8;
+  }, [insets.bottom, isMobile]);
+
+  const scrollBottomPadding = useMemo(() => {
+    if (!isMobile) return 0;
+    if (!showStickyActions) return 0;
+    // +16 — небольшой зазор, чтобы последний контент не прилипал к панели
+    return stickyActionsBottomOffset + stickyActionsHeight + 16;
+  }, [isMobile, showStickyActions, stickyActionsBottomOffset, stickyActionsHeight]);
 
   // ✅ АРХИТЕКТУРА: Intersection Observer логика теперь в useActiveSection
   // Остается только логика установки data-section-key атрибутов
@@ -1237,6 +1221,7 @@ export default function TravelDetails() {
             ref={scrollRef}
             contentContainerStyle={[
               styles.scrollContent,
+              isMobile && showStickyActions && { paddingBottom: scrollBottomPadding },
             ]}
             keyboardShouldPersistTaps="handled"
             onScroll={Animated.event(
@@ -1258,13 +1243,21 @@ export default function TravelDetails() {
                 collapsable={false}
               >
                 <SList revealOrder="forwards" tail="collapsed">
-                  <TravelHeroSection
-                    travel={travel}
-                    anchors={anchors}
-                    isMobile={isMobile}
-                    renderSlider={Platform.OS !== "web" ? true : lcpLoaded}
-                    onFirstImageLoad={() => setLcpLoaded(true)}
-                  />
+                  <View
+                    collapsable={false}
+                    onLayout={(e) => {
+                      const h = e.nativeEvent.layout.height;
+                      setHeroBlockHeight((prev) => (prev === h ? prev : h));
+                    }}
+                  >
+                    <TravelHeroSection
+                      travel={travel}
+                      anchors={anchors}
+                      isMobile={isMobile}
+                      renderSlider={Platform.OS !== "web" ? true : lcpLoaded}
+                      onFirstImageLoad={() => setLcpLoaded(true)}
+                    />
+                  </View>
 
                   {isMobile && showMobileSectionTabs && sectionLinks.length > 0 && (
                     <View style={styles.sectionTabsContainer}>
@@ -1298,6 +1291,29 @@ export default function TravelDetails() {
               </View>
             </View>
           </ScrollView>
+
+          {isMobile && showStickyActions && (
+            <View
+              testID="travel-details-sticky-actions"
+              pointerEvents="box-none"
+              style={[
+                styles.stickyActionsWrap,
+                {
+                  bottom: stickyActionsBottomOffset,
+                },
+              ]}
+            >
+              <View
+                style={styles.stickyActionsInner}
+                onLayout={(e) => {
+                  const h = e.nativeEvent.layout.height;
+                  setStickyActionsHeight((prev) => (prev === h ? prev : h));
+                }}
+              >
+                <ShareButtons travel={travel} variant="sticky" />
+              </View>
+            </View>
+          )}
             
           {/* ✅ Кнопка "Наверх" */}
           <ScrollToTopButton
@@ -1336,7 +1352,6 @@ const TravelDeferredSections: React.FC<{
   setRelatedTravels: React.Dispatch<React.SetStateAction<Travel[]>>;
 }> = ({ travel, isMobile, forceOpenKey, anchors, relatedTravels, setRelatedTravels }) => {
   const [canRenderHeavy, setCanRenderHeavy] = useState(false);
-  const [showMap, setShowMap] = useState(Platform.OS !== "web");
   const [showExcursions] = useState(true);
 
   useEffect(() => {
@@ -1350,7 +1365,6 @@ const TravelDeferredSections: React.FC<{
     if (Platform.OS === "web") {
       rIC(() => {
         setCanRenderHeavy(true);
-        setShowMap(true);
       }, 3500);
     }
   }, []);
@@ -1368,7 +1382,6 @@ const TravelDeferredSections: React.FC<{
         travel={travel}
         anchors={anchors}
         canRenderHeavy={canRenderHeavy}
-        showMap={showMap}
         showExcursions={showExcursions}
       />
 
@@ -1756,11 +1769,14 @@ const TravelVisualSections: React.FC<{
   travel: Travel;
   anchors: AnchorsMap;
   canRenderHeavy: boolean;
-  showMap: boolean;
   showExcursions: boolean;
-}> = ({ travel, anchors, canRenderHeavy, showMap, showExcursions }) => {
+}> = ({ travel, anchors, canRenderHeavy, showExcursions }) => {
+  const { width } = useWindowDimensions();
   const hasMapData = (travel.coordsMeTravel?.length ?? 0) > 0;
-  const shouldRenderMap = canRenderHeavy && showMap && hasMapData;
+  const { shouldLoad: shouldLoadMap, setElementRef } = useLazyMap({ enabled: Platform.OS === 'web' });
+  const shouldRenderMap = canRenderHeavy && (Platform.OS !== 'web' || shouldLoadMap) && hasMapData;
+
+  const isMobileWeb = Platform.OS === 'web' && width <= METRICS.breakpoints.tablet;
 
   return (
     <>
@@ -1796,12 +1812,22 @@ const TravelVisualSections: React.FC<{
         collapsable={false}
         {...(Platform.OS === "web" ? { "data-section-key": "map", "data-map-for-pdf": "1" } : {})}
       >
+        {Platform.OS === 'web' && (
+          <View
+            collapsable={false}
+            // @ts-ignore - ref callback for RNW
+            ref={(node: any) => {
+              const target = node?._nativeNode || node?._domNode || node || null;
+              setElementRef(target as any);
+            }}
+          />
+        )}
         <Text style={styles.sectionHeaderText}>Карта маршрута</Text>
         <Text style={styles.sectionSubtitle}>Посмотрите последовательность точек на живой карте</Text>
         <View style={{ marginTop: 12 }}>
           {hasMapData ? (
             <ToggleableMap
-              initiallyOpen
+              initiallyOpen={isMobileWeb ? false : true}
               isLoading={!shouldRenderMap}
               loadingLabel="Подгружаем карту маршрута..."
             >
@@ -1844,14 +1870,40 @@ const TravelRelatedContent: React.FC<{
   anchors: AnchorsMap;
   relatedTravels: Travel[];
   setRelatedTravels: React.Dispatch<React.SetStateAction<Travel[]>>;
-}> = ({ travel, anchors, relatedTravels, setRelatedTravels }) => (
-  <>
+}> = ({ travel, anchors, relatedTravels, setRelatedTravels }) => {
+  const { shouldLoad: shouldLoadNear, setElementRef: setNearRef } = useProgressiveLoad({
+    priority: 'low',
+    rootMargin: '200px',
+    threshold: 0.1,
+    fallbackDelay: 1500,
+  });
+  const { shouldLoad: shouldLoadPopular, setElementRef: setPopularRef } = useProgressiveLoad({
+    priority: 'low',
+    rootMargin: '200px',
+    threshold: 0.1,
+    fallbackDelay: 1500,
+  });
+
+  return (
+    <>
     <View
       ref={anchors.near}
       style={[styles.sectionContainer, styles.contentStable]}
       collapsable={false}
       {...(Platform.OS === "web" ? { "data-section-key": "near" } : {})}
     >
+      {Platform.OS === 'web' ? (
+        <View
+          collapsable={false}
+          // @ts-ignore - ref callback for RNW
+          ref={(node: any) => {
+            const target = node?._nativeNode || node?._domNode || node || null;
+            setNearRef(target);
+          }}
+        />
+      ) : (
+        <View ref={setNearRef as any} />
+      )}
       <Text style={styles.sectionHeaderText}>Рядом (~60км)</Text>
       <Text style={[styles.sectionSubtitle, styles.nearSubtitle]}>
         Маршруты поблизости — пригодятся для импровизации
@@ -1864,14 +1916,19 @@ const TravelRelatedContent: React.FC<{
         </View>
       </View>
       <View style={{ marginTop: 12 }}>
-        {travel.travelAddress && (
-          <Suspense fallback={<TravelListFallback />}>
-            <NearTravelList
-              travel={travel}
-              onTravelsLoaded={(travels) => setRelatedTravels(travels)}
-            />
-          </Suspense>
-        )}
+        {travel.travelAddress &&
+          (shouldLoadNear ? (
+            <Suspense fallback={<TravelListFallback />}>
+              <NearTravelList
+                travel={travel}
+                onTravelsLoaded={(travels) => setRelatedTravels(travels)}
+              />
+            </Suspense>
+          ) : (
+            <View style={styles.lazySectionReserved}>
+              <TravelListSkeleton count={3} />
+            </View>
+          ))}
       </View>
     </View>
 
@@ -1887,6 +1944,18 @@ const TravelRelatedContent: React.FC<{
       collapsable={false}
       {...(Platform.OS === "web" ? { "data-section-key": "popular" } : {})}
     >
+      {Platform.OS === 'web' ? (
+        <View
+          collapsable={false}
+          // @ts-ignore - ref callback for RNW
+          ref={(node: any) => {
+            const target = node?._nativeNode || node?._domNode || node || null;
+            setPopularRef(target);
+          }}
+        />
+      ) : (
+        <View ref={setPopularRef as any} />
+      )}
       <Text style={styles.sectionHeaderText}>Популярные путешествия</Text>
       <Text style={[styles.sectionSubtitle, styles.popularSubtitle]}>
         Самые просматриваемые направления за последнюю неделю
@@ -1899,13 +1968,20 @@ const TravelRelatedContent: React.FC<{
         </View>
       </View>
       <View style={{ marginTop: 12 }}>
-        <Suspense fallback={<TravelListFallback />}>
-          <PopularTravelList />
-        </Suspense>
+        {shouldLoadPopular ? (
+          <Suspense fallback={<TravelListFallback />}>
+            <PopularTravelList />
+          </Suspense>
+        ) : (
+          <View style={styles.lazySectionReserved}>
+            <TravelListSkeleton count={3} />
+          </View>
+        )}
       </View>
     </View>
-  </>
-);
+    </>
+  );
+};
 
 const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boolean }> = ({ travel, isMobile }) => (
   <>
@@ -1959,6 +2035,36 @@ const styles = StyleSheet.create({
   mainContainerMobile: {
     flexDirection: "column",
     alignItems: "stretch",
+  },
+  stickyActionsWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    zIndex: 2000,
+  },
+  stickyActionsInner: {
+    borderRadius: 999,
+    overflow: 'hidden',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(15, 23, 42, 0.08)',
+    ...Platform.select({
+      web: ({
+        // @ts-ignore - web-only shadow
+        boxShadow: '0px 8px 24px rgba(15, 23, 42, 0.12)',
+      } as any),
+      default: {
+        elevation: 6,
+      },
+    }),
+  },
+  lazySectionReserved: {
+    width: '100%',
+    minHeight: Platform.select({
+      web: 560,
+      default: 520,
+    }),
   },
 
   // ✅ РЕДИЗАЙН: Адаптивное боковое меню с glassmorphism
@@ -2091,70 +2197,6 @@ const styles = StyleSheet.create({
     maxHeight: "100vh" as any,
     overflowY: "auto" as any,
     paddingTop: HEADER_OFFSET_MOBILE + 32,
-  },
-
-  // ✅ РЕДИЗАЙН: Оптимизированная FAB с градиентом (отступ от низа 80px)
-  fab: {
-    position: "absolute",
-    right: 16,
-    width: 56, // ✅ Размер 56px × 56px
-    height: 56,
-    borderRadius: 28, // ✅ Круглая форма (50% от размера)
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1001, // ✅ Z-index: 1001
-    shadowColor: DESIGN_TOKENS.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24, // ✅ Уровень 3 теней для FAB
-    elevation: 12,
-  },
-  fabWeb: {
-    cursor: "pointer" as any,
-    // @ts-ignore - Web-specific CSS properties
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)" as any,
-    // @ts-ignore
-    backgroundImage: "linear-gradient(135deg, #ff9f5a 0%, #ff6b35 100%)" as any,
-    ":hover": {
-      transform: "scale(1.1) translateY(-2px)" as any,
-      shadowOpacity: 0.5 as any,
-    } as any,
-  },
-  fabInner: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  fabHintBubble: {
-    position: "absolute",
-    right: 12,
-    paddingHorizontal: 14,
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
-    borderRadius: 16,
-    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-    maxWidth: 240,
-    zIndex: 1002,
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  fabHintBubbleWeb: {
-    cursor: "pointer" as any,
-  },
-  fabHintTitle: {
-    color: DESIGN_TOKENS.colors.surface,
-    fontWeight: "600",
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-  },
-  fabHintText: {
-    color: "rgba(248, 250, 252, 0.92)",
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    lineHeight: 18,
-    marginTop: 4,
   },
 
   pdfButtonContainer: {
@@ -2438,6 +2480,14 @@ const styles = StyleSheet.create({
   },
 
   fallback: { paddingVertical: 32, alignItems: "center" },
+  travelListFallback: {
+    width: '100%',
+    minHeight: Platform.select({
+      web: 560,
+      default: 520,
+    }),
+    justifyContent: 'center',
+  },
   center: { 
     flex: 1, 
     justifyContent: "center", 

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 
 // Types for progressive loading
 export interface LoadPriority {
@@ -23,19 +23,28 @@ export interface ProgressiveLoadConfig {
 
 // Hook for progressive component loading
 export function useProgressiveLoad(config: ProgressiveLoadConfig) {
+  const priority = config.priority;
+  const threshold = config.threshold;
+  const rootMargin = config.rootMargin;
+  const fallbackDelay = config.fallbackDelay;
+
   const [shouldLoad, setShouldLoad] = useState(
-    config.priority === 'immediate' || config.priority === 'high'
+    priority === 'immediate' || priority === 'high'
   );
   const elementRef = useRef<any>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
+  const setElementRef = useCallback((node: any) => {
+    elementRef.current = node;
+  }, []);
+
   useEffect(() => {
-    if (config.priority === 'immediate') {
+    if (priority === 'immediate') {
       setShouldLoad(true);
       return;
     }
 
-    if (config.priority === 'high' && Platform.OS !== 'web') {
+    if (priority === 'high' && Platform.OS !== 'web') {
       // On native, high priority loads immediately
       setShouldLoad(true);
       return;
@@ -45,7 +54,7 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
       // Fallback for native - load after interaction
       const timer = setTimeout(() => {
         setShouldLoad(true);
-      }, config.fallbackDelay || 1000);
+      }, fallbackDelay || 1000);
       return () => clearTimeout(timer);
     }
 
@@ -54,7 +63,7 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
       // Fallback for browsers without Intersection Observer
       const timer = setTimeout(() => {
         setShouldLoad(true);
-      }, config.fallbackDelay || 2000);
+      }, fallbackDelay || 2000);
       return () => clearTimeout(timer);
     }
 
@@ -69,8 +78,8 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
         }
       },
       {
-        threshold: config.threshold || 0.1,
-        rootMargin: config.rootMargin || '50px',
+        threshold: threshold || 0.1,
+        rootMargin: rootMargin || '50px',
       }
     );
 
@@ -88,9 +97,9 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
         observerRef.current.disconnect();
       }
     };
-  }, [config]);
+  }, [fallbackDelay, priority, rootMargin, shouldLoad, threshold]);
 
-  return { shouldLoad, elementRef };
+  return { shouldLoad, elementRef, setElementRef };
 }
 
 // Component wrapper for progressive loading
@@ -110,11 +119,23 @@ export function ProgressiveWrapper({
   const { shouldLoad, elementRef } = useProgressiveLoad(config);
 
   if (!shouldLoad) {
-    return React.createElement('div', { 
-      ref: elementRef, 
-      className: className, 
-      style: { minHeight: '100px' } 
-    }, fallback);
+    if (Platform.OS === 'web') {
+      return React.createElement(
+        'div',
+        {
+          ref: elementRef,
+          className: className,
+          style: { minHeight: '100px' },
+        },
+        fallback
+      );
+    }
+
+    return React.createElement(
+      View,
+      { ref: elementRef as any, style: { minHeight: 100 } },
+      fallback
+    );
   }
 
   return React.createElement(React.Fragment, null, children);
