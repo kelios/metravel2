@@ -32,7 +32,7 @@ interface UserStats {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { isAuthenticated, logout, userId } = useAuth();
+  const { isAuthenticated, logout, userId, setUserAvatar, triggerProfileRefresh } = useAuth();
   const favoritesContext = typeof useFavorites === 'function' ? useFavorites() : { favorites: [], viewHistory: [] };
   const { favorites, viewHistory } = favoritesContext as any;
   const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({ name: '', email: '' });
@@ -88,6 +88,20 @@ export default function ProfileScreen() {
         try {
           const profileData = await fetchUserProfile(uid);
           setProfile(profileData);
+
+          const rawAvatar = String((profileData as any)?.avatar ?? '').trim();
+          const lowerAvatar = rawAvatar.toLowerCase();
+          const normalizedAvatar = rawAvatar && lowerAvatar !== 'null' && lowerAvatar !== 'undefined' ? rawAvatar : null;
+          setUserAvatar(normalizedAvatar);
+
+          const { setStorageBatch, removeStorageBatch } = await import('@/src/utils/storageBatch');
+          if (normalizedAvatar) {
+            await setStorageBatch([['userAvatar', normalizedAvatar]]);
+          } else {
+            await removeStorageBatch(['userAvatar']);
+          }
+
+          triggerProfileRefresh();
         } catch (e) {
           if (__DEV__) {
             const message = e instanceof ApiError ? e.message : String(e);

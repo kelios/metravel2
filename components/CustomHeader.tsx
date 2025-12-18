@@ -1,9 +1,9 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { View, StyleSheet, Platform, StatusBar, useWindowDimensions, Pressable, Text, Image, Modal, ScrollView } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import AccountMenu from './AccountMenu';
-import Breadcrumbs from './Breadcrumbs';
+import HeaderContextBar from './HeaderContextBar';
 import Logo from './Logo';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
@@ -16,7 +16,11 @@ import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS } from '@/constants/header
 
 const palette = DESIGN_TOKENS.colors;
 
-export default function CustomHeader() {
+type CustomHeaderProps = {
+    onHeightChange?: (height: number) => void;
+};
+
+export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const pathname = usePathname();
     const router = useRouter();
     const { width } = useWindowDimensions();
@@ -32,6 +36,7 @@ export default function CustomHeader() {
     const { favorites } = useFavorites();
     const { updateFilters } = useFilters();
     const [avatarLoadError, setAvatarLoadError] = useState(false);
+    const lastHeightRef = useRef(0);
 
     React.useEffect(() => {
         if (Platform.OS !== 'web') return;
@@ -47,14 +52,6 @@ export default function CustomHeader() {
         return () => window.removeEventListener('keydown', handler);
     }, [mobileMenuVisible]);
 
-    const resolvedPathname =
-        Platform.OS === 'web' && typeof window !== 'undefined'
-            ? window.location.pathname || pathname
-            : pathname;
-
-    const breadcrumbsVisible = resolvedPathname !== '/' && resolvedPathname !== '/index' && !!resolvedPathname;
-    const breadcrumbsReserved = breadcrumbsVisible;
-
     const avatarUri = useMemo(() => {
         if (avatarLoadError) return null;
         const raw = String(userAvatar ?? '').trim();
@@ -67,6 +64,8 @@ export default function CustomHeader() {
             const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/?api\/?$/, '');
             if (base) {
                 normalized = `${base}${raw}`;
+            } else if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                normalized = `${window.location.origin}${raw}`;
             }
         }
 
@@ -118,7 +117,13 @@ export default function CustomHeader() {
       <View 
         style={styles.container}
         testID="main-header"
-        onLayout={() => {}}
+        onLayout={(e) => {
+            const next = Math.round(e.nativeEvent.layout.height);
+            if (next > 0 && next !== lastHeightRef.current) {
+                lastHeightRef.current = next;
+                onHeightChange?.(next);
+            }
+        }}
       >
           <View style={styles.wrapper}>
               <View style={[styles.inner, isMobile && styles.innerMobile]}>
@@ -170,15 +175,25 @@ export default function CustomHeader() {
                       {!isMobile && (
                           <Pressable
                               onPress={handleCreate}
-                              style={[styles.createButton, globalFocusStyles.focusable]}
+                              style={({ hovered, pressed }) => [
+                                  styles.createButton,
+                                  (hovered || pressed) && styles.createButtonHover,
+                                  globalFocusStyles.focusable,
+                              ]}
                               accessibilityRole="button"
-                              accessibilityLabel="Создать путешествие"
+                              accessibilityLabel="Добавить путешествие"
                               testID="header-create"
                           >
-                              <View style={styles.iconSlot18}>
-                                  <Feather name="plus" size={18} color={palette.surface} />
+                              <View style={styles.createIconComposite}>
+                                  <Feather name="book" size={18} color={palette.surface} />
+                                  <View style={styles.createIconPlus}>
+                                      <Feather name="plus" size={10} color={palette.surface} />
+                                  </View>
+                                  <View style={styles.createIconPin}>
+                                      <Feather name="map-pin" size={10} color={palette.surface} />
+                                  </View>
                               </View>
-                              <Text style={styles.createLabel}>Создать</Text>
+                              <Text style={styles.createLabel}>Добавить</Text>
                           </Pressable>
                       )}
 
@@ -239,12 +254,7 @@ export default function CustomHeader() {
                   </View>
               </View>
           
-          {/* Хлебные крошки - показываем на всех страницах кроме главной */}
-          {breadcrumbsReserved ? (
-            <View style={styles.breadcrumbsContainer}>
-              {breadcrumbsVisible ? <Breadcrumbs /> : null}
-            </View>
-          ) : null}
+          <HeaderContextBar />
 
           {isMobile && (
             <Modal
@@ -288,7 +298,11 @@ export default function CustomHeader() {
                             <Pressable
                                 key={item.path}
                                 onPress={() => handleNavPress(item.path)}
-                                style={[styles.modalNavItem, isActive && styles.modalNavItemActive]}
+                                style={({ hovered, pressed }) => [
+                                    styles.modalNavItem,
+                                    (hovered || pressed) && styles.modalNavItemHover,
+                                    isActive && styles.modalNavItemActive,
+                                ]}
                                 accessibilityRole="button"
                                 accessibilityLabel={item.label}
                                 accessibilityState={{ selected: isActive }}
@@ -372,7 +386,7 @@ export default function CustomHeader() {
                                 accessibilityLabel="Добавить путешествие"
                             >
                                 <View style={styles.iconSlot20}>
-                                    <Feather name="plus" size={20} color={palette.textMuted} />
+                                    <Feather name="book" size={20} color={palette.textMuted} />
                                 </View>
                                 <Text style={styles.modalNavLabel}>Добавить путешествие</Text>
                             </Pressable>
@@ -429,7 +443,7 @@ export default function CustomHeader() {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: palette.surface,
+        backgroundColor: Platform.OS === 'web' ? '#FBFAF8' : palette.surface,
         // Sticky header для лучшей навигации
         // (на web положение управляется родительским layout)
         ...Platform.select({
@@ -446,7 +460,7 @@ const styles = StyleSheet.create({
     },
     wrapper: {
         width: '100%',
-        backgroundColor: palette.surface,
+        backgroundColor: Platform.OS === 'web' ? '#FBFAF8' : palette.surface,
         // Убрана граница, используется только тень для разделения
         ...Platform.select({
             ios: {
@@ -460,6 +474,8 @@ const styles = StyleSheet.create({
                 shadowColor: '#1f1f1f',
             },
             web: {
+                borderBottomWidth: StyleSheet.hairlineWidth,
+                borderBottomColor: 'rgba(17, 24, 39, 0.08)',
                 shadowColor: '#1f1f1f',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.1,
@@ -587,7 +603,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 14,
         paddingVertical: 10,
-        borderRadius: DESIGN_TOKENS.radii.sm,
+        borderRadius: 999,
         gap: 8,
         backgroundColor: 'transparent',
         justifyContent: 'center',
@@ -601,7 +617,14 @@ const styles = StyleSheet.create({
                 transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)' as any,
                 // @ts-ignore: web-only styles
                 cursor: 'pointer' as any,
-                // @ts-ignore: web-only styles
+            },
+        }),
+    },
+    navItemHover: {
+        backgroundColor: 'rgba(93, 140, 124, 0.10)',
+        ...Platform.select({
+            web: {
+                // @ts-ignore: web-only style
                 transform: 'translateY(-1px)' as any,
             },
         }),
@@ -641,16 +664,51 @@ const styles = StyleSheet.create({
         backgroundColor: palette.primary,
         paddingHorizontal: 14,
         paddingVertical: 10,
-        borderRadius: DESIGN_TOKENS.radii.sm,
+        borderRadius: 999,
         gap: 8,
         minHeight: 44,
         minWidth: 44,
+        ...Platform.select({
+            web: {
+                // @ts-ignore: web-only styles
+                transition: 'transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease' as any,
+                // @ts-ignore: web-only styles
+                cursor: 'pointer' as any,
+            },
+        }),
+    },
+    createButtonHover: {
+        ...Platform.select({
+            web: {
+                // @ts-ignore: web-only style
+                transform: 'translateY(-1px)' as any,
+                // @ts-ignore: web-only style
+                boxShadow: '0 8px 16px rgba(47, 94, 80, 0.18)' as any,
+            },
+        }),
     },
     createLabel: {
         color: palette.surface,
         fontSize: 14,
         fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
         letterSpacing: -0.1,
+    },
+    createIconComposite: {
+        width: 18,
+        height: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+    },
+    createIconPlus: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+    },
+    createIconPin: {
+        position: 'absolute',
+        bottom: -4,
+        right: -4,
     },
     modalOverlay: {
         flex: 1,
@@ -702,6 +760,9 @@ const styles = StyleSheet.create({
         // Увеличен размер touch-цели для мобильных
         minHeight: 48,
     },
+    modalNavItemHover: {
+        backgroundColor: 'rgba(93, 140, 124, 0.10)',
+    },
     modalNavItemActive: {
         backgroundColor: palette.primaryLight,
         borderLeftWidth: 3,
@@ -723,9 +784,5 @@ const styles = StyleSheet.create({
         backgroundColor: palette.border,
         marginVertical: 8,
         marginHorizontal: 20,
-    },
-    breadcrumbsContainer: {
-        // CLS FIX: Fixed height to reserve space for breadcrumbs and prevent layout shifts
-        minHeight: 32, 
     },
 });

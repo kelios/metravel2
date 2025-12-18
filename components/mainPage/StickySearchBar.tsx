@@ -100,12 +100,7 @@ function StickySearchBar({
       ]}
     >
       <View
-        style={[
-          styles.inner,
-          isMobile && Platform.OS === 'web'
-            ? ({ width: '34%', maxWidth: 360, alignSelf: 'center', marginLeft: 0, marginRight: 0 } as any)
-            : null,
-        ]}
+        style={[styles.inner]}
       >
         <View style={[styles.contentRow, isMobile && styles.contentRowMobile]}>
           <View
@@ -299,11 +294,12 @@ const styles = StyleSheet.create({
   },
   contentRowMobile: {
     flexDirection: 'row',
-    alignItems: 'stretch',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
   },
   searchBox: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: palette.background,
@@ -321,8 +317,9 @@ const styles = StyleSheet.create({
     }),
   },
   searchBoxMobile: {
-    width: '100%',
-    marginBottom: spacing.xs,
+    flex: 1,
+    minWidth: 0,
+    marginBottom: 0,
   },
   input: {
     flex: 1,
@@ -407,7 +404,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   actionsMobile: {
-    width: '100%',
+    flexShrink: 0,
     justifyContent: 'flex-start',
   },
   actionButton: {

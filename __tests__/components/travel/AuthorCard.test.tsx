@@ -5,6 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import AuthorCard from '@/components/travel/AuthorCard'
 
+jest.mock('@/src/hooks/useUserProfileCached', () => ({
+  useUserProfileCached: () => ({ profile: null }),
+}))
+
 // Мокаем expo-router useRouter
 const mockPush = jest.fn()
 jest.mock('expo-router', () => ({

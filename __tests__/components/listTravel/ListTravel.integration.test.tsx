@@ -265,6 +265,10 @@ describe('ListTravel Integration Tests', () => {
     });
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('renders export mode UI and allows selecting all items', async () => {
     (global as any).__mockRouteName = 'export';
     (global as any).__mockPathname = '/export';
@@ -520,29 +524,36 @@ describe('ListTravel Integration Tests', () => {
   });
 
   it('handles loading states correctly', async () => {
-    mockUseListTravelData.mockReturnValue({
-      data: [],
-      total: 0,
-      hasMore: false,
-      isLoading: true,
-      isFetching: false,
-      isError: false,
-      status: 'loading',
-      isInitialLoading: true,
-      isNextPageLoading: false,
-      isEmpty: false,
-      refetch: jest.fn(),
-      handleEndReached: jest.fn(),
-      handleRefresh: jest.fn(),
-      isRefreshing: false,
-    });
+    jest.useFakeTimers();
+    try {
+      mockUseListTravelData.mockReturnValue({
+        data: [],
+        total: 0,
+        hasMore: false,
+        isLoading: true,
+        isFetching: false,
+        isError: false,
+        status: 'loading',
+        isInitialLoading: true,
+        isNextPageLoading: false,
+        isEmpty: false,
+        refetch: jest.fn(),
+        handleEndReached: jest.fn(),
+        handleRefresh: jest.fn(),
+        isRefreshing: false,
+      });
 
-    renderWithProviders(<ListTravel />);
+      renderWithProviders(<ListTravel />);
 
-    // Should show skeleton loader
-    await waitFor(() => {
+      // Skeleton is delayed to prevent flicker.
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
       expect(screen.getByTestId('travel-list-skeleton-mock')).toBeTruthy();
-    });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('handles error states correctly', () => {

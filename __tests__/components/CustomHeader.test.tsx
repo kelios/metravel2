@@ -87,18 +87,18 @@ describe('CustomHeader', () => {
         it('renders desktop navigation by default', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
-            expect(utils.getByText('Путешествия')).toBeTruthy();
+            expect(utils.getByLabelText('Путешествия')).toBeTruthy();
         });
 
         it('shows navigation items on desktop', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
             
-            expect(utils.getByText('Путешествия')).toBeTruthy();
-            expect(utils.getByText('Беларусь')).toBeTruthy();
-            expect(utils.getByText('Карта')).toBeTruthy();
-            expect(utils.getByText('Случайный маршрут')).toBeTruthy();
-            expect(utils.getByText('Квесты')).toBeTruthy();
+            expect(utils.getByLabelText('Путешествия')).toBeTruthy();
+            expect(utils.getByLabelText('Беларусь')).toBeTruthy();
+            expect(utils.getByLabelText('Карта')).toBeTruthy();
+            expect(utils.getByLabelText('Случайный маршрут')).toBeTruthy();
+            expect(utils.getByLabelText('Квесты')).toBeTruthy();
         });
 
         it('highlights active navigation item', () => {

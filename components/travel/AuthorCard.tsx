@@ -26,6 +26,21 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
   const { width } = useWindowDimensions();
   const isMobile = width <= METRICS.breakpoints.tablet;
 
+  const normalizeMediaUrl = useCallback((raw: string) => {
+    const value = String(raw ?? '').trim();
+    if (!value) return '';
+    const lower = value.toLowerCase();
+    if (lower === 'null' || lower === 'undefined') return '';
+    if (value.startsWith('http://') || value.startsWith('https://')) return value;
+
+    if (value.startsWith('/')) {
+      const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/?api\/?$/, '');
+      if (base) return `${base}${value}`;
+    }
+
+    return value;
+  }, []);
+
   // Извлекаем и очищаем данные об авторе
   const userName = useMemo(() => {
     // 1. Пробуем user объект (самый надежный источник)
@@ -66,9 +81,13 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
     // 4. Ничего не найдено
     return '';
   }, [travel.user?.name, travel.user?.first_name, travel.user?.last_name, (travel as any).userName]);
-  
-  const countryName = (travel as any).countryName || '';
-  const userId = (travel as any).userIds ?? (travel as any).userId ?? null;
+
+  const userId =
+    (travel as any)?.user?.id ??
+    (travel as any)?.userId ??
+    (travel as any)?.user_id ??
+    (travel as any)?.userIds ??
+    null;
 
   // Подсчет количества путешествий автора (если доступно)
   const travelsCount = (travel as any).userTravelsCount || null;
@@ -76,6 +95,30 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
   const { profile: authorProfile } = useUserProfileCached(userId, {
     enabled: !!userId,
   });
+
+  const authorCountryName = useMemo(() => {
+    const fromProfile =
+      (authorProfile as any)?.countryName ||
+      (authorProfile as any)?.country_name ||
+      (authorProfile as any)?.country ||
+      '';
+    const fromUserObj =
+      ((travel as any)?.user as any)?.countryName ||
+      ((travel as any)?.user as any)?.country_name ||
+      ((travel as any)?.user as any)?.country ||
+      '';
+
+    const fromTravel =
+      (travel as any)?.countryName ||
+      (travel as any)?.country_name ||
+      (travel as any)?.country ||
+      '';
+
+    const raw = String(fromProfile || fromUserObj || fromTravel || '').trim();
+    if (!raw) return '';
+    if (raw.toLowerCase() === 'null' || raw.toLowerCase() === 'undefined') return '';
+    return raw;
+  }, [authorProfile, travel]);
 
   const socials = useMemo(() => {
     if (!authorProfile) return [];
@@ -104,11 +147,14 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
 
   // Оптимизация аватара
   const avatarUri = useMemo(() => {
-    const rawUri = (travel as any).user?.avatar || authorProfile?.avatar;
+    const rawUri = authorProfile?.avatar || (travel as any).user?.avatar;
     if (!rawUri) return '';
+
+    const normalizedUri = normalizeMediaUrl(rawUri);
+    if (!normalizedUri) return '';
     
     const versionedUrl = buildVersionedImageUrl(
-      rawUri,
+      normalizedUri,
       (travel as any).updated_at,
       travel.id
     );
@@ -123,10 +169,10 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
       quality: 85,
       fit: 'cover',
     }) || versionedUrl;
-  }, [(travel as any).user?.avatar, authorProfile?.avatar, (travel as any).updated_at, travel.id, isMobile]);
+  }, [authorProfile?.avatar, (travel as any).user?.avatar, (travel as any).updated_at, travel.id, isMobile, normalizeMediaUrl]);
 
   // Не показываем если нет данных об авторе
-  if (!userName && !countryName && !userId) {
+  if (!userName && !authorCountryName && !userId) {
     return null;
   }
 
@@ -172,10 +218,10 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
             </Text>
           </Pressable>
           
-          {countryName && (
+          {authorCountryName && (
             <View style={styles.locationRow}>
               <Feather name="map-pin" size={14} color="#718096" />
-              <Text style={styles.locationText}>{countryName}</Text>
+              <Text style={styles.locationText}>{authorCountryName}</Text>
             </View>
           )}
 

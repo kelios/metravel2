@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ReservedSpace from '@/components/ReservedSpace';

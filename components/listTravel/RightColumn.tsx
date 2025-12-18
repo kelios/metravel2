@@ -153,7 +153,10 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     }, [isRecommendationsVisible]) // Removed scrollToRecommendations dependency
 
     const cardsWrapperStyle = useMemo<StyleProp<ViewStyle>>(() => {
-      const resetPadding = { paddingHorizontal: 0, paddingTop: 12 }
+      const resetPadding = {
+        paddingHorizontal: 0,
+        paddingTop: Platform.OS === 'web' && isMobile ? 4 : 12,
+      }
 
       if (Array.isArray(cardsContainerStyle)) {
         return [...cardsContainerStyle, resetPadding]
@@ -306,25 +309,28 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
     const [showDelayedSkeleton, setShowDelayedSkeleton] = useState(false)
 
+    const skeletonDelayMs = Platform.OS === 'web' ? 200 : 250
+
+    const skeletonCount = useMemo(() => {
+      if (Platform.OS !== 'web') return PER_PAGE
+      return isMobile ? 6 : 12
+    }, [isMobile])
+
     const shouldShowSkeleton =
-      Platform.OS === 'web'
-        ? showInitialLoading && travels.length === 0
-        : showDelayedSkeleton
+      showDelayedSkeleton && showInitialLoading && travels.length === 0
 
     useEffect(() => {
-      if (Platform.OS === 'web') return
-
       if (!showInitialLoading || travels.length !== 0) {
         setShowDelayedSkeleton(false)
         return
       }
 
-      const t = setTimeout(() => setShowDelayedSkeleton(true), 250)
+      const t = setTimeout(() => setShowDelayedSkeleton(true), skeletonDelayMs)
       return () => {
         clearTimeout(t)
         setShowDelayedSkeleton(false)
       }
-    }, [showInitialLoading, travels.length])
+    }, [showInitialLoading, travels.length, skeletonDelayMs])
 
     return (
       <View style={containerStyle}>
@@ -333,7 +339,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
           style={[
             searchHeaderStyle,
             Platform.OS === 'web'
-              ? ({ minHeight: isMobile ? 120 : 76 } as any)
+              ? ({ minHeight: isMobile ? 76 : 76 } as any)
               : ({ minHeight: 60 } as any),
           ]}
         >
@@ -389,7 +395,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
               ]}
             >
               <TravelListSkeleton
-                count={PER_PAGE}
+                count={skeletonCount}
                 columns={gridColumns}
                 rowStyle={cardsGridStyle}
                 variant={Platform.OS === 'web' ? 'detailed' : isMobile ? 'reserve' : 'detailed'}

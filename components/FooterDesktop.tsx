@@ -101,8 +101,9 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
   );
 
   const quickActions: LinkItem[] = [
-    { key: "home", label: "Путешествия", route: "/" as any, icon: <Feather name="home" size={16} color={iconColor} /> },
-    { key: "map", label: "Карта", route: "/map" as any, icon: <Feather name="map" size={16} color={iconColor} /> },
+    { key: "home", label: "Путешествия", route: "/" as any, icon: <Feather name="compass" size={16} color={iconColor} /> },
+    { key: "belarus", label: "Беларусь", route: "/travelsby" as any, icon: <Feather name="map" size={16} color={iconColor} /> },
+    { key: "map", label: "Карта", route: "/map" as any, icon: <Feather name="map-pin" size={16} color={iconColor} /> },
     { key: "favorites", label: "Избранное", route: "/favorites" as any, icon: <Feather name="heart" size={16} color={iconColor} /> },
     { key: "create", label: "Создать", route: "/travel/new" as any, icon: <Feather name="plus" size={16} color={iconColor} /> },
     { key: "profile", label: "Профиль", route: "/profile" as any, icon: <Feather name="user" size={16} color={iconColor} /> },

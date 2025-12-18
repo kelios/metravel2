@@ -255,7 +255,6 @@ const TravelDetailsLoadingSkeleton = () => (
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            Platform.OS === "web" && { paddingTop: HEADER_OFFSET_MOBILE },
           ]}
           style={styles.scrollView}
         >
@@ -1165,7 +1164,6 @@ export default function TravelDetails() {
             ref={scrollRef}
             contentContainerStyle={[
               styles.scrollContent,
-              Platform.OS === "web" && isMobile && { paddingTop: HEADER_OFFSET_MOBILE },
             ]}
             keyboardShouldPersistTaps="handled"
             onScroll={Animated.event(

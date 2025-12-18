@@ -1,22 +1,30 @@
 // TabLayout.tsx — кастомный header + полный офф таббара
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import { Platform, View } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
 import CustomHeader from '@/components/CustomHeader';
 
 const Header = React.memo(function Header() {
     const [mounted, setMounted] = useState(Platform.OS !== 'web');
+    const [measuredHeight, setMeasuredHeight] = useState<number>(0);
     const pathname = usePathname();
     useEffect(() => {
         if (Platform.OS !== 'web') return;
         setMounted(true);
     }, []);
 
+    const handleHeaderHeight = useCallback((h: number) => {
+        if (h > 0) setMeasuredHeight(h);
+    }, []);
+
     // Reserve stable header space on web to avoid CLS during hydration / icon font swap.
-    const hasBreadcrumbs = pathname !== '/' && pathname !== '/index' && !!pathname;
-    const reservedHeight = hasBreadcrumbs ? 88 : 56;
+    const reservedHeight = 88;
     if (Platform.OS === 'web') {
-        return <View style={{ height: reservedHeight }}>{mounted ? <CustomHeader /> : null}</View>;
+        return (
+            <View style={{ height: measuredHeight > 0 ? measuredHeight : reservedHeight }}>
+                {mounted ? <CustomHeader onHeightChange={handleHeaderHeight} /> : null}
+            </View>
+        );
     }
 
     return <CustomHeader />;
