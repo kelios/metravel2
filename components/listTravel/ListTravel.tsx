@@ -745,30 +745,10 @@ function ListTravel({
       [deleteId, queryClient]
     );
 
-    const handleDeletePress = useCallback(
-      (id: number) => {
-        // Для web сразу показываем confirm, чтобы не зависеть от повторных эффектов
-        if (Platform.OS === 'web') {
-          const title = 'Удалить путешествие?';
-          const message = 'Это действие нельзя отменить.';
-          const ok =
-            typeof (globalThis as any).confirm === 'function'
-              ? (globalThis as any).confirm(`${title}\n\n${message}`)
-              : true;
-
-          if (ok) {
-            handleDelete(id);
-          } else {
-            setDelete(null);
-          }
-          return;
-        }
-
-        // Для native сохраняем id и открываем Alert через эффект
-        setDelete(id);
-      },
-      [handleDelete]
-    );
+    const handleDeletePress = useCallback((id: number) => {
+      // Всегда сохраняем id, подтверждение выполняем в useEffect для единообразия
+      setDelete(id);
+    }, []);
 
     useEffect(() => {
         if (!deleteId) return;
@@ -1162,34 +1142,8 @@ function ListTravel({
       ]
     );
     
-    const isWebMobileCLS = Platform.OS === 'web' && !isTestEnv && effectiveWidth <= 420;
-
-    if (isWebMobileCLS) {
-      return (
-        <View
-          style={[
-            styles.root,
-            styles.rootMobile,
-            {
-              minHeight: 1200,
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: '#fff',
-              paddingHorizontal: TOKENS.spacing.md,
-            },
-          ]}
-        >
-          <Text
-            style={{
-              fontSize: 16,
-              color: TOKENS.colors.textSecondary,
-            }}
-          >
-            Загружаем подборку путешествий...
-          </Text>
-        </View>
-      );
-    }
+    // Disable mobile web CLS optimization to ensure search bar is always visible
+    const isWebMobileCLS = false;
 
   return (
     <View style={[styles.root, isMobileDevice ? styles.rootMobile : undefined]}>

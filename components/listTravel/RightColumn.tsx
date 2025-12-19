@@ -344,31 +344,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       }
     }, [showInitialLoading, travels.length, skeletonDelayMs])
 
-    // Web mobile: render static placeholder only, to avoid CLS from interactive elements on first paint.
-    if (isWebMobile) {
-      return (
-        <View
-          style={[
-            containerStyle,
-            {
-              minHeight: STABLE_PLACEHOLDER_HEIGHT,
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: '#fff',
-            } as any,
-          ]}
-        >
-          <Text
-            style={{
-              fontSize: 16,
-              color: '#777',
-            }}
-          >
-            Загружаем подборку путешествий...
-          </Text>
-        </View>
-      )
-    }
+    // Always render the search bar, even on mobile
 
     return (
       <View style={containerStyle}>

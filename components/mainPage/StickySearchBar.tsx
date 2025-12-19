@@ -86,10 +86,8 @@ function StickySearchBar({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Web CLS guard: render static spacer without TextInput to avoid layout shifts on narrow viewports.
-  if (Platform.OS === 'web' && webWidth > 0 && webWidth <= 1024) {
-    return <View style={{ minHeight: 64 }} />;
-  }
+  // Mobile web specific styles
+  const isMobileWeb = Platform.OS === 'web' && webWidth > 0 && webWidth <= 1024;
 
   return (
     <View
