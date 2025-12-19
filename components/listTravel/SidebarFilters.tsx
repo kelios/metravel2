@@ -35,23 +35,9 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
       return null
     }
 
-    // На web-mobile, когда панель скрыта, оставляем невидимый инпут года,
-    // чтобы E2E могли его найти и чтобы значения сохранялись при открытии.
+    // На web-mobile при скрытой панели ничего не рендерим, чтобы избежать лишнего DOM и CLS.
     if (Platform.OS === 'web' && isMobile && !isVisible) {
-      return (
-        <View style={{ position: 'absolute', left: -9999, top: 0, width: 0, height: 0 }}>
-          <ModernFilters
-            filterGroups={[]}
-            selectedFilters={filter as any}
-            onFilterChange={() => {}}
-            onClearAll={() => {}}
-            resultsCount={total}
-            year={filter.year}
-            onYearChange={(value) => onSelect('year', value)}
-            showModeration={false}
-          />
-        </View>
-      )
+      return null
     }
 
     return (

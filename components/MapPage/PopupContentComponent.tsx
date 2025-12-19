@@ -846,6 +846,8 @@ if (typeof document !== 'undefined') {
       doc.head.appendChild(styleTag);
     }
 
+    if (!styleTag) return;
+
     if (styleTag && styleTag.innerHTML !== styles) {
       styleTag.innerHTML = styles;
     }

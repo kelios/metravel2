@@ -283,10 +283,11 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       const points = [];
       for (let i = 0; i < Math.min(travelsNear.length, 20); i++) {
         const item = travelsNear[i];
-        if (!item.points || !Array.isArray(item.points)) continue;
+        const itemPoints = (item as any)?.points;
+        if (!itemPoints || !Array.isArray(itemPoints)) continue;
 
-        for (let j = 0; j < item.points.length; j++) {
-          const point = item.points[j];
+        for (let j = 0; j < itemPoints.length; j++) {
+          const point = itemPoints[j];
           if (!point?.coord) continue;
 
           const [lat, lng] = String(point.coord).split(',').map(n => parseFloat(n.trim()));

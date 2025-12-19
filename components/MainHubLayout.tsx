@@ -18,16 +18,31 @@ export default function MainHubLayout({
   sidebar,
   maxWidth = 1400,
 }: MainHubLayoutProps) {
+  const webContentStyle: any =
+    Platform.OS === 'web' ? { marginHorizontal: 'auto' } : undefined;
+
+  const webSidebarStyle: any =
+    Platform.OS === 'web'
+      ? {
+          position: 'sticky',
+          top: 0,
+          alignSelf: 'flex-start',
+          maxHeight: '100vh',
+          overflowY: 'auto',
+          zIndex: 10,
+        }
+      : undefined;
+
   return (
     <View style={styles.container}>
       <View
         style={[
           styles.content,
           { maxWidth },
-          Platform.OS === 'web' && { marginHorizontal: 'auto' },
+          webContentStyle,
         ]}
       >
-        {sidebar && <View style={styles.sidebar}>{sidebar}</View>}
+        {sidebar && <View style={[styles.sidebar, webSidebarStyle]}>{sidebar}</View>}
         <View style={styles.main}>{children}</View>
       </View>
     </View>
@@ -56,16 +71,6 @@ const styles = StyleSheet.create({
     width: 260,
     paddingRight: DESIGN_TOKENS.spacing.lg,
     paddingTop: DESIGN_TOKENS.spacing.sm,
-    ...Platform.select({
-      web: {
-        position: 'sticky',
-        top: 0,
-        alignSelf: 'flex-start',
-        maxHeight: '100vh',
-        overflowY: 'auto',
-        zIndex: 10,
-      },
-    }),
   },
   main: {
     flex: 1,

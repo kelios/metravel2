@@ -1136,6 +1136,35 @@ function ListTravel({
     router.push('/travel/new');
   }, [router]);
 
+  const isWebMobileCLS = Platform.OS === 'web' && effectiveWidth <= 420;
+
+  if (isWebMobileCLS) {
+    return (
+      <View
+        style={[
+          styles.root,
+          styles.rootMobile,
+          {
+            minHeight: 1200,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: '#fff',
+            paddingHorizontal: TOKENS.spacing.md,
+          },
+        ]}
+      >
+        <Text
+          style={{
+            fontSize: 16,
+            color: TOKENS.colors.textSecondary,
+          }}
+        >
+          Загружаем подборку путешествий...
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.root, isMobileDevice ? styles.rootMobile : undefined]}>
       <SidebarFilters
@@ -1144,45 +1173,56 @@ function ListTravel({
         filter={filter}
         onSelect={onSelect}
         total={total}
-                onClearSelection={clearSelection}
-                onPreview={handleOpenSettingsForPreview}
-                onSave={handleOpenSettingsForSave}
-                onSettings={handleOpenSettingsForSave}
-                isGenerating={pdfExport.isGenerating}
-                progress={pdfExport.progress}
-                settingsSummary={settingsSummary}
-                hasSelection={hasSelection}
-              />
-
-              <Modal
-                visible={showSettingsModal}
-                transparent
-                animationType={Platform.OS === 'web' ? 'none' : 'slide'}
-                onRequestClose={() => setShowSettingsModal(false)}
-              >
-                <BookSettingsModalLazy
-                  visible={showSettingsModal}
-                  onClose={() => setShowSettingsModal(false)}
-                  defaultSettings={lastSettings}
-                  travelCount={selectionCount}
-                  userName={userId ?? undefined}
-                  mode={settingsModalMode}
-                  onSave={async (settings: any) => {
-                    await handleSaveWithSettings(settings);
-                    setShowSettingsModal(false);
-                  }}
-                  onPreview={async (settings: any) => {
-                    await handlePreviewWithSettings(settings);
-                    setShowSettingsModal(false);
-                  }}
-                />
-              </Modal>
-            </>
-          ) : null
-        }
+        isSuper={isSuper}
+        setSearch={setSearch}
+        resetFilters={resetFilters}
+        isVisible={!isMobileDevice || showFilters}
+        onClose={() => setShowFilters(false)}
+        containerStyle={isMobileDevice ? [styles.sidebar, styles.sidebarMobile] : styles.sidebar}
       />
-      
-      {/* Floating add button скрыт по требованию */}
+
+      <RightColumn
+        search={debSearch}
+        setSearch={setSearch}
+        onClearAll={() => {
+          setSearch('');
+          resetFilters();
+          if (isMobileDevice) {
+            setShowFilters(false);
+          }
+        }}
+        availableWidth={effectiveWidth}
+        topContent={null}
+        isRecommendationsVisible={isRecommendationsVisible}
+        handleRecommendationsVisibilityChange={setIsRecommendationsVisible}
+        activeFiltersCount={activeFiltersCount}
+        total={total}
+        contentPadding={contentPadding}
+        showInitialLoading={showInitialLoading}
+        isError={isError}
+        showEmptyState={showEmptyState}
+        getEmptyStateMessage={getEmptyStateMessage}
+        travels={travels}
+        gridColumns={gridColumns}
+        isMobile={isMobileDevice}
+        showNextPageLoading={showNextPageLoading}
+        refetch={refetch}
+        onEndReached={handleListEndReached}
+        onEndReachedThreshold={0.5}
+        onFiltersPress={isMobileDevice ? () => setShowFilters(true) : undefined}
+        containerStyle={isMobileDevice ? [styles.rightColumn, styles.rightColumnMobile] : styles.rightColumn}
+        searchHeaderStyle={
+          isMobileDevice
+            ? [{ minHeight: 0, paddingHorizontal: contentPadding }]
+            : [styles.searchHeader, { paddingHorizontal: contentPadding }]
+        }
+        cardsContainerStyle={isMobileDevice ? [styles.cardsContainer, styles.cardsContainerMobile] : styles.cardsContainer}
+        cardsGridStyle={cardsGridDynamicStyle}
+        cardSpacing={gapSize}
+        footerLoaderStyle={styles.footerLoader}
+        renderItem={renderTravelListItem}
+        testID="travels-list"
+      />
     </View>
   );
 }

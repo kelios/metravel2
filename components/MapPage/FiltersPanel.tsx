@@ -58,14 +58,16 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+type CategoryOption = string | { id?: string | number; name?: string; value?: string };
+
 interface FiltersPanelProps {
   filters: {
-    categories: { id: number; name: string }[];
+    categories: CategoryOption[];
     radius: { id: string; name: string }[];
     address: string;
   };
   filterValue: {
-    categories: string[];
+    categories: CategoryOption[];
     radius: string;
     address: string;
   };
@@ -196,7 +198,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   }, [setMode]);
 
   const handleCategoryRemove = useCallback(
-    (cat: string | { id?: string | number; name?: string; value?: string }) => {
+    (cat: CategoryOption) => {
       // ✅ ИСПРАВЛЕНИЕ: Обрабатываем случай, когда cat может быть объектом
       const catValue = typeof cat === 'string' 
         ? cat 
@@ -294,7 +296,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                           : (cat && typeof cat === 'object' && 'value' in cat ? cat.value : String(cat || ''))
                       )
                     : []}
-                  onChange={(v) => onFilterChange('categories', v)}
+                  onChange={(v: CategoryOption[]) => onFilterChange('categories', v)}
                   labelField="label"
                   valueField="value"
                   placeholder="Выберите..."

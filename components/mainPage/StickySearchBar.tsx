@@ -9,6 +9,7 @@ import {
   Pressable,
   Text,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -62,8 +63,9 @@ function StickySearchBar({
   const isMobile = isPhone || isLargePhone;
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
-  
-  // ✅ UX УЛУЧШЕНИЕ: Показываем счетчик только если есть результаты
+  const webWidth = Platform.OS === 'web' ? Dimensions.get('window').width : 0;
+
+  // UX УЛУЧШЕНИЕ: Показываем счетчик только если есть результаты
   const showResultsCount = resultsCount !== undefined && resultsCount > 0 && !isMobile;
   const shouldReserveDesktopResultsSlot = Platform.OS === 'web' && !isMobile;
   const shouldReserveDesktopClearAllSlot = Platform.OS === 'web' && !isMobile && !!onClearAll;
@@ -83,6 +85,11 @@ function StickySearchBar({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // Web mobile CLS guard: render static spacer without TextInput to avoid layout shifts.
+  if (Platform.OS === 'web' && webWidth > 0 && webWidth <= 420) {
+    return <View style={{ minHeight: 64 }} />;
+  }
 
   return (
     <View

@@ -1,13 +1,13 @@
 // components/travel/StableContent.tsx
 import React, { memo, Suspense, useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Linking, Platform, Text, Pressable } from "react-native";
-import type { RenderHTMLProps, TDefaultRendererProps } from "react-native-render-html";
+import type { TDefaultRendererProps } from "react-native-render-html";
 import { sanitizeRichText } from '@/src/utils/sanitizeRichText';
 
 type LazyInstagramProps = { url: string };
 
 const LazyRenderHTML = React.lazy(() =>
-  import("react-native-render-html").then((m: any) => ({ default: m.default }))
+  import("react-native-render-html").then((m: any) => ({ default: m.default as React.ComponentType<any> }))
 );
 const LazyInstagram = React.lazy<React.ComponentType<LazyInstagramProps>>(() =>
   import("@/components/iframe/InstagramEmbed").then((m: any) => ({ default: m.default }))
@@ -443,8 +443,8 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
               </Pressable>
             );
           }
-          const { TDefaultRenderer, ...rest } = props;
-          return <TDefaultRenderer {...rest} />;
+          const DefaultRenderer = (props as any).TDefaultRenderer;
+          return DefaultRenderer ? <DefaultRenderer {...props} /> : null;
         }
 
         const DefaultRenderer = (props as any).TDefaultRenderer;
@@ -714,8 +714,8 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
           key={prepared.length}
           source={{ html: prepared }}
           contentWidth={contentWidth}
-          {...(customHTMLElementModels ? { customHTMLElementModels } : {})}
-          {...(renderers ? { renderers } : {})}
+          customHTMLElementModels={customHTMLElementModels}
+          renderers={renderers}
           defaultTextProps={{ selectable: !isWeb }}
           onLinkPress={handleLinkPress}
           baseStyle={baseStyle as any}
