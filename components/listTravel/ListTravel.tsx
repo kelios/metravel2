@@ -745,9 +745,30 @@ function ListTravel({
       [deleteId, queryClient]
     );
 
-    const handleDeletePress = useCallback((id: number) => {
-      setDelete(id);
-    }, []);
+    const handleDeletePress = useCallback(
+      (id: number) => {
+        // Для web сразу показываем confirm, чтобы не зависеть от повторных эффектов
+        if (Platform.OS === 'web') {
+          const title = 'Удалить путешествие?';
+          const message = 'Это действие нельзя отменить.';
+          const ok =
+            typeof (globalThis as any).confirm === 'function'
+              ? (globalThis as any).confirm(`${title}\n\n${message}`)
+              : true;
+
+          if (ok) {
+            handleDelete(id);
+          } else {
+            setDelete(null);
+          }
+          return;
+        }
+
+        // Для native сохраняем id и открываем Alert через эффект
+        setDelete(id);
+      },
+      [handleDelete]
+    );
 
     useEffect(() => {
         if (!deleteId) return;
