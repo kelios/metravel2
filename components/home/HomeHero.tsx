@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, useWindowDimensions, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
+import { useResponsive } from '@/hooks/useResponsive';
+import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/components/layout';
 
 interface HomeHeroProps {
   travelsCount?: number;
@@ -14,9 +16,7 @@ interface HomeHeroProps {
 export default function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const { width } = useWindowDimensions();
-  const isSmallMobile = width <= 480;
-  const isMobile = width <= 768;
+  const { isSmallPhone, isPhone, isTablet, isDesktop } = useResponsive();
 
   const handleCreateBook = () => {
     sendAnalyticsEvent('HomeClick_CreateBook');
@@ -40,137 +40,87 @@ export default function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     return 'Собрать книгу из историй';
   }, [isAuthenticated, travelsCount]);
 
+  const isMobile = isSmallPhone || isPhone;
+  const showImage = isTablet || isDesktop;
+
   return (
-    <View style={[
-      styles.container, 
-      isMobile && styles.containerMobile,
-      isSmallMobile && styles.containerSmallMobile
-    ]}>
-      <View style={styles.content}>
-        <Text style={[
-          styles.title, 
-          isMobile && styles.titleMobile,
-          isSmallMobile && styles.titleSmallMobile
-        ]}>
-          Пиши о своих путешествиях
-        </Text>
-        <Text style={[
-          styles.subtitle, 
-          isMobile && styles.subtitleMobile,
-          isSmallMobile && styles.subtitleSmallMobile
-        ]}>
-          Делись маршрутами и историями, собирай их в красивую книгу — или ищи вдохновение, куда отправиться в этот раз.
-        </Text>
+    <ResponsiveContainer maxWidth="xxl" padding>
+      <ResponsiveStack direction="responsive" gap={60} align="center">
+        <View style={styles.content}>
+          <ResponsiveText variant="h1" style={styles.title}>
+            Пиши о своих путешествиях
+          </ResponsiveText>
+          
+          <ResponsiveText variant="h4" style={styles.subtitle}>
+            Делись маршрутами и историями, собирай их в красивую книгу — или ищи вдохновение, куда отправиться в этот раз.
+          </ResponsiveText>
 
-        {travelsCount === 0 && isAuthenticated && (
-          <Text style={[styles.hint, isMobile && styles.hintMobile]}>
-            Расскажи о своём первом путешествии — или найди вдохновение в историях других путешественников.
-          </Text>
-        )}
+          {travelsCount === 0 && isAuthenticated && (
+            <Text style={styles.hint}>
+              Расскажи о своём первом путешествии — или найди вдохновение в историях других путешественников.
+            </Text>
+          )}
 
-        <View style={[styles.buttonsContainer, isMobile && styles.buttonsContainerMobile]}>
-          <Pressable
-            onPress={handleCreateBook}
-            style={({ pressed, hovered }) => [
-              styles.primaryButton,
-              (pressed || hovered) && styles.primaryButtonHover,
-              globalFocusStyles.focusable,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={primaryButtonLabel}
+          <ResponsiveStack 
+            direction={isMobile ? 'vertical' : 'horizontal'} 
+            gap={isMobile ? 12 : 16}
+            style={styles.buttonsContainer}
           >
-            <Text style={styles.primaryButtonText}>{primaryButtonLabel}</Text>
-          </Pressable>
+            <Pressable
+              onPress={handleCreateBook}
+              style={({ pressed, hovered }) => [
+                styles.primaryButton,
+                (pressed || hovered) && styles.primaryButtonHover,
+                globalFocusStyles.focusable,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={primaryButtonLabel}
+            >
+              <Text style={styles.primaryButtonText}>{primaryButtonLabel}</Text>
+            </Pressable>
 
-          <Pressable
-            onPress={handleOpenSearch}
-            style={({ pressed, hovered }) => [
-              styles.secondaryButton,
-              (pressed || hovered) && styles.secondaryButtonHover,
-              globalFocusStyles.focusable,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Найти вдохновение">
-            <Feather name="compass" size={18} color={DESIGN_TOKENS.colors.text} />
-            <Text style={styles.secondaryButtonText}>Найти вдохновение</Text>
-          </Pressable>
+            <Pressable
+              onPress={handleOpenSearch}
+              style={({ pressed, hovered }) => [
+                styles.secondaryButton,
+                (pressed || hovered) && styles.secondaryButtonHover,
+                globalFocusStyles.focusable,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Найти вдохновение">
+              <Feather name="compass" size={18} color={DESIGN_TOKENS.colors.text} />
+              <Text style={styles.secondaryButtonText}>Найти вдохновение</Text>
+            </Pressable>
+          </ResponsiveStack>
         </View>
-      </View>
 
-      {!isMobile && (
-        <View style={styles.imageContainer}>
-          <Image
-            source={require('../../assets/images/pdf.webp')}
-            style={styles.bookImage}
-            resizeMode="contain"
-            {...(Platform.OS === 'web' ? { loading: 'lazy' as any } : {})}
-          />
-        </View>
-      )}
-    </View>
+        {showImage && (
+          <View style={styles.imageContainer}>
+            <Image
+              source={require('../../assets/images/pdf.webp')}
+              style={styles.bookImage}
+              resizeMode="contain"
+              {...(Platform.OS === 'web' ? { loading: 'lazy' as any } : {})}
+            />
+          </View>
+        )}
+      </ResponsiveStack>
+    </ResponsiveContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    paddingHorizontal: 60,
-    paddingVertical: 100,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    alignItems: 'center',
-    gap: 60,
-    ...Platform.select({
-      web: {
-        background: 'linear-gradient(135deg, #ffffff 0%, #f8f7f5 100%)',
-      },
-    }),
-  },
-  containerMobile: {
-    flexDirection: 'column',
-    paddingHorizontal: 24,
-    paddingVertical: 60,
-    gap: 40,
-  },
-  containerSmallMobile: {
-    paddingHorizontal: 16,
-    paddingVertical: 40,
-    gap: 24,
-  },
   content: {
     flex: 1,
     gap: 24,
   },
   title: {
-    fontSize: 48,
-    fontWeight: '800',
     color: DESIGN_TOKENS.colors.text,
-    lineHeight: 56,
     letterSpacing: -0.5,
   },
-  titleMobile: {
-    fontSize: 32,
-    lineHeight: 40,
-    letterSpacing: -0.3,
-  },
-  titleSmallMobile: {
-    fontSize: 24,
-    lineHeight: 32,
-    letterSpacing: -0.2,
-  },
   subtitle: {
-    fontSize: 20,
-    fontWeight: '500',
     color: DESIGN_TOKENS.colors.textMuted,
-    lineHeight: 32,
     maxWidth: 540,
-  },
-  subtitleMobile: {
-    fontSize: 18,
-    lineHeight: 28,
-  },
-  subtitleSmallMobile: {
-    fontSize: 16,
-    lineHeight: 24,
   },
   hint: {
     fontSize: 15,
@@ -181,30 +131,20 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: DESIGN_TOKENS.colors.primaryLight,
   },
-  hintMobile: {
-    fontSize: 14,
-    lineHeight: 22,
-  },
   buttonsContainer: {
-    flexDirection: 'row',
-    gap: 16,
     marginTop: 32,
-  },
-  buttonsContainerMobile: {
-    flexDirection: 'column',
-    gap: 12,
   },
   primaryButton: {
     backgroundColor: DESIGN_TOKENS.colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 18,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
     borderRadius: DESIGN_TOKENS.radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 56,
-    flex: 1,
+    minHeight: 52,
     ...Platform.select({
       web: {
+        flex: 1,
         boxShadow: '0 4px 14px rgba(93, 140, 124, 0.25)',
         transition: 'all 0.2s ease',
       },
@@ -221,25 +161,25 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: DESIGN_TOKENS.colors.surface,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
   secondaryButton: {
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderWidth: 2,
     borderColor: DESIGN_TOKENS.colors.border,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     borderRadius: DESIGN_TOKENS.radii.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    minHeight: 56,
-    flex: 1,
+    gap: 8,
+    minHeight: 52,
     ...Platform.select({
       web: {
+        flex: 1,
         transition: 'all 0.2s ease',
       },
     }),
@@ -255,9 +195,9 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: DESIGN_TOKENS.colors.text,
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '600',
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
   imageContainer: {
     flex: 1,

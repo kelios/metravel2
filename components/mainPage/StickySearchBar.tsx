@@ -9,11 +9,11 @@ import {
   Pressable,
   Text,
   Platform,
-  useWindowDimensions,
 } from 'react-native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface StickySearchBarProps {
   search: string;
@@ -58,15 +58,8 @@ function StickySearchBar({
   onClearAll,
   activeFiltersCount,
 }: StickySearchBarProps) {
-  const { width } = useWindowDimensions();
-  const effectiveWidth =
-    Platform.OS === 'web' && width === 0 && typeof window !== 'undefined' ? window.innerWidth : width;
-  const isMobileByWindow = effectiveWidth < METRICS.breakpoints.tablet;
-  const isCompactByAvailableWidth =
-    typeof availableWidth === 'number' && availableWidth > 0
-      ? availableWidth < 860
-      : false;
-  const isMobile = isMobileByWindow || isCompactByAvailableWidth;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
   

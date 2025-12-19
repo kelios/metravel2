@@ -7,7 +7,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Linking,
-  useWindowDimensions,
   KeyboardAvoidingView,
   Platform,
   TextInput,
@@ -22,7 +21,9 @@ import InstantSEO from '@/components/seo/InstantSEO';
 import { sendFeedback } from '@/src/api/misc';
 import { useIsFocused } from '@react-navigation/native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
+import { globalFocusStyles } from '@/styles/globalFocus'; 
 import { FontAwesome5 } from '@expo/vector-icons';
 
 const EMAIL = 'metraveldev@gmail.com';
@@ -37,7 +38,7 @@ const SOCIAL_LINKS = {
 };
 
 function AboutAndContactScreen() {
-  const { width } = useWindowDimensions();
+  const { width } = useResponsive();
   const isWide = width >= 900;
 
   const router = useRouter();

@@ -18,7 +18,6 @@ import {
   Text,
   AppState,
   AccessibilityInfo,
-  useWindowDimensions,
   Platform,
   ActivityIndicator,
 } from "react-native";
@@ -38,6 +37,7 @@ import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl } from "@
 import { Feather } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 /* -------------------------------------------------------------------------- */
 /*                                  Types                                     */
@@ -275,8 +275,8 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   } = props;
 
   const insets = useSafeAreaInsets();
-  const { width: winW, height: winH } = useWindowDimensions();
-  const isMobile = winW < METRICS.breakpoints.tablet;
+  const { width: winW, height: winH, isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
 
   const [containerW, setContainerW] = useState(winW);
   const [containerH, setContainerH] = useState<number | null>(null);

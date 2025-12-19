@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, useWindowDimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useResponsive } from '@/hooks/useResponsive';
+import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/components/layout';
 
 const STEPS = [
   {
@@ -25,89 +27,74 @@ const STEPS = [
 ];
 
 export default function HomeHowItWorks() {
-  const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const { isSmallPhone, isPhone, isTablet, isDesktop } = useResponsive();
+  const isMobile = isSmallPhone || isPhone;
+  const showConnectors = isTablet || isDesktop;
 
   return (
-    <View style={[styles.container, isMobile && styles.containerMobile]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, isMobile && styles.titleMobile]}>
-          Как это работает
-        </Text>
-      </View>
+    <View style={styles.container}>
+      <ResponsiveContainer maxWidth="xl" padding>
+        <View style={styles.header}>
+          <ResponsiveText variant="h2" style={styles.title}>
+            Как это работает
+          </ResponsiveText>
+        </View>
 
-      <View style={[styles.stepsContainer, isMobile && styles.stepsContainerMobile]}>
-        {STEPS.map((step, index) => (
-          <View key={step.number} style={styles.stepWrapper}>
-            <View style={[styles.step, isMobile && styles.stepMobile]}>
-              <View style={styles.stepHeader}>
-                <View style={styles.iconContainer}>
-                  <Feather
-                    name={step.icon as any}
-                    size={24}
-                    color={DESIGN_TOKENS.colors.primary}
-                  />
+        <ResponsiveStack 
+          direction={isMobile ? 'vertical' : 'horizontal'} 
+          gap={isMobile ? 20 : 24}
+          justify="space-between"
+        >
+          {STEPS.map((step, index) => (
+            <View key={step.number} style={styles.stepWrapper}>
+              <View style={styles.step}>
+                <View style={styles.stepHeader}>
+                  <View style={styles.iconContainer}>
+                    <Feather
+                      name={step.icon as any}
+                      size={24}
+                      color={DESIGN_TOKENS.colors.primary}
+                    />
+                  </View>
+                  <View style={styles.numberBadge}>
+                    <Text style={styles.numberText}>{step.number}</Text>
+                  </View>
                 </View>
-                <View style={styles.numberBadge}>
-                  <Text style={styles.numberText}>{step.number}</Text>
-                </View>
+
+                <ResponsiveText variant="h4" style={styles.stepTitle}>
+                  {step.title}
+                </ResponsiveText>
+                <ResponsiveText variant="body" style={styles.stepDescription}>
+                  {step.description}
+                </ResponsiveText>
               </View>
 
-              <Text style={[styles.stepTitle, isMobile && styles.stepTitleMobile]}>
-                {step.title}
-              </Text>
-              <Text style={[styles.stepDescription, isMobile && styles.stepDescriptionMobile]}>
-                {step.description}
-              </Text>
+              {index < STEPS.length - 1 && showConnectors && (
+                <View style={styles.connector}>
+                  <Feather name="arrow-right" size={20} color={DESIGN_TOKENS.colors.borderLight} />
+                </View>
+              )}
             </View>
-
-            {index < STEPS.length - 1 && !isMobile && (
-              <View style={styles.connector}>
-                <Feather name="arrow-right" size={20} color={DESIGN_TOKENS.colors.borderLight} />
-              </View>
-            )}
-          </View>
-        ))}
-      </View>
+          ))}
+        </ResponsiveStack>
+      </ResponsiveContainer>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 60,
     paddingVertical: 80,
     backgroundColor: DESIGN_TOKENS.colors.background,
-  },
-  containerMobile: {
-    paddingHorizontal: 24,
-    paddingVertical: 60,
   },
   header: {
     marginBottom: 56,
     alignItems: 'center',
   },
   title: {
-    fontSize: 40,
-    fontWeight: '800',
     color: DESIGN_TOKENS.colors.text,
-    lineHeight: 48,
     textAlign: 'center',
     letterSpacing: -0.5,
-  },
-  titleMobile: {
-    fontSize: 28,
-    lineHeight: 36,
-    letterSpacing: -0.3,
-  },
-  stepsContainer: {
-    flexDirection: 'row',
-    gap: 24,
-    justifyContent: 'space-between',
-  },
-  stepsContainerMobile: {
-    flexDirection: 'column',
-    gap: 20,
   },
   stepWrapper: {
     flex: 1,
@@ -130,9 +117,6 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  stepMobile: {
-    padding: 24,
-  },
   stepHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -148,7 +132,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Platform.select({
       web: {
-        background: 'linear-gradient(135deg, rgba(93, 140, 124, 0.15) 0%, rgba(93, 140, 124, 0.08) 100%)',
+        backgroundImage: 'linear-gradient(135deg, rgba(93, 140, 124, 0.15) 0%, rgba(93, 140, 124, 0.08) 100%)',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: '100% 100%',
       },
     }),
   },
@@ -171,24 +157,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   stepTitle: {
-    fontSize: 22,
-    fontWeight: '700',
     color: DESIGN_TOKENS.colors.text,
-    lineHeight: 30,
     letterSpacing: -0.2,
   },
-  stepTitleMobile: {
-    fontSize: 18,
-    lineHeight: 26,
-  },
   stepDescription: {
-    fontSize: 16,
     color: DESIGN_TOKENS.colors.textMuted,
-    lineHeight: 26,
-  },
-  stepDescriptionMobile: {
-    fontSize: 15,
-    lineHeight: 24,
   },
   connector: {
     justifyContent: 'center',

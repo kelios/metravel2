@@ -99,7 +99,7 @@ function TravelCardCompact({
         )}
 
         {/* Просмотры */}
-        {countUnicIpView > 0 && (
+        {Number(countUnicIpView) > 0 && (
           <View style={styles.viewsBadge}>
             <Feather name="eye" size={12} color="#fff" />
             <Text style={styles.viewsText}>{countUnicIpView}</Text>
@@ -129,6 +129,7 @@ export default memo(TravelCardCompact);
 
 const styles = StyleSheet.create({
   card: {
+    height: '100%',
     backgroundColor: palette.surface,
     borderRadius: radii.md,
     overflow: 'hidden',
@@ -150,7 +151,7 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     width: '100%',
-    height: 140,
+    height: 180,
     position: 'relative',
     backgroundColor: palette.surfaceMuted,
   },
@@ -196,6 +197,8 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.sm,
+    height: 100,
+    justifyContent: 'space-between',
   },
   title: {
     fontSize: 14,

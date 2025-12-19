@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { useResponsive } from '@/hooks/useResponsive';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
@@ -14,8 +15,8 @@ const TravelWizardTip: React.FC<TravelWizardTipProps> = ({
     body,
     defaultExpanded = false,
 }) => {
-    const { width } = useWindowDimensions();
-    const isMobile = width <= DESIGN_TOKENS.breakpoints.mobile;
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
 
     const [expanded, setExpanded] = useState(defaultExpanded);
 

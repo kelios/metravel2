@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface RouteHintProps {
   onDismiss: () => void;
@@ -9,8 +10,8 @@ interface RouteHintProps {
 }
 
 export default function RouteHint({ onDismiss, routePointsCount }: RouteHintProps) {
-  const { width } = useWindowDimensions();
-  const isMobile = width <= METRICS.breakpoints.tablet;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
 
   if (routePointsCount >= 2) return null; // Скрываем, если маршрут уже построен
 

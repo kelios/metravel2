@@ -1,15 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface MapLegendProps {
   showRouteMode?: boolean;
 }
 
 export default function MapLegend({ showRouteMode = false }: MapLegendProps) {
-  const { width } = useWindowDimensions();
-  const isMobile = width <= METRICS.breakpoints.tablet;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
 
   const legendItems = [
     {

@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, Platform, LayoutChangeEvent, useWindowDimensions, Text, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable, Text, Platform } from 'react-native';
 import { Button, IconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface TravelWizardFooterProps {
     canGoBack?: boolean;
@@ -13,7 +15,7 @@ interface TravelWizardFooterProps {
     primaryLabel: string;
     saveLabel?: string;
     primaryDisabled?: boolean;
-    onLayout?: (event: LayoutChangeEvent) => void;
+    onLayout?: (event: any) => void;
 }
 
 const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
@@ -26,9 +28,8 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
     primaryDisabled = false,
     onLayout,
 }) => {
-    const { width } = useWindowDimensions();
-    const isMobile = width <= DESIGN_TOKENS.breakpoints.mobile;
-    const isNarrowMobile = width <= 380;
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
     const isWeb = Platform.OS === 'web';
     const insets = useSafeAreaInsets();
 

@@ -10,6 +10,28 @@ jest.mock('@/hooks/useDebouncedValue', () => ({
   useDebouncedValue: (value: any) => value,
 }));
 
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () =>
+    (global as any).__mockResponsive ?? {
+      width: 1200,
+      height: 800,
+      isSmallPhone: false,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: true,
+      isMobile: false,
+      isPortrait: false,
+      isLandscape: true,
+      orientation: 'landscape',
+      breakpoints: {},
+      isAtLeast: () => true,
+      isAtMost: () => false,
+      isBetween: () => false,
+    },
+}));
+
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({
     userId: 'test-user',
@@ -216,6 +238,25 @@ describe('ListTravel Integration Tests', () => {
 
     Platform.OS = 'web';
 
+    (global as any).__mockResponsive = {
+      width: 1200,
+      height: 800,
+      isSmallPhone: false,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: true,
+      isMobile: false,
+      isPortrait: false,
+      isLandscape: true,
+      orientation: 'landscape',
+      breakpoints: {},
+      isAtLeast: () => true,
+      isAtMost: () => false,
+      isBetween: () => false,
+    };
+
     // Setup default mocks
     mockUseListTravelFilters.mockReturnValue({
       filter: {},
@@ -241,14 +282,6 @@ describe('ListTravel Integration Tests', () => {
       handleEndReached: jest.fn(),
       handleRefresh: jest.fn(),
       isRefreshing: false,
-    });
-
-    // Desktop layout so that SidebarFilters (and ModernFilters with results badge) are visible
-    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
-      width: 1200,
-      height: 800,
-      scale: 1,
-      fontScale: 1,
     });
 
     mockUseListTravelExport.mockReturnValue({
@@ -357,14 +390,6 @@ describe('ListTravel Integration Tests', () => {
   });
 
   it('shows filters in sidebar on desktop', async () => {
-    // Mock desktop dimensions
-    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
-      width: 1200,
-      height: 800,
-      scale: 1,
-      fontScale: 1,
-    });
-
     renderWithProviders(<ListTravel />);
 
     // Wait for filters to load
@@ -382,13 +407,24 @@ describe('ListTravel Integration Tests', () => {
   });
 
   it('hides sidebar filters on mobile', () => {
-    // Mock mobile dimensions
-    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
+    (global as any).__mockResponsive = {
       width: 375,
       height: 667,
-      scale: 1,
-      fontScale: 1,
-    });
+      isSmallPhone: false,
+      isPhone: true,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: false,
+      isMobile: true,
+      isPortrait: true,
+      isLandscape: false,
+      orientation: 'portrait',
+      breakpoints: {},
+      isAtLeast: () => false,
+      isAtMost: () => true,
+      isBetween: () => false,
+    };
 
     renderWithProviders(<ListTravel />);
 
@@ -472,14 +508,6 @@ describe('ListTravel Integration Tests', () => {
       handleToggleCategory: jest.fn(),
     });
 
-    // Ensure desktop layout so that SidebarFilters (and ModernFilters) are visible
-    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
-      width: 1200,
-      height: 800,
-      scale: 1,
-      fontScale: 1,
-    });
-
     renderWithProviders(<ListTravel />);
 
     // Clear button should be available when there are active filters
@@ -490,26 +518,29 @@ describe('ListTravel Integration Tests', () => {
   });
 
   it('handles responsive layout changes', () => {
-    // Start with desktop
-    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
-      width: 1200,
-      height: 800,
-      scale: 1,
-      fontScale: 1,
-    });
-
     const { rerender } = renderWithProviders(<ListTravel />);
 
     // Should show sidebar on desktop
     expect(screen.getByText('Категории')).toBeTruthy();
 
-    // Change to mobile
-    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
+    (global as any).__mockResponsive = {
       width: 375,
       height: 667,
-      scale: 1,
-      fontScale: 1,
-    });
+      isSmallPhone: false,
+      isPhone: true,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: false,
+      isMobile: true,
+      isPortrait: true,
+      isLandscape: false,
+      orientation: 'portrait',
+      breakpoints: {},
+      isAtLeast: () => false,
+      isAtMost: () => true,
+      isBetween: () => false,
+    };
 
     // Re-render component
     rerender(

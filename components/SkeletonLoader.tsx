@@ -1,12 +1,8 @@
-import React from 'react';
-import { View, StyleSheet, Platform, ViewStyle, StyleProp, useWindowDimensions } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated, Platform, ViewStyle, StyleProp } from 'react-native';
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
-import {
-  BREAKPOINTS,
-  TRAVEL_CARD_IMAGE_HEIGHT,
-  TRAVEL_CARD_WEB_HEIGHT,
-  TRAVEL_CARD_WEB_MOBILE_HEIGHT,
-} from '@/components/listTravel/utils/listTravelConstants';
+import { BREAKPOINTS, TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT, TRAVEL_CARD_WEB_MOBILE_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface SkeletonLoaderProps {
   testID?: string;
@@ -72,10 +68,8 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
  * ✅ ИСПРАВЛЕНИЕ: Высоты должны совпадать с реальными карточками
  */
 export const TravelCardSkeleton: React.FC = () => {
-  const { width } = useWindowDimensions();
-
-  const effectiveWidth =
-    Platform.OS === 'web' && width === 0 && typeof window !== 'undefined' ? window.innerWidth : width;
+  const { width, isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
 
   // ✅ FIX: Унифицированная высота изображения с реальными карточками и учетом маленьких экранов
   const imageHeight = TRAVEL_CARD_IMAGE_HEIGHT;
@@ -84,7 +78,7 @@ export const TravelCardSkeleton: React.FC = () => {
 
   const cardHeight =
     Platform.OS === 'web'
-      ? effectiveWidth > 0 && effectiveWidth < BREAKPOINTS.MOBILE
+      ? width > 0 && width < BREAKPOINTS.MOBILE
         ? TRAVEL_CARD_WEB_MOBILE_HEIGHT
         : TRAVEL_CARD_WEB_HEIGHT
       : undefined;
@@ -111,7 +105,7 @@ export const TravelCardSkeleton: React.FC = () => {
 };
 
 export const TravelCardReserveSkeleton: React.FC = () => {
-  const { width } = useWindowDimensions();
+  const { width } = useResponsive();
 
   const effectiveWidth =
     Platform.OS === 'web' && width === 0 && typeof window !== 'undefined' ? window.innerWidth : width;

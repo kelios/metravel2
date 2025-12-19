@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import {
   ScrollView,
   ActivityIndicator,
-  useWindowDimensions,
   StyleSheet,
   SafeAreaView,
   Platform,
@@ -15,10 +14,11 @@ import { WebView } from 'react-native-webview'
 import { Card, Title } from 'react-native-paper'
 import { fetchArticle } from '@/src/api/articles'
 import { SafeHtml } from '@/components/SafeHtml'
+import { useResponsive } from '@/hooks/useResponsive'
 
 export default function ArticleDetails() {
-  const { width } = useWindowDimensions()
-  const isMobile = width <= 768
+  const { width, isPhone, isLargePhone } = useResponsive()
+  const isMobile = isPhone || isLargePhone
 
   const params = useLocalSearchParams()
   const id = typeof params.id === 'string' ? Number(params.id) : undefined

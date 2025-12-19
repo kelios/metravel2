@@ -13,7 +13,6 @@ import {
   Platform,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from "react-native";
 import { Title } from "react-native-paper";
@@ -21,6 +20,7 @@ import TravelTmlRound from "@/components/travel/TravelTmlRound";
 import { fetchTravelsPopular } from "@/src/api/map";
 import type { Travel, TravelsMap } from "@/src/types/types";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useResponsive } from '@/hooks/useResponsive';
 
 type PopularTravelListProps = {
   onLayout?: (event: any) => void;
@@ -41,7 +41,7 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
     const [travelsPopular, setTravelsPopular] = useState<TravelsMap>({});
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
-    const { width } = useWindowDimensions();
+    const { width } = useResponsive();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const mountedRef = useRef(true);
 

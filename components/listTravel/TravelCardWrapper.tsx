@@ -1,13 +1,14 @@
 import React, { useMemo } from 'react';
-import { View, useWindowDimensions, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 /**
  * Wrapper для карточки путешествия с адаптивными отступами
  * Использует ширину экрана вместо Platform.select для правильной адаптивности в браузере
  */
 export function TravelCardWrapper({ children }: { children: React.ReactNode }) {
-  const { width } = useWindowDimensions();
+  const { width } = useResponsive();
   
   // ✅ Вычисляем marginBottom на основе ШИРИНЫ, а не Platform
   const marginBottom = useMemo(() => {

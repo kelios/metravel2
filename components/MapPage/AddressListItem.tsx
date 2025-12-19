@@ -6,7 +6,6 @@ import {
     Pressable,
     ImageBackground,
     Linking,
-    useWindowDimensions,
     ActivityIndicator,
     Platform,
 } from 'react-native';
@@ -17,6 +16,7 @@ import { TravelCoords } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import PopupContentComponent from './PopupContentComponent';
+import { useResponsive } from '@/hooks/useResponsive';
 
 type Props = {
     travel: TravelCoords;
@@ -72,9 +72,9 @@ const AddressListItem: React.FC<Props> = ({
     const [imgLoaded, setImgLoaded] = useState(false);
     const [hovered, setHovered] = useState(false);
 
-    const { width } = useWindowDimensions();
-    const isMobile = isMobileProp ?? width <= METRICS.breakpoints.tablet;
-    const isSmallScreen = width <= 480;
+    const { width, isPhone, isLargePhone } = useResponsive();
+    const isMobile = isMobileProp ?? (isPhone || isLargePhone);
+    const isSmallScreen = isPhone;
     const isTablet = width > 480 && width <= METRICS.breakpoints.largeTablet;
 
     // показываем оверлеи всегда на мобиле и только при hover на web

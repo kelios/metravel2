@@ -1,10 +1,11 @@
 // Компонент для пустых состояний
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 // ✅ ДИЗАЙН: Импорт максимально легкой и воздушной палитры
 import { AIRY_COLORS, AIRY_GRADIENTS, AIRY_BOX_SHADOWS } from '@/constants/airyColors';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 interface EmptyStateProps {
@@ -21,8 +22,9 @@ interface EmptyStateProps {
   };
   iconSize?: number;
   iconColor?: string;
-  variant?: 'default' | 'search' | 'error' | 'empty'; // ✅ УЛУЧШЕНИЕ: Варианты EmptyState
+  variant?: 'default' | 'search' | 'error' | 'empty' | 'inspire'; // ✅ УЛУЧШЕНИЕ: Варианты EmptyState
   suggestions?: string[]; // ✅ UX УЛУЧШЕНИЕ: Предложения для поиска
+  examples?: Array<{ title: string; author?: string; image?: string }>; // ✅ UX: Примеры для вдохновения
 }
 
 export default function EmptyState({
@@ -35,13 +37,15 @@ export default function EmptyState({
   iconColor = AIRY_COLORS.primary, // ✅ ДИЗАЙН: Воздушный легкий персик по умолчанию
   variant = 'default',
   suggestions = [],
+  examples = [],
 }: EmptyStateProps) {
   // ✅ УЛУЧШЕНИЕ: Разные цвета для разных вариантов
   const variantColors = {
     default: { icon: DESIGN_TOKENS.colors.primary, bg: DESIGN_TOKENS.colors.primaryLight },
-    search: { icon: DESIGN_TOKENS.colors.textSecondary, bg: DESIGN_TOKENS.colors.backgroundSecondary },
+    search: { icon: DESIGN_TOKENS.colors.textMuted, bg: DESIGN_TOKENS.colors.backgroundSecondary },
     error: { icon: DESIGN_TOKENS.colors.danger, bg: DESIGN_TOKENS.colors.dangerLight },
-    empty: { icon: DESIGN_TOKENS.colors.textTertiary, bg: DESIGN_TOKENS.colors.mutedBackground },
+    empty: { icon: DESIGN_TOKENS.colors.textSubtle, bg: DESIGN_TOKENS.colors.mutedBackground },
+    inspire: { icon: DESIGN_TOKENS.colors.primary, bg: DESIGN_TOKENS.colors.primaryLight },
   };
 
   const colors = variantColors[variant] || variantColors.default;
@@ -76,6 +80,28 @@ export default function EmptyState({
               >
                 <Text style={styles.suggestionText}>{suggestion}</Text>
               </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* ✅ UX УЛУЧШЕНИЕ: Примеры для вдохновения */}
+      {variant === 'inspire' && examples.length > 0 && (
+        <View style={styles.examplesContainer}>
+          <Text style={styles.examplesTitle}>Примеры от путешественников:</Text>
+          <View style={styles.examplesList}>
+            {examples.slice(0, 3).map((example, index) => (
+              <View key={index} style={styles.exampleCard}>
+                <Feather name="map-pin" size={16} color={DESIGN_TOKENS.colors.primary} />
+                <Text style={styles.exampleTitle} numberOfLines={1}>
+                  {example.title}
+                </Text>
+                {example.author && (
+                  <Text style={styles.exampleAuthor} numberOfLines={1}>
+                    от {example.author}
+                  </Text>
+                )}
+              </View>
             ))}
           </View>
         </View>
@@ -174,7 +200,7 @@ const styles = StyleSheet.create({
       default: 15, // Mobile: 15px
       web: 16, // Desktop: 16px
     }),
-    color: DESIGN_TOKENS.colors.textSecondary, // ✅ ДИЗАЙН: Вторичный цвет
+    color: DESIGN_TOKENS.colors.textMuted, // ✅ ДИЗАЙН: Вторичный цвет
     textAlign: 'center',
     lineHeight: Platform.select({
       default: 22, // Mobile: 22px
@@ -250,7 +276,7 @@ const styles = StyleSheet.create({
   suggestionsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textSecondary,
+    color: DESIGN_TOKENS.colors.textMuted,
     marginBottom: 12,
   },
   suggestionsList: {
@@ -286,6 +312,51 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: DESIGN_TOKENS.colors.text,
     fontWeight: '500',
+  },
+  examplesContainer: {
+    marginTop: 24,
+    marginBottom: 24,
+    width: '100%',
+    maxWidth: Platform.select({
+      default: 320,
+      web: 500,
+    }),
+  },
+  examplesTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: DESIGN_TOKENS.colors.textMuted,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  examplesList: {
+    gap: 12,
+  },
+  exampleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.border,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+      },
+    }),
+  },
+  exampleTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: DESIGN_TOKENS.colors.text,
+  },
+  exampleAuthor: {
+    fontSize: 12,
+    color: DESIGN_TOKENS.colors.textMuted,
+    fontStyle: 'italic',
   },
 });
 

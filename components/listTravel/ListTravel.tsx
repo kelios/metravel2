@@ -12,7 +12,6 @@ import {
   SafeAreaView,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
   ViewStyle,
 } from 'react-native'
@@ -30,8 +29,10 @@ import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDes
 import { useAuth } from '@/context/AuthContext'
 import { fetchAllFiltersOptimized } from '@/src/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { useResponsive } from '@/hooks/useResponsive'
 import EmptyState from '@/components/EmptyState'
 import ProgressIndicator from '@/components/ProgressIndicator'
+import FloatingActionButton from '@/components/ui/FloatingActionButton'
 import type { Travel } from '@/src/types/types'
 import {
   BREAKPOINTS,
@@ -400,7 +401,7 @@ function ListTravel({
         onToggleWeeklyHighlights,
     });
 
-    const { width, height } = useWindowDimensions();
+    const { width, height, isPhone, isLargePhone, isTablet: isTabletSize, isDesktop: isDesktopSize, isPortrait } = useResponsive();
     const route = useRoute();
     const router = useRouter();
     const pathname = usePathname();
@@ -412,20 +413,14 @@ function ListTravel({
     const isTravelBy = (route as any).name === "travelsby";
     const isExport = (route as any).name === "export" || pathname?.includes('/export');
 
-    // ✅ CLS fix (web): useWindowDimensions() can report width/height=0 on the very first render
-    // (SSR/hydration). If we compute columns/gaps from 0, the grid reflows after mount causing huge CLS.
-    const windowWidth =
-      Platform.OS === 'web' && width === 0 && typeof window !== 'undefined' ? window.innerWidth : width;
-    const windowHeight =
-      Platform.OS === 'web' && height === 0 && typeof window !== 'undefined' ? window.innerHeight : height;
+    // ✅ Используем значения из useResponsive
+    const windowWidth = width;
+    const windowHeight = height;
 
     // ✅ АДАПТИВНОСТЬ: Определяем устройство и ориентацию
-    // На всех платформах считаем устройство "мобильным", если ширина меньше MOBILE breakpoint
-    const isMobileDevice = isMobile(windowWidth);
-    // Планшет: от MOBILE до TABLET_LANDSCAPE, всё, что шире, считаем десктопом (3 колонки)
-    const isTablet = windowWidth >= BREAKPOINTS.MOBILE && windowWidth < BREAKPOINTS.DESKTOP;
-    const isDesktop = !isMobileDevice && !isTablet;
-    const isPortrait = windowHeight > windowWidth;
+    const isMobileDevice = isPhone || isLargePhone;
+    const isTablet = isTabletSize;
+    const isDesktop = isDesktopSize;
 
     // ✅ ОПТИМИЗАЦИЯ: Базовое количество колонок для логики (от общей ширины окна)
     // На десктопе всегда 3 колонки, на планшетах/мобилках рассчитываем динамически
@@ -1120,6 +1115,10 @@ function ListTravel({
       ]
     );
 
+  const handleCreateTravel = useCallback(() => {
+    router.push('/travel/new');
+  }, [router]);
+
   return (
     <View style={[styles.root, isMobileDevice ? styles.rootMobile : undefined]}>
       <SidebarFilters
@@ -1215,6 +1214,8 @@ function ListTravel({
           ) : null
         }
       />
+      
+      {/* Floating add button скрыт по требованию */}
     </View>
   );
 }

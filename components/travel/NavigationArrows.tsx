@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, useWindowDimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -14,6 +14,7 @@ import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface NavigationArrowsProps {
   currentTravel: Travel;
@@ -27,8 +28,8 @@ export default function NavigationArrows({
   onNavigate,
 }: NavigationArrowsProps) {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const isMobile = width <= METRICS.breakpoints.tablet;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
 
   // Находим текущее путешествие в списке похожих
   const currentIndex = useMemo(() => {

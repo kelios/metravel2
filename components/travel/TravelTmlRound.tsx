@@ -6,7 +6,6 @@ import {
     StyleSheet,
     Text,
     View,
-    useWindowDimensions,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { Paragraph } from "react-native-paper";
@@ -16,17 +15,15 @@ import type { Travel } from "@/src/types/types";
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from "@/utils/imageOptimization";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { useResponsive } from '@/hooks/useResponsive';
 
 type Props = { travel: Travel };
 
 const PLACEHOLDER = require("@/assets/placeholder.webp");
 
 const TravelTmlRound: React.FC<Props> = ({ travel }) => {
-    const { width } = useWindowDimensions();
-    // ✅ УЛУЧШЕНИЕ: Более точные брейкпоинты
-    const isMobile = width < 640;
-    const isTablet = width >= 640 && width < 1024;
-    const isDesktop = width >= 1024;
+    const { width, isPhone, isLargePhone, isTablet, isDesktop } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
     const isLargeDesktop = width >= 1440;
 
     const {

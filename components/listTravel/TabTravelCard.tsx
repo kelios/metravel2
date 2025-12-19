@@ -1,11 +1,12 @@
 import React, { memo, useMemo } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { View, Text, StyleSheet, Pressable, useWindowDimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image as ExpoImage } from 'expo-image';
-
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 import { TAB_CARD_TEMPLATE, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
 
@@ -32,8 +33,8 @@ type Props = {
 };
 
 function TabTravelCard({ item, onPress, badge, testID, style }: Props) {
-  const { width } = useWindowDimensions();
-  const isMobile = width <= METRICS.breakpoints.tablet;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
 
   const location = useMemo(() => {
     return [item?.city, item?.country].filter(Boolean).join(', ');

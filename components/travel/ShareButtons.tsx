@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback, useState, useMemo, lazy, Suspense } from 'react';
-import { View, Text, StyleSheet, Pressable, useWindowDimensions, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Alert } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
@@ -15,6 +15,7 @@ import { ExportStage } from '@/src/types/pdf-export';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
 
@@ -25,8 +26,8 @@ interface ShareButtonsProps {
 }
 
 export default function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
-  const { width } = useWindowDimensions();
-  const isMobile = width <= METRICS.breakpoints.tablet;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
   const isSticky = variant === 'sticky';
 
   const [copied, setCopied] = useState(false);

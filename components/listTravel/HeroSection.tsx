@@ -1,16 +1,16 @@
 // HeroSection.tsx
-import React, { memo, useState } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Platform,
-  useWindowDimensions,
   Pressable,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useResponsive } from '@/hooks/useResponsive';
 import { AIRY_GRADIENTS, AIRY_COLORS } from '@/constants/airyColors';
 
 const palette = DESIGN_TOKENS.colors;
@@ -42,8 +42,8 @@ function HeroSection({
   popularCategories = [],
   onCategoryPress,
 }: HeroSectionProps) {
-  const dimensions = useWindowDimensions() || { width: 0, height: 0 };
-  const isMobile = dimensions.width < DESIGN_TOKENS.breakpoints.mobile;
+  const { isPhone } = useResponsive();
+  const isMobile = isPhone;
   const [isExpanded, setIsExpanded] = useState(false); // По умолчанию свернут, чтобы не отвлекать от путешествий
   
   // На десктопе тоже можно свернуть для компактности

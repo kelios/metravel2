@@ -3,7 +3,7 @@
  * Поддержка responsive images, WebP, и адаптивных размеров
  */
 
-import { Platform, useWindowDimensions } from 'react-native';
+import { Platform } from 'react-native';
 
 export interface ImageOptimizationOptions {
   width?: number;

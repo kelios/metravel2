@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, Suspense, lazy, useState } from 'react';
-import { View, StyleSheet, ScrollView, Platform, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
@@ -7,33 +7,36 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { fetchMyTravels } from '@/src/api/travelsApi';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { useResponsive } from '@/hooks/useResponsive';
+import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
 import HomeHero from './HomeHero';
 import HomeHowItWorks from './HomeHowItWorks';
 
 const HomeInspirationSections = lazy(() => import('./HomeInspirationSection'));
 const HomeFinalCTA = lazy(() => import('./HomeFinalCTA'));
 
-const SectionSkeleton = ({ isMobile }: { isMobile: boolean }) => (
-  <View style={{ padding: isMobile ? 24 : 60, gap: 24 }}>
-    <SkeletonLoader width={isMobile ? 200 : 300} height={isMobile ? 28 : 40} borderRadius={8} />
-    <View style={{ flexDirection: 'row', gap: 20, flexWrap: 'wrap' }}>
-      {Array.from({ length: isMobile ? 2 : 3 }).map((_, i) => (
-        <SkeletonLoader key={i} width={isMobile ? '45%' : '30%'} height={280} borderRadius={12} />
-      ))}
-    </View>
-  </View>
-);
+const SectionSkeleton = () => {
+  const { isSmallPhone, isPhone } = useResponsive();
+  const isMobile = isSmallPhone || isPhone;
+  
+  return (
+    <ResponsiveContainer padding>
+      <ResponsiveStack direction="vertical" gap={24}>
+        <SkeletonLoader width={isMobile ? 200 : 300} height={isMobile ? 28 : 40} borderRadius={8} />
+        <ResponsiveStack direction="responsive" gap={20} wrap>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonLoader key={i} width={isMobile ? '100%' : '30%'} height={280} borderRadius={12} />
+          ))}
+        </ResponsiveStack>
+      </ResponsiveStack>
+    </ResponsiveContainer>
+  );
+};
 
 export default function Home() {
   const isFocused = useIsFocused();
   const { isAuthenticated, userId } = useAuth();
-  const { width } = useWindowDimensions();
-  
-  // Responsive breakpoints for all devices
-  const isSmallMobile = width <= 480;  // Small phones (320px-480px)
-  const isMobile = width <= 768;        // Mobile & tablets (up to 768px)
-  const isTablet = width > 480 && width <= 1024; // Tablets (481px-1024px)
-  const isDesktop = width > 1024;       // Desktop (1025px+)
+  const { isSmallPhone, isPhone, isTablet } = useResponsive();
 
   const [showHeavyContent, setShowHeavyContent] = useState(false);
 
@@ -69,37 +72,39 @@ export default function Home() {
     });
   }, [isFocused, isAuthenticated, travelsCount]);
 
+  const isMobile = isSmallPhone || isPhone;
+
   if (isAuthenticated && isLoadingTravels) {
-    const padding = isSmallMobile ? 16 : isMobile ? 24 : isTablet ? 40 : 60;
     return (
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ padding, gap: isSmallMobile ? 16 : 24 }}>
-          <SkeletonLoader 
-            width={isMobile ? '90%' : 500} 
-            height={isSmallMobile ? 28 : isMobile ? 32 : 48} 
-            borderRadius={8} 
-          />
-          <SkeletonLoader 
-            width={isMobile ? '80%' : 400} 
-            height={isSmallMobile ? 16 : isMobile ? 18 : 20} 
-            borderRadius={4} 
-          />
-          <View style={{ 
-            flexDirection: isSmallMobile ? 'column' : 'row', 
-            gap: isSmallMobile ? 12 : 16, 
-            marginTop: 16 
-          }}>
+        <ResponsiveContainer padding>
+          <ResponsiveStack direction="vertical" gap={isSmallPhone ? 16 : 24}>
             <SkeletonLoader 
-              width={isSmallMobile ? '100%' : isMobile ? '100%' : 200} 
-              height={56} 
+              width={isMobile ? '90%' : 500} 
+              height={isSmallPhone ? 28 : isMobile ? 32 : 48} 
               borderRadius={8} 
             />
-          </View>
-        </View>
+            <SkeletonLoader 
+              width={isMobile ? '80%' : 400} 
+              height={isSmallPhone ? 16 : isMobile ? 18 : 20} 
+              borderRadius={4} 
+            />
+            <ResponsiveStack 
+              direction={isSmallPhone ? 'vertical' : 'horizontal'} 
+              gap={isSmallPhone ? 12 : 16}
+            >
+              <SkeletonLoader 
+                width={isMobile ? '100%' : 200} 
+                height={56} 
+                borderRadius={8} 
+              />
+            </ResponsiveStack>
+          </ResponsiveStack>
+        </ResponsiveContainer>
       </ScrollView>
     );
   }
@@ -116,11 +121,11 @@ export default function Home() {
       <HomeHowItWorks />
       
       {showHeavyContent ? (
-        <Suspense fallback={<SectionSkeleton isMobile={isMobile} />}>
+        <Suspense fallback={<SectionSkeleton />}>
           <HomeInspirationSections />
         </Suspense>
       ) : (
-        <SectionSkeleton isMobile={isMobile} />
+        <SectionSkeleton />
       )}
       
       {showHeavyContent ? (

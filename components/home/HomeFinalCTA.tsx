@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, useWindowDimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { useResponsive } from '@/hooks/useResponsive';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
 
 interface HomeFinalCTAProps {
@@ -13,8 +14,8 @@ interface HomeFinalCTAProps {
 export default function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
 
   const handleAction = () => {
     sendAnalyticsEvent('HomeClick_FinalCTA');
@@ -69,7 +70,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Platform.select({
       web: {
-        background: 'linear-gradient(135deg, #5d8c7c 0%, #4d7566 100%)',
+        backgroundImage: 'linear-gradient(135deg, #5d8c7c 0%, #4d7566 100%)',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: '100% 100%',
       },
     }),
   },

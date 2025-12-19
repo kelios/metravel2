@@ -20,11 +20,11 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
   Pressable,
   DeviceEventEmitter,
   InteractionManager,
   LayoutChangeEvent,
+  useWindowDimensions,
 } from "react-native";
 
 import { useRouter } from "expo-router";
@@ -34,12 +34,14 @@ import { useIsFocused } from "@react-navigation/native";
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
 import { LAYOUT } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 
 /* ✅ УЛУЧШЕНИЕ: Импорт компонентов навигации и поделиться */
 import NavigationArrows from "@/components/travel/NavigationArrows";
 import ShareButtons from "@/components/travel/ShareButtons";
 import TelegramDiscussionSection from "@/components/travel/TelegramDiscussionSection";
+import WeatherWidget from "@/components/WeatherWidget";
 import type { Travel } from "@/src/types/types";
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
 import { useTravelDetails } from "@/hooks/useTravelDetails";
@@ -374,15 +376,6 @@ const rIC = (cb: () => void, timeout = 900) => {
 };
 
 /* -------------------- hooks -------------------- */
-const useResponsive = () => {
-  const { width } = useWindowDimensions();
-  const isMobile = width <= METRICS.breakpoints.tablet;
-  return {
-    isMobile,
-    headerOffset: isMobile ? HEADER_OFFSET_MOBILE : HEADER_OFFSET_DESKTOP,
-    width,
-  };
-};
 
 const useLCPPreload = (travel?: Travel) => {
   useEffect(() => {
@@ -564,7 +557,7 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
               padding: "10px 14px",
               borderRadius: 999,
               border: "none",
-              background: "#0f172a",
+              backgroundColor: "#0f172a",
               color: "#ffffff",
               fontWeight: 600,
               cursor: "pointer",
@@ -1164,10 +1157,10 @@ export default function TravelDetails() {
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
           {/* ✅ РЕДИЗАЙН: Адаптивный spacer под меню */}
-          {!isMobile && <View style={{ width: menuWidthNum }} />}
+          {!isMobile && width >= METRICS.breakpoints.tablet && <View style={{ width: menuWidthNum }} />}
 
           {/* ✅ РЕДИЗАЙН: Адаптивное боковое меню */}
-          {!isMobile && (
+          {!isMobile && width >= METRICS.breakpoints.tablet && (
             <Defer when={deferAllowed}>
               <Animated.View
                 testID="travel-details-side-menu"
@@ -1223,7 +1216,7 @@ export default function TravelDetails() {
               { useNativeDriver: false }
             )}
             scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
-            style={styles.scrollView}
+            style={[styles.scrollView, isMobile && { width: '100%' }]}
             nestedScrollEnabled
             onContentSizeChange={handleContentSizeChange}
             onLayout={handleLayout}
@@ -1521,6 +1514,14 @@ const TravelHeroSection: React.FC<{
       >
         <QuickFacts travel={travel} />
       </View>
+
+      {isMobile && travel.travelAddress && (
+        <View style={[styles.sectionContainer, styles.contentStable, { marginTop: 16 }]}>
+          <Suspense fallback={null}>
+            <WeatherWidget points={travel.travelAddress as any} />
+          </Suspense>
+        </View>
+      )}
 
       {quickJumpLinks.length > 0 && (
         <View style={[styles.sectionContainer, styles.contentStable, styles.quickJumpWrapper]}>

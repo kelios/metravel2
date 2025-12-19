@@ -7,7 +7,6 @@ import {
   Pressable,
   ScrollView,
   Platform,
-  useWindowDimensions,
   ActivityIndicator,
   DeviceEventEmitter,
   Alert,
@@ -23,6 +22,7 @@ import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from "@
 import type { BookSettings } from "@/components/export/BookSettingsModal";
 import { useSingleTravelExport } from "@/components/travel/hooks/useSingleTravelExport";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const Fallback = () => (
   <View style={styles.fallback}>
@@ -73,8 +73,7 @@ function CompactSideBarTravel({
                                 activeSection: externalActiveSection, // ✅ УЛУЧШЕНИЕ: Внешняя активная секция
                                 links,
 }: SideBarProps) {
-  const { width } = useWindowDimensions();
-  const isTablet = width >= 768 && width < 1024;
+  const { width, isTablet } = useResponsive();
   const [active, setActive] = useState<string>("");
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const {

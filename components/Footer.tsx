@@ -1,6 +1,6 @@
 import React from "react";
-import { View, Platform, useWindowDimensions } from "react-native";
-import { DESIGN_TOKENS } from "@/constants/designSystem";
+import { View, Platform } from "react-native";
+import { useResponsive } from "@/hooks/useResponsive";
 import BottomDock from "@/components/BottomDock";
 import FooterDesktop from "@/components/FooterDesktop";
 
@@ -11,23 +11,15 @@ type FooterProps = {
 };
 
 const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
-  const { width } = useWindowDimensions();
-  const effectiveWidth =
-    Platform.OS === "web"
-      ? width === 0
-        ? typeof window !== "undefined"
-          ? window.innerWidth
-          : 0
-        : width
-      : width;
-  const isMobile = Platform.OS !== "web" ? true : effectiveWidth < DESIGN_TOKENS.breakpoints.mobile;
+  const { isPhone, isLargePhone, isTablet } = useResponsive();
+  const isMobile = Platform.OS !== "web" ? true : (isPhone || isLargePhone || isTablet);
 
   if (isMobile) {
     return <BottomDock onDockHeight={onDockHeight} />;
   }
 
   return (
-    <View style={{ paddingVertical: 10 }}>
+    <View style={{ paddingVertical: 0 }}>
       <FooterDesktop />
     </View>
   );

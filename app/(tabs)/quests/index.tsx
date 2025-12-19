@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useEffect, useCallback, Suspense } from 'react';
 import {
     View, Text, StyleSheet, Pressable, Platform,
-    useWindowDimensions, Image, ScrollView,
+    Image, ScrollView,
 } from 'react-native';
 import { Link } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,6 +15,7 @@ const Ion = React.lazy(() =>
 import InstantSEO from '@/components/seo/InstantSEO';
 import { haversineKm } from '@/utils/geo';
 import { useIsFocused } from '@react-navigation/native';
+import { useResponsive } from '@/hooks/useResponsive';
 
 // ---- типы данных для ленивой загрузки ----
 type City = { id: string; name: string; country: 'PL' | 'BY' };
@@ -72,8 +73,8 @@ export default function QuestsScreen() {
     const [ALL_QUESTS, setALL_QUESTS] = useState<QuestMeta[]>([]);
 
     const isFocused = useIsFocused();
-    const { width } = useWindowDimensions();
-    const isMobile = width < 480;
+    const { width, isPhone } = useResponsive();
+    const isMobile = isPhone;
 
     // колонки
     const cityColumns = isMobile ? 2 : width >= 1200 ? 5 : width >= 900 ? 4 : 3;

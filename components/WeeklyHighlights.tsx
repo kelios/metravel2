@@ -1,14 +1,15 @@
 import React, { useMemo, memo, useCallback, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
 import { fetchTravelsOfMonth } from '@/src/api/map';
 import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AIRY_COLORS } from '@/constants/airyColors'; // ✅ ИСПРАВЛЕНИЕ: Добавлен импорт AIRY_COLORS
+import { AIRY_COLORS } from '@/constants/airyColors'; 
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
 
@@ -21,8 +22,8 @@ interface WeeklyHighlightsProps {
 
 function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true, enabled = true }: WeeklyHighlightsProps) {
     const router = useRouter();
-    const { width } = useWindowDimensions();
-    const isMobile = width <= METRICS.breakpoints.tablet;
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
     const { viewHistory } = useFavorites();
     
     const [isCollapsed, setIsCollapsed] = useState(false);

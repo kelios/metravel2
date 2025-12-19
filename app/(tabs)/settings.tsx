@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView, TextInput, ActivityIndicator, Alert, Image, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView, TextInput, ActivityIndicator, Alert, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -9,6 +9,8 @@ import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/EmptyState';
 import Button from '@/components/ui/Button';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/src/utils/confirmAction';
 import { fetchUserProfile, updateUserProfile, uploadUserProfileAvatarFile, type UpdateUserProfilePayload, type UploadUserProfileAvatarFile, type UserProfileDto } from '@/src/api/user';
@@ -17,8 +19,8 @@ import { ApiError } from '@/src/api/client';
 export default function SettingsScreen() {
     const router = useRouter();
     const { isAuthenticated, logout, username, userId, triggerProfileRefresh } = useAuth();
-    const { width } = useWindowDimensions();
-    const isMobile = width <= 768;
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
     const isWeb = Platform.OS === 'web';
     const favoritesContext = typeof useFavorites === 'function' ? useFavorites() : ({} as any);
     const { clearHistory, clearFavorites, favorites, viewHistory } = favoritesContext as any;

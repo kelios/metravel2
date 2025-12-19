@@ -13,6 +13,7 @@ interface ResponsiveState {
   isTablet: boolean;
   isLargeTablet: boolean;
   isDesktop: boolean;
+  isMobile: boolean;
   
   // Screen dimensions
   width: number;
@@ -76,6 +77,7 @@ export function useResponsive(): ResponsiveState {
   const isTablet = width >= METRICS.breakpoints.tablet && width < METRICS.breakpoints.largeTablet;
   const isLargeTablet = width >= METRICS.breakpoints.largeTablet && width < METRICS.breakpoints.desktop;
   const isDesktop = width >= METRICS.breakpoints.desktop;
+  const isMobile = width < METRICS.breakpoints.tablet;
 
   // Helper functions
   const isAtLeast = (breakpoint: Breakpoint): boolean => {
@@ -98,6 +100,7 @@ export function useResponsive(): ResponsiveState {
     isTablet,
     isLargeTablet,
     isDesktop,
+    isMobile,
     
     // Screen dimensions
     width,

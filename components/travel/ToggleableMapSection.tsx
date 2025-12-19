@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, Pressable, Text, useWindowDimensions, ActivityIndicator, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, Text, ActivityIndicator, Platform } from 'react-native';
 import ChevronDown from 'lucide-react-native/dist/esm/icons/chevron-down';
 import ChevronUp from 'lucide-react-native/dist/esm/icons/chevron-up';
 import MapPinned from 'lucide-react-native/dist/esm/icons/map-pinned';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useResponsive } from '@/hooks/useResponsive';
 
 type ToggleableMapSectionProps = {
     children: React.ReactNode;
@@ -20,8 +21,8 @@ const ToggleableMapSection = ({
     loadingLabel = 'Загружаем карту...',
 }: ToggleableMapSectionProps) => {
     const [showMap, setShowMap] = useState(initiallyOpen);
-    const { width } = useWindowDimensions();
-    const isMobile = width <= 480;
+    const { isPhone } = useResponsive();
+    const isMobile = isPhone;
     const hintText = useMemo(
         () => (showMap && isLoading ? loadingLabel : showMap ? 'Скрыть карту' : 'Показать карту'),
         [isLoading, loadingLabel, showMap],

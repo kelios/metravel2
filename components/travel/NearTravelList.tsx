@@ -13,7 +13,6 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
   Platform,
   FlatList,
@@ -29,6 +28,7 @@ import { useLazyMap } from '@/hooks/useLazyMap';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { useResponsive } from '@/hooks/useResponsive';
 
 const brandOrange = '#ff8c49'; // Оставляем для обратной совместимости, но используем DESIGN_TOKENS где возможно
 const lightOrange = '#ffede2';
@@ -156,13 +156,11 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     const [error, setError] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<Segment>('list');
     const [visibleCount, setVisibleCount] = useState(6);
-    const { width, height } = useWindowDimensions();
+    const { width, isPhone, isLargePhone, isTablet, isDesktop } = useResponsive();
     const listRef = useRef<FlatList>(null);
     const scrollViewRef = useRef<ScrollView>(null);
 
-    const isMobile = width < METRICS.breakpoints.tablet;
-    const isTablet = width >= METRICS.breakpoints.tablet && width < METRICS.breakpoints.largeTablet;
-    const isDesktop = width >= METRICS.breakpoints.largeTablet;
+    const isMobile = isPhone || isLargePhone;
 
     // Адаптивные высоты для карты
     const mapHeight = useMemo(() => {

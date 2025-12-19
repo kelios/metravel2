@@ -1,24 +1,24 @@
 // components/SearchAndFilterBar.tsx
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import {
     View,
     TextInput,
     StyleSheet,
-    useWindowDimensions,
     Pressable,
     Platform,
     Keyboard,
     Text,
     ActivityIndicator,
-} from "react-native";
+} from 'react-native';
 import { Feather } from "@expo/vector-icons";
 import { MaterialIcons } from '@expo/vector-icons';
 import IconButton from '@/components/ui/IconButton';
-import { DESIGN_TOKENS } from "@/constants/designSystem";
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import SearchAutocomplete from '@/components/SearchAutocomplete';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const palette = DESIGN_TOKENS.colors;
 const spacing = DESIGN_TOKENS.spacing;
@@ -51,7 +51,7 @@ function SearchAndFilterBar({
     onClearAll,
     placeholderOverride,
 }: Props) {
-    const { width } = useWindowDimensions();
+    const { width } = useResponsive();
     const effectiveWidth =
         Platform.OS === 'web' && width === 0 && typeof window !== 'undefined'
             ? window.innerWidth

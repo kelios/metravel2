@@ -15,6 +15,30 @@ console.log = (...args) => {
 // Suppress FontFaceObserver timeout errors that often surface as
 // `Uncaught (in promise) Error: 6000ms timeout exceeded` on web.
 // We only prevent default for this specific known case.
+// Additionally, patch FontFaceObserver to use a longer timeout and swallow its timeout rejection.
+try {
+  const FFO = require('fontfaceobserver');
+  const proto = FFO && FFO.prototype;
+  if (proto && !proto.__patchedTimeout) {
+    const originalLoad = proto.load;
+    proto.load = function patchedLoad(text, timeout) {
+      const safeTimeout = typeof timeout === 'number' ? timeout : 20000; // extend to 20s
+      return originalLoad.call(this, text, safeTimeout).catch((err) => {
+        if (err && typeof err.message === 'string' && err.message.includes('timeout exceeded')) {
+          return undefined; // resolve instead of reject on timeout
+        }
+        throw err;
+      });
+    };
+    proto.__patchedTimeout = true;
+    if (typeof globalThis !== 'undefined' && !globalThis.FontFaceObserver) {
+      globalThis.FontFaceObserver = FFO;
+    }
+  }
+} catch (e) {
+  // If fontfaceobserver is unavailable, skip patching.
+}
+
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('error', (event) => {
     const message =

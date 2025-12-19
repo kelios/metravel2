@@ -2,6 +2,28 @@ import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 import PaginationComponent from '@/components/PaginationComponent'
 
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () =>
+    (global as any).__mockResponsive ?? {
+      width: 1400,
+      height: 900,
+      isSmallPhone: false,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: true,
+      isMobile: false,
+      isPortrait: false,
+      isLandscape: true,
+      orientation: 'landscape',
+      breakpoints: {},
+      isAtLeast: () => true,
+      isAtMost: () => false,
+      isBetween: () => false,
+    },
+}))
+
 describe('PaginationComponent', () => {
   const defaultProps = {
     currentPage: 0,
@@ -14,6 +36,24 @@ describe('PaginationComponent', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    ;(global as any).__mockResponsive = {
+      width: 1400,
+      height: 900,
+      isSmallPhone: false,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: true,
+      isMobile: false,
+      isPortrait: false,
+      isLandscape: true,
+      orientation: 'landscape',
+      breakpoints: {},
+      isAtLeast: () => true,
+      isAtMost: () => false,
+      isBetween: () => false,
+    }
   })
 
   it('renders minimal layout with current page info', () => {
@@ -63,8 +103,24 @@ describe('PaginationComponent', () => {
   })
 
   it('updates page when input changes on mobile layout', () => {
-    const rn = require('react-native')
-    const spy = jest.spyOn(rn, 'useWindowDimensions').mockReturnValue({ width: 420, height: 800 })
+    ;(global as any).__mockResponsive = {
+      width: 600,
+      height: 800,
+      isSmallPhone: false,
+      isPhone: false,
+      isLargePhone: true,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: false,
+      isMobile: true,
+      isPortrait: true,
+      isLandscape: false,
+      orientation: 'portrait',
+      breakpoints: {},
+      isAtLeast: () => false,
+      isAtMost: () => true,
+      isBetween: () => false,
+    }
 
     const onPageChange = jest.fn()
     const { getByLabelText } = render(
@@ -74,8 +130,6 @@ describe('PaginationComponent', () => {
     fireEvent.changeText(input, '5')
     fireEvent(input, 'submitEditing')
     expect(onPageChange).toHaveBeenCalledWith(4) // 0-based
-
-    spy.mockRestore()
   })
 })
 

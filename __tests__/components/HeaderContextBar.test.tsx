@@ -13,6 +13,28 @@ jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
 }));
 
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () =>
+    (global as any).__mockResponsive ?? {
+      width: 1400,
+      height: 900,
+      isSmallPhone: false,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: true,
+      isMobile: false,
+      isPortrait: false,
+      isLandscape: true,
+      orientation: 'landscape',
+      breakpoints: {},
+      isAtLeast: () => true,
+      isAtMost: () => false,
+      isBetween: () => false,
+    },
+}));
+
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
   return {
@@ -41,6 +63,25 @@ describe('HeaderContextBar', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue({ push: mockPush, back: mockBack });
+
+    (global as any).__mockResponsive = {
+      width: 1400,
+      height: 900,
+      isSmallPhone: false,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: true,
+      isMobile: false,
+      isPortrait: false,
+      isLandscape: true,
+      orientation: 'landscape',
+      breakpoints: {},
+      isAtLeast: () => true,
+      isAtMost: () => false,
+      isBetween: () => false,
+    };
 
     useBreadcrumbModel.mockReturnValue({
       showBreadcrumbs: false,

@@ -7,12 +7,12 @@ import {
   Text,
   Platform,
   Modal,
-  useWindowDimensions,
 } from "react-native"
 import { MaterialIcons } from "@expo/vector-icons"
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { METRICS } from "@/constants/layout"
+import { useResponsive } from '@/hooks/useResponsive'
 
 interface TravelSectionTabsProps {
   links: TravelSectionLink[]
@@ -29,8 +29,8 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
 }) => {
   if (!links.length) return null
 
-  const { width } = useWindowDimensions()
-  const isMobile = width <= METRICS.breakpoints.tablet
+  const { isPhone, isLargePhone } = useResponsive()
+  const isMobile = isPhone || isLargePhone
   const [moreOpen, setMoreOpen] = useState(false)
 
   const { visibleLinks, overflowLinks } = useMemo(() => {
@@ -191,23 +191,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: Platform.select({
-      default: 12, // Мобильные
+      default: 10, // Мобильные - уменьшено
       web: 14, // Десктоп
     }),
     paddingVertical: Platform.select({
-      default: 8, // Мобильные
+      default: 6, // Мобильные - уменьшено
       web: 10, // Десктоп
     }),
-    borderRadius: 18,
+    borderRadius: 16,
     backgroundColor: "#fff",
-    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 1
+    borderWidth: 0.5,
     borderColor: "rgba(0, 0, 0, 0.06)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02, // ✅ УЛУЧШЕНИЕ: Упрощенная тень
+    shadowOpacity: 0.02,
     shadowRadius: 4,
-    elevation: 1, // ✅ УЛУЧШЕНИЕ: Уменьшено с 2
-    marginRight: 8,
+    elevation: 1,
+    marginRight: 6,
   },
   tabActive: {
     borderColor: "#1f2937", // ✅ УЛУЧШЕНИЕ: Нейтральный темно-серый

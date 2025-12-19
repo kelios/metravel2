@@ -8,6 +8,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/src/types/types";
 import OptimizedFavoriteButton from "@/components/OptimizedFavoriteButton";
+import ReactionButtons from "@/components/social/ReactionButtons";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travelsApi";
 import { generateSrcSet, optimizeImageUrl } from "@/utils/imageOptimization";
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
@@ -843,6 +844,17 @@ function TravelListItem({
               </View>
             )}
           </View>
+
+          {/* Реакции и просмотры */}
+          {!selectable && (
+            <View style={{ marginTop: 8 }}>
+              <ReactionButtons 
+                travelId={String(id)} 
+                compact={true}
+                showViews={false}
+              />
+            </View>
+          )}
         </View>
       </CardWrapper>
     );

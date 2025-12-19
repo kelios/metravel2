@@ -3,6 +3,28 @@ import { render, fireEvent } from '@testing-library/react-native'
 import Footer from '@/components/Footer'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () =>
+    (global as any).__mockResponsive ?? {
+      width: 390,
+      height: 844,
+      isSmallPhone: false,
+      isPhone: true,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: false,
+      isMobile: true,
+      isPortrait: true,
+      isLandscape: false,
+      orientation: 'portrait',
+      breakpoints: {},
+      isAtLeast: () => false,
+      isAtMost: () => true,
+      isBetween: () => false,
+    },
+}))
+
 // Mock Linking
 const mockOpenURL = jest.fn(() => Promise.resolve())
 jest.mock('react-native/Libraries/Linking/Linking', () => ({
@@ -13,6 +35,7 @@ jest.mock('react-native/Libraries/Linking/Linking', () => ({
 describe('Footer', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    ;(global as any).__mockResponsive = undefined
   })
 
   afterEach(() => {
@@ -20,12 +43,12 @@ describe('Footer', () => {
   })
 
   it('renders mobile dock correctly', () => {
-    const { getByText } = render(<Footer />)
-    expect(getByText('Главная')).toBeTruthy()
-    expect(getByText('Поиск')).toBeTruthy()
-    expect(getByText('Карта')).toBeTruthy()
-    expect(getByText('Избранное')).toBeTruthy()
-    expect(getByText('Создать')).toBeTruthy()
+    const { getByTestId } = render(<Footer />)
+    expect(getByTestId('footer-item-home')).toBeTruthy()
+    expect(getByTestId('footer-item-search')).toBeTruthy()
+    expect(getByTestId('footer-item-map')).toBeTruthy()
+    expect(getByTestId('footer-item-favorites')).toBeTruthy()
+    expect(getByTestId('footer-item-create')).toBeTruthy()
   })
 
   it('calls onDockHeight callback', () => {
@@ -45,10 +68,24 @@ describe('Footer', () => {
     ;(Platform as any).OS = 'web'
 
     try {
-      // Force desktop mode by mocking useWindowDimensions
-      jest
-        .spyOn(require('react-native'), 'useWindowDimensions')
-        .mockReturnValue({ width: DESIGN_TOKENS.breakpoints.mobile + 100, height: 800, scale: 2, fontScale: 2 })
+      ;(global as any).__mockResponsive = {
+        width: Math.max(1400, DESIGN_TOKENS.breakpoints.mobile + 100),
+        height: 800,
+        isSmallPhone: false,
+        isPhone: false,
+        isLargePhone: false,
+        isTablet: false,
+        isLargeTablet: false,
+        isDesktop: true,
+        isMobile: false,
+        isPortrait: false,
+        isLandscape: true,
+        orientation: 'landscape',
+        breakpoints: {},
+        isAtLeast: () => true,
+        isAtMost: () => false,
+        isBetween: () => false,
+      }
 
       const { getByTestId } = render(<Footer />)
       expect(getByTestId('footer-item-about')).toBeTruthy()

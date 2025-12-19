@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, useWindowDimensions, FlatList, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, FlatList, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { useResponsive } from '@/hooks/useResponsive';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { fetchTravelsPopular, fetchTravelsOfMonth } from '@/src/api/map';
 import TravelCardCompact from '@/components/TravelCardCompact';
@@ -19,8 +20,8 @@ interface HomeSectionProps {
 
 function HomeInspirationSection({ title, subtitle, queryKey, fetchFn }: HomeSectionProps) {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
 
   const { data: travelData = {}, isLoading } = useQuery({
     queryKey: [queryKey],
@@ -76,7 +77,7 @@ function HomeInspirationSection({ title, subtitle, queryKey, fetchFn }: HomeSect
 
   return (
     <View style={[styles.section, isMobile && styles.sectionMobile]}>
-      <View style={styles.header}>
+      <View style={[styles.header, isMobile && styles.headerMobile]}>
         <View style={styles.titleContainer}>
           <Text style={[styles.title, isMobile && styles.titleMobile]}>{title}</Text>
           {subtitle && <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>{subtitle}</Text>}
@@ -85,6 +86,7 @@ function HomeInspirationSection({ title, subtitle, queryKey, fetchFn }: HomeSect
           onPress={handleViewMore}
           style={({ pressed, hovered }) => [
             styles.viewMoreButton,
+            isMobile && styles.viewMoreButtonMobile,
             (pressed || hovered) && styles.viewMoreButtonHover,
             globalFocusStyles.focusable,
           ]}
@@ -115,8 +117,8 @@ function HomeInspirationSection({ title, subtitle, queryKey, fetchFn }: HomeSect
 }
 
 export default function HomeInspirationSections() {
-  const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
 
   return (
     <View style={[styles.container, isMobile && styles.containerMobile]}>
@@ -158,13 +160,19 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 24,
+    alignItems: 'flex-start',
+    gap: 16,
     marginBottom: 8,
+  },
+  headerMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 20,
   },
   titleContainer: {
     flex: 1,
     gap: 8,
+    minWidth: 0,
   },
   title: {
     fontSize: 36,
@@ -190,6 +198,7 @@ const styles = StyleSheet.create({
   viewMoreButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -202,6 +211,9 @@ const styles = StyleSheet.create({
         transition: 'all 0.2s ease',
       },
     }),
+  },
+  viewMoreButtonMobile: {
+    width: '100%',
   },
   viewMoreButtonHover: {
     backgroundColor: DESIGN_TOKENS.colors.primaryLight,
@@ -222,12 +234,17 @@ const styles = StyleSheet.create({
   },
   row: {
     gap: 20,
+    justifyContent: 'flex-start',
   },
   cardWrapper: {
-    flex: 1,
-    minHeight: 280,
+    width: 360,
+    minWidth: 320,
+    maxWidth: 360,
+    height: 280,
   },
   cardWrapperMobile: {
-    minHeight: 240,
+    width: '48%',
+    minWidth: 150,
+    height: 240,
   },
 });

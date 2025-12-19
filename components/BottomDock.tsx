@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  useWindowDimensions,
   Platform,
   SafeAreaView,
   LayoutChangeEvent,
@@ -13,6 +12,7 @@ import { useRouter, type Href } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { globalFocusStyles } from "@/styles/globalFocus";
+import { useResponsive } from "@/hooks/useResponsive";
 
 type BottomDockProps = {
   onDockHeight?: (h: number) => void;
@@ -26,18 +26,20 @@ type DockItem = {
 };
 
 const palette = DESIGN_TOKENS.colors;
-const MOBILE_DOCK_HEIGHT_WEB = 64;
+const MOBILE_DOCK_HEIGHT_WEB = 32;
 
 const DockButton = memo(function DockButton({
   label,
   href,
   children,
   testID,
+  showLabel = true,
 }: {
   label: string;
   href: Href;
   children: React.ReactNode;
   testID?: string;
+  showLabel?: boolean;
 }) {
   const router = useRouter();
 
@@ -56,27 +58,19 @@ const DockButton = memo(function DockButton({
     >
       <View style={styles.itemInner}>
         <View style={styles.iconBox}>{children}</View>
-        <Text style={styles.itemText} numberOfLines={1} ellipsizeMode="tail">
-          {label}
-        </Text>
+        {showLabel ? (
+          <Text style={styles.itemText} numberOfLines={1} ellipsizeMode="tail">
+            {label}
+          </Text>
+        ) : null}
       </View>
     </Pressable>
   );
 });
 
 export default function BottomDock({ onDockHeight }: BottomDockProps) {
-  const { width } = useWindowDimensions();
-
-  const effectiveWidth =
-    Platform.OS === "web"
-      ? width === 0
-        ? typeof window !== "undefined"
-          ? window.innerWidth
-          : 0
-        : width
-      : width;
-
-  const isMobile = Platform.OS !== "web" ? true : effectiveWidth < DESIGN_TOKENS.breakpoints.mobile;
+  const { isPhone, isLargePhone, isTablet } = useResponsive();
+  const isMobile = Platform.OS !== "web" ? true : (isPhone || isLargePhone || isTablet);
 
   const lastDockH = useRef(0);
   const handleDockLayout = (e: LayoutChangeEvent) => {
@@ -158,7 +152,13 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
         <View onLayout={handleDockLayout} testID="footer-dock-measure">
           <View style={styles.row} testID="footer-dock-row">
             {items.map((item) => (
-              <DockButton key={item.key} testID={`footer-item-${item.key}`} href={item.route} label={item.label}>
+              <DockButton
+                key={item.key}
+                testID={`footer-item-${item.key}`}
+                href={item.route}
+                label={item.label}
+                showLabel={false}
+              >
                 {item.icon}
               </DockButton>
             ))}
@@ -177,8 +177,8 @@ const styles = StyleSheet.create({
     zIndex: 50,
   },
   dockWrapper: {
-    paddingTop: 2,
-    paddingBottom: Platform.select({ web: 4, default: 2 }),
+    paddingTop: 1,
+    paddingBottom: Platform.select({ web: 2, default: 1 }),
     paddingHorizontal: 6,
     backgroundColor: palette.dockBackground,
     borderTopLeftRadius: 18,
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     elevation: 12,
     ...Platform.select({
       web: {
-        maxHeight: 72,
+        maxHeight: 36,
         backdropFilter: "blur(14px)",
       } as any,
     }),
@@ -207,15 +207,15 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexBasis: 0,
     paddingHorizontal: 6,
-    paddingVertical: 2,
-    minHeight: 44,
+    paddingVertical: 0,
+    minHeight: 32,
     borderRadius: 10,
   },
   pressed: { opacity: 0.7 },
   itemInner: {
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
+    gap: 0,
   },
   iconBox: {
     width: 20,

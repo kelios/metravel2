@@ -4,11 +4,12 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, useWindowDimensions, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import type { Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface QuickFactsProps {
   travel: Travel;
@@ -16,8 +17,8 @@ interface QuickFactsProps {
 }
 
 export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
-  const { width } = useWindowDimensions();
-  const isMobile = width <= METRICS.breakpoints.tablet;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
 
   // Извлекаем данные о путешествии
   const monthName = (travel as any).monthName || '';

@@ -62,6 +62,8 @@ export function useActiveSection(
       return;
     }
 
+    const safeHeaderOffset = typeof headerOffset === 'number' && !isNaN(headerOffset) ? headerOffset : 0;
+
     const observer = new IntersectionObserverCtor(
       (entries) => {
         // Debounce Intersection Observer callbacks to improve performance
@@ -73,7 +75,7 @@ export function useActiveSection(
             if (!sectionKey || !entry.isIntersecting) return;
 
             const rect = entry.boundingClientRect;
-            const viewportTop = headerOffset;
+            const viewportTop = safeHeaderOffset;
 
             if (rect.top <= viewportTop + 100 && rect.bottom >= viewportTop) {
               const ratio = entry.intersectionRatio;
@@ -113,7 +115,7 @@ export function useActiveSection(
       },
       {
         root: null,
-        rootMargin: `-${headerOffset}px 0px -60% 0px`,
+        rootMargin: `-${safeHeaderOffset}px 0px -60% 0px`,
         threshold: [0, 0.1, 0.25, 0.5, 0.75, 1.0],
       }
     );

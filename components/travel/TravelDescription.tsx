@@ -3,7 +3,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    useWindowDimensions,
     View,
     Platform,
     InteractionManager,
@@ -11,6 +10,7 @@ import {
 import { Image as ExpoImage } from "expo-image";
 import StableContent from "@/components/travel/StableContent";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface TravelDescriptionProps {
     htmlContent: string;
@@ -34,7 +34,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                                                                  title,
                                                                  noBox = false,
                                                              }) => {
-    const { width, height } = useWindowDimensions();
+    const { width, height } = useResponsive();
 
     // ✅ ОПТИМИЗАЦИЯ: Адаптивные размеры контейнера
     const pageHeight = useMemo(() => Math.round(height * 0.7), [height]);

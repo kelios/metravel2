@@ -18,12 +18,13 @@ import {
   Animated,
   FlatList,
   RefreshControl,
-  useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';

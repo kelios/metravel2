@@ -1,5 +1,5 @@
 import React, { useMemo, memo, useCallback, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useRouter } from 'expo-router';
@@ -10,6 +10,7 @@ import { AIRY_COLORS } from '@/constants/airyColors';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const COLLAPSED_KEY = 'personalization_collapsed';
 
@@ -24,8 +25,8 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
     const { favorites, viewHistory, getRecommendations } = useFavorites();
     const { isAuthenticated } = useAuth();
     const router = useRouter();
-    const { width } = useWindowDimensions();
-    const isMobile = width <= METRICS.breakpoints.tablet;
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
     
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);

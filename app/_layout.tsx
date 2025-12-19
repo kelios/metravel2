@@ -1,6 +1,6 @@
 import "@expo/metro-runtime";
 import React, { Suspense, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, Platform, StyleSheet, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Image, Platform, StyleSheet, View } from "react-native";
 import { MD3LightTheme as DefaultTheme, PaperProvider } from "react-native-paper";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
@@ -16,7 +16,9 @@ import ConsentBanner from "@/components/ConsentBanner";
 import Footer from "@/components/Footer";
 import { useFonts } from "expo-font";
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
-import { DESIGN_TOKENS } from "@/constants/designSystem"; // ✅ ИСПРАВЛЕНИЕ: Импорт единой палитры
+import { DESIGN_TOKENS } from "@/constants/designSystem"; 
+import { METRICS } from "@/constants/layout";
+import { useResponsive } from "@/hooks/useResponsive"; 
 import { createOptimizedQueryClient } from "@/src/utils/reactQueryConfig";
 
 // ✅ ИСПРАВЛЕНИЕ: Глобальный CSS для web (box-sizing fix)
@@ -129,10 +131,9 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
     const pathname = usePathname();
-    const { width } = useWindowDimensions();
+    const { width, isPhone, isLargePhone } = useResponsive();
     // ✅ ИСПРАВЛЕНИЕ: Используем единый breakpoint из DESIGN_TOKENS
-    // На web useWindowDimensions() может вернуть width=0 на первом рендере.
-    // Это приводит к первичной отрисовке в mobile-режиме и резкому переключению (layout shift).
+    // На web useResponsive() обрабатывает SSR и возвращает корректную ширину.
     const effectiveWidth =
       Platform.OS === 'web'
         ? width === 0
@@ -162,7 +163,7 @@ function RootLayoutNav() {
     const defaultTitle = "MeTravel — путешествия и маршруты";
     const defaultDescription = "Маршруты, места и впечатления от путешественников.";
 
-    const WEB_FOOTER_RESERVE_HEIGHT = 72;
+    const WEB_FOOTER_RESERVE_HEIGHT = 36;
 
     /** === динамическая высота ДОКА футера (только иконки) === */
     const [dockHeight, setDockHeight] = useState(0);
@@ -290,7 +291,7 @@ function RootLayoutNav() {
                             {/* ✅ FIX-005: Индикатор статуса сети */}
                             <NetworkStatus position="top" />
 
-                            <View style={[styles.content, isWeb ? ({ paddingBottom: WEB_FOOTER_RESERVE_HEIGHT } as any) : null]}>
+                            <View style={[styles.content, isWeb && isMobile ? ({ paddingBottom: WEB_FOOTER_RESERVE_HEIGHT } as any) : null]}>
                                 <Stack screenOptions={{ headerShown: false }}>
                                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                                 </Stack>
@@ -303,7 +304,7 @@ function RootLayoutNav() {
                             <ConsentBanner />
 
                             {showFooter && (!isWeb || isMounted) && (
-                              <View style={[styles.footerWrapper, isWeb ? ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 100 } as any) : null]}>
+                              <View style={[styles.footerWrapper, isWeb && isMobile ? ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 100 } as any) : null]}>
                                 <Footer
                                   /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
                                   onDockHeight={(h) => setDockHeight(h)}
@@ -358,6 +359,10 @@ const styles = StyleSheet.create({
     footerWrapper: {
         marginTop: 'auto',
         flexShrink: 0,
+        paddingVertical: 0,
+        paddingHorizontal: 0,
+        width: '100%',
+        alignItems: 'center',
     },
     footerFallback: {
         padding: 12,

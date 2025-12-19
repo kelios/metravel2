@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Linking,
   Platform,
-  useWindowDimensions,
   Pressable,
   Text,
   FlatList,
@@ -26,6 +25,7 @@ import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
+import { useResponsive } from '@/hooks/useResponsive';
 
 type Point = {
   id: string;
@@ -264,11 +264,8 @@ const PointCard = React.memo(function PointCard({
 
 const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
   const safePoints = useMemo(() => (Array.isArray(points) ? points : []), [points]);
-  const { width } = useWindowDimensions();
-  // ✅ УЛУЧШЕНИЕ: Более точные брейкпоинты для адаптивности
-  const isMobile = width < 640;
-  const isTablet = width >= 640 && width < 1024;
-  const isDesktop = width >= 1024;
+  const { width, isPhone, isLargePhone, isTablet, isDesktop } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
   const isLargeDesktop = width >= 1440;
 
   const [showList, setShowList] = useState(false);

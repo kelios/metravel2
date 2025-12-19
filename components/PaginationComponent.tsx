@@ -4,13 +4,12 @@ import {
     Text,
     TextInput,
     StyleSheet,
-    useWindowDimensions,
-    Platform,
     TouchableOpacity,
     NativeSyntheticEvent,
     TextInputSubmitEditingEventData,
 } from "react-native";
 import { IconButton, Menu } from "react-native-paper";
+import { useResponsive } from '@/hooks/useResponsive';
 
 type Props = {
     currentPage: number; // 0-based
@@ -33,9 +32,9 @@ function PaginationComponent({
                                  totalItems,
                                  bottomInset = 0,
                              }: Props) {
-    const { width } = useWindowDimensions();
-    const isMobile = width < 480;
-    const isVerySmall = width < 380;
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
+    const isVerySmall = isMobile && !isLargePhone;
 
     const totalPages = useMemo(
       () => Math.max(1, Math.ceil((totalItems || 0) / (itemsPerPage || 1))),

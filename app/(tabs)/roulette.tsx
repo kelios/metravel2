@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Modal, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions, Pressable, FlatList, Image } from 'react-native';
+import { Animated, Easing, Modal, Platform, ScrollView, StyleSheet, Text, View, Pressable, FlatList, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -11,6 +11,8 @@ import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import UIButton from '@/components/ui/Button';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useListTravelFilters } from '@/components/listTravel/hooks/useListTravelFilters';
 import { useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
 import { normalizeApiResponse, deduplicateTravels } from '@/components/listTravel/utils/listTravelHelpers';
@@ -32,8 +34,8 @@ function shuffleTravels(items: Travel[]): Travel[] {
 export default function RouletteScreen() {
   const pathname = usePathname();
   const isFocused = useIsFocused();
-  const { width } = useWindowDimensions();
-  const isMobile = width <= 768;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
 
   const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
   const canonical = useMemo(() => `${SITE}${pathname || '/roulette'}`, [SITE, pathname]);

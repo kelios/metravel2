@@ -1,10 +1,11 @@
 // src/components/listTravel/RenderTravelItem.tsx
 import React, { memo, useMemo } from "react";
-import { Platform, View, useWindowDimensions, ViewStyle } from "react-native";
+import { Platform, View, ViewStyle } from "react-native";
 import TravelListItem from "./TravelListItem";
 import AnimatedCard from "../AnimatedCard";
 import type { Travel } from "@/src/types/types";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useResponsive } from '@/hooks/useResponsive';
 import { router } from 'expo-router';
 import { TRAVEL_CARD_WEB_HEIGHT, TRAVEL_CARD_WEB_MOBILE_HEIGHT } from './utils/listTravelConstants';
 
@@ -46,7 +47,7 @@ function RenderTravelItem({
                           }: RenderTravelItemProps) {
     if (!item) return null;
 
-    const { width } = useWindowDimensions();
+    const { width } = useResponsive();
 
     const cardWidthNumber = useMemo(() => {
         if (typeof cardWidth === 'number') return cardWidth;

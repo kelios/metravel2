@@ -1,10 +1,11 @@
 import React, { useRef, useEffect } from 'react';
 import { Dialog, Portal } from 'react-native-paper';
-import { StyleSheet, Text, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 type ConfirmDialogProps = {
     visible: boolean;
@@ -28,8 +29,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                                       }) => {
     const dialogRef = useRef<HTMLElement>(null);
     const cancelButtonRef = useRef<HTMLElement>(null);
-    const { width } = useWindowDimensions();
-    const isMobile = width <= METRICS.breakpoints.tablet;
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
     const palette = DESIGN_TOKENS.colors;
 
     // ✅ УЛУЧШЕНИЕ: Focus trap для модального окна

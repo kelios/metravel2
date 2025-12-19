@@ -4,7 +4,8 @@
  */
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Animated, Easing, useWindowDimensions } from 'react-native';
+import { Animated, Easing } from 'react-native';
+import { useResponsive } from '@/hooks/useResponsive';
 
 export interface UseMenuStateReturn {
   menuOpen: boolean;
@@ -21,7 +22,7 @@ const MENU_WIDTH_DESKTOP = 280; // Боковое меню как на глав�
 const MENU_WIDTH_TABLET = 260; // Чуть уже на планшетах
 
 export function useMenuState(isMobile: boolean): UseMenuStateReturn {
-  const { width } = useWindowDimensions();
+  const { width } = useResponsive();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const stableWidth = useMemo(() => {

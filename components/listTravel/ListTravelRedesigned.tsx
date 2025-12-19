@@ -3,7 +3,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
-import { useWindowDimensions } from 'react-native';
 import MainHubLayout from '@/components/MainHubLayout';
 import CollapsibleBlock from '@/components/CollapsibleBlock';
 import WelcomeBanner from '@/components/WelcomeBanner';
@@ -13,6 +12,7 @@ import SearchAndFilterBar from './SearchAndFilterBar';
 import { useBlockVisibility } from '@/hooks/useBlockVisibility';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 // Это пример интеграции - полная версия будет в основном файле
 // Показываю структуру новой страницы
@@ -22,8 +22,8 @@ interface ListTravelRedesignedProps {
 }
 
 export default function ListTravelRedesigned({}: ListTravelRedesignedProps) {
-  const { width } = useWindowDimensions();
-  const isMobile = width <= METRICS.breakpoints.tablet;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
   const [mode] = useState<'compact' | 'expanded' | 'smart'>('smart');
   
   const {

@@ -2,13 +2,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Platform,
-  useWindowDimensions,
   StyleSheet,
   Image as RNImage,
   Text,
 } from "react-native";
 import { CustomRendererProps } from "react-native-render-html";
 import { Image as ExpoImage } from "expo-image";
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface CustomImageRendererProps extends CustomRendererProps<any> {
   contentWidth: number;
@@ -69,10 +69,10 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
 
   const attrAR = attW && attH && attH > 0 ? attW / attH : null;
 
-  const { width: winW } = useWindowDimensions();
+  const { width: screenWidth } = useResponsive();
   const maxFrameWidth = useMemo(
-    () => Math.min(contentWidth || winW || MAX_WIDTH, MAX_WIDTH, (winW || MAX_WIDTH) - H_PADDING * 2),
-    [contentWidth, winW]
+    () => Math.min(contentWidth || screenWidth || MAX_WIDTH, MAX_WIDTH, (screenWidth || MAX_WIDTH) - H_PADDING * 2),
+    [contentWidth, screenWidth]
   );
 
   const [ar, setAr] = useState<number | null>(attrAR ?? null);

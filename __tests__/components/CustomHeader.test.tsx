@@ -47,6 +47,28 @@ jest.mock('expo-router', () => ({
     useRouter: jest.fn(),
 }));
 
+jest.mock('@/hooks/useResponsive', () => ({
+    useResponsive: () =>
+        (global as any).__mockResponsive ?? {
+            width: 1400,
+            height: 900,
+            isSmallPhone: false,
+            isPhone: false,
+            isLargePhone: false,
+            isTablet: false,
+            isLargeTablet: false,
+            isDesktop: true,
+            isMobile: false,
+            isPortrait: false,
+            isLandscape: true,
+            orientation: 'landscape',
+            breakpoints: {},
+            isAtLeast: () => true,
+            isAtMost: () => false,
+            isBetween: () => false,
+        },
+}));
+
 describe('CustomHeader', () => {
     const mockPush = jest.fn();
     const mockRouter = {
@@ -70,6 +92,24 @@ describe('CustomHeader', () => {
         mockFavoritesContext.isFavorite.mockClear();
         mockFiltersContext.updateFilters.mockClear();
         (useRouter as jest.Mock).mockReturnValue(mockRouter);
+        (global as any).__mockResponsive = {
+            width: 1400,
+            height: 900,
+            isSmallPhone: false,
+            isPhone: false,
+            isLargePhone: false,
+            isTablet: false,
+            isLargeTablet: false,
+            isDesktop: true,
+            isMobile: false,
+            isPortrait: false,
+            isLandscape: true,
+            orientation: 'landscape',
+            breakpoints: {},
+            isAtLeast: () => true,
+            isAtMost: () => false,
+            isBetween: () => false,
+        };
         dimensionsSpy.mockReturnValue({ width: 1024, height: 768, scale: 1, fontScale: 1 } as ReactNative.ScaledSize);
     });
 
@@ -155,6 +195,24 @@ describe('CustomHeader', () => {
 
     describe('Mobile menu modal', () => {
         beforeEach(() => {
+            (global as any).__mockResponsive = {
+                width: 390,
+                height: 844,
+                isSmallPhone: false,
+                isPhone: true,
+                isLargePhone: false,
+                isTablet: false,
+                isLargeTablet: false,
+                isDesktop: false,
+                isMobile: true,
+                isPortrait: true,
+                isLandscape: false,
+                orientation: 'portrait',
+                breakpoints: {},
+                isAtLeast: () => false,
+                isAtMost: () => true,
+                isBetween: () => false,
+            };
             dimensionsSpy.mockReturnValue({ width: 390, height: 844, scale: 1, fontScale: 1 } as ReactNative.ScaledSize);
         });
 

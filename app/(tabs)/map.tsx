@@ -13,7 +13,6 @@ import {
     StyleSheet,
     View,
     Text,
-    useWindowDimensions,
     ActivityIndicator,
     Pressable,
     Animated,
@@ -37,10 +36,12 @@ import { fetchFiltersMap, fetchTravelsForMap, fetchTravelsNearRoute } from '@/sr
 import InstantSEO from '@/components/seo/InstantSEO';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/src/utils/filterQuery';
-import ErrorDisplay from '@/components/ErrorDisplay';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface Coordinates { latitude: number; longitude: number; }
 interface FilterValues { categories: string[]; radius: string; address: string; }
@@ -61,9 +62,9 @@ const LazyMapPanel = lazy(() => import('@/components/MapPage/MapPanel'));
 export default function MapScreen() {
     const pathname = usePathname();
     const isFocused = useIsFocused();
-    const { width } = useWindowDimensions();
+    const { isPhone, isLargePhone } = useResponsive();
     const insets = useSafeAreaInsets();
-    const isMobile = width <= METRICS.breakpoints.tablet;
+    const isMobile = isPhone || isLargePhone;
     const queryClient = useQueryClient();
 
     // State

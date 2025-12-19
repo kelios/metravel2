@@ -556,7 +556,7 @@ const styles: any = {
     },
     mobileSheetClose: {
         border: 'none',
-        background: 'transparent',
+        backgroundColor: 'transparent',
         cursor: 'pointer',
         fontSize: '18px',
         lineHeight: '18px',

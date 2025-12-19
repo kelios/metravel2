@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, Pressable, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, FlatList, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -11,10 +11,11 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/src/utils/confirmAction';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { useResponsive } from '@/hooks/useResponsive';
 
 export default function HistoryScreen() {
     const router = useRouter();
-    const { width } = useWindowDimensions();
+    const { width, isPhone, isLargePhone } = useResponsive();
     const { isAuthenticated } = useAuth();
     const { viewHistory, clearHistory } = useFavorites() as any;
     const [isLoading, setIsLoading] = useState(true);

@@ -213,6 +213,12 @@ describe('Home Component', () => {
 
   describe('Data Handling', () => {
     it('should handle different API response formats for travels count', async () => {
+      const freshQueryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false, staleTime: 0 },
+        },
+      });
+
       mockUseAuth.mockReturnValue({
         isAuthenticated: true,
         userId: '123',
@@ -224,13 +230,17 @@ describe('Home Component', () => {
 
       // Test array format
       mockFetchMyTravels.mockResolvedValueOnce([{ id: 1 }, { id: 2 }] as any);
-      const { rerender } = renderHome();
+      const { rerender } = render(
+        <QueryClientProvider client={freshQueryClient}>
+          <Home />
+        </QueryClientProvider>
+      );
       await waitFor(() => expect(mockFetchMyTravels).toHaveBeenCalled());
 
       // Test data property format
       mockFetchMyTravels.mockResolvedValueOnce({ data: [{ id: 1 }, { id: 2 }, { id: 3 }] } as any);
       rerender(
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={freshQueryClient}>
           <Home />
         </QueryClientProvider>
       );
@@ -238,34 +248,54 @@ describe('Home Component', () => {
       // Test total property format
       mockFetchMyTravels.mockResolvedValueOnce({ total: 5 } as any);
       rerender(
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={freshQueryClient}>
           <Home />
         </QueryClientProvider>
       );
     });
 
     it('should handle empty travels data', async () => {
+      // Create completely isolated query client
+      const isolatedQueryClient = new QueryClient({
+        defaultOptions: {
+          queries: { 
+            retry: false, 
+            staleTime: 0,
+            refetchOnMount: true,
+            refetchOnWindowFocus: false,
+          },
+        },
+      });
+
+      const uniqueUserId = 'test-empty-user-' + Date.now();
+      
       mockUseAuth.mockReturnValue({
         isAuthenticated: true,
-        userId: '123',
+        userId: uniqueUserId,
         login: jest.fn(),
         logout: jest.fn(),
         setUserAvatar: jest.fn(),
         triggerProfileRefresh: jest.fn(),
       } as any);
 
+      // Clear all previous mock calls and set new return value
+      mockFetchMyTravels.mockReset();
       mockFetchMyTravels.mockResolvedValue({ data: [] } as any);
 
-      const { UNSAFE_getByType } = renderHome();
+      const { UNSAFE_getByType } = render(
+        <QueryClientProvider client={isolatedQueryClient}>
+          <Home />
+        </QueryClientProvider>
+      );
       
+      // Wait for query to complete and component to render
       await waitFor(() => {
+        expect(mockFetchMyTravels).toHaveBeenCalledWith({ user_id: uniqueUserId });
         const HomeHero = require('@/components/home/HomeHero').default;
         const heroInstance = UNSAFE_getByType(HomeHero);
-        // After loading completes, travelsCount should be 0
-        expect(heroInstance.props.travelsCount).toBeDefined();
         expect(heroInstance.props.travelsCount).toBe(0);
       }, { timeout: 3000 });
-    });
+    }, 10000);
   });
 
   describe('Performance', () => {

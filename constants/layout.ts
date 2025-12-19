@@ -15,24 +15,39 @@ export const METRICS = {
     l: 24,   // Large
     xl: 32,  // Extra large
     xxl: 40, // Extra extra large
+    xxxl: 48, // Extra extra extra large
   },
   
-  // Standard breakpoints
+  // Standard breakpoints - единая система для всего приложения
   breakpoints: {
-    smallPhone: 0,     // 0-359px
-    phone: 375,        // 360-767px
-    largePhone: 414,   // 414-767px
-    tablet: 768,       // 768-1023px
-    largeTablet: 1024, // 1024-1279px
-    desktop: 1280,     // 1280px+
+    smallPhone: 0,     // 0-359px - очень маленькие телефоны
+    phone: 360,        // 360-479px - стандартные телефоны
+    largePhone: 480,   // 480-767px - большие телефоны
+    tablet: 768,       // 768-1023px - планшеты портрет
+    largeTablet: 1024, // 1024-1279px - планшеты ландшафт
+    desktop: 1280,     // 1280-1919px - десктоп
+    largeDesktop: 1920, // 1920px+ - большие мониторы
+    ultraWide: 2560,   // 2560px+ - ультраширокие мониторы
+  },
+  
+  // Контейнеры - максимальная ширина контента
+  containers: {
+    sm: 640,   // Узкий контент (статьи, формы)
+    md: 768,   // Средний контент
+    lg: 1024,  // Широкий контент
+    xl: 1280,  // Очень широкий контент
+    xxl: 1536, // Максимальный контент
+    full: '100%', // Полная ширина
   },
   
   // Border radius
   borderRadius: {
+    xs: 2,
     s: 4,
     m: 8,
     l: 12,
     xl: 16,
+    xxl: 24,
     pill: 1000, // For pill-shaped components
     circle: 9999, // For circular components
   },
@@ -44,6 +59,7 @@ export const METRICS = {
     m: 4,
     l: 8,
     xl: 16,
+    xxl: 24,
   },
   
   // Animation durations
@@ -51,6 +67,19 @@ export const METRICS = {
     fast: 150,
     normal: 300,
     slow: 500,
+    slower: 700,
+  },
+  
+  // Grid columns для разных breakpoints
+  gridColumns: {
+    smallPhone: 1,
+    phone: 1,
+    largePhone: 1,
+    tablet: 2,
+    largeTablet: 2,
+    desktop: 3,
+    largeDesktop: 3,
+    ultraWide: 4,
   },
 } as const;
 

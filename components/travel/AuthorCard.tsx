@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, useWindowDimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ import { type UserProfileDto } from '@/src/api/user';
 import { openExternalUrl } from '@/src/utils/externalLinks';
 import { useUserProfileCached } from '@/src/hooks/useUserProfileCached';
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface AuthorCardProps {
   travel: Travel;
@@ -23,8 +24,8 @@ interface AuthorCardProps {
 
 export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const isMobile = width <= METRICS.breakpoints.tablet;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
 
   const normalizeMediaUrl = useCallback((raw: string) => {
     const value = String(raw ?? '').trim();

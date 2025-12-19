@@ -7,6 +7,28 @@ import RouletteScreen from '@/app/(tabs)/roulette';
 import { useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
 import { useListTravelFilters } from '@/components/listTravel/hooks/useListTravelFilters';
 
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () =>
+    (global as any).__mockResponsive ?? {
+      width: 1400,
+      height: 900,
+      isSmallPhone: false,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: true,
+      isMobile: false,
+      isPortrait: false,
+      isLandscape: true,
+      orientation: 'landscape',
+      breakpoints: {},
+      isAtLeast: () => true,
+      isAtMost: () => false,
+      isBetween: () => false,
+    },
+}));
+
 jest.mock('@/components/listTravel/hooks/useListTravelFilters');
 jest.mock('@/components/listTravel/hooks/useListTravelData');
 
@@ -93,6 +115,25 @@ const createTravel = (id: number) => ({
 function setupWeb() {
   (Platform as any).OS = 'web';
 
+  (global as any).__mockResponsive = {
+    width: 1400,
+    height: 900,
+    isSmallPhone: false,
+    isPhone: false,
+    isLargePhone: false,
+    isTablet: false,
+    isLargeTablet: false,
+    isDesktop: true,
+    isMobile: false,
+    isPortrait: false,
+    isLandscape: true,
+    orientation: 'landscape',
+    breakpoints: {},
+    isAtLeast: () => true,
+    isAtMost: () => false,
+    isBetween: () => false,
+  };
+
   const client = new QueryClient({
     defaultOptions: {
       queries: {
@@ -141,6 +182,25 @@ function setupWeb() {
 
 function setupMobileWeb() {
   (Platform as any).OS = 'web';
+
+  (global as any).__mockResponsive = {
+    width: 390,
+    height: 844,
+    isSmallPhone: false,
+    isPhone: true,
+    isLargePhone: false,
+    isTablet: false,
+    isLargeTablet: false,
+    isDesktop: false,
+    isMobile: true,
+    isPortrait: true,
+    isLandscape: false,
+    orientation: 'portrait',
+    breakpoints: {},
+    isAtLeast: () => false,
+    isAtMost: () => true,
+    isBetween: () => false,
+  };
 
   // Эмулируем мобильную ширину экрана
   const RN = require('react-native');
@@ -208,9 +268,9 @@ describe('RouletteScreen', () => {
   });
 
   it('calls refetch when roulette center is pressed on desktop web', async () => {
-    const { getByText, refetch, unmount } = setupWeb();
+    const { getByLabelText, refetch, unmount } = setupWeb();
 
-    fireEvent.press(getByText('Случайный маршрут'));
+    fireEvent.press(getByLabelText('Подобрать маршруты'));
 
     await waitFor(() => {
       expect(refetch).toHaveBeenCalled();

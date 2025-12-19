@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
-import { View, StyleSheet, Platform, StatusBar, useWindowDimensions, Pressable, Text, Image, Modal, ScrollView } from 'react-native';
+import { View, StyleSheet, Platform, StatusBar, Pressable, Text, Image, Modal, ScrollView } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import AccountMenu from './AccountMenu';
@@ -11,7 +11,8 @@ import { useFilters } from '@/providers/FiltersProvider';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
-import { globalFocusStyles } from '@/styles/globalFocus'; 
+import { globalFocusStyles } from '@/styles/globalFocus';
+import { useResponsive } from '@/hooks/useResponsive'; 
 import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 
 const palette = DESIGN_TOKENS.colors;
@@ -23,14 +24,8 @@ type CustomHeaderProps = {
 export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const pathname = usePathname();
     const router = useRouter();
-    const { width } = useWindowDimensions();
-    const effectiveWidth =
-        Platform.OS === 'web' && width === 0
-            ? typeof window !== 'undefined'
-                ? window.innerWidth
-                : METRICS.breakpoints.tablet + 1
-            : width;
-    const isMobile = effectiveWidth <= METRICS.breakpoints.tablet;
+    const { isPhone, isLargePhone, isTablet } = useResponsive();
+    const isMobile = isPhone || isLargePhone || isTablet;
     const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
     const { isAuthenticated, username, logout, userAvatar, profileRefreshToken, userId } = useAuth();
     const { favorites } = useFavorites();

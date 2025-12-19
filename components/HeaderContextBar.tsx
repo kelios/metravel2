@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useBreadcrumbModel } from '@/hooks/useBreadcrumbModel';
 import { globalFocusStyles } from '@/styles/globalFocus';
 
@@ -15,8 +16,8 @@ type HeaderContextBarProps = {
 
 export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const isMobile = width <= METRICS.breakpoints.tablet;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
 
   const model = useBreadcrumbModel();
 

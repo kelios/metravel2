@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Text, useWindowDimensions, Pressable, Platform } from 'react-native';
+import { View, StyleSheet, Text, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 type TravelWizardHeaderProps = {
     canGoBack?: boolean;
@@ -27,8 +28,8 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     tipTitle,
     tipBody,
 }) => {
-    const { width } = useWindowDimensions();
-    const isMobile = width <= DESIGN_TOKENS.breakpoints.mobile;
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
     const clamped = Math.min(Math.max(progressPercent, 0), 100);
     
     // Определяем цвет прогресс-бара на основе процента

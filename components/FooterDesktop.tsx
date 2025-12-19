@@ -1,5 +1,6 @@
 import React, { memo } from "react";
-import { View, Text, StyleSheet, Pressable, Linking, Platform, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Pressable, Linking, Platform } from "react-native";
+import { ResponsiveContainer } from "@/components/layout";
 import { useRouter, type Href } from "expo-router";
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from "@/constants/designSystem";
@@ -205,32 +206,28 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
 
   return (
     <View style={styles.base} testID={testID || "footer-desktop"}>
-      <View style={styles.bar}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.stack}
-        >
-          <View style={styles.topRow}>
-            <View style={styles.leftGroup}>
-              <View style={styles.iconRow}>
-                {primaryIconActions.map((i) => renderItem(i, { showLabel: false }))}
-                {secondaryIconActions.map((i) => renderItem(i, { showLabel: false }))}
+      <ResponsiveContainer maxWidth="full" padding={false} paddingHorizontal={false} paddingVertical={false}>
+        <View style={styles.bar}>
+          <View style={styles.columns}>
+            <View style={styles.leftColumn}>
+              <View style={styles.iconRows}>
+                <View style={styles.iconRow}>{primaryIconActions.map((i) => renderItem(i, { showLabel: false }))}</View>
+                <View style={styles.iconRow}>{secondaryIconActions.map((i) => renderItem(i, { showLabel: false }))}</View>
               </View>
             </View>
 
-            <View style={styles.topRight}>
+            <View style={styles.rightColumn}>
               <View style={styles.socialRow}>{social.map((i) => renderItem(i, { showLabel: false }))}</View>
-              <Text style={styles.copy}>© MeTravel 2020–{new Date().getFullYear()}</Text>
+              <View style={styles.utilityRow}>
+                {utilityLinks.map((i) => renderItem(i))}
+                <Text style={styles.copy} numberOfLines={1}>
+                  © MeTravel 2020–{new Date().getFullYear()}
+                </Text>
+              </View>
             </View>
           </View>
-
-          <View style={styles.bottomRow}>
-            <View style={styles.bottomLeft} />
-            <View style={styles.utilityRow}>{utilityLinks.map((i) => renderItem(i))}</View>
-          </View>
-        </ScrollView>
-      </View>
+        </View>
+      </ResponsiveContainer>
     </View>
   );
 }
@@ -241,12 +238,13 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: palette.border,
     marginTop: -1,
+    width: "100%",
   },
   bar: {
-    maxWidth: 1280,
+    maxWidth: "100%",
     width: "100%",
     alignSelf: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 4,
     backgroundColor: palette.surface,
     borderRadius: 12,
@@ -262,16 +260,9 @@ const styles = StyleSheet.create({
       } as any,
     }),
   },
-  stack: {
-    flexDirection: "column",
-    alignItems: "stretch",
-    justifyContent: "center",
-    flexWrap: "nowrap",
-    width: "100%",
-  },
   topRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     flexWrap: "nowrap",
     width: "100%",
@@ -280,7 +271,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: 8 as any,
+    gap: 12 as any,
     flexWrap: "nowrap",
   },
   socialRow: {
@@ -294,10 +285,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     width: "100%",
-    marginTop: 2,
+    marginTop: 0,
   },
   bottomLeft: {
     flexGrow: 1,
+  },
+  columns: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 24,
+    width: "100%",
+  },
+  leftColumn: {
+    flex: 1,
+    alignItems: "flex-start",
+  },
+  rightColumn: {
+    flex: 1,
+    alignItems: "flex-end",
+    gap: 8,
   },
   utilityRow: {
     flexDirection: "row",
@@ -305,6 +312,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 6 as any,
     flexWrap: "nowrap",
+    flexShrink: 1,
   },
   leftGroup: {
     flexDirection: "column",
@@ -316,12 +324,12 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "flex-start",
     justifyContent: "flex-start",
-    gap: 2 as any,
+    gap: 6 as any,
   },
   iconRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6 as any,
+    gap: 8 as any,
     flexWrap: "nowrap",
   },
   item: {
@@ -329,11 +337,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexGrow: 0,
     flexShrink: 0,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    minWidth: 44,
-    minHeight: 32,
-    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 0,
+    minWidth: 32,
+    minHeight: 20,
+    borderRadius: 6,
     ...Platform.select({
       web: {
         display: "flex",

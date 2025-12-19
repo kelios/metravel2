@@ -1,6 +1,6 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView, View, StyleSheet, Text, ScrollView, Dimensions, TextInput, Platform, findNodeHandle, UIManager, LayoutChangeEvent, useWindowDimensions } from 'react-native';
+import { KeyboardAvoidingView, View, StyleSheet, Text, ScrollView, Dimensions, TextInput, Platform, findNodeHandle, UIManager, LayoutChangeEvent } from 'react-native';
 import { Button } from 'react-native-paper';
 
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
@@ -8,6 +8,7 @@ import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { MarkerData, TravelFormData } from '@/src/types/types';
 import MultiSelectField from '@/components/MultiSelectField';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const WebMapComponent = Platform.OS === 'web'
     ? React.lazy(() => import('@/components/travel/WebMapComponent'))
@@ -66,8 +67,8 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     focusAnchorId,
     onAnchorHandled,
 }) => {
-    const { width } = useWindowDimensions();
-    const isMobile = width <= DESIGN_TOKENS.breakpoints.mobile;
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
 
     const [footerHeight, setFooterHeight] = useState(0);
 

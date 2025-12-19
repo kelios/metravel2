@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, useWindowDimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { Travel } from '@/src/types/types';
@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface CTASectionProps {
   travel: Travel;
@@ -21,8 +22,8 @@ interface CTASectionProps {
 
 export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const isMobile = width <= METRICS.breakpoints.tablet;
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobile = isPhone || isLargePhone;
   const { isAuthenticated } = useAuth();
   const { favorites, addFavorite, removeFavorite, isFavorite: checkIsFavorite } = useFavorites();
 
