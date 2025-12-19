@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, useColorScheme } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, StyleSheet, Text, ActivityIndicator, useColorScheme, Platform } from 'react-native';
 import { TravelFormData, Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import ImageGalleryComponent from '@/components/travel/ImageGalleryComponent';
 
 interface GallerySectionProps {
     formData: TravelFormData | null;
@@ -34,15 +35,35 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData }) => {
         );
     }
 
-    // ✅ Всегда показываем компонент галереи, даже если изображений ещё нет
-    const images = Array.isArray(formData.gallery) ? formData.gallery : [];
+    const normalizedImages = useMemo(() => {
+        const raw = Array.isArray(formData.gallery) ? formData.gallery : [];
+        return raw
+            .map((item, index) => {
+                if (typeof item === 'string') {
+                    return { id: `legacy-${index}`, url: item };
+                }
+                if (item && typeof item === 'object' && 'url' in item) {
+                    return { id: String((item as any).id ?? `legacy-${index}`), url: (item as any).url as string };
+                }
+                return null;
+            })
+            .filter(Boolean) as { id: string; url: string }[];
+    }, [formData.gallery]);
 
-    // Компонент галереи временно недоступен — выводим заглушку
+    // Для web используем галерею с дропзоной, для native — платформенный файл
     return (
         <View style={[styles.galleryContainer, isDarkMode && styles.darkBackground]}>
-            <Text style={[styles.infoText, isDarkMode && styles.darkText]}>
-                Галерея временно недоступна.
-            </Text>
+            <ImageGalleryComponent
+                collection="travelGallery"
+                idTravel={String(formData.id)}
+                initialImages={normalizedImages}
+                maxImages={10}
+            />
+            {Platform.OS !== 'web' && normalizedImages.length === 0 && (
+                <Text style={[styles.infoText, isDarkMode && styles.darkText]}>
+                    Нет загруженных изображений
+                </Text>
+            )}
         </View>
     );
 };
