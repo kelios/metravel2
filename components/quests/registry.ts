@@ -31,7 +31,6 @@ import {
 import {
     PAKOCIM_INTRO,
     PAKOCIM_STEPS,
-    PAKOCIM_CAFE_BONUS,
     PAKOCIM_FINALE,
 } from '@/components/quests/data/krakow/pakocim';
 

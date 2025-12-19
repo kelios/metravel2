@@ -127,7 +127,6 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
                             style={[styles.image, imgStyle]}
                             contentFit="cover"
                             cachePolicy="memory-disk"
-                            priority="low"
                             transition={200}
                             {...(Platform.OS === "web" ? { loading: "lazy" as any } : {})}
                         />

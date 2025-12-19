@@ -779,7 +779,8 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
 /* =================================================================== */
 
 export default function TravelDetails() {
-  const { isMobile, headerOffset, width } = useResponsive();
+  const { isMobile, width } = useResponsive();
+  const headerOffset = 0;
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [, startTransition] = useTransition();

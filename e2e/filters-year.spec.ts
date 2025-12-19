@@ -13,7 +13,9 @@ test.describe('Filters', () => {
       }
     });
 
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    // На главной странице нет сайдбара, поэтому проверяем рабочую страницу поиска,
+    // где фильтры (и поле "Год") доступны на десктопе.
+    await page.goto('/search', { waitUntil: 'domcontentloaded' });
 
     // Year input exists inside ModernFilters (sidebar) on desktop.
     const yearInput = page.getByPlaceholder('2023');

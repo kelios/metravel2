@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, StyleSheet, Text, ActivityIndicator, useColorScheme } from 'react-native';
-import ImageGalleryComponent from '@/components/travel/ImageGalleryComponent';
 import { TravelFormData, Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
@@ -38,20 +37,19 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData }) => {
     // ✅ Всегда показываем компонент галереи, даже если изображений ещё нет
     const images = Array.isArray(formData.gallery) ? formData.gallery : [];
 
+    // Компонент галереи временно недоступен — выводим заглушку
     return (
         <View style={[styles.galleryContainer, isDarkMode && styles.darkBackground]}>
-            <ImageGalleryComponent
-                collection="gallery"
-                idTravel={formData.id}
-                initialImages={images}
-            />
+            <Text style={[styles.infoText, isDarkMode && styles.darkText]}>
+                Галерея временно недоступна.
+            </Text>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     galleryContainer: {
-        marginTop: DESIGN_TOKENS.spacing.xxs0,
+        marginTop: DESIGN_TOKENS.spacing.xxs,
         padding: 15,
         backgroundColor: '#fff',
         borderRadius: 10,
