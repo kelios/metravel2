@@ -295,7 +295,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           points.push({
             id: `${item.id}-${j}`,
             coord: `${lat},${lng}`,
-            address: point.address || item.title || '',
+            address: point.address || item.name || '',
             travelImageThumbUrl: point.travelImageThumbUrl || item.travel_image_thumb_url || '',
             categoryName: point.categoryName || item.countryName || '',
             articleUrl: point.urlTravel,
@@ -321,7 +321,6 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       ]}>
         <TravelTmlRound
           travel={item}
-          priority={index < 6}
         />
       </View>
     ), []);
@@ -473,7 +472,7 @@ const styles = StyleSheet.create({
   section: {
     marginTop: DESIGN_TOKENS.spacing.md,
     marginBottom: 40,
-    paddingHorizontal: Math.max(16, Platform.OS === 'web' ? '4%' : 16),
+    paddingHorizontal: 16,
     paddingVertical: DESIGN_TOKENS.spacing.md,
     backgroundColor: backgroundGray,
     borderRadius: 20,

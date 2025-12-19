@@ -1,13 +1,15 @@
 // components/travel/StableContent.tsx
 import React, { memo, Suspense, useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Linking, Platform, Text, Pressable } from "react-native";
-import type { TDefaultRendererProps } from "react-native-render-html";
+import type { RenderHTMLProps, TDefaultRendererProps } from "react-native-render-html";
 import { sanitizeRichText } from '@/src/utils/sanitizeRichText';
+
+type LazyInstagramProps = { url: string };
 
 const LazyRenderHTML = React.lazy(() =>
   import("react-native-render-html").then((m: any) => ({ default: m.default }))
 );
-const LazyInstagram = React.lazy(() =>
+const LazyInstagram = React.lazy<React.ComponentType<LazyInstagramProps>>(() =>
   import("@/components/iframe/InstagramEmbed").then((m: any) => ({ default: m.default }))
 );
 import CustomImageRenderer from "@/components/CustomImageRenderer";
@@ -349,7 +351,11 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
     link.href = first;
     link.crossOrigin = "anonymous";
     document.head.appendChild(link);
-    return () => document.head.removeChild(link);
+    return () => {
+      if (link.parentNode) {
+        document.head.removeChild(link);
+      }
+    };
   }, [prepared]);
 
   useEffect(() => {
@@ -396,22 +402,22 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
 
   const renderers = useMemo(() => {
     return {
-      img: (props: TDefaultRendererProps) => {
+      img: (props: TDefaultRendererProps<any>) => {
         try {
           // @ts-ignore
           return <CustomImageRenderer {...props} contentWidth={contentWidth} />;
         } catch {
-          const { TDefaultRenderer, ...rest } = props;
-          return <TDefaultRenderer {...rest} />;
+          const DefaultRenderer = (props as any).TDefaultRenderer;
+          return DefaultRenderer ? <DefaultRenderer {...props} /> : null;
         }
       },
-      iframe: (props: TDefaultRendererProps) => {
+      iframe: (props: TDefaultRendererProps<any>) => {
         const attrs = (props.tnode?.attributes || {}) as any;
         const src: string = attrs.src || "";
 
         if (!src) {
-          const { TDefaultRenderer, ...rest } = props;
-          return <TDefaultRenderer {...rest} />;
+          const DefaultRenderer = (props as any).TDefaultRenderer;
+          return DefaultRenderer ? <DefaultRenderer {...props} /> : null;
         }
 
         if (isInstagram(src)) {
@@ -441,8 +447,8 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
           return <TDefaultRenderer {...rest} />;
         }
 
-        const { TDefaultRenderer, ...rest } = props;
-        return <TDefaultRenderer {...rest} />;
+        const DefaultRenderer = (props as any).TDefaultRenderer;
+        return DefaultRenderer ? <DefaultRenderer {...props} /> : null;
       },
     };
   }, [contentWidth]);
@@ -473,7 +479,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         fontSize: BASE_FONT_SIZE + 12, // ~28-29px
         lineHeight: Math.round((BASE_FONT_SIZE + 12) * 1.3), 
         fontWeight: "700", 
-        marginTop: DESIGN_TOKENS.spacing.xxs4,
+        marginTop: DESIGN_TOKENS.spacing.md,
         marginBottom: DESIGN_TOKENS.spacing.lg,
         color: "#1a202c", // ✅ Более темный цвет
       },
@@ -481,7 +487,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         fontSize: BASE_FONT_SIZE + 8, // ~24-25px
         lineHeight: Math.round((BASE_FONT_SIZE + 8) * 1.34), 
         fontWeight: "700", 
-        marginTop: DESIGN_TOKENS.spacing.xxs0,
+        marginTop: DESIGN_TOKENS.spacing.xs,
         marginBottom: 12,
         color: "#1a202c",
       },
@@ -497,11 +503,11 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
       // ✅ УЛУЧШЕНИЕ: Улучшенные списки
       ul: { 
         marginVertical: 12, 
-        paddingLeft: DESIGN_TOKENS.spacing.xxs4, // ✅ Увеличенный отступ
+        paddingLeft: DESIGN_TOKENS.spacing.md, // ✅ Увеличенный отступ
       },
       ol: {
         marginVertical: 12,
-        paddingLeft: DESIGN_TOKENS.spacing.xxs4,
+        paddingLeft: DESIGN_TOKENS.spacing.md,
       },
       li: { 
         marginVertical: DESIGN_TOKENS.spacing.xs, // ✅ Увеличенный отступ между элементами

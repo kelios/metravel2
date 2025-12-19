@@ -8,6 +8,7 @@ import {
   LayoutChangeEvent,
   StyleProp,
   FlatList,
+  Dimensions,
 } from 'react-native'
 
 import { useRouter } from 'expo-router'
@@ -154,7 +155,8 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       prevVisibilityRef.current = isRecommendationsVisible
     }, [isRecommendationsVisible]) // Removed scrollToRecommendations dependency
 
-    const isWebMobile = Platform.OS === 'web' && isMobile
+    const webWidth = Platform.OS === 'web' ? Dimensions.get('window').width : 0
+    const isWebMobile = Platform.OS === 'web' && (isMobile || webWidth <= 420)
     const showRecommendations = Platform.OS === 'web' && !isMobile && isRecommendationsVisible
 
     const cardsWrapperStyle = useMemo<StyleProp<ViewStyle>>(() => {
@@ -341,6 +343,32 @@ const RightColumn: React.FC<RightColumnProps> = memo(
         setShowDelayedSkeleton(false)
       }
     }, [showInitialLoading, travels.length, skeletonDelayMs])
+
+    // Web mobile: render static placeholder only, to avoid CLS from interactive elements on first paint.
+    if (isWebMobile) {
+      return (
+        <View
+          style={[
+            containerStyle,
+            {
+              minHeight: STABLE_PLACEHOLDER_HEIGHT,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: '#fff',
+            } as any,
+          ]}
+        >
+          <Text
+            style={{
+              fontSize: 16,
+              color: '#777',
+            }}
+          >
+            Загружаем подборку путешествий...
+          </Text>
+        </View>
+      )
+    }
 
     return (
       <View style={containerStyle}>
