@@ -1,5 +1,6 @@
 const MEASUREMENT_ID = process.env.EXPO_PUBLIC_GOOGLE_GA4;
 const API_SECRET = process.env.EXPO_PUBLIC_GOOGLE_API_SECRET;
+let hasWarnedMissingConfig = false;
 
 const generateClientId = () => `${Date.now()}.${Math.floor(Math.random() * 1e9)}`;
 
@@ -8,7 +9,10 @@ export const sendAnalyticsEvent = async (
     eventParams: Record<string, unknown> = {}
 ) => {
     if (!MEASUREMENT_ID || !API_SECRET) {
-        console.warn('GA4: Missing MEASUREMENT_ID or API_SECRET');
+        if (!hasWarnedMissingConfig) {
+            console.warn('GA4: Missing MEASUREMENT_ID or API_SECRET – analytics event skipped. Provide EXPO_PUBLIC_GOOGLE_GA4 and EXPO_PUBLIC_GOOGLE_API_SECRET to enable.');
+            hasWarnedMissingConfig = true;
+        }
         return;
     }
 

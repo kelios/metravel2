@@ -50,7 +50,7 @@ function TravelCardCompact({
     <Pressable
       style={styles.card}
       onPress={handlePress}
-      accessibilityRole="button"
+      accessibilityRole="link"
       accessibilityLabel={`Путешествие: ${name}`}
       {...Platform.select({
         web: {
