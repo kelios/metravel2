@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, Alert } from 'react-native';
+import { View, TextInput, Button } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 
-const SetNewPasswordScreen = ({ route }) => {
+type SetNewPasswordScreenProps = {
+    route: {
+        params: {
+            token: string;
+        };
+    };
+};
+
+const SetNewPasswordScreen: React.FC<SetNewPasswordScreenProps> = ({ route }) => {
     const { token } = route.params; // Получить токен из параметров маршрута
     const [newPassword, setNewPasswordValue] = useState('');
     const { setNewPassword: submitNewPassword } = useAuth();

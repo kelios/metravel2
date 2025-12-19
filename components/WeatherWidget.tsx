@@ -67,6 +67,14 @@ export default function WeatherWidget({ points, countryName }: Props) {
 
     if (Platform.OS !== 'web' || !forecast.length || !locationLabel) return null;
 
+    const webTitleEvents =
+      Platform.OS === 'web'
+        ? {
+            onMouseEnter: () => isTitleTruncated && setShowFullTitle(true),
+            onMouseLeave: () => setShowFullTitle(false),
+          }
+        : undefined;
+
     return (
       <View style={styles.wrapper}>
           <View style={styles.titleContainer}>
@@ -75,8 +83,7 @@ export default function WeatherWidget({ points, countryName }: Props) {
                 style={styles.title}
                 numberOfLines={1}
                 ellipsizeMode="tail"
-                onMouseEnter={() => isTitleTruncated && setShowFullTitle(true)}
-                onMouseLeave={() => setShowFullTitle(false)}
+                {...webTitleEvents}
               >
                   Погода в {locationLabel}
               </Text>

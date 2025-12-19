@@ -220,7 +220,7 @@ export function sanitizeRichText(html?: string | null): string {
       iframe: (_tag: string, attribs: Attributes) => {
         const src = normalizeUrl(attribs.src)
         if (!src || !isAllowedIframe(src)) {
-          return { tagName: 'div', text: '' }
+          return { tagName: 'div', text: '', attribs: {} }
         }
         const height = normalizeDimension(attribs.height)
         const width = normalizeDimension(attribs.width)

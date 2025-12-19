@@ -81,7 +81,7 @@ export function useBlockVisibility() {
   const toggleExpanded = useCallback(
     (blockId: string) => {
       updateBlock(blockId, {
-        expanded: !blocksState[blockId]?.expanded ?? true,
+        expanded: !(blocksState[blockId]?.expanded ?? false),
       });
     },
     [blocksState, updateBlock]
@@ -91,7 +91,7 @@ export function useBlockVisibility() {
   const toggleHidden = useCallback(
     (blockId: string) => {
       updateBlock(blockId, {
-        hidden: !blocksState[blockId]?.hidden ?? false,
+        hidden: !(blocksState[blockId]?.hidden ?? false),
       });
     },
     [blocksState, updateBlock]

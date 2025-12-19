@@ -33,9 +33,6 @@ export const defaultQueryOptions: DefaultOptions = {
     // Не перезагружать при восстановлении сети
     refetchOnReconnect: true,
     
-    // Показывать предыдущие данные во время загрузки
-    keepPreviousData: true,
-    
     // Не перезагружать при монтировании, если данные свежие
     refetchOnMount: true,
   },
@@ -92,7 +89,6 @@ export const queryConfigs = {
   paginated: {
     staleTime: 5 * 60 * 1000, // 5 минут
     gcTime: 10 * 60 * 1000, // 10 минут
-    keepPreviousData: true,
     refetchOnMount: false,
   },
 };

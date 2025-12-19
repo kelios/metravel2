@@ -24,7 +24,7 @@ export const FiltersProvider: React.FC<FiltersProviderProps> = ({ children }) =>
         companions: [],
         complexity: [],
         month: [],
-        overNightStay: [],
+        over_nights_stay: [],
         transports: [],
         year: ''
     });

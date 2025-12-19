@@ -38,7 +38,8 @@
     "android:submit:latest": "eas submit --platform android --latest",
     "build:all:dev": "eas build --platform all --profile development",
     "build:all:preview": "eas build --platform all --profile preview",
-    "build:all:prod": "eas build --platform all --profile production"
+    "build:all:prod": "eas build --platform all --profile production",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@babel/runtime": "^7.25.0",

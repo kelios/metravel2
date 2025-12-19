@@ -87,7 +87,7 @@ export const fetchFiltersV2 = async (): Promise<Filters> => {
             companions: [],
             complexity: [],
             month: [],
-            overNightStay: [],
+            over_nights_stay: [],
             transports: [],
             year: '',
         };

@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Text as RNText, StyleSheet, TextProps as RNTextProps, Platform } from 'react-native';
+import { Text as RNText, StyleSheet, TextProps as RNTextProps, Platform, TextStyle } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type TextVariant = 
@@ -94,7 +94,7 @@ const colorMap: Record<TextColor, string> = {
   info: palette.info,
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<{ base: TextStyle }>({
   base: {
     fontFamily: Platform.select({
       web: typography.fontFamily,
@@ -105,11 +105,14 @@ const styles = StyleSheet.create({
   },
 });
 
-const variantStyles = StyleSheet.create({
+const fontWeightValue = (key: TextWeight): TextStyle['fontWeight'] =>
+  typography.weights[key] as TextStyle['fontWeight'];
+
+const variantStyles = StyleSheet.create<Record<TextVariant, TextStyle>>({
   h1: {
     fontSize: DESIGN_TOKENS.typography.sizes.xl,
     lineHeight: 40,
-    fontWeight: typography.weights.bold as any,
+    fontWeight: fontWeightValue('bold'),
     letterSpacing: -0.5,
     ...Platform.select({
       web: {
@@ -121,7 +124,7 @@ const variantStyles = StyleSheet.create({
   h2: {
     fontSize: DESIGN_TOKENS.typography.sizes.xl,
     lineHeight: 36,
-    fontWeight: typography.weights.bold,
+    fontWeight: fontWeightValue('bold'),
     letterSpacing: -0.3,
     ...Platform.select({
       web: {
@@ -133,40 +136,40 @@ const variantStyles = StyleSheet.create({
   h3: {
     fontSize: typography.sizes.xl, // 24
     lineHeight: 32,
-    fontWeight: typography.weights.semibold,
+    fontWeight: fontWeightValue('semibold'),
     letterSpacing: -0.2,
   },
   h4: {
     fontSize: typography.sizes.lg, // 20
     lineHeight: 28,
-    fontWeight: typography.weights.semibold,
+    fontWeight: fontWeightValue('semibold'),
     letterSpacing: -0.1,
   },
   body: {
     fontSize: typography.sizes.md, // 16
     lineHeight: 24,
-    fontWeight: typography.weights.regular,
+    fontWeight: fontWeightValue('regular'),
   },
   bodyLarge: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
     lineHeight: 28,
-    fontWeight: typography.weights.regular,
+    fontWeight: fontWeightValue('regular'),
   },
   bodySmall: {
     fontSize: typography.sizes.sm, // 14
     lineHeight: 20,
-    fontWeight: typography.weights.regular,
+    fontWeight: fontWeightValue('regular'),
   },
   caption: {
     fontSize: typography.sizes.xs, // 12
     lineHeight: 16,
-    fontWeight: typography.weights.regular,
+    fontWeight: fontWeightValue('regular'),
     letterSpacing: 0.3,
   },
   label: {
     fontSize: typography.sizes.sm, // 14
     lineHeight: 20,
-    fontWeight: typography.weights.medium,
+    fontWeight: fontWeightValue('medium'),
     letterSpacing: 0.1,
   },
 });
