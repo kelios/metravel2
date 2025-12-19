@@ -1144,56 +1144,6 @@ function ListTravel({
         filter={filter}
         onSelect={onSelect}
         total={total}
-        isSuper={isSuper}
-        setSearch={setSearch}
-        resetFilters={resetFilters}
-        isVisible={!isMobileDevice || showFilters}
-        onClose={() => setShowFilters(false)}
-        containerStyle={isMobileDevice ? [styles.sidebar, styles.sidebarMobile] : styles.sidebar}
-      />
-
-      <RightColumn
-        search={search}
-        setSearch={setSearch}
-        availableWidth={effectiveWidth}
-        onClearAll={() => {
-          setSearch('')
-          resetFilters()
-          if (isMobileDevice) {
-            setShowFilters(false)
-          }
-        }}
-        isRecommendationsVisible={isRecommendationsVisible}
-        handleRecommendationsVisibilityChange={handleRecommendationsVisibilityChange}
-        activeFiltersCount={activeFiltersCount}
-        total={total}
-        contentPadding={contentPadding}
-        showInitialLoading={showInitialLoading}
-        isError={isError}
-        showEmptyState={showEmptyState}
-        getEmptyStateMessage={getEmptyStateMessage}
-        travels={travels}
-        gridColumns={gridColumns}
-        isMobile={isMobileDevice}
-        showNextPageLoading={showNextPageLoading}
-        refetch={refetch}
-        onEndReached={handleListEndReached}
-        onFiltersPress={isMobileDevice ? () => setShowFilters(true) : undefined}
-        containerStyle={isMobileDevice ? [styles.rightColumn, styles.rightColumnMobile] : styles.rightColumn}
-        searchHeaderStyle={[styles.searchHeader, { paddingHorizontal: contentPadding }]}
-        cardsContainerStyle={isMobileDevice ? [styles.cardsContainer, styles.cardsContainerMobile] : styles.cardsContainer}
-        cardsGridStyle={cardsGridDynamicStyle}
-        cardSpacing={gapSize}
-        footerLoaderStyle={styles.footerLoader}
-        renderItem={renderTravelListItem}
-        topContent={
-          isExport ? (
-            <>
-              <ExportBar
-                isMobile={isMobileDevice}
-                selectedCount={selectionCount}
-                allCount={travels.length}
-                onToggleSelectAll={toggleSelectAll}
                 onClearSelection={clearSelection}
                 onPreview={handleOpenSettingsForPreview}
                 onSave={handleOpenSettingsForSave}
