@@ -107,8 +107,6 @@ function OptimizedImage({
         })}
         // Кэширование
         cachePolicy="memory-disk"
-        // Приоритет
-        priority={priority}
       />
 
       {/* Индикатор загрузки */}

@@ -59,6 +59,11 @@ const styles = StyleSheet.create({
     overflowX: 'hidden',
     width: '100%',
     maxWidth: '100%',
+    ...Platform.select({
+      web: {
+        minHeight: 900,
+      },
+    }),
   },
   rootMobile: {
     flexDirection: 'column',
@@ -201,6 +206,11 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     overflow: 'hidden',
     height: '100%',
+    ...Platform.select({
+      web: {
+        minHeight: 900,
+      },
+    }),
     ...(Platform.OS === 'web' ? ({ paddingTop: TOKENS.spacing.lg } as const) : null),
   },
   rightColumnMobile: {
@@ -224,9 +234,15 @@ const styles = StyleSheet.create({
     // Горизонтальные отступы задаются динамически через contentPadding, чтобы избежать лишних белых полей
     paddingTop: TOKENS.spacing.lg,
     paddingBottom: TOKENS.spacing.md,
+    ...Platform.select({
+      web: {
+        minHeight: 900,
+      },
+    }),
   },
   cardsContainerMobile: {
     paddingBottom: 0,
+    minHeight: 720,
   },
   // ✅ CARDS GRID: Flexbox layout for both platforms
   cardsGrid: {
