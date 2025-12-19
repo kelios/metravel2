@@ -7,7 +7,6 @@ interface OptimizedImageProps {
   alt: string;
   containerWidth?: number;
   containerHeight?: number;
-  priority?: 'high' | 'low';
   className?: string;
   style?: any;
   onLoad?: () => void;
@@ -19,7 +18,6 @@ export function OptimizedImage({
   alt,
   containerWidth = 400,
   containerHeight = 300,
-  priority = 'low',
   className,
   style,
   onLoad,

@@ -154,6 +154,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     }, [isRecommendationsVisible]) // Removed scrollToRecommendations dependency
 
     const isWebMobile = Platform.OS === 'web' && isMobile
+    const showRecommendations = Platform.OS === 'web' && !isMobile && isRecommendationsVisible
 
     const cardsWrapperStyle = useMemo<StyleProp<ViewStyle>>(() => {
       const resetPadding = {
@@ -299,21 +300,21 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     const ListHeader = useMemo(() => {
       return (
         <View
-          onLayout={isRecommendationsVisible ? handleRecommendationsLayout : undefined}
+          onLayout={showRecommendations ? handleRecommendationsLayout : undefined}
           style={{
-            height: isRecommendationsVisible ? RECOMMENDATIONS_TOTAL_HEIGHT : 0,
-            marginBottom: isRecommendationsVisible ? 24 : 0,
+            height: showRecommendations ? RECOMMENDATIONS_TOTAL_HEIGHT : 0,
+            marginBottom: showRecommendations ? 24 : 0,
             overflow: 'hidden',
           }}
         >
-          {isRecommendationsVisible && (
+          {showRecommendations && (
             <Suspense fallback={<RecommendationsPlaceholder />}>
               <RecommendationsTabs />
             </Suspense>
           )}
         </View>
       );
-    }, [isRecommendationsVisible, handleRecommendationsLayout]);
+    }, [showRecommendations, handleRecommendationsLayout]);
 
     const [showDelayedSkeleton, setShowDelayedSkeleton] = useState(false)
 
@@ -362,9 +363,9 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             }}
             onFiltersPress={onFiltersPress}
             onToggleRecommendations={() =>
-              handleRecommendationsVisibilityChange(!isRecommendationsVisible)
+              handleRecommendationsVisibilityChange(!showRecommendations)
             }
-            isRecommendationsVisible={isRecommendationsVisible}
+            isRecommendationsVisible={showRecommendations}
             hasActiveFilters={activeFiltersCount > 0}
             resultsCount={total}
             activeFiltersCount={activeFiltersCount}
@@ -442,12 +443,21 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             !isError &&
             showEmptyState &&
             getEmptyStateMessage && (
-              <EmptyState
-                icon={getEmptyStateMessage.icon}
-                title={getEmptyStateMessage.title}
-                description={getEmptyStateMessage.description}
-                variant={getEmptyStateMessage.variant}
-              />
+              isWebMobile ? (
+                // Web mobile: render a plain spacer to avoid any layout shifts from icons/text rendering
+                <View
+                  style={{
+                    height: STABLE_PLACEHOLDER_HEIGHT,
+                  }}
+                />
+              ) : (
+                <EmptyState
+                  icon={getEmptyStateMessage.icon}
+                  title={getEmptyStateMessage.title}
+                  description={getEmptyStateMessage.description}
+                  variant={getEmptyStateMessage.variant}
+                />
+              )
             )}
 
           {/* Travel Cards Grid - Only show when we have data */}
