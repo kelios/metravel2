@@ -80,6 +80,7 @@ interface RightColumnProps {
   footerLoaderStyle?: ViewStyle | ViewStyle[]
   renderItem: (travel: Travel, index: number) => React.ReactNode
   cardSpacing?: number
+  testID?: string
 }
 
 const RightColumn: React.FC<RightColumnProps> = memo(

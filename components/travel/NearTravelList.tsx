@@ -471,10 +471,10 @@ export default NearTravelList;
 
 const styles = StyleSheet.create({
   section: {
-    marginTop: DESIGN_TOKENS.spacing.xxs4,
+    marginTop: DESIGN_TOKENS.spacing.md,
     marginBottom: 40,
     paddingHorizontal: Math.max(16, Platform.OS === 'web' ? '4%' : 16),
-    paddingVertical: DESIGN_TOKENS.spacing.xxs4,
+    paddingVertical: DESIGN_TOKENS.spacing.md,
     backgroundColor: backgroundGray,
     borderRadius: 20,
     width: '100%',
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: DESIGN_TOKENS.spacing.xxs4,
+    marginBottom: DESIGN_TOKENS.spacing.md,
     paddingHorizontal: 8,
   },
   title: {
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
   },
   desktopContainer: {
     flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.xxs4,
+    gap: DESIGN_TOKENS.spacing.md,
     minHeight: 600,
   },
   listColumn: {
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
   },
   loadMoreButton: {
     backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs4,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
     paddingVertical: 12,
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     borderWidth: 2,
@@ -661,7 +661,7 @@ const styles = StyleSheet.create({
   errorContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    padding: DESIGN_TOKENS.spacing.xs0,
+    padding: DESIGN_TOKENS.spacing.xs,
     backgroundColor: backgroundGray,
     borderRadius: 20,
     marginHorizontal: DESIGN_TOKENS.spacing.lg,
@@ -674,12 +674,12 @@ const styles = StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     color: '#e53e3e',
     textAlign: 'center',
-    marginBottom: DESIGN_TOKENS.spacing.xxs0,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
     lineHeight: 22,
   },
   retryButton: {
     backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs4,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
     paddingVertical: 12,
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     shadowColor: '#000',
@@ -718,14 +718,14 @@ const segmentStyles = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.mutedBackground, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     borderRadius: DESIGN_TOKENS.radii.lg, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     padding: DESIGN_TOKENS.spacing.xs,
-    marginBottom: DESIGN_TOKENS.spacing.xxs0,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
     alignSelf: 'center',
     maxWidth: 300,
   },
   button: {
     flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     alignItems: 'center',
     justifyContent: 'center',
