@@ -19,6 +19,7 @@ import type { Travel } from '@/src/types/types'
 import { PER_PAGE } from './utils/listTravelConstants'
 
 const RECOMMENDATIONS_TOTAL_HEIGHT = 376;
+const STABLE_PLACEHOLDER_HEIGHT = 1200; // Reserve vertical space on web mobile to avoid CLS
 
 // Lazy load RecommendationsTabs with proper error boundary
 const RecommendationsTabs = lazy(async () => {
@@ -152,10 +153,17 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       prevVisibilityRef.current = isRecommendationsVisible
     }, [isRecommendationsVisible]) // Removed scrollToRecommendations dependency
 
+    const isWebMobile = Platform.OS === 'web' && isMobile
+
     const cardsWrapperStyle = useMemo<StyleProp<ViewStyle>>(() => {
       const resetPadding = {
         paddingHorizontal: 0,
         paddingTop: Platform.OS === 'web' && isMobile ? 4 : 12,
+        ...(isWebMobile
+          ? ({
+              minHeight: STABLE_PLACEHOLDER_HEIGHT,
+            } as any)
+          : null),
       }
 
       if (Array.isArray(cardsContainerStyle)) {
@@ -167,7 +175,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       }
 
       return resetPadding
-    }, [cardsContainerStyle])
+    }, [cardsContainerStyle, isWebMobile])
 
     const rows = useMemo(() => {
       const cols = Math.max(1, (isMobile ? 1 : gridColumns) || 1)
@@ -384,23 +392,35 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
           {/* Initial Loading - Only show skeleton when actually loading initial data */}
           {shouldShowSkeleton && (
-            <View
-              style={[
-                cardsGridStyle,
-                {
-                  paddingHorizontal: contentPadding,
-                  paddingTop: 8,
-                  paddingBottom: 28,
-                } as any,
-              ]}
-            >
-              <TravelListSkeleton
-                count={skeletonCount}
-                columns={gridColumns}
-                rowStyle={cardsGridStyle}
-                variant={Platform.OS === 'web' ? 'detailed' : isMobile ? 'reserve' : 'detailed'}
-              />
-            </View>
+            isWebMobile ? (
+              <View
+                style={{
+                  height: STABLE_PLACEHOLDER_HEIGHT,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <ActivityIndicator size="small" />
+              </View>
+            ) : (
+              <View
+                style={[
+                  cardsGridStyle,
+                  {
+                    paddingHorizontal: contentPadding,
+                    paddingTop: 8,
+                    paddingBottom: 28,
+                  } as any,
+                ]}
+              >
+                <TravelListSkeleton
+                  count={skeletonCount}
+                  columns={gridColumns}
+                  rowStyle={cardsGridStyle}
+                  variant={Platform.OS === 'web' ? 'detailed' : isMobile ? 'reserve' : 'detailed'}
+                />
+              </View>
+            )
           )}
 
           {/* Error */}

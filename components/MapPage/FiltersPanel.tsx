@@ -402,8 +402,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                       accessibilityRole="button"
                       accessibilityLabel={`Выбрать транспорт: ${TRANSPORT_MODES.find(m => m.key === key)?.label}`}
                       accessibilityState={{ selected: active }}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
                     >
                       <Text style={styles.transportEmoji}>{emoji}</Text>
                       <Text

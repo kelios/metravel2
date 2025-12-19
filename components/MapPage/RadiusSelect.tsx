@@ -24,6 +24,7 @@ interface RadiusSelectProps {
     disabled?: boolean;
     loading?: boolean;
     placeholder?: string;
+    compact?: boolean;
 }
 
 const RadiusSelect: React.FC<RadiusSelectProps> = ({
