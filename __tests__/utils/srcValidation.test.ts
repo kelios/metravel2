@@ -172,8 +172,7 @@ describe('src/utils/validation', () => {
 
   describe('validateImageType', () => {
     it('rejects missing or non-image mime types', () => {
-      // @ts-expect-error intentional invalid type
-      expect(validateImageType('')).toEqual({
+      expect(validateImageType('' as any)).toEqual({
         valid: false,
         error: 'Файл должен быть изображением',
       });

@@ -119,7 +119,7 @@ describe('usePdfExport', () => {
     title: 'Test Book',
     subtitle: '',
     coverType: 'auto' as const,
-    template: 'minimal',
+    template: 'minimal' as const,
     format: 'A4',
     orientation: 'portrait',
     margins: 'standard',
@@ -211,7 +211,7 @@ describe('usePdfExport', () => {
         },
         {
           ...mockTravels[0],
-          id: undefined,
+          id: 2,
           slug: 'slug-travel',
           description: undefined,
           recommendation: undefined,

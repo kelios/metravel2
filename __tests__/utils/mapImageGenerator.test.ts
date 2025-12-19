@@ -121,8 +121,8 @@ describe('generateLeafletRouteSnapshot', () => {
 
     const promise = generateLeafletRouteSnapshot(
       [
-        { name: 'A', lat: 10, lng: 20 },
-        { name: 'B', lat: 11, lng: 22 },
+        { lat: 10, lng: 20 },
+        { lat: 11, lng: 22 },
       ],
       { width: 320, height: 180, zoom: 9 }
     )
