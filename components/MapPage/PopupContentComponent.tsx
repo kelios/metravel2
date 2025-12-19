@@ -270,8 +270,8 @@ const CloseIcon = () => (
   <IconBase><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></IconBase>
 );
 
-/** Исправленные стили */
-const styles = `
+/** Исправленные стили (web) */
+const popupStyles = `
 .popup-container {
   position: relative;
   margin: 0;
@@ -813,6 +813,7 @@ const styles = `
     height: 28px;
   }
 }
+.popup-category-container {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -829,11 +830,15 @@ const styles = `
   line-height: 1;
   white-space: nowrap;
 }
+`;
 
-// Безопасное добавление стилей
+// Безопасное добавление стилей (только в браузере)
 if (typeof document !== 'undefined') {
-  const doc: any = document as any;
-  const hasDomApi = typeof doc.getElementById === 'function' && typeof doc.createElement === 'function' && doc.head;
+  const doc = document as Document;
+  const hasDomApi =
+    typeof doc.getElementById === 'function' &&
+    typeof doc.createElement === 'function' &&
+    !!doc.head;
 
   if (hasDomApi) {
     const id = 'popup-content-web-style';
@@ -845,8 +850,8 @@ if (typeof document !== 'undefined') {
       doc.head.appendChild(styleTag);
     }
 
-    if (styleTag.innerHTML !== styles) {
-      styleTag.innerHTML = styles;
+    if (styleTag && styleTag.innerHTML !== popupStyles) {
+      styleTag.innerHTML = popupStyles;
     }
   }
 }
