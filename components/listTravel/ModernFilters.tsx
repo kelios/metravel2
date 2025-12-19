@@ -123,7 +123,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   }, [animatedValues]);
 
   const activeFiltersCount = useMemo(() => {
-    return Object.values(selectedFilters).reduce((sum, filters) => {
+    return Object.values(selectedFilters).reduce<number>((sum, filters) => {
       if (Array.isArray(filters)) {
         return sum + filters.length;
       }
@@ -310,7 +310,9 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
       >
         {filterGroups.map((group, index) => {
           const isExpanded = expandedGroups.has(group.key);
-          const selectedCount = selectedFilters[group.key]?.length || 0;
+          const rawSelected = selectedFilters[group.key];
+          const selectedArray = Array.isArray(rawSelected) ? rawSelected : [];
+          const selectedCount = selectedArray.length;
           
           return (
             <View 
@@ -366,7 +368,8 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   ]}
                 >
                   {group.options.map(option => {
-                    const isSelected = selectedFilters[group.key]?.includes(option.id);
+                    const optionId = String(option.id);
+                    const isSelected = selectedArray.map(String).includes(optionId);
                     
                     return (
                       <Pressable

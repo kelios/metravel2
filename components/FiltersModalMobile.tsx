@@ -37,7 +37,7 @@ export default function FiltersModalMobile({
   isSuperuser = false,
 }: FiltersModalMobileProps) {
   const insets = useSafeAreaInsets();
-  const modalRef = useRef<HTMLElement>(null);
+  const modalRef = useRef<any>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   // ✅ УЛУЧШЕНИЕ: Focus trap для модального окна
@@ -87,7 +87,7 @@ export default function FiltersModalMobile({
     outputRange: [0, 1],
   });
 
-  const activeFiltersCount = Object.values(filterValue || {}).reduce((count, value) => {
+  const activeFiltersCount = Object.values(filterValue || {}).reduce<number>((count, value) => {
     if (Array.isArray(value)) return count + value.length;
     if (value && value !== '') return count + 1;
     return count;

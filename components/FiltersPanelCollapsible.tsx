@@ -41,7 +41,7 @@ export default function FiltersPanelCollapsible({
 }: FiltersPanelCollapsibleProps) {
   if (isHidden) return null;
 
-  const activeFiltersCount = Object.values(filterValue || {}).reduce((count, value) => {
+  const activeFiltersCount = Object.values(filterValue || {}).reduce<number>((count, value) => {
     if (Array.isArray(value)) return count + value.length;
     if (value && value !== '') return count + 1;
     return count;
