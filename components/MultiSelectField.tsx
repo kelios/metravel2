@@ -1,5 +1,5 @@
 import React, { forwardRef, useRef } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { MultiSelect } from 'react-native-element-dropdown';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -64,13 +64,31 @@ const MultiSelectField = forwardRef<any, MultiSelectFieldProps>(
                     style={[styles.dropdown, compact && styles.dropdownCompact]}
                     placeholderStyle={styles.placeholder}
                     inputSearchStyle={styles.searchInput}
-                    iconStyle={styles.icon}
                     containerStyle={styles.menuContainer}
                     itemContainerStyle={styles.menuItemContainer}
                     itemTextStyle={styles.menuItemText}
                     activeColor={DESIGN_TOKENS.colors.primarySoft}
                     selectedStyle={styles.selectedChip}
                     selectedTextStyle={styles.selectedChipText}
+                    renderItem={(item, selected) => (
+                        <Pressable
+                            style={[styles.menuItem, selected && { backgroundColor: DESIGN_TOKENS.colors.primarySoft }]}
+                            onPress={() => {
+                                if (single) {
+                                    handleChange([item[valueField]]);
+                                } else {
+                                    const newValue = value?.includes(item[valueField])
+                                        ? value.filter((v: any) => v !== item[valueField])
+                                        : [...(value || []), item[valueField]];
+                                    handleChange(newValue);
+                                }
+                            }}
+                        >
+                            <Text style={[styles.menuItemText, selected && styles.selectedItemText]}>
+                                {item[labelField]}
+                            </Text>
+                        </Pressable>
+                    )}
                     {...rest}
                 />
             </View>
@@ -86,6 +104,14 @@ const styles = StyleSheet.create({
         fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
         color: DESIGN_TOKENS.colors.text,
         marginBottom: DESIGN_TOKENS.spacing.xs,
+    },
+    menuItem: {
+        padding: DESIGN_TOKENS.spacing.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    selectedItemText: {
+        color: DESIGN_TOKENS.colors.white,
     },
     dropdown: {
         minHeight: DESIGN_TOKENS.touchTarget.minHeight,
@@ -119,7 +145,7 @@ const styles = StyleSheet.create({
     icon: {
         width: 18,
         height: 18,
-        tintColor: DESIGN_TOKENS.colors.textMuted,
+        color: DESIGN_TOKENS.colors.textMuted,
     },
     menuContainer: {
         borderRadius: DESIGN_TOKENS.radii.md,

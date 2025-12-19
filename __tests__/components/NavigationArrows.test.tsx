@@ -38,26 +38,54 @@ describe('NavigationArrows', () => {
     back: jest.fn(),
   };
 
+  const baseTravel: Travel = {
+    id: 0,
+    slug: 'base',
+    name: 'Base',
+    travel_image_thumb_url: 'https://example.com/thumb.jpg',
+    travel_image_thumb_small_url: 'https://example.com/thumb-small.jpg',
+    url: '/travels/base',
+    youtube_link: '',
+    userName: '',
+    description: '',
+    recommendation: '',
+    plus: '',
+    minus: '',
+    cityName: '',
+    countryName: '',
+    countUnicIpView: '',
+    gallery: [],
+    travelAddress: [],
+    userIds: '',
+    year: '',
+    monthName: '',
+    number_days: 0,
+    companions: [],
+    countryCode: '',
+  };
+
   const mockTravel: Travel = {
+    ...baseTravel,
     id: 1,
     slug: 'test-travel',
     name: 'Текущее путешествие',
     description: 'Test Description',
-    travel_image_thumb_url: 'https://example.com/image.jpg',
-  } as Travel;
+  };
 
   const mockRelatedTravels: Travel[] = [
     {
+      ...baseTravel,
       id: 0,
       slug: 'prev-travel',
       name: 'Предыдущий маршрут',
-    } as Travel,
+    },
     mockTravel,
     {
+      ...baseTravel,
       id: 2,
       slug: 'next-travel',
       name: 'Следующий маршрут',
-    } as Travel,
+    },
   ];
 
   beforeEach(() => {
@@ -136,10 +164,11 @@ describe('NavigationArrows', () => {
 
   it('should not render when current travel is not in related travels', () => {
     const unrelatedTravel: Travel = {
+      ...baseTravel,
       id: 999,
       slug: 'unrelated',
-      title: 'Unrelated',
-    } as Travel;
+      name: 'Unrelated',
+    };
 
     const { queryByText } = render(
       <NavigationArrows
@@ -154,15 +183,16 @@ describe('NavigationArrows', () => {
 
   it('should handle travel without slug by using id', () => {
     const travelWithoutSlug: Travel = {
+      ...baseTravel,
       id: 1,
       slug: 'current-travel',
       name: 'Test Travel',
-    } as Travel;
+    };
 
     const relatedTravels: Travel[] = [
-      { id: 0, slug: 'prev-travel', name: 'Previous' } as Travel,
+      { ...baseTravel, id: 0, slug: 'prev-travel', name: 'Previous' },
       travelWithoutSlug,
-      { id: 2, name: 'Next' } as Travel,
+      { ...baseTravel, id: 2, name: 'Next', slug: '' },
     ];
 
     const { getByLabelText } = render(

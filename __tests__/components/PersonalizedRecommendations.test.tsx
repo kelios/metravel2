@@ -1,11 +1,12 @@
 import React from 'react'
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
 import PersonalizedRecommendations from '@/components/PersonalizedRecommendations'
+import type { FavoriteItem, ViewHistoryItem } from '@/context/FavoritesContext'
 
 // Mock contexts
-const mockFavorites: any[] = []
-const mockViewHistory: any[] = []
-const mockGetRecommendations = jest.fn(() => [])
+const mockFavorites: FavoriteItem[] = []
+const mockViewHistory: ViewHistoryItem[] = []
+const mockGetRecommendations = jest.fn<FavoriteItem[], []>(() => [])
 let mockIsAuthenticated = false
 const mockPush = jest.fn()
 
@@ -76,7 +77,7 @@ describe('PersonalizedRecommendations', () => {
 
   it('renders favorites section when authenticated with favorites', async () => {
     mockIsAuthenticated = true
-    const testFavorite = {
+    const testFavorite: FavoriteItem = {
       id: '1',
       type: 'travel' as const,
       title: 'Test Travel',
@@ -109,7 +110,7 @@ describe('PersonalizedRecommendations', () => {
 
   it('handles item press by navigating via router', async () => {
     mockIsAuthenticated = true
-    const testFavorite = {
+    const testFavorite: FavoriteItem = {
       id: '1',
       type: 'travel' as const,
       title: 'Test Travel',

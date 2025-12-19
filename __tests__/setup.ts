@@ -1,5 +1,25 @@
 import '@testing-library/jest-native/extend-expect'
 
+// Suppress React Native deprecation warnings
+const originalWarn = console.warn;
+console.warn = (message, ...args) => {
+  // Suppress specific deprecation warnings
+  if (/(ProgressBarAndroid|Clipboard|PushNotificationIOS) has been extracted/.test(message)) {
+    return;
+  }
+  originalWarn(message, ...args);
+};
+
+// Mock console.error to avoid error logs in test output
+const originalError = console.error;
+console.error = (message, ...args) => {
+  // Suppress specific error messages from tests
+  if (/(Ошибка при создании формы|Ошибка при отправке обратной связи|Error: AI request failed)/.test(message)) {
+    return;
+  }
+  originalError(message, ...args);
+};
+
 // Ensure critical Expo env vars exist for API clients referenced in tests
 process.env.EXPO_PUBLIC_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://example.test/api'
 
@@ -278,10 +298,14 @@ jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter', () => {
   return MockNativeEventEmitter
 })
 
+// Mock react-native/Libraries/PushNotificationIOS/PushNotificationIOS
+export const mockRequestPermissions = jest.fn(() => Promise.resolve(true))
+export const mockGetInitialNotification = jest.fn(() => Promise.resolve())
+
 jest.mock('react-native/Libraries/PushNotificationIOS/PushNotificationIOS', () => ({
   addEventListener: jest.fn(),
   removeEventListener: jest.fn(),
-  requestPermissions: jest.fn(),
+  requestPermissions: mockRequestPermissions,
   abandonPermissions: jest.fn(),
   checkPermissions: jest.fn((cb: any) => cb({ alert: true, badge: true, sound: true })),
   getInitialNotification: jest.fn(() => Promise.resolve(null)),
