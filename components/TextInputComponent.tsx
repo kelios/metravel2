@@ -3,7 +3,7 @@ import { StyleSheet, Text, TextInput, View, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface TextInputComponentProps {
-    label: string;
+    label?: string;
     value: string;
     onChange: (value: string) => void;
     secureTextEntry?: boolean;

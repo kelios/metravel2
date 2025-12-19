@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     selectedItemText: {
-        color: DESIGN_TOKENS.colors.white,
+        color: DESIGN_TOKENS.colors.textInverse,
     },
     dropdown: {
         minHeight: DESIGN_TOKENS.touchTarget.minHeight,
