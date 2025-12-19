@@ -52,11 +52,11 @@ export function useListTravelExport(
 
   const clearSelection = useCallback(() => setSelected([]), []);
 
-  const selectedIds = useMemo(() => new Set((selected || []).map((item) => item.id ?? item.slug)), [selected]);
+  const selectedIds = useMemo(() => new Set((selected || []).map((item) => String(item.id ?? item.slug))), [selected]);
 
   const isSelected = useCallback(
     (id: number | string) => {
-      return selectedIds.has(id);
+      return selectedIds.has(String(id));
     },
     [selectedIds]
   );
@@ -73,10 +73,6 @@ export function useListTravelExport(
       includeToc: true,
       includeGallery: true,
       includeMap: true,
-      colorTheme: 'blue',
-      fontFamily: 'sans',
-      photoMode: 'gallery',
-      mapMode: 'full-page',
       includeChecklists: false,
       checklistSections: ['clothing', 'food', 'electronics'],
     }),
@@ -91,8 +87,7 @@ export function useListTravelExport(
 
   const settingsSummary = useMemo(() => {
     const template = lastSettings.template || 'minimal';
-    const colorTheme = lastSettings.colorTheme || 'blue';
-    return `${template} • тема: ${colorTheme}`;
+    return `${template}`;
   }, [lastSettings]);
 
   const handleSaveWithSettings = useCallback(

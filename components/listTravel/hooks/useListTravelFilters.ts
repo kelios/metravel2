@@ -187,7 +187,7 @@ export function useListTravelFilters({
   const handleToggleCategory = useCallback((categoryName: string) => {
     const currentCategories = filter.categories || [];
     const newCategories = currentCategories.includes(categoryName)
-      ? currentCategories.filter((c: string) => c !== categoryName)
+      ? currentCategories.filter((c): c is string | number => c !== categoryName)
       : [...currentCategories, categoryName];
     onSelect('categories', newCategories);
   }, [filter.categories, onSelect]);

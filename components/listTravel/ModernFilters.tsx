@@ -123,7 +123,12 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   }, [animatedValues]);
 
   const activeFiltersCount = useMemo(() => {
-    return Object.values(selectedFilters).reduce((sum, filters) => sum + filters.length, 0);
+    return Object.values(selectedFilters).reduce((sum, filters) => {
+      if (Array.isArray(filters)) {
+        return sum + filters.length;
+      }
+      return sum;
+    }, 0);
   }, [selectedFilters]);
 
   const allGroupKeys = useMemo(() => filterGroups.map((g) => g.key), [filterGroups]);

@@ -846,7 +846,11 @@ if (typeof document !== 'undefined') {
       doc.head.appendChild(styleTag);
     }
 
-    if (styleTag && styleTag.innerHTML !== styles) {
+    if (!styleTag) {
+      return;
+    }
+
+    if (styleTag.innerHTML !== styles) {
       styleTag.innerHTML = styles;
     }
   }
