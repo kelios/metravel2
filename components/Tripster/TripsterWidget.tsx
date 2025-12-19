@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 import { normalize, transliterate, CITY_ALIASES, TRIPSTER_CITY_NAMES } from "@/utils/CityUtils";
 import { useInView } from 'react-intersection-observer';
@@ -47,10 +47,19 @@ export default function TripsterWidget({ points }: Props) {
         }
     }
 
-    const [viewRef, inView] = useInView({
+    const [inViewRef, inView] = useInView({
         triggerOnce: true,
         rootMargin: '200px',
     });
+
+    // Адаптер для рефа: react-intersection-observer ожидает DOM Element
+    const setViewRef = useCallback(
+        (node: View | null) => {
+            if (Platform.OS !== 'web') return;
+            (inViewRef as unknown as (node?: Element | null) => void)(node as unknown as Element | null);
+        },
+        [inViewRef]
+    );
 
     useEffect(() => {
         if (Platform.OS !== 'web' || !validCity || !containerRef.current || !inView) return;
@@ -74,7 +83,7 @@ export default function TripsterWidget({ points }: Props) {
     if (Platform.OS !== 'web' || !validCity) return null;
 
     return (
-        <View ref={viewRef} style={{ width: '100%', marginBottom: 32 }}>
+        <View ref={setViewRef} style={{ width: '100%', marginBottom: 32 }}>
             <View style={{ width: '100%', minHeight: 300 }}>
                 {inView && <div ref={containerRef} />}
             </View>

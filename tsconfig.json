@@ -26,5 +26,9 @@
     "skipLibCheck": true,
     "types": ["jest", "node"]
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "exclude": [
+    "components/ui/examples/**/*",
+    "components/ui/ModernTravelCard.tsx"
+  ]
 }

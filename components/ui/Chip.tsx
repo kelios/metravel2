@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
   base: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: DESIGN_TOKENS.spacing.xxs0, // ✅ УЛУЧШЕНИЕ: Увеличен padding для больших чипсов
+    paddingHorizontal: DESIGN_TOKENS.spacing.xxs, // ✅ УЛУЧШЕНИЕ: Увеличен padding для больших чипсов
     paddingVertical: DESIGN_TOKENS.spacing.sm, // ✅ УЛУЧШЕНИЕ: Увеличен padding для высоты 40px
     borderRadius: radii.lg,
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень

@@ -81,17 +81,17 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
 
     // ✅ УЛУЧШЕНИЕ: Пропорциональные стили с aspect ratio
     const imageWrapperStyle = useMemo(
-        () => ({ 
-          width: '100%', 
-          aspectRatio: 1,
-          borderRadius: radius,
-          overflow: 'hidden' as const,
+        () => ({
+            width: size,
+            height: size,
+            borderRadius: radius,
+            overflow: 'hidden' as const,
         }),
-        [radius]
+        [radius, size]
     );
     const imgStyle = useMemo(
-        () => ({ width: '100%', height: '100%' }),
-        []
+        () => ({ width: size, height: size }),
+        [size]
     );
 
     return (
@@ -265,7 +265,9 @@ const styles = StyleSheet.create({
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
         textAlign: 'center',
-        textShadow: '0 1px 2px rgba(255,255,255,0.9)',
+        textShadowColor: 'rgba(255,255,255,0.9)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 2,
     },
 
     // ✅ Нижний оверлей как в попапе

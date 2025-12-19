@@ -690,66 +690,69 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
     };
   }, [prepared]);
 
-  if (Platform.OS === "web") {
+  const isWeb = (Platform.OS as string) === 'web';
+
+  if (isWeb) {
     return (
       <div
         className={WEB_RICH_TEXT_CLASS}
         dangerouslySetInnerHTML={{ __html: prepared }}
       />
-    );
+    )
   }
 
   return (
-    <View style={styles.htmlWrapper}>
+    <View style={isWeb ? [styles.htmlWrapper, styles.htmlWrapperWeb] : styles.htmlWrapper}>
       <Suspense fallback={null}>
         <LazyRenderHTML
           key={prepared.length}
           source={{ html: prepared }}
           contentWidth={contentWidth}
           {...(customHTMLElementModels ? { customHTMLElementModels } : {})}
-          renderers={renderers as any}
-          defaultTextProps={{ selectable: Platform.OS !== "web" }}
+          {...(renderers ? { renderers } : {})}
+          defaultTextProps={{ selectable: !isWeb }}
           onLinkPress={handleLinkPress}
           baseStyle={baseStyle as any}
           tagsStyles={tagsStyles as any}
-          ignoredDomTags={["script", "style"]}
+          ignoredDomTags={['script', 'style']}
         />
       </Suspense>
     </View>
-  );
+  )
 });
 
-export default StableContent;
+export default StableContent
 
 const styles = StyleSheet.create({
   htmlWrapper: {
-    flexDirection: "column",
-    width: "100%",
-    alignSelf: "center",
+    flexDirection: 'column',
+    width: '100%',
+    alignSelf: 'center'
+  },
+  htmlWrapperWeb: {
+    width: '100%',
   },
   ytStub: {
     marginVertical: DESIGN_TOKENS.spacing.sm,
     aspectRatio: 16 / 9,
-    backgroundColor: "#eee",
+    backgroundColor: '#eee',
     borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   ytStubText: {
-    color: "#111",
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: '#111',
+    fontSize: DESIGN_TOKENS.typography.sizes.sm
   },
   instagramEmbedWrapper: {
     marginVertical: 14,
-    width: "100%",
-    maxWidth: "100%",
-    alignSelf: "stretch",
-    overflow: "hidden",
+    width: '100%',
+    maxWidth: '100%',
+    alignSelf: 'stretch',
+    overflow: 'hidden'
   },
   instagramEmbedWrapperWeb: {
-    width: "100vw",
-    maxWidth: "100vw",
-    marginLeft: "calc(50% - 50vw)",
-    marginRight: "calc(50% - 50vw)",
-  },
-});
+    width: '100%',
+    maxWidth: '100%',
+  }
+})
