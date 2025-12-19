@@ -2,6 +2,28 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import SearchAndFilterBar from '@/components/listTravel/SearchAndFilterBar';
 
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () =>
+    (global as any).__mockResponsive ?? {
+      width: 1024,
+      height: 768,
+      isSmallPhone: false,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: true,
+      isMobile: false,
+      isPortrait: false,
+      isLandscape: true,
+      orientation: 'landscape',
+      breakpoints: {},
+      isAtLeast: () => true,
+      isAtMost: () => false,
+      isBetween: () => false,
+    },
+}));
+
 describe('SearchAndFilterBar', () => {
   const mockSetSearch = jest.fn();
   const mockOnToggleFilters = jest.fn();
@@ -22,6 +44,24 @@ describe('SearchAndFilterBar', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (global as any).__mockResponsive = {
+      width: 1024,
+      height: 768,
+      isSmallPhone: false,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: true,
+      isMobile: false,
+      isPortrait: false,
+      isLandscape: true,
+      orientation: 'landscape',
+      breakpoints: {},
+      isAtLeast: () => true,
+      isAtMost: () => false,
+      isBetween: () => false,
+    };
   });
 
   it('renders search input', () => {

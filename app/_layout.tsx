@@ -232,6 +232,27 @@ function RootLayoutNav() {
       return () => window.removeEventListener('unhandledrejection', onUnhandled);
     }, []);
 
+    // Avoid keeping focus inside screens that become aria-hidden after navigation (web)
+    useEffect(() => {
+      if (!isWeb) return;
+      const active = document.activeElement as HTMLElement | null;
+      if (active && typeof active.blur === 'function') {
+        active.blur();
+      }
+
+      const main = document.getElementById('main-content');
+      if (main) {
+        const hadTabIndex = main.hasAttribute('tabindex');
+        if (!hadTabIndex) {
+          main.setAttribute('tabindex', '-1');
+        }
+        main.focus();
+        if (!hadTabIndex) {
+          main.removeAttribute('tabindex');
+        }
+      }
+    }, [pathname]);
+
     useEffect(() => {
       if (fontError && !isWeb) {
         console.error("Font loading error:", fontError);

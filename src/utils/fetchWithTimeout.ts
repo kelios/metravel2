@@ -16,12 +16,16 @@ export async function fetchWithTimeout(
     const externalSignal = options.signal;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
+    let cleanupExternalAbort: (() => void) | undefined;
 
     // Если есть внешний signal, слушаем его для отмены
     if (externalSignal) {
-        externalSignal.addEventListener('abort', () => {
-            controller.abort();
-        });
+        const abortHandler = () => controller.abort();
+        externalSignal.addEventListener('abort', abortHandler);
+        cleanupExternalAbort = () => externalSignal.removeEventListener('abort', abortHandler);
+        if (externalSignal.aborted) {
+            abortHandler();
+        }
     }
 
     try {
@@ -29,10 +33,8 @@ export async function fetchWithTimeout(
             ...options,
             signal: controller.signal,
         });
-        clearTimeout(timeoutId);
         return response;
     } catch (error: any) {
-        clearTimeout(timeoutId);
         if (error.name === 'AbortError') {
             // Если отмена произошла из-за внешнего signal, пробрасываем оригинальную ошибку
             if (externalSignal?.aborted) {
@@ -41,6 +43,9 @@ export async function fetchWithTimeout(
             throw new Error(`Превышено время ожидания (${timeout}ms). Попробуйте позже.`);
         }
         throw error;
+    } finally {
+        clearTimeout(timeoutId);
+        cleanupExternalAbort?.();
     }
 }
 

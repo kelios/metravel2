@@ -42,7 +42,7 @@ try {
   });
   console.log('\n✅ Unit тесты пройдены!');
 } catch (error) {
-  console.error('\n❌ Unit тесты провалились!');
+  console.error('\n❌ Unit тесты провалились!', error);
   process.exit(1);
 }
 

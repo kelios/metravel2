@@ -120,7 +120,7 @@ const patchIfPresent = (filePath, transform) => {
       return true;
     }
     return false;
-  } catch (_err) {
+  } catch {
     return false;
   }
 };
@@ -179,11 +179,11 @@ const patchPrepareEsm = (src) => {
     "const hasTouchableProperty = typeof _hasTouchableProperty === 'function' ? _hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);";
   const rewritten = src
     .replace(
-      /import\s+\{\s*hasTouchableProperty\s*,\s*parseTransformProp\s*\}\s+from\s+['\"]\.['\"];?/,
+      /import\s+\{\s*hasTouchableProperty\s*,\s*parseTransformProp\s*\}\s+from\s+['"].['"];?/,
       "import { hasTouchableProperty as _hasTouchableProperty, parseTransformProp } from '.';"
     )
     .replace(
-      /import\s+\{\s*parseTransformProp\s*,\s*hasTouchableProperty\s*\}\s+from\s+['\"]\.['\"];?/,
+      /import\s+\{\s*parseTransformProp\s*,\s*hasTouchableProperty\s*\}\s+from\s+['"].['"];?/,
       "import { parseTransformProp, hasTouchableProperty as _hasTouchableProperty } from '.';"
     );
 
@@ -206,7 +206,7 @@ const patchPrepareCjs = (src) => {
   if (src.includes("const _hasTouchableProperty = typeof _.hasTouchableProperty")) {
     return src;
   }
-  const requireLine = "var _ = require(\".\");";
+  const requireLine = 'var _ = require(".");';
   let next = src;
   if (next.includes(requireLine)) {
     next = next.replace(
@@ -227,11 +227,11 @@ const patchWebShapeEsm = (src) => {
     "const hasTouchableProperty = typeof _hasTouchableProperty === 'function' ? _hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);";
   const rewritten = src
     .replace(
-      /import\s+\{\s*camelCaseToDashed\s*,\s*hasTouchableProperty\s*,\s*remeasure\s*\}\s+from\s+['\"]\.\/utils['\"];?/,
+      /import\s+\{\s*camelCaseToDashed\s*,\s*hasTouchableProperty\s*,\s*remeasure\s*\}\s+from\s+['"].\/utils['"];?/,
       "import { camelCaseToDashed, hasTouchableProperty as _hasTouchableProperty, remeasure } from './utils';"
     )
     .replace(
-      /import\s+\{\s*hasTouchableProperty\s*,\s*camelCaseToDashed\s*,\s*remeasure\s*\}\s+from\s+['\"]\.\/utils['\"];?/,
+      /import\s+\{\s*hasTouchableProperty\s*,\s*camelCaseToDashed\s*,\s*remeasure\s*\}\s+from\s+['"].\/utils['"];?/,
       "import { hasTouchableProperty as _hasTouchableProperty, camelCaseToDashed, remeasure } from './utils';"
     );
 
@@ -252,7 +252,7 @@ const patchWebShapeCjs = (src) => {
   if (src.includes('var _hasTouchableProperty =')) {
     return src;
   }
-  const from = "var _utils = require(\"./utils\");";
+  const from = 'var _utils = require("./utils");';
   if (!src.includes(from)) {
     return src;
   }

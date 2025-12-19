@@ -51,8 +51,12 @@ function normalizePathname(pathname: string | null | undefined) {
 
 function getResolvedPathname(pathname: string | null | undefined) {
   const normalized = normalizePathname(pathname);
+  // Предпочитаем значение из роутера; к window обращаемся только если pathname пуст
+  if (normalized && normalized !== undefined) {
+    return normalized;
+  }
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return normalizePathname(window.location.pathname || normalized);
+    return normalizePathname(window.location.pathname);
   }
   return normalized;
 }

@@ -63,6 +63,8 @@ export default function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
+    alignSelf: 'stretch',
     paddingHorizontal: 60,
     paddingVertical: 100,
     backgroundColor: DESIGN_TOKENS.colors.primary,

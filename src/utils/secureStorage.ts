@@ -18,6 +18,11 @@ const ENCRYPTION_KEY = 'metravel_encryption_key_v1'; // В production долже
 function simpleEncrypt(text: string, key: string): string {
   if (Platform.OS !== 'web') return text;
   
+  // SSR/web-worker safety: btoa может отсутствовать
+  if (typeof btoa !== 'function') {
+    return text;
+  }
+
   let result = '';
   for (let i = 0; i < text.length; i++) {
     result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
@@ -28,6 +33,10 @@ function simpleEncrypt(text: string, key: string): string {
 function simpleDecrypt(encrypted: string, key: string): string {
   if (Platform.OS !== 'web') return encrypted;
   
+  if (typeof atob !== 'function') {
+    return '';
+  }
+
   try {
     const text = atob(encrypted); // Base64 decode
     let result = '';

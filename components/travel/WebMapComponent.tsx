@@ -7,10 +7,16 @@ type LeafletNS = any;
 type ReactLeafletNS = typeof import('react-leaflet');
 
 const reverseGeocode = async (latlng: any) => {
-    const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1`
-    );
-    return await response.json();
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1`
+        );
+        if (!response.ok) return null;
+        return await response.json();
+    } catch {
+        // Network/parse errors: let caller fallback to empty address
+        return null;
+    }
 };
 
 type WebMapComponentProps = {

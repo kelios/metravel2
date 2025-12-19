@@ -418,7 +418,8 @@ function ListTravel({
     const windowHeight = height;
 
     // ✅ АДАПТИВНОСТЬ: Определяем устройство и ориентацию
-    const isMobileDevice = isPhone || isLargePhone;
+    // На планшетах в портретной ориентации ведем себя как на мобильном: скрываем сайдбар и даем больше ширины сетке
+    const isMobileDevice = isPhone || isLargePhone || (isTabletSize && isPortrait);
     const isTablet = isTabletSize;
     const isDesktop = isDesktopSize;
 

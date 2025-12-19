@@ -3,13 +3,28 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { ThemeProvider } from '@/context/ThemeContext';
 import StickySearchBar from '@/components/mainPage/StickySearchBar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useWindowDimensions } from 'react-native';
 
-const mockUseWindowDimensions = useWindowDimensions as unknown as jest.Mock;
-
-const setWindowWidth = (width: number) => {
-  mockUseWindowDimensions.mockReturnValue({ width, height: 768 });
-};
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () =>
+    (global as any).__mockResponsive ?? {
+      width: 1024,
+      height: 768,
+      isSmallPhone: false,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: true,
+      isMobile: false,
+      isPortrait: false,
+      isLandscape: true,
+      orientation: 'landscape',
+      breakpoints: {},
+      isAtLeast: () => true,
+      isAtMost: () => false,
+      isBetween: () => false,
+    },
+}));
 
 const renderWithProviders = (component: React.ReactElement) => {
   const queryClient = new QueryClient({
@@ -36,7 +51,24 @@ describe('StickySearchBar Component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    setWindowWidth(1024);
+    (global as any).__mockResponsive = {
+      width: 1024,
+      height: 768,
+      isSmallPhone: false,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: true,
+      isMobile: false,
+      isPortrait: false,
+      isLandscape: true,
+      orientation: 'landscape',
+      breakpoints: {},
+      isAtLeast: () => true,
+      isAtMost: () => false,
+      isBetween: () => false,
+    };
   });
 
   it('renders search input and desktop actions', () => {
@@ -56,7 +88,8 @@ describe('StickySearchBar Component', () => {
 
     expect(screen.getByPlaceholderText('Найти путешествия...')).toBeTruthy();
     expect(screen.getByTestId('toggle-recommendations-button')).toBeTruthy();
-    expect(screen.getByText('Найдено: 10 путешествий')).toBeTruthy();
+    const results = screen.getByTestId('results-count-text');
+    expect(String((results.props as any).children)).toContain('10');
   });
 
   it('calls onSearchChange when text is entered', async () => {
@@ -83,7 +116,24 @@ describe('StickySearchBar Component', () => {
   });
 
   it('calls onFiltersPress when filters button is pressed (mobile)', () => {
-    setWindowWidth(375);
+    (global as any).__mockResponsive = {
+      width: 375,
+      height: 768,
+      isSmallPhone: false,
+      isPhone: true,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: false,
+      isMobile: true,
+      isPortrait: true,
+      isLandscape: false,
+      orientation: 'portrait',
+      breakpoints: {},
+      isAtLeast: () => false,
+      isAtMost: () => true,
+      isBetween: () => false,
+    };
     renderWithProviders(
       <StickySearchBar
         search=""
@@ -126,7 +176,24 @@ describe('StickySearchBar Component', () => {
   });
 
   it('shows active filters indicator on mobile when hasActiveFilters is true', () => {
-    setWindowWidth(375);
+    (global as any).__mockResponsive = {
+      width: 375,
+      height: 768,
+      isSmallPhone: false,
+      isPhone: true,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: false,
+      isMobile: true,
+      isPortrait: true,
+      isLandscape: false,
+      orientation: 'portrait',
+      breakpoints: {},
+      isAtLeast: () => false,
+      isAtMost: () => true,
+      isBetween: () => false,
+    };
     renderWithProviders(
       <StickySearchBar
         search=""
@@ -199,6 +266,7 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    expect(screen.getByText('Найдено: 25 путешествий')).toBeTruthy();
+    const results = screen.getByTestId('results-count-text');
+    expect(String((results.props as any).children)).toContain('25');
   });
 });

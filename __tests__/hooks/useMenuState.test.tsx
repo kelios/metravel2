@@ -3,9 +3,50 @@ import { renderHook, act } from '@testing-library/react-native';
 import * as RN from 'react-native';
 import { useMenuState } from '@/hooks/useMenuState';
 
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () =>
+    (global as any).__mockResponsive ?? {
+      width: 1024,
+      height: 768,
+      isSmallPhone: false,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: true,
+      isMobile: false,
+      isPortrait: false,
+      isLandscape: true,
+      orientation: 'landscape',
+      breakpoints: {},
+      isAtLeast: () => true,
+      isAtMost: () => false,
+      isBetween: () => false,
+    },
+}));
+
 describe('useMenuState', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+
+    (global as any).__mockResponsive = {
+      width: 1024,
+      height: 768,
+      isSmallPhone: false,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: true,
+      isMobile: false,
+      isPortrait: false,
+      isLandscape: true,
+      orientation: 'landscape',
+      breakpoints: {},
+      isAtLeast: () => true,
+      isAtMost: () => false,
+      isBetween: () => false,
+    };
 
     // Мокаем анимацию, чтобы сразу устанавливать конечное значение
     jest.spyOn(RN.Animated, 'timing').mockImplementation(((value: any, config: any) => ({
@@ -17,6 +58,11 @@ describe('useMenuState', () => {
   });
 
   it('initializes desktop menu as open with correct width', () => {
+    (global as any).__mockResponsive = {
+      ...(global as any).__mockResponsive,
+      width: 1400,
+      height: 800,
+    };
     jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({ width: 1400, height: 800 } as any);
 
     const { result } = renderHook(() => useMenuState(false));
@@ -28,6 +74,16 @@ describe('useMenuState', () => {
   });
 
   it('toggles menu open/close on mobile and animates position', () => {
+    (global as any).__mockResponsive = {
+      ...(global as any).__mockResponsive,
+      width: 400,
+      height: 800,
+      isDesktop: false,
+      isMobile: true,
+      isPortrait: true,
+      isLandscape: false,
+      orientation: 'portrait',
+    };
     jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({ width: 400, height: 800 } as any);
 
     const { result } = renderHook(() => useMenuState(true));
@@ -49,6 +105,11 @@ describe('useMenuState', () => {
   });
 
   it('openMenuOnDesktop forces menu open on desktop', () => {
+    (global as any).__mockResponsive = {
+      ...(global as any).__mockResponsive,
+      width: 1280,
+      height: 800,
+    };
     jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({ width: 1280, height: 800 } as any);
 
     const { result } = renderHook(() => useMenuState(false));

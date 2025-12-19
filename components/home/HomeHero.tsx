@@ -8,6 +8,7 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { useResponsive } from '@/hooks/useResponsive';
 import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/components/layout';
+import { METRICS } from '@/constants/layout';
 
 interface HomeHeroProps {
   travelsCount?: number;

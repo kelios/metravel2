@@ -3,6 +3,10 @@ import { render, waitFor, fireEvent } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import MapScreen from '@/app/(tabs)/map'
 
+jest.mock('@/hooks/useDebouncedValue', () => ({
+  useDebouncedValue: (value: any) => value,
+}))
+
 // Мокаем expo-router/usePathname, чтобы не тянуть реальный роутер
 jest.mock('expo-router', () => ({
   usePathname: () => '/map',
