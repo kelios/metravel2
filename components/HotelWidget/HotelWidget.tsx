@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Platform, View, Text } from 'react-native';
+import { Platform } from 'react-native';
 import { normalize, transliterate, CITY_ALIASES, MANUAL_IDS } from "@/utils/CityUtils";
 import { useInView } from 'react-intersection-observer';
 
@@ -120,11 +120,11 @@ export default function HotelWidget({ points }: Props) {
     if (Platform.OS !== 'web' || !locationId) return null;
 
     return (
-        <View ref={refInView} style={{ width: '100%', marginBottom: 32 }}>
-            <Text style={{ fontSize: 20, fontWeight: '600', marginBottom: 8 }}>Отели рядом</Text>
-            <View style={{ width: '100%', minHeight: 600 }}>
+        <div ref={refInView as any} style={{ width: '100%', marginBottom: 32 }}>
+            <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Отели рядом</div>
+            <div style={{ width: '100%', minHeight: 600 }}>
                 {inView && <div ref={ref} />}
-            </View>
-        </View>
+            </div>
+        </div>
     );
 }

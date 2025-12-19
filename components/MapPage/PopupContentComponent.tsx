@@ -829,7 +829,6 @@ const styles = `
   line-height: 1;
   white-space: nowrap;
 }
-`;
 
 // Безопасное добавление стилей
 if (typeof document !== 'undefined') {
@@ -844,10 +843,6 @@ if (typeof document !== 'undefined') {
       styleTag = doc.createElement('style');
       styleTag.id = id;
       doc.head.appendChild(styleTag);
-    }
-
-    if (!styleTag) {
-      return;
     }
 
     if (styleTag.innerHTML !== styles) {

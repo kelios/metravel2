@@ -671,9 +671,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
                 <View
                   style={[
                     styles.loadingOverlay,
-                    Platform.OS === "web" && ({ pointerEvents: "none" } as any),
                   ]}
-                  {...(Platform.OS !== "web" ? ({ pointerEvents: "none" } as any) : {})}
                   testID={`slider-loading-overlay-${index}`}
                 >
                   <ActivityIndicator color="#0f172a" />
@@ -778,9 +776,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
             style={[
               styles.counter,
               isMobile && styles.counterMobile,
-              Platform.OS === "web" && ({ pointerEvents: "none" } as any),
             ]}
-            {...(Platform.OS !== "web" ? ({ pointerEvents: "none" } as any) : {})}
           >
             <View style={styles.counterContainer}>
               <Text style={styles.counterText}>
@@ -796,9 +792,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
             style={[
               styles.dots,
               isMobile && styles.dotsMobile,
-              Platform.OS === "web" && ({ pointerEvents: "none" } as any),
             ]}
-            {...(Platform.OS !== "web" ? ({ pointerEvents: "none" } as any) : {})}
           >
             <View style={styles.dotsContainer}>
               {images.map((_, i) => (
@@ -840,12 +834,6 @@ const styles = StyleSheet.create<Record<string, any>>({
       web: {
         boxShadow: "0 25px 60px rgba(15,23,42,0.12)",
         backdropFilter: "blur(26px)",
-      },
-      ios: {
-        shadowColor: "#0f172a",
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.12,
-        shadowRadius: 24,
       },
       android: {
         elevation: 8,
@@ -895,12 +883,6 @@ const styles = StyleSheet.create<Record<string, any>>({
     ...Platform.select({
       web: {
         filter: "drop-shadow(0 25px 45px rgba(15,23,42,0.18))",
-      },
-      ios: {
-        shadowColor: "#0f172a",
-        shadowOpacity: 0.15,
-        shadowRadius: 30,
-        shadowOffset: { width: 0, height: 18 },
       },
       android: {
         elevation: 10,
@@ -994,12 +976,6 @@ const styles = StyleSheet.create<Record<string, any>>({
         boxShadow: "0 12px 24px rgba(15,23,42,0.15)",
         backdropFilter: "blur(16px)",
       },
-      ios: {
-        shadowColor: "#0f172a",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
-      },
       android: {
         elevation: 6,
       },
@@ -1029,11 +1005,7 @@ const styles = StyleSheet.create<Record<string, any>>({
     justifyContent: "center",
     alignItems: "center",
   },
-  arrowIcon: {
-    textShadowColor: "rgba(15,23,42,0.35)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
+  arrowIcon: {},
   dots: {
     position: "absolute",
     bottom: 16,
