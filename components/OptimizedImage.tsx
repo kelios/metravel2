@@ -82,10 +82,6 @@ export function OptimizedImage({
         resizeMode="cover"
         onLoad={handleLoad}
         onError={handleError}
-        // Performance optimizations
-        fadeDuration={priority === 'high' ? 0 : 200}
-        // LCP optimizations for high priority images
-        priority={priority === 'high' ? 'high' : 'low'}
         // Add explicit dimensions for layout stability
         width={containerWidth}
         height={containerHeight}
@@ -116,7 +112,6 @@ export function OptimizedGalleryImage({ src, alt, size = 'medium' }: {
       alt={alt}
       containerWidth={config.width}
       containerHeight={config.height}
-      priority={size === 'large' ? 'high' : 'low'}
     />
   );
 }
@@ -132,7 +127,6 @@ export function OptimizedDescriptionImage({ src, alt }: {
       alt={alt}
       containerWidth={473}
       containerHeight={229}
-      priority="low"
     />
   );
 }
