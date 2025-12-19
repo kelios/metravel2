@@ -1,5 +1,6 @@
 import React from 'react';
-import renderer, { ReactTestInstance } from 'react-test-renderer';
+import renderer from 'react-test-renderer';
+import type { ReactTestInstance } from 'react-test-renderer';
 import SelectComponent from '@/components/SelectComponent';
 
 const options = [

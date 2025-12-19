@@ -95,7 +95,7 @@ describe('ListTravel - Countries Filter Normalization', () => {
             const p: Record<string, any> = {};
             Object.entries(filter).forEach(([k, v]) => {
                 if (v === undefined || v === null) return;
-                if (v === "") return;
+                if (typeof v === "string" && v === "") return;
                 if (Array.isArray(v) && v.length === 0) return; // ✅ Ключевая проверка
                 if (Array.isArray(v) ? v.length > 0 : v) {
                     p[k] = v;

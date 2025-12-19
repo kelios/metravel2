@@ -1,6 +1,7 @@
 // ResultsCounter.test.tsx - Тесты для компонента ResultsCounter
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import { ActivityIndicator } from 'react-native';
 import ResultsCounter from '@/components/listTravel/ResultsCounter';
 
 // Mock Platform
@@ -24,7 +25,7 @@ describe('ResultsCounter', () => {
       );
       
       expect(getByText('Загрузка...')).toBeTruthy();
-      expect(UNSAFE_getByType('ActivityIndicator')).toBeTruthy();
+      expect(UNSAFE_getByType(ActivityIndicator)).toBeTruthy();
     });
 
     it('does not show count when loading', () => {
