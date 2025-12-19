@@ -238,7 +238,11 @@ export default function ProfileScreen() {
           <View style={styles.headerRow}>
             <View style={styles.avatar}>
               {profile?.avatar ? (
-                <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
+                <Image
+                  source={{ uri: profile.avatar }}
+                  style={styles.avatarImage}
+                  resizeMode="cover"
+                />
               ) : (
                 <Feather name="user" size={28} color={DESIGN_TOKENS.colors.primary} />
               )}

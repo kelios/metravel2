@@ -6,6 +6,7 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { Platform, Alert } from 'react-native';
 import { usePdfExport } from '@/src/hooks/usePdfExport';
 import { ExportStage } from '@/src/types/pdf-export';
+import type { ChecklistSection } from '@/components/export/BookSettingsModal';
 
 const mockGenerateTravelsHtml = jest.fn(async () => '<html><body><section class="pdf-page">Test</section></body></html>');
 const mockOpenBookPreviewWindow = jest.fn();
@@ -40,13 +41,11 @@ jest.mock('@/src/services/book/BookHtmlExportService', () => ({
 }));
 
 jest.mock('@/src/utils/openBookPreviewWindow', () => ({
-  openBookPreviewWindow: (...args) => mockOpenBookPreviewWindow(...args),
+  openBookPreviewWindow: (...args: any[]) => mockOpenBookPreviewWindow(...args),
 }));
 
-global.URL = {
-  createObjectURL: jest.fn(() => 'blob:mock-url'),
-  revokeObjectURL: jest.fn(),
-};
+global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
+global.URL.revokeObjectURL = jest.fn();
 
 const mockDocument = {
   createElement: jest.fn((tag) => {
@@ -74,7 +73,7 @@ const mockDocument = {
   querySelectorAll: jest.fn(() => []),
 };
 
-global.document = mockDocument;
+global.document = mockDocument as unknown as Document;
 
 const originalPlatformOS = Platform.OS;
 const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
@@ -129,7 +128,7 @@ describe('usePdfExport', () => {
     includeGallery: true,
     includeMap: true,
     includeChecklists: false,
-    checklistSections: ['clothing', 'food', 'electronics'],
+    checklistSections: ['clothing', 'food', 'electronics'] as ChecklistSection[],
   };
 
   beforeEach(() => {

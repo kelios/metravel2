@@ -3,7 +3,7 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { View } from 'react-native';
 import { ThemeProvider } from '@/context/ThemeContext';
 import TravelSidebar from '@/components/listTravel/TravelSidebar';
-import type { FilterState } from '@/components/listTravel/utils/listTravelTypes';
+import type { FilterState } from '@/components/listTravel/ModernFilters';
 
 type MockFilterGroup = {
   key: string;

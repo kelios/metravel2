@@ -26,13 +26,11 @@ describe('useKeyboardShortcuts', () => {
 
     // Перехватываем обработчик keydown, который вешает хук
     lastKeydownHandler = null
-    // @ts-expect-error - тестовая заглушка
     document.addEventListener = jest.fn((type: string, handler: any) => {
       if (type === 'keydown') {
         lastKeydownHandler = handler
       }
     })
-    // @ts-expect-error - тестовая заглушка
     document.removeEventListener = jest.fn()
   })
 
