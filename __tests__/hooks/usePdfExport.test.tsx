@@ -118,7 +118,7 @@ describe('usePdfExport', () => {
   const mockSettings = {
     title: 'Test Book',
     subtitle: '',
-    coverType: 'auto',
+    coverType: 'auto' as const,
     template: 'minimal',
     format: 'A4',
     orientation: 'portrait',
@@ -128,10 +128,6 @@ describe('usePdfExport', () => {
     includeToc: true,
     includeGallery: true,
     includeMap: true,
-    colorTheme: 'blue',
-    fontFamily: 'sans',
-    photoMode: 'gallery',
-    mapMode: 'full-page',
     includeChecklists: false,
     checklistSections: ['clothing', 'food', 'electronics'],
   };

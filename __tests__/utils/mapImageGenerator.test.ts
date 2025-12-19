@@ -36,8 +36,8 @@ jest.mock('leaflet', () => ({
 
 describe('generateStaticMapUrl', () => {
   const points = [
-    { lat: 55.75, lng: 37.61 },
-    { lat: 59.93, lng: 30.31 },
+    { name: 'Moscow', lat: 55.75, lng: 37.61 },
+    { name: 'SPB', lat: 59.93, lng: 30.31 },
   ]
 
   it('returns empty string when no points provided', () => {
@@ -121,8 +121,8 @@ describe('generateLeafletRouteSnapshot', () => {
 
     const promise = generateLeafletRouteSnapshot(
       [
-        { lat: 10, lng: 20 },
-        { lat: 11, lng: 22 },
+        { name: 'A', lat: 10, lng: 20 },
+        { name: 'B', lat: 11, lng: 22 },
       ],
       { width: 320, height: 180, zoom: 9 }
     )

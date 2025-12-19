@@ -472,21 +472,12 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             !isError &&
             showEmptyState &&
             getEmptyStateMessage && (
-              isWebMobile ? (
-                // Web mobile: render a plain spacer to avoid any layout shifts from icons/text rendering
-                <View
-                  style={{
-                    height: STABLE_PLACEHOLDER_HEIGHT,
-                  }}
-                />
-              ) : (
-                <EmptyState
-                  icon={getEmptyStateMessage.icon}
-                  title={getEmptyStateMessage.title}
-                  description={getEmptyStateMessage.description}
-                  variant={getEmptyStateMessage.variant}
-                />
-              )
+              <EmptyState
+                icon={getEmptyStateMessage.icon}
+                title={getEmptyStateMessage.title}
+                description={getEmptyStateMessage.description}
+                variant={getEmptyStateMessage.variant}
+              />
             )}
 
           {/* Travel Cards Grid - Only show when we have data */}

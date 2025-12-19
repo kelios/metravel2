@@ -389,6 +389,8 @@ describe('TravelDataTransformer', () => {
           number_days: 0,
           companions: [],
           countryCode: '',
+          travel_image_thumb_url: '',
+          travel_image_thumb_small_url: '',
         },
       ];
 

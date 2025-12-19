@@ -107,7 +107,7 @@ describe('logger dev/prod behaviour', () => {
     expect(devMonitoring.captureMessage).not.toHaveBeenCalled()
 
     // prod
-    const prodModule = reloadLoggerWithEnv({ ...originalEnv, NODE_ENV: 'production' })
+    const prodModule = reloadLoggerWithEnv({ ...originalEnv, NODE_ENV: 'production' }, false)
     const prodMonitoring = {
       captureException: jest.fn(),
       captureMessage: jest.fn(),
