@@ -30,13 +30,13 @@ const BORDER_SUBTLE = DESIGN_TOKENS.colors.borderLight;
 const TEXT_MAIN = DESIGN_TOKENS.colors.text;
 const TEXT_SUBTLE = DESIGN_TOKENS.colors.textSubtle;
 
-interface FilterOption {
+export interface FilterOption {
   id: string;
   name: string;
   count?: number;
 }
 
-interface FilterGroup {
+export interface FilterGroup {
   key: string;
   title: string;
   options: FilterOption[];
@@ -44,9 +44,11 @@ interface FilterGroup {
   icon?: string;
 }
 
+export type FilterState = Record<string, string[]> & { year?: string | number; moderation?: number };
+
 interface ModernFiltersProps {
   filterGroups: FilterGroup[];
-  selectedFilters: Record<string, string[]>;
+  selectedFilters: FilterState;
   onFilterChange: (groupKey: string, optionId: string) => void;
   onClearAll: () => void;
   resultsCount?: number;

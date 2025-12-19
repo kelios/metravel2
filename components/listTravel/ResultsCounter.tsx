@@ -86,18 +86,13 @@ const styles = StyleSheet.create({
       default: spacing.md,
       web: 0,
     }),
-    ...Platform.select({
-      web: {
-        fontFamily: DESIGN_TOKENS.typography.fontFamily,
-      },
-    }),
   },
   text: {
     fontSize: Platform.select({
       default: 13,
       web: 14,
     }),
-    fontWeight: DESIGN_TOKENS.typography.weights.medium,
+    fontWeight: Number(DESIGN_TOKENS.typography.weights.medium) as any,
     color: palette.textMuted,
     ...Platform.select({
       web: {
@@ -110,7 +105,7 @@ const styles = StyleSheet.create({
       default: 13,
       web: 14,
     }),
-    fontWeight: DESIGN_TOKENS.typography.weights.regular,
+    fontWeight: Number(DESIGN_TOKENS.typography.weights.regular) as any,
     color: palette.textMuted,
     ...Platform.select({
       web: {

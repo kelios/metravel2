@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import ModernFilters from './ModernFilters';
-import type { FilterGroup } from '../utils/listTravelTypes';
-import type { FilterState } from '../utils/listTravelTypes';
+import type { FilterGroup } from './ModernFilters';
+import type { FilterState } from './ModernFilters';
 
 interface TravelSidebarProps {
   filterGroups: FilterGroup[];

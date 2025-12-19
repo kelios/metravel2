@@ -173,13 +173,20 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       filters.categories
         .map((c) => {
           // Safely handle cases where name might not be a string
-          const name = typeof c?.name === 'string' ? c.name.trim() : String(c?.name || '').trim();
+          const name =
+            typeof c === 'string'
+              ? c.trim()
+              : typeof c?.name === 'string'
+                ? c.name.trim()
+                : typeof c?.value === 'string'
+                  ? c.value.trim()
+                  : String(c || '').trim();
           if (!name) return null;
           const qty = travelCategoriesCount[name];
           if (!qty) return null;
           // ✅ ИСПРАВЛЕНИЕ: Создаем чистый объект только с нужными полями, чтобы избежать рендеринга лишних свойств
           return {
-            id: c?.id || name,
+            id: typeof c === 'object' && c !== null && 'id' in c ? (c as any).id || name : name,
             label: `${name} (${qty})`,
             value: name,
           };

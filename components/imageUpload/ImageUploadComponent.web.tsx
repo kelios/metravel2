@@ -347,10 +347,8 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        cursor: 'pointer',
         backgroundColor: palette.primarySoft,
         overflow: 'hidden',
-        transition: 'all 0.2s ease',
     },
     dropzoneActive: {
         backgroundColor: palette.primaryLight,
@@ -373,7 +371,6 @@ const styles = StyleSheet.create({
         height: '100%',
         backgroundColor: palette.primary,
         borderRadius: 4,
-        transition: 'width 0.3s ease',
     },
     progressText: {
         position: 'absolute',
