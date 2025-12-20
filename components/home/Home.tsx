@@ -73,14 +73,6 @@ export default function Home() {
   }, [isFocused, isAuthenticated, travelsCount]);
 
   const isMobile = isSmallPhone || isPhone;
-  const demoCards: { id: string; title: string }[] = useMemo(
-    () => [
-      { id: 'demo-1', title: 'Демо маршрут 1' },
-      { id: 'demo-2', title: 'Демо маршрут 2' },
-      { id: 'demo-3', title: 'Демо маршрут 3' },
-    ],
-    []
-  );
 
   if (isAuthenticated && isLoadingTravels) {
     return (
@@ -138,24 +130,6 @@ export default function Home() {
         </View>
       </ResponsiveContainer>
 
-      {/* Минимальный список карточек, чтобы тесты всегда видели travel-card-link */}
-      <ResponsiveContainer padding>
-        <View style={styles.cardsRow}>
-          {demoCards.map((card) => (
-            <Pressable
-              key={card.id}
-              testID="travel-card-link"
-              style={styles.card}
-              accessibilityRole="link"
-              accessibilityLabel={card.title}
-            >
-              <Text style={styles.cardTitle}>{card.title}</Text>
-              <Text style={styles.cardMeta}>Демо контент</Text>
-            </Pressable>
-          ))}
-        </View>
-      </ResponsiveContainer>
-
       <HomeHero travelsCount={travelsCount} />
       <HomeHowItWorks />
       
@@ -202,31 +176,6 @@ const styles = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.surface,
   },
   searchHint: {
-    color: DESIGN_TOKENS.colors.textSubtle,
-    fontSize: 12,
-  },
-  cardsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    flexWrap: 'wrap',
-  },
-  card: {
-    flexGrow: 0,
-    flexShrink: 0,
-    width: 200,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
-    marginBottom: 4,
-  },
-  cardMeta: {
     color: DESIGN_TOKENS.colors.textSubtle,
     fontSize: 12,
   },

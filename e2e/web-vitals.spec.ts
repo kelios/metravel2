@@ -27,9 +27,9 @@ async function gotoWithRetry(page: any, url: string) {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120_000 });
       lastError = null;
       break;
-    } catch (e) {
-      lastError = e;
-      const msg = String((e as any)?.message ?? e ?? '');
+    } catch (error) {
+      lastError = error;
+      const msg = String((error as any)?.message ?? error ?? '');
       const isTransient =
         msg.includes('ERR_CONNECTION_REFUSED') ||
         msg.includes('ERR_EMPTY_RESPONSE') ||
