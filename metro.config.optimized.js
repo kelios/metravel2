@@ -204,7 +204,7 @@ config.cacheStores = [
 config.reporter = {
   ...config.reporter,
   // Enable performance reporting
-  update: (snapshot) => {
+  update: (_snapshot) => {
     // Silent performance reporting
   },
 };

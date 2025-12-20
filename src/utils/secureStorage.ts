@@ -71,7 +71,7 @@ export async function setSecureItem(key: string, value: string): Promise<void> {
       try {
         const SecureStore = require('expo-secure-store');
         await SecureStore.setItemAsync(key, value);
-      } catch (error) {
+      } catch (_error) {
         // Если SecureStore не установлен, используем AsyncStorage с предупреждением
         if (__DEV__) {
           console.warn('expo-secure-store не установлен. Используется AsyncStorage (небезопасно для production)');
@@ -79,11 +79,11 @@ export async function setSecureItem(key: string, value: string): Promise<void> {
         await AsyncStorage.setItem(`${STORAGE_PREFIX}${key}`, value);
       }
     }
-  } catch (error) {
+  } catch (_error) {
     if (__DEV__) {
-      console.error('Ошибка при сохранении в secure storage:', error);
+      console.error('Ошибка при сохранении в secure storage:', _error);
     }
-    throw error;
+    throw _error;
   }
 }
 
@@ -108,7 +108,7 @@ export async function getSecureItem(key: string): Promise<string | null> {
       try {
         const SecureStore = require('expo-secure-store');
         return await SecureStore.getItemAsync(key);
-      } catch (error) {
+      } catch (_error) {
         // Если SecureStore не установлен, используем AsyncStorage
         if (__DEV__) {
           console.warn('expo-secure-store не установлен. Используется AsyncStorage');
@@ -116,9 +116,9 @@ export async function getSecureItem(key: string): Promise<string | null> {
         return await AsyncStorage.getItem(`${STORAGE_PREFIX}${key}`);
       }
     }
-  } catch (error) {
+  } catch (_error) {
     if (__DEV__) {
-      console.error('Ошибка при получении из secure storage:', error);
+      console.error('Ошибка при получении из secure storage:', _error);
     }
     return null;
   }
@@ -139,13 +139,13 @@ export async function removeSecureItem(key: string): Promise<void> {
       try {
         const SecureStore = require('expo-secure-store');
         await SecureStore.deleteItemAsync(key);
-      } catch (error) {
+      } catch (_error) {
         await AsyncStorage.removeItem(`${STORAGE_PREFIX}${key}`);
       }
     }
-  } catch (error) {
+  } catch (_error) {
     if (__DEV__) {
-      console.error('Ошибка при удалении из secure storage:', error);
+      console.error('Ошибка при удалении из secure storage:', _error);
     }
   }
 }

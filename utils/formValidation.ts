@@ -85,7 +85,7 @@ export function validateName(name: string | undefined | null): ValidationError |
 export function validateStep(
   step: number,
   formData: TravelFormLike,
-  markers?: any[] | null,
+  _markers?: any[] | null,
 ): ValidationResult {
   const errors: ValidationError[] = [];
 
@@ -389,4 +389,3 @@ export function getFieldError(field: string, errors: ValidationError[]): string 
   const error = errors.find(e => e.field === field);
   return error ? error.message : null;
 }
-

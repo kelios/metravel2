@@ -10,7 +10,7 @@ export class ErrorHandler {
   /**
    * Классифицирует ошибку и создает структурированный ExportError
    */
-  handle(_error: unknown, context?: Record<string, any>): ExportError {
+  handle(error: unknown, context?: Record<string, any>): ExportError {
     if (error instanceof ExportError) {
       return error;
     }

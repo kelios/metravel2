@@ -39,7 +39,7 @@ export class GalleryPageGenerator {
   }
 
   private renderHeader(travelName: string): string {
-    const { colors } = this.theme;
+    const { colors, typography } = this.theme;
 
     return `
       <div style="margin-bottom: 15mm; text-align: center;">
@@ -218,7 +218,7 @@ export class GalleryPageGenerator {
    * Полароид - ретро стиль с рамками и подписями
    */
   private renderPolaroidLayout(photos: GalleryPhoto[]): string {
-    const { colors, typography } = this.theme;
+    const { colors } = this.theme;
 
     return `
       <div style="

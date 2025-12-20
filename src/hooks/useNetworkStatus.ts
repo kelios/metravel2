@@ -74,7 +74,7 @@ export function useNetworkStatus(): NetworkStatus {
         return () => {
           unsubscribe();
         };
-      } catch (error) {
+      } catch (_error) {
         // Если NetInfo не установлен, используем fallback
         if (__DEV__) {
           console.warn('@react-native-community/netinfo не установлен. Используется fallback.');
@@ -99,4 +99,3 @@ export function useIsConnected(): boolean {
   const { isConnected } = useNetworkStatus();
   return isConnected;
 }
-

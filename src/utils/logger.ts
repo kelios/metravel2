@@ -132,7 +132,7 @@ export const logMessage = (
         console.warn(message, context);
         break;
       default:
-        console.log(message, context);
+        console.info(message, context);
     }
   }
   
@@ -146,4 +146,3 @@ export const logMessage = (
     }
   }
 };
-

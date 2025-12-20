@@ -642,7 +642,7 @@ export class EnhancedPdfGenerator {
     qrCode: string,
     pageNumber: number
   ): string {
-    const { colors, typography, spacing } = this.theme;
+    const { colors, typography } = this.theme;
     
     // Парсим контент
     const descriptionBlocks = travel.description
@@ -908,7 +908,7 @@ export class EnhancedPdfGenerator {
    * Рендерит страницу галереи
    */
   private renderGalleryPage(travel: TravelForBook, pageNumber: number): string {
-    const { colors, typography, spacing } = this.theme;
+    const { colors, typography } = this.theme;
     const photos = (travel.gallery || [])
       .map((item) => {
         const raw = typeof item === 'string' ? item : item?.url;

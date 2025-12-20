@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: DESIGN_TOKENS.spacing.xl,
     borderRadius: 999,
-    backgroundColor: '#229ED9',
+    backgroundColor: DESIGN_TOKENS.colors.primary,
     minHeight: 44,
   },
   buttonPressed: {

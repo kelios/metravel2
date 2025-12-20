@@ -79,31 +79,29 @@ export function useLayoutBatch() {
   const pendingWrites = useRef<(() => void)[]>([]);
   const animationFrameId = useRef<number | null>(null);
   
+  const flush = useCallback(() => {
+    if (animationFrameId.current) return;
+
+    animationFrameId.current = requestAnimationFrame(() => {
+      const reads = pendingReads.current.splice(0);
+      reads.forEach((read) => read());
+
+      const writes = pendingWrites.current.splice(0);
+      writes.forEach((write) => write());
+
+      animationFrameId.current = null;
+    });
+  }, []);
+
   const scheduleRead = useCallback((read: () => void) => {
     pendingReads.current.push(read);
     flush();
-  }, []);
+  }, [flush]);
   
   const scheduleWrite = useCallback((write: () => void) => {
     pendingWrites.current.push(write);
     flush();
-  }, []);
-  
-  const flush = useCallback(() => {
-    if (animationFrameId.current) return;
-    
-    animationFrameId.current = requestAnimationFrame(() => {
-      // Execute all reads first
-      const reads = pendingReads.current.splice(0);
-      reads.forEach(read => read());
-      
-      // Then execute all writes
-      const writes = pendingWrites.current.splice(0);
-      writes.forEach(write => write());
-      
-      animationFrameId.current = null;
-    });
-  }, []);
+  }, [flush]);
   
   useEffect(() => {
     return () => {
@@ -212,7 +210,7 @@ export function usePerformanceMonitor(name: string) {
   const end = useCallback(() => {
     const duration = performance.now() - startTimeRef.current;
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[Performance] ${name}: ${duration.toFixed(2)}ms`);
+      console.info(`[Performance] ${name}: ${duration.toFixed(2)}ms`);
     }
     return duration;
   }, [name]);

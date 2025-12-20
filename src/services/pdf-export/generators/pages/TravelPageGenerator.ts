@@ -98,7 +98,7 @@ export class TravelPageGenerator {
   }
 
   private renderPhotoOverlay(travel: TravelForBook): string {
-    const { colors, typography } = this.theme;
+    const { typography } = this.theme;
 
     return `
       <div style="

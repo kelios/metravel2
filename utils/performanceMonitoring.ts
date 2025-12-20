@@ -42,7 +42,7 @@ export class PerformanceMonitor {
       });
       observer.observe({ entryTypes: ['largest-contentful-paint'] });
       this.observers.push(observer);
-    } catch (e) {
+    } catch {
       console.warn('[Performance] LCP measurement not supported');
     }
   }
@@ -59,7 +59,7 @@ export class PerformanceMonitor {
       });
       observer.observe({ entryTypes: ['first-input'] });
       this.observers.push(observer);
-    } catch (e) {
+    } catch {
       console.warn('[Performance] FID measurement not supported');
     }
   }
@@ -79,7 +79,7 @@ export class PerformanceMonitor {
       });
       observer.observe({ entryTypes: ['layout-shift'] });
       this.observers.push(observer);
-    } catch (e) {
+    } catch {
       console.warn('[Performance] CLS measurement not supported');
     }
   }
@@ -104,7 +104,7 @@ export class PerformanceMonitor {
       });
       observer.observe({ entryTypes: ['paint'] });
       this.observers.push(observer);
-    } catch (e) {
+    } catch {
       console.warn('[Performance] FCP measurement not supported');
     }
   }
@@ -237,7 +237,7 @@ export function analyzeResourceTiming() {
     }
   });
 
-  console.table(analysis);
+  console.info('[Performance] Resource analysis', analysis);
   
   // Log specific issues
   if (analysis.slowResources.length > 0) {

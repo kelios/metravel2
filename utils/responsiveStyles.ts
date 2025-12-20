@@ -1,4 +1,4 @@
-import { StyleSheet, Platform, StatusBar, Dimensions, StyleProp, ViewStyle, TextStyle, ImageStyle } from 'react-native';
+import { StyleSheet, Platform, StatusBar, Dimensions, ViewStyle, TextStyle, ImageStyle } from 'react-native';
 import { METRICS, getSpacing, getBreakpoint } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 
@@ -47,7 +47,7 @@ export function createResponsiveStyleSheet<T extends NamedStyles<T> | NamedStyle
  */
 export function useResponsiveStyles<T extends NamedStyles<T> | NamedStyles<any>>(
   styles: T | NamedStyles<T>,
-  deps: any[] = []
+  _deps: any[] = []
 ): T {
   const responsive = useResponsive();
   

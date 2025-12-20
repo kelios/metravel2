@@ -11,22 +11,27 @@ import { getUserFriendlyError } from '@/src/utils/userFriendlyErrors';
 import { retry, isRetryableError } from '@/src/utils/retry';
 import { getSecureItem, setSecureItem } from '@/src/utils/secureStorage';
 
-const URLAPI: string =
+const rawApiUrl: string =
     process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
-if (!URLAPI) {
+if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }
 
-const DEFAULT_TIMEOUT = 10000; // 10 секунд
-const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запросов
+// Нормализуем базу API: гарантируем суффикс /api и убираем лишние слэши
+const URLAPI = (() => {
+    const trimmed = rawApiUrl.replace(/\/+$/, '');
+    return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+})();
 
-const LOGIN = `${URLAPI}/api/user/login/`;
-const LOGOUT = `${URLAPI}/api/user/logout/`;
-const REGISTER = `${URLAPI}/api/user/registration/`;
-const RESETPASSWORDLINK = `${URLAPI}/api/user/reset-password-link/`;
-const CONFIRM_REGISTER = `${URLAPI}/api/user/confirm-registration/`;
-const SETNEWPASSWORD = `${URLAPI}/api/user/set-password-after-reset/`;
-const SENDPASSWORD = `${URLAPI}/api/user/sendpassword/`;
+const DEFAULT_TIMEOUT = 10000; // 10 секунд
+
+const LOGIN = `${URLAPI}/user/login/`;
+const LOGOUT = `${URLAPI}/user/logout/`;
+const REGISTER = `${URLAPI}/user/registration/`;
+const RESETPASSWORDLINK = `${URLAPI}/user/reset-password-link/`;
+const CONFIRM_REGISTER = `${URLAPI}/user/confirm-registration/`;
+const SETNEWPASSWORD = `${URLAPI}/user/set-password-after-reset/`;
+const SENDPASSWORD = `${URLAPI}/user/sendpassword/`;
 
 export const loginApi = async (email: string, password: string): Promise<{
     token: string;

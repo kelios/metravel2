@@ -143,7 +143,7 @@ export function ProgressiveWrapper({
 
 // Hook for managing loading priorities
 export function useLoadingPriorities() {
-  const [priorities, setPriorities] = useState<Record<string, LoadPriority>>({
+  const [priorities] = useState<Record<string, LoadPriority>>({
     immediate: { immediate: true, high: true, normal: true, low: true },
     high: { immediate: false, high: true, normal: true, low: true },
     normal: { immediate: false, high: false, normal: true, low: true },
@@ -240,14 +240,14 @@ export function measureWebVitals() {
   new PerformanceObserver((entryList) => {
     const entries = entryList.getEntries();
     const lastEntry = entries[entries.length - 1];
-    console.log(`[Web Vitals] LCP: ${lastEntry.startTime}ms`);
+    console.info(`[Web Vitals] LCP: ${lastEntry.startTime}ms`);
   }).observe({ entryTypes: ['largest-contentful-paint'] });
 
   // First Input Delay (FID)
   new PerformanceObserver((entryList) => {
     const entries = entryList.getEntries();
     entries.forEach((entry: any) => {
-      console.log(`[Web Vitals] FID: ${entry.processingStart - entry.startTime}ms`);
+      console.info(`[Web Vitals] FID: ${entry.processingStart - entry.startTime}ms`);
     });
   }).observe({ entryTypes: ['first-input'] });
 
@@ -258,7 +258,7 @@ export function measureWebVitals() {
     entries.forEach((entry: any) => {
       if (!entry.hadRecentInput) {
         clsValue += entry.value;
-        console.log(`[Web Vitals] CLS: ${clsValue}`);
+        console.info(`[Web Vitals] CLS: ${clsValue}`);
       }
     });
   }).observe({ entryTypes: ['layout-shift'] });

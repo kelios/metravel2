@@ -9,15 +9,19 @@ import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { 
     setSecureItem, 
     getSecureItem, 
-    removeSecureItem, 
     removeSecureItems 
 } from '@/src/utils/secureStorage';
 
-const URLAPI: string =
+const rawApiUrl: string =
     process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
-if (!URLAPI) {
+if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }
+// Нормализуем: чтобы всегда был суффикс /api и не было двойных слэшей
+const URLAPI = (() => {
+    const trimmed = rawApiUrl.replace(/\/+$/, '');
+    return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+})();
 const DEFAULT_TIMEOUT = 10000;
 const LONG_TIMEOUT = 30000;
 
@@ -240,7 +244,7 @@ class ApiClient {
                     }
 
                     return await this.parseSuccessResponse<T>(retryResponse);
-                } catch (refreshError) {
+                } catch (_refreshError) {
                     // Если refresh не удался, пробрасываем ошибку
                     throw new ApiError(401, 'Требуется авторизация');
                 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Dimensions, ScaledSize } from 'react-native';
+import { Dimensions } from 'react-native';
 import { METRICS } from '@/constants/layout';
 
 type Breakpoint = keyof typeof METRICS.breakpoints;

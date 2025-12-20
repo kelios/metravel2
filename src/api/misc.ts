@@ -1,31 +1,34 @@
-import { FeedbackData, Filters, TravelFormData } from '@/src/types/types';
-import { Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Filters, TravelFormData } from '@/src/types/types';
 import { devError } from '@/src/utils/logger';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { sanitizeInput } from '@/src/utils/security';
 import { validateAIMessage, validateImageFile } from '@/src/utils/validation';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
-import { getUserFriendlyError } from '@/src/utils/userFriendlyErrors';
 import { getSecureItem } from '@/src/utils/secureStorage';
 
-const URLAPI: string =
+const rawApiUrl: string =
   process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
-if (!URLAPI) {
+if (!rawApiUrl) {
   throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }
+
+// Нормализуем базу API: гарантируем суффикс /api и убираем лишние слэши
+const URLAPI = (() => {
+  const trimmed = rawApiUrl.replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+})();
 
 const DEFAULT_TIMEOUT = 10000;
 const LONG_TIMEOUT = 30000;
 
-const SAVE_TRAVEL = `${URLAPI}/api/travels/upsert/`;
-const UPLOAD_IMAGE = `${URLAPI}/api/upload`;
-const GALLERY = `${URLAPI}/api/gallery`;
-const GET_FILTERS = `${URLAPI}/api/getFiltersTravel`;
-const GET_FILTERS_COUNTRY = `${URLAPI}/api/countriesforsearch`;
-const GET_ALL_COUNTRY = `${URLAPI}/api/countries/`;
-const SEND_FEEDBACK = `${URLAPI}/api/feedback/`;
-const SEND_AI_QUESTION = `${URLAPI}/api/chat`;
+const SAVE_TRAVEL = `${URLAPI}/travels/upsert/`;
+const UPLOAD_IMAGE = `${URLAPI}/upload`;
+const GALLERY = `${URLAPI}/gallery`;
+const GET_FILTERS = `${URLAPI}/getFiltersTravel/`;
+const GET_FILTERS_COUNTRY = `${URLAPI}/countriesforsearch/`;
+const GET_ALL_COUNTRY = `${URLAPI}/countries/`;
+const SEND_FEEDBACK = `${URLAPI}/feedback/`;
+const SEND_AI_QUESTION = `${URLAPI}/chat`;
 
 export const saveFormData = async (data: TravelFormData): Promise<TravelFormData> => {
   try {

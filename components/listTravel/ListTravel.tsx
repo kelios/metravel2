@@ -270,8 +270,10 @@ const RecommendationsTabs = lazy(() => import('./RecommendationsTabs'));
 
 // Simple delete function implementation
 const deleteTravel = async (id: string): Promise<void> => {
-    const URLAPI = process.env.EXPO_PUBLIC_API_URL || '';
-    const response = await fetch(`${URLAPI}/api/travels/${id}`, {
+    const raw = process.env.EXPO_PUBLIC_API_URL || '';
+    const trimmed = raw.replace(/\/+$/, '');
+    const normalized = trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+    const response = await fetch(`${normalized}/travels/${id}`, {
         method: 'DELETE',
     });
     if (!response.ok) {
@@ -1174,7 +1176,24 @@ function ListTravel({
           }
         }}
         availableWidth={effectiveWidth}
-        topContent={null}
+        topContent={
+          isExport ? (
+            <ExportBar
+              isMobile={isMobileDevice}
+              selectedCount={selectionCount}
+              allCount={travels.length}
+              onToggleSelectAll={toggleSelectAll}
+              onClearSelection={clearSelection}
+              onPreview={handleOpenSettingsForPreview}
+              onSave={handleOpenSettingsForSave}
+              onSettings={handleOpenSettingsForSave}
+              isGenerating={exportState.pdfExport.isGenerating}
+              progress={exportState.pdfExport.progress}
+              settingsSummary={exportState.settingsSummary}
+              hasSelection={hasSelection}
+            />
+          ) : null
+        }
         isRecommendationsVisible={isRecommendationsVisible}
         handleRecommendationsVisibilityChange={setIsRecommendationsVisible}
         activeFiltersCount={activeFiltersCount}

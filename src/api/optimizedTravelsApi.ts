@@ -4,14 +4,19 @@ import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { retry, isRetryableError } from '@/src/utils/retry';
 
-const URLAPI: string =
+const rawApiUrl: string =
   process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
-if (!URLAPI) {
+if (!rawApiUrl) {
   throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }
 
-const SAVE_TRAVEL = `${URLAPI}/api/travels/upsert/`;
-const DEFAULT_TIMEOUT = 10000;
+// Нормализуем базу API: гарантируем суффикс /api и убираем лишние слэши
+const URLAPI = (() => {
+  const trimmed = rawApiUrl.replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+})();
+
+const SAVE_TRAVEL = `${URLAPI}/travels/upsert/`;
 const LONG_TIMEOUT = 30000;
 
 interface OptimizedSaveOptions {
@@ -162,7 +167,7 @@ export const batchSaveFormData = async (
       batch.map(item => optimizedSaveFormData(item, options))
     );
 
-    batchResults.forEach((result, index) => {
+    batchResults.forEach((result, _index) => {
       if (result.status === 'fulfilled') {
         results.push(result.value);
       } else {

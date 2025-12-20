@@ -90,9 +90,11 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
             setPreviewFile(file);
             const objectUrl = URL.createObjectURL(file);
             setPreviewUrl(objectUrl);
+            return objectUrl;
         } else {
             const rnFile = file as { uri: string };
             setPreviewUrl(rnFile.uri);
+            return rnFile.uri;
         }
     }, []);
 
@@ -121,7 +123,7 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
             }
 
             // ✅ УЛУЧШЕНИЕ: Показываем превью
-            createPreview(file);
+            const previewCandidate = createPreview(file);
 
             setLoading(true);
 
@@ -158,10 +160,10 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
             setUploadProgress(100);
 
             const uploadedUrl = response?.url || response?.data?.url || response?.path || response?.file_url;
+            const visualUrl = previewCandidate || uploadedUrl || previewUrl;
 
-            if (uploadedUrl || previewUrl) {
+            if (uploadedUrl || visualUrl) {
                 // Показываем локальный preview в UI, но наружу отдаём URL с бэкенда (если есть)
-                const visualUrl = previewUrl || uploadedUrl;
                 const persistedUrl = uploadedUrl || visualUrl!;
                 setImageUri(visualUrl);
                 setPreviewUrl(visualUrl);

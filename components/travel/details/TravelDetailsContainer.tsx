@@ -2170,19 +2170,6 @@ const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boolean }> =
       </View>
     )}
 
-    {isMobile && (
-      <View
-        testID="travel-details-author"
-        style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
-      >
-        <Text style={styles.sectionHeaderText}>Автор</Text>
-        <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
-        <View style={{ marginTop: 12 }}>
-          <AuthorCard travel={travel} />
-        </View>
-      </View>
-    )}
-
     <View testID="travel-details-cta" style={[styles.sectionContainer, styles.ctaContainer]}>
       <CTASection travel={travel} />
     </View>
@@ -2507,7 +2494,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: DESIGN_TOKENS.spacing.sm,
-    flex: 1,
+    flexShrink: 1,
+    flexGrow: 1,
   },
   
   sectionHeaderIcon: {
@@ -2522,6 +2510,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: DESIGN_TOKENS.spacing.sm,
+    flexShrink: 0,
   },
   sectionHeaderBadge: {
     fontSize: Platform.select({ default: 11, web: 12 }),
@@ -2531,6 +2520,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: DESIGN_TOKENS.spacing.xxs,
     borderRadius: DESIGN_TOKENS.radii.pill,
+    flexShrink: 0,
   },
 
   sectionHeaderText: { 
@@ -2545,7 +2535,7 @@ const styles = StyleSheet.create({
       default: 28,
       web: 32,
     }),
-    flex: 1,
+    flexShrink: 1,
   },
   sectionSubtitle: {
     fontSize: Platform.select({ default: 14, web: 16 }),

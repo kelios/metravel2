@@ -168,7 +168,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
 
   return (
     <View style={[styles.container, isMobile && styles.containerMobile]}>
-      <View style={styles.content}>
+      <View style={[styles.content, isMobile && styles.contentMobile]}>
         {/* Аватар */}
         <Pressable
           style={styles.avatarSection}
@@ -291,6 +291,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.lg,
+  },
+  contentMobile: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: DESIGN_TOKENS.spacing.md,
   },
   avatarSection: {
     alignItems: 'center',
@@ -437,6 +442,8 @@ const styles = StyleSheet.create({
   viewButtonMobile: {
     paddingVertical: DESIGN_TOKENS.spacing.sm,
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    alignSelf: 'flex-start',
+    marginTop: DESIGN_TOKENS.spacing.sm,
   },
   viewButtonPressed: {
     backgroundColor: 'rgba(0, 0, 0, 0.04)', // ✅ УЛУЧШЕНИЕ: Нейтральный фон

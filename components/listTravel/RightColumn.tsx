@@ -157,7 +157,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
     const webWidth = Platform.OS === 'web' ? Dimensions.get('window').width : 0
     const isWebMobile = Platform.OS === 'web' && (isMobile || webWidth <= 420)
-    const showRecommendations = Platform.OS === 'web' && !isMobile && isRecommendationsVisible
+    const showRecommendations = isRecommendationsVisible
 
     const cardsWrapperStyle = useMemo<StyleProp<ViewStyle>>(() => {
       const resetPadding = {
@@ -301,14 +301,20 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     )
 
     const ListHeader = useMemo(() => {
+      const desktopHeight =
+        Platform.OS === 'web' && !isMobile ? RECOMMENDATIONS_TOTAL_HEIGHT : undefined
+
       return (
         <View
           onLayout={showRecommendations ? handleRecommendationsLayout : undefined}
-          style={{
-            height: showRecommendations ? RECOMMENDATIONS_TOTAL_HEIGHT : 0,
-            marginBottom: showRecommendations ? 24 : 0,
-            overflow: 'hidden',
-          }}
+          style={
+            showRecommendations
+              ? {
+                  marginBottom: 24,
+                  ...(desktopHeight ? { height: desktopHeight, overflow: 'hidden' } : {}),
+                }
+              : { height: 0, overflow: 'hidden' }
+          }
         >
           {showRecommendations && (
             <Suspense fallback={<RecommendationsPlaceholder />}>
@@ -316,8 +322,8 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             </Suspense>
           )}
         </View>
-      );
-    }, [showRecommendations, handleRecommendationsLayout]);
+      )
+    }, [showRecommendations, handleRecommendationsLayout, isMobile]);
 
     const [showDelayedSkeleton, setShowDelayedSkeleton] = useState(false)
 

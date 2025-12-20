@@ -187,28 +187,20 @@ export function usePerformanceMonitoring(
  */
 export function logPerformanceMetrics(metrics: PerformanceMetrics): void {
     if (__DEV__) {
-        console.group('📊 Performance Metrics');
-        if (metrics.lcp) {
-            const status = metrics.lcp < 2500 ? '✅' : metrics.lcp < 4000 ? '⚠️' : '❌';
-            console.log(`LCP: ${metrics.lcp.toFixed(2)}ms ${status}`);
-        }
-        if (metrics.fcp) {
-            const status = metrics.fcp < 1800 ? '✅' : '⚠️';
-            console.log(`FCP: ${metrics.fcp.toFixed(2)}ms ${status}`);
-        }
-        if (metrics.fid) {
-            const status = metrics.fid < 100 ? '✅' : '⚠️';
-            console.log(`FID: ${metrics.fid.toFixed(2)}ms ${status}`);
-        }
-        if (metrics.cls !== undefined) {
-            const status = metrics.cls < 0.1 ? '✅' : metrics.cls < 0.25 ? '⚠️' : '❌';
-            console.log(`CLS: ${metrics.cls.toFixed(4)} ${status}`);
-        }
-        if (metrics.ttfb) {
-            const status = metrics.ttfb < 800 ? '✅' : '⚠️';
-            console.log(`TTFB: ${metrics.ttfb.toFixed(2)}ms ${status}`);
-        }
-        console.groupEnd();
+        console.info('📊 Performance Metrics', {
+            lcp: metrics.lcp,
+            fcp: metrics.fcp,
+            fid: metrics.fid,
+            cls: metrics.cls,
+            ttfb: metrics.ttfb,
+            status: {
+                lcp: metrics.lcp ? (metrics.lcp < 2500 ? '✅' : metrics.lcp < 4000 ? '⚠️' : '❌') : undefined,
+                fcp: metrics.fcp ? (metrics.fcp < 1800 ? '✅' : '⚠️') : undefined,
+                fid: metrics.fid ? (metrics.fid < 100 ? '✅' : '⚠️') : undefined,
+                cls: metrics.cls !== undefined ? (metrics.cls < 0.1 ? '✅' : metrics.cls < 0.25 ? '⚠️' : '❌') : undefined,
+                ttfb: metrics.ttfb ? (metrics.ttfb < 800 ? '✅' : '⚠️') : undefined,
+            },
+        });
     }
 }
 

@@ -3,15 +3,21 @@ import { devError } from '@/src/utils/logger';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 
-const URLAPI: string =
+const rawApiUrl: string =
   process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
-if (!URLAPI) {
+if (!rawApiUrl) {
   throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }
 
+// Нормализуем базу API: гарантируем суффикс /api и убираем лишние слэши
+const URLAPI = (() => {
+  const trimmed = rawApiUrl.replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+})();
+
 const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запросов
 
-const GET_ARTICLES = `${URLAPI}/api/articles`;
+const GET_ARTICLES = `${URLAPI}/articles`;
 
 export const fetchArticles = async (
   page: number,

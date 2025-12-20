@@ -4,21 +4,27 @@ import { devError, devWarn } from '@/src/utils/logger';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 
-const URLAPI: string =
+const rawApiUrl: string =
   process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
-if (!URLAPI) {
+if (!rawApiUrl) {
   throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }
+
+// Нормализуем базу API: гарантируем суффикс /api и убираем лишние слэши
+const URLAPI = (() => {
+  const trimmed = rawApiUrl.replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+})();
 
 const DEFAULT_TIMEOUT = 10000; // 10 секунд
 const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запросов
 
-const SEARCH_TRAVELS_FOR_MAP = `${URLAPI}/api/travels/search_travels_for_map`;
-const GET_FILTER_FOR_MAP = `${URLAPI}/api/filterformap`;
-const GET_TRAVELS = `${URLAPI}/api/travels`;
-const GET_TRAVELS_POPULAR = `${URLAPI}/api/travelsPopular`;
-const GET_TRAVELS_OF_MONTH = `${URLAPI}/api/travels/of-month/`;
-const SEARCH_TRAVELS_NEAR_ROUTE = `${URLAPI}/api/travels/near-route/`;
+// 🔗 Сервер отдаёт 301 на URL без завершающего слэша — добавляем его сразу, чтобы избежать лишних редиректов.
+const SEARCH_TRAVELS_FOR_MAP = `${URLAPI}/travels/search_travels_for_map/`;
+const GET_FILTER_FOR_MAP = `${URLAPI}/filterformap/`;
+const GET_TRAVELS = `${URLAPI}/travels`;
+const GET_TRAVELS_OF_MONTH = `${URLAPI}/travels/of-month/`;
+const SEARCH_TRAVELS_NEAR_ROUTE = `${URLAPI}/travels/near-route/`;
 
 export const fetchTravelsNear = async (travel_id: number, signal?: AbortSignal) => {
   try {

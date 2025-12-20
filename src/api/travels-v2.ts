@@ -3,8 +3,7 @@
 // Этот файл показывает, как мигрировать существующие функции на новый apiClient
 
 import { apiClient, ApiError } from './client';
-import { Travel, Article, Filters } from '@/src/types/types';
-import { normalizeNumericArray } from '@/src/utils/filterQuery';
+import { Travel, Filters } from '@/src/types/types';
 import { devError } from '@/src/utils/logger';
 
 // ===== КОНСТАНТЫ ENDPOINTS =====
@@ -60,7 +59,8 @@ export const fetchTravelV2 = async (id: number): Promise<Travel> => {
  */
 export const fetchTravelBySlugV2 = async (slug: string): Promise<Travel> => {
     try {
-        return await apiClient.get<Travel>(`/api/travels/by-slug/${slug}`);
+        const safeSlug = encodeURIComponent(String(slug).replace(/^\/+/, ''));
+        return await apiClient.get<Travel>(`/travels/by-slug/${safeSlug}/`);
     } catch (error) {
         if (error instanceof ApiError) {
             devError('Error fetching travel by slug:', error.message);
@@ -104,7 +104,7 @@ export const fetchTravelsV2 = async (
     itemsPerPage: number,
     search: string,
     urlParams: Record<string, any>,
-    options?: { signal?: AbortSignal }
+    _options?: { signal?: AbortSignal }
 ) => {
     try {
         // Нормализуем фильтры
@@ -298,4 +298,3 @@ export const saveTravelV2 = async (data: any): Promise<any> => {
  *    - Мигрировать функции по одной
  *    - Тестировать каждую миграцию отдельно
  */
-

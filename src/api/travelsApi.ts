@@ -1,7 +1,5 @@
 import {
     Travel,
-    TravelsForMap,
-    TravelsMap,
 } from '@/src/types/types';
 import { devError, devWarn } from '@/src/utils/logger';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
@@ -9,18 +7,25 @@ import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { retry, isRetryableError } from '@/src/utils/retry';
 import { getSecureItem } from '@/src/utils/secureStorage';
 
-const URLAPI: string =
+const rawApiUrl: string =
     process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
-if (!URLAPI) {
+if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }
+
+// Нормализуем базу API: гарантируем суффикс /api и убираем лишние слэши
+const URLAPI = (() => {
+    const trimmed = rawApiUrl.replace(/\/+$/, '');
+    return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+})();
 
 const DEFAULT_TIMEOUT = 10000; // 10 секунд
 const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запросов
 
-const GET_TRAVELS = `${URLAPI}/api/travels`;
-const GET_RANDOM_TRAVELS = `${URLAPI}/api/travels/random`;
-const GET_TRAVELS_BY_SLUG = `${URLAPI}/api/travels/by-slug`;
+// Use trailing slash to avoid backend 301 redirects
+const GET_TRAVELS = `${URLAPI}/travels/`;
+const GET_RANDOM_TRAVELS = `${URLAPI}/travels/random`;
+const GET_TRAVELS_BY_SLUG = `${URLAPI}/travels/by-slug`;
 
 const travelDef: Travel = {
     name: 'test',
@@ -290,8 +295,7 @@ export const fetchTravels = async (
             where: whereObject,
         });
 
-        const baseUrl = GET_TRAVELS.endsWith('/') ? GET_TRAVELS : `${GET_TRAVELS}/`;
-        const urlTravel = `${baseUrl}?${params}`;
+        const urlTravel = `${GET_TRAVELS}?${params}`;
 
         const res = options?.signal
             ? await fetchWithTimeout(urlTravel, { signal: options.signal }, LONG_TIMEOUT)
@@ -460,7 +464,7 @@ export const fetchTravel = async (id: number): Promise<Travel> => {
 
     try {
         const res = await fetchWithTimeout(
-            `${GET_TRAVELS}/${id}`,
+            `${GET_TRAVELS}/${id}/`,
             authHeaders ? { headers: authHeaders } : {},
             DEFAULT_TIMEOUT,
         );
@@ -478,8 +482,9 @@ export const fetchTravel = async (id: number): Promise<Travel> => {
 export const fetchTravelBySlug = async (slug: string): Promise<Travel> => {
     try {
         const authHeaders = await buildAuthHeaders();
+        const safeSlug = encodeURIComponent(String(slug).replace(/^\/+/, ''));
         const res = await fetchWithTimeout(
-            `${GET_TRAVELS_BY_SLUG}/${slug}/`,
+            `${GET_TRAVELS_BY_SLUG}/${safeSlug}/`,
             authHeaders ? { headers: authHeaders } : {},
             DEFAULT_TIMEOUT,
         );
@@ -532,7 +537,7 @@ export const fetchMyTravels = async (params: {
         return await safeJsonParse<any>(res, {});
     } catch (e) {
         if (__DEV__) {
-            console.log('Error fetching MyTravels:', e);
+            devError('Error fetching MyTravels:', e);
         }
         return [];
     }

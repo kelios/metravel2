@@ -145,7 +145,7 @@ export function reduceBlockingTime() {
   if (scheduler && scheduler.postTask) {
     scheduler.postTask(() => {
       // Non-critical work
-      console.log('Non-critical work scheduled');
+      console.info('Non-critical work scheduled');
     }, { priority: 'background' });
   }
 
@@ -153,7 +153,7 @@ export function reduceBlockingTime() {
   if ('requestIdleCallback' in window) {
     window.requestIdleCallback(() => {
       // Background processing
-      console.log('Background tasks executed');
+      console.info('Background tasks executed');
     });
   }
 }

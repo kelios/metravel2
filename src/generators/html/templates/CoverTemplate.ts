@@ -1,9 +1,6 @@
 // src/generators/html/templates/CoverTemplate.ts
 // ✅ АРХИТЕКТУРА: Шаблон обложки для PDF
 
-import type { BookSettings } from '@/components/export/BookSettingsModal';
-import type { TravelForBook } from '@/src/types/pdf-export';
-
 export interface CoverTemplateData {
   title: string;
   subtitle?: string;
@@ -17,7 +14,7 @@ export interface CoverTemplateData {
 /**
  * Генерирует HTML для обложки
  */
-export function generateCoverTemplate(data: CoverTemplateData, settings: BookSettings): string {
+export function generateCoverTemplate(data: CoverTemplateData): string {
   const { title, subtitle, userName, travelCount, yearRange, coverImage, createdDate } = data;
 
   const backgroundStyle = coverImage
@@ -87,4 +84,3 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
-
