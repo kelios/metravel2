@@ -10,6 +10,7 @@ interface UseImprovedAutoSaveOptions<T> {
   maxRetries?: number;
   retryDelay?: number;
   enableRetry?: boolean;
+  enabled?: boolean;
 }
 
 type AutosaveStatus = 'idle' | 'debouncing' | 'saving' | 'saved' | 'error';
@@ -36,6 +37,7 @@ export function useImprovedAutoSave<T>(
     maxRetries = 3,
     retryDelay = 1000,
     enableRetry = true,
+    enabled = true,
   } = options;
 
   const [state, setState] = useState<AutosaveState>({
@@ -109,6 +111,9 @@ export function useImprovedAutoSave<T>(
 
   // Save function with retry logic
   const performSave = useCallback(async (dataToSave: T, retryAttempt = 0): Promise<T> => {
+    if (!enabled) {
+      return dataToSave;
+    }
     // Create new abort controller for this save attempt
     abortControllerRef.current = new AbortController();
     
@@ -188,6 +193,11 @@ export function useImprovedAutoSave<T>(
   // срабатывает только если данные реально отличаются от последнего успешно сохранённого
   // и только один раз после дебаунса.
   useEffect(() => {
+    if (!enabled) {
+      cleanup();
+      return;
+    }
+
     // Нет изменений относительно последнего успешного сохранения — ничего не планируем.
     const isEqual = _isEqual(data, lastSavedDataRef.current);
 
@@ -250,6 +260,10 @@ export function useImprovedAutoSave<T>(
 
   // Manual save function
   const saveNow = useCallback(async (): Promise<T> => {
+    if (!enabled) {
+      return data;
+    }
+
     if (!state.isOnline) {
       throw new Error('Cannot save while offline');
     }
@@ -278,6 +292,9 @@ export function useImprovedAutoSave<T>(
 
   // Retry failed save
   const retrySave = useCallback((): Promise<T> => {
+    if (!enabled) {
+      return Promise.resolve(data);
+    }
     if (state.status !== 'error' || !state.error) {
       throw new Error('No failed save to retry');
     }

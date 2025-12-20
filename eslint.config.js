@@ -2,13 +2,17 @@ const js = require("@eslint/js");
 const prettier = require("eslint-config-prettier");
 const globals = require("globals");
 const tsParser = require("@typescript-eslint/parser");
+const tsPlugin = require("@typescript-eslint/eslint-plugin");
 
 const baseIgnores = [
   "node_modules/",
   ".expo/",
   "dist/",
+  "dist-web-analyze/",
+  "dist-web-analyze-sm/",
   "web-build/",
   "coverage/",
+  "coverage-new/",
   "playwright-report/",
   "playwright-report/**",
   "**/playwright-report/**",
@@ -53,6 +57,9 @@ module.exports = [
       globals: {
         ...globals.browser
       }
+    },
+    plugins: {
+      "@typescript-eslint": tsPlugin
     },
     rules: {
       "no-undef": "off"

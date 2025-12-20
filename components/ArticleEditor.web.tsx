@@ -122,7 +122,21 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
         if (!editorRef) return;
         if (typeof editorRef === 'function') editorRef(quillRef.current);
         else (editorRef as any).current = quillRef.current;
-    });
+    }, [editorRef]);
+
+    useEffect(() => {
+        if (!isWeb) return;
+        const originalError = console.error;
+        console.error = (...args: any[]) => {
+            if (typeof args[0] === 'string' && args[0].includes('findDOMNode is deprecated')) {
+                return;
+            }
+            originalError(...args);
+        };
+        return () => {
+            console.error = originalError;
+        };
+    }, []);
 
     const debouncedParentChange = useDebounce(onChange, 250);
 

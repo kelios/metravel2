@@ -192,6 +192,9 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             moderation: true,
         });
 
+        // Сохраняем статус модерации на бэкенд перед редиректом/уведомлением
+        await onManualSave();
+
         await trackWizardEvent('wizard_moderation_success', {
             travel_id: formData.id ?? null,
             filled_checklist_count: checklist.filter(item => item.ok).length,

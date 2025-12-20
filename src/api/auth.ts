@@ -195,7 +195,7 @@ export const setNewPasswordApi = async (password_reset_token: string, password: 
     }
 };
 
-export const registration = async (values: FormValues): Promise<string> => {
+export const registration = async (values: FormValues): Promise<{ ok: boolean; message: string }> => {
     try {
         if (values.password) {
             const passwordValidation = validatePassword(values.password);
@@ -239,10 +239,10 @@ export const registration = async (values: FormValues): Promise<string> => {
             await setSecureItem('userToken', jsonResponse.token);
             await AsyncStorage.setItem('userName', jsonResponse.name || '');
         }
-        return 'Пользователь успешно зарегистрирован. Проверьте почту для активации.';
+        return { ok: true, message: 'Пользователь успешно зарегистрирован. Проверьте почту для активации.' };
     } catch (error: any) {
         devError('Registration error:', error);
-        return error.message || 'Произошла неизвестная ошибка.';
+        return { ok: false, message: error.message || 'Произошла неизвестная ошибка.' };
     }
 };
 

@@ -1,6 +1,6 @@
 import "@expo/metro-runtime";
 import React, { Suspense, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, Platform, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Image, Platform, StyleSheet, View, LogBox } from "react-native";
 import { MD3LightTheme as DefaultTheme, PaperProvider } from "react-native-paper";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
@@ -39,6 +39,12 @@ if (Platform.OS === 'web') {
     originalError.apply(console, args);
   };
 }
+
+// Подавляем внешние депрекейшн-варнинги от зависимостей (react-native-element-dropdown)
+LogBox.ignoreLogs([
+  'TouchableWithoutFeedback is deprecated. Please use Pressable.',
+  'Image: style.tintColor is deprecated. Please use props.tintColor.',
+]);
 
 /** ===== Helpers ===== */
 const isWeb = Platform.OS === "web";

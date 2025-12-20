@@ -109,13 +109,8 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
       ((travel as any)?.user as any)?.country ||
       '';
 
-    const fromTravel =
-      (travel as any)?.countryName ||
-      (travel as any)?.country_name ||
-      (travel as any)?.country ||
-      '';
-
-    const raw = String(fromProfile || fromUserObj || fromTravel || '').trim();
+    // Показываем только страну автора (профиль / user), не страны путешествия
+    const raw = String(fromProfile || fromUserObj || '').trim();
     if (!raw) return '';
     if (raw.toLowerCase() === 'null' || raw.toLowerCase() === 'undefined') return '';
     return raw;
@@ -153,24 +148,10 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
 
     const normalizedUri = normalizeMediaUrl(rawUri);
     if (!normalizedUri) return '';
-    
-    const versionedUrl = buildVersionedImageUrl(
-      normalizedUri,
-      (travel as any).updated_at,
-      travel.id
-    );
-    
-    const avatarSize = isMobile ? 64 : 80;
-    const optimalSize = getOptimalImageSize(avatarSize, avatarSize);
-    
-    return optimizeImageUrl(versionedUrl, {
-      width: optimalSize.width,
-      height: optimalSize.height,
-      format: 'webp',
-      quality: 85,
-      fit: 'cover',
-    }) || versionedUrl;
-  }, [authorProfile?.avatar, (travel as any).user?.avatar, (travel as any).updated_at, travel.id, isMobile, normalizeMediaUrl]);
+
+    // Для надёжности отдаём нормализованный URL без доп. опций, чтобы не ломать S3/прокси
+    return normalizedUri;
+  }, [authorProfile?.avatar, (travel as any).user?.avatar, normalizeMediaUrl]);
 
   // Не показываем если нет данных об авторе
   if (!userName && !authorCountryName && !userId) {

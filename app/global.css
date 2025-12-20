@@ -23,6 +23,14 @@ body {
   box-sizing: border-box !important;
 }
 
+/* Убираем синий outline у всех полей ввода на web */
+input,
+textarea,
+select {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* Ensure cards don't overflow */
 [data-testid*="travel"],
 [class*="card"],

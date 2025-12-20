@@ -196,6 +196,7 @@ export default function UpsertTravel() {
             },
             onSuccess: handleSaveSuccess,
             onError: handleSaveError,
+            enabled: isAuthenticated && hasAccess,
         }
     );
     

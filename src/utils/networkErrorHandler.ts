@@ -39,13 +39,17 @@ export const isNetworkError = (error: any): boolean => {
         code === 'econnrefused' ||
         code === 'enetunreach' ||
         code === 'etimedout' ||
-    name === 'networkerror' ||
-    name === 'typeerror' ||
-    (() => {
-      const navigatorObject = getGlobalNavigator();
-      return Boolean(navigatorObject && typeof navigatorObject.onLine === 'boolean' && !navigatorObject.onLine);
-    })()
-);
+        name === 'networkerror' ||
+        name === 'typeerror' ||
+        (() => {
+            const navigatorObject = getGlobalNavigator();
+            return Boolean(
+                navigatorObject &&
+                typeof navigatorObject.onLine === 'boolean' &&
+                !navigatorObject.onLine
+            );
+        })()
+    );
 };
 
 /**
