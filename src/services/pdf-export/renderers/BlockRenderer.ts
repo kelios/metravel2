@@ -343,7 +343,7 @@ export class BlockRenderer {
    * Рендерит код
    */
   private renderCode(block: ParsedContentBlock & { type: 'code' }): string {
-    const { code, language } = block;
+    const { code } = block;
 
     return `
       <pre style="

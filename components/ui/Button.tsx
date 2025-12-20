@@ -159,19 +159,33 @@ const sizeStyles: Record<ButtonSize, ViewStyle> = {
 const variantStyles: Record<ButtonVariant, ViewStyle> = {
   primary: {
     backgroundColor: palette.primary,
-    shadowColor: palette.text,
-    shadowOpacity: 0.12,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
-    elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 6px 16px rgba(0,0,0,0.16)',
+      },
+      default: {
+        shadowColor: palette.text,
+        shadowOpacity: 0.12,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 8,
+        elevation: 3,
+      },
+    }),
   },
   secondary: {
     backgroundColor: palette.surface,
-    shadowColor: palette.text,
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 2,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+      },
+      default: {
+        shadowColor: palette.text,
+        shadowOpacity: 0.08,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 6,
+        elevation: 2,
+      },
+    }),
   },
   ghost: {
     backgroundColor: 'transparent',
@@ -179,11 +193,18 @@ const variantStyles: Record<ButtonVariant, ViewStyle> = {
   },
   danger: {
     backgroundColor: palette.danger,
-    shadowColor: palette.text,
-    shadowOpacity: 0.12,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
-    elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
+      },
+      default: {
+        shadowColor: palette.text,
+        shadowOpacity: 0.12,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 8,
+        elevation: 3,
+      },
+    }),
   },
   outline: {
     backgroundColor: 'transparent',

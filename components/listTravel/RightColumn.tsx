@@ -259,7 +259,6 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                     // eslint-disable-next-line react/no-array-index-key
                     key={`placeholder-${rowIndex}-${placeholderIndex}`}
                     testID={`travel-row-${rowIndex}-placeholder-${placeholderIndex}`}
-                    pointerEvents="none"
                     style={[
                       ({
                         flexGrow: 0,
@@ -268,6 +267,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                         minWidth: 320,
                         maxWidth: 360,
                         opacity: 0,
+                        pointerEvents: 'none',
                       } as any) as ViewStyle,
                       Platform.OS === 'web'
                         ? null
