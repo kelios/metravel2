@@ -1,4 +1,4 @@
-import React, {createContext, FC, ReactNode, useContext, useEffect, useState,} from 'react';
+import React, {createContext, FC, ReactNode, useCallback, useContext, useEffect, useState,} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi,} from '@/src/api/auth';
 import { setSecureItem, getSecureItem, removeSecureItems } from '@/src/utils/secureStorage';
@@ -47,13 +47,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
         return raw;
     };
 
-    // При первой загрузке проверяем данные аутентификации
-    useEffect(() => {
-        checkAuthentication();
-    }, []);
-
-    // Функции, не содержащие хуков
-    const checkAuthentication = async () => {
+    const checkAuthentication = useCallback(async () => {
         try {
             // ✅ FIX-001: Используем безопасное хранилище для токена
             // ✅ FIX-004: Используем батчинг для остальных данных
@@ -90,7 +84,12 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
             setIsSuperuser(false);
             setUserAvatar(null);
         }
-    };
+    }, []);
+
+    // При первой загрузке проверяем данные аутентификации
+    useEffect(() => {
+        checkAuthentication();
+    }, [checkAuthentication]);
 
     const login = async (email: string, password: string): Promise<boolean> => {
         try {

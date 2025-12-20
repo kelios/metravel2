@@ -27,12 +27,7 @@ export function useSingleTravelExport(travel?: Travel) {
   const travelsForExport = useMemo(() => (travel ? [travel] : []), [travel])
   const pdfExport = usePdfExport(travelsForExport)
 
-  const baseSettings = useMemo(() => buildDefaultSettingsForTravel(travel), [
-    travel?.id,
-    travel?.name,
-    travel?.countryName,
-    travel?.cityName,
-  ])
+  const baseSettings = useMemo(() => buildDefaultSettingsForTravel(travel), [travel])
 
   const [lastSettings, setLastSettings] = useState<BookSettings>(baseSettings)
 

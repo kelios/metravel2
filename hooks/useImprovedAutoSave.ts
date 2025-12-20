@@ -283,7 +283,7 @@ export function useImprovedAutoSave<T>(
       retryCount: 0,
       isOnline: state.isOnline,
     });
-  }, [originalData, cleanup, state.isOnline, enabled]);
+  }, [originalData, cleanup, state.isOnline]);
 
   // Clear error
   const clearError = useCallback(() => {

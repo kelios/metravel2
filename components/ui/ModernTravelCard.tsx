@@ -3,7 +3,7 @@
 
 import React, { memo, useMemo, useCallback } from 'react';
 import { Platform } from 'react-native';
-import { TravelCard, designTokens } from '../ui';
+import { TravelCard } from '../ui';
 import type { Travel } from '../../types/types';
 
 // Modern TravelCard wrapper that integrates with existing logic
