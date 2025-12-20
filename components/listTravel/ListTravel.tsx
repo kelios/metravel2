@@ -1,52 +1,42 @@
 // ListTravel.tsx
-import React, { lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Platform,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
   ViewStyle,
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { useLocalSearchParams, usePathname, useRouter } from 'expo-router'
+import { useLocalSearchParams, usePathname } from 'expo-router'
 import { useRoute } from '@react-navigation/native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import RenderTravelItem from './RenderTravelItem'
 import SidebarFilters from './SidebarFilters'
 import RightColumn from './RightColumn'
-import StickySearchBar from '@/components/mainPage/StickySearchBar'
-// Keep native confirm for web tests; ConfirmDialog is unused in current flows
 import UIButton from '@/components/ui/Button'
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
 import { useAuth } from '@/context/AuthContext'
 import { fetchAllFiltersOptimized } from '@/src/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useResponsive } from '@/hooks/useResponsive'
-import EmptyState from '@/components/EmptyState'
 import ProgressIndicator from '@/components/ProgressIndicator'
-import FloatingActionButton from '@/components/ui/FloatingActionButton'
 import type { Travel } from '@/src/types/types'
 import {
   BREAKPOINTS,
-  FLATLIST_CONFIG,
-  FLATLIST_CONFIG_MOBILE,
   MAX_VISIBLE_CATEGORIES,
-  PER_PAGE,
   RECOMMENDATIONS_VISIBLE_KEY
 } from './utils/listTravelConstants'
 import { useListTravelVisibility } from './hooks/useListTravelVisibility'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
 import { useListTravelExport } from './hooks/useListTravelExport'
-import { calculateCategoriesWithCount, calculateColumns, isMobile, getContainerPadding } from './utils/listTravelHelpers'
+import { calculateCategoriesWithCount, calculateColumns } from './utils/listTravelHelpers'
 
 // Define styles at the top level before any component definitions
 const styles = StyleSheet.create({
@@ -272,9 +262,6 @@ const styles = StyleSheet.create({
   },
 });
 
-// Ленивая загрузка RecommendationsTabs без requestIdleCallback (устраняем тайпинги)
-const RecommendationsTabs = lazy(() => import('./RecommendationsTabs'));
-
 // Simple delete function implementation
 const deleteTravel = async (id: string): Promise<void> => {
     const raw = process.env.EXPO_PUBLIC_API_URL || '';
@@ -287,26 +274,6 @@ const deleteTravel = async (id: string): Promise<void> => {
         throw new Error(`Failed to delete travel: ${response.statusText}`);
     }
 };
-
-// @ts-ignore - Dynamic imports are supported in runtime
-const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
-
-// ✅ УЛУЧШЕНИЕ: Улучшенный skeleton для рекомендаций
-const RecommendationsPlaceholder = () => (
-  <View style={styles.recommendationsLoader}>
-    <View style={styles.recommendationsSkeleton}>
-      <View style={styles.recommendationsSkeletonHeader}>
-        <View style={styles.recommendationsSkeletonTitle} />
-        <View style={styles.recommendationsSkeletonTabs} />
-      </View>
-      <View style={styles.recommendationsSkeletonContent}>
-        {[1, 2, 3].map((i) => (
-          <View key={i} style={styles.recommendationsSkeletonCard} />
-        ))}
-      </View>
-    </View>
-  </View>
-);
 
 const pluralizeTravels = (count: number) => {
   const mod10 = count % 10;
@@ -420,11 +387,11 @@ function ListTravel({
 }: ListTravelProps = {}) {
     // ✅ АРХИТЕКТУРА: Использование кастомного хука для видимости
     const {
-        isPersonalizationVisible,
-        isWeeklyHighlightsVisible,
-        isInitialized,
-        handleTogglePersonalization,
-        handleToggleWeeklyHighlights,
+        isPersonalizationVisible: _isPersonalizationVisible,
+        isWeeklyHighlightsVisible: _isWeeklyHighlightsVisible,
+        isInitialized: _isInitialized,
+        handleTogglePersonalization: _handleTogglePersonalization,
+        handleToggleWeeklyHighlights: _handleToggleWeeklyHighlights,
     } = useListTravelVisibility({
         externalPersonalizationVisible,
         externalWeeklyHighlightsVisible,
@@ -434,7 +401,6 @@ function ListTravel({
 
     const { width, height, isPhone, isLargePhone, isTablet: isTabletSize, isDesktop: isDesktopSize, isPortrait } = useResponsive();
     const route = useRoute();
-    const router = useRouter();
     const pathname = usePathname();
 
     const params = useLocalSearchParams<{ user_id?: string }>();
@@ -447,18 +413,12 @@ function ListTravel({
 
     // ✅ Используем значения из useResponsive
     const windowWidth = Platform.OS === 'web' && isTestEnv ? Math.max(width, 1024) : width;
-    const windowHeight = height;
 
     // ✅ АДАПТИВНОСТЬ: Определяем устройство и ориентацию
     // На планшетах в портретной ориентации ведем себя как на мобильном: скрываем сайдбар и даем больше ширины сетке
     const isMobileDevice = isPhone || isLargePhone || (isTabletSize && isPortrait);
     const isTablet = isTabletSize;
     const isDesktop = isDesktopSize;
-
-    // ✅ ОПТИМИЗАЦИЯ: Базовое количество колонок для логики (от общей ширины окна)
-    // На десктопе всегда 3 колонки, на планшетах/мобилках рассчитываем динамически
-    const baseColumns = isDesktop ? 3 : calculateColumns(windowWidth);
-    const columns = isTablet && isPortrait && baseColumns > 2 ? 2 : baseColumns;
 
     const gapSize =
       windowWidth < BREAKPOINTS.XS
@@ -614,7 +574,6 @@ function ListTravel({
 
     const onMomentumRef = useRef(false);
     const lastEndReachedAtRef = useRef<number>(0);
-    const scrollY = useRef<number>(0);
     const saveScrollTimeoutRef = useRef<number | null>(null);
     const lastScrollOffsetRef = useRef<number>(0);
     const deleteInFlightRef = useRef<number | null>(null);
@@ -653,8 +612,6 @@ function ListTravel({
         queryParams,
         resetFilters,
         onSelect,
-        applyFilter,
-        handleToggleCategory,
     } = useListTravelFilters({
         options,
         isMeTravel,
@@ -677,35 +634,29 @@ function ListTravel({
     const {
         data: travels,
         total,
-        hasMore,
-        isLoading,
-        isFetching,
+        hasMore: _hasMore,
+        isLoading: _isLoading,
+        isFetching: _isFetching,
         isError,
-        status,
+        status: _status,
         isInitialLoading,
         isNextPageLoading,
         isEmpty,
         refetch,
         handleEndReached,
-        handleRefresh,
-        isRefreshing,
+        handleRefresh: _handleRefresh,
+        isRefreshing: _isRefreshing,
     } = useListTravelData({
         queryParams,
         search: debSearch,
         isQueryEnabled,
     });
-
     // ✅ АДАПТИВНОСТЬ: Количество видимых категорий зависит от устройства
     const maxVisibleCategories = useMemo(() => {
       if (isMobileDevice) return 6;
       if (isTablet) return 8;
       return MAX_VISIBLE_CATEGORIES;
     }, [isMobileDevice, isTablet]);
-
-    const categoriesWithCount = useMemo(
-      () => calculateCategoriesWithCount(travels, options?.categories as any).slice(0, maxVisibleCategories),
-      [travels, options?.categories, maxVisibleCategories]
-    );
 
     /* Delete */
     const handleDelete = useCallback(
@@ -808,9 +759,9 @@ function ListTravel({
         hasSelection,
         selectionCount,
         pdfExport,
-        lastSettings,
-        handleSaveWithSettings,
-        handlePreviewWithSettings,
+        lastSettings: _lastSettings,
+        handleSaveWithSettings: _handleSaveWithSettings,
+        handlePreviewWithSettings: _handlePreviewWithSettings,
         settingsSummary,
     } = exportState;
 
@@ -832,11 +783,8 @@ function ListTravel({
       [isMobileDevice, isSuper, isMeTravel, isExport, handleDeletePress, isSelected, toggleSelect]
     );
 
-    const selectionLabel = hasSelection
-      ? `Выбрано ${selectionCount} ${pluralizeTravels(selectionCount)}`
-      : 'Выберите путешествия для экспорта';
-    const [showSettingsModal, setShowSettingsModal] = useState(false);
-    const [settingsModalMode, setSettingsModalMode] = useState<'save' | 'preview'>('save');
+    const [ _showSettingsModal, setShowSettingsModal] = useState(false);
+    const [_settingsModalMode, setSettingsModalMode] = useState<'save' | 'preview'>('save');
 
     const handleOpenSettingsForSave = useCallback(() => {
       setSettingsModalMode('save');
@@ -918,7 +866,7 @@ function ListTravel({
                     try {
                         window.sessionStorage.setItem('travel-list-scroll', String(offsetY));
                         lastScrollOffsetRef.current = offsetY;
-                    } catch (error) {
+                    } catch (_error) {
                         // Игнорируем ошибки sessionStorage
                     }
                 }, isMobileDevice ? 600 : 800) as any;
@@ -1159,9 +1107,6 @@ function ListTravel({
       ]
     );
     
-    // Disable mobile web CLS optimization to ensure search bar is always visible
-    const isWebMobileCLS = false;
-
   return (
     <View style={[styles.root, isMobileDevice ? styles.rootMobile : undefined]}>
       <SidebarFilters
@@ -1208,7 +1153,7 @@ function ListTravel({
           ) : null
         }
         isRecommendationsVisible={isRecommendationsVisible}
-        handleRecommendationsVisibilityChange={setIsRecommendationsVisible}
+        handleRecommendationsVisibilityChange={handleRecommendationsVisibilityChange}
         activeFiltersCount={activeFiltersCount}
         total={total}
         contentPadding={contentPadding}

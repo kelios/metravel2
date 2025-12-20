@@ -77,9 +77,7 @@ test.describe('Footer layout invariants (web)', () => {
     await gotoWithRetry(page, '/');
 
     const desktopBar = page.getByTestId('footer-desktop-bar');
-    if (!(await desktopBar.isVisible({ timeout: 5_000 }).catch(() => false))) {
-      test.skip(true, 'Desktop footer not rendered on this variant');
-    }
+    await expect(desktopBar).toBeVisible({ timeout: 30_000 });
 
     // Sample height multiple times right after navigation.
     // This catches transient layout shifts (first frame vs settled state).

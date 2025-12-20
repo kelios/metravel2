@@ -1,12 +1,12 @@
 // app/map/index.tsx
 import React, {
+    Suspense,
+    lazy,
     useEffect,
     useState,
     useRef,
     useCallback,
     useMemo,
-    Suspense,
-    lazy,
 } from 'react';
 import {
     SafeAreaView,
@@ -16,9 +16,7 @@ import {
     ActivityIndicator,
     Pressable,
     Animated,
-    PanResponder,
     Dimensions,
-    ScrollView,
     Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,17 +28,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
 import TravelListPanel from '@/components/MapPage/TravelListPanel';
-import RouteStats from '@/components/MapPage/RouteStats';
-import RouteHint from '@/components/MapPage/RouteHint';
 import { fetchFiltersMap, fetchTravelsForMap, fetchTravelsNearRoute } from '@/src/api/map';
 import InstantSEO from '@/components/seo/InstantSEO';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/src/utils/filterQuery';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
 import ErrorDisplay from '@/components/ErrorDisplay';
 
 interface Coordinates { latitude: number; longitude: number; }
@@ -79,10 +72,8 @@ export default function MapScreen() {
     const [mode, setMode] = useState<'radius' | 'route'>('radius');
     const [transportMode, setTransportMode] = useState<'car' | 'bike' | 'foot'>('car');
     const [routeDistance, setRouteDistance] = useState<number | null>(null);
-    const [fullRouteCoords, setFullRouteCoords] = useState<[number, number][]>([]);
     const [startAddress, setStartAddress] = useState('');
     const [endAddress, setEndAddress] = useState('');
-    const [menuVisible, setMenuVisible] = useState(!isMobile);
     const [infoPanelHeight, setInfoPanelHeight] = useState(INFO_PANEL_MIN_HEIGHT);
     const [rightPanelTab, setRightPanelTab] = useState<'filters' | 'travels'>('filters');
     const [rightPanelVisible, setRightPanelVisible] = useState(true);
@@ -343,7 +334,12 @@ export default function MapScreen() {
     }, []);
 
     const closeMenu = useCallback(() => {
-        setMenuVisible(false);
+        setRightPanelVisible(false);
+    }, []);
+
+    const setFullRouteCoords = useCallback((coords: [number, number][]) => {
+        // placeholder for MapPanel callback; current screen does not use the value
+        if (coords.length === 0) return;
     }, []);
 
     // ✅ РЕАЛИЗАЦИЯ: Фильтрация данных на фронтенде по выбранным категориям
@@ -537,7 +533,6 @@ export default function MapScreen() {
                                     travelsData={allTravelsData} // Все данные для подсчета категорий
                                     filteredTravelsData={travelsData} // Отфильтрованные данные для отображения количества
                                     isMobile={isMobile}
-                                    closeMenu={closeMenu}
                                     mode={mode}
                                     setMode={setMode}
                                     transportMode={transportMode}

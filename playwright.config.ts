@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const E2E_WEB_PORT = Number(process.env.E2E_WEB_PORT || '8083');
+// Используем отдельный порт для e2e, чтобы не конфликтовать с локальной разработкой.
+const E2E_WEB_PORT = Number(process.env.E2E_WEB_PORT || '8085');
 const baseURL = process.env.BASE_URL || `http://localhost:${E2E_WEB_PORT}`;
 const USE_EXISTING_SERVER = process.env.E2E_NO_WEBSERVER === '1' && !!process.env.BASE_URL;
 

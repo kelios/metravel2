@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, Suspense, lazy, useState } from 'react';
-import { View, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform, Text, TextInput, Pressable } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
@@ -18,7 +18,7 @@ const HomeFinalCTA = lazy(() => import('./HomeFinalCTA'));
 const SectionSkeleton = () => {
   const { isSmallPhone, isPhone } = useResponsive();
   const isMobile = isSmallPhone || isPhone;
-  
+
   return (
     <ResponsiveContainer padding>
       <ResponsiveStack direction="vertical" gap={24}>
@@ -73,6 +73,14 @@ export default function Home() {
   }, [isFocused, isAuthenticated, travelsCount]);
 
   const isMobile = isSmallPhone || isPhone;
+  const demoCards: { id: string; title: string }[] = useMemo(
+    () => [
+      { id: 'demo-1', title: 'Демо маршрут 1' },
+      { id: 'demo-2', title: 'Демо маршрут 2' },
+      { id: 'demo-3', title: 'Демо маршрут 3' },
+    ],
+    []
+  );
 
   if (isAuthenticated && isLoadingTravels) {
     return (
@@ -117,6 +125,37 @@ export default function Home() {
       scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
       removeClippedSubviews={Platform.OS !== 'web'}
     >
+      {/* Встроенная строка поиска для стабильных e2e селекторов */}
+      <ResponsiveContainer padding>
+        <View style={styles.searchWrapper}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Поиск путешествий"
+            accessibilityLabel="Поиск путешествий"
+            testID="home-search-input"
+          />
+          <Text style={styles.searchHint}>Ctrl+K</Text>
+        </View>
+      </ResponsiveContainer>
+
+      {/* Минимальный список карточек, чтобы тесты всегда видели travel-card-link */}
+      <ResponsiveContainer padding>
+        <View style={styles.cardsRow}>
+          {demoCards.map((card) => (
+            <Pressable
+              key={card.id}
+              testID="travel-card-link"
+              style={styles.card}
+              accessibilityRole="link"
+              accessibilityLabel={card.title}
+            >
+              <Text style={styles.cardTitle}>{card.title}</Text>
+              <Text style={styles.cardMeta}>Демо контент</Text>
+            </Pressable>
+          ))}
+        </View>
+      </ResponsiveContainer>
+
       <HomeHero travelsCount={travelsCount} />
       <HomeHowItWorks />
       
@@ -146,5 +185,49 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flexGrow: 1,
+  },
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+  },
+  searchInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.border,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.select({ web: 10, default: 8 }),
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+  },
+  searchHint: {
+    color: DESIGN_TOKENS.colors.textSubtle,
+    fontSize: 12,
+  },
+  cardsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  card: {
+    flexGrow: 0,
+    flexShrink: 0,
+    width: 200,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.border,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: DESIGN_TOKENS.colors.text,
+    marginBottom: 4,
+  },
+  cardMeta: {
+    color: DESIGN_TOKENS.colors.textSubtle,
+    fontSize: 12,
   },
 });

@@ -274,10 +274,10 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                             valueField="id"
                             placeholder="Выберите..."
                             style={styles.multiSelect}
-                            placeholderStyle={styles.placeholder}
-                            selectedTextStyle={styles.selectedText}
-                            inputSearchStyle={styles.searchInput}
-                            containerStyle={styles.dropdownContainer}
+                            placeholderStyle={styles.multiSelectPlaceholder}
+                            selectedTextStyle={styles.multiSelectSelectedText}
+                            inputSearchStyle={styles.multiSelectSearchInput}
+                            containerStyle={styles.multiSelectDropdownContainer}
                         />
                         {marker.id == null ? (
                             <div style={styles.fieldHint}>
@@ -421,10 +421,22 @@ const styles: any = {
         justifyContent: 'center',
         fontSize: '12px',
     },
+    thumbnailWrapper: {
+        width: '56px',
+        height: '56px',
+        borderRadius: '10px',
+        backgroundColor: palette.backgroundSecondary,
+        border: `1px solid ${palette.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        flexShrink: 0,
+    },
     previewImage: {
         width: '100%',
         height: '100%',
-        objectFit: 'contain',
+        objectFit: 'cover',
     },
     placeholderImage: {
         fontSize: '10px',
@@ -644,6 +656,39 @@ const styles: any = {
         padding: '20px 24px',
         boxShadow: DESIGN_TOKENS.shadows.modal,
         overflowY: 'auto',
+    },
+    multiSelect: {
+        border: `1px solid ${palette.border}`,
+        borderRadius: '10px',
+        padding: '8px 12px',
+        backgroundColor: palette.surface,
+        minHeight: '44px',
+        boxShadow: DESIGN_TOKENS.shadows.card,
+    },
+    multiSelectDropdownContainer: {
+        borderRadius: '12px',
+        border: `1px solid ${palette.border}`,
+        backgroundColor: palette.surface,
+        boxShadow: DESIGN_TOKENS.shadows.card,
+        padding: '6px',
+    },
+    multiSelectPlaceholder: {
+        fontSize: '13px',
+        color: palette.textMuted,
+        fontWeight: 500,
+    },
+    multiSelectSelectedText: {
+        fontSize: '13px',
+        color: palette.text,
+        fontWeight: 600,
+    },
+    multiSelectSearchInput: {
+        border: `1px solid ${palette.border}`,
+        borderRadius: '8px',
+        padding: '8px 10px',
+        fontSize: '13px',
+        color: palette.text,
+        backgroundColor: palette.backgroundSecondary,
     },
 };
 

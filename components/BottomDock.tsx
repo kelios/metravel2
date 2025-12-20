@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useRef } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -35,18 +35,26 @@ const DockButton = memo(function DockButton({
   children,
   testID,
   showLabel = true,
+  onPress,
 }: {
   label: string;
   href: Href;
   children: React.ReactNode;
   testID?: string;
   showLabel?: boolean;
+  onPress?: () => void;
 }) {
   const router = useRouter();
 
   return (
     <Pressable
-      onPress={() => router.push(href as any)}
+      onPress={() => {
+        if (onPress) {
+          onPress();
+          return;
+        }
+        router.push(href as any);
+      }}
       accessibilityRole="link"
       accessibilityLabel={label}
       hitSlop={6}
@@ -72,6 +80,7 @@ const DockButton = memo(function DockButton({
 export default function BottomDock({ onDockHeight }: BottomDockProps) {
   const { isPhone, isLargePhone, isTablet } = useResponsive();
   const isMobile = Platform.OS !== "web" ? true : (isPhone || isLargePhone || isTablet);
+  const [showMore, setShowMore] = useState(false);
 
   const lastDockH = useRef(0);
   const handleDockLayout = (e: LayoutChangeEvent) => {
@@ -154,6 +163,7 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
                 href={item.route}
                 label={item.label}
                 showLabel={false}
+                onPress={item.isMore ? () => setShowMore(true) : undefined}
               >
                 {item.icon}
               </DockButton>
@@ -161,6 +171,28 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
           </View>
         </View>
       </View>
+      {showMore && Platform.OS === "web" && (
+        <>
+          <Pressable
+            testID="footer-more-backdrop"
+            style={styles.moreBackdrop}
+            onPress={() => setShowMore(false)}
+          />
+          <View testID="footer-more-sheet" style={styles.moreSheet}>
+            <View testID="footer-more-list" style={styles.moreList}>
+              <Pressable onPress={() => setShowMore(false)} style={styles.moreItem}>
+                <Text style={styles.moreItemText}>Политика конфиденциальности</Text>
+              </Pressable>
+              <Pressable onPress={() => setShowMore(false)} style={styles.moreItem}>
+                <Text style={styles.moreItemText}>Настройки cookies</Text>
+              </Pressable>
+              <Pressable onPress={() => setShowMore(false)} style={styles.moreItem}>
+                <Text style={styles.moreItemText}>Связаться с нами</Text>
+              </Pressable>
+            </View>
+          </View>
+        </>
+      )}
     </Container>
   );
 }
@@ -222,8 +254,39 @@ const styles = StyleSheet.create({
   itemText: {
     color: palette.textMuted,
     fontSize: 10,
-    lineHeight: 11,
-    marginTop: 1,
+    lineHeight: 10,
+    marginTop: 0,
     textAlign: "center",
+  },
+  itemTextOnly: {
+    marginTop: 0,
+  },
+  moreBackdrop: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    zIndex: 999,
+  },
+  moreSheet: {
+    position: "fixed",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: palette.surface,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+    zIndex: 1000,
+    boxShadow: "0 -8px 24px rgba(0,0,0,0.12)",
+  } as any,
+  moreList: {
+    gap: 12,
+  } as any,
+  moreItem: {
+    paddingVertical: 8,
+  },
+  moreItemText: {
+    fontSize: 14,
+    color: palette.text,
   },
 });
