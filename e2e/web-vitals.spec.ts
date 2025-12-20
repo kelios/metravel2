@@ -166,7 +166,7 @@ test.describe('Web Vitals (CLS/LCP/INP)', () => {
           }
         });
         clsObserver.observe({ type: 'layout-shift', buffered: true } as any);
-      } catch (e) {
+      } catch {
         // ignore
       }
 

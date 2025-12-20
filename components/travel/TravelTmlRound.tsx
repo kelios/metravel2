@@ -1,5 +1,5 @@
 // components/travel/TravelTmlRound.tsx
-import React, { memo, useMemo, useRef, useState } from "react";
+import React, { memo, useMemo, useState } from "react";
 import {
     Platform,
     Pressable,
@@ -8,7 +8,6 @@ import {
     View,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
-import { Paragraph } from "react-native-paper";
 import { router } from "expo-router";
 import type { Travel } from "@/src/types/types";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
@@ -44,7 +43,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
       } else {
         return { imageSize: 160, cardPadding: 12 };
       }
-    }, [isMobile, isTablet, isDesktop, isLargeDesktop]);
+    }, [isTablet, isDesktop, isLargeDesktop]);
     
     const size = cardDimensions.imageSize;
     const radius = 16; // ✅ УЛУЧШЕНИЕ: Современные скругленные углы вместо круга

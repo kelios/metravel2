@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, Text, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 
 type TravelWizardHeaderProps = {

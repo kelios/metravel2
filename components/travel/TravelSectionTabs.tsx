@@ -11,7 +11,6 @@ import {
 import { MaterialIcons } from "@expo/vector-icons"
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { METRICS } from "@/constants/layout"
 import { useResponsive } from '@/hooks/useResponsive'
 
 interface TravelSectionTabsProps {

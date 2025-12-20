@@ -29,7 +29,7 @@ const SEARCH_TRAVELS_NEAR_ROUTE = `${URLAPI}/travels/near-route/`;
 export const fetchTravelsNear = async (travel_id: number, signal?: AbortSignal) => {
   try {
     const params = new URLSearchParams({ travel_id: travel_id.toString() }).toString();
-    const urlTravel = `${GET_TRAVELS}/${travel_id}/near?${params}`;
+    const urlTravel = `${GET_TRAVELS}${travel_id}/near/?${params}`;
     const res = await fetchWithTimeout(urlTravel, { signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
       devError('Error fetching travels near: HTTP', res.status, res.statusText);
@@ -47,7 +47,7 @@ export const fetchTravelsNear = async (travel_id: number, signal?: AbortSignal) 
 
 export const fetchTravelsPopular = async (): Promise<TravelsMap> => {
   try {
-    const urlTravel = `${GET_TRAVELS}/popular`;
+    const urlTravel = `${GET_TRAVELS}popular/`;
     const res = await fetchWithTimeout(urlTravel, {}, DEFAULT_TIMEOUT);
     return await safeJsonParse<TravelsMap>(res, {} as TravelsMap);
   } catch (e) {

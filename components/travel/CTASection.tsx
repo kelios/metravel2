@@ -12,7 +12,6 @@ import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 
 interface CTASectionProps {
@@ -25,7 +24,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const { isAuthenticated } = useAuth();
-  const { favorites, addFavorite, removeFavorite, isFavorite: checkIsFavorite } = useFavorites();
+  const { addFavorite, removeFavorite, isFavorite: checkIsFavorite } = useFavorites();
 
   // Проверяем, в избранном ли путешествие
   const isFavorite = checkIsFavorite(travel.id, 'travel');
@@ -313,4 +312,3 @@ const styles = StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.md,
   },
 });
-

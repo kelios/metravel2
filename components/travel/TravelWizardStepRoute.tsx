@@ -1,6 +1,6 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView, View, StyleSheet, Text, ScrollView, Dimensions, TextInput, Platform, findNodeHandle, UIManager, LayoutChangeEvent } from 'react-native';
+import { KeyboardAvoidingView, View, StyleSheet, Text, ScrollView, TextInput, Platform, findNodeHandle, UIManager, LayoutChangeEvent } from 'react-native';
 import { Button } from 'react-native-paper';
 
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
@@ -28,7 +28,6 @@ interface TravelWizardStepRouteProps {
     onBack: () => void;
     onNext: () => void;
     isFiltersLoading?: boolean;
-    onManualSave?: () => Promise<TravelFormData | void>;
     stepMeta?: {
         title?: string;
         subtitle?: string;
@@ -61,7 +60,6 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     onBack,
     onNext,
     isFiltersLoading,
-    onManualSave,
     stepMeta,
     progress = currentStep / totalSteps,
     autosaveBadge,
@@ -97,7 +95,6 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     const [manualCoords, setManualCoords] = useState('');
     const [manualLat, setManualLat] = useState('');
     const [manualLng, setManualLng] = useState('');
-    const [countriesSyncedVisible, setCountriesSyncedVisible] = useState(false);
 
     useEffect(() => {
         if (!focusAnchorId) return;
@@ -240,8 +237,6 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
 
         if (derivedCountryId && !selectedCountryIds.includes(derivedCountryId)) {
             onCountrySelect(derivedCountryId);
-            setCountriesSyncedVisible(true);
-            setTimeout(() => setCountriesSyncedVisible(false), 3000);
         }
 
         handleMarkersChange([...(markers || []), newMarker]);
@@ -274,17 +269,6 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         }
 
         removed.forEach(onCountryDeselect);
-    };
-
-    const handleNext = () => {
-        onNext();
-    };
-
-    const handleScrollToMarkers = () => {
-        if (typeof document === 'undefined') return;
-        const el = document.getElementById('markers-list-root');
-        if (!el) return;
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
     return (
