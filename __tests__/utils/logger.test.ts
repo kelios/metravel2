@@ -8,7 +8,7 @@ const reloadLoggerWithEnv = (env: NodeJS.ProcessEnv, devFlag: boolean) => {
   jest.resetModules()
   process.env = env
   ;(global as any).__DEV__ = devFlag
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   return require('@/src/utils/logger') as typeof logger
 }
 

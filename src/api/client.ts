@@ -244,7 +244,7 @@ class ApiClient {
                     }
 
                     return await this.parseSuccessResponse<T>(retryResponse);
-                } catch (_refreshError) {
+                } catch {
                     // Если refresh не удался, пробрасываем ошибку
                     throw new ApiError(401, 'Требуется авторизация');
                 }

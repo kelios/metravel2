@@ -88,7 +88,7 @@ export function useOptimizedFormState<T extends Record<string, any>>(
         }
       }, validationDebounce);
     }
-  }, [validateOnChange, validationDebounce]);
+  }, [validateOnChange, validationDebounce, validateField]);
 
   // Batch update for multiple fields
   const updateFields = useCallback((updates: Partial<T>) => {
@@ -109,7 +109,7 @@ export function useOptimizedFormState<T extends Record<string, any>>(
   }, []);
 
   // Validation functions
-  const validateField = useCallback((field: string, value: any) => {
+  const validateField = useCallback((field: string, _value: any) => {
     // This would be injected with validation rules
     // For now, just clear errors for the field
     setState(prevState => ({

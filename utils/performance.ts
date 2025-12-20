@@ -215,7 +215,7 @@ export function measurePerformance(name: string, fn: () => void): void {
     if (measure && measure.duration > 100) {
       console.warn(`[Performance] ${name} took ${measure.duration.toFixed(2)}ms`)
     }
-  } catch (_e) {
+  } catch {
     // Ignore
   } finally {
     if (performance.clearMarks) {

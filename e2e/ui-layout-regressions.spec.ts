@@ -31,7 +31,7 @@ async function gotoWithRetry(page: any, url: string) {
   let lastError: any = null;
   for (let attempt = 0; attempt < 10; attempt++) {
     try {
-      // eslint-disable-next-line no-await-in-loop
+       
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
       lastError = null;
       break;
@@ -43,7 +43,7 @@ async function gotoWithRetry(page: any, url: string) {
       // If the page was closed (e.g. by Playwright after a timeout), don't keep waiting.
       if (typeof page?.isClosed === 'function' && page.isClosed()) break;
 
-      // eslint-disable-next-line no-await-in-loop
+       
       try {
         await page.waitForTimeout(isConn ? 800 + attempt * 250 : 500);
       } catch {

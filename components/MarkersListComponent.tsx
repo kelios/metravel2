@@ -7,7 +7,7 @@ import ImageUploadComponent from '@/components/imageUpload/ImageUploadComponent'
 import MultiSelectField from '@/components/MultiSelectField';
 
 const MultiSelectFieldAny: any = MultiSelectField;
-/* eslint-disable no-unused-vars */
+ 
 interface MarkersListComponentProps {
     markers: MarkerData[];
     categoryTravelAddress: { id: number; name: string }[];
@@ -177,7 +177,7 @@ interface EditMarkerModalProps {
     onClose: () => void;
     onRemove: (index: number) => void;
 }
-/* eslint-enable no-unused-vars */
+ 
 
 const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                                                              marker,

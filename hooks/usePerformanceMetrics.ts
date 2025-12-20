@@ -119,13 +119,15 @@ export function usePerformanceMetrics(onMetrics?: (metrics: PerformanceMetrics) 
 // Утилита для логирования метрик в консоль (для разработки)
 export function logPerformanceMetrics(metrics: PerformanceMetrics) {
   if (__DEV__) {
-    console.group('📊 Performance Metrics');
-    if (metrics.lcp) console.log(`LCP: ${metrics.lcp.toFixed(2)}ms`);
-    if (metrics.fcp) console.log(`FCP: ${metrics.fcp.toFixed(2)}ms`);
-    if (metrics.fid) console.log(`FID: ${metrics.fid.toFixed(2)}ms`);
-    if (metrics.cls) console.log(`CLS: ${metrics.cls.toFixed(4)}`);
-    if (metrics.ttfb) console.log(`TTFB: ${metrics.ttfb.toFixed(2)}ms`);
-    console.groupEnd();
+    const messages: string[] = [];
+    if (metrics.lcp) messages.push(`LCP: ${metrics.lcp.toFixed(2)}ms`);
+    if (metrics.fcp) messages.push(`FCP: ${metrics.fcp.toFixed(2)}ms`);
+    if (metrics.fid) messages.push(`FID: ${metrics.fid.toFixed(2)}ms`);
+    if (metrics.cls) messages.push(`CLS: ${metrics.cls.toFixed(4)}`);
+    if (metrics.ttfb) messages.push(`TTFB: ${metrics.ttfb.toFixed(2)}ms`);
+    if (messages.length) {
+      console.info('📊 Performance Metrics —', messages.join(' | '));
+    }
   }
 }
 

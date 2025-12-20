@@ -137,13 +137,13 @@ test.describe('CLS guard', () => {
     let lastError: any = null;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        // eslint-disable-next-line no-await-in-loop
+         
         await page.goto(ROUTE, { waitUntil: 'domcontentloaded', timeout: 45_000 });
         lastError = null;
         break;
       } catch (e) {
         lastError = e;
-        // eslint-disable-next-line no-await-in-loop
+         
         await page.waitForTimeout(500);
       }
     }

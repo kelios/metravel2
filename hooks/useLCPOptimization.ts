@@ -42,7 +42,7 @@ export const useLCPOptimization = (isFirstCard: boolean = false) => {
           isOptimized: lcpEntry.startTime < 2500, // Good LCP threshold
         }));
 
-        console.log(`[LCP] First travel card: ${lcpEntry.startTime.toFixed(2)}ms`);
+        console.info(`[LCP] First travel card: ${lcpEntry.startTime.toFixed(2)}ms`);
         
         // Cleanup после измерения
         setTimeout(() => {

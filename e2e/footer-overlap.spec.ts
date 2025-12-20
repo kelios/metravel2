@@ -32,7 +32,7 @@ test.describe('Footer dock (web mobile)', () => {
     let lastError: any = null;
     for (let attempt = 0; attempt < 10; attempt++) {
       try {
-        // eslint-disable-next-line no-await-in-loop
+         
         await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60_000 });
         lastError = null;
         break;
@@ -45,7 +45,7 @@ test.describe('Footer dock (web mobile)', () => {
           msg.includes('ECONNREFUSED') ||
           msg.includes('net::');
         const backoffMs = isTransient ? Math.min(1000 + attempt * 600, 8000) : 500;
-        // eslint-disable-next-line no-await-in-loop
+         
         await page.waitForTimeout(backoffMs);
       }
     }

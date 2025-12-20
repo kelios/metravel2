@@ -256,7 +256,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             {Platform.OS === 'web' && !isMobile && missingSlots > 0
               ? Array.from({ length: missingSlots }).map((_, placeholderIndex) => (
                   <View
-                    // eslint-disable-next-line react/no-array-index-key
+                     
                     key={`placeholder-${rowIndex}-${placeholderIndex}`}
                     testID={`travel-row-${rowIndex}-placeholder-${placeholderIndex}`}
                     style={[

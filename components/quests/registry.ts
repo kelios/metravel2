@@ -56,7 +56,7 @@ export type QuestMeta = {
     difficulty?: 'easy' | 'medium' | 'hard';
     tags?: string[];
     petFriendly?: boolean;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     cover?: any;
 };
 

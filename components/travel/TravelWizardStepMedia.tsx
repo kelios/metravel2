@@ -14,7 +14,7 @@ const GallerySectionLazy = Platform.OS === 'web'
     : null;
 
 // Native (and other platforms) should keep direct rendering for stability.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+ 
 const GallerySectionNative = Platform.OS !== 'web' ? require('@/components/travel/GallerySection').default : null;
 
 interface TravelWizardStepMediaProps {

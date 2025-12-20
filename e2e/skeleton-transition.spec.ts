@@ -49,7 +49,7 @@ async function gotoWithRetry(page: any, url: string) {
   let lastError: any = null;
   for (let attempt = 0; attempt < 10; attempt++) {
     try {
-      // eslint-disable-next-line no-await-in-loop
+       
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120_000 });
       lastError = null;
       break;
@@ -64,7 +64,7 @@ async function gotoWithRetry(page: any, url: string) {
 
       if (typeof page?.isClosed === 'function' && page.isClosed()) break;
 
-      // eslint-disable-next-line no-await-in-loop
+       
       try {
         await page.waitForTimeout(isTransient ? Math.min(1200 + attempt * 600, 8000) : 500);
       } catch {
@@ -161,18 +161,18 @@ test.describe('Skeleton transition (no layout shift)', () => {
     // Stroboscopic guard: catch transient oversized/vertical dock during the first second.
     for (let i = 0; i < 10; i++) {
       // Desktop footer must not flash on mobile during loading.
-      // eslint-disable-next-line no-await-in-loop
+       
       await expect(page.getByTestId('footer-desktop-bar')).toHaveCount(0);
 
-      // eslint-disable-next-line no-await-in-loop
+       
       const h = await dock.boundingBox().then((b: any) => (b ? b.height : 0));
       expect(h, `footer dock must be compact during loading (height=${h}px, sample=${i})`).toBeLessThanOrEqual(120);
 
       const dockInteractive = dock.locator('[role="link"], [role="button"]');
-      // eslint-disable-next-line no-await-in-loop
+       
       const cnt = await dockInteractive.count();
       if (cnt >= 2) {
-        // eslint-disable-next-line no-await-in-loop
+         
         const [b0, b1] = await Promise.all([
           dockInteractive.nth(0).boundingBox(),
           dockInteractive.nth(1).boundingBox(),
@@ -185,7 +185,7 @@ test.describe('Skeleton transition (no layout shift)', () => {
         }
       }
 
-      // eslint-disable-next-line no-await-in-loop
+       
       await page.waitForTimeout(100);
     }
 

@@ -44,7 +44,7 @@ export function useAutoSaveForm<T>(formData: T, options: Options<T>) {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             isMounted = false; // ✅ ИСПРАВЛЕНИЕ: Сбрасываем флаг при размонтировании
         };
-    }, [formData, debounce, onSave, onSuccess, onError]);
+    }, [formData, debounce, onSave, onSuccess, onError, onStart]);
 
     const resetOriginalData = (newData: T) => {
         originalDataRef.current = newData;

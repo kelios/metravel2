@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Polyfill for Formik / DOM usage in Jest + React Native environment
 // Formik references HTMLButtonElement in its internals, which is not defined in jsdom for RN tests.
 // Определяем минимальный класс, достаточный для проверок внутри Formik.
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+ 
 // @ts-ignore
 if (typeof (global as any).HTMLButtonElement === 'undefined') {
   (global as any).HTMLButtonElement = class {};

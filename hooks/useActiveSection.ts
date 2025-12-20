@@ -32,11 +32,6 @@ export interface UseActiveSectionReturn {
   registerSection: (key: string, ref: RefObject<View>) => void;
 }
 
-interface SectionRef {
-  key: string;
-  ref: RefObject<View>;
-}
-
 export function useActiveSection(
   anchors: Record<string, RefObject<View>>,
   headerOffset: number
@@ -137,15 +132,17 @@ export function useActiveSection(
     });
 
     return () => {
+      const observerInstance = observerRef.current;
+      const registeredSections = registeredSectionsRef.current;
       if (observerRef.current) {
-        observerRef.current.disconnect();
+        observerInstance.disconnect();
         observerRef.current = null;
       }
-      registeredSectionsRef.current.clear();
+      registeredSections.clear();
     };
   }, [anchors, headerOffset, activeSection]);
 
-  const registerSection = useCallback((key: string, ref: RefObject<View>) => {
+  const registerSection = useCallback((_key: string, _ref: RefObject<View>) => {
     // Для native это будет обрабатываться через scroll events
     // Для web уже обрабатывается через Intersection Observer
   }, []);

@@ -278,8 +278,11 @@ function RootLayoutNav() {
     const mapBackground = require("../assets/travel/roulette-map-bg.jpg");
 
     // Показываем фон-карту только на экранах рулетки, на остальных страницах сохраняем чистый белый фон
+    // На мобильном web фон мешает доку/контенту — отключаем.
     const showMapBackground =
-      Platform.OS === 'web' && (pathname?.includes('roulette') || pathname?.includes('random'));
+      Platform.OS === 'web' &&
+      !isMobile &&
+      (pathname?.includes('roulette') || pathname?.includes('random'));
 
     return (
       <ErrorBoundary>

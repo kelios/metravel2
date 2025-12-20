@@ -74,7 +74,7 @@ export function useNetworkStatus(): NetworkStatus {
         return () => {
           unsubscribe();
         };
-      } catch (_error) {
+      } catch {
         // Если NetInfo не установлен, используем fallback
         if (__DEV__) {
           console.warn('@react-native-community/netinfo не установлен. Используется fallback.');

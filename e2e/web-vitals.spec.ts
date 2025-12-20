@@ -23,7 +23,7 @@ async function gotoWithRetry(page: any, url: string) {
   let lastError: any = null;
   for (let attempt = 0; attempt < 10; attempt++) {
     try {
-      // eslint-disable-next-line no-await-in-loop
+       
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120_000 });
       lastError = null;
       break;
@@ -38,7 +38,7 @@ async function gotoWithRetry(page: any, url: string) {
 
       if (typeof page?.isClosed === 'function' && page.isClosed()) break;
 
-      // eslint-disable-next-line no-await-in-loop
+       
       try {
         await page.waitForTimeout(isTransient ? Math.min(1200 + attempt * 600, 8000) : 500);
       } catch {
@@ -272,9 +272,9 @@ test.describe('Web Vitals (CLS/LCP/INP)', () => {
     clsEntries: vitals.clsEntries,
   };
 
-  // eslint-disable-next-line no-console
+   
   console.log('E2E Web Vitals:');
-  // eslint-disable-next-line no-console
+   
   console.log(
     JSON.stringify(
       {

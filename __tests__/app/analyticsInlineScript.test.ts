@@ -80,7 +80,7 @@ const setupDomEnv = ({ host = 'metravel.by', consent = { necessary: true, analyt
 
 const runAnalyticsSnippet = () => {
   const snippet = getAnalyticsInlineScript(TEST_METRIKA_ID, TEST_GA_ID)
-  // eslint-disable-next-line no-eval
+   
   eval(snippet)
 }
 

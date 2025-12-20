@@ -24,13 +24,13 @@ async function gotoWithRetry(page: any, url: string) {
   let lastError: any = null;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      // eslint-disable-next-line no-await-in-loop
+       
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
       lastError = null;
       break;
     } catch (e) {
       lastError = e;
-      // eslint-disable-next-line no-await-in-loop
+       
       await page.waitForTimeout(500);
     }
   }
@@ -83,10 +83,10 @@ test.describe('Footer layout invariants (web)', () => {
     // This catches transient layout shifts (first frame vs settled state).
     const heights: number[] = [];
     for (let i = 0; i < 10; i++) {
-      // eslint-disable-next-line no-await-in-loop
+       
       const h = await desktopBar.boundingBox().then((b) => (b ? b.height : 0));
       heights.push(h);
-      // eslint-disable-next-line no-await-in-loop
+       
       await page.waitForTimeout(100);
     }
 
@@ -120,10 +120,10 @@ test.describe('Footer layout invariants (web)', () => {
     // Stroboscopic guard: within the first second, footer must not become a tall vertical list.
     // This catches layout that persists long enough to be visible to users.
     for (let i = 0; i < 10; i++) {
-      // eslint-disable-next-line no-await-in-loop
+       
       const h = await desktopBar.boundingBox().then((b) => (b ? b.height : 0));
       expect(h, `desktop footer must not be tall (height=${h}px, sample=${i})`).toBeLessThanOrEqual(140);
-      // eslint-disable-next-line no-await-in-loop
+       
       await page.waitForTimeout(100);
     }
 
@@ -173,13 +173,13 @@ test.describe('Footer layout invariants (web)', () => {
 
     // Stroboscopic guard: dock must never become tall (half-screen regression).
     for (let i = 0; i < 10; i++) {
-      // eslint-disable-next-line no-await-in-loop
+       
       await expect(page.getByTestId('footer-desktop-bar')).toHaveCount(0);
 
-      // eslint-disable-next-line no-await-in-loop
+       
       const h = await dock.boundingBox().then((b) => (b ? b.height : 0));
       expect(h, `dock must be compact (height=${h}px, sample=${i})`).toBeLessThanOrEqual(120);
-      // eslint-disable-next-line no-await-in-loop
+       
       await page.waitForTimeout(100);
     }
 
@@ -230,13 +230,13 @@ test.describe('Footer layout invariants (web)', () => {
       const dock = page.getByTestId('footer-dock-wrapper');
       await expect(dock).toBeVisible({ timeout: 30_000 });
       for (let i = 0; i < 10; i++) {
-        // eslint-disable-next-line no-await-in-loop
+         
         await expect(page.getByTestId('footer-desktop-bar')).toHaveCount(0);
 
-        // eslint-disable-next-line no-await-in-loop
+         
         const h = await dock.boundingBox().then((b) => (b ? b.height : 0));
         expect(h, `dock must be compact at width=${w} (height=${h}px, sample=${i})`).toBeLessThanOrEqual(120);
-        // eslint-disable-next-line no-await-in-loop
+         
         await page.waitForTimeout(100);
       }
 

@@ -242,7 +242,7 @@ test.describe('CLS audit', () => {
     // Sort worst offenders first
     results.sort((a, b) => b.clsAfterRender - a.clsAfterRender);
 
-    // eslint-disable-next-line no-console
+     
     console.log(
       'CLS audit results (sorted by clsAfterRender):\n' +
         results
@@ -254,7 +254,7 @@ test.describe('CLS audit', () => {
     );
 
     if (VERBOSE) {
-      // eslint-disable-next-line no-console
+       
       console.log(
         'Top CLS entries per route:\n' +
           results

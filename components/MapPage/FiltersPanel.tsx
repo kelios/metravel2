@@ -149,7 +149,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         {title ? <Text style={styles.compactButtonText}>{title}</Text> : null}
       </Pressable>
     ));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [styles]); // зависимость — локальные styles
 
   // ——— Aggregations

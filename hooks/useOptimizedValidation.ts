@@ -21,7 +21,7 @@ export function useOptimizedValidation<T extends Record<string, any>>(
   const {
     debounce = 300,
     validateOnChange = true,
-    validateOnBlur = true,
+    validateOnBlur: _validateOnBlur = true,
   } = options;
 
   const [state, setState] = useState<ValidationState>({
@@ -96,7 +96,7 @@ export function useOptimizedValidation<T extends Record<string, any>>(
         }
       }, debounce);
     });
-  }, [data, debounce]);
+  }, [data, debounce, state.errors, state.isValid]);
 
   // Auto-validate on data change
   useEffect(() => {

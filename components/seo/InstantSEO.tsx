@@ -90,7 +90,7 @@ const InstantSEO: React.FC<Props> = ({
             // маяк для восстановления после BFCache
             upsertMeta({ name: 'x-current-title' }, title);
         } catch (error) {
-            // eslint-disable-next-line no-console
+             
             console.warn('InstantSEO: failed to update meta tags', error);
         }
     }, [title, description, canonical, image, ogType]);
@@ -107,7 +107,7 @@ const InstantSEO: React.FC<Props> = ({
                     document.title = expected;
                 }
             } catch (error) {
-                // eslint-disable-next-line no-console
+                 
                 console.warn('InstantSEO: failed to sync title from bfcache', error);
             }
         };
