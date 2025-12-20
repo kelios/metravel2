@@ -322,7 +322,7 @@ export default function SettingsScreen() {
                                     value={lastName}
                                     onChangeText={setLastName}
                                     style={styles.input}
-                                    placeholder="Введите фамилию"
+                                    placeholder={username || 'Введите фамилию'}
                                     placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
                                 />
                             </View>

@@ -73,8 +73,9 @@ export const uploadUserProfileAvatarFile = async (
         } as any);
     }
 
+    // apiClient.baseURL уже содержит /api, поэтому здесь без /api в начале
     return apiClient.uploadFormData<UserProfileDto>(
-        `/api/user/${userId}/profile/avatar-upload/`,
+        `/user/${userId}/profile/avatar-upload/`,
         formData,
         'PUT'
     );
@@ -105,24 +106,29 @@ const unwrapList = <T>(payload: MaybePaginated<T>): T[] => {
 };
 
 export const fetchUserFavoriteTravels = async (userId: string | number): Promise<CardViewTravelDto[]> => {
-    const res = await apiClient.get<MaybePaginated<CardViewTravelDto>>(`/api/user/${userId}/favorite-travels/`);
+    // apiClient.baseURL уже содержит /api
+    const res = await apiClient.get<MaybePaginated<CardViewTravelDto>>(`/user/${userId}/favorite-travels/`);
     return unwrapList(res);
 };
 
 export const fetchUserHistory = async (userId: string | number): Promise<CardViewTravelDto[]> => {
-    const res = await apiClient.get<MaybePaginated<CardViewTravelDto>>(`/api/user/${userId}/history/`);
+    // apiClient.baseURL уже содержит /api
+    const res = await apiClient.get<MaybePaginated<CardViewTravelDto>>(`/user/${userId}/history/`);
     return unwrapList(res);
 };
 
 export const clearUserHistory = async (userId: string | number): Promise<null> => {
-    return apiClient.delete<null>(`/api/user/${userId}/clear-history/`);
+    // apiClient.baseURL уже содержит /api
+    return apiClient.delete<null>(`/user/${userId}/clear-history/`);
 };
 
 export const clearUserFavorites = async (userId: string | number): Promise<null> => {
-    return apiClient.delete<null>(`/api/user/${userId}/clear-favorite/`);
+    // apiClient.baseURL уже содержит /api
+    return apiClient.delete<null>(`/user/${userId}/clear-favorite/`);
 };
 
 export const fetchUserRecommendedTravels = async (userId: string | number): Promise<CardViewTravelDto[]> => {
-    const res = await apiClient.get<MaybePaginated<CardViewTravelDto>>(`/api/user/${userId}/recommended-travels/`);
+    // apiClient.baseURL уже содержит /api
+    const res = await apiClient.get<MaybePaginated<CardViewTravelDto>>(`/user/${userId}/recommended-travels/`);
     return unwrapList(res);
 };
