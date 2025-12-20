@@ -1,14 +1,14 @@
 // Example: Modern ListTravel renderItem using new design system
 // This shows how much cleaner the code becomes with atomic design
 
-import React, { useCallback } from 'react';
-import { FlatList, View } from 'react-native';
+import React from 'react';
+import { FlatList } from 'react-native';
 import { Box, Text, Button, Icon, designTokens } from '../ui';
 import { ModernTravelCard } from '../ui/ModernTravelCard';
 import type { Travel } from '../../types/types';
 
 // Modern renderItem function - much cleaner!
-const renderTravelItem = useCallback(({
+const renderTravelItem = ({
   item: travel,
   index
 }: {
@@ -35,16 +35,21 @@ const renderTravelItem = useCallback(({
         isFirst={index === 0}
         canEdit={true} // Would come from props/context
         canDelete={true}
-        onPress={() => console.log('Navigate to travel:', travel.id)}
-        onEdit={() => console.log('Edit travel:', travel.id)}
-        onDelete={() => console.log('Delete travel:', travel.id)}
+        onPress={() => undefined}
+        onEdit={() => undefined}
+        onDelete={() => undefined}
       />
     </Box>
   );
-}, []);
+};
 
 // Modern EmptyState using design system
-const renderEmptyState = useCallback(({ showFilters, activeFiltersCount, onClearFilters }) => (
+type ModernEmptyStateProps = {
+  activeFiltersCount: number;
+  onClearFilters: () => void;
+};
+
+const renderEmptyState = ({ activeFiltersCount, onClearFilters }: ModernEmptyStateProps) => (
   <Box
     padding={8}
     alignItems="center"
@@ -89,10 +94,10 @@ const renderEmptyState = useCallback(({ showFilters, activeFiltersCount, onClear
       </Button>
     )}
   </Box>
-), []);
+);
 
 // Modern LoadingState
-const renderLoadingState = useCallback(() => (
+const renderLoadingState = () => (
   <Box padding={4} gap={4}>
     {/* Skeleton loading cards */}
     {Array.from({ length: 6 }).map((_, index) => (
@@ -131,10 +136,15 @@ const renderLoadingState = useCallback(() => (
       </Box>
     ))}
   </Box>
-), []);
+);
 
 // Modern FlatList usage - much simpler configuration
-const ModernTravelList = ({ travels, loading, empty, ...props }) => (
+interface ModernTravelListProps extends ModernEmptyStateProps {
+  travels: Travel[];
+  loading?: boolean;
+}
+
+const ModernTravelList = ({ travels, loading, ...props }: ModernTravelListProps) => (
   <FlatList
     data={travels}
     renderItem={renderTravelItem}
@@ -154,7 +164,7 @@ const ModernTravelList = ({ travels, loading, empty, ...props }) => (
     removeClippedSubviews={false}
     // Modern refresh control
     refreshing={false}
-    onRefresh={() => console.log('Refresh')}
+    onRefresh={() => undefined}
   />
 );
 

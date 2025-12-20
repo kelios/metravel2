@@ -89,13 +89,16 @@ const InstantSEO: React.FC<Props> = ({
 
             // маяк для восстановления после BFCache
             upsertMeta({ name: 'x-current-title' }, title);
-        } catch {}
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.warn('InstantSEO: failed to update meta tags', error);
+        }
     }, [title, description, canonical, image, ogType]);
 
     // 2) При возвращении «назад» из bfcache браузера — ещё раз фиксируем тайтл
     React.useEffect(() => {
         if (typeof window === 'undefined') return;
-        const onPageShow = (e: PageTransitionEvent) => {
+        const onPageShow = () => {
             // isTrusted + persisted гарантирует BFCache; но нам ок и просто дожать тайтл
             try {
                 const meta = document.head.querySelector<HTMLMetaElement>('meta[name="x-current-title"]');
@@ -103,7 +106,10 @@ const InstantSEO: React.FC<Props> = ({
                 if (document.title !== expected) {
                     document.title = expected;
                 }
-            } catch {}
+            } catch (error) {
+                // eslint-disable-next-line no-console
+                console.warn('InstantSEO: failed to sync title from bfcache', error);
+            }
         };
         window.addEventListener('pageshow', onPageShow);
         return () => window.removeEventListener('pageshow', onPageShow);

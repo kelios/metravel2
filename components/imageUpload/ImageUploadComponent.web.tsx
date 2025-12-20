@@ -157,7 +157,7 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
             if (uploadedUrl || previewUrl) {
                 const finalUrl = uploadedUrl || previewUrl!;
                 setImageUri(finalUrl);
-                setPreviewUrl(null); // Очищаем превью после успешной загрузки
+                setPreviewUrl(finalUrl); // Показываем превью сразу (даже если файл ещё генерируется на CDN)
                 setPreviewFile(null); // Очищаем файл
                 setUploadMessage('Фотография успешно загружена');
                 onUpload?.(finalUrl);

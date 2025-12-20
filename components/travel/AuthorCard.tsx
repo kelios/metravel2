@@ -9,12 +9,9 @@ import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import type { Travel } from '@/src/types/types';
-import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { type UserProfileDto } from '@/src/api/user';
 import { openExternalUrl } from '@/src/utils/externalLinks';
 import { useUserProfileCached } from '@/src/hooks/useUserProfileCached';
-import { METRICS } from '@/constants/layout';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 
 interface AuthorCardProps {
@@ -64,7 +61,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
     if (directName && typeof directName === 'string' && directName.trim()) {
       const clean = directName.trim();
       // Проверяем на очевидные плейсхолдеры
-      if (!/^[\.\s\u00B7\u2022]+$|^Автор|^Пользователь|^User/i.test(clean)) {
+      if (!/^[.\s\u00B7\u2022]+$|^Автор|^Пользователь|^User/i.test(clean)) {
         return clean;
       }
     }
@@ -74,14 +71,14 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
     if (typeof base === 'string' && base.trim()) {
       const clean = base.trim();
       // Проверяем на плейсхолдеры, но менее строго
-      if (!/^[\.\s\u00B7\u2022]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i.test(clean)) {
+      if (!/^[.\s\u00B7\u2022]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i.test(clean)) {
         return clean;
       }
     }
     
     // 4. Ничего не найдено
     return '';
-  }, [travel.user?.name, travel.user?.first_name, travel.user?.last_name, (travel as any).userName]);
+  }, [travel]);
 
   const userId = useMemo(() => {
     const direct =
@@ -151,8 +148,10 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
   }, [userId, onViewAuthorTravels, router]);
 
   // Оптимизация аватара
+  const travelUserAvatar = (travel as any)?.user?.avatar;
+
   const avatarUri = useMemo(() => {
-    const rawUri = authorProfile?.avatar || (travel as any).user?.avatar;
+    const rawUri = authorProfile?.avatar || travelUserAvatar;
     if (!rawUri) return '';
 
     const normalizedUri = normalizeMediaUrl(rawUri);
@@ -160,7 +159,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
 
     // Для надёжности отдаём нормализованный URL без доп. опций, чтобы не ломать S3/прокси
     return normalizedUri;
-  }, [authorProfile?.avatar, (travel as any).user?.avatar, normalizeMediaUrl]);
+  }, [authorProfile?.avatar, travelUserAvatar, normalizeMediaUrl]);
 
   // Не показываем если нет данных об авторе
   if (!userName && !authorCountryName && !userId) {
@@ -455,4 +454,3 @@ const styles = StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
   },
 });
-
