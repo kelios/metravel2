@@ -40,6 +40,7 @@ interface TravelWizardStepRouteProps {
     autosaveBadge?: string;
     focusAnchorId?: string | null;
     onAnchorHandled?: () => void;
+    onStepSelect?: (step: number) => void;
 }
 
 const MultiSelectFieldAny: any = MultiSelectField;
@@ -66,6 +67,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     autosaveBadge,
     focusAnchorId,
     onAnchorHandled,
+    onStepSelect,
 }) => {
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
@@ -420,6 +422,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                             </View>
                         </View>
 
+                        {/* карта и список точек */}
                         <View style={styles.card}>
                             <View ref={markersListAnchorRef} nativeID="markers-list-root" />
                             <View style={[styles.mapContainer, isMobile && styles.mapContainerMobile]}>
@@ -462,6 +465,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                     currentStep={currentStep}
                     totalSteps={totalSteps}
                     onLayout={handleFooterLayout}
+                    onStepSelect={onStepSelect}
                 />
             </KeyboardAvoidingView>
         </SafeAreaView>

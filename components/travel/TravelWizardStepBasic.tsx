@@ -39,6 +39,7 @@ interface TravelWizardStepBasicProps {
         nextLabel?: string;
     };
     progress?: number;
+    onStepSelect?: (step: number) => void;
 }
 
 const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
@@ -60,6 +61,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     onAnchorHandled,
     stepMeta,
     progress = currentStep / totalSteps,
+    onStepSelect,
 }) => {
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
@@ -127,6 +129,9 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                     primaryLabel={stepMeta?.nextLabel ?? 'Далее'}
                     onSave={onManualSave}
                     onLayout={handleFooterLayout}
+                    currentStep={currentStep}
+                    totalSteps={totalSteps}
+                    onStepSelect={onStepSelect}
                 />
                 <Snackbar visible={snackbarVisible} onDismiss={onDismissSnackbar}>
                     {snackbarMessage}

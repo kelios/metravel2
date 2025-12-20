@@ -37,6 +37,7 @@ interface TravelWizardStepMediaProps {
     autosaveBadge?: string;
     focusAnchorId?: string | null;
     onAnchorHandled?: () => void;
+    onStepSelect?: (step: number) => void;
 }
 
 const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
@@ -53,6 +54,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     autosaveBadge,
     focusAnchorId,
     onAnchorHandled,
+    onStepSelect,
 }) => {
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
@@ -199,6 +201,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                     onLayout={handleFooterLayout}
                     currentStep={currentStep}
                     totalSteps={totalSteps}
+                    onStepSelect={onStepSelect}
                 />
             </KeyboardAvoidingView>
         </SafeAreaView>

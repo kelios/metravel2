@@ -18,6 +18,7 @@ interface TravelWizardFooterProps {
     onLayout?: (event: any) => void;
     currentStep?: number;
     totalSteps?: number;
+    onStepSelect?: (step: number) => void;
 }
 
 const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
@@ -31,6 +32,7 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
     onLayout,
     currentStep,
     totalSteps,
+    onStepSelect,
 }) => {
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
@@ -86,12 +88,15 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                     {steps.length > 0 && (
                         <View style={styles.stepsRowMobile}>
                             {steps.map(step => (
-                                <View
+                                <Pressable
                                     key={step}
                                     style={[
                                         styles.stepBadge,
                                         step === currentStep ? styles.stepBadgeActive : styles.stepBadgeInactive,
                                     ]}
+                                    onPress={() => onStepSelect?.(step)}
+                                    disabled={!onStepSelect || step === currentStep}
+                                    {...Platform.select({ web: { cursor: onStepSelect ? 'pointer' : 'default' } })}
                                 >
                                     <Text
                                         style={[
@@ -101,7 +106,7 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                                     >
                                         {step}
                                     </Text>
-                                </View>
+                                </Pressable>
                             ))}
                         </View>
                     )}
@@ -125,12 +130,15 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                         {steps.length > 0 && (
                             <View style={styles.stepsRow}>
                                 {steps.map(step => (
-                                    <View
+                                    <Pressable
                                         key={step}
                                         style={[
                                             styles.stepBadge,
                                             step === currentStep ? styles.stepBadgeActive : styles.stepBadgeInactive,
                                         ]}
+                                        onPress={() => onStepSelect?.(step)}
+                                        disabled={!onStepSelect || step === currentStep}
+                                        {...Platform.select({ web: { cursor: onStepSelect ? 'pointer' : 'default' } })}
                                     >
                                         <Text
                                             style={[
@@ -140,7 +148,7 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                                         >
                                             {step}
                                         </Text>
-                                    </View>
+                                    </Pressable>
                                 ))}
                             </View>
                         )}
@@ -179,8 +187,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: DESIGN_TOKENS.spacing.md,
-        paddingVertical: DESIGN_TOKENS.spacing.sm,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        paddingVertical: DESIGN_TOKENS.spacing.xs,
         borderTopWidth: 1,
         borderColor: DESIGN_TOKENS.colors.border,
         backgroundColor: DESIGN_TOKENS.colors.surface,
@@ -208,6 +216,7 @@ const styles = StyleSheet.create({
     centerSection: {
         flex: 2,
         alignItems: 'center',
+        gap: 6,
     },
     rightSection: {
         flex: 1,
@@ -236,7 +245,7 @@ const styles = StyleSheet.create({
         backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
     },
     primaryButton: {
-        minWidth: 200,
+        minWidth: 170,
     },
     primaryButtonMobile: {
         flex: 1,
@@ -278,16 +287,16 @@ const styles = StyleSheet.create({
     },
     stepsRow: {
         flexDirection: 'row',
-        gap: 8,
-        justifyContent: 'center',
+        gap: 6,
+        justifyContent: 'space-evenly',
         alignItems: 'center',
-        marginBottom: DESIGN_TOKENS.spacing.xs,
+        marginBottom: 4,
     },
     stepBadge: {
-        minWidth: 32,
-        height: 32,
-        borderRadius: 16,
-        paddingHorizontal: 10,
+        minWidth: 28,
+        height: 28,
+        borderRadius: 14,
+        paddingHorizontal: 8,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
@@ -300,7 +309,7 @@ const styles = StyleSheet.create({
     },
     stepBadgeInactive: {},
     stepBadgeText: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '700',
         color: DESIGN_TOKENS.colors.textMuted,
     },

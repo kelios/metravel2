@@ -536,10 +536,9 @@ function TravelListItem({
             zIndex: 2,
             opacity: 1,
             transitionDuration: "150ms",
+            pointerEvents: 'none',
           } as any,
-          Platform.OS === 'web' && ({ pointerEvents: 'none' } as any),
         ]}
-        {...(Platform.OS !== 'web' ? ({ pointerEvents: 'none' } as any) : {})}
       />
     )}
         {selectable && (
@@ -555,10 +554,9 @@ function TravelListItem({
                 zIndex: 2,
                 opacity: 1,
                 transitionDuration: "150ms",
+                pointerEvents: 'none',
               } as any,
-              Platform.OS === 'web' && ({ pointerEvents: 'none' } as any),
             ]}
-            {...(Platform.OS !== 'web' ? ({ pointerEvents: 'none' } as any) : {})}
           />
         )}
 
@@ -588,9 +586,8 @@ function TravelListItem({
             <View
               style={[
                 styles.favoriteButtonContainer,
-                Platform.OS === 'web' && ({ pointerEvents: 'box-none' } as any),
+                { pointerEvents: 'box-none' } as any,
               ]}
-              {...(Platform.OS !== 'web' ? ({ pointerEvents: 'box-none' } as any) : {})}
               {...(Platform.OS === 'web' && {
                 onClick: (e: any) => {
                   e.stopPropagation();
@@ -611,99 +608,6 @@ function TravelListItem({
             </View>
           )}
 
-          {/* Кнопки управления (Top Left) - перенесены сюда, чтобы не мешать бейджам внизу */}
-          {canEdit && !selectable && (
-            <View
-              style={[
-                styles.adminActionsContainer,
-                Platform.OS === 'web' && ({ pointerEvents: 'box-none' } as any),
-              ]}
-              {...(Platform.OS !== 'web' ? ({ pointerEvents: 'box-none' } as any) : {})}
-              {...(Platform.OS === "web" && {
-                onClick: (e: any) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                },
-                onMouseDown: (e: any) => e.stopPropagation(),
-              })}
-            >
-              <Pressable 
-                onPress={(e) => handleEdit(e)} 
-                hitSlop={10} 
-                style={styles.adminBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Редактировать"
-                {...(Platform.OS === 'web' && {
-                  onClick: (e: any) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    handleEdit(e);
-                  },
-                  onMouseDown: (e: any) => e.stopPropagation(),
-                })}
-              >
-                <Feather name="edit-2" size={Platform.select({ default: 14, web: 16 })} color="#1e293b" />
-              </Pressable>
-              <View style={styles.adminDivider} />
-              <Pressable 
-                onPress={(e) => handleDelete(e)} 
-                hitSlop={10} 
-                style={styles.adminBtn}
-                testID="delete-button"
-                accessibilityRole="button"
-                accessibilityLabel="Удалить"
-                {...(Platform.OS === 'web' && {
-                  onClick: (e: any) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    handleDelete(e);
-                  },
-                  onMouseDown: (e: any) => e.stopPropagation(),
-                })}
-              >
-                <Feather name="trash-2" size={Platform.select({ default: 14, web: 16 })} color="#1e293b" />
-              </Pressable>
-            </View>
-          )}
-
-          {/* Минимальный градиент только внизу для читаемости - заменен на CSS для производительности */}
-          {Platform.OS === 'web' ? (
-            <View 
-              style={{
-                position: 'absolute' as any,
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: 120,
-                backgroundColor: 'transparent' as any,
-                pointerEvents: 'none' as any,
-              }}
-            />
-          ) : (
-            <LinearGradient
-              colors={["transparent", "rgba(0,0,0,0.02)", "rgba(0,0,0,0.15)", "rgba(0,0,0,0.35)"]}
-              pointerEvents="none"
-              style={styles.grad}
-            />
-          )}
-
-          {/* Только бейдж локации на фото - полупрозрачный */}
-          {countries.length > 0 && countries[0] && (
-            <View
-              style={[
-                styles.topBadges,
-                Platform.OS === 'web' && ({ pointerEvents: 'none' } as any),
-              ]}
-              {...(Platform.OS !== 'web' ? ({ pointerEvents: 'none' } as any) : {})}
-            >
-              <View style={styles.infoBadge}>
-                <Feather name="map-pin" size={Platform.select({ default: 10, web: 11 })} color="#0f172a" />
-                <Text style={styles.infoBadgeText} numberOfLines={1}>
-                  {countries[0]}
-                </Text>
-              </View>
-            </View>
-          )}
 
           {selectable && (
             <Pressable

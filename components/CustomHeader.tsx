@@ -64,6 +64,10 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
             }
         }
 
+        if (normalized.includes('X-Amz-') || normalized.includes('x-amz-')) {
+            return normalized;
+        }
+
         const separator = normalized.includes('?') ? '&' : '?';
         return `${normalized}${separator}v=${profileRefreshToken}`;
     }, [avatarLoadError, userAvatar, profileRefreshToken]);

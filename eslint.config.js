@@ -72,7 +72,8 @@ module.exports = [
     rules: {
       "no-undef": "off",
       "no-console": ["warn", { allow: ["warn", "error", "info"] }],
-      "no-unused-vars": [
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
         "warn",
         {
           argsIgnorePattern: "^_",

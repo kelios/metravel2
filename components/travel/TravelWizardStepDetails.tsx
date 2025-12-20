@@ -27,6 +27,7 @@ interface TravelWizardStepDetailsProps {
     };
     progress?: number;
     autosaveBadge?: string;
+    onStepSelect?: (step: number) => void;
 }
 
 const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
@@ -40,6 +41,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
     stepMeta,
     progress = currentStep / totalSteps,
     autosaveBadge,
+    onStepSelect,
 }) => {
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
@@ -185,6 +187,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                     onLayout={handleFooterLayout}
                     currentStep={currentStep}
                     totalSteps={totalSteps}
+                    onStepSelect={onStepSelect}
                 />
             </KeyboardAvoidingView>
         </SafeAreaView>

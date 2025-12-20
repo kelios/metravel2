@@ -107,6 +107,15 @@ export default function UpsertTravel() {
 
     const pendingIssueNavRef = useRef<{ step: number; anchorId?: string } | null>(null);
     const [focusAnchorId, setFocusAnchorId] = useState<string | null>(null);
+
+    const handleStepSelect = useCallback(
+        (step: number) => {
+            if (step < 1 || step > totalSteps || step === currentStep) return;
+            trackWizardEvent('wizard_step_jump', { step_from: currentStep, step_to: step });
+            setCurrentStep(step);
+        },
+        [currentStep, totalSteps],
+    );
     
     // Optimized form state management
     const initialFormData = useMemo(() => getEmptyFormData(isNew ? null : String(id)), [isNew, id]);
@@ -467,6 +476,7 @@ export default function UpsertTravel() {
                 progress={progressValue}
                 focusAnchorId={focusAnchorId}
                 onAnchorHandled={handleAnchorHandled}
+                onStepSelect={handleStepSelect}
             />
         );
     }
@@ -523,6 +533,7 @@ export default function UpsertTravel() {
                 autosaveBadge={autosaveBadge}
                 focusAnchorId={focusAnchorId}
                 onAnchorHandled={handleAnchorHandled}
+                onStepSelect={handleStepSelect}
             />
         );
     }
@@ -557,6 +568,7 @@ export default function UpsertTravel() {
                 autosaveBadge={autosaveBadge}
                 focusAnchorId={focusAnchorId}
                 onAnchorHandled={handleAnchorHandled}
+                onStepSelect={handleStepSelect}
             />
         );
     }
@@ -624,6 +636,7 @@ export default function UpsertTravel() {
                 autosaveBadge={autosaveBadge}
                 focusAnchorId={focusAnchorId}
                 onAnchorHandled={handleAnchorHandled}
+                onStepSelect={handleStepSelect}
             />
         );
     }

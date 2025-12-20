@@ -30,6 +30,7 @@ interface TravelWizardStepExtrasProps {
     autosaveBadge?: string;
     focusAnchorId?: string | null;
     onAnchorHandled?: () => void;
+    onStepSelect?: (step: number) => void;
 }
 
 const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
@@ -48,6 +49,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
     autosaveBadge,
     focusAnchorId,
     onAnchorHandled,
+    onStepSelect,
 }) => {
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
@@ -151,6 +153,9 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                     onSave={onManualSave}
                     saveLabel="Сохранить"
                     onLayout={handleFooterLayout}
+                    currentStep={currentStep}
+                    totalSteps={totalSteps}
+                    onStepSelect={onStepSelect}
                 />
             </KeyboardAvoidingView>
         </SafeAreaView>
