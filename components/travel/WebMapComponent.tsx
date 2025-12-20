@@ -31,7 +31,45 @@ const reverseGeocode = async (latlng: any) => {
     }
 };
 
-const buildAddressFromGeocode = (geocodeData: any, latlng: any) => {
+const normalizeCountryString = (value?: string | null) =>
+    (value || '')
+        .toLowerCase()
+        .replace(/[.,]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+export const matchCountryId = (countryName: string, countrylist: any[]): number | null => {
+    const target = normalizeCountryString(countryName);
+    if (!target) return null;
+
+    const found = countrylist.find((c: any) => {
+        const candidates = [
+            c?.title_ru,
+            c?.title_en,
+            c?.title,
+            c?.name,
+        ]
+            .map(normalizeCountryString)
+            .filter(Boolean);
+
+        return candidates.some((candidate: string) => {
+            if (!candidate) return false;
+            return target === candidate || target.includes(candidate) || candidate.includes(target);
+        });
+    });
+
+    if (found?.country_id != null) {
+        const num = Number(found.country_id);
+        return Number.isFinite(num) ? num : null;
+    }
+    return null;
+};
+
+export const buildAddressFromGeocode = (
+    geocodeData: any,
+    latlng: any,
+    matchedCountry?: any,
+) => {
     const localityParts: string[] = [];
     const locality = geocodeData?.localityInfo?.locality?.[0]?.name;
     const adminRegion = geocodeData?.localityInfo?.administrative?.find((item: any) => item?.order === 2)?.name;
@@ -47,8 +85,15 @@ const buildAddressFromGeocode = (geocodeData: any, latlng: any) => {
         geocodeData?.address?.city ||
         '';
 
+    const countryLabel =
+        matchedCountry?.title_ru ||
+        matchedCountry?.title ||
+        geocodeData?.address?.country ||
+        geocodeData?.countryName ||
+        '';
+
     const localityStr = localityParts.filter(Boolean).join(', ');
-    const combined = [baseAddress, localityStr].filter(Boolean).join(' · ');
+    const combined = [baseAddress, localityStr, countryLabel].filter(Boolean).join(' · ');
 
     return combined || `${latlng.lat}, ${latlng.lng}`;
 };
@@ -222,7 +267,6 @@ const WebMapComponent = ({
         if (!isValidCoordinates(latlng)) return;
 
         const geocodeData = await reverseGeocode(latlng);
-        const address = buildAddressFromGeocode(geocodeData, latlng);
         const country =
             geocodeData?.address?.country ||
             geocodeData?.countryName ||
@@ -241,14 +285,22 @@ const WebMapComponent = ({
             country: null as number | null,
         };
 
-        if (country) {
-            const foundCountry = countrylist.find((c: any) => c.title_ru === country);
-            if (foundCountry) {
-                derivedCountryId = Number(foundCountry.country_id);
-                newMarker.country = derivedCountryId;
-                onCountrySelect(String(derivedCountryId));
-            }
+        const matchedId = country ? matchCountryId(country, countrylist) : null;
+        const matchedCountry = matchedId != null
+            ? countrylist.find((c: any) => Number(c?.country_id) === matchedId)
+            : null;
+
+        const address = buildAddressFromGeocode(geocodeData, latlng, matchedCountry);
+
+        if (matchedId != null) {
+            derivedCountryId = matchedId;
+            newMarker.country = derivedCountryId;
+            onCountrySelect(String(derivedCountryId));
+        } else {
+            newMarker.country = null;
         }
+
+        newMarker.address = address;
 
         debouncedMarkersChange([...localMarkers, newMarker]);
         setActiveIndex(localMarkers.length);

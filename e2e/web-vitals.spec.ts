@@ -41,7 +41,7 @@ async function gotoWithRetry(page: any, url: string) {
        
       try {
         await page.waitForTimeout(isTransient ? Math.min(1200 + attempt * 600, 8000) : 500);
-      } catch {
+      } catch (_e) {
         break;
       }
     }
