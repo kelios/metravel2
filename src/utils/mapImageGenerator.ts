@@ -197,7 +197,6 @@ export async function generateLeafletRouteSnapshot(
     if (isTestEnv) {
       try {
         // In Jest we mock 'leaflet', so prefer synchronous require to avoid hanging on CDN.
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
         // Use an indirect require so Metro doesn't statically include Leaflet in the web entry bundle.
         const req = (0, eval)('require') as NodeRequire;
         const leafletMod = req('leaflet');

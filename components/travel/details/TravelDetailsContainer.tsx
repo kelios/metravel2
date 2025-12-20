@@ -138,15 +138,15 @@ const BelkrajWidgetComponent =
 
 // Обёртка для ленивой загрузки секции "Экскурсии" (Belkraj) по скроллу на web
 const ExcursionsLazySection: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // На native просто рендерим сразу
-  if (Platform.OS !== "web") {
-    return <>{children}</>;
-  }
-
   const containerRef = useRef<any>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    if (Platform.OS !== "web") {
+      setVisible(true);
+      return;
+    }
+
     if (visible) return; // уже показали
     if (typeof window === "undefined" || typeof document === "undefined") {
       setVisible(true);
@@ -189,6 +189,10 @@ const ExcursionsLazySection: React.FC<{ children: React.ReactNode }> = ({ childr
       observer.disconnect();
     };
   }, [visible]);
+
+  if (Platform.OS !== "web") {
+    return <>{children}</>;
+  }
 
   return (
     <View ref={containerRef} collapsable={false}>

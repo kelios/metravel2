@@ -191,11 +191,14 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                 </ScrollView>
 
                 <TravelWizardFooter
-                    canGoBack={false}
+                    canGoBack={true}
+                    onBack={onBack}
                     onPrimary={onNext}
                     onSave={onManualSave}
                     primaryLabel="К деталям"
                     onLayout={handleFooterLayout}
+                    currentStep={currentStep}
+                    totalSteps={totalSteps}
                 />
             </KeyboardAvoidingView>
         </SafeAreaView>

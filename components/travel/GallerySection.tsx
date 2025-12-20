@@ -12,6 +12,22 @@ interface GallerySectionProps {
 const GallerySection: React.FC<GallerySectionProps> = ({ formData }) => {
     const theme = useColorScheme();
     const isDarkMode = theme === 'dark';
+    const gallerySource = formData?.gallery;
+
+    const normalizedImages = useMemo(() => {
+        const raw = Array.isArray(gallerySource) ? gallerySource : [];
+        return raw
+            .map((item, index) => {
+                if (typeof item === 'string') {
+                    return { id: `legacy-${index}`, url: item };
+                }
+                if (item && typeof item === 'object' && 'url' in item) {
+                    return { id: String((item as any).id ?? `legacy-${index}`), url: (item as any).url as string };
+                }
+                return null;
+            })
+            .filter(Boolean) as { id: string; url: string }[];
+    }, [gallerySource]);
 
     if (!formData) {
         return (
@@ -34,21 +50,6 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData }) => {
             </View>
         );
     }
-
-    const normalizedImages = useMemo(() => {
-        const raw = Array.isArray(formData.gallery) ? formData.gallery : [];
-        return raw
-            .map((item, index) => {
-                if (typeof item === 'string') {
-                    return { id: `legacy-${index}`, url: item };
-                }
-                if (item && typeof item === 'object' && 'url' in item) {
-                    return { id: String((item as any).id ?? `legacy-${index}`), url: (item as any).url as string };
-                }
-                return null;
-            })
-            .filter(Boolean) as { id: string; url: string }[];
-    }, [formData.gallery]);
 
     // Для web используем галерею с дропзоной, для native — платформенный файл
     return (

@@ -61,6 +61,13 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
         }
     }, [imageUri]);
 
+    // Показываем подтверждение сразу после успешной загрузки (поведение как у обложки маршрута)
+    useEffect(() => {
+        if (imageUri && isManuallySelected) {
+            setUploadMessage('Фотография успешно загружена');
+        }
+    }, [imageUri, isManuallySelected]);
+
     // ✅ УЛУЧШЕНИЕ: Валидация файла
     const validateFile = useCallback((file: File | { uri: string; name: string; type: string; size?: number }): string | null => {
         if (Platform.OS === 'web' && file instanceof File) {
@@ -79,12 +86,10 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
     // ✅ УЛУЧШЕНИЕ: Создание превью
     const createPreview = useCallback((file: File | { uri: string; name: string; type: string }) => {
         if (Platform.OS === 'web' && file instanceof File) {
-            setPreviewFile(file); // Сохраняем файл
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setPreviewUrl(e.target?.result as string);
-            };
-            reader.readAsDataURL(file);
+            // Используем ObjectURL, чтобы мгновенно показать превью без ожидания FileReader
+            setPreviewFile(file);
+            const objectUrl = URL.createObjectURL(file);
+            setPreviewUrl(objectUrl);
         } else {
             const rnFile = file as { uri: string };
             setPreviewUrl(rnFile.uri);
@@ -155,12 +160,13 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
             const uploadedUrl = response?.url || response?.data?.url || response?.path || response?.file_url;
 
             if (uploadedUrl || previewUrl) {
-                const finalUrl = uploadedUrl || previewUrl!;
-                setImageUri(finalUrl);
-                setPreviewUrl(finalUrl); // Показываем превью сразу (даже если файл ещё генерируется на CDN)
+                const visualUrl = previewUrl || uploadedUrl; // показываем сразу локальный превью, если CDN ещё не готов
+                const persistedUrl = uploadedUrl || previewUrl!; // что отдать наружу/сохранить
+                setImageUri(persistedUrl);
+                setPreviewUrl(visualUrl);
                 setPreviewFile(null); // Очищаем файл
                 setUploadMessage('Фотография успешно загружена');
-                onUpload?.(finalUrl);
+                onUpload?.(persistedUrl);
                 setIsManuallySelected(true);
                 setError(null);
             } else {

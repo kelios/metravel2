@@ -56,6 +56,10 @@ const WebImageOptimized = memo(function WebImageOptimized({
     const imgRef = useRef<HTMLImageElement>(null);
 
     useEffect(() => {
+        if (Platform.OS !== "web" || typeof document === "undefined") {
+            return;
+        }
+
         // Для приоритетных изображений (первой карточки) не используем lazy loading — грузим сразу
         if (priority) {
             setIsInView(true);
@@ -77,11 +81,6 @@ const WebImageOptimized = memo(function WebImageOptimized({
         observer.observe(imgRef.current);
         return () => observer.disconnect();
     }, [priority]);
-
-    // Дополнительная проверка для SSR
-    if (Platform.OS !== 'web' || typeof document === 'undefined') {
-        return null;
-    }
     
     const imageSrcSet = useMemo(() => generateSrcSet(src, [400, 800, 1200]), [src]);
     // Для трёх колонок с левой панелью уточняем sizes, чтобы не тянуть лишнее
@@ -89,7 +88,11 @@ const WebImageOptimized = memo(function WebImageOptimized({
       () => "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 30vw",
       []
     );
-    
+
+    if (Platform.OS !== 'web' || typeof document === 'undefined') {
+        return null;
+    }
+
     return (
         <img
             ref={imgRef}
@@ -192,7 +195,6 @@ function TravelListItem({
                             cardWidth,
                             viewportWidth,
                         }: Props) {
-    if (!travel) return null;
 
     const {
         id,
@@ -222,23 +224,23 @@ function TravelListItem({
         
         // 2. Пробуем прямые поля в travel объекте
         const directName = (travel as any).author_name || (travel as any).authorName || (travel as any).owner_name || (travel as any).ownerName;
-        if (directName && typeof directName === 'string' && directName.trim()) {
-            const clean = directName.trim();
-            // Проверяем на очевидные плейсхолдеры
-            if (!/^[\.\s\u00B7\u2022]+$|^Автор|^Пользователь|^User/i.test(clean)) {
-                return clean;
+            if (directName && typeof directName === 'string' && directName.trim()) {
+                const clean = directName.trim();
+                // Проверяем на очевидные плейсхолдеры
+                if (!/^[.\s\u00B7\u2022]+$|^Автор|^Пользователь|^User/i.test(clean)) {
+                    return clean;
+                }
             }
-        }
         
         // 3. Используем поле userName как основной fallback
         const base = userName;
-        if (typeof base === 'string' && base.trim()) {
-            const clean = base.trim();
-            // Проверяем на плейсхолдеры, но менее строго
-            if (!/^[\.\s\u00B7\u2022]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i.test(clean)) {
-                return clean;
+            if (typeof base === 'string' && base.trim()) {
+                const clean = base.trim();
+                // Проверяем на плейсхолдеры, но менее строго
+                if (!/^[.\s\u00B7\u2022]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i.test(clean)) {
+                    return clean;
+                }
             }
-        }
         
         // 4. Ничего не найдено
         return '';

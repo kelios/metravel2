@@ -455,11 +455,12 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                 </ScrollView>
 
                 <TravelWizardFooter
-                    canGoBack={false}
-                    onPrimary={handleNext}
+                    canGoBack={true}
+                    onBack={onBack}
+                    onPrimary={onNext}
                     primaryLabel="К медиа"
-                    onSave={onManualSave}
-                    saveLabel="Сохранить маршрут"
+                    currentStep={currentStep}
+                    totalSteps={totalSteps}
                     onLayout={handleFooterLayout}
                 />
             </KeyboardAvoidingView>

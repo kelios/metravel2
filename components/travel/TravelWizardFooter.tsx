@@ -16,6 +16,8 @@ interface TravelWizardFooterProps {
     saveLabel?: string;
     primaryDisabled?: boolean;
     onLayout?: (event: any) => void;
+    currentStep?: number;
+    totalSteps?: number;
 }
 
 const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
@@ -27,11 +29,17 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
     saveLabel = 'Сохранить',
     primaryDisabled = false,
     onLayout,
+    currentStep,
+    totalSteps,
 }) => {
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
     const isWeb = Platform.OS === 'web';
     const insets = useSafeAreaInsets();
+
+    const steps = totalSteps && currentStep
+        ? Array.from({ length: totalSteps }, (_, i) => i + 1)
+        : [];
 
     return (
         <View
@@ -75,6 +83,28 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                             />
                         ) : null}
                     </View>
+                    {steps.length > 0 && (
+                        <View style={styles.stepsRowMobile}>
+                            {steps.map(step => (
+                                <View
+                                    key={step}
+                                    style={[
+                                        styles.stepBadge,
+                                        step === currentStep ? styles.stepBadgeActive : styles.stepBadgeInactive,
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.stepBadgeText,
+                                            step === currentStep ? styles.stepBadgeTextActive : styles.stepBadgeTextInactive,
+                                        ]}
+                                    >
+                                        {step}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
+                    )}
                 </>
             ) : (
                 <>
@@ -92,6 +122,28 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                     </View>
 
                     <View style={styles.centerSection}>
+                        {steps.length > 0 && (
+                            <View style={styles.stepsRow}>
+                                {steps.map(step => (
+                                    <View
+                                        key={step}
+                                        style={[
+                                            styles.stepBadge,
+                                            step === currentStep ? styles.stepBadgeActive : styles.stepBadgeInactive,
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.stepBadgeText,
+                                                step === currentStep ? styles.stepBadgeTextActive : styles.stepBadgeTextInactive,
+                                            ]}
+                                        >
+                                            {step}
+                                        </Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
                         <Button
                             mode="contained"
                             onPress={onPrimary}
@@ -216,6 +268,46 @@ const styles = StyleSheet.create({
         width: '100%',
         gap: DESIGN_TOKENS.spacing.xs,
     },
+    stepsRowMobile: {
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: DESIGN_TOKENS.spacing.xs,
+        width: '100%',
+    },
+    stepsRow: {
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: DESIGN_TOKENS.spacing.xs,
+    },
+    stepBadge: {
+        minWidth: 32,
+        height: 32,
+        borderRadius: 16,
+        paddingHorizontal: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
+        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+    },
+    stepBadgeActive: {
+        borderColor: DESIGN_TOKENS.colors.primary,
+        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    },
+    stepBadgeInactive: {},
+    stepBadgeText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: '700',
+        color: DESIGN_TOKENS.colors.textMuted,
+    },
+    stepBadgeTextActive: {
+        color: DESIGN_TOKENS.colors.primaryDark,
+    },
+    stepBadgeTextInactive: {},
 });
 
 export default TravelWizardFooter;

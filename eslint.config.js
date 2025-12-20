@@ -4,6 +4,7 @@ const globals = require("globals");
 const tsParser = require("@typescript-eslint/parser");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
 const reactHooks = require("eslint-plugin-react-hooks");
+const reactPlugin = require("eslint-plugin-react");
 
 const baseIgnores = [
   "node_modules/",
@@ -40,11 +41,12 @@ module.exports = [
       }
     },
     plugins: {
-      "react-hooks": reactHooks
+      "react-hooks": reactHooks,
+      react: reactPlugin
     },
     rules: {
       "no-unused-vars": "warn",
-      "no-console": "warn",
+      "no-console": ["warn", { allow: ["warn", "error", "info"] }],
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn"
     }
@@ -68,7 +70,15 @@ module.exports = [
       "@typescript-eslint": tsPlugin
     },
     rules: {
-      "no-undef": "off"
+      "no-undef": "off",
+      "no-console": ["warn", { allow: ["warn", "error", "info"] }],
+      "no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_"
+        }
+      ]
     }
   },
   {

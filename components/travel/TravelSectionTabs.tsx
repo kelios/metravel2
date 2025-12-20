@@ -27,8 +27,6 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
   onNavigate,
   stickyOffset,
 }) => {
-  if (!links.length) return null
-
   const { isPhone, isLargePhone } = useResponsive()
   const isMobile = isPhone || isLargePhone
   const [moreOpen, setMoreOpen] = useState(false)
@@ -55,6 +53,8 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
     Platform.OS === "web" && typeof stickyOffset === "number"
       ? ({ position: "sticky", top: stickyOffset, zIndex: DESIGN_TOKENS.zIndex.sticky } as const)
       : undefined
+
+  if (!links.length) return null
 
   return (
     <View style={[styles.wrapper, stickyStyles]}>

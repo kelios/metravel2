@@ -90,8 +90,6 @@ const Arrow = memo(function Arrow({
   insets: { left: number; right: number };
   dismissSwipeHint: () => void;
 }) {
-  if (isMobile && hideArrowsOnMobile) return null;
-
   const arrowOpacity = useSharedValue(1);
   const arrowScale = useSharedValue(1);
 
@@ -129,6 +127,8 @@ const Arrow = memo(function Arrow({
   );
 
   const iconSize = isMobile ? 20 : 24;
+
+  if (isMobile && hideArrowsOnMobile) return null;
 
   return (
     <TouchableOpacity
@@ -539,8 +539,6 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     warmNeighbors(0);
   }, [images.length, warmNeighbors, prefetchEnabled]);
 
-  if (!images.length) return null;
-
   const keyExtractor = useCallback((it: SliderImage) => String(it.id), []);
   const getItemLayout = useCallback(
     (_: any, i: number) => ({
@@ -697,6 +695,8 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
       updateLoadStatus,
     ]
   );
+
+  if (!images.length) return null;
 
   return (
     <View style={styles.sliderStack}>

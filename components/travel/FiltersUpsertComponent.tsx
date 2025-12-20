@@ -57,7 +57,18 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                                                                      showCoverImage = true,
                                                                      showAdditionalFields = true,
                                                                  }) => {
-    if (!formData || !filters) {
+    const isLoading = !formData || !filters;
+
+    useEffect(() => {
+        // если новая запись — явно фиксируем publish=false,
+        // чтобы избежать случайной публикации до модерации
+        if (!formData) return;
+        if (!formData.id && formData.publish !== false) {
+            setFormData({ ...formData, publish: false });
+        }
+    }, [formData, setFormData]);
+
+    if (isLoading) {
         return (
             <View style={styles.loaderContainer}>
                 <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} />
@@ -66,20 +77,12 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
         );
     }
 
-    const form: any = formData;
-
-    useEffect(() => {
-        // если новая запись — явно фиксируем publish=false,
-        // чтобы избежать случайной публикации до модерации
-        if (!formData.id && formData.publish !== false) {
-            setFormData({ ...formData, publish: false });
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [formData.id]);
+    const form: any = formData!;
+    const resolvedFilters = filters!;
 
     const handleResetFilters = () => {
         setFormData({
-            ...(formData as any),
+            ...(form as any),
             publish: false,
             moderation: false,
             countries: [],
@@ -107,7 +110,6 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             Linking.openURL(`https://metravel.by${url}`).catch(() => {});
         }
     };
-
 
     return (
         <ScrollView
@@ -152,25 +154,25 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                 <>
                     <CheckboxComponent
                         label="Сохранить как черновик"
-                        value={!formData.publish}
-                        onChange={(value) => setFormData({ ...formData, publish: !value })}
+                        value={!form.publish}
+                        onChange={(value) => setFormData({ ...form, publish: !value })}
                     />
 
                     {isSuperAdmin && (
                         <CheckboxComponent
                             label="Прошел модерацию"
-                            value={formData.moderation ?? false}
-                            onChange={(value) => setFormData({ ...formData, moderation: value })}
+                            value={form.moderation ?? false}
+                            onChange={(value) => setFormData({ ...form, moderation: value })}
                         />
                     )}
                 </>
             )}
 
-            {showCoverImage && formData.id && (
+            {showCoverImage && form.id && (
                 <View style={styles.imageUploadWrapper}>
                     <ImageUploadComponent
                         collection="travelMainImage"
-                        idTravel={formData.id}
+                        idTravel={form.id}
                         oldImage={
                             form.travel_image_thumb_small_url?.length
                                 ? form.travel_image_thumb_small_url
@@ -186,9 +188,9 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             {showCountries && (
                 <MultiSelectFieldAny
                     label="Страны для путешествия *"
-                    items={filters.countries}
-                    value={formData.countries ?? []}
-                    onChange={(countries: any) => setFormData({ ...formData, countries })}
+                    items={resolvedFilters.countries}
+                    value={form.countries ?? []}
+                    onChange={(countries: any) => setFormData({ ...form, countries })}
                     labelField="title_ru"
                     valueField="country_id"
                 />
@@ -198,9 +200,9 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                 <View nativeID="travelwizard-publish-categories">
                     <MultiSelectFieldAny
                         label="Категории путешествий *"
-                        items={filters.categories}
-                        value={formData.categories ?? []}
-                        onChange={(categories: any) => setFormData({ ...formData, categories })}
+                        items={resolvedFilters.categories}
+                        value={form.categories ?? []}
+                        onChange={(categories: any) => setFormData({ ...form, categories })}
                         labelField="name"
                         valueField="id"
                     />
@@ -211,45 +213,45 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                 <>
                     <MultiSelectFieldAny
                         label="Средства передвижения"
-                        items={filters.transports}
-                        value={formData.transports ?? []}
-                        onChange={(transports: any) => setFormData({ ...formData, transports })}
+                    items={resolvedFilters.transports}
+                        value={form.transports ?? []}
+                        onChange={(transports: any) => setFormData({ ...form, transports })}
                         labelField="name"
                         valueField="id"
                     />
 
                     <MultiSelectFieldAny
                         label="Физическая подготовка"
-                        items={filters.complexity}
-                        value={formData.complexity ?? []}
-                        onChange={(complexity: any) => setFormData({ ...formData, complexity })}
+                    items={resolvedFilters.complexity}
+                        value={form.complexity ?? []}
+                        onChange={(complexity: any) => setFormData({ ...form, complexity })}
                         labelField="name"
                         valueField="id"
                     />
 
                     <MultiSelectFieldAny
                         label="Путешествуете с..."
-                        items={filters.companions}
-                        value={formData.companions ?? []}
-                        onChange={(companions: any) => setFormData({ ...formData, companions })}
+                    items={resolvedFilters.companions}
+                        value={form.companions ?? []}
+                        onChange={(companions: any) => setFormData({ ...form, companions })}
                         labelField="name"
                         valueField="id"
                     />
 
                     <MultiSelectFieldAny
                         label="Ночлег..."
-                        items={filters.over_nights_stay}
-                        value={formData.over_nights_stay ?? []}
-                        onChange={(over_nights_stay: any) => setFormData({ ...formData, over_nights_stay })}
+                    items={resolvedFilters.over_nights_stay}
+                        value={form.over_nights_stay ?? []}
+                        onChange={(over_nights_stay: any) => setFormData({ ...form, over_nights_stay })}
                         labelField="name"
                         valueField="id"
                     />
 
                     <MultiSelectFieldAny
                         label="Месяц путешествия"
-                        items={filters.month}
-                        value={formData.month ?? []}
-                        onChange={(month: any) => setFormData({ ...formData, month })}
+                    items={resolvedFilters.month}
+                        value={form.month ?? []}
+                        onChange={(month: any) => setFormData({ ...form, month })}
                         labelField="name"
                         valueField="id"
                     />
@@ -257,8 +259,8 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     {renderNumericInput('Год путешествия', 'year')}
                     <CheckboxComponent
                         label="Требуется виза"
-                        value={formData.visa ?? false}
-                        onChange={(visa) => setFormData({ ...formData, visa })}
+                        value={form.visa ?? false}
+                        onChange={(visa) => setFormData({ ...form, visa })}
                     />
                     {renderNumericInput('Количество участников', 'number_peoples')}
                     {renderNumericInput('Длительность (дней)', 'number_days')}
@@ -270,7 +272,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
 
     // Поле, принимающее только цифры
     function renderNumericInput(label: string, field: keyof TravelFormData) {
-        const current = formData as TravelFormData;
+        const current = form as TravelFormData;
         return (
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>{label}</Text>

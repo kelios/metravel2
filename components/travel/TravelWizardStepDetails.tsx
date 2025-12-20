@@ -176,12 +176,15 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                 </ScrollView>
 
                 <TravelWizardFooter
-                    canGoBack={false}
+                    canGoBack={true}
+                    onBack={onBack}
                     onPrimary={onNext}
                     onSave={onManualSave}
                     saveLabel="Сохранить"
                     primaryLabel="К публикации"
                     onLayout={handleFooterLayout}
+                    currentStep={currentStep}
+                    totalSteps={totalSteps}
                 />
             </KeyboardAvoidingView>
         </SafeAreaView>

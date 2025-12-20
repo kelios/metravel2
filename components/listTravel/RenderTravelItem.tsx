@@ -45,8 +45,6 @@ function RenderTravelItem({
                               onToggle,
                               cardWidth,
                           }: RenderTravelItemProps) {
-    if (!item) return null;
-
     const { width } = useResponsive();
 
     const cardWidthNumber = useMemo(() => {
@@ -108,6 +106,8 @@ function RenderTravelItem({
         borderWidth: 2,
         borderColor: DESIGN_TOKENS.colors.primary,
     }), []);
+
+    if (!item) return null;
 
     // Всегда используем TravelListItem
     return (
