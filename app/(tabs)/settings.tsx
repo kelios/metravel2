@@ -22,8 +22,13 @@ export default function SettingsScreen() {
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
     const isWeb = Platform.OS === 'web';
-    const favoritesContext = typeof useFavorites === 'function' ? useFavorites() : ({} as any);
-    const { clearHistory, clearFavorites, favorites, viewHistory } = favoritesContext as any;
+    const favoritesContext = useFavorites();
+    const {
+        clearHistory = async () => {},
+        clearFavorites = async () => {},
+        favorites = [],
+        viewHistory = [],
+    } = favoritesContext ?? {};
 
     const [profile, setProfile] = useState<UserProfileDto | null>(null);
     const [profileLoading, setProfileLoading] = useState(false);

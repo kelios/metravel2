@@ -159,7 +159,8 @@ function RootLayoutNav() {
         if (["/login", "/onboarding"].includes(p)) return false;
         // On travel create/edit wizard we render our own bottom actions footer.
         // The global mobile dock would overlap it.
-        if (p.startsWith('/travel') && false) return false;
+        // TODO: re-enable this guard if the footer dock is restored.
+        // if (p.startsWith('/travel')) return false;
         return true;
       },
       [pathname]

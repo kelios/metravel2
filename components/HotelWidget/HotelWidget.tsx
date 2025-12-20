@@ -54,7 +54,9 @@ async function findCityId(term: string): Promise<string | null> {
                     return cityId;
                 }
             }
-        } catch {}
+        } catch (error) {
+            console.warn('Hotel widget lookup failed', error);
+        }
     }
 
     CITY_CACHE.set(lowerTerm, null);

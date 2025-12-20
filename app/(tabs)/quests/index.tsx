@@ -98,7 +98,9 @@ export default function QuestsScreen() {
             try {
                 const saved = await AsyncStorage.getItem(STORAGE_NEARBY_RADIUS);
                 if (saved) setNearbyRadiusKm(Number(saved));
-            } catch {}
+            } catch (error) {
+                console.warn('Error reading nearby radius storage', error);
+            }
         })();
     }, []);
 
@@ -118,17 +120,19 @@ export default function QuestsScreen() {
     // ⚡️ геолокацию просим ТОЛЬКО если выбран «Рядом»
     useEffect(() => {
         let cancelled = false;
-        (async () => {
-            if (selectedCityId !== NEARBY_ID) return;
-            try {
-                const { status } = await Location.requestForegroundPermissionsAsync();
-                if (status !== 'granted' || cancelled) return;
-                const pos = await Location.getCurrentPositionAsync({
-                    accuracy: Location.LocationAccuracy.Balanced,
-                });
-                if (!cancelled) setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-            } catch {}
-        })();
+            (async () => {
+                if (selectedCityId !== NEARBY_ID) return;
+                try {
+                    const { status } = await Location.requestForegroundPermissionsAsync();
+                    if (status !== 'granted' || cancelled) return;
+                    const pos = await Location.getCurrentPositionAsync({
+                        accuracy: Location.LocationAccuracy.Balanced,
+                    });
+                    if (!cancelled) setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                } catch (error) {
+                    console.warn('Error requesting nearby location', error);
+                }
+            })();
         return () => { cancelled = true; };
     }, [selectedCityId]);
 

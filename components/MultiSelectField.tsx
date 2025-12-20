@@ -67,12 +67,16 @@ const MultiSelectField = forwardRef<any, MultiSelectFieldProps>(
                     containerStyle={styles.menuContainer}
                     itemContainerStyle={styles.menuItemContainer}
                     itemTextStyle={styles.menuItemText}
-                    activeColor={DESIGN_TOKENS.colors.primarySoft}
+                    flatListProps={{
+                        contentContainerStyle: styles.menuListContent,
+                        showsVerticalScrollIndicator: false,
+                    }}
+                    activeColor="rgba(122, 157, 143, 0.2)"
                     selectedStyle={styles.selectedChip}
                     selectedTextStyle={styles.selectedChipText}
                     renderItem={(item, selected) => (
                         <Pressable
-                            style={[styles.menuItem, selected && { backgroundColor: DESIGN_TOKENS.colors.primarySoft }]}
+                            style={[styles.menuItem, selected && styles.menuItemSelected]}
                             onPress={() => {
                                 if (single) {
                                     handleChange([item[valueField]]);
@@ -113,15 +117,21 @@ const styles = StyleSheet.create({
     selectedItemText: {
         color: DESIGN_TOKENS.colors.textInverse,
     },
+    menuItemSelected: {
+        backgroundColor: 'rgba(122, 157, 143, 0.2)',
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.borderAccent,
+    },
     dropdown: {
         minHeight: DESIGN_TOKENS.touchTarget.minHeight,
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: DESIGN_TOKENS.colors.borderAccent,
         borderRadius: DESIGN_TOKENS.radii.md,
         paddingHorizontal: DESIGN_TOKENS.spacing.md,
         paddingVertical: DESIGN_TOKENS.spacing.sm,
         backgroundColor: DESIGN_TOKENS.colors.surface,
+        boxShadow: DESIGN_TOKENS.shadows.card as any,
     },
     dropdownCompact: {
         borderRadius: DESIGN_TOKENS.radii.sm,
@@ -130,10 +140,12 @@ const styles = StyleSheet.create({
     placeholder: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: DESIGN_TOKENS.colors.textMuted,
+        fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
     },
     selectedText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: DESIGN_TOKENS.colors.text,
+        fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
     },
     searchInput: {
         height: DESIGN_TOKENS.touchTarget.minHeight,
@@ -141,6 +153,7 @@ const styles = StyleSheet.create({
         color: DESIGN_TOKENS.colors.text,
         borderRadius: DESIGN_TOKENS.radii.md,
         backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
     },
     icon: {
         width: 18,
@@ -148,19 +161,25 @@ const styles = StyleSheet.create({
         color: DESIGN_TOKENS.colors.textMuted,
     },
     menuContainer: {
-        borderRadius: DESIGN_TOKENS.radii.md,
+        borderRadius: DESIGN_TOKENS.radii.lg,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: DESIGN_TOKENS.colors.borderAccent,
         backgroundColor: DESIGN_TOKENS.colors.surface,
-        ...(DESIGN_TOKENS.shadows.card as any),
+        boxShadow: DESIGN_TOKENS.shadows.card as any,
+        paddingVertical: DESIGN_TOKENS.spacing.xs,
+        maxHeight: 320,
+    },
+    menuListContent: {
+        paddingVertical: DESIGN_TOKENS.spacing.xs,
     },
     menuItemContainer: {
-        borderRadius: DESIGN_TOKENS.radii.sm,
-        marginHorizontal: DESIGN_TOKENS.spacing.xs,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        marginHorizontal: DESIGN_TOKENS.spacing.sm,
     },
     menuItemText: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
         color: DESIGN_TOKENS.colors.text,
+        fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
     },
     selectedChip: {
         borderRadius: DESIGN_TOKENS.radii.pill,
@@ -169,8 +188,8 @@ const styles = StyleSheet.create({
         borderColor: DESIGN_TOKENS.colors.borderAccent,
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
         paddingVertical: DESIGN_TOKENS.spacing.xs,
-        marginRight: DESIGN_TOKENS.spacing.xs,
-        marginBottom: DESIGN_TOKENS.spacing.xs,
+        marginRight: DESIGN_TOKENS.spacing.sm,
+        marginBottom: DESIGN_TOKENS.spacing.sm,
     },
     selectedChipText: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,

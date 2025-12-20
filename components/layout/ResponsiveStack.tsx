@@ -39,9 +39,11 @@ export default function ResponsiveStack({
   const { isTablet, isDesktop } = useResponsive();
 
   // Определяем gap
-  const stackGap = typeof gap === 'number' 
-    ? gap 
-    : useResponsiveValue(gap || { default: METRICS.spacing.m });
+  const gapConfig = typeof gap === 'number'
+    ? { default: gap }
+    : gap || { default: METRICS.spacing.m };
+  const responsiveGap = useResponsiveValue(gapConfig);
+  const stackGap = typeof gap === 'number' ? gap : responsiveGap;
 
   // Определяем направление
   const getDirection = () => {

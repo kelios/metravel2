@@ -35,7 +35,7 @@ module.exports = {
     select: (variants = {}) =>
       variants.web ?? variants.default ?? variants.native ?? variants,
   },
-  requireNativeViewManager: jest.fn(() => (_props) => null),
+  requireNativeViewManager: jest.fn(() => () => null),
   requireNativeModule,
   requireOptionalNativeModule,
   registerWebModule: jest.fn(),

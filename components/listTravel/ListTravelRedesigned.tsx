@@ -21,7 +21,7 @@ interface ListTravelRedesignedProps {
   // Все пропсы из оригинального ListTravel
 }
 
-export default function ListTravelRedesigned({}: ListTravelRedesignedProps) {
+export default function ListTravelRedesigned(_: ListTravelRedesignedProps) {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const [mode] = useState<'compact' | 'expanded' | 'smart'>('smart');
@@ -128,4 +128,3 @@ const styles = StyleSheet.create({
     padding: 0,
   },
 });
-

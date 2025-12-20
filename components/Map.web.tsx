@@ -54,16 +54,13 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
                                                                 travel = { data: [] },
                                                                 coordinates = { latitude: 53.8828449, longitude: 27.7273595 },
                                                               }) => {
-  // карта только в браузере
-  if (!isWeb) {
-    return <Text style={{ padding: 20 }}>Карта доступна только в браузере</Text>;
-  }
 
   const [L, setL] = useState<LeafletNS | null>(null);
   const [rl, setRl] = useState<RL | null>(null);
 
   // очень лёгкая инициализация: грузим libs на idle, как только компонент смонтирован
   useEffect(() => {
+    if (!isWeb) return;
     let cancelled = false;
 
     const ensureLeaflet = async (): Promise<any> => {
@@ -98,8 +95,8 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
           setL(L);
           setRl(rlMod);
         }
-      } catch {
-        // проглатываем — покажем текст-заглушку
+      } catch (error) {
+        console.warn('Leaflet web load failed', error);
       }
     };
 
@@ -140,6 +137,10 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       <Text style={styles.placeholderText}>Загружаем карту…</Text>
     </View>
   );
+
+  if (!isWeb) {
+    return <Text style={{ padding: 20 }}>Карта доступна только в браузере</Text>;
+  }
 
   if (!L || !rl || !meTravelIcon) {
     return renderPlaceholder();

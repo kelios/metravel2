@@ -54,6 +54,13 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
         }
     }, [oldImage, isManuallySelected]);
 
+    // Очистка ошибки, если появилось актуальное изображение
+    useEffect(() => {
+        if (imageUri) {
+            setError(null);
+        }
+    }, [imageUri]);
+
     // ✅ УЛУЧШЕНИЕ: Валидация файла
     const validateFile = useCallback((file: File | { uri: string; name: string; type: string; size?: number }): string | null => {
         if (Platform.OS === 'web' && file instanceof File) {
@@ -145,13 +152,17 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
             clearInterval(progressInterval);
             setUploadProgress(100);
 
-            if (response?.url) {
-                setImageUri(response.url);
+            const uploadedUrl = response?.url || response?.data?.url || response?.path || response?.file_url;
+
+            if (uploadedUrl || previewUrl) {
+                const finalUrl = uploadedUrl || previewUrl!;
+                setImageUri(finalUrl);
                 setPreviewUrl(null); // Очищаем превью после успешной загрузки
                 setPreviewFile(null); // Очищаем файл
                 setUploadMessage('Фотография успешно загружена');
-                onUpload?.(response.url);
+                onUpload?.(finalUrl);
                 setIsManuallySelected(true);
+                setError(null);
             } else {
                 setError('Ошибка при загрузке');
                 setPreviewUrl(null);
@@ -209,8 +220,8 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
                 setError(null);
                 setUploadMessage(null);
                 setUploadProgress(0);
-                setPreviewFile(file);
-                createPreview(file);
+                // Авто-загрузка без дополнительного клика
+                handleUploadImage(file);
             }
         },
         accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp', '.heic', '.heif'] },
@@ -222,12 +233,6 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
         setPreviewUrl(null);
         setPreviewFile(null);
         setError(null);
-    };
-
-    const handleConfirmUpload = () => {
-        if (previewFile) {
-            handleUploadImage(previewFile);
-        }
     };
 
     return (
@@ -247,9 +252,14 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
                             )}
                         </View>
                     ) : previewUrl ? (
-                        // ✅ УЛУЧШЕНИЕ: Превью перед загрузкой
+                        // ✅ Автозагрузка: оставляем превью, но без кнопки подтверждения
                         <View style={styles.previewContainer}>
-                            <Image source={{ uri: previewUrl }} style={styles.previewImage} resizeMode="contain" />
+                            <img
+                                src={previewUrl}
+                                alt="Предпросмотр"
+                                style={styles.previewImage as any}
+                                onError={() => setError('Не удалось отобразить превью')}
+                            />
                             <Pressable
                                 style={styles.removePreviewButton}
                                 onPress={handleRemovePreview}
@@ -257,17 +267,15 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
                             >
                                 <Feather name="x" size={20} color="#fff" />
                             </Pressable>
-                            <Pressable
-                                style={styles.uploadConfirmButton}
-                                onPress={handleConfirmUpload}
-                                disabled={loading || !previewFile}
-                            >
-                                <Text style={styles.uploadConfirmText}>Загрузить</Text>
-                            </Pressable>
                         </View>
                     ) : imageUri ? (
                         <View style={styles.imageContainer}>
-                            <Image source={{ uri: imageUri }} style={styles.image} resizeMode="contain" />
+                            <img
+                                src={imageUri}
+                                alt="Загруженное фото"
+                                style={styles.image as any}
+                                onError={() => setError('Не удалось загрузить изображение')}
+                            />
                             <Pressable
                                 style={styles.replaceButton}
                                 onPress={() => {
@@ -309,7 +317,7 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
             )}
 
             {/* ✅ УЛУЧШЕНИЕ: Отображение ошибок */}
-            {error && (
+            {error && !imageUri && (
                 <View style={styles.errorContainer}>
                     <Feather name="alert-circle" size={16} color="#ef4444" />
                     <Text style={styles.errorText}>{error}</Text>

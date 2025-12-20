@@ -79,13 +79,20 @@ export const uploadImage = async (data: FormData): Promise<any> => {
     body: data,
   }, LONG_TIMEOUT);
 
-  if (response.status === 200) {
-    const responseData = await safeJsonParse<any>(response, {});
-    return responseData;
-  } else {
-    const errorText = await response.text().catch(() => 'Upload failed');
-    throw new Error(errorText || 'Upload failed.');
+  // Бэкенд может возвращать 201/200 — считаем любой 2xx успехом
+  if (response.ok) {
+    // Ответ может быть JSON или просто URL строкой
+    const rawText = await response.text().catch(() => '');
+    if (!rawText) return {};
+    try {
+      return JSON.parse(rawText);
+    } catch {
+      return { url: rawText.trim() };
+    }
   }
+
+  const errorText = await response.text().catch(() => 'Upload failed');
+  throw new Error(errorText || 'Upload failed.');
 };
 
 export const deleteImage = async (imageId: string) => {

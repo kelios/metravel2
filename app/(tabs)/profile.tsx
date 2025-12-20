@@ -34,8 +34,8 @@ interface UserStats {
 export default function ProfileScreen() {
   const router = useRouter();
   const { isAuthenticated, logout, userId, setUserAvatar, triggerProfileRefresh } = useAuth();
-  const favoritesContext = typeof useFavorites === 'function' ? useFavorites() : { favorites: [], viewHistory: [] };
-  const { favorites, viewHistory } = favoritesContext as any;
+  const favoritesContext = useFavorites();
+  const { favorites = [], viewHistory = [] } = favoritesContext ?? { favorites: [], viewHistory: [] };
   const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({ name: '', email: '' });
   const [profile, setProfile] = useState<UserProfileDto | null>(null);
   const [stats, setStats] = useState<UserStats>({

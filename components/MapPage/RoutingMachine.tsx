@@ -182,7 +182,11 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                         setFullRouteCoords(result.coordsLngLat)
                         const latlngs = result.coordsLngLat.map(([lng, lat]) => L.latLng(lat, lng))
                         if (polylineRef.current) {
-                            try { map.removeLayer(polylineRef.current) } catch {}
+                            try {
+                                map.removeLayer(polylineRef.current)
+                            } catch (error) {
+                                console.warn('Failed to remove existing routing layer', error)
+                            }
                             polylineRef.current = null
                         }
                         const line = L.polyline(latlngs, { color: '#3388ff', weight: 5, opacity: 0.85 })
@@ -228,7 +232,11 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         return () => {
             if (!map || !L) return
             if (polylineRef.current) {
-                try { map.removeLayer(polylineRef.current) } catch {}
+                try {
+                    map.removeLayer(polylineRef.current)
+                } catch (error) {
+                    console.warn('Failed to remove routing layer during cleanup', error)
+                }
                 polylineRef.current = null
             }
         }

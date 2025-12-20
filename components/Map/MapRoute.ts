@@ -35,11 +35,6 @@ const getOSRMProfile = (p: 'driving' | 'bike' | 'foot') =>
     p === 'bike' ? 'bike' : p === 'foot' ? 'foot' : 'driving'
 
 export default function MapRoute({ data = [], profile = 'driving', map }: MapRouteProps) {
-    if (!isWeb) {
-        console.warn('⚠ Компонент `MapRoute` работает только в браузере.')
-        return null
-    }
-
     const [L, setL] = React.useState<LeafletNS | null>(null)
 
     const polylineRef = useRef<any>(null)
@@ -51,6 +46,7 @@ export default function MapRoute({ data = [], profile = 'driving', map }: MapRou
 
     // подключаем стили Leaflet один раз
     useEffect(() => {
+        if (!isWeb) return
         const href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
         if (!document.querySelector(`link[href="${href}"]`)) {
             const link = document.createElement('link')
@@ -62,6 +58,7 @@ export default function MapRoute({ data = [], profile = 'driving', map }: MapRou
 
     // Динамически подгружаем Leaflet только в браузере (без require, чтобы не тянуть в entry)
     useEffect(() => {
+        if (!isWeb) return
         let cancelled = false
         const load = async () => {
             try {
@@ -89,8 +86,11 @@ export default function MapRoute({ data = [], profile = 'driving', map }: MapRou
 
                 const leaflet = await ensureLeaflet()
                 if (!cancelled) setL(leaflet)
-            } catch {
-                if (!cancelled) setL(null)
+            } catch (error) {
+                if (!cancelled) {
+                    console.warn('Leaflet load failed', error)
+                    setL(null)
+                }
             }
         }
         load()
@@ -101,13 +101,16 @@ export default function MapRoute({ data = [], profile = 'driving', map }: MapRou
 
     // скрываем стандартные контролы, как у тебя в исходнике
     useEffect(() => {
+        if (!isWeb) return
         const style = document.createElement('style')
         style.innerHTML = `.leaflet-top, .leaflet-right { display: none !important; }`
         document.head.appendChild(style)
         return () => {
             try {
                 document.head.removeChild(style)
-            } catch {}
+            } catch (error) {
+                console.warn('Failed to remove Leaflet controls styles', error)
+            }
         }
     }, [])
 
@@ -137,17 +140,26 @@ export default function MapRoute({ data = [], profile = 'driving', map }: MapRou
     }, [L])
 
     useEffect(() => {
+        if (!isWeb) return
         if (!L) return
         if (!map || !map.getContainer()) return
 
         // очистка прошлой линии и маркеров
         const clearLayers = () => {
             if (polylineRef.current) {
-                try { map.removeLayer(polylineRef.current) } catch {}
+                try {
+                    map.removeLayer(polylineRef.current)
+                } catch (error) {
+                    console.warn('Failed to remove polyline layer', error)
+                }
                 polylineRef.current = null
             }
             markersRef.current.forEach(m => {
-                try { map.removeLayer(m) } catch {}
+                try {
+                    map.removeLayer(m)
+                } catch (error) {
+                    console.warn('Failed to remove marker layer', error)
+                }
             })
             markersRef.current = []
         }
@@ -245,5 +257,8 @@ export default function MapRoute({ data = [], profile = 'driving', map }: MapRou
         }
     }, [map, waypointsLatLng, profile, ORS_API_KEY, L])
 
+    if (!isWeb) {
+        console.warn('⚠ Компонент `MapRoute` работает только в браузере.')
+    }
     return null
 }

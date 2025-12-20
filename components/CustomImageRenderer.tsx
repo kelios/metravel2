@@ -55,21 +55,12 @@ const normalizeUrl = (url: string) => {
 /* ─ component ─ */
 const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) => {
   const raw = pickSrc(tnode);
-  if (!raw) return null;
-
-  const src = useMemo(() => normalizeUrl(raw), [raw]);
-
   const attW = tnode.attributes?.width ? Number(tnode.attributes.width) : undefined;
   const attH = tnode.attributes?.height ? Number(tnode.attributes.height) : undefined;
-
-  // 🔎 если это мелкая иконка — игнорируем (даёт «белые квадраты» и ломает тексты)
-  if ((attW && attW <= 32) || (attH && attH <= 32)) {
-    return null;
-  }
-
+  const isSmallIcon = (attW && attW <= 32) || (attH && attH <= 32);
   const attrAR = attW && attH && attH > 0 ? attW / attH : null;
-
   const { width: screenWidth } = useResponsive();
+  const src = useMemo(() => (raw ? normalizeUrl(raw) : ''), [raw]);
   const maxFrameWidth = useMemo(
     () => Math.min(contentWidth || screenWidth || MAX_WIDTH, MAX_WIDTH, (screenWidth || MAX_WIDTH) - H_PADDING * 2),
     [contentWidth, screenWidth]
@@ -82,26 +73,51 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
   useEffect(() => {
     let mounted = true;
 
-    if (attrAR) { setAr(attrAR); return () => { mounted = false; }; }
+    if (!src || isSmallIcon) {
+      return () => {
+        mounted = false;
+      };
+    }
+
+    if (attrAR) {
+      setAr(attrAR);
+      return () => {
+        mounted = false;
+      };
+    }
 
     if (Platform.OS === "web") {
       const img = new (window as any).Image();
       (img as any).decoding = "async";
       (img as any).loading = "lazy";
-      img.onload = () => { if (mounted && img.naturalWidth && img.naturalHeight) setAr(img.naturalWidth / img.naturalHeight); };
-      img.onerror = () => { if (mounted) setAr(null); };
+      img.onload = () => {
+        if (mounted && img.naturalWidth && img.naturalHeight) {
+          setAr(img.naturalWidth / img.naturalHeight);
+        }
+      };
+      img.onerror = () => {
+        if (mounted) setAr(null);
+      };
       img.src = src;
-      return () => { mounted = false; };
+      return () => {
+        mounted = false;
+      };
     }
 
     RNImage.getSize(
       src,
-      (w, h) => { if (mounted && h > 0) setAr(w / h); },
-      () => { if (mounted) setAr(null); }
+      (w, h) => {
+        if (mounted && h > 0) setAr(w / h);
+      },
+      () => {
+        if (mounted) setAr(null);
+      }
     );
 
-    return () => { mounted = false; };
-  }, [src, attrAR]);
+    return () => {
+      mounted = false;
+    };
+  }, [src, attrAR, isSmallIcon]);
 
   const aspect = ar && ar > 0 ? ar : 16 / 9;
 
@@ -112,6 +128,8 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
     }
     return { boxWidth: maxFrameWidth, boxHeight: heightIfFullWidth };
   }, [maxFrameWidth, aspect]);
+
+  if (!raw || isSmallIcon) return null;
 
   // ✅ FIX: Убрали fetchpriority из webAttrs, так как ExpoImage не поддерживает этот проп
   // Для веба ExpoImage использует priority prop вместо fetchpriority

@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform } from 'react-native';
 import ReactDOM from 'react-dom';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -8,7 +7,7 @@ import ImageUploadComponent from '@/components/imageUpload/ImageUploadComponent'
 import MultiSelectField from '@/components/MultiSelectField';
 
 const MultiSelectFieldAny: any = MultiSelectField;
-
+/* eslint-disable no-unused-vars */
 interface MarkersListComponentProps {
     markers: MarkerData[];
     categoryTravelAddress: { id: number; name: string }[];
@@ -21,18 +20,17 @@ interface MarkersListComponentProps {
     setActiveIndex?: (index: number | null) => void;
     travelId?: string | null;
 }
-
 const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
-                                                                       markers,
-                                                                       categoryTravelAddress,
-                                                                       handleMarkerChange,
-                                                                       handleImageUpload,
-                                                                       handleMarkerRemove,
-                                                                       editingIndex,
-                                                                       setEditingIndex,
-                                                                       activeIndex,
-                                                                       setActiveIndex,
-                                                                   }) => {
+                                                               markers,
+                                                               categoryTravelAddress,
+                                                               handleMarkerChange,
+                                                               handleImageUpload,
+                                                               handleMarkerRemove,
+                                                               editingIndex,
+                                                               setEditingIndex,
+                                                               activeIndex,
+                                                               setActiveIndex,
+                                                           }) => {
     const [search, setSearch] = useState('');
     const onRemove = useCallback((index: number) => handleMarkerRemove(index), [handleMarkerRemove]);
     const onEdit = useCallback((index: number) => {
@@ -179,6 +177,7 @@ interface EditMarkerModalProps {
     onClose: () => void;
     onRemove: (index: number) => void;
 }
+/* eslint-enable no-unused-vars */
 
 const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                                                              marker,
@@ -207,7 +206,6 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
 
     const handleDelete = () => {
         const shortAddr = address || marker.address || 'эту точку';
-        // eslint-disable-next-line no-alert
         const confirmed = window.confirm(`Удалить точку "${shortAddr}" из маршрута? Это действие нельзя отменить.`);
         if (!confirmed) return;
         onRemove(index);
@@ -267,41 +265,21 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
 
                     <div style={styles.field}>
                         <label style={styles.fieldLabel}>Категории точки</label>
-                        {Platform.OS === 'web' ? (
-                            <select
-                                multiple
-                                value={categories.map(String)}
-                                onChange={(e) => {
-                                    const selected = Array.from(e.target.selectedOptions).map(o => o.value);
-                                    setCategories(selected);
-                                }}
-                                style={styles.nativeSelect as React.CSSProperties}
-                            >
-                                {categoryTravelAddress.map((item) => (
-                                    <option key={item.id} value={item.id}>
-                                        {item.name}
-                                    </option>
-                                ))}
-                            </select>
-                        ) : (
-                            <MultiSelectFieldAny
-                                label=""
-                                items={categoryTravelAddress}
-                                value={categories}
-                                onChange={(selected: any) => setCategories(selected as any[])}
-                                labelField="name"
-                                valueField="id"
-                                placeholder="Выберите..."
-                                style={styles.multiSelect}
-                                placeholderStyle={styles.placeholder}
-                                selectedTextStyle={styles.selectedText}
-                                inputSearchStyle={styles.searchInput}
-                                containerStyle={styles.dropdownContainer}
-                            />
-                        )}
-                    </div>
-
-                    {marker.id == null ? (
+                        <MultiSelectFieldAny
+                            label=""
+                            items={categoryTravelAddress}
+                            value={categories}
+                            onChange={(selected: any) => setCategories(selected as any[])}
+                            labelField="name"
+                            valueField="id"
+                            placeholder="Выберите..."
+                            style={styles.multiSelect}
+                            placeholderStyle={styles.placeholder}
+                            selectedTextStyle={styles.selectedText}
+                            inputSearchStyle={styles.searchInput}
+                            containerStyle={styles.dropdownContainer}
+                        />
+                        {marker.id == null ? (
                             <div style={styles.fieldHint}>
                                 Фото можно будет добавить после сохранения маршрута.
                                 Нажмите «Сохранить маршрут» внизу шага и затем откройте точку снова.
@@ -429,7 +407,7 @@ const styles: any = {
     },
     row: {
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: '8px',
     },
     indexBadge: {
@@ -458,6 +436,7 @@ const styles: any = {
     previewText: {
         flex: 1,
         minWidth: 0,
+        marginRight: '8px',
     },
     markerTitle: {
         fontSize: '13px',
@@ -473,7 +452,8 @@ const styles: any = {
     metaRow: {
         display: 'flex',
         flexWrap: 'wrap',
-        gap: '4px',
+        gap: '6px',
+        marginTop: '4px',
     },
     badge: {
         fontSize: '11px',
@@ -492,9 +472,10 @@ const styles: any = {
     actions: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '4px',
+        gap: '6px',
         marginLeft: '8px',
         flexShrink: 0,
+        alignSelf: 'flex-start',
     },
     editButton: {
         backgroundColor: palette.primarySoft,

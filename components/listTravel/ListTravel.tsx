@@ -917,17 +917,19 @@ function ListTravel({
 
         // ✅ A2.2: Упрощенное восстановление скролла без двойного requestAnimationFrame
         const restoreScroll = () => {
-            try {
-                const stored = window.sessionStorage.getItem('travel-list-scroll');
-                if (!stored) return;
-                const value = Number(stored);
-                if (!Number.isFinite(value) || value <= 0) return;
+                try {
+                    const stored = window.sessionStorage.getItem('travel-list-scroll');
+                    if (!stored) return;
+                    const value = Number(stored);
+                    if (!Number.isFinite(value) || value <= 0) return;
 
-                // Простое восстановление без лишних анимаций
-                setTimeout(() => {
-                    flatListRef.current?.scrollToOffset({ offset: value, animated: false });
-                }, 50); // Небольшая задержка для стабильности
-            } catch (error) {}
+                    // Простое восстановление без лишних анимаций
+                    setTimeout(() => {
+                        flatListRef.current?.scrollToOffset({ offset: value, animated: false });
+                    }, 50); // Небольшая задержка для стабильности
+                } catch (error) {
+                    console.warn('Failed to restore travel list scroll position', error);
+                }
         };
 
         // Используем setTimeout для обеспечения готовности DOM
