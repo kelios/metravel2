@@ -37,8 +37,19 @@ function normalizeCategoryTravelAddress(raw: any): Array<{ id: string; name: str
     return raw
         .map((item, idx) => {
             if (item && typeof item === 'object') {
-                const id = item.id ?? idx;
-                const name = item.name ?? item.title_ru ?? item.title ?? String(id);
+                const id =
+                    item.id ??
+                    item.value ??
+                    item.category_id ??
+                    idx;
+                const name =
+                    item.name ??
+                    item.name_ru ??
+                    item.title_ru ??
+                    item.title_en ??
+                    item.title ??
+                    item.text ??
+                    String(id);
                 return { id: String(id), name: String(name) };
             }
             return { id: String(item), name: String(item) };

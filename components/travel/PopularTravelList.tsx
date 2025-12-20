@@ -18,7 +18,7 @@ import {
 import { Title } from "react-native-paper";
 import TravelTmlRound from "@/components/travel/TravelTmlRound";
 import { fetchTravelsPopular } from "@/src/api/map";
-import type { Travel, TravelsMap } from "@/src/types/types";
+import type { TravelsMap } from "@/src/types/types";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 
@@ -29,12 +29,7 @@ type PopularTravelListProps = {
   maxColumns?: number;
 };
 
-const ITEM_HEIGHT = 250;
 const SEPARATOR_HEIGHT = 20;
-
-// Оптимизированные значения для производительности
-const WEB_LIST_WINDOW_SIZE = 3; // Уменьшено для web
-const INITIAL_NUM_TO_RENDER = 4; // Уменьшено для быстрой первоначальной загрузки
 
 const PopularTravelList: React.FC<PopularTravelListProps> = memo(
   ({ onLayout, scrollToAnchor, title = "Популярные маршруты", maxColumns = 3 }) => {

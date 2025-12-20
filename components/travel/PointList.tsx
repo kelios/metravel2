@@ -263,7 +263,7 @@ const PointCard = React.memo(function PointCard({
 
 const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
   const safePoints = useMemo(() => (Array.isArray(points) ? points : []), [points]);
-  const { width, isPhone, isLargePhone, isTablet, isDesktop } = useResponsive();
+  const { width, isPhone, isLargePhone, isTablet } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const isLargeDesktop = width >= 1440;
 
@@ -323,7 +323,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
       } else {
         await Clipboard.setStringAsync(coordStr);
       }
-    } catch (err) {
+    } catch (_err) {
       // ignore clipboard failures
     }
   }, []);
@@ -346,7 +346,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
           await Linking.openURL(deeplink);
           return;
         }
-      } catch (err) {
+      } catch (_err) {
         // ignore deep link failures
       }
     }

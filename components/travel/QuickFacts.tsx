@@ -8,7 +8,6 @@ import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import type { Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 
 interface QuickFactsProps {

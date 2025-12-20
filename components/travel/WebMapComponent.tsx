@@ -229,6 +229,8 @@ const WebMapComponent = ({
             geocodeData?.localityInfo?.administrative?.find((item: any) => item?.order === 2)?.name ||
             '';
 
+        let derivedCountryId: number | null = null;
+
         const newMarker = {
             id: null,
             lat: latlng.lat,
@@ -236,14 +238,15 @@ const WebMapComponent = ({
             address,
             categories: [],
             image: null,
-            country: null,
+            country: null as number | null,
         };
 
         if (country) {
             const foundCountry = countrylist.find((c: any) => c.title_ru === country);
             if (foundCountry) {
-                newMarker.country = foundCountry.country_id;
-                onCountrySelect(foundCountry.country_id);
+                derivedCountryId = Number(foundCountry.country_id);
+                newMarker.country = derivedCountryId;
+                onCountrySelect(String(derivedCountryId));
             }
         }
 
@@ -275,8 +278,9 @@ const WebMapComponent = ({
         debouncedMarkersChange(updated);
 
         if (removed.country) {
-            const stillExists = updated.some((m: any) => m.country === removed.country);
-            if (!stillExists) onCountryDeselect(removed.country);
+            const removedId = String(removed.country);
+            const stillExists = updated.some((m: any) => String(m.country) === removedId);
+            if (!stillExists) onCountryDeselect(removedId);
         }
 
         if (editingIndex === index) setEditingIndex(null);
