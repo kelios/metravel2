@@ -397,7 +397,7 @@ export class EnhancedPdfGenerator {
    * Рендерит оглавление
    */
   private renderTocPage(meta: TravelSectionMeta[], pageNumber: number): string {
-    const { colors, typography } = this.theme;
+    const { colors, typography, spacing } = this.theme;
     const tocItems = meta
       .map((item, index) => {
         const travel = item.travel;
@@ -501,7 +501,7 @@ export class EnhancedPdfGenerator {
    * Рендерит страницу с фото путешествия
    */
   private renderTravelPhotoPage(travel: TravelForBook, pageNumber: number): string {
-    const { colors, typography } = this.theme;
+    const { colors, typography, spacing } = this.theme;
     const coverImage = this.buildSafeImageUrl(
       travel.travel_image_url || travel.travel_image_thumb_url
     );
@@ -642,7 +642,7 @@ export class EnhancedPdfGenerator {
     qrCode: string,
     pageNumber: number
   ): string {
-    const { colors, typography } = this.theme;
+    const { colors, typography, spacing } = this.theme;
     
     // Парсим контент
     const descriptionBlocks = travel.description
@@ -908,7 +908,7 @@ export class EnhancedPdfGenerator {
    * Рендерит страницу галереи
    */
   private renderGalleryPage(travel: TravelForBook, pageNumber: number): string {
-    const { colors, typography } = this.theme;
+    const { colors, typography, spacing } = this.theme;
     const photos = (travel.gallery || [])
       .map((item) => {
         const raw = typeof item === 'string' ? item : item?.url;
@@ -1289,7 +1289,7 @@ export class EnhancedPdfGenerator {
    * Собирает HTML документ
    */
   private buildHtmlDocument(pages: string[], settings: BookSettings): string {
-    const { colors, typography, spacing } = this.theme;
+    const { colors, typography } = this.theme;
 
     const styles = `
       * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1611,7 +1611,7 @@ export class EnhancedPdfGenerator {
   }
 
   private buildLocationList(locations: NormalizedLocation[]): string {
-    const { colors, typography, spacing } = this.theme;
+    const { colors, typography } = this.theme;
     return locations
       .map(
         (location, index) => {

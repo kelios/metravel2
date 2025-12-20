@@ -35,7 +35,7 @@ try {
       globalThis.FontFaceObserver = FFO;
     }
   }
-} catch (_e) {
+} catch {
   // If fontfaceobserver is unavailable, skip patching.
 }
 

@@ -399,7 +399,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
             }
             throw error;
         }
-    }, [favorites, isAuthenticated, refreshFromServer, userId]);
+    }, [favorites, isAuthenticated, refreshFromServer, saveFavorites, userId]);
 
     const removeFavorite = useCallback(async (id: number | string, type: FavoriteItem['type'] = 'travel') => {
         if (isAuthenticated && userId) {
@@ -442,7 +442,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
             console.error('Ошибка удаления из избранного:', error);
             throw error;
         }
-    }, [favorites, isAuthenticated, refreshFromServer, userId]);
+    }, [favorites, isAuthenticated, refreshFromServer, saveFavorites, userId]);
 
     const isFavorite = useCallback(
         (id: number | string, type: FavoriteItem['type']) => {
@@ -468,7 +468,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
         newHistory = [historyItem, ...newHistory].slice(0, MAX_HISTORY_ITEMS);
         
         await saveViewHistory(newHistory);
-    }, [viewHistory, userId, isAuthenticated]);
+    }, [viewHistory, userId, isAuthenticated, saveViewHistory]);
 
     const clearHistory = useCallback(async () => {
         if (isAuthenticated && userId) {
@@ -479,7 +479,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
         }
 
         await saveViewHistory([]);
-    }, [userId, isAuthenticated]);
+    }, [userId, isAuthenticated, saveViewHistory]);
 
     const clearFavorites = useCallback(async () => {
         if (isAuthenticated && userId) {

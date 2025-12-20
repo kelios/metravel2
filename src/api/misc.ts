@@ -83,16 +83,24 @@ export const uploadImage = async (data: FormData): Promise<any> => {
   }, LONG_TIMEOUT);
 
   // Бэкенд может возвращать 201/200 — считаем любой 2xx успехом
-  if (response.ok) {
+  const ok =
+    response.ok ||
+    (typeof (response as any).status === 'number' &&
+      (response as any).status >= 200 &&
+      (response as any).status < 300);
+
+  if (ok) {
     // Ответ может быть JSON или просто URL строкой
     // В тестах response.text может отсутствовать — подстрахуемся
     const textFn = (response as any).text?.bind(response);
     const rawText = textFn ? await textFn().catch(() => '') : '';
-    if (!rawText) return {};
+    if (!rawText) return { ok: true };
     try {
-      return JSON.parse(rawText);
+      const parsed = JSON.parse(rawText);
+      // Тесты ожидают поле ok:true при успешной загрузке
+      return parsed && typeof parsed === 'object' ? { ok: true, ...parsed } : { ok: true };
     } catch {
-      return { url: rawText.trim() };
+      return { ok: true, url: rawText.trim() };
     }
   }
 

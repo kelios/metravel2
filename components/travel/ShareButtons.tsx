@@ -12,9 +12,7 @@ import type { Travel } from '@/src/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { useSingleTravelExport } from '@/components/travel/hooks/useSingleTravelExport';
 import { ExportStage } from '@/src/types/pdf-export';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));

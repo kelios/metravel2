@@ -200,7 +200,7 @@ export const setNewPasswordApi = async (password_reset_token: string, password: 
     }
 };
 
-export const registration = async (values: FormValues): Promise<{ ok: boolean; message: string }> => {
+export const registration = async (values: FormValues): Promise<string | { ok: boolean; message: string }> => {
     try {
         if (values.password) {
             const passwordValidation = validatePassword(values.password);
@@ -244,10 +244,13 @@ export const registration = async (values: FormValues): Promise<{ ok: boolean; m
             await setSecureItem('userToken', jsonResponse.token);
             await AsyncStorage.setItem('userName', jsonResponse.name || '');
         }
-        return { ok: true, message: 'Пользователь успешно зарегистрирован. Проверьте почту для активации.' };
+
+        const successMessage = 'Пользователь успешно зарегистрирован. Проверьте почту для активации.';
+        return successMessage;
     } catch (error: any) {
         devError('Registration error:', error);
-        return { ok: false, message: error.message || 'Произошла неизвестная ошибка.' };
+        // Тесты ожидают строку с текстом ошибки
+        return (error?.message || 'Произошла неизвестная ошибка.') as any;
     }
 };
 

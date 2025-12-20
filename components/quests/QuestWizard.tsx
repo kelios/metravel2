@@ -55,11 +55,11 @@ const SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
 // ======== helpers ========
 const notify = (msg: string) => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') window.alert(msg);
-    else console.log('[INFO]', msg);
+    else console.info('[INFO]', msg);
 };
 const confirmAsync = async (title: string, message: string): Promise<boolean> => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') return Promise.resolve(window.confirm(`${title}\n\n${message}`));
-    console.log('[CONFIRM]', title, message);
+    console.info('[CONFIRM]', title, message);
     return Promise.resolve(true);
 };
 const resolveUri = (src: any | undefined): string | undefined => {
@@ -118,14 +118,14 @@ const StepCard = memo((props: StepCardProps) => {
     useEffect(() => { setValue(''); setError(''); }, [step.id]);
 
     useEffect(() => { (async () => {
-        try { const om = await Linking.canOpenURL('om://map'); const om2 = await Linking.canOpenURL('organicmaps://'); setHasOrganic(Boolean(om || om2)); } catch (err) { /* ignore missing map handlers */ }
-        try { const mm = await Linking.canOpenURL('mapsme://map'); setHasMapsme(Boolean(mm)); } catch (err) { /* ignore missing mapsme */ }
+        try { const om = await Linking.canOpenURL('om://map'); const om2 = await Linking.canOpenURL('organicmaps://'); setHasOrganic(Boolean(om || om2)); } catch { /* ignore missing map handlers */ }
+        try { const mm = await Linking.canOpenURL('mapsme://map'); setHasMapsme(Boolean(mm)); } catch { /* ignore missing mapsme */ }
     })(); }, [step.id]);
 
     const openCandidates = async (cands: Array<string | undefined>) => {
         for (const url of cands) {
             if (!url) continue;
-            try { const ok = await Linking.canOpenURL(url); if (ok) { await Linking.openURL(url); return; } } catch (err) { /* ignore failed link open */ }
+            try { const ok = await Linking.canOpenURL(url); if (ok) { await Linking.openURL(url); return; } } catch { /* ignore failed link open */ }
         }
         notify('Не удалось открыть карты. Проверьте, что установлено нужное приложение.');
     };
@@ -383,8 +383,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         if (suppressSave.current) return;
         AsyncStorage.setItem(storageKey, JSON.stringify({
             index: currentIndex, unlocked: unlockedIndex, answers, attempts, hints, showMap
-        })).catch(e => console.log('Error saving progress:', e));
-    }, [currentIndex, unlockedIndex, JSON.stringify(answers), JSON.stringify(attempts), JSON.stringify(hints), showMap, storageKey]);
+        })).catch(e => console.error('Error saving progress:', e));
+    }, [currentIndex, unlockedIndex, answers, attempts, hints, showMap, storageKey]);
 
     const completedSteps = steps.filter(s => answers[s.id]);
     const progress = steps.length > 0 ? completedSteps.length / steps.length : 0;
@@ -434,7 +434,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
             await AsyncStorage.setItem(storageKey, JSON.stringify({ index: 0, unlocked: 0, answers: {}, attempts: {}, hints: {}, showMap: true }));
             notify('Прогресс очищен');
         } catch (e) {
-            console.log('Error resetting progress:', e);
+            console.error('Error resetting progress:', e);
         } finally {
             setTimeout(() => { suppressSave.current = false; }, 0);
         }
@@ -590,7 +590,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                     onToggleHint={() => toggleHint(currentStep)}
                                     onSkip={skipStep}
                                     showMap={showMap}
-                                    onToggleMap={() => setShowMap(v => !v)}
+                                    onToggleMap={toggleMap}
                                 />
 
                                 {!!steps.length && (

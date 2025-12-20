@@ -29,7 +29,7 @@ export default async function globalSetup(config: FullConfig) {
   // Always visit the app once so we have a deterministic storage state file.
   try {
     await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-  } catch (e: any) {
+  } catch {
     await context.storageState({ path: STORAGE_STATE_PATH });
     await browser.close();
     return;

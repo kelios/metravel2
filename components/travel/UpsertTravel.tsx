@@ -219,7 +219,7 @@ export default function UpsertTravel() {
             countries: syncedCountries,
         });
         setMarkers(markersFromData);
-    }, []); // formState.updateFields is stable, no need to include it
+    }, [formState, setMarkers]);
 
     // Load travel data from server
     const loadTravelData = useCallback(async (travelId: string) => {
@@ -278,7 +278,7 @@ export default function UpsertTravel() {
         } finally {
             setIsInitialLoading(false);
         }
-    }, [isNew, isAuthenticated, userId, isSuperAdmin, router, autosave.updateBaseline]); // Added dependencies for useCallback
+    }, [autosave, formState, isAuthenticated, isNew, router, setMarkers, userId, isSuperAdmin]); // Added dependencies for useCallback
 
     useEffect(() => {
         let isMounted = true;
@@ -329,7 +329,7 @@ export default function UpsertTravel() {
             console.error('Manual save error:', error);
             return;
         }
-    }, [currentStep, isNew, formState.data.moderation, autosave.saveNow, applySavedData, showToast]);
+    }, [applySavedData, autosave, currentStep, formState.data.moderation, isNew, showToast]);
 
     const handleFinishWizard = useCallback(async () => {
         await handleManualSave();
@@ -346,11 +346,11 @@ export default function UpsertTravel() {
         if (countryId && !formState.data.countries.includes(countryId)) {
             formState.updateField('countries', [...formState.data.countries, countryId]);
         }
-    }, [formState.data.countries]); // Only depend on the data we read
+    }, [formState]);
 
     const handleCountryDeselect = useCallback((countryId: string) => {
         formState.updateField('countries', formState.data.countries.filter(id => id !== countryId));
-    }, [formState.data.countries]); // Only depend on the data we read
+    }, [formState]); // Only depend on the data we read
 
     // Create a stable wrapper for setFormData that works with all wizard steps
     // Uses ref to access current data without causing recreations

@@ -85,8 +85,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 900): Promise<T> => {
   try {
     return await fn();
-  } catch (e) {
-    if (tries <= 0) throw e;
+  } catch {
+    if (tries <= 0) throw new Error('retry failed');
     await new Promise((r) => setTimeout(r, delay));
     return retry(fn, tries - 1, delay);
   }
@@ -98,7 +98,7 @@ const withLazy = <T extends React.ComponentType<any>>(f: () => Promise<{ default
       return await retry(f, 2, 900);
     } catch {
       return {
-        default: ((props: any) => (
+        default: (() => (
           <View style={{ padding: DESIGN_TOKENS.spacing.md }}>
             <Text>Component failed to load</Text>
           </View>
@@ -324,17 +324,8 @@ const Icon: React.FC<{ name: string; size?: number; color?: string }> = ({
 
 /* -------------------- consts -------------------- */
 // ✅ UX УЛУЧШЕНИЕ: Адаптивная ширина меню (увеличено для полного устранения скролла)
-const getMenuWidth = (width: number) => {
-  if (width >= 1200) return 380; // Десктоп (>1200px): 380px (было 360)
-  if (width >= 768) return 320; // Планшеты (768-1200px): 320px (было 300)
-  return '100%'; // Мобильные: 100% (fullscreen overlay)
-};
-const MENU_WIDTH_DESKTOP = 380; // ✅ UX: Увеличено с 360 для длинных названий погоды
-const MENU_WIDTH_TABLET = 320;  // ✅ UX: Увеличено с 300 для полного устранения скролла
 const HEADER_OFFSET_DESKTOP = 72;
 const HEADER_OFFSET_MOBILE = 56;
-const MAX_CONTENT_WIDTH = 1200;
-const FAB_HINT_STORAGE_KEY = "travel:floatingMenu:hintShown";
 
 /* -------------------- utils -------------------- */
 const getYoutubeId = (url?: string | null) => {
@@ -792,7 +783,7 @@ export default function TravelDetails() {
   const [relatedTravels, setRelatedTravels] = useState<Travel[]>([]);
   
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
-  const { travel, isLoading, isError, slug, isId } = useTravelDetails();
+  const { travel, isLoading, isError, slug } = useTravelDetails();
   const { anchors, scrollTo, scrollRef } = useScrollNavigation() as { anchors: AnchorsMap; scrollTo: any; scrollRef: any };
   const { activeSection, setActiveSection } = useActiveSection(anchors, headerOffset);
   const { closeMenu, animatedX, menuWidth, menuWidthNum, openMenuOnDesktop } = useMenuState(isMobile);
@@ -877,7 +868,7 @@ export default function TravelDetails() {
     // По умолчанию считаем активной секцию галереи, чтобы в меню
     // всегда был выделен хотя бы один пункт при первом рендере
     setActiveSection("gallery");
-  }, [slug, setActiveSection]);
+  }, [slug, setActiveSection, scrollRef]);
 
   // Измеряем высоту контента для прогресс-бара
   const handleContentSizeChange = useCallback((_w: number, h: number) => {
@@ -942,7 +933,7 @@ export default function TravelDetails() {
                 // Если это уже DOM элемент
                 (domNode as HTMLElement).setAttribute("data-section-key", key);
               }
-            } catch (e) {
+            } catch {
               // Игнорируем ошибки
             }
           }, 100);
@@ -1033,8 +1024,6 @@ export default function TravelDetails() {
   }, [firstImg?.url, readyImage, width]);
   const firstImgOrigin = getOrigin(firstImg?.url);
   const headKey = `travel-${slug}`;
-  const firstRatio =
-    (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9;
 
   const jsonLd =
     travel &&

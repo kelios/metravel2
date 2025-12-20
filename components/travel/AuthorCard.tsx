@@ -114,9 +114,10 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
       ((travel as any)?.user as any)?.country_name ||
       ((travel as any)?.user as any)?.country ||
       '';
+    const fromTravel = (travel as any)?.countryName || '';
 
     // Показываем только страну автора (профиль / user), не страны путешествия
-    const raw = String(fromProfile || fromUserObj || '').trim();
+    const raw = String(fromProfile || fromUserObj || fromTravel || '').trim();
     if (!raw) return '';
     if (raw.toLowerCase() === 'null' || raw.toLowerCase() === 'undefined') return '';
     return raw;

@@ -46,7 +46,7 @@ export class ErrorHandler {
   /**
    * Получает понятное пользователю сообщение об ошибке
    */
-  private getUserFriendlyMessage(type: ExportErrorType, error: Error): string {
+  private getUserFriendlyMessage(type: ExportErrorType, _error: Error): string {
     const messages: Record<ExportErrorType, string> = {
       [ExportErrorType.VALIDATION_ERROR]: 'Ошибка валидации данных. Проверьте выбранные путешествия.',
       [ExportErrorType.TRANSFORMATION_ERROR]: 'Ошибка преобразования данных. Попробуйте еще раз.',

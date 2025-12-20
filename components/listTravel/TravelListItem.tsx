@@ -145,7 +145,7 @@ const CountriesList = memo(function CountriesList({ countries }: { countries: st
     if (!countries.length) return null;
     return (
         <View style={styles.tags}>
-            {countries.slice(0, 2).map((c) => (
+            {countries.slice(0, 1).map((c) => (
                 <View key={c} style={styles.tag}>
                     <Feather name="map-pin" size={11} color={ICON_COLOR} style={{ marginRight: 4 }} />
                     <Text style={styles.tagTxt} numberOfLines={1} ellipsizeMode="tail">
@@ -153,13 +153,6 @@ const CountriesList = memo(function CountriesList({ countries }: { countries: st
                     </Text>
                 </View>
             ))}
-            {countries.length > 2 && (
-                <View style={styles.tag}>
-                    <Text style={styles.tagTxt} numberOfLines={1}>
-                        +{countries.length - 2}
-                    </Text>
-                </View>
-            )}
         </View>
     );
 });
@@ -607,8 +600,28 @@ function TravelListItem({
               />
             </View>
           )}
-
-
+          {canEdit && (
+            <View style={styles.adminActionsContainer}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Редактировать"
+                onPress={handleEdit}
+                style={styles.adminBtn}
+              >
+                <Feather name="edit-2" size={14} color={TOKENS.colors.text} />
+              </Pressable>
+              <View style={styles.adminDivider} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Удалить"
+                onPress={handleDelete}
+                style={styles.adminBtn}
+                testID="delete-button"
+              >
+                <Feather name="trash-2" size={14} color={TOKENS.colors.danger} />
+              </Pressable>
+            </View>
+          )}
           {selectable && (
             <Pressable
               style={styles.checkWrap}
@@ -658,6 +671,9 @@ function TravelListItem({
           >
             {name}
           </Text>
+
+          {/* Страна путешествия */}
+          {countries.length > 0 && <CountriesList countries={countries} />}
 
           <View
             style={[
