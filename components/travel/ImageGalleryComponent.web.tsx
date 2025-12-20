@@ -73,13 +73,21 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
         async (files: File[]) => {
             if (images.length + files.length > maxImages) return;
             setIsUploading(true);
+            const baseLength = images.length;
+
             const uploads = files.map(async (file, index) => {
-                const currentIndex = images.length + index;
+                const currentIndex = baseLength + index;
+                const tempId = `temp-${Date.now()}-${index}`;
+                const tempUrl = URL.createObjectURL(file);
+
+                // optimistic preview
+                setImages((prev) => [...prev, { id: tempId, url: tempUrl }]);
                 setLoading((prev) => {
                     const next = [...prev];
                     next[currentIndex] = true;
                     return next;
                 });
+
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
@@ -87,11 +95,13 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                     formData.append('id', idTravel);
                     const response = await uploadImage(formData);
                     if (response?.url) {
-                        setImages((prev) => [
-                            ...prev,
-                            { id: response.id, url: ensureAbsoluteUrl(String(response.url)) },
-                        ]);
+                        const finalUrl = ensureAbsoluteUrl(String(response.url));
+                        setImages((prev) =>
+                            prev.map((img) => (img.id === tempId ? { id: response.id, url: finalUrl } : img)),
+                        );
                     }
+                } catch (error) {
+                    console.error('Upload error:', error);
                 } finally {
                     setLoading((prev) => {
                         const next = [...prev];
