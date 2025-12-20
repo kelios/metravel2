@@ -1,5 +1,4 @@
 import React, {createContext, FC, ReactNode, useCallback, useContext, useEffect, useState,} from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi,} from '@/src/api/auth';
 import { setSecureItem, getSecureItem, removeSecureItems } from '@/src/utils/secureStorage';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/src/utils/storageBatch';

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Pressable,
   Platform,
-  type LayoutRectangle,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -43,7 +42,6 @@ function Tooltip({
   style,
 }: TooltipProps) {
   const [visible, setVisible] = useState(false);
-  const [layout, setLayout] = useState<LayoutRectangle | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const showTooltip = () => {
@@ -63,12 +61,8 @@ function Tooltip({
     setVisible(false);
   };
 
-  const handleLayout = (event: any) => {
-    setLayout(event.nativeEvent.layout);
-  };
-
   return (
-    <View style={[styles.container, style]} onLayout={handleLayout}>
+    <View style={[styles.container, style]}>
       <Pressable
         onHoverIn={Platform.OS === 'web' ? showTooltip : undefined}
         onHoverOut={Platform.OS === 'web' ? hideTooltip : undefined}

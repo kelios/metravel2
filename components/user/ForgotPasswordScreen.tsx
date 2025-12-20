@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, Alert } from 'react-native';
+import { View, TextInput, Button } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 
 const ForgotPasswordScreen = () => {

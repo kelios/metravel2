@@ -46,11 +46,7 @@ const ActivityFeed = ({ userId, limit = 20, showHeader = true }: ActivityFeedPro
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadActivities();
-  }, [userId]);
-
-  const loadActivities = async () => {
+  const loadActivities = useCallback(async () => {
     try {
       const activitiesData = await AsyncStorage.getItem(STORAGE_KEY_ACTIVITIES);
       if (activitiesData) {
@@ -66,13 +62,17 @@ const ActivityFeed = ({ userId, limit = 20, showHeader = true }: ActivityFeedPro
     } finally {
       setLoading(false);
     }
-  };
+  }, [limit, userId]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadActivities();
     setRefreshing(false);
-  }, []);
+  }, [loadActivities]);
+
+  useEffect(() => {
+    loadActivities();
+  }, [loadActivities]);
 
   const renderActivity = useCallback(({ item }: { item: Activity }) => {
     return <ActivityItem activity={item} />;

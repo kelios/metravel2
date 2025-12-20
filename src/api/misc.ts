@@ -85,7 +85,9 @@ export const uploadImage = async (data: FormData): Promise<any> => {
   // Бэкенд может возвращать 201/200 — считаем любой 2xx успехом
   if (response.ok) {
     // Ответ может быть JSON или просто URL строкой
-    const rawText = await response.text().catch(() => '');
+    // В тестах response.text может отсутствовать — подстрахуемся
+    const textFn = (response as any).text?.bind(response);
+    const rawText = textFn ? await textFn().catch(() => '') : '';
     if (!rawText) return {};
     try {
       return JSON.parse(rawText);
@@ -94,7 +96,8 @@ export const uploadImage = async (data: FormData): Promise<any> => {
     }
   }
 
-  const errorText = await response.text().catch(() => 'Upload failed');
+  const textFn = (response as any).text?.bind(response);
+  const errorText = textFn ? await textFn().catch(() => 'Upload failed') : 'Upload failed';
   throw new Error(errorText || 'Upload failed.');
 };
 

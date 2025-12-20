@@ -30,13 +30,7 @@ const ReactionButtons = ({ travelId, compact = false, showViews = true }: Reacti
   const [userReaction, setUserReaction] = useState<'like' | 'love' | 'fire' | null>(null);
   const [views, setViews] = useState<number>(0);
 
-  // Загрузка данных из AsyncStorage
-  useEffect(() => {
-    loadData();
-    incrementViews();
-  }, [travelId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       // Загрузка реакций
       const reactionsData = await AsyncStorage.getItem(STORAGE_KEY_REACTIONS);
@@ -62,9 +56,9 @@ const ReactionButtons = ({ travelId, compact = false, showViews = true }: Reacti
     } catch (error) {
       console.error('Error loading reaction data:', error);
     }
-  };
+  }, [travelId]);
 
-  const incrementViews = async () => {
+  const incrementViews = useCallback(async () => {
     try {
       const viewsData = await AsyncStorage.getItem(STORAGE_KEY_VIEWS);
       const allViews = viewsData ? JSON.parse(viewsData) : {};
@@ -75,7 +69,12 @@ const ReactionButtons = ({ travelId, compact = false, showViews = true }: Reacti
     } catch (error) {
       console.error('Error incrementing views:', error);
     }
-  };
+  }, [travelId]);
+
+  useEffect(() => {
+    loadData();
+    incrementViews();
+  }, [loadData, incrementViews]);
 
   const handleReaction = useCallback(async (type: 'like' | 'love' | 'fire') => {
     try {
