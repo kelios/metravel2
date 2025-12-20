@@ -8,6 +8,9 @@ import { ApiError } from '@/src/api/client';
 /**
  * Проверяет, является ли ошибка сетевой
  */
+const getGlobalNavigator = () =>
+  (globalThis as typeof globalThis & { navigator?: { onLine?: boolean } }).navigator;
+
 export const isNetworkError = (error: any): boolean => {
     if (!error) return false;
 
@@ -36,10 +39,13 @@ export const isNetworkError = (error: any): boolean => {
         code === 'econnrefused' ||
         code === 'enetunreach' ||
         code === 'etimedout' ||
-        name === 'networkerror' ||
-        name === 'typeerror' ||
-        (Platform.OS === 'web' && typeof navigator !== 'undefined' && !navigator.onLine)
-    );
+    name === 'networkerror' ||
+    name === 'typeerror' ||
+    (() => {
+      const navigatorObject = getGlobalNavigator();
+      return Boolean(navigatorObject && typeof navigatorObject.onLine === 'boolean' && !navigatorObject.onLine);
+    })()
+);
 };
 
 /**
@@ -199,4 +205,3 @@ export const withNetworkErrorHandler = async <T>(
         return null;
     }
 };
-

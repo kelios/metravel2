@@ -87,6 +87,7 @@ describe('networkErrorHandler', () => {
     });
 
     it('detects offline state via navigator.onLine on web', () => {
+      delete (globalThis as any).navigator;
       Object.defineProperty(globalThis, 'navigator', {
         configurable: true,
         value: {
