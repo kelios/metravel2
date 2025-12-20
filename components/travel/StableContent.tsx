@@ -460,7 +460,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
       fontSize: BASE_FONT_SIZE,
       lineHeight: BASE_LINE_HEIGHT,
     }),
-    [BASE_FONT_SIZE]
+    [BASE_FONT_SIZE, BASE_LINE_HEIGHT]
   );
 
   const tagsStyles = useMemo(

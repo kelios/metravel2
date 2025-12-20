@@ -9,7 +9,7 @@ interface TelegramDiscussionSectionProps {
   travel: Travel;
 }
 
-export default function TelegramDiscussionSection({ travel }: TelegramDiscussionSectionProps) {
+export default function TelegramDiscussionSection({ travel: _travel }: TelegramDiscussionSectionProps) {
   const baseUrl = process.env.EXPO_PUBLIC_TELEGRAM_DISCUSSION_URL || '';
 
   const handleOpen = useCallback(() => {
