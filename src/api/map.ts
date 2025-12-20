@@ -22,7 +22,7 @@ const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запро�
 // 🔗 Сервер отдаёт 301 на URL без завершающего слэша — добавляем его сразу, чтобы избежать лишних редиректов.
 const SEARCH_TRAVELS_FOR_MAP = `${URLAPI}/travels/search_travels_for_map/`;
 const GET_FILTER_FOR_MAP = `${URLAPI}/filterformap/`;
-const GET_TRAVELS = `${URLAPI}/travels`;
+const GET_TRAVELS = `${URLAPI}/travels/`;
 const GET_TRAVELS_OF_MONTH = `${URLAPI}/travels/of-month/`;
 const SEARCH_TRAVELS_NEAR_ROUTE = `${URLAPI}/travels/near-route/`;
 

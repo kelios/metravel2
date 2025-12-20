@@ -7,6 +7,18 @@ type LeafletNS = any;
 type ReactLeafletNS = typeof import('react-leaflet');
 
 const reverseGeocode = async (latlng: any) => {
+    // Use a CORS-friendly provider first, then fall back to Nominatim
+    try {
+        const primary = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latlng.lat}&longitude=${latlng.lng}&localityLanguage=en`
+        );
+        if (primary.ok) {
+            return await primary.json();
+        }
+    } catch {
+        // ignore and fall back
+    }
+
     try {
         const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1`

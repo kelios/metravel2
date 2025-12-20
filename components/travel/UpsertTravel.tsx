@@ -278,7 +278,7 @@ export default function UpsertTravel() {
         } finally {
             setIsInitialLoading(false);
         }
-    }, [autosave, formState, isAuthenticated, isNew, router, setMarkers, userId, isSuperAdmin]); // Added dependencies for useCallback
+    }, [autosave, formState, isNew, router, setMarkers, userId, isSuperAdmin]); // Added dependencies for useCallback
 
     useEffect(() => {
         let isMounted = true;
@@ -361,7 +361,7 @@ export default function UpsertTravel() {
         } else {
             formState.updateFields(updater as Partial<TravelFormData>);
         }
-    }, []); // No dependencies - uses ref for current data
+    }, [formState]); // stable on formState
 
     const handleNextFromBasic = useCallback(() => {
         const result = validateStep(1, {

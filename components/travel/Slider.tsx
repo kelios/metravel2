@@ -36,7 +36,6 @@ import Animated, {
 import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl } from "@/utils/imageOptimization";
 import { Feather } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 
 /* -------------------------------------------------------------------------- */
@@ -693,6 +692,8 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
       loadStatuses,
       aspectRatio,
       updateLoadStatus,
+      retryImage,
+      prefetchEnabled,
     ]
   );
 

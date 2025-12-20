@@ -464,7 +464,7 @@ export const fetchTravel = async (id: number): Promise<Travel> => {
 
     try {
         const res = await fetchWithTimeout(
-            `${GET_TRAVELS}/${id}/`,
+            `${GET_TRAVELS}${id}/`,
             authHeaders ? { headers: authHeaders } : {},
             DEFAULT_TIMEOUT,
         );

@@ -5,7 +5,7 @@ import { Button } from 'react-native-paper';
 
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
-import { MarkerData, TravelFormData } from '@/src/types/types';
+import { MarkerData } from '@/src/types/types';
 import MultiSelectField from '@/components/MultiSelectField';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -193,10 +193,27 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     };
 
     const reverseGeocode = async (lat: number, lng: number) => {
-        const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
-        );
-        return await response.json();
+        // Use a CORS-friendly provider first, then fall back to Nominatim
+        try {
+            const primary = await fetch(
+                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+            );
+            if (primary.ok) {
+                return await primary.json();
+            }
+        } catch {
+            // ignore and fall back
+        }
+
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
+            );
+            if (!response.ok) return null;
+            return await response.json();
+        } catch {
+            return null;
+        }
     };
 
     const handleAddManualPoint = async () => {
@@ -213,8 +230,12 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
 
         try {
             const data = await reverseGeocode(lat, lng);
-            address = data?.display_name || '';
-            const countryName = data?.address?.country || '';
+            address = data?.display_name || data?.localityInfo?.informative?.[0]?.description || '';
+            const countryName =
+                data?.address?.country ||
+                data?.countryName ||
+                data?.localityInfo?.administrative?.find((item: any) => item?.order === 2)?.name ||
+                '';
             if (countryName) {
                 const foundCountry = (countries || []).find((c: any) => c?.title_ru === countryName);
                 if (foundCountry?.country_id) {

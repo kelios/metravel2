@@ -21,8 +21,7 @@ type Props = { travel: Travel };
 const PLACEHOLDER = require("@/assets/placeholder.webp");
 
 const TravelTmlRound: React.FC<Props> = ({ travel }) => {
-    const { width, isPhone, isLargePhone, isTablet, isDesktop } = useResponsive();
-    const isMobile = isPhone || isLargePhone;
+    const { width, isTablet, isDesktop } = useResponsive();
     const isLargeDesktop = width >= 1440;
 
     const {

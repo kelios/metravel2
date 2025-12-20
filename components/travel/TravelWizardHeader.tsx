@@ -104,6 +104,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                 </View>
                 <View style={styles.headerRightRow}>
                     {TipTrigger}
+                    {autosaveBadge ? <Text style={styles.autosaveBadge}>{autosaveBadge}</Text> : null}
                 </View>
             </View>
 
