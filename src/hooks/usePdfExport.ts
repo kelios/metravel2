@@ -52,17 +52,6 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
   /**
    * Callback для обновления прогресса
    */
-  const handleProgress = useCallback((progress: ExportProgress) => {
-    // ✅ ИСПРАВЛЕНИЕ: Проверяем монтирование перед обновлением состояния
-    if (isMountedRef.current) {
-      setProgress(progress.progress);
-      setCurrentStage(progress.stage);
-      if (progress.message) {
-        setMessage(progress.message);
-      }
-    }
-  }, []);
-
   /**
    * Обновить прогресс с подэтапами
    */
@@ -242,7 +231,7 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
           setIsGenerating(false);
         }
       }
-    }, [loadDetailedTravels]);
+    }, [loadDetailedTravels, updateProgress]);
 
   return {
     openPrintBook,

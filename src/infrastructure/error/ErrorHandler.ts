@@ -10,7 +10,7 @@ export class ErrorHandler {
   /**
    * Классифицирует ошибку и создает структурированный ExportError
    */
-  handle(error: unknown, context?: Record<string, any>): ExportError {
+  handle(_error: unknown, context?: Record<string, any>): ExportError {
     if (error instanceof ExportError) {
       return error;
     }
@@ -96,4 +96,3 @@ export class ErrorHandler {
     return Math.min(1000 * Math.pow(2, attempt), 10000); // Максимум 10 секунд
   }
 }
-
