@@ -1,8 +1,6 @@
 // src/types/pdf-export.ts
 // ✅ АРХИТЕКТУРА: Типы для PDF экспорта
 
-import type { Travel } from './types';
-import type { BookSettings } from '@/components/export/BookSettingsModal';
 
 /**
  * Нормализованная структура путешествия для генерации PDF
