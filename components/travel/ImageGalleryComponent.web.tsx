@@ -73,12 +73,13 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
         async (files: File[]) => {
             if (images.length + files.length > maxImages) return;
             setIsUploading(true);
-            const newLoading = [...loading];
-
             const uploads = files.map(async (file, index) => {
                 const currentIndex = images.length + index;
-                newLoading[currentIndex] = true;
-                setLoading([...newLoading]);
+                setLoading((prev) => {
+                    const next = [...prev];
+                    next[currentIndex] = true;
+                    return next;
+                });
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
@@ -92,8 +93,11 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                         ]);
                     }
                 } finally {
-                    newLoading[currentIndex] = false;
-                    setLoading([...newLoading]);
+                    setLoading((prev) => {
+                        const next = [...prev];
+                        next[currentIndex] = false;
+                        return next;
+                    });
                 }
             });
 

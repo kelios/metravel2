@@ -27,13 +27,17 @@ npm run android
 
 ## Backend API
 
-- **Base URL**
-  - Configure via `EXPO_PUBLIC_API_URL`.
-- **OpenAPI/Redoc**
+- **Backend API**
+  - Base URL: `${EXPO_PUBLIC_API_URL}`
   - Redoc UI: `${EXPO_PUBLIC_API_URL}/api/schema/redoc/`
   - OpenAPI schema: `${EXPO_PUBLIC_API_URL}/api/schema/`
-- **Auth**
-  - Header: `Authorization: Token <token>`
+  - Auth header: `Authorization: Token <token>`
+
+### Upload collections (travel media)
+- `travelMainImage` — обложка маршрута
+- `travelImageAddress` — изображения точек маршрута
+- `gallery` — галерея путешествия (предпочтительно для блока фото)
+- `description` — изображения из поля описания
 
 ### Core endpoints (OpenAPI)
 

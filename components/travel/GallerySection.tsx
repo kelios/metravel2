@@ -54,7 +54,8 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData }) => {
     return (
         <View style={[styles.galleryContainer, isDarkMode && styles.darkBackground]}>
             <ImageGalleryComponent
-                collection="travelGallery"
+                // Бэкенд коллекция галереи
+                collection="gallery"
                 idTravel={String(formData.id)}
                 initialImages={normalizedImages}
                 maxImages={10}

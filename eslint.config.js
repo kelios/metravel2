@@ -1,6 +1,7 @@
 const js = require("@eslint/js");
 const prettier = require("eslint-config-prettier");
 const globals = require("globals");
+const tsParser = require("@typescript-eslint/parser");
 
 const baseIgnores = [
   "node_modules/",
@@ -39,6 +40,25 @@ module.exports = [
     }
   },
   {
+    files: ["**/*.ts", "**/*.tsx"],
+    languageOptions: {
+      parser: tsParser,
+      ecmaVersion: 2022,
+      sourceType: "module",
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true
+        }
+      },
+      globals: {
+        ...globals.browser
+      }
+    },
+    rules: {
+      "no-undef": "off"
+    }
+  },
+  {
     files: [
       "scripts/**/*.{js,ts,mjs,cjs}",
       "*.config.{js,ts,mjs,cjs}",
@@ -53,6 +73,14 @@ module.exports = [
     },
     rules: {
       "no-console": "off"
+    }
+  },
+  {
+    files: ["entry.js", "metro-stubs/**/*.js"],
+    languageOptions: {
+      globals: {
+        ...globals.node
+      }
     }
   },
   {
