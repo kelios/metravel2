@@ -3,13 +3,13 @@
 // Suppress noisy React Native Web AppRegistry startup banner.
 // This banner is printed by react-native-web when NODE_ENV is not production/test.
 // We filter only that specific message to keep other logs intact.
-const originalLog = console.log;
-console.log = (...args) => {
+const originalInfo = console.info;
+console.info = (...args) => {
   const first = args[0];
   if (typeof first === 'string' && first.startsWith('Running application "main" with appParams:')) {
     return;
   }
-  return originalLog(...args);
+  return originalInfo(...args);
 };
 
 // Suppress FontFaceObserver timeout errors that often surface as
@@ -35,7 +35,7 @@ try {
       globalThis.FontFaceObserver = FFO;
     }
   }
-} catch (e) {
+} catch (_e) {
   // If fontfaceobserver is unavailable, skip patching.
 }
 

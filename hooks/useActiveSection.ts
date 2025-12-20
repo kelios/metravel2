@@ -131,10 +131,11 @@ export function useActiveSection(
       }, 200);
     });
 
+    const registeredSections = registeredSectionsRef.current;
+    const observerInstance = observerRef.current;
+
     return () => {
-      const observerInstance = observerRef.current;
-      const registeredSections = registeredSectionsRef.current;
-      if (observerRef.current) {
+      if (observerInstance) {
         observerInstance.disconnect();
         observerRef.current = null;
       }

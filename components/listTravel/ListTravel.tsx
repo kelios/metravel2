@@ -123,6 +123,12 @@ const styles = StyleSheet.create({
       ? ({ shadowColor: TOKENS.colors.border, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4 } as const)
       : TOKENS.shadowsNative.subtle),
   },
+  exportBarMobile: {
+    flexDirection: 'column',
+    gap: TOKENS.spacing.sm,
+    alignItems: 'stretch',
+    padding: TOKENS.spacing.sm,
+  },
   exportBarMobileWeb: {
     marginHorizontal: -TOKENS.spacing.xs,
     marginBottom: TOKENS.spacing.sm,
@@ -158,6 +164,7 @@ const styles = StyleSheet.create({
   exportBarButtonsMobile: {
     flexDirection: 'column',
     width: '100%',
+    alignItems: 'stretch',
   },
   progressWrapper: {
     marginTop: TOKENS.spacing.sm,
@@ -342,7 +349,13 @@ const ExportBar = memo(function ExportBar({
       : 'Выберите путешествия для экспорта';
 
   return (
-      <View style={[styles.exportBar, Platform.OS === 'web' && isMobile && styles.exportBarMobileWeb]}>
+      <View
+        style={[
+          styles.exportBar,
+          isMobile && styles.exportBarMobile,
+          Platform.OS === 'web' && isMobile && styles.exportBarMobileWeb,
+        ]}
+      >
           <View style={styles.exportBarInfo}>
             <Text style={styles.exportBarInfoTitle as any}>{selectionText}</Text>
             <Text style={styles.exportBarInfoSubtitle as any}>

@@ -72,15 +72,18 @@ export function useFocusTrap(
     container.addEventListener('keydown', handleTab);
     document.addEventListener('keydown', handleEscape);
 
+    const returnFocusEl = returnFocus?.current;
+    const prevActive = previousActiveElement.current;
+
     return () => {
       container.removeEventListener('keydown', handleTab);
       document.removeEventListener('keydown', handleEscape);
 
       // Возвращаем фокус при размонтировании
-      if (returnFocus?.current) {
-        returnFocus.current.focus();
-      } else if (previousActiveElement.current) {
-        previousActiveElement.current.focus();
+      if (returnFocusEl) {
+        returnFocusEl.focus();
+      } else if (prevActive) {
+        prevActive.focus();
       }
     };
   }, [enabled, containerRef, initialFocus, returnFocus]);

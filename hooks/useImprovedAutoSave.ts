@@ -187,10 +187,10 @@ export function useImprovedAutoSave<T>(
       onError?.(saveError);
       throw saveError;
     }
-  }, [onSave, onSuccess, onError, enableRetry, maxRetries, retryDelay]);
+  }, [onSave, onSuccess, onError, enableRetry, maxRetries, retryDelay, enabled]);
 
   // Упрощённый безопасный автосейв:
-  // срабатывает только если данные реально отличаются от последнего успешно сохранённого
+  // срабатывает, только если данные реально отличаются от последнего успешно сохранённого
   // и только один раз после дебаунса.
   useEffect(() => {
     if (!enabled) {
@@ -256,7 +256,7 @@ export function useImprovedAutoSave<T>(
         timeoutRef.current = null;
       }
     };
-  }, [data, debounce, performSave, onStart]); // Removed hasDataChanged from dependencies
+  }, [data, debounce, performSave, onStart, enabled, cleanup]); // Removed hasDataChanged from dependencies
 
   // Manual save function
   const saveNow = useCallback(async (): Promise<T> => {
@@ -270,7 +270,7 @@ export function useImprovedAutoSave<T>(
 
     cleanup();
     return performSave(data);
-  }, [data, performSave, cleanup, state.isOnline]);
+  }, [data, performSave, cleanup, state.isOnline, enabled]);
 
   // Reset to original data
   const resetToOriginal = useCallback(() => {
@@ -283,7 +283,7 @@ export function useImprovedAutoSave<T>(
       retryCount: 0,
       isOnline: state.isOnline,
     });
-  }, [originalData, cleanup, state.isOnline]);
+  }, [originalData, cleanup, state.isOnline, enabled]);
 
   // Clear error
   const clearError = useCallback(() => {
@@ -299,7 +299,7 @@ export function useImprovedAutoSave<T>(
       throw new Error('No failed save to retry');
     }
     return performSave(data);
-  }, [state.status, state.error, data, performSave]);
+  }, [state.status, state.error, data, performSave, enabled]);
 
   // Update baseline data (e.g., after loading from server)
   const updateBaseline = useCallback((newBaseline: T) => {

@@ -59,6 +59,25 @@ export function useOptimizedFormState<T extends Record<string, any>>(
     };
   }, []);
 
+  // Validation functions are declared before usage to avoid TDZ issues
+  const validateField = useCallback((field: string, _value: any) => {
+    // This would be injected with validation rules
+    // For now, just clear errors for the field
+    setState(prevState => ({
+      ...prevState,
+      errors: { ...prevState.errors, [field]: '' },
+    }));
+  }, []);
+
+  const validateAll = useCallback(() => {
+    // Validate all fields and update errors
+    setState(prevState => ({
+      ...prevState,
+      errors: {}, // Reset errors
+      isValid: true, // Would be calculated based on validation
+    }));
+  }, []);
+
   // Optimized field update with minimal re-renders
   const updateField = useCallback(<K extends keyof T>(
     field: K,
@@ -106,25 +125,6 @@ export function useOptimizedFormState<T extends Record<string, any>>(
         isDirty,
       };
     });
-  }, []);
-
-  // Validation functions
-  const validateField = useCallback((field: string, _value: any) => {
-    // This would be injected with validation rules
-    // For now, just clear errors for the field
-    setState(prevState => ({
-      ...prevState,
-      errors: { ...prevState.errors, [field]: '' },
-    }));
-  }, []);
-
-  const validateAll = useCallback(() => {
-    // Validate all fields and update errors
-    setState(prevState => ({
-      ...prevState,
-      errors: {}, // Reset errors
-      isValid: true, // Would be calculated based on validation
-    }));
   }, []);
 
   // Autosave functionality
