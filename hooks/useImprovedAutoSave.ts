@@ -132,9 +132,11 @@ export function useImprovedAutoSave<T>(
         return result;
       }
 
-      // Update refs and state on success
-      lastSavedDataRef.current = result;
-      latestDataRef.current = result;
+      // Update refs and state on success using the sent payload, чтобы
+      // не триггерить новые автосохранения из-за служебных полей (например updated_at),
+      // которые приходят только в ответе сервера.
+      lastSavedDataRef.current = dataToSave;
+      latestDataRef.current = dataToSave;
       setState(prev => ({
         ...prev,
         status: 'saved',

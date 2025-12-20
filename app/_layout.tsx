@@ -188,13 +188,13 @@ function RootLayoutNav() {
     const BottomGutter = () => {
       if (!showFooter || !isMobile) return null;
 
-      if (isWeb) return null;
-
       // On web mobile the footer dock is position: fixed and can overlap content.
-      // Reserve deterministic space to avoid layout shifts caused by late measurement.
-      const webFixed = 64;
-      const h = isWeb ? webFixed : dockHeight;
+      // Reserve deterministic space using a deterministic height to avoid late layout shifts.
+      if (isWeb) {
+        return <View testID="bottom-gutter" style={{ height: WEB_FOOTER_RESERVE_HEIGHT }} />;
+      }
 
+      const h = dockHeight;
       if (h <= 0) return null;
 
       return <View testID="bottom-gutter" style={{ height: h }} />;

@@ -23,6 +23,7 @@ type DockItem = {
   label: string;
   route: Href;
   icon: React.ReactNode;
+  isMore?: boolean;
 };
 
 const palette = DESIGN_TOKENS.colors;
@@ -115,16 +116,11 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
         icon: <Feather name="map-pin" size={18} color={iconColor} />,
       },
       {
-        key: "favorites",
-        label: "Избранное",
-        route: "/favorites" as any,
-        icon: <Feather name="heart" size={18} color={iconColor} />,
-      },
-      {
-        key: "create",
-        label: "Создать",
-        route: "/travel/new" as any,
-        icon: <Feather name="plus" size={18} color={iconColor} />,
+        key: "more",
+        label: "Ещё",
+        route: "/more" as any,
+        icon: <Feather name="more-horizontal" size={18} color={iconColor} />,
+        isMore: true,
       },
       {
         key: "profile",

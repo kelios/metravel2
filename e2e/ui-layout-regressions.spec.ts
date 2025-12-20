@@ -59,11 +59,11 @@ async function waitForMainToRender(page: any) {
     page.waitForSelector('#search-input', { timeout: 30_000 }),
     page.waitForSelector(
       '[data-testid="travel-card-link"], [data-testid="travel-card-skeleton"], [data-testid="list-travel-skeleton"]',
-      {
-        timeout: 30_000,
-      }
+      { timeout: 30_000 }
     ),
     page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
+    page.waitForSelector('text=Найдено:', { timeout: 30_000 }),
+    page.waitForSelector('text=Пиши о своих путешествиях', { timeout: 30_000 }),
   ]);
 }
 

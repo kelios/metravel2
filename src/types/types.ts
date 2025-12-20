@@ -179,6 +179,7 @@ export interface TravelFilters {
 
 export interface TravelFormData {
     id?: string | null;
+    slug?: string;
     name?: string;
     countries: string[];
     cities: string[];

@@ -207,7 +207,7 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
   return (
     <View style={styles.base} testID={testID || "footer-desktop"}>
       <ResponsiveContainer maxWidth="full" padding={false} paddingHorizontal={false} paddingVertical={false}>
-        <View style={styles.bar}>
+        <View style={styles.bar} testID="footer-desktop-bar">
           <View style={styles.columns}>
             <View style={styles.leftColumn}>
               <View style={styles.iconRows}>

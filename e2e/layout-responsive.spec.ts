@@ -31,6 +31,7 @@ async function waitForTravelsListToRender(page: any) {
     page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
     page.waitForSelector('text=Найдено:', { timeout: 30_000 }),
     page.waitForSelector('#search-input', { timeout: 30_000 }),
+    page.waitForSelector('text=Пиши о своих путешествиях', { timeout: 30_000 }),
   ]);
 }
 

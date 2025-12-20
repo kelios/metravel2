@@ -200,8 +200,17 @@ const WebMapComponent = ({
         if (!isValidCoordinates(latlng)) return;
 
         const geocodeData = await reverseGeocode(latlng);
-        const address = geocodeData?.display_name || '';
-        const country = geocodeData?.address?.country || '';
+        const address =
+            geocodeData?.display_name ||
+            geocodeData?.localityInfo?.informative?.[0]?.description ||
+            geocodeData?.address?.road ||
+            geocodeData?.address?.city ||
+            `${latlng.lat}, ${latlng.lng}`;
+        const country =
+            geocodeData?.address?.country ||
+            geocodeData?.countryName ||
+            geocodeData?.localityInfo?.administrative?.find((item: any) => item?.order === 2)?.name ||
+            '';
 
         const newMarker = {
             id: null,

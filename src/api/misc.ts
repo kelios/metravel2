@@ -30,11 +30,35 @@ const GET_ALL_COUNTRY = `${URLAPI}/countries/`;
 const SEND_FEEDBACK = `${URLAPI}/feedback/`;
 const SEND_AI_QUESTION = `${URLAPI}/chat`;
 
+const slugifySafe = (value?: string): string => {
+  if (!value) return '';
+  return value
+    .normalize('NFKD')
+    .replace(/[^\w\s-]+/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .toLowerCase();
+};
+
+const makeUniqueSlug = (value?: string): string => {
+  const base = slugifySafe(value);
+  const suffix = Math.random().toString(36).slice(2, 6);
+  return base ? `${base}-${suffix}` : `travel-${suffix}`;
+};
+
 export const saveFormData = async (data: TravelFormData): Promise<TravelFormData> => {
   try {
     const token = await getSecureItem('userToken');
     if (!token) {
       throw new Error('Пользователь не авторизован');
+    }
+
+    // Генерируем уникальный slug для новых путешествий, чтобы избежать конфликтов unique constraint
+    const payload: TravelFormData = { ...data };
+    if (!payload.id) {
+      const existing = (payload.slug || '').trim();
+      payload.slug = existing || makeUniqueSlug(payload.name || 'travel');
     }
 
     const response = await fetchWithTimeout(SAVE_TRAVEL, {
@@ -43,7 +67,7 @@ export const saveFormData = async (data: TravelFormData): Promise<TravelFormData
         'Content-Type': 'application/json',
         Authorization: `Token ${token}`,
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     }, LONG_TIMEOUT);
 
     if (!response.ok) {

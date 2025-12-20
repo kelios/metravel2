@@ -32,6 +32,20 @@ type StepMeta = {
     nextLabel: string;
 };
 
+function normalizeCategoryTravelAddress(raw: any): Array<{ id: string; name: string }> {
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .map((item, idx) => {
+            if (item && typeof item === 'object') {
+                const id = item.id ?? idx;
+                const name = item.name ?? item.title_ru ?? item.title ?? String(id);
+                return { id: String(id), name: String(name) };
+            }
+            return { id: String(item), name: String(item) };
+        })
+        .filter(Boolean);
+}
+
 const STEP_CONFIG: StepMeta[] = [
     {
         id: 1,
@@ -280,16 +294,35 @@ export default function UpsertTravel() {
         }
     }, [autosave, formState, isNew, router, setMarkers, userId, isSuperAdmin]); // Added dependencies for useCallback
 
+    // Загружаем фильтры и данные путешествия только один раз на конкретный id,
+    // чтобы исключить повторные запросы (/countries, /getFiltersTravel, /travels/:id)
+    const initialLoadKeyRef = useRef<string | null>(null);
     useEffect(() => {
+        const loadKey = String(id ?? 'new');
+        if (initialLoadKeyRef.current === loadKey) return;
+        initialLoadKeyRef.current = loadKey;
+
         let isMounted = true;
         (async () => {
             try {
+                // Ленивая инициализация фильтров с кешированием стран, чтобы избежать повторных запросов
                 const [filtersData, countryData] = await Promise.all([
                     fetchFilters(),
                     fetchAllCountries(),
                 ]);
                 if (isMounted) {
-                    setFilters({ ...filtersData, countries: countryData } as any);
+                    setFilters((prev) => {
+                        // Если страны уже загружены ранее, повторно не трогаем
+                        if (prev && Array.isArray(prev.countries) && prev.countries.length > 0) {
+                            return prev;
+                        }
+                        const normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(filtersData?.categoryTravelAddress);
+                        return {
+                            ...filtersData,
+                            categoryTravelAddress: normalizedCategoryTravelAddress,
+                            countries: countryData,
+                        } as any;
+                    });
                 }
             } catch (error) {
                 console.error('Ошибка загрузки фильтров:', error);
@@ -308,7 +341,7 @@ export default function UpsertTravel() {
         return () => {
             isMounted = false;
         };
-    }, [id, isNew, isAuthenticated, userId, router, loadTravelData]);
+    }, [id, isNew, loadTravelData]);
 
     const handleManualSave = useCallback(async (): Promise<TravelFormData | void> => {
         try {

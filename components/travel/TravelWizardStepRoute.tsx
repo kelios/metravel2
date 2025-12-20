@@ -27,6 +27,7 @@ interface TravelWizardStepRouteProps {
     onCountryDeselect: (countryId: string) => void;
     onBack: () => void;
     onNext: () => void;
+    onManualSave?: () => Promise<any>;
     isFiltersLoading?: boolean;
     stepMeta?: {
         title?: string;
@@ -59,6 +60,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     onCountryDeselect,
     onBack,
     onNext,
+    onManualSave,
     isFiltersLoading,
     stepMeta,
     progress = currentStep / totalSteps,
@@ -467,6 +469,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                     onBack={onBack}
                     onPrimary={onNext}
                     primaryLabel="К медиа"
+                    onSave={onManualSave}
                     currentStep={currentStep}
                     totalSteps={totalSteps}
                     onLayout={handleFooterLayout}
