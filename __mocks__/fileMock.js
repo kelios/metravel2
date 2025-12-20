@@ -1,2 +1,3 @@
-module.exports = 'test-file-stub';
+/* global module */
 
+module.exports = 'test-file-stub';

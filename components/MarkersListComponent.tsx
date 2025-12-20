@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Platform } from 'react-native';
 import ReactDOM from 'react-dom';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -113,7 +114,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                         ) : (
                                             <div style={styles.placeholderImage}>Нет фото</div>
                                         )}
-                                    </div>
+                                        </div>
                                     <div style={styles.previewText}>
                                         <div style={styles.markerTitle} title={marker.address || 'Без адреса'}>
                                             {marker.address || 'Без адреса'}
@@ -251,23 +252,56 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                     </div>
 
                     <div style={styles.field}>
-                        <label style={styles.fieldLabel}>Категории точки</label>
-                        <MultiSelectFieldAny
-                            label=""
-                            items={categoryTravelAddress}
-                            value={categories}
-                            onChange={(selected: any) => setCategories(selected as any[])}
-                            labelField="name"
-                            valueField="id"
+                        <label style={styles.fieldLabel}>Изображение точки</label>
+                        <input
+                            type="text"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            style={styles.input}
+                            placeholder="Например: Фото озера Sucha"
                         />
                         <div style={styles.fieldHint}>
-                            Например: смотровая площадка, кемпинг, парковка, заправка, кафе.
+                            Можно добавить изображение точки.
                         </div>
                     </div>
 
                     <div style={styles.field}>
-                        <label style={styles.fieldLabel}>Изображение точки</label>
-                        {marker.id == null ? (
+                        <label style={styles.fieldLabel}>Категории точки</label>
+                        {Platform.OS === 'web' ? (
+                            <select
+                                multiple
+                                value={categories.map(String)}
+                                onChange={(e) => {
+                                    const selected = Array.from(e.target.selectedOptions).map(o => o.value);
+                                    setCategories(selected);
+                                }}
+                                style={styles.nativeSelect as React.CSSProperties}
+                            >
+                                {categoryTravelAddress.map((item) => (
+                                    <option key={item.id} value={item.id}>
+                                        {item.name}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <MultiSelectFieldAny
+                                label=""
+                                items={categoryTravelAddress}
+                                value={categories}
+                                onChange={(selected: any) => setCategories(selected as any[])}
+                                labelField="name"
+                                valueField="id"
+                                placeholder="Выберите..."
+                                style={styles.multiSelect}
+                                placeholderStyle={styles.placeholder}
+                                selectedTextStyle={styles.selectedText}
+                                inputSearchStyle={styles.searchInput}
+                                containerStyle={styles.dropdownContainer}
+                            />
+                        )}
+                    </div>
+
+                    {marker.id == null ? (
                             <div style={styles.fieldHint}>
                                 Фото можно будет добавить после сохранения маршрута.
                                 Нажмите «Сохранить маршрут» внизу шага и затем откройте точку снова.
@@ -316,7 +350,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                 </div>
             </div>
         </div>,
-        document.body,
+        document.body
     );
 };
 
@@ -408,19 +442,6 @@ const styles: any = {
         alignItems: 'center',
         justifyContent: 'center',
         fontSize: '12px',
-        fontWeight: 700,
-        flexShrink: 0,
-    },
-    thumbnailWrapper: {
-        width: '48px',
-        height: '48px',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        backgroundColor: palette.backgroundSecondary,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
     },
     previewImage: {
         width: '100%',

@@ -83,12 +83,21 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
     return '';
   }, [travel.user?.name, travel.user?.first_name, travel.user?.last_name, (travel as any).userName]);
 
-  const userId =
-    (travel as any)?.user?.id ??
-    (travel as any)?.userId ??
-    (travel as any)?.user_id ??
-    (travel as any)?.userIds ??
-    null;
+  const userId = useMemo(() => {
+    const direct =
+      (travel as any)?.user?.id ??
+      (travel as any)?.userId ??
+      (travel as any)?.user_id ??
+      null;
+
+    if (direct != null) return direct;
+
+    const arr = (travel as any)?.userIds;
+    if (Array.isArray(arr) && arr.length > 0) {
+      return arr[0];
+    }
+    return null;
+  }, [travel]);
 
   // Подсчет количества путешествий автора (если доступно)
   const travelsCount = (travel as any).userTravelsCount || null;

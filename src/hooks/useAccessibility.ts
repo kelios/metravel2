@@ -149,6 +149,10 @@ export function useImageAccessibility(
 ): AccessibilityProps {
   const { decorative } = options;
 
+  const imageProps = useAccessibility(alt, {
+    role: 'image',
+  });
+
   if (decorative) {
     return {
       accessibilityRole: 'none',
@@ -156,8 +160,5 @@ export function useImageAccessibility(
     };
   }
 
-  return useAccessibility(alt, {
-    role: 'image',
-  });
+  return imageProps;
 }
-

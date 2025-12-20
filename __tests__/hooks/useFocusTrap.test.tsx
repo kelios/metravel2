@@ -14,7 +14,8 @@ function FocusTrapHarness({
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const initialRef = useRef<HTMLButtonElement>(null)
-  const returnRef = externalReturnRef ?? useRef<HTMLElement>(null)
+  const internalReturnRef = useRef<HTMLElement>(null)
+  const returnRef = externalReturnRef ?? internalReturnRef
 
   useFocusTrap(containerRef, { enabled, initialFocus: initialRef, returnFocus: returnRef })
 

@@ -30,4 +30,4 @@ Use scripts from `package.json`:
 ## MeTravel — Regression Summary (Web / iOS / Android)
 
 - Command: `npm run test:coverage` (Jest coverage run across all suites).
-- Result: suites pass except for `__tests__/utils/networkErrorHandler.test.ts` (`navigator.onLine` mocked as `false` while the assertion expects `true`), so the run exits with code 1 despite the rest of the platform-relevant tests finishing successfully. Coverage-report artifacts still appear in `coverage/` following the run.
+- Result: command exits with code 1 today; `__tests__/api/travels.auth.test.ts` still asserts against a bare string while the mocked registration helper now returns `{ message, ok }`, and `__tests__/components/travel/UpsertTravel.integration.test.ts` cannot locate the moderation hint text `Нужно дополнить перед модерацией`. `__tests__/utils/networkErrorHandler.test.ts` now passes after the navigator guard was rewritten. Coverage-report artifacts still appear in `coverage/` despite the failure.

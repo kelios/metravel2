@@ -359,7 +359,7 @@ export class ContentParser {
       case 'table':
         return this.parseTable(element);
       
-      default:
+      default: {
         // Для неизвестных тегов пытаемся извлечь текст
         const text = this.extractTextContent(element);
         if (text && text.length > 0) {
@@ -370,6 +370,7 @@ export class ContentParser {
           };
         }
         return null;
+      }
     }
   }
 

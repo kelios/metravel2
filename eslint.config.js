@@ -3,6 +3,7 @@ const prettier = require("eslint-config-prettier");
 const globals = require("globals");
 const tsParser = require("@typescript-eslint/parser");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
+const reactHooks = require("eslint-plugin-react-hooks");
 
 const baseIgnores = [
   "node_modules/",
@@ -38,9 +39,14 @@ module.exports = [
         ...globals.browser
       }
     },
+    plugins: {
+      "react-hooks": reactHooks
+    },
     rules: {
       "no-unused-vars": "warn",
-      "no-console": "warn"
+      "no-console": "warn",
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn"
     }
   },
   {

@@ -1,3 +1,5 @@
+/* global jest, module */
+
 const createMockEmitter = () => ({
   addListener: jest.fn(),
   removeAllListeners: jest.fn(),
@@ -33,7 +35,7 @@ module.exports = {
     select: (variants = {}) =>
       variants.web ?? variants.default ?? variants.native ?? variants,
   },
-  requireNativeViewManager: jest.fn(() => (props) => null),
+  requireNativeViewManager: jest.fn(() => (_props) => null),
   requireNativeModule,
   requireOptionalNativeModule,
   registerWebModule: jest.fn(),
@@ -46,4 +48,3 @@ module.exports = {
 };
 
 module.exports.default = module.exports;
-

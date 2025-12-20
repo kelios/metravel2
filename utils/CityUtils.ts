@@ -215,7 +215,10 @@ export async function findCityId(term: string): Promise<string | null> {
                     return cityId;
                 }
             }
-        } catch {}
+        } catch (error) {
+            // Ignore lookup failures
+            void error;
+        }
     }
 
     CITY_CACHE.set(lowerTerm, null);
@@ -235,6 +238,9 @@ export async function findCityByCoords(lat: number, lon: number): Promise<string
             data?.address?.county;
 
         if (cityName) return await findCityId(cityName);
-    } catch {}
+    } catch (error) {
+        // Ignore reverse-geocoding failures
+        void error;
+    }
     return null;
 }

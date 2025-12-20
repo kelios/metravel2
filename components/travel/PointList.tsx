@@ -330,7 +330,9 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
       } else {
         await Clipboard.setStringAsync(coordStr);
       }
-    } catch {}
+    } catch (err) {
+      // ignore clipboard failures
+    }
   }, []);
 
   // ✅ исправленный Telegram share
@@ -351,7 +353,9 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
           await Linking.openURL(deeplink);
           return;
         }
-      } catch {}
+      } catch (err) {
+        // ignore deep link failures
+      }
     }
 
     // 2) веб-фолбэк

@@ -35,7 +35,10 @@ export function optimizeFontLoading() {
 
   // NOTE: The URLs below are placeholders and are not valid assets in this project.
   // Injecting/preloading them causes font decode/OTS errors in the browser.
-  return;
+  const shouldInjectFonts = false;
+  if (!shouldInjectFonts) {
+    return;
+  }
 
   // Add font-display: swap to existing font faces
   const fontOptimization = `

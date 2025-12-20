@@ -55,7 +55,7 @@ export function checkPasswordStrength(password: string): PasswordStrength {
   }
 
   // Проверка наличия специальных символов
-  if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+  if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
     score += 1;
   } else {
     feedback.push('Добавьте специальные символы (!@#$%^&* и т.д.)');
@@ -126,4 +126,3 @@ export function meetsMinimumRequirements(password: string): boolean {
 
   return hasLowercase && hasUppercase && hasNumber;
 }
-

@@ -118,14 +118,14 @@ const StepCard = memo((props: StepCardProps) => {
     useEffect(() => { setValue(''); setError(''); }, [step.id]);
 
     useEffect(() => { (async () => {
-        try { const om = await Linking.canOpenURL('om://map'); const om2 = await Linking.canOpenURL('organicmaps://'); setHasOrganic(Boolean(om || om2)); } catch {}
-        try { const mm = await Linking.canOpenURL('mapsme://map'); setHasMapsme(Boolean(mm)); } catch {}
+        try { const om = await Linking.canOpenURL('om://map'); const om2 = await Linking.canOpenURL('organicmaps://'); setHasOrganic(Boolean(om || om2)); } catch (err) { /* ignore missing map handlers */ }
+        try { const mm = await Linking.canOpenURL('mapsme://map'); setHasMapsme(Boolean(mm)); } catch (err) { /* ignore missing mapsme */ }
     })(); }, [step.id]);
 
     const openCandidates = async (cands: Array<string | undefined>) => {
         for (const url of cands) {
             if (!url) continue;
-            try { const ok = await Linking.canOpenURL(url); if (ok) { await Linking.openURL(url); return; } } catch {}
+            try { const ok = await Linking.canOpenURL(url); if (ok) { await Linking.openURL(url); return; } } catch (err) { /* ignore failed link open */ }
         }
         notify('Не удалось открыть карты. Проверьте, что установлено нужное приложение.');
     };

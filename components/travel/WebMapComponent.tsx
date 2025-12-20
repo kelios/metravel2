@@ -51,6 +51,7 @@ const WebMapComponent = ({
                 const link = document.createElement('link');
                 link.rel = 'stylesheet';
                 link.href = href;
+                // avoid setting indexed props on style list; append normally
                 document.head.appendChild(link);
             }
         };

@@ -16,7 +16,10 @@ if (!globalThis.expo) {
   globalThis.expo = {};
 }
 
-process.env.EXPO_PUBLIC_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://example.test/api';
+globalThis.process = globalThis.process || {};
+globalThis.process.env = globalThis.process.env || {};
+globalThis.process.env.EXPO_PUBLIC_API_URL =
+  globalThis.process.env.EXPO_PUBLIC_API_URL || 'https://example.test/api';
 
 globalThis.expo.EventEmitter = globalThis.expo.EventEmitter || MockEventEmitter;
 globalThis.expo.NativeModule = globalThis.expo.NativeModule || MockNativeModule;
@@ -25,5 +28,5 @@ globalThis.expo.NativeModulesProxy = globalThis.expo.NativeModulesProxy || {};
 
 // Polyfill setImmediate for jsdom environment
 if (typeof setImmediate === 'undefined') {
-  global.setImmediate = (fn: Function) => setTimeout(fn, 0);
+  globalThis.setImmediate = (fn) => setTimeout(fn, 0);
 }
