@@ -31,6 +31,28 @@ const reverseGeocode = async (latlng: any) => {
     }
 };
 
+const buildAddressFromGeocode = (geocodeData: any, latlng: any) => {
+    const localityParts: string[] = [];
+    const locality = geocodeData?.localityInfo?.locality?.[0]?.name;
+    const adminRegion = geocodeData?.localityInfo?.administrative?.find((item: any) => item?.order === 2)?.name;
+    const adminArea = geocodeData?.localityInfo?.administrative?.find((item: any) => item?.order === 4)?.name;
+
+    if (locality) localityParts.push(locality);
+    if (adminRegion) localityParts.push(adminRegion);
+    if (adminArea && adminArea !== adminRegion) localityParts.push(adminArea);
+
+    const baseAddress =
+        geocodeData?.display_name ||
+        geocodeData?.address?.road ||
+        geocodeData?.address?.city ||
+        '';
+
+    const localityStr = localityParts.filter(Boolean).join(', ');
+    const combined = [baseAddress, localityStr].filter(Boolean).join(' · ');
+
+    return combined || `${latlng.lat}, ${latlng.lng}`;
+};
+
 type WebMapComponentProps = {
     markers: any[];
     onMarkersChange: (markers: any[]) => void;
@@ -200,12 +222,7 @@ const WebMapComponent = ({
         if (!isValidCoordinates(latlng)) return;
 
         const geocodeData = await reverseGeocode(latlng);
-        const address =
-            geocodeData?.display_name ||
-            geocodeData?.localityInfo?.informative?.[0]?.description ||
-            geocodeData?.address?.road ||
-            geocodeData?.address?.city ||
-            `${latlng.lat}, ${latlng.lng}`;
+        const address = buildAddressFromGeocode(geocodeData, latlng);
         const country =
             geocodeData?.address?.country ||
             geocodeData?.countryName ||
