@@ -5,13 +5,6 @@ import { ExportConfig } from '@/src/types/pdf-export';
 import { ErrorHandler } from '@/src/infrastructure/error/ErrorHandler';
 import { devWarn } from '@/src/utils/logger';
 
-interface ImageLoadResult {
-  url: string;
-  success: boolean;
-  error?: Error;
-  element?: HTMLImageElement;
-}
-
 /**
  * Сервис для загрузки изображений с retry механизмом
  */
@@ -328,4 +321,3 @@ export class ImageLoader {
     };
   }
 }
-

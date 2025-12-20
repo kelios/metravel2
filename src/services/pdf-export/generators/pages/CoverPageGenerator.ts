@@ -2,7 +2,6 @@
 // Генератор обложки книги
 
 import type { PdfThemeConfig } from '../../themes/PdfThemeConfig';
-import type { BookSettings } from '@/components/export/BookSettingsModal';
 
 export interface CoverPageData {
   title: string;
@@ -24,7 +23,7 @@ export class CoverPageGenerator {
    * Генерирует HTML для обложки
    */
   generate(data: CoverPageData): string {
-    const { colors, typography } = this.theme;
+    const { colors } = this.theme;
     const travelLabel = this.getTravelLabel(data.travelCount);
     const safeCoverImage = this.buildSafeImageUrl(data.coverImage);
     

@@ -39,7 +39,7 @@ export class GalleryPageGenerator {
   }
 
   private renderHeader(travelName: string): string {
-    const { colors, typography } = this.theme;
+    const { colors } = this.theme;
 
     return `
       <div style="margin-bottom: 15mm; text-align: center;">

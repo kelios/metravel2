@@ -30,22 +30,23 @@ export type UpdateUserProfilePayload = Partial<
     >
 >;
 
+// NOTE: apiClient.baseURL already includes `/api`, so endpoints here must be without it
 export const fetchUserProfile = async (userId: string | number): Promise<UserProfileDto> => {
-    return apiClient.get<UserProfileDto>(`/api/user/${userId}/profile/`);
+    return apiClient.get<UserProfileDto>(`/user/${userId}/profile/`);
 };
 
 export const updateUserProfile = async (
     userId: string | number,
     payload: UpdateUserProfilePayload
 ): Promise<UserProfileDto> => {
-    return apiClient.put<UserProfileDto>(`/api/user/${userId}/profile/update/`, payload);
+    return apiClient.put<UserProfileDto>(`/user/${userId}/profile/update/`, payload);
 };
 
 export const uploadUserProfileAvatar = async (
     userId: string | number,
     avatar: string
 ): Promise<UserProfileDto> => {
-    return apiClient.put<UserProfileDto>(`/api/user/${userId}/profile/avatar-upload/`, { avatar });
+    return apiClient.put<UserProfileDto>(`/user/${userId}/profile/avatar-upload/`, { avatar });
 };
 
 export type UploadUserProfileAvatarFile =

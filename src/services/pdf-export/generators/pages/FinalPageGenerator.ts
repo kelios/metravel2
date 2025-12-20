@@ -20,7 +20,7 @@ export class FinalPageGenerator {
    * Генерирует HTML для финальной страницы
    */
   generate(data: FinalPageData, pageNumber: number): string {
-    const { colors, typography } = this.theme;
+    const { colors } = this.theme;
 
     return `
       <section class="pdf-page final-page" style="

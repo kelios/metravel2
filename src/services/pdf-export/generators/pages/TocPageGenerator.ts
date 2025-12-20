@@ -21,7 +21,7 @@ export class TocPageGenerator {
    * Генерирует HTML для оглавления
    */
   generate(entries: TocEntry[], pageNumber: number): string {
-    const { colors, typography, spacing } = this.theme;
+    const { colors, spacing } = this.theme;
 
     return `
       <section class="pdf-page toc-page" style="

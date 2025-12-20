@@ -140,7 +140,6 @@ export async function generateMapImageFromDOM(
   } catch (error) {
     // Логируем реальную ошибку html2canvas для диагностики
     if (typeof console !== 'undefined') {
-      // eslint-disable-next-line no-console
       console.error('[MAP_SNAPSHOT_DOM] generateMapImageFromDOM error', error);
     }
 
@@ -350,7 +349,6 @@ export async function generateLeafletRouteSnapshot(
   } catch (error) {
     // В случае ошибки вернем null, чтобы генератор PDF мог использовать SVG как fallback
     if (typeof console !== 'undefined') {
-      // eslint-disable-next-line no-console
       console.error('[MAP_SNAPSHOT] generateLeafletRouteSnapshot error', error);
     }
     return null;

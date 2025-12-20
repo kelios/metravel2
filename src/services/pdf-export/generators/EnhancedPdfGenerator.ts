@@ -397,7 +397,7 @@ export class EnhancedPdfGenerator {
    * Рендерит оглавление
    */
   private renderTocPage(meta: TravelSectionMeta[], pageNumber: number): string {
-    const { colors, typography, spacing } = this.theme;
+    const { colors, typography } = this.theme;
     const tocItems = meta
       .map((item, index) => {
         const travel = item.travel;
@@ -501,7 +501,7 @@ export class EnhancedPdfGenerator {
    * Рендерит страницу с фото путешествия
    */
   private renderTravelPhotoPage(travel: TravelForBook, pageNumber: number): string {
-    const { colors, typography, spacing } = this.theme;
+    const { colors, typography } = this.theme;
     const coverImage = this.buildSafeImageUrl(
       travel.travel_image_url || travel.travel_image_thumb_url
     );

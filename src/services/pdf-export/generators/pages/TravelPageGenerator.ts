@@ -31,7 +31,7 @@ export class TravelPageGenerator {
    * Генерирует левую страницу с большим фото
    */
   generatePhotoPage(travel: TravelForBook, pageNumber: number): string {
-    const { colors, spacing } = this.theme;
+    const { colors } = this.theme;
     const imageUrl = this.getMainImage(travel);
 
     return `

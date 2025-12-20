@@ -6,7 +6,6 @@
 
 import { StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { MODERN_MATTE_PALETTE } from '@/constants/modernMattePalette'
 
 export const globalFocusStyles = StyleSheet.create({
   /**

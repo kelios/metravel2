@@ -160,9 +160,10 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
             const uploadedUrl = response?.url || response?.data?.url || response?.path || response?.file_url;
 
             if (uploadedUrl || previewUrl) {
-                const visualUrl = previewUrl || uploadedUrl; // показываем сразу локальный превью, если CDN ещё не готов
-                const persistedUrl = uploadedUrl || previewUrl!; // что отдать наружу/сохранить
-                setImageUri(persistedUrl);
+                // Показываем локальный preview в UI, но наружу отдаём URL с бэкенда (если есть)
+                const visualUrl = previewUrl || uploadedUrl;
+                const persistedUrl = uploadedUrl || visualUrl!;
+                setImageUri(visualUrl);
                 setPreviewUrl(visualUrl);
                 setPreviewFile(null); // Очищаем файл
                 setUploadMessage('Фотография успешно загружена');
