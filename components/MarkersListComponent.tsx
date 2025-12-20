@@ -20,6 +20,14 @@ interface MarkersListComponentProps {
     setActiveIndex?: (index: number | null) => void;
     travelId?: string | null;
 }
+const normalizeImageUrl = (url?: string | null) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+    const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
+    if (!base) return url;
+    return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                                                markers,
                                                                categoryTravelAddress,
@@ -108,7 +116,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                     <div style={styles.indexBadge}>{index + 1}</div>
                                     <div style={styles.thumbnailWrapper}>
                                         {hasImage ? (
-                                            <img src={marker.image} alt="Фото" style={styles.previewImage} />
+                                            <img src={normalizeImageUrl(marker.image)} alt="Фото" style={styles.previewImage} />
                                         ) : (
                                             <div style={styles.placeholderImage}>Нет фото</div>
                                         )}

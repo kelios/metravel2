@@ -117,7 +117,7 @@ jest.mock('expo-router', () => {
 
   return {
     router,
-    Link: ({ children, href, ...props }: any) => {
+    Link: ({ children, href: _href, ...props }: any) => {
       const content = React.Children.map(children, (child: any) =>
         typeof child === 'string'
           ? React.createElement(RN.Text, null, child)
@@ -199,7 +199,7 @@ jest.mock('@react-native-async-storage/async-storage', () => createAsyncStorageM
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
   const React = require('react')
   const { View } = require('react-native')
-  return ({ name, size, color, ...props }: any) =>
+  return ({ name, size: _size, color: _color, ...props }: any) =>
     React.createElement(View, { testID: `icon-${name}`, ...props })
 })
 
@@ -215,20 +215,19 @@ jest.mock('@expo/vector-icons', () => {
   const React = require('react')
   const { View } = require('react-native')
   return {
-    Feather: ({ name, size, color, ...props }: any) =>
+    Feather: ({ name, size: _size, color: _color, ...props }: any) =>
       React.createElement(View, { testID: `feather-${name}`, ...props }),
-    FontAwesome5: ({ name, size, color, ...props }: any) =>
+    FontAwesome5: ({ name, size: _size, color: _color, ...props }: any) =>
       React.createElement(View, { testID: `fa5-${name}`, ...props }),
-    MaterialIcons: ({ name, size, color, ...props }: any) =>
+    MaterialIcons: ({ name, size: _size, color: _color, ...props }: any) =>
       React.createElement(View, { testID: `material-${name}`, ...props }),
-    MaterialCommunityIcons: ({ name, size, color, ...props }: any) =>
+    MaterialCommunityIcons: ({ name, size: _size, color: _color, ...props }: any) =>
       React.createElement(View, { testID: `mci-${name}`, ...props }),
   }
 })
 
 // Mock react-native-paper Portal
 jest.mock('react-native-paper', () => {
-  const RN = require('react-native')
   const Paper = jest.requireActual('react-native-paper')
   return {
     ...Paper,

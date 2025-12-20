@@ -24,14 +24,11 @@ import { Travel } from '@/src/types/types';
 import { fetchTravelsNear } from '@/src/api/map';
 import TravelTmlRound from '@/components/travel/TravelTmlRound';
 import MapClientSideComponent from '@/components/Map';
-import { useLazyMap } from '@/hooks/useLazyMap';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useResponsive } from '@/hooks/useResponsive';
 
 const brandOrange = '#ff8c49'; // Оставляем для обратной совместимости, но используем DESIGN_TOKENS где возможно
-const lightOrange = '#ffede2';
 const backgroundGray = '#f8f9fa';
 
 type Segment = 'list' | 'map';
@@ -106,8 +103,6 @@ const MapContainer = memo(({
   height?: number;
   showRoute?: boolean;
 }) => {
-  const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
-
   const canRenderMap = useMemo(
     () => typeof window !== 'undefined' && points.length > 0,
     [points.length]
@@ -156,8 +151,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     const [error, setError] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<Segment>('list');
     const [visibleCount, setVisibleCount] = useState(6);
-    const { width, isPhone, isLargePhone, isTablet, isDesktop } = useResponsive();
-    const listRef = useRef<FlatList>(null);
+    const { isPhone, isLargePhone, isTablet } = useResponsive();
     const scrollViewRef = useRef<ScrollView>(null);
 
     const isMobile = isPhone || isLargePhone;
@@ -176,18 +170,6 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     }, [isMobile, isTablet]);
 
     // Адаптивное количество колонок
-    const numColumns = useMemo(() => {
-      if (isMobile) return 1;
-      if (isTablet) return 2;
-      return 3;
-    }, [isMobile, isTablet]);
-
-    const initialLoadCount = useMemo(() => {
-      if (isMobile) return 6;
-      if (isTablet) return 8;
-      return 12;
-    }, [isMobile, isTablet]);
-
     const loadMoreCount = useMemo(() => {
       if (isMobile) return 4;
       if (isTablet) return 6;
@@ -249,7 +231,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           setIsLoading(false);
         }
       }
-    }, [travel.id]); // ✅ УБРАНО: onTravelsLoaded из зависимостей для предотвращения бесконечных запросов
+    }, [travel.id, onTravelsLoaded]);
 
     // ✅ ИСПРАВЛЕНИЕ: Загружаем данные только один раз при монтировании или изменении travel.id
     useEffect(() => {
@@ -267,14 +249,14 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           controllerRef.current.abort();
         }
       };
-    }, [travel.id]); // ✅ ИСПРАВЛЕНИЕ: Зависим только от travel.id, не от fetchNearbyTravels
+    }, [travel.id, fetchNearbyTravels]);
 
     // ✅ ИСПРАВЛЕНИЕ: Вызываем onTravelsLoaded только после успешной загрузки
     useEffect(() => {
       if (travelsNear.length > 0 && onTravelsLoaded) {
         onTravelsLoaded(travelsNear);
       }
-    }, [travelsNear.length]); // ✅ Зависим только от длины массива, не от самого массива или функции
+    }, [travelsNear, onTravelsLoaded]);
 
     // Оптимизированное преобразование точек для карты
     const mapPoints = useMemo(() => {

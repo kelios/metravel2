@@ -3,7 +3,6 @@ import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
-  TouchableOpacity,
   Linking,
   Platform,
   Pressable,
@@ -273,12 +272,8 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
   // ✅ УЛУЧШЕНИЕ: Пропорциональные карточки с фиксированным aspect ratio
   const responsive: Responsive = useMemo(
     () => {
-      // Используем aspect ratio вместо фиксированной высоты для пропорциональности
-      // Aspect ratio 4:3 (1.33) - стандартное соотношение для карточек
       const aspectRatio = 4 / 3;
-      
-      // Адаптивная высота изображения (будет вычисляться на основе ширины и aspect ratio)
-      // Но оставляем минимальную высоту для мобильных
+
       let imageMinHeight = 240; // мобильные по умолчанию
       if (isLargeDesktop) {
         imageMinHeight = 400;
@@ -294,7 +289,6 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
         imageMinHeight = 240;
       }
 
-      // Адаптивный размер заголовка
       let titleSize = 14;
       if (isLargeDesktop) {
         titleSize = 19;
@@ -310,7 +304,6 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
         titleSize = 14;
       }
 
-      // Адаптивный размер координат
       const coordSize = isMobile ? 12 : isTablet ? 13 : 14;
 
       return {
@@ -320,7 +313,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
         aspectRatio, // Добавляем aspect ratio
       };
     },
-    [isMobile, isTablet, isDesktop, isLargeDesktop, width]
+    [isMobile, isTablet, isLargeDesktop, width]
   );
 
   const onCopy = useCallback(async (coordStr: string) => {

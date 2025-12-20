@@ -1,17 +1,14 @@
 // components/listTravel/ListTravelRedesigned.tsx
 // ✅ РЕДИЗАЙН: Новая версия ListTravel с управляемыми блоками
 
-import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import MainHubLayout from '@/components/MainHubLayout';
 import CollapsibleBlock from '@/components/CollapsibleBlock';
 import WelcomeBanner from '@/components/WelcomeBanner';
 import RecentViews from '@/components/RecentViews';
 import FiltersPanelCollapsible from '@/components/FiltersPanelCollapsible';
-import SearchAndFilterBar from './SearchAndFilterBar';
 import { useBlockVisibility } from '@/hooks/useBlockVisibility';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 
 // Это пример интеграции - полная версия будет в основном файле
@@ -47,8 +44,8 @@ export default function ListTravelRedesigned(_: ListTravelRedesignedProps) {
         icon="sun"
         defaultExpanded={getBlockState('welcomeBanner').expanded}
         defaultHidden={getBlockState('welcomeBanner').hidden}
-        onToggle={(expanded) => toggleExpanded('welcomeBanner')}
-        onHide={(hidden) => toggleHidden('welcomeBanner')}
+        onToggle={(_expanded) => toggleExpanded('welcomeBanner')}
+        onHide={(_hidden) => toggleHidden('welcomeBanner')}
         compactMode={mode === 'compact'}
       >
         <WelcomeBanner compact={mode === 'compact'} />
@@ -62,8 +59,8 @@ export default function ListTravelRedesigned(_: ListTravelRedesignedProps) {
         icon="search"
         defaultExpanded={getBlockState('search').expanded}
         defaultHidden={getBlockState('search').hidden}
-        onToggle={(expanded) => toggleExpanded('search')}
-        onHide={(hidden) => toggleHidden('search')}
+        onToggle={(_expanded) => toggleExpanded('search')}
+        onHide={(_hidden) => toggleHidden('search')}
         compactMode={mode === 'compact'}
       >
         <View style={styles.searchWrapper}>
@@ -80,8 +77,8 @@ export default function ListTravelRedesigned(_: ListTravelRedesignedProps) {
           icon="filter"
           defaultExpanded={getBlockState('filters').expanded}
           defaultHidden={getBlockState('filters').hidden}
-          onToggle={(expanded) => toggleExpanded('filters')}
-          onHide={(hidden) => toggleHidden('filters')}
+          onToggle={(_expanded) => toggleExpanded('filters')}
+          onHide={(_hidden) => toggleHidden('filters')}
           compactMode={mode === 'compact'}
         >
           <FiltersPanelCollapsible

@@ -21,7 +21,7 @@ const DEV = isDevelopment();
  */
 export const devLog = (...args: any[]): void => {
   if (DEV) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -51,7 +51,7 @@ export const devError = (...args: any[]): void => {
  */
 export const pdfLog = (...args: any[]): void => {
   if (DEV) {
-    console.log('[PDF]', ...args);
+    console.info('[PDF]', ...args);
   }
 };
 
@@ -132,7 +132,7 @@ export const logMessage = (
         console.warn(message, context);
         break;
       default:
-        console.log(message, context);
+        console.info(message, context);
     }
   }
   
