@@ -36,7 +36,21 @@ export function optimizeImageUrl(
   } = options;
 
   try {
-    const url = new URL(originalUrl, Platform.OS === 'web' ? window.location.origin : 'https://metravel.by');
+    // Handle both absolute and relative URLs
+    let url: URL;
+    if (originalUrl.startsWith('http://') || originalUrl.startsWith('https://')) {
+      url = new URL(originalUrl);
+    } else if (originalUrl.startsWith('/')) {
+      // Relative URL starting with /
+      const base = Platform.OS === 'web' && typeof window !== 'undefined' 
+        ? window.location.origin 
+        : 'https://metravel.by';
+      url = new URL(originalUrl, base);
+    } else {
+      // Invalid URL format
+      console.warn('Invalid image URL format:', originalUrl);
+      return originalUrl;
+    }
 
     // Если URL уже содержит параметры оптимизации, обновляем их
     // Иначе добавляем новые

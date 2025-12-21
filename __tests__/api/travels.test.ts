@@ -250,13 +250,15 @@ describe('src/api/travelsApi.ts', () => {
       expect(options).toMatchObject({ headers: { Authorization: 'Token slug-token' } });
     });
 
-    it('fetchArticles обрабатывает неожиданный ответ', async () => {
+    it('fetchTravelBySlug использует путь /api/travels/by-slug/{slug}/', async () => {
+      mockedGetSecureItem.mockResolvedValueOnce(null);
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce({} as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ id: 1, slug: 'sluggy' } as any);
 
-      const result = await fetchArticles(0, 10, {});
+      await fetchTravelBySlug('sluggy');
 
-      expect(result).toEqual({ data: [], total: 0 });
+      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      expect(url).toBe('http://example.test/api/travels/by-slug/sluggy/');
     });
 
     it('fetchTravelsNear пробрасывает AbortError', async () => {

@@ -15,7 +15,7 @@ import { Button } from 'react-native-paper';
 
 import MultiSelectField from '@/components/MultiSelectField';
 import CheckboxComponent from '@/components/CheckboxComponent';
-import ImageUploadComponent from '@/components/imageUpload/ImageUploadComponent';
+import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { TravelFormData, TravelFilters, Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
@@ -147,16 +147,18 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                 </>
             )}
 
-            {showCoverImage && form.id && (
+            {showCoverImage && (
                 <View style={styles.imageUploadWrapper}>
-                    <ImageUploadComponent
+                    <PhotoUploadWithPreview
                         collection="travelMainImage"
-                        idTravel={form.id}
+                        idTravel={form.id ?? null}
                         oldImage={
                             form.travel_image_thumb_small_url?.length
                                 ? form.travel_image_thumb_small_url
                                 : (travelDataOld as any)?.travel_image_thumb_small_url ?? null
                         }
+                        placeholder="Перетащите обложку путешествия"
+                        maxSizeMB={10}
                     />
                     <Text style={styles.coverHint}>
                         Рекомендуем горизонтальное изображение (соотношение сторон 16:9), без коллажей и текста на картинке.

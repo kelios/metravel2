@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { MarkerData } from "@/src/types/types";
-import ImageUploadComponent from '@/components/imageUpload/ImageUploadComponent';
+import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import MultiSelectField from '@/components/MultiSelectField';
 
 const MultiSelectFieldAny: any = MultiSelectField;
@@ -99,7 +99,8 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                         const categoriesLabel = hasCategories
                             ? `${marker.categories.length} ${marker.categories.length === 1 ? 'категория' : 'категории'}`
                             : 'Категории не выбраны';
-                        const hasImage = !!marker.image;
+                        // Проверяем, что image не пустая строка
+                        const hasImage = marker.image && marker.image.trim().length > 0;
 
                         const isActive = activeIndex === index;
 
@@ -260,20 +261,6 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                     </div>
 
                     <div style={styles.field}>
-                        <label style={styles.fieldLabel}>Изображение точки</label>
-                        <input
-                            type="text"
-                            value={address}
-                            onChange={(e) => setAddress(e.target.value)}
-                            style={styles.input}
-                            placeholder="Например: Фото озера Sucha"
-                        />
-                        <div style={styles.fieldHint}>
-                            Можно добавить изображение точки.
-                        </div>
-                    </div>
-
-                    <div style={styles.field}>
                         <label style={styles.fieldLabel}>Категории точки</label>
                         <MultiSelectFieldAny
                             label=""
@@ -289,24 +276,27 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                             inputSearchStyle={styles.multiSelectSearchInput}
                             containerStyle={styles.multiSelectDropdownContainer}
                         />
-                        {marker.id == null ? (
-                            <div style={styles.fieldHint}>
-                                Фото можно будет добавить после сохранения маршрута.
-                                Нажмите «Сохранить маршрут» внизу шага и затем откройте точку снова.
-                            </div>
-                        ) : (
-                            <>
-                                <ImageUploadComponent
-                                    collection="travelImageAddress"
-                                    idTravel={String(marker.id)}
-                                    oldImage={marker.image}
-                                    onUpload={(imageUrl) => handleImageUpload(index, imageUrl)}
-                                />
-                                <div style={styles.fieldHint}>
-                                    Фото поможет путешественникам узнать место. Можно загрузить одно главное изображение.
-                                </div>
-                            </>
-                        )}
+                        <div style={styles.fieldHint}>
+                            Выберите категории, которые описывают эту точку маршрута.
+                        </div>
+                    </div>
+
+                    <div style={styles.field}>
+                        <label style={styles.fieldLabel}>Изображение точки</label>
+                        <PhotoUploadWithPreview
+                            collection="travelImageAddress"
+                            idTravel={marker.id ? String(marker.id) : null}
+                            oldImage={marker.image}
+                            onUpload={(imageUrl: string) => handleImageUpload(index, imageUrl)}
+                            placeholder="Перетащите фото точки маршрута"
+                            maxSizeMB={10}
+                        />
+                        <div style={styles.fieldHint}>
+                            {marker.id == null 
+                                ? 'Превью будет сохранено. После сохранения маршрута фото загрузится на сервер автоматически.'
+                                : 'Фото поможет путешественникам узнать место. Можно загрузить одно главное изображение.'
+                            }
+                        </div>
                     </div>
 
                     <div style={styles.actionsRow}>

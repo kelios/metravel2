@@ -1,11 +1,13 @@
 // components/MapPage/Map.web.tsx
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import React from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, Platform, ActivityIndicator, Pressable } from 'react-native';
 import * as Location from 'expo-location';
 import 'leaflet/dist/leaflet.css';
 type ReactLeafletNS = typeof import('react-leaflet');
 // CSS загружается через CDN ниже в коде
 import RoutingMachine from '@/components/MapPage/RoutingMachine';
+import RoutingStatus from '@/components/MapPage/RoutingStatus';
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
 // MapLegend is currently unused in the web map
 
@@ -740,18 +742,7 @@ const MapPageComponent: React.FC<Props> = ({
             </View>
           )}
 
-          {routingLoading && (
-              <View style={styles.routingProgress}>
-                <ActivityIndicator size="small" color="#fff" />
-                <Text style={styles.routingProgressText}>Building route...</Text>
-              </View>
-          )}
-
-          {errors.routing && (
-              <View style={styles.routingError}>
-                <Text style={styles.routingErrorText}>Routing error</Text>
-              </View>
-          )}
+          {/* RoutingStatus компонент отображается в боковой панели */}
         </MapContainer>
         
         {/* ✅ ИСПРАВЛЕНИЕ: Легенда карты перенесена в боковую панель */}

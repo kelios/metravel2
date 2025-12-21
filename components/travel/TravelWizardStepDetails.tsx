@@ -7,6 +7,8 @@ import TextInputComponent from '@/components/TextInputComponent';
 import CheckboxComponent from '@/components/CheckboxComponent';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
+import { ValidationSummary } from '@/components/travel/ValidationFeedback';
+import { validateStep } from '@/utils/travelWizardValidation';
 import { TravelFormData } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
@@ -83,6 +85,11 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
         return { filled, total: keys.length };
     }, [formData]);
 
+    // Валидация шага 4 (опциональный, показываем только warnings)
+    const validation = useMemo(() => {
+        return validateStep(4, formData);
+    }, [formData]);
+
     return (
         <SafeAreaView style={styles.safeContainer}>
             <KeyboardAvoidingView
@@ -100,6 +107,14 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
                 />
+                {validation.warnings.length > 0 && (
+                    <View style={styles.validationSummaryWrapper}>
+                        <ValidationSummary
+                            errorCount={validation.errors.length}
+                            warningCount={validation.warnings.length}
+                        />
+                    </View>
+                )}
                 <ScrollView
                     style={styles.content}
                     contentContainerStyle={[styles.contentContainer, { paddingBottom: contentPaddingBottom }]}
@@ -197,6 +212,10 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
 const styles = StyleSheet.create({
     safeContainer: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
     keyboardAvoid: { flex: 1 },
+    validationSummaryWrapper: {
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
+    },
     content: {
         flex: 1,
     },

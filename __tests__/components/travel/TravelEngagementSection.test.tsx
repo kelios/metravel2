@@ -2,19 +2,20 @@
  * @jest-environment jsdom
  */
 
-import React from 'react';
 import { render } from '@testing-library/react-native';
 import { TravelEngagementSection } from '@/components/travel/details/TravelDetailsContainer';
 
 // Stub heavy child components to simple markers
 jest.mock('@/components/travel/TelegramDiscussionSection', () => {
-  const React = require('react');
   return () => <div data-testid="mock-telegram" />;
 });
 
 jest.mock('@/components/travel/ShareButtons', () => {
-  const React = require('react');
   return ({ testID }: { testID?: string }) => <div data-testid={testID || 'mock-share'} />;
+});
+
+jest.mock('@/components/travel/CTASection', () => {
+  return () => <div data-testid="mock-cta" />;
 });
 
 const baseTravel: any = {

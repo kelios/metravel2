@@ -25,7 +25,7 @@ const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запро�
 // Base travels endpoint (no trailing slash to avoid duplicate slashes)
 const GET_TRAVELS = `${URLAPI}/travels`;
 const GET_RANDOM_TRAVELS = `${URLAPI}/travels/random/`;
-const GET_TRAVELS_BY_SLUG = `${URLAPI}/travels/`;
+const GET_TRAVELS_BY_SLUG = `${URLAPI}/travels/by-slug/`;
 
 const travelDef: Travel = {
     name: 'test',

@@ -107,7 +107,8 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                                      routeHintDismissed = false,
                                                      onRouteHintDismiss,
                                                    }) => {
-  const styles = useMemo(() => getStyles(isMobile), [isMobile]);
+  const windowWidth = Dimensions.get('window').width;
+  const styles = useMemo(() => getStyles(isMobile, windowWidth), [isMobile, windowWidth]);
 
   // Компактная кнопка теперь внутри компонента — видит styles
   const CompactButton = React.useMemo(() => {
@@ -225,53 +226,55 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
 
   return (
     <View style={styles.card}>
-      {/* Заголовок */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Фильтры</Text>
-        <View style={styles.headerActions}>
-          {hasActiveFilters && (
-            <CompactButton
-              onPress={resetFilters}
-              icon="refresh"
-              compact
-              color={COLORS.danger}
-              accessibilityLabel="Сбросить фильтры"
-            />
-          )}
-          {isMobile && (
-            <CompactButton
-              onPress={closeMenu}
-              icon="close"
-              compact
-              accessibilityLabel="Закрыть панель"
-            />
-          )}
+      {/* Заголовок - фиксированный */}
+      <View style={styles.headerContainer}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Фильтры</Text>
+          <View style={styles.headerActions}>
+            {hasActiveFilters && (
+              <CompactButton
+                onPress={resetFilters}
+                icon="refresh"
+                compact
+                color={COLORS.danger}
+                accessibilityLabel="Сбросить фильтры"
+              />
+            )}
+            {isMobile && (
+              <CompactButton
+                onPress={closeMenu}
+                icon="close"
+                compact
+                accessibilityLabel="Закрыть панель"
+              />
+            )}
+          </View>
         </View>
-      </View>
 
-      {/* Переключение режимов */}
-      <View style={styles.modeTabs} accessibilityRole="tablist">
-        {SEARCH_MODES.map(({ key, icon, label }) => {
-          const active = mode === key;
-          return (
-            <Pressable
-              key={key}
-              style={[
-                styles.modeTab, 
-                active && styles.modeTabActive,
-                globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-              ]}
-              onPress={() => handleSetMode(key)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: active }}
-            >
-              <Icon name={icon} size={18} color={active ? '#fff' : COLORS.textMuted} />
-              <Text style={[styles.modeTabText, active && styles.modeTabTextActive]}>
-                {label}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {/* Переключение режимов */}
+        <View style={styles.modeTabs} accessibilityRole="tablist">
+          {SEARCH_MODES.map(({ key, icon, label }) => {
+            const active = mode === key;
+            return (
+              <Pressable
+                key={key}
+                style={[
+                  styles.modeTab, 
+                  active && styles.modeTabActive,
+                  globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                ]}
+                onPress={() => handleSetMode(key)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+              >
+                <Icon name={icon} size={18} color={active ? '#fff' : COLORS.textMuted} />
+                <Text style={[styles.modeTabText, active && styles.modeTabTextActive]}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       {/* Контент */}
@@ -516,9 +519,8 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
 };
 
 // ——— Styles
-const getStyles = (isMobile: boolean) => {
-  const { width } = Dimensions.get('window');
-  const panelWidth = isMobile ? Math.min(width - 24, 480) : 340;
+const getStyles = (isMobile: boolean, windowWidth: number) => {
+  const panelWidth = isMobile ? Math.min(windowWidth - 24, 480) : 340;
 
   return StyleSheet.create({
     card: {
@@ -535,6 +537,10 @@ const getStyles = (isMobile: boolean) => {
       elevation: 6,
       alignSelf: isMobile ? 'center' : 'flex-start',
       // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    },
+    headerContainer: {
+      // Фиксированный контейнер для заголовка и табов
+      marginBottom: 12,
     },
     header: {
       flexDirection: 'row',

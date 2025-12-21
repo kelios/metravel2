@@ -32,15 +32,15 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
                                                                    disabled = false, // ✅ ИСПРАВЛЕНИЕ
                                                                }) => {
     return (
-        <View style={styles.container}>
-            {label && (
+        <View style={[styles.container, !label && styles.containerNoLabel]}>
+            {label ? (
                 <View style={styles.labelRow}>
                     <Text style={styles.label}>
                         {label}
-                        {required && <Text style={styles.required}> *</Text>}
+                        {required ? <Text style={styles.required}> *</Text> : null}
                     </Text>
                 </View>
-            )}
+            ) : null}
             <TextInput
                 style={[
                     styles.input,
@@ -50,7 +50,7 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
                 ]}
                 value={value}
                 onChangeText={onChange}
-                placeholder={placeholder || `Введите ${label?.toLowerCase?.() || ''}`}
+                placeholder={placeholder || (label ? `Введите ${label.toLowerCase()}` : '')}
                 placeholderTextColor={palette.textMuted}
                 secureTextEntry={secureTextEntry}
                 multiline={multiline}
@@ -70,20 +70,21 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
                     },
                 })}
             />
-            {hint && !error && (
+            {hint && !error ? (
                 <Text style={styles.hint}>{hint}</Text>
-            )}
-            {error && (
+            ) : null}
+            {error ? (
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>{error}</Text>
                 </View>
-            )}
+            ) : null}
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: { marginBottom: 16 },
+    containerNoLabel: { marginBottom: 0 },
     labelRow: {
         marginBottom: 6,
     },

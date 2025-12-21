@@ -8,8 +8,10 @@ import { useRouter } from 'expo-router';
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
+import { QualityIndicator } from '@/components/travel/ValidationFeedback';
 import { TravelFormData, Travel } from '@/src/types/types';
 import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
+import { getQualityScore, isReadyForModeration } from '@/utils/travelWizardValidation';
 import { trackWizardEvent } from '@/src/utils/analytics';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
@@ -96,6 +98,11 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             gallery: (formData as any).gallery ?? [],
             travel_image_thumb_small_url: (formData as any).travel_image_thumb_small_url ?? null,
         } as any);
+    }, [formData]);
+
+    // Качественная оценка заполнения
+    const qualityScore = useMemo(() => {
+        return getQualityScore(formData);
     }, [formData]);
 
     const moderationIssuesByKey = useMemo(() => {
@@ -297,6 +304,19 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         </View>
                     </View>
 
+                    <View style={[styles.card, styles.qualityCard]}>
+                        <Text style={styles.cardTitle}>Качество заполнения</Text>
+                        <QualityIndicator level={qualityScore.level} score={qualityScore.score} />
+                        {qualityScore.suggestions.length > 0 && (
+                            <View style={styles.suggestionsContainer}>
+                                <Text style={styles.suggestionsTitle}>Рекомендации для улучшения:</Text>
+                                {qualityScore.suggestions.map((suggestion, idx) => (
+                                    <Text key={idx} style={styles.suggestionItem}>• {suggestion}</Text>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+
                     <View style={[styles.card, styles.checklistCard]}>
                         <View style={styles.checklistHeader}>
                             <Text style={styles.cardTitle}>Чек-лист готовности</Text>
@@ -446,6 +466,25 @@ const styles = StyleSheet.create({
         marginBottom: DESIGN_TOKENS.spacing.sm,
     },
     statusCard: {},
+    qualityCard: {},
+    suggestionsContainer: {
+        marginTop: DESIGN_TOKENS.spacing.md,
+        paddingTop: DESIGN_TOKENS.spacing.md,
+        borderTopWidth: 1,
+        borderTopColor: DESIGN_TOKENS.colors.borderLight,
+    },
+    suggestionsTitle: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: '600',
+        color: DESIGN_TOKENS.colors.text,
+        marginBottom: DESIGN_TOKENS.spacing.xs,
+    },
+    suggestionItem: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: DESIGN_TOKENS.colors.textMuted,
+        marginBottom: 4,
+        lineHeight: 20,
+    },
     statusOptions: {
         gap: DESIGN_TOKENS.spacing.sm,
     },

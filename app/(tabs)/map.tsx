@@ -65,6 +65,7 @@ export default function MapScreen() {
     const [mode, setMode] = useState<'radius' | 'route'>('radius');
     const [transportMode, setTransportMode] = useState<'car' | 'bike' | 'foot'>('car');
     const [routeDistance, setRouteDistance] = useState<number | null>(null);
+    const [fullRouteCoords, setFullRouteCoords] = useState<[number, number][]>([]);
     const [startAddress, setStartAddress] = useState('');
     const [endAddress, setEndAddress] = useState('');
     const [rightPanelTab, setRightPanelTab] = useState<'filters' | 'travels'>('filters');
@@ -97,10 +98,10 @@ export default function MapScreen() {
 
     const routeSignature = useMemo(
         () =>
-            debouncedRoutePoints.length > 0
-                ? debouncedRoutePoints.map((p) => `${p[0]},${p[1]}`).join('|')
+            fullRouteCoords.length > 0
+                ? fullRouteCoords.map((p) => `${p[0]},${p[1]}`).join('|')
                 : '',
-        [debouncedRoutePoints]
+        [fullRouteCoords]
     );
 
     const mapQueryDescriptor = useMemo(
@@ -111,6 +112,7 @@ export default function MapScreen() {
             address: debouncedFilterValues.address || '',
             mode,
             routePoints: debouncedRoutePoints,
+            fullRouteCoords: fullRouteCoords,
             routeKey: routeSignature,
             transportMode,
             filters: backendFilters,
@@ -122,6 +124,7 @@ export default function MapScreen() {
             debouncedFilterValues.address,
             mode,
             debouncedRoutePoints,
+            fullRouteCoords,
             routeSignature,
             transportMode,
             backendFilters,
@@ -186,7 +189,7 @@ export default function MapScreen() {
         queryKey: ['travelsForMap', mapQueryDescriptor],
         enabled:
             isFocused &&
-            (mode === 'radius' || (mode === 'route' && debouncedRoutePoints.length >= 2)) &&
+            (mode === 'radius' || (mode === 'route' && fullRouteCoords.length >= 2)) &&
             typeof debouncedCoordinates?.latitude === 'number' &&
             typeof debouncedCoordinates?.longitude === 'number' &&
             !isNaN(debouncedCoordinates.latitude) &&
@@ -201,6 +204,7 @@ export default function MapScreen() {
                     address: string;
                     mode: 'radius' | 'route';
                     routePoints: [number, number][];
+                    fullRouteCoords: [number, number][];
                     routeKey: string;
                     transportMode: typeof transportMode;
                     filters: Record<string, any>;
@@ -222,8 +226,8 @@ export default function MapScreen() {
                         categories: params.filters.categories,
                     });
                     data = Object.values(result || {});
-                } else if (params.mode === 'route' && params.routePoints.length >= 2) {
-                    const result = await fetchTravelsNearRoute(params.routePoints, 2);
+                } else if (params.mode === 'route' && params.fullRouteCoords.length >= 2) {
+                    const result = await fetchTravelsNearRoute(params.fullRouteCoords, 2);
                     if (result && typeof result === 'object') {
                         data = Array.isArray(result) ? result : Object.values(result);
                     }
@@ -322,6 +326,7 @@ export default function MapScreen() {
         setStartAddress('');
         setEndAddress('');
         setRouteDistance(null);
+        setFullRouteCoords([]);
     }, []);
 
     const buildRouteTo = useCallback((item: any) => {
@@ -331,9 +336,8 @@ export default function MapScreen() {
         }
     }, []);
 
-    const setFullRouteCoords = useCallback((coords: [number, number][]) => {
-        // placeholder for MapPanel callback; current screen does not use the value
-        if (coords.length === 0) return;
+    const handleSetFullRouteCoords = useCallback((coords: [number, number][]) => {
+        setFullRouteCoords(coords);
     }, []);
 
     // ✅ РЕАЛИЗАЦИЯ: Фильтрация данных на фронтенде по выбранным категориям
@@ -396,7 +400,7 @@ export default function MapScreen() {
                                 onMapClick={handleMapClick}
                                 transportMode={transportMode}
                                 setRouteDistance={setRouteDistance}
-                                setFullRouteCoords={setFullRouteCoords}
+                                setFullRouteCoords={handleSetFullRouteCoords}
                                 radius={filterValues.radius}
                             />
                         </Suspense>

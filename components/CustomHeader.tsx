@@ -428,7 +428,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
               </Pressable>
             </Modal>
           )}
-      </View>
+          </View>
       </View>
     );
 };

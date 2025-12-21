@@ -1,5 +1,6 @@
 // components/MapPage/RoutingMachine.tsx
 import { useEffect, useRef } from 'react'
+import { useRouting } from './useRouting'
 
 interface RoutingMachineProps {
     map: any
@@ -12,287 +13,157 @@ interface RoutingMachineProps {
     ORS_API_KEY: string | undefined
 }
 
-const getORSProfile = (mode: 'car' | 'bike' | 'foot') => {
-    switch (mode) {
-        case 'bike': return 'cycling-regular'
-        case 'foot': return 'foot-walking'
-        default: return 'driving-car'
-    }
-}
-
-const getOSRMProfile = (mode: 'car' | 'bike' | 'foot') => {
-    switch (mode) {
-        case 'bike': return 'bike'
-        case 'foot': return 'foot'
-        default: return 'driving'
-    }
-}
-
 /**
- * Роутинг без leaflet-routing-machine:
- * 1) Если есть ключ ORS — используем OpenRouteService.
- * 2) Если ключа нет — фоллбэк на публичный OSRM (без ключа).
+ * RoutingMachine Component
+ * 
+ * Отвечает за построение маршрута между двумя точками на карте.
+ * Использует OpenRouteService (ORS) API или OSRM в качестве fallback.
+ * 
+ * Основные возможности:
+ * - Построение оптимального маршрута по дорогам
+ * - Поддержка разных видов транспорта (авто, велосипед, пешком)
+ * - Кэширование маршрутов для оптимизации
+ * - Fallback на прямую линию при недоступности сервисов
+ * - Визуальная индикация статуса построения маршрута
  */
+
 const RoutingMachine: React.FC<RoutingMachineProps> = ({
-                                                          map,
-                                                          routePoints,
-                                                          transportMode,
-                                                          setRoutingLoading,
-                                                          setErrors,
-                                                          setRouteDistance,
-                                                          setFullRouteCoords,
-                                                          ORS_API_KEY,
-                                                      }) => {
+    map,
+    routePoints,
+    transportMode,
+    setRoutingLoading,
+    setErrors,
+    setRouteDistance,
+    setFullRouteCoords,
+    ORS_API_KEY,
+}) => {
     const polylineRef = useRef<any>(null)
-    const abortRef = useRef<AbortController | null>(null)
-    const lastRouteKeyRef = useRef<string | null>(null)
-    const lastRouteAtRef = useRef<number>(0)
-    const mapRef = useRef<any>(null)
-    const isRunningRef = useRef<boolean>(false)
+    const prevStateRef = useRef<{
+        loading: boolean
+        error: string | boolean
+        distance: number
+        coords: string
+    } | null>(null)
 
-    const hasTwoPoints = Array.isArray(routePoints) && routePoints.length >= 2
+    // Use custom hook for routing logic
+    const routingState = useRouting(routePoints, transportMode, ORS_API_KEY)
 
+    // Sync routing state to parent callbacks (only when changed)
+    // Use coordsKey to prevent infinite loops from array reference changes
+    const coordsKeyForSync = JSON.stringify(routingState.coords)
+    
     useEffect(() => {
-        if (map) {
-            mapRef.current = map
+        const currentState = {
+            loading: routingState.loading,
+            error: routingState.error,
+            distance: routingState.distance,
+            coords: coordsKeyForSync,
         }
-    }, [map])
 
+        const prevState = prevStateRef.current
+        const hasChanged = !prevState ||
+            prevState.loading !== currentState.loading ||
+            prevState.error !== currentState.error ||
+            prevState.distance !== currentState.distance ||
+            prevState.coords !== currentState.coords
+
+        if (hasChanged) {
+            prevStateRef.current = currentState
+            setRoutingLoading(routingState.loading)
+            
+            // Передаем ошибку только если она есть
+            if (typeof routingState.error === 'string' && routingState.error) {
+                setErrors({ routing: routingState.error })
+            } else {
+                setErrors({ routing: false })
+            }
+            
+            setRouteDistance(routingState.distance)
+            setFullRouteCoords(routingState.coords)
+        }
+    }, [
+        routingState.loading,
+        routingState.error,
+        routingState.distance,
+        coordsKeyForSync,
+        setRoutingLoading,
+        setErrors,
+        setRouteDistance,
+        setFullRouteCoords
+    ])
+
+    // Draw polyline on map (separate effect)
+    // Use coordsKey to avoid infinite loops from array reference changes
+    const coordsKeyForDraw = JSON.stringify(routingState.coords)
+    
     useEffect(() => {
-        const mapInstance = mapRef.current
+        if (!map || typeof window === 'undefined') return
+
         const L = (window as any).L
-        if (!mapInstance || !L) return
-        // если точек недостаточно — убираем линию и выходим
-        if (!hasTwoPoints) {
-            if (polylineRef.current) {
-                try { 
-                    mapInstance.removeLayer(polylineRef.current); 
-                } catch (error) {
-                    // ✅ FIX-009: Логируем ошибки удаления слоя (не критично, но полезно для отладки)
-                    if (__DEV__) {
-                        const { devWarn } = require('@/src/utils/logger');
-                        devWarn('Error removing polyline layer:', error);
-                    }
-                }
-                polylineRef.current = null
-            }
-            setErrors((prev: any) => {
-                if (prev?.routing === false) return prev
-                return { ...prev, routing: false }
-            })
-            setRouteDistance(0)
-            return
-        }
+        if (!L) return
 
-        // предотвращаем повторный запуск для тех же входных данных (и частые повторы)
-        const routeKey = `${transportMode}-${JSON.stringify(routePoints)}`
-        const now = Date.now()
-        if (isRunningRef.current) {
-            return
-        }
-        if (lastRouteKeyRef.current === routeKey && now - lastRouteAtRef.current < 5000) {
-            return
-        }
-        lastRouteKeyRef.current = routeKey
-        lastRouteAtRef.current = now
-
-        // отменяем предыдущий запрос, если был
-        if (abortRef.current) {
-            abortRef.current.abort()
-            abortRef.current = null
-        }
-        const abort = new AbortController()
-        abortRef.current = abort
-
-        const fetchORS = async () => {
-        const res = await fetch(
-            `https://api.openrouteservice.org/v2/directions/${getORSProfile(transportMode)}/geojson`,
-            {
-                method: 'POST',
-                headers: {
-                        Authorization: String(ORS_API_KEY),
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ coordinates: routePoints }),
-                    signal: abort.signal,
-                }
-            )
-            if (!res.ok) throw new Error(`ORS error: ${res.status}`)
-            const data = await res.json()
-            const feature = data.features?.[0]
-            const geometry = feature?.geometry
-            const summary = feature?.properties?.summary
-            if (!geometry?.coordinates?.length) throw new Error('Empty route from ORS')
-            const coordsLngLat: [number, number][] = geometry.coordinates
-            const distance = summary?.distance as number | undefined
-            return { coordsLngLat, distance }
-        }
-
-        const fetchOSRM = async () => {
-            const profile = getOSRMProfile(transportMode)
-            const coordsStr = routePoints.map(([lng, lat]) => `${lng},${lat}`).join(';')
-            const url = `https://router.project-osrm.org/route/v1/${profile}/${coordsStr}?overview=full&geometries=geojson`
-            const res = await fetch(url, { signal: abort.signal })
-            if (!res.ok) throw new Error(`OSRM error: ${res.status}`)
-            const data = await res.json()
-            const route = data.routes?.[0]
-            if (!route?.geometry?.coordinates?.length) throw new Error('Empty route from OSRM')
-            const coordsLngLat: [number, number][] = route.geometry.coordinates
-            const distance = route.distance as number | undefined
-            return { coordsLngLat, distance }
-        }
-
-        const drawDirectLine = () => {
-            if (!mapInstance || !L) return
-            const latlngs = routePoints.map(([lng, lat]) => L.latLng(lat, lng))
-            if (!latlngs.length) return
-            if (polylineRef.current) {
-                try {
-                    mapInstance.removeLayer(polylineRef.current)
-                } catch (error) {
-                    if (__DEV__) {
-                        const { devWarn } = require('@/src/utils/logger')
-                        devWarn('Error removing polyline layer before fallback line:', error)
-                    }
-                }
-                polylineRef.current = null
-            }
-            const line = L.polyline(latlngs, { color: '#3388ff', weight: 4, opacity: 0.65 })
-            line.addTo(mapInstance)
-            polylineRef.current = line
-            const dist = latlngs.reduce((acc: number, cur: any, i: number, arr: any[]) => {
-                if (i === 0) return 0
-                return acc + arr[i - 1].distanceTo(cur)
-            }, 0)
-            setRouteDistance(dist)
-            setErrors((prev: any) => ({ ...prev, routing: false }))
-        }
-
-        // ✅ FIX-006: Флаг для отслеживания монтирования компонента
-        let isMounted = true;
-
-        const run = async () => {
+        // Remove old polyline
+        if (polylineRef.current) {
             try {
-                isRunningRef.current = true
-                if (!isMounted) return;
-                setRoutingLoading(true)
-                setErrors((prev: any) => ({ ...prev, routing: false }))
-
-                // 1) пробуем ORS, если есть ключ; иначе — OSRM
-                const result = ORS_API_KEY ? await fetchORS() : await fetchOSRM()
-
-                // ✅ FIX-006: Проверяем монтирование перед обновлением состояния
-                if (!isMounted) return;
-
-                // обновляем состояния
-                setFullRouteCoords(result.coordsLngLat)
-
-                const latlngs = result.coordsLngLat.map(([lng, lat]) => L.latLng(lat, lng))
-
-                if (polylineRef.current) {
-                    try { 
-                        map.removeLayer(polylineRef.current); 
-                    } catch (error) {
-                        // ✅ FIX-009: Логируем ошибки удаления слоя
-                        if (__DEV__) {
-                            const { devWarn } = require('@/src/utils/logger');
-                            devWarn('Error removing polyline layer:', error);
-                        }
-                    }
-                    polylineRef.current = null
+                map.removeLayer(polylineRef.current)
+            } catch (error) {
+                if (__DEV__) {
+                    const { devWarn } = require('@/src/utils/logger')
+                    devWarn('Ошибка удаления полилинии:', error)
                 }
-                const line = L.polyline(latlngs, { color: '#3388ff', weight: 5, opacity: 0.85 })
-                line.addTo(mapInstance)
-                polylineRef.current = line
-
-                // расстояние
-                if (typeof result.distance === 'number') {
-                    setRouteDistance(result.distance)
-                } else {
-                    const dist = latlngs.reduce((acc: number, cur: any, i: number, arr: any[]) => {
-                        if (i === 0) return 0
-                        return acc + arr[i - 1].distanceTo(cur)
-                    }, 0)
-                    setRouteDistance(dist)
-                }
-
-                // ✅ ИСПРАВЛЕНИЕ: Убираем автоматический зум при построении маршрута
-                // Пользователь сам контролирует масштаб карты при клике на старт/финиш
-                // map.fitBounds(line.getBounds().pad(0.2))
-                ;(window as any).disableFitBounds = false
-            } catch (e: any) {
-                if (e?.name === 'AbortError' || !isMounted) return
-                setErrors((prev: any) => ({ ...prev, routing: e?.message || true }))
-                // если ORS с ключом упал — пробуем OSRM разово
-                if (ORS_API_KEY && isMounted) {
-                    try {
-                        const result = await fetchOSRM()
-                        if (!isMounted) return;
-                        setFullRouteCoords(result.coordsLngLat)
-                        const latlngs = result.coordsLngLat.map(([lng, lat]) => L.latLng(lat, lng))
-                        if (polylineRef.current) {
-                            try {
-                                mapInstance.removeLayer(polylineRef.current)
-                            } catch (error) {
-                                console.warn('Failed to remove existing routing layer', error)
-                            }
-                            mapInstance.removeLayer(polylineRef.current)
-                            polylineRef.current = null
-                        }
-                        const line = L.polyline(latlngs, { color: '#3388ff', weight: 5, opacity: 0.85 })
-                        line.addTo(mapInstance)
-                        polylineRef.current = line
-                        if (typeof result.distance === 'number') setRouteDistance(result.distance)
-                        else setRouteDistance(0)
-                        // ✅ ИСПРАВЛЕНИЕ: Убираем автоматический зум при построении маршрута
-                        // if (!(window as any).disableFitBounds && !avoidAutoFit) map.fitBounds(line.getBounds().pad(0.2))
-                        ;(window as any).disableFitBounds = false
-                        setErrors((prev: any) => ({ ...prev, routing: false }))
-                    } catch (error) {
-                        // ✅ FIX-009: Логируем ошибки fallback маршрутизации
-                        if (__DEV__) {
-                            const { devError } = require('@/src/utils/logger');
-                            devError('Error in OSRM fallback routing:', error);
-                        }
-                        // Последний шанс: рисуем прямую линию между точками, чтобы пользователь видел маршрут
-                        drawDirectLine()
-                    }
-                } else {
-                    // Когда нет ключа ORS и OSRM тоже упал — рисуем прямую линию
-                    drawDirectLine()
-                }
-            } finally {
-                if (isMounted) {
-                    setRoutingLoading(false)
-                }
-                isRunningRef.current = false
             }
+            polylineRef.current = null
         }
 
-        run()
+        // Draw new polyline if we have coordinates
+        if (routingState.coords.length >= 2) {
+            const latlngs = routingState.coords.map(([lng, lat]) => L.latLng(lat, lng))
+            
+            // Определяем цвет линии в зависимости от статуса
+            const isOptimal = routingState.error === false || routingState.error === ''
+            const color = isOptimal ? '#3388ff' : '#ff9800'
+            const weight = isOptimal ? 5 : 4
+            const opacity = isOptimal ? 0.85 : 0.65
+            const dashArray = isOptimal ? null : '10, 10' // Пунктирная линия для неоптимального маршрута
 
-        return () => {
-            // ✅ FIX-006: Устанавливаем флаг размонтирования
-            isMounted = false;
-            if (abortRef.current) {
-                abortRef.current.abort()
-                abortRef.current = null
+            const line = L.polyline(latlngs, { 
+                color, 
+                weight, 
+                opacity,
+                dashArray,
+                lineJoin: 'round',
+                lineCap: 'round'
+            })
+            line.addTo(map)
+            polylineRef.current = line
+            
+            // Центрируем карту на маршруте только при первом построении
+            try {
+                const bounds = line.getBounds()
+                if (bounds.isValid()) {
+                    map.fitBounds(bounds.pad(0.1), { 
+                        animate: true,
+                        duration: 0.5,
+                        maxZoom: 14
+                    })
+                }
+            } catch (error) {
+                if (__DEV__) {
+                    const { devWarn } = require('@/src/utils/logger')
+                    devWarn('Ошибка центрирования на маршруте:', error)
+                }
             }
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [transportMode, ORS_API_KEY, JSON.stringify(routePoints)])
+    }, [map, coordsKeyForDraw, routingState.error])
 
-    // cleanup полилинии при размонтировании
+    // Cleanup on unmount
     useEffect(() => {
-        const mapInstance = mapRef.current
-        const L = (window as any).L
         return () => {
-            if (!mapInstance || !L) return
-            if (polylineRef.current) {
+            if (polylineRef.current && map) {
                 try {
-                    mapInstance.removeLayer(polylineRef.current)
+                    map.removeLayer(polylineRef.current)
                 } catch (error) {
-                    console.warn('Failed to remove routing layer during cleanup', error)
+                    // Игнорируем ошибки при очистке
                 }
                 polylineRef.current = null
             }

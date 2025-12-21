@@ -384,6 +384,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
                 address: item.address,
                 coord: item.coord,
                 travelImageThumbUrl: item.travelImageThumbUrl,
+                updated_at: item.updated_at,
                 categoryName: item.categoryName,
                 description: item.description,
                 articleUrl: baseUrl,

@@ -2,22 +2,23 @@ import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 import MultiSelectField from '@/components/MultiSelectField'
 
-// Мокаем MultiSelect, чтобы контролировать его поведение
-jest.mock('react-native-element-dropdown', () => ({
-  MultiSelect: ({ onChange: _onChange, value, data, ...rest }: any) => {
-    return (
-      <div
-        testID="multi-select-mock"
-        data-value={JSON.stringify(value)}
-        data-items={JSON.stringify(data)}
-        onClick={() => {
-          // ничего не делаем, управление выбором идёт через fireEvent
-        }}
-        {...rest}
-      />
-    )
-  },
-}))
+// Mock SimpleMultiSelect component
+jest.mock('@/components/SimpleMultiSelect', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  
+  return {
+    __esModule: true,
+    default: ({ onChange: _onChange, value, data, ...rest }: any) => {
+      return React.createElement(View, {
+        testID: 'multi-select-mock',
+        'data-value': JSON.stringify(value),
+        'data-items': JSON.stringify(data),
+        ...rest
+      });
+    },
+  };
+});
 
 describe('MultiSelectField', () => {
   const items = [
@@ -39,6 +40,22 @@ describe('MultiSelectField', () => {
     )
 
     expect(getByText('Категории')).toBeTruthy()
+  })
+
+  it('renders without crashing', () => {
+    const { getByTestId } = render(
+      // @ts-ignore
+      <MultiSelectField
+        label="Одна категория"
+        items={['a', 'b'] as any}
+        value={''}
+        onChange={() => {}}
+        labelField="label"
+        valueField="value"
+      />
+    )
+
+    expect(getByTestId('simple-multi-select')).toBeTruthy()
   })
 
   it('calls onChange with single value in single mode (primitive)', () => {
@@ -112,20 +129,59 @@ describe('MultiSelectField', () => {
     expect(handleChange).toHaveBeenCalledWith(['a', 'b'])
   })
 
+  it('handles multi-select mode correctly', () => {
+    const onChange = jest.fn()
+
+    const { getByTestId } = render(
+      // @ts-ignore
+      // @ts-ignore
+      <MultiSelectField
+        label="Несколько категорий"
+        items={items as any}
+        value={['a', 'b']}
+        onChange={onChange}
+        labelField="label"
+        valueField="value"
+      />
+    )
+
+    const element = getByTestId('multi-select-mock')
+    expect(element.props['data-value']).toBe(JSON.stringify(['a', 'b']))
+  })
+
+  it('handles empty value in multi-select mode', () => {
+    const onChange = jest.fn()
+
+    const { getByTestId } = render(
+      // @ts-ignore
+      <MultiSelectField
+        label="Несколько категорий"
+        items={items as any}
+        value={[]}
+        onChange={onChange}
+        labelField="label"
+        valueField="value"
+      />
+    )
+
+    const element = getByTestId('multi-select-mock')
+    expect(element.props['data-value']).toBe(JSON.stringify([]))
+  })
+
   it('passes correct value prop to underlying MultiSelect in single mode', () => {
     const { getByTestId, rerender } = render(
       <MultiSelectField
         label="Одна категория"
         items={items}
         value={''}
-        onChange={jest.fn()}
+        onChange={() => {}}
         labelField="label"
         valueField="value"
         single
       />
     )
 
-    const element = getByTestId('multi-select-mock') as any
+    const element = getByTestId('multi-select-mock')
     expect(element.props['data-value']).toBe(JSON.stringify([]))
 
     rerender(
@@ -133,14 +189,14 @@ describe('MultiSelectField', () => {
         label="Одна категория"
         items={items}
         value={'a'}
-        onChange={jest.fn()}
+        onChange={() => {}}
         labelField="label"
         valueField="value"
         single
       />
     )
 
-    const updated = getByTestId('multi-select-mock') as any
+    const updated = getByTestId('multi-select-mock')
     expect(updated.props['data-value']).toBe(JSON.stringify(['a']))
   })
 })

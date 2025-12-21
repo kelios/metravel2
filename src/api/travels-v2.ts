@@ -8,6 +8,7 @@ import { devError } from '@/src/utils/logger';
 
 // ===== КОНСТАНТЫ ENDPOINTS =====
 // Оставляем для обратной совместимости, но можно использовать напрямую в apiClient
+const GET_TRAVELS_BY_SLUG = '/api/travels/by-slug/';
 
 /**
  * ✅ ПРИМЕР МИГРАЦИИ: Получение путешествия по ID
@@ -55,12 +56,12 @@ export const fetchTravelV2 = async (id: number): Promise<Travel> => {
 };
 
 /**
- * ✅ ПРИМЕР МИГРАЦИИ: Получение путешествия по slug
+ * ПРИМЕР МИГРАЦИИ: Получение путешествия по slug
  */
 export const fetchTravelBySlugV2 = async (slug: string): Promise<Travel> => {
     try {
         const safeSlug = encodeURIComponent(String(slug).replace(/^\/+/, ''));
-        return await apiClient.get<Travel>(`/travels/${safeSlug}/`);
+        return await apiClient.get<Travel>(`${GET_TRAVELS_BY_SLUG}${safeSlug}/`);
     } catch (error) {
         if (error instanceof ApiError) {
             devError('Error fetching travel by slug:', error.message);

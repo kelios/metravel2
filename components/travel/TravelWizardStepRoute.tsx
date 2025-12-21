@@ -5,9 +5,11 @@ import { Button } from 'react-native-paper';
 
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
+import { ValidationSummary } from '@/components/travel/ValidationFeedback';
+import { validateStep } from '@/utils/travelWizardValidation';
 import { MarkerData } from '@/src/types/types';
 import MultiSelectField from '@/components/MultiSelectField';
-import { matchCountryId } from '@/components/travel/WebMapComponent';
+import { matchCountryId, buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 
@@ -92,6 +94,14 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     const progressPercent = Math.round(progressValue * 100);
 
     const hasAtLeastOnePoint = useMemo(() => markers && markers.length > 0, [markers]);
+
+    // Валидация шага 2
+    const validation = useMemo(() => {
+        return validateStep(2, {
+            coordsMeTravel: markers,
+            countries: selectedCountryIds,
+        } as any);
+    }, [markers, selectedCountryIds]);
 
     const [isCoachmarkVisible, setIsCoachmarkVisible] = useState(false);
     const [isManualPointVisible, setIsManualPointVisible] = useState(false);
@@ -233,7 +243,6 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
 
         try {
             const data = await reverseGeocode(lat, lng);
-            address = data?.display_name || data?.localityInfo?.informative?.[0]?.description || '';
             const countryName =
                 data?.address?.country ||
                 data?.countryName ||
@@ -244,12 +253,18 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                 data?.countryCode ||
                 data?.address?.ISO3166_1_alpha2 ||
                 null;
+            
+            let matchedCountry = null;
             if (countryName || countryCode) {
                 const matchedId = matchCountryId(countryName || '', countries || [], countryCode);
                 if (matchedId != null) {
                     derivedCountryId = String(matchedId);
+                    matchedCountry = countries.find((c: any) => Number(c?.country_id) === matchedId);
                 }
             }
+            
+            // Use buildAddressFromGeocode to get properly formatted address
+            address = buildAddressFromGeocode(data, { lat, lng }, matchedCountry);
         } catch {
             // ignore
         }
@@ -317,6 +332,15 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
                 />
+
+                {validation.errors.length > 0 && (
+                    <View style={styles.validationSummaryWrapper}>
+                        <ValidationSummary
+                            errorCount={validation.errors.length}
+                            warningCount={validation.warnings.length}
+                        />
+                    </View>
+                )}
 
                 <ScrollView
                     ref={scrollRef}
@@ -489,6 +513,10 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
 const styles = StyleSheet.create({
     safeContainer: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
     keyboardAvoid: { flex: 1 },
+    validationSummaryWrapper: {
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
+    },
     syncBadge: {
         marginTop: 8,
         alignSelf: 'flex-start',

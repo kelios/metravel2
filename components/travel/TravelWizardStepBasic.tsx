@@ -7,6 +7,9 @@ import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
 import { TravelFormData } from '@/src/types/types';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
+import { ValidatedTextInput } from '@/components/travel/ValidatedTextInput';
+import { ValidationSummary } from '@/components/travel/ValidationFeedback';
+import { validateStep } from '@/utils/travelWizardValidation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 
@@ -76,6 +79,15 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
         return footerHeight > 0 ? footerHeight + 16 : 180;
     }, [footerHeight]);
 
+    // Валидация шага 1
+    const validation = useMemo(() => {
+        return validateStep(1, formData);
+    }, [formData]);
+
+    const handleFieldChange = useCallback((field: keyof TravelFormData, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    }, [setFormData]);
+
     return (
         <SafeAreaView style={styles.safeContainer}>
             <KeyboardAvoidingView
@@ -91,16 +103,12 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
                 />
-                {stepErrors && stepErrors.length > 0 && (
-                    <View style={styles.errorSummaryContainer}>
-                        {stepErrors.map((err, idx) => (
-                            <Text key={idx} style={styles.errorSummaryText}>
-                                • {err}
-                            </Text>
-                        ))}
-                        <Text style={styles.errorSummaryHelper}>
-                            Проверьте выделенные поля — без них маршрут нельзя отправить на модерацию.
-                        </Text>
+                {validation.errors.length > 0 && (
+                    <View style={styles.validationSummaryWrapper}>
+                        <ValidationSummary
+                            errorCount={validation.errors.length}
+                            warningCount={validation.warnings.length}
+                        />
                     </View>
                 )}
                 <View style={[styles.mainWrapper, isMobile && styles.mainWrapperMobile]}>
@@ -110,6 +118,18 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                         keyboardShouldPersistTaps="handled"
                     >
                         <View style={styles.contentInner}>
+                            <ValidatedTextInput
+                                label="Название путешествия"
+                                value={formData.name || ''}
+                                onChange={(value) => handleFieldChange('name', value)}
+                                fieldName="name"
+                                step={1}
+                                required
+                                placeholder="Например: Неделя в Грузии"
+                                hint="Краткое и понятное название, которое отражает суть маршрута"
+                                nativeID="field-name"
+                            />
+                            
                             <ContentUpsertSection
                                 formData={formData}
                                 setFormData={setFormData}
@@ -117,7 +137,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                                 autosaveStatus={autosaveStatus}
                                 focusAnchorId={focusAnchorId}
                                 onAnchorHandled={onAnchorHandled}
-                                visibleFields={['name', 'description']}
+                                visibleFields={['description']}
                                 showProgress={false}
                             />
                         </View>
@@ -158,22 +178,9 @@ const styles = StyleSheet.create({
         width: '100%',
         maxWidth: 980,
     },
-    errorSummaryContainer: {
-        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-        paddingVertical: 8,
-        backgroundColor: DESIGN_TOKENS.colors.errorSoft,
-        borderTopWidth: 1,
-        borderBottomWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.dangerLight,
-    },
-    errorSummaryText: {
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.dangerDark,
-    },
-    errorSummaryHelper: {
-        marginTop: 4,
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.dangerDark,
+    validationSummaryWrapper: {
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
     },
 });
 

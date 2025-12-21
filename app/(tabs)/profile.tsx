@@ -17,6 +17,7 @@ import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { fetchUserProfile, type UserProfileDto } from '@/src/api/user';
+import { fetchMyTravels } from '@/src/api/travelsApi';
 import { ApiError } from '@/src/api/client';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -96,7 +97,24 @@ export default function ProfileScreen() {
             await removeStorageBatch(['userAvatar']);
           }
 
-          triggerProfileRefresh();
+          // Загружаем путешествия пользователя для подсчёта
+          try {
+            const userTravels = await fetchMyTravels({ user_id: uid });
+            const travelsCount = Array.isArray(userTravels) ? userTravels.length : 0;
+            setStats((prev) => ({
+              ...prev,
+              travelsCount,
+            }));
+          } catch (e) {
+            if (__DEV__) {
+              const message = e instanceof ApiError ? e.message : String(e);
+              console.warn('Error loading user travels:', message);
+            }
+            setStats((prev) => ({
+              ...prev,
+              travelsCount: 0,
+            }));
+          }
         } catch (e) {
           if (__DEV__) {
             const message = e instanceof ApiError ? e.message : String(e);
@@ -104,18 +122,12 @@ export default function ProfileScreen() {
           }
         }
       }
-
-      // Подсчитываем статистику (без запроса на путешествия)
-      setStats((prev) => ({
-        ...prev,
-        travelsCount: 0,
-      }));
     } catch (error) {
       console.error('Error loading user data:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [setUserAvatar, triggerProfileRefresh, userId]);
+  }, [setUserAvatar, userId]);
 
   useEffect(() => {
     setStats((prev) => ({

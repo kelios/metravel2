@@ -5,6 +5,8 @@ import { KeyboardAvoidingView, Platform, View, StyleSheet, ScrollView, findNodeH
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
+import { ValidationSummary } from '@/components/travel/ValidationFeedback';
+import { validateStep } from '@/utils/travelWizardValidation';
 import { TravelFormData, Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
@@ -103,6 +105,11 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
         }, 50);
     }, [focusAnchorId, onAnchorHandled]);
 
+    // Валидация шага 5 (опциональный, показываем только warnings)
+    const validation = useMemo(() => {
+        return validateStep(5, formData);
+    }, [formData]);
+
     return (
         <SafeAreaView style={styles.safeContainer}>
             <KeyboardAvoidingView
@@ -120,6 +127,14 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
                 />
+                {validation.warnings.length > 0 && (
+                    <View style={styles.validationSummaryWrapper}>
+                        <ValidationSummary
+                            errorCount={validation.errors.length}
+                            warningCount={validation.warnings.length}
+                        />
+                    </View>
+                )}
                 <ScrollView
                     ref={scrollRef}
                     style={styles.content}
@@ -165,6 +180,10 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
 const styles = StyleSheet.create({
     safeContainer: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
     keyboardAvoid: { flex: 1 },
+    validationSummaryWrapper: {
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
+    },
     content: {
         flex: 1,
     },

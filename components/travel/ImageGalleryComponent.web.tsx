@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
     View,
     Text,
@@ -36,6 +36,9 @@ const ensureAbsoluteUrl = (value: string): string => {
 interface GalleryItem {
     id: string;
     url: string;
+    isUploading?: boolean;
+    uploadProgress?: number;
+    error?: string | null;
 }
 
 interface ImageGalleryComponentProps {
@@ -52,67 +55,118 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                                                          maxImages = 10,
                                                                      }) => {
     const [images, setImages] = useState<GalleryItem[]>([]);
-    const [loading, setLoading] = useState<boolean[]>([]);
-    const [isUploading, setIsUploading] = useState<boolean>(false);
     const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
     const [dialogVisible, setDialogVisible] = useState(false);
     const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
-
+    const [batchUploadProgress, setBatchUploadProgress] = useState<{ current: number; total: number } | null>(null);
+    
+    const blobUrlsRef = useRef<Set<string>>(new Set());
     const theme = useColorScheme();
     const isDarkMode = theme === 'dark';
+    
+    const uploadingCount = useMemo(() => images.filter(img => img.isUploading).length, [images]);
+    const hasErrors = useMemo(() => images.some(img => img.error), [images]);
 
     useEffect(() => {
         if (initialImages?.length) {
-            setImages(initialImages.map((img) => ({ ...img, url: ensureAbsoluteUrl(img.url) })));
-            setLoading(initialImages.map(() => false));
+            setImages(initialImages.map((img) => ({ 
+                ...img, 
+                url: ensureAbsoluteUrl(img.url),
+                isUploading: false,
+                uploadProgress: 0,
+                error: null
+            })));
         }
         setIsInitialLoading(false);
     }, [initialImages]);
+    
+    // Cleanup blob URLs on unmount
+    useEffect(() => {
+        return () => {
+            blobUrlsRef.current.forEach(url => {
+                try {
+                    URL.revokeObjectURL(url);
+                } catch (e) {
+                    // Ignore errors
+                }
+            });
+            blobUrlsRef.current.clear();
+        };
+    }, []);
 
     const handleUploadImages = useCallback(
         async (files: File[]) => {
-            if (images.length + files.length > maxImages) return;
-            setIsUploading(true);
-            const baseLength = images.length;
-
-            const uploads = files.map(async (file, index) => {
-                const currentIndex = baseLength + index;
+            if (images.length + files.length > maxImages) {
+                alert(`Максимум ${maxImages} изображений`);
+                return;
+            }
+            
+            setBatchUploadProgress({ current: 0, total: files.length });
+            
+            // Create placeholders immediately
+            const placeholders: GalleryItem[] = files.map((file, index) => {
                 const tempId = `temp-${Date.now()}-${index}`;
                 const tempUrl = URL.createObjectURL(file);
+                blobUrlsRef.current.add(tempUrl);
+                
+                return {
+                    id: tempId,
+                    url: tempUrl,
+                    isUploading: true,
+                    uploadProgress: 0,
+                    error: null
+                };
+            });
+            
+            setImages(prev => [...prev, ...placeholders]);
 
-                // optimistic preview
-                setImages((prev) => [...prev, { id: tempId, url: tempUrl }]);
-                setLoading((prev) => {
-                    const next = [...prev];
-                    next[currentIndex] = true;
-                    return next;
-                });
-
+            // Upload sequentially for better UX and error handling
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const placeholder = placeholders[i];
+                
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
                     formData.append('collection', collection);
                     formData.append('id', idTravel);
+                    
                     const response = await uploadImage(formData);
+                    
                     if (response?.url) {
                         const finalUrl = ensureAbsoluteUrl(String(response.url));
-                        setImages((prev) =>
-                            prev.map((img) => (img.id === tempId ? { id: response.id, url: finalUrl } : img)),
+                        
+                        // Cleanup blob URL
+                        if (blobUrlsRef.current.has(placeholder.url)) {
+                            URL.revokeObjectURL(placeholder.url);
+                            blobUrlsRef.current.delete(placeholder.url);
+                        }
+                        
+                        setImages(prev =>
+                            prev.map(img => 
+                                img.id === placeholder.id 
+                                    ? { id: response.id || placeholder.id, url: finalUrl, isUploading: false, uploadProgress: 100, error: null }
+                                    : img
+                            )
                         );
+                    } else {
+                        throw new Error('No URL in response');
                     }
                 } catch (error) {
                     console.error('Upload error:', error);
-                } finally {
-                    setLoading((prev) => {
-                        const next = [...prev];
-                        next[currentIndex] = false;
-                        return next;
-                    });
+                    setImages(prev =>
+                        prev.map(img => 
+                            img.id === placeholder.id 
+                                ? { ...img, isUploading: false, error: 'Ошибка загрузки' }
+                                : img
+                        )
+                    );
                 }
-            });
-
-            await Promise.all(uploads);
-            setIsUploading(false);
+                
+                setBatchUploadProgress({ current: i + 1, total: files.length });
+            }
+            
+            setBatchUploadProgress(null);
         },
         [collection, idTravel, images.length, maxImages]
     );
@@ -141,9 +195,25 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
 
     const confirmDeleteImage = async () => {
         if (!selectedImageId) return;
+        
+        const imageToDelete = images.find(img => img.id === selectedImageId);
+        
         try {
-            await deleteImage(selectedImageId);
-            setImages((prev) => prev.filter((img) => img.id !== selectedImageId));
+            // Only call API if it's not a temp/failed upload
+            if (imageToDelete && !imageToDelete.error && !selectedImageId.startsWith('temp-')) {
+                await deleteImage(selectedImageId);
+            }
+            
+            // Cleanup blob URL if exists
+            if (imageToDelete && blobUrlsRef.current.has(imageToDelete.url)) {
+                URL.revokeObjectURL(imageToDelete.url);
+                blobUrlsRef.current.delete(imageToDelete.url);
+            }
+            
+            setImages(prev => prev.filter(img => img.id !== selectedImageId));
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('Не удалось удалить изображение');
         } finally {
             setDialogVisible(false);
             setSelectedImageId(null);
@@ -181,18 +251,72 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                 })()
             )}
 
+            {batchUploadProgress && (
+                <View style={styles.batchProgressContainer}>
+                    <View style={styles.batchProgressBar}>
+                        <View 
+                            style={[
+                                styles.batchProgressFill, 
+                                { width: `${(batchUploadProgress.current / batchUploadProgress.total) * 100}%` }
+                            ]} 
+                        />
+                    </View>
+                    <Text style={[styles.batchProgressText, isDarkMode && styles.darkText]}>
+                        Загрузка {batchUploadProgress.current} из {batchUploadProgress.total}
+                    </Text>
+                </View>
+            )}
+
             {isInitialLoading ? (
-                <ActivityIndicator size="large" color="#4b7c6f" style={styles.loader} />
+                <View style={styles.galleryGrid}>
+                    {[...Array(3)].map((_, i) => (
+                        <View key={`skeleton-${i}`} style={styles.imageWrapper}>
+                            <View style={[styles.skeleton, isDarkMode && styles.skeletonDark]} />
+                        </View>
+                    ))}
+                </View>
             ) : images.length > 0 ? (
                 <View style={styles.galleryGrid}>
                     {images.map((image, index) => (
                         <View key={image.id} style={styles.imageWrapper} testID="gallery-image">
-                            {loading[index] ? (
-                                <ActivityIndicator size="large" color="#ffffff" />
+                            {image.isUploading ? (
+                                <View style={styles.uploadingImageContainer}>
+                                    <OptimizedImage
+                                        source={{ uri: image.url }}
+                                        style={styles.image}
+                                        contentFit="cover"
+                                        loading="eager"
+                                        alt={`Uploading ${index + 1}`}
+                                    />
+                                    <View style={styles.uploadingOverlayImage}>
+                                        <ActivityIndicator size="large" color="#ffffff" />
+                                        <Text style={styles.uploadingImageText}>Загрузка...</Text>
+                                    </View>
+                                </View>
+                            ) : image.error ? (
+                                <View style={styles.errorImageContainer}>
+                                    <OptimizedImage
+                                        source={{ uri: image.url }}
+                                        style={[styles.image, styles.errorImage]}
+                                        contentFit="cover"
+                                        loading="lazy"
+                                        alt={`Error ${index + 1}`}
+                                    />
+                                    <View style={styles.errorOverlay}>
+                                        <Text style={styles.errorOverlayText}>⚠️</Text>
+                                        <Text style={styles.errorOverlaySubtext}>{image.error}</Text>
+                                    </View>
+                                    <TouchableOpacity
+                                        onPress={() => handleDeleteImage(image.id)}
+                                        style={styles.deleteButton}
+                                    >
+                                        <Text style={styles.deleteButtonText}>✖</Text>
+                                    </TouchableOpacity>
+                                </View>
                             ) : (
                                 <>
                                     <OptimizedImage
-                                        source={{ uri: image.url || '' }}
+                                        source={{ uri: image.url }}
                                         style={styles.image}
                                         contentFit="cover"
                                         loading="lazy"
@@ -215,10 +339,11 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                 </Text>
             )}
 
-            {isUploading && (
-                <View style={styles.uploadingOverlay}>
-                    <ActivityIndicator size="large" color="#ffffff" />
-                    <Text style={styles.uploadingText}>Загружаются изображения...</Text>
+            {hasErrors && (
+                <View style={styles.errorBanner}>
+                    <Text style={styles.errorBannerText}>
+                        ⚠️ Некоторые изображения не удалось загрузить. Удалите их и попробуйте снова.
+                    </Text>
                 </View>
             )}
 
@@ -270,15 +395,15 @@ const styles = StyleSheet.create({
     galleryGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        justifyContent: 'space-between',
         gap: DESIGN_TOKENS.spacing.md,
     },
     imageWrapper: {
-        width: '30%',
+        width: '31.5%',
         aspectRatio: 1,
         borderRadius: 10,
         overflow: 'hidden',
         position: 'relative',
+        backgroundColor: '#f0f0f0',
     },
     image: {
         width: '100%',
@@ -334,18 +459,101 @@ const styles = StyleSheet.create({
     loader: {
         marginTop: DESIGN_TOKENS.spacing.xl,
     },
-    uploadingOverlay: {
+    skeleton: {
+        width: '100%',
+        height: '100%',
+        backgroundColor: '#e0e0e0',
+    },
+    skeletonDark: {
+        backgroundColor: '#444',
+    },
+    uploadingImageContainer: {
+        width: '100%',
+        height: '100%',
+        position: 'relative',
+    },
+    uploadingOverlayImage: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.6)',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    uploadingText: {
+    uploadingImageText: {
         color: '#fff',
-        marginTop: DESIGN_TOKENS.spacing.sm,
+        marginTop: DESIGN_TOKENS.spacing.xs,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        fontWeight: '600',
+    },
+    errorImageContainer: {
+        width: '100%',
+        height: '100%',
+        position: 'relative',
+    },
+    errorImage: {
+        opacity: 0.5,
+    },
+    errorOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(239, 68, 68, 0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: DESIGN_TOKENS.spacing.xs,
+    },
+    errorOverlayText: {
+        fontSize: 32,
+        marginBottom: DESIGN_TOKENS.spacing.xxs,
+    },
+    errorOverlaySubtext: {
+        color: '#fff',
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        textAlign: 'center',
+        fontWeight: '600',
+    },
+    batchProgressContainer: {
+        marginBottom: DESIGN_TOKENS.spacing.lg,
+        padding: DESIGN_TOKENS.spacing.md,
+        backgroundColor: '#f0f9ff',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#bae6fd',
+    },
+    batchProgressBar: {
+        width: '100%',
+        height: 8,
+        backgroundColor: '#e0f2fe',
+        borderRadius: 4,
+        overflow: 'hidden',
+        marginBottom: DESIGN_TOKENS.spacing.xs,
+    },
+    batchProgressFill: {
+        height: '100%',
+        backgroundColor: '#0ea5e9',
+    },
+    batchProgressText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: '#0369a1',
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    errorBanner: {
+        marginTop: DESIGN_TOKENS.spacing.md,
+        padding: DESIGN_TOKENS.spacing.md,
+        backgroundColor: '#fef2f2',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#fecaca',
+    },
+    errorBannerText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: '#991b1b',
+        textAlign: 'center',
     },
 });

@@ -364,8 +364,15 @@ const WebMapComponent = ({
     };
 
     const handleImageUpload = (index: number, imageUrl: string) => {
+        console.log('handleImageUpload called:', { index, imageUrl });
         const updated = [...localMarkers];
-        updated[index].image = imageUrl;
+        updated[index] = { ...updated[index], image: imageUrl };
+        console.log('Updated marker:', updated[index]);
+        
+        // Немедленное обновление локального состояния
+        setLocalMarkers(updated);
+        
+        // Обновление родительского компонента
         debouncedMarkersChange(updated);
     };
 

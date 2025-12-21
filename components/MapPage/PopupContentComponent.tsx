@@ -1,10 +1,12 @@
 // components/travel/PopupContentWeb.tsx
-import React, { useCallback, memo, useEffect, useRef, useState } from 'react';
+import React, { useCallback, memo, useEffect, useRef, useState, useMemo } from 'react';
+import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 
 interface Travel {
   address: string;
   coord: string; // "lat,lng"
   travelImageThumbUrl?: string;
+  updated_at?: string;
   categoryName?: string;   // "cat1, cat2"
   description?: string;
   articleUrl?: string;
@@ -26,10 +28,42 @@ const parseLatLng = (coord: string): { lat: number; lng: number } | null => {
 };
 
 const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose }) => {
-  const { address, coord, travelImageThumbUrl, categoryName, description, articleUrl, urlTravel } = travel;
+  const { address, coord, travelImageThumbUrl, updated_at, categoryName, description, articleUrl, urlTravel } = travel;
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const mounted = useRef(false);
+
+  // Optimize and version the image URL
+  const optimizedImageUrl = useMemo(() => {
+    if (!travelImageThumbUrl) {
+      console.log('[PopupContent] No travelImageThumbUrl provided');
+      return undefined;
+    }
+    
+    // Create versioned URL
+    const versionedUrl = buildVersionedImageUrl(travelImageThumbUrl, updated_at);
+    
+    // Optimal size for popup images
+    const optimalSize = getOptimalImageSize(640, 480);
+    
+    const optimized = optimizeImageUrl(versionedUrl, {
+      width: optimalSize.width,
+      height: optimalSize.height,
+      format: 'webp',
+      quality: 82,
+      fit: 'contain',
+    }) || versionedUrl;
+    
+    console.log('[PopupContent] Image URLs:', {
+      original: travelImageThumbUrl,
+      versioned: versionedUrl,
+      optimized,
+      updated_at
+    });
+    
+    return optimized;
+  }, [travelImageThumbUrl, updated_at]);
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
@@ -105,39 +139,35 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
         <div className="popup-content">
           <div
             className="popup-photo"
-            style={travelImageThumbUrl ? ({
+            style={optimizedImageUrl && !imageError ? ({
               // Пробрасываем URL фото в CSS-переменную для размытого фона
-              ['--popup-photo-url' as any]: `url(${travelImageThumbUrl})`,
+              ['--popup-photo-url' as any]: `url(${optimizedImageUrl})`,
             } as React.CSSProperties) : undefined}
           >
-            {travelImageThumbUrl ? (
+            {optimizedImageUrl && !imageError ? (
               <img
-                src={travelImageThumbUrl}
+                src={optimizedImageUrl}
                 alt={address || 'Фото точки'}
                 className="popup-photo-img"
                 loading="lazy"
                 decoding="async"
+                onLoad={() => {
+                  console.log('[PopupContent] Image loaded successfully:', optimizedImageUrl);
+                }}
                 onError={(e) => {
-                  // Если изображение не загрузилось, показываем placeholder
-                  const target = e.currentTarget;
-                  target.style.display = 'none';
-                  const placeholder = target.parentElement?.querySelector('.popup-image-placeholder-fallback');
-                  if (placeholder) {
-                    (placeholder as HTMLElement).style.display = 'flex';
-                  }
+                  console.error('[PopupContent] Image failed to load:', {
+                    src: optimizedImageUrl,
+                    error: e
+                  });
+                  setImageError(true);
                 }}
               />
-            ) : null}
-            {!travelImageThumbUrl && (
+            ) : (
               <div className="popup-image-placeholder" aria-label="Нет фото для этой точки">
                 <span className="popup-placeholder-icon" aria-hidden="true">📷</span>
-                <span>Нет фотографии</span>
+                <span>{imageError ? 'Ошибка загрузки фото' : 'Нет фотографии'}</span>
               </div>
             )}
-            <div className="popup-image-placeholder popup-image-placeholder-fallback" style={{ display: 'none' }} aria-label="Нет фото для этой точки">
-              <span className="popup-placeholder-icon" aria-hidden="true">📷</span>
-              <span>Нет фотографии</span>
-            </div>
 
             {cats[0] && (
               <div className="popup-photo-badge" aria-label="Категория локации">
@@ -580,7 +610,11 @@ const popupStyles = `
 }
 
 .popup-photo-img {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 1;
   width: 100%;
   height: 100%;

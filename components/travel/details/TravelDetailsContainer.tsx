@@ -27,7 +27,6 @@ import {
   useWindowDimensions,
 } from "react-native";
 
-import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import { useIsFocused } from "@react-navigation/native";
@@ -60,8 +59,6 @@ import { injectCriticalStyles } from '@/styles/criticalCSS';
 import { initPerformanceMonitoring } from '@/utils/performanceMonitoring';
 import { SectionSkeleton } from '@/components/SectionSkeleton';
 import { optimizeCriticalPath } from '@/utils/advancedPerformanceOptimization';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
-import ReservedSpace from '@/components/ReservedSpace';
 
 /* ---------- LCP-компонент грузим СИНХРОННО ---------- */
 import Slider from "@/components/travel/Slider";
@@ -239,71 +236,6 @@ const PointListFallback = () => (
 const TravelListFallback = () => (
   <View style={styles.travelListFallback}>
     <TravelListSkeleton count={3} />
-  </View>
-);
-
-const TravelDetailsLoadingSkeleton = () => (
-  <View
-    testID="travel-details-loading"
-    style={[
-      styles.wrapper,
-      Platform.OS === "web" &&
-        ({
-          // @ts-ignore - web-specific CSS property
-          backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f9f8f2 100%)",
-        } as any),
-    ]}
-  >
-    <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.mainContainer, styles.mainContainerMobile]}>
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-          ]}
-          style={styles.scrollView}
-        >
-          <View style={styles.contentOuter} collapsable={false}>
-            <View style={[styles.contentWrapper, { paddingHorizontal: 16 }]} collapsable={false}>
-              <View style={[styles.sectionContainer, styles.contentStable]}>
-                {Platform.OS === 'web' ? (
-                  <>
-                    <SkeletonLoader width="100%" height={320} borderRadius={16} />
-                    <View style={{ marginTop: 14 }}>
-                      <SkeletonLoader width="70%" height={24} borderRadius={8} style={{ marginBottom: 10 }} />
-                      <SkeletonLoader width="90%" height={16} borderRadius={8} style={{ marginBottom: 8 }} />
-                      <SkeletonLoader width="82%" height={16} borderRadius={8} />
-                    </View>
-                  </>
-                ) : (
-                  <>
-                    <ReservedSpace testID="travel-details-loading-hero-reserved" height={320} style={{ borderRadius: 16 }} />
-                    <View style={{ marginTop: 14 }}>
-                      <ReservedSpace testID="travel-details-loading-title-reserved" height={24} width="70%" style={{ borderRadius: 8, marginBottom: 10 }} />
-                      <ReservedSpace testID="travel-details-loading-subtitle-reserved" height={16} width="90%" style={{ borderRadius: 8, marginBottom: 8 }} />
-                      <ReservedSpace testID="travel-details-loading-subtitle2-reserved" height={16} width="82%" style={{ borderRadius: 8 }} />
-                    </View>
-                  </>
-                )}
-              </View>
-
-              <View style={[styles.sectionContainer, styles.contentStable]}>
-                <Text style={styles.sectionHeaderText}>Описание</Text>
-                <View style={{ marginTop: 12 }}>
-                  <DescriptionSkeleton />
-                </View>
-              </View>
-
-              <View style={[styles.sectionContainer, styles.contentStable]}>
-                <Text style={styles.sectionHeaderText}>Карта маршрута</Text>
-                <View style={{ marginTop: 12 }}>
-                  <MapSkeleton />
-                </View>
-              </View>
-            </View>
-          </View>
-        </ScrollView>
-      </View>
-    </SafeAreaView>
   </View>
 );
 
@@ -774,28 +706,96 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
 /* =================================================================== */
 
 export default function TravelDetails() {
-  const { isMobile, width } = useResponsive();
-  const router = useRouter();
+  const { isMobile, width: responsiveWidth } = useResponsive();
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
-  const isFocused = useIsFocused();
+  const { width: screenWidth } = useWindowDimensions();
+  // Fallback to true if hook is unavailable (e.g., static render) while preserving hook order
+  const useIsFocusedSafe = useIsFocused ?? (() => true);
+  const isFocused = useIsFocusedSafe();
   const [, startTransition] = useTransition();
   // ✅ УЛУЧШЕНИЕ: Состояние для похожих путешествий (для навигации)
   const [relatedTravels, setRelatedTravels] = useState<Travel[]>([]);
   
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
-  const { travel, isLoading, isError, slug } = useTravelDetails();
+  const { travel, isLoading, slug } = useTravelDetails();
   const { anchors, scrollTo, scrollRef } = useScrollNavigation() as { anchors: AnchorsMap; scrollTo: any; scrollRef: any };
+  const headerOffset = useMemo(
+    () => (isMobile ? HEADER_OFFSET_MOBILE : HEADER_OFFSET_DESKTOP),
+    [isMobile]
+  );
   const { activeSection, setActiveSection } = useActiveSection(anchors, headerOffset);
   const { closeMenu, animatedX, menuWidth, menuWidthNum, openMenuOnDesktop } = useMenuState(isMobile);
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
+  // Стабильный ключ для <Head>, чтобы избежать ReferenceError при отрисовке
+  const headKey = useMemo(
+    () => `travel-${travel?.id ?? slug ?? "unknown"}`,
+    [travel?.id, slug]
+  );
+
+  const {
+    readyTitle,
+    readyDesc,
+    canonicalUrl,
+    readyImage,
+    lcpPreloadImage,
+    firstImgOrigin,
+    firstImg,
+    jsonLd,
+  } = useMemo(() => {
+    const title = travel?.name ? `${travel.name} | MeTravel` : "MeTravel";
+    const desc = stripToDescription(travel?.description);
+    const canonical =
+      typeof travel?.slug === "string" && travel.slug
+        ? `https://metravel.by/travels/${travel.slug}`
+        : undefined;
+    const rawFirst = travel?.gallery?.[0];
+    const firstUrl = rawFirst
+      ? typeof rawFirst === "string"
+        ? rawFirst
+        : rawFirst.url
+      : undefined;
+    const versioned = firstUrl
+      ? buildVersioned(firstUrl, (rawFirst as any)?.updated_at, (rawFirst as any)?.id)
+      : undefined;
+    const lcpUrl =
+      versioned &&
+      optimizeImageUrl(versioned, {
+        width: 1440,
+        format: "webp",
+        quality: 85,
+        fit: "contain",
+      });
+    const origin = firstUrl ? getOrigin(firstUrl) : null;
+
+    const structuredData = travel
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: travel.name,
+          description: desc,
+          image: firstUrl ? [firstUrl] : undefined,
+          url: canonical,
+        }
+      : null;
+
+    return {
+      readyTitle: title,
+      readyDesc: desc,
+      canonicalUrl: canonical,
+      readyImage: firstUrl,
+      lcpPreloadImage: lcpUrl ?? versioned ?? firstUrl,
+      firstImgOrigin: origin,
+      firstImg: firstUrl ? { url: firstUrl } : null,
+      jsonLd: structuredData,
+    };
+  }, [travel]);
   const contentHorizontalPadding = useMemo(() => {
-    if (width >= 1600) return 80;
-    if (width >= 1440) return 64;
-    if (width >= 1024) return 48;
-    if (width >= 768) return 32;
+    if (screenWidth >= 1600) return 80;
+    if (screenWidth >= 1440) return 64;
+    if (screenWidth >= 1024) return 48;
+    if (screenWidth >= 768) return 32;
     return 16;
-  }, [width]);
+  }, [screenWidth]);
   const sideMenuPlatformStyles =
     Platform.OS === "web"
       ? isMobile
@@ -804,6 +804,26 @@ export default function TravelDetails() {
       : styles.sideMenuNative;
 
   useLCPPreload(travel);
+
+  /* ---- open-section bridge ---- */
+  const [forceOpenKey, setForceOpenKey] = useState<string | null>(null);
+  const handleSectionOpen = useCallback((key: string) => {
+    startTransition(() => setForceOpenKey(key));
+  }, []);
+  useEffect(() => {
+    const handler =
+      Platform.OS === "web"
+        ? (e: any) => handleSectionOpen(e?.detail?.key ?? "")
+        : (key: string) => handleSectionOpen(key);
+
+    if (Platform.OS === "web") {
+      window.addEventListener("open-section", handler as unknown as EventListener, { passive: true } as any);
+      return () => window.removeEventListener("open-section", handler as unknown as EventListener);
+    } else {
+      const sub = DeviceEventEmitter.addListener("open-section", handler);
+      return () => sub.remove();
+    }
+  }, [handleSectionOpen]);
 
   /* ---- Inject critical CSS for faster First Paint ---- */
   useEffect(() => {
@@ -829,29 +849,6 @@ export default function TravelDetails() {
       ]);
     }, 2600);
   }, []);
-
-  /* ---- user flags ---- */
-  const { isSuperuser, userId } = useAuth();
-
-  /* ---- open-section bridge ---- */
-  const [forceOpenKey, setForceOpenKey] = useState<string | null>(null);
-  const handleSectionOpen = useCallback((key: string) => {
-    startTransition(() => setForceOpenKey(key));
-  }, []);
-  useEffect(() => {
-    const handler =
-      Platform.OS === "web"
-        ? (e: any) => handleSectionOpen(e?.detail?.key ?? "")
-        : (key: string) => handleSectionOpen(key);
-
-    if (Platform.OS === "web") {
-      window.addEventListener("open-section", handler as unknown as EventListener, { passive: true } as any);
-      return () => window.removeEventListener("open-section", handler as unknown as EventListener);
-    } else {
-      const sub = DeviceEventEmitter.addListener("open-section", handler);
-      return () => sub.remove();
-    }
-  }, [handleSectionOpen]);
 
   // ✅ АРХИТЕКТУРА: anchors и scrollRef теперь создаются в useScrollNavigation
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -1001,7 +998,23 @@ export default function TravelDetails() {
     }
   }, [deferAllowed, isMobile, openMenuOnDesktop]);
 
+  /* ---- user flags ---- */
+  const { isSuperuser, userId } = useAuth();
+
   /* -------------------- READY -------------------- */
+
+  // Пока данные путешествия не загружены — показываем простой лоадер,
+  // но делаем это после инициализации всех хуков, чтобы не нарушать порядок.
+  if (!travel) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.mainContainer, styles.mainContainerMobile]}>
+          <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <>
       {isFocused && (
@@ -1048,10 +1061,10 @@ export default function TravelDetails() {
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
           {/* ✅ РЕДИЗАЙН: Адаптивный spacer под меню */}
-          {!isMobile && width >= METRICS.breakpoints.tablet && <View style={{ width: menuWidthNum }} />}
+          {!isMobile && responsiveWidth >= METRICS.breakpoints.tablet && <View style={{ width: menuWidthNum }} />}
 
           {/* ✅ РЕДИЗАЙН: Адаптивное боковое меню */}
-          {!isMobile && width >= METRICS.breakpoints.tablet && (
+          {!isMobile && responsiveWidth >= METRICS.breakpoints.tablet && (
             <Defer when={deferAllowed}>
               <Animated.View
                 testID="travel-details-side-menu"
@@ -1137,7 +1150,7 @@ export default function TravelDetails() {
                     sectionLinks={sectionLinks}
                     onQuickJump={scrollToWithMenuClose}
                   />
-                </View>
+                  </View>
 
                   {isMobile && showMobileSectionTabs && sectionLinks.length > 0 && (
                     <View style={styles.sectionTabsContainer}>

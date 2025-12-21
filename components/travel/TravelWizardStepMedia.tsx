@@ -3,7 +3,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView, findNodeHandle, UIManager, LayoutChangeEvent } from 'react-native';
 
 import YoutubeLinkComponent from '@/components/YoutubeLinkComponent';
-import ImageUploadComponent from '@/components/imageUpload/ImageUploadComponent';
+import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
+import { ValidationSummary } from '@/components/travel/ValidationFeedback';
+import { validateStep } from '@/utils/travelWizardValidation';
 import { TravelFormData, Travel } from '@/src/types/types';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
@@ -112,6 +114,11 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
         setFormData({ ...formData, youtube_link: value });
     };
 
+    // Валидация шага 3
+    const validation = useMemo(() => {
+        return validateStep(3, formData);
+    }, [formData]);
+
     return (
         <SafeAreaView style={styles.safeContainer}>
             <KeyboardAvoidingView
@@ -130,6 +137,15 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                     tipBody={stepMeta?.tipBody}
                 />
 
+                {validation.warnings.length > 0 && (
+                    <View style={styles.validationSummaryWrapper}>
+                        <ValidationSummary
+                            errorCount={validation.errors.length}
+                            warningCount={validation.warnings.length}
+                        />
+                    </View>
+                )}
+
                 <ScrollView
                     ref={scrollRef}
                     style={styles.content}
@@ -142,23 +158,24 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                             <Text style={styles.sectionHint}>
                                 Обложка маршрута, которая будет показываться в списках и на странице путешествия.
                             </Text>
-                            {formData.id ? (
-                                <View style={styles.coverWrapper}>
-                                    <ImageUploadComponent
-                                        collection="travelMainImage"
-                                        idTravel={formData.id}
-                                        oldImage={
-                                            (formData as any).travel_image_thumb_small_url?.length
-                                                ? (formData as any).travel_image_thumb_small_url
-                                                : (travelDataOld as any)?.travel_image_thumb_small_url ?? null
-                                        }
-                                    />
-                                </View>
-                            ) : (
-                                <Text style={styles.infoText}>
-                                    Чтобы добавить обложку, сначала сохраните черновик (кнопка «Сохранить» внизу).
-                                </Text>
-                            )}
+                            <View style={styles.coverWrapper}>
+                                <PhotoUploadWithPreview
+                                    collection="travelMainImage"
+                                    idTravel={formData.id ?? null}
+                                    oldImage={
+                                        (formData as any).travel_image_thumb_small_url?.length
+                                            ? (formData as any).travel_image_thumb_small_url
+                                            : (travelDataOld as any)?.travel_image_thumb_small_url ?? null
+                                    }
+                                    placeholder="Перетащите обложку путешествия"
+                                    maxSizeMB={10}
+                                />
+                                {!formData.id && (
+                                    <Text style={styles.infoText}>
+                                        Превью будет сохранено. После сохранения черновика фото загрузится на сервер.
+                                    </Text>
+                                )}
+                            </View>
                         </View>
 
                         <View style={styles.section}>
@@ -211,6 +228,10 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
 const styles = StyleSheet.create({
     safeContainer: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
     keyboardAvoid: { flex: 1 },
+    validationSummaryWrapper: {
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
+    },
     content: {
         flex: 1,
     },
