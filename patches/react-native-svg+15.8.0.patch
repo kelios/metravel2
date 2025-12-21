@@ -40,39 +40,6 @@ index 32b5db7..aace074 100644
        onStartShouldSetResponder: self.touchableHandleStartShouldSetResponder,
        onResponderTerminationRequest: self.touchableHandleResponderTerminationRequest,
        onResponderGrant: self.touchableHandleResponderGrant,
-diff --git a/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js b/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
-index aace074..9e1ab20 100644
---- a/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
-+++ b/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
-@@ -54,15 +54,21 @@ const prepare = (self, props = self.props) => {
-     clean['transform-origin'] = `${originX || 0} ${originY || 0}`;
-   }
- 
-   // we do it like this because setting transform as undefined causes error in web
--  const parsedTransform = (0, _.parseTransformProp)(transform, props);
-+  const parsedTransform =
-+    typeof _.parseTransformProp === 'function'
-+      ? (0, _.parseTransformProp)(transform, props)
-+      : undefined;
-   if (parsedTransform) {
-     clean.transform = parsedTransform;
-   }
--  const parsedGradientTransform = (0, _.parseTransformProp)(gradientTransform);
-+  const parsedGradientTransform =
-+    typeof _.parseTransformProp === 'function'
-+      ? (0, _.parseTransformProp)(gradientTransform)
-+      : undefined;
-   if (parsedGradientTransform) {
-     clean.gradientTransform = parsedGradientTransform;
-   }
--  const parsedPatternTransform = (0, _.parseTransformProp)(patternTransform);
-+  const parsedPatternTransform =
-+    typeof _.parseTransformProp === 'function'
-+      ? (0, _.parseTransformProp)(patternTransform)
-+      : undefined;
-   if (parsedPatternTransform) {
-     clean.patternTransform = parsedPatternTransform;
-   }
 diff --git a/node_modules/react-native-svg/lib/module/web/WebShape.js b/node_modules/react-native-svg/lib/module/web/WebShape.js
 index 64801fc..bd46e49 100644
 --- a/node_modules/react-native-svg/lib/module/web/WebShape.js
@@ -89,47 +56,15 @@ index 64801fc..bd46e49 100644
    prepareProps(props) {
      return props;
 diff --git a/node_modules/react-native-svg/lib/module/web/utils/prepare.js b/node_modules/react-native-svg/lib/module/web/utils/prepare.js
-index 796b489..9286795 100644
+index 796b489..f8c50cf 100644
 --- a/node_modules/react-native-svg/lib/module/web/utils/prepare.js
 +++ b/node_modules/react-native-svg/lib/module/web/utils/prepare.js
 @@ -1,6 +1,7 @@
 -import { hasTouchableProperty, parseTransformProp } from '.';
-+import { hasTouchableProperty as _hasTouchableProperty, parseTransformProp } from './index';
++import { hasTouchableProperty as _hasTouchableProperty, parseTransformProp } from '.';
  import { resolve } from '../../lib/resolve';
  import { resolveAssetUri } from '../../lib/resolveAssetUri';
 +const hasTouchableProperty = typeof _hasTouchableProperty === 'function' ? _hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);
  /**
   * `react-native-svg` supports additional props that aren't defined in the spec.
   * This function replaces them in a spec conforming manner.
-diff --git a/node_modules/react-native-svg/lib/module/web/utils/prepare.js b/node_modules/react-native-svg/lib/module/web/utils/prepare.js
-index 9286795..b2b6a44 100644
---- a/node_modules/react-native-svg/lib/module/web/utils/prepare.js
-+++ b/node_modules/react-native-svg/lib/module/web/utils/prepare.js
-@@ -46,15 +46,21 @@ export const prepare = (self, props = self.props) => {
-   }
- 
-   // we do it like this because setting transform as undefined causes error in web
--  const parsedTransform = parseTransformProp(transform, props);
-+  const parsedTransform =
-+    typeof parseTransformProp === 'function'
-+      ? parseTransformProp(transform, props)
-+      : undefined;
-   if (parsedTransform) {
-     clean.transform = parsedTransform;
-   }
--  const parsedGradientTransform = parseTransformProp(gradientTransform);
-+  const parsedGradientTransform =
-+    typeof parseTransformProp === 'function'
-+      ? parseTransformProp(gradientTransform)
-+      : undefined;
-   if (parsedGradientTransform) {
-     clean.gradientTransform = parsedGradientTransform;
-   }
--  const parsedPatternTransform = parseTransformProp(patternTransform);
-+  const parsedPatternTransform =
-+    typeof parseTransformProp === 'function'
-+      ? parseTransformProp(patternTransform)
-+      : undefined;
-   if (parsedPatternTransform) {
-     clean.patternTransform = parsedPatternTransform;
-   }

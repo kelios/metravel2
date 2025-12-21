@@ -201,10 +201,7 @@ function CompactSideBarTravel({
   }, [travelAddress]);
 
   // ✅ УЛУЧШЕНИЕ: Группировка пунктов меню по категориям
-  const navLinks = useMemo(
-    () => (navLinksSource ? navLinksSource : buildTravelSectionLinks(travel)),
-    [navLinksSource, travel]
-  );
+  const navLinks = navLinksSource ? navLinksSource : buildTravelSectionLinks(travel);
 
   const handleUserTravels = () =>
     openUrl(`/?user_id=${(travel as any).userIds ?? (travel as any).userId}`);

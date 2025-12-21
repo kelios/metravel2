@@ -134,7 +134,10 @@ const MapPageComponent: React.FC<Props> = ({
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(max-width: 768px)').matches;
   });
-  const travelData = Array.isArray(travel?.data) ? travel.data : [];
+  const travelData = useMemo(
+    () => (Array.isArray(travel?.data) ? travel.data : []),
+    [travel?.data]
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -400,7 +403,7 @@ const MapPageComponent: React.FC<Props> = ({
     const map = useMap();
     useMapEvents({ click: handleMapClick });
     const [hasCenteredOnData, setHasCenteredOnData] = useState(false);
-    const fitBoundsPoints: [number, number][] = (() => {
+    const fitBoundsPoints = useMemo<[number, number][]>(() => {
       const points: [number, number][] = [];
 
       if (travelData.length > 0) {
@@ -415,45 +418,11 @@ const MapPageComponent: React.FC<Props> = ({
       }
 
       return points;
-    })();
-    
+    }, [travelData, userLocation]);
+
     // Сохраняем ссылку на карту
     useEffect(() => {
       mapRef.current = map;
-    }, [map]);
-
-    useEffect(() => {
-      if (!map) return;
-
-      const invalidate = () => {
-        try {
-          map.invalidateSize?.(true);
-        } catch {
-          // noop
-        }
-      };
-
-      map.whenReady?.(() => {
-        invalidate();
-        requestAnimationFrame(invalidate);
-        setTimeout(invalidate, 50);
-        setTimeout(invalidate, 250);
-      });
-
-      const onResize = () => invalidate();
-      window.addEventListener('resize', onResize);
-
-      const container: HTMLElement | undefined = map.getContainer?.();
-      let ro: ResizeObserver | null = null;
-      if (container && typeof ResizeObserver !== 'undefined') {
-        ro = new ResizeObserver(() => invalidate());
-        ro.observe(container);
-      }
-
-      return () => {
-        window.removeEventListener('resize', onResize);
-        ro?.disconnect();
-      };
     }, [map]);
 
     // Сохраняем текущую позицию карты при изменении (только в режиме route)
@@ -513,9 +482,9 @@ const MapPageComponent: React.FC<Props> = ({
       }
       
       lastModeRef.current = mode;
-    }, [map]);
+    }, [map, mode, coordinates, userLocation]);
 
-    // Автоматическое подгонка границ при изменении данных (но только если не отключено)
+    // Автоматическая подгонка границ при изменении данных (но только если не отключено)
     const shouldFitBounds = !disableFitBounds && mode !== 'route';
 
     useEffect(() => {
@@ -537,6 +506,12 @@ const MapPageComponent: React.FC<Props> = ({
 
     return null;
   };
+
+  if (loading) return <Loader message="Loading map..." />;
+
+  if (!L || !rl) {
+    return <Loader message={errors.loadingModules ? 'Loading map modules failed' : 'Loading map...'} />;
+  }
 
   return (
       <View style={styles.wrapper}>
