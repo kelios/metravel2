@@ -399,7 +399,13 @@ const MapPageComponent: React.FC<Props> = ({
     return <PopupContentComponent travel={point} onClose={handleClose} />;
   };
 
-  const MapLogic = () => {
+  const MapLogic: React.FC<{
+    travelData: Point[];
+    userLocation: Coordinates | null;
+    mode: MapMode;
+    coordinates: Coordinates;
+    disableFitBounds: boolean;
+  }> = ({ travelData, userLocation, mode, coordinates, disableFitBounds }) => {
     const map = useMap();
     useMapEvents({ click: handleMapClick });
     const [hasCenteredOnData, setHasCenteredOnData] = useState(false);
@@ -446,7 +452,7 @@ const MapPageComponent: React.FC<Props> = ({
         map.off('moveend', saveView);
         map.off('zoomend', saveView);
       };
-    }, [map]);
+    }, [map, mode]);
 
     // Центрирование на местоположение пользователя при первой загрузке
     useEffect(() => {
@@ -619,7 +625,13 @@ const MapPageComponent: React.FC<Props> = ({
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           />
 
-          <MapLogic />
+          <MapLogic
+            travelData={travelData}
+            userLocation={userLocation}
+            mode={mode}
+            coordinates={coordinates}
+            disableFitBounds={disableFitBounds}
+          />
 
           {/* Круг радиуса поиска */}
           {mode === 'radius' && radiusInMeters && (
