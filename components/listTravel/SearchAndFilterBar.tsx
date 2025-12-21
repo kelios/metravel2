@@ -162,7 +162,7 @@ function SearchAndFilterBar({
                 recommendations: recommendationsIcon,
             };
         },
-        [isMobile, isRecommendationsVisible, palette.accent, palette.primary, palette.textMuted, palette.textSubtle]
+        [isMobile, isRecommendationsVisible]
     );
 
     const onSubmit = useCallback(() => {

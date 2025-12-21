@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Platform, Pressable } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
@@ -22,6 +22,23 @@ const BadgeNotification = ({
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(-100));
 
+  const handleDismiss = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: -100,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onDismiss();
+    });
+  }, [fadeAnim, onDismiss, slideAnim]);
+
   useEffect(() => {
     if (visible) {
       Animated.parallel([
@@ -44,24 +61,9 @@ const BadgeNotification = ({
 
       return () => clearTimeout(timer);
     }
-  }, [visible]);
 
-  const handleDismiss = () => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: -100,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onDismiss();
-    });
-  };
+    return undefined;
+  }, [duration, fadeAnim, handleDismiss, slideAnim, visible]);
 
   if (!visible) return null;
 

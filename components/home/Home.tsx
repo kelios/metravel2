@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, Suspense, lazy, useState } from 'react';
-import { View, StyleSheet, ScrollView, Platform, Text, TextInput, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
@@ -36,7 +36,7 @@ const SectionSkeleton = () => {
 export default function Home() {
   const isFocused = useIsFocused();
   const { isAuthenticated, userId } = useAuth();
-  const { isSmallPhone, isPhone, isTablet } = useResponsive();
+  const { isSmallPhone, isPhone } = useResponsive();
 
   const [showHeavyContent, setShowHeavyContent] = useState(false);
 

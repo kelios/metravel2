@@ -34,7 +34,7 @@ export default function ResponsiveLayout({
   style,
   testID,
 }: ResponsiveLayoutProps) {
-  const { isTablet, isLargeTablet, isDesktop, width } = useResponsive();
+  const { isLargeTablet, isDesktop } = useResponsive();
 
   // Показываем sidebar только на больших экранах
   const showSidebar = sidebar && (isLargeTablet || isDesktop);

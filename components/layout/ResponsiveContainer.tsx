@@ -31,7 +31,7 @@ export default function ResponsiveContainer({
   style,
   testID,
 }: ResponsiveContainerProps) {
-  const { isSmallPhone, isPhone, isLargePhone, isTablet, isDesktop } = useResponsive();
+  const { isSmallPhone, isPhone, isLargePhone, isTablet } = useResponsive();
 
   // Определяем padding на основе размера экрана
   const getPadding = () => {
