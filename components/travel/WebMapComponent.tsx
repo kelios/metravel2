@@ -103,6 +103,20 @@ export const buildAddressFromGeocode = (
     latlng: any,
     matchedCountry?: any,
 ) => {
+    // Если есть display_name, используем его как основу
+    if (geocodeData?.display_name) {
+        // Очищаем display_name от лишних символов и форматируем
+        const displayName = String(geocodeData.display_name)
+            .replace(/,\s*/g, ' · ')
+            .trim();
+        
+        // Если display_name достаточно информативен (больше одного сегмента), возвращаем его
+        if (displayName.includes('·')) {
+            return displayName;
+        }
+    }
+
+    // Если display_name недостаточно информативен, строим адрес из компонентов
     const parts: string[] = [];
 
     const road = geocodeData?.address?.road;
@@ -118,6 +132,7 @@ export const buildAddressFromGeocode = (
 
     const adminRegion =
         geocodeData?.address?.state ||
+        geocodeData?.address?.region ||
         geocodeData?.localityInfo?.administrative?.find((item: any) => item?.order === 2)?.name;
 
     const adminArea =
@@ -137,24 +152,11 @@ export const buildAddressFromGeocode = (
     if (adminArea && adminArea !== adminRegion) parts.push(adminArea);
     if (countryLabel) parts.push(countryLabel);
 
-    if (parts.length < 2 && geocodeData?.display_name) {
-        const fallbackSegments = String(geocodeData.display_name)
-            .split(/[·,]/)
-            .map((s: string) => s.trim())
-            .filter(Boolean);
-        for (const segment of fallbackSegments) {
-            if (parts.length >= 2) break;
-            if (!parts.includes(segment)) {
-                parts.push(segment);
-            }
-        }
-    }
-
     const separator = ' · ';
     const combined = parts.filter(Boolean).join(separator);
     if (combined) return combined;
 
-    // fallback to provider display_name or coords
+    // Финальный fallback - display_name или координаты
     return geocodeData?.display_name || `${latlng.lat}, ${latlng.lng}`;
 };
 

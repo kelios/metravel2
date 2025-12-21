@@ -340,6 +340,28 @@ export default function MapScreen() {
         setFullRouteCoords(coords);
     }, []);
 
+    const handleAddressSelect = useCallback((address: string, coords: [number, number], isStart: boolean) => {
+        if (isStart) {
+            setStartAddress(address);
+            if (routePoints.length === 0) {
+                setRoutePoints([coords]);
+            } else if (routePoints.length === 1) {
+                setRoutePoints([coords, routePoints[0]]);
+            } else {
+                setRoutePoints([coords, routePoints[1]]);
+            }
+        } else {
+            setEndAddress(address);
+            if (routePoints.length === 0) {
+                setRoutePoints([coords]);
+            } else if (routePoints.length === 1) {
+                setRoutePoints([routePoints[0], coords]);
+            } else {
+                setRoutePoints([routePoints[0], coords]);
+            }
+        }
+    }, [routePoints]);
+
     // ✅ РЕАЛИЗАЦИЯ: Фильтрация данных на фронтенде по выбранным категориям
     const travelsData = useMemo(() => {
         // Если категории не выбраны, возвращаем все данные
@@ -543,6 +565,7 @@ export default function MapScreen() {
                                     onClearRoute={handleClearRoute}
                                     routeHintDismissed={routeHintDismissed}
                                     onRouteHintDismiss={() => setRouteHintDismissed(true)}
+                                    onAddressSelect={handleAddressSelect}
                                     closeMenu={() => setRightPanelVisible(false)}
                                 />
                             ) : (

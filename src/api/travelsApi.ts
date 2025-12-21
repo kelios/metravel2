@@ -22,8 +22,8 @@ const URLAPI = (() => {
 const DEFAULT_TIMEOUT = 10000; // 10 секунд
 const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запросов
 
-// Base travels endpoint (no trailing slash to avoid duplicate slashes)
-const GET_TRAVELS = `${URLAPI}/travels`;
+// Base travels endpoint with trailing slash
+const GET_TRAVELS = `${URLAPI}/travels/`;
 const GET_RANDOM_TRAVELS = `${URLAPI}/travels/random/`;
 const GET_TRAVELS_BY_SLUG = `${URLAPI}/travels/by-slug/`;
 
@@ -530,8 +530,7 @@ export const fetchMyTravels = async (params: {
             where: JSON.stringify(whereObject),
         }).toString();
 
-        const baseTravels = GET_TRAVELS.replace(/\/+$/, '');
-        const url = `${baseTravels}?${query}`;
+        const url = `${GET_TRAVELS}?${query}`;
         const res = await fetchWithTimeout(url, {}, LONG_TIMEOUT);
         if (!res.ok) {
             const errorText = await res.text().catch(() => 'Unknown error');

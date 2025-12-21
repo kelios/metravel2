@@ -21,6 +21,7 @@ import RoutePointControls from '@/components/MapPage/RoutePointControls';
 import MapLegend from '@/components/MapPage/MapLegend';
 import RouteStats from '@/components/MapPage/RouteStats';
 import RouteHint from '@/components/MapPage/RouteHint';
+import AddressSearch from '@/components/MapPage/AddressSearch';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
@@ -83,6 +84,7 @@ interface FiltersPanelProps {
   onClearRoute?: () => void;
   routeHintDismissed?: boolean;
   onRouteHintDismiss?: () => void;
+  onAddressSelect?: (address: string, coords: [number, number], isStart: boolean) => void;
 }
 
 const FiltersPanel: React.FC<FiltersPanelProps> = ({
@@ -106,6 +108,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                                      onClearRoute,
                                                      routeHintDismissed = false,
                                                      onRouteHintDismiss,
+                                                     onAddressSelect,
                                                    }) => {
   const windowWidth = Dimensions.get('window').width;
   const styles = useMemo(() => getStyles(isMobile, windowWidth), [isMobile, windowWidth]);
@@ -390,6 +393,25 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           </>
         ) : (
           <>
+            {/* Поиск адресов */}
+            {onAddressSelect && (
+              <View style={styles.section}>
+                <AddressSearch
+                  label="Точка старта"
+                  placeholder="Введите адрес начала маршрута..."
+                  value={startAddress}
+                  onAddressSelect={(address, coords) => onAddressSelect(address, coords, true)}
+                />
+                <View style={{ height: 12 }} />
+                <AddressSearch
+                  label="Точка финиша"
+                  placeholder="Введите адрес конца маршрута..."
+                  value={endAddress}
+                  onAddressSelect={(address, coords) => onAddressSelect(address, coords, false)}
+                />
+              </View>
+            )}
+
             {/* Транспорт */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Транспорт</Text>
