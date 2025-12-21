@@ -400,7 +400,7 @@ const MapPageComponent: React.FC<Props> = ({
     const map = useMap();
     useMapEvents({ click: handleMapClick });
     const [hasCenteredOnData, setHasCenteredOnData] = useState(false);
-    const fitBoundsPoints = useMemo<[number, number][]>(() => {
+    const fitBoundsPoints: [number, number][] = (() => {
       const points: [number, number][] = [];
 
       if (travelData.length > 0) {
@@ -415,7 +415,7 @@ const MapPageComponent: React.FC<Props> = ({
       }
 
       return points;
-    }, [travelData, userLocation]);
+    })();
     
     // Сохраняем ссылку на карту
     useEffect(() => {
