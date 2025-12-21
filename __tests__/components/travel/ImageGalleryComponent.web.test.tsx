@@ -21,17 +21,25 @@ jest.mock('react-dropzone', () => {
 });
 
 jest.mock('@/components/ConfirmDialog', () => {
+  const React = require('react');
+  const { View, TouchableOpacity, Text } = require('react-native');
   return ({ visible, onConfirm, onClose }: any) =>
-    visible ? (
-      <View>
-        <TouchableOpacity testID="confirm-delete" onPress={onConfirm}>
-          <Text>confirm</Text>
-        </TouchableOpacity>
-        <TouchableOpacity testID="cancel-delete" onPress={onClose}>
-          <Text>cancel</Text>
-        </TouchableOpacity>
-      </View>
-    ) : null;
+    visible
+      ? React.createElement(
+          View,
+          null,
+          React.createElement(
+            TouchableOpacity,
+            { testID: 'confirm-delete', onPress: onConfirm },
+            React.createElement(Text, null, 'confirm'),
+          ),
+          React.createElement(
+            TouchableOpacity,
+            { testID: 'cancel-delete', onPress: onClose },
+            React.createElement(Text, null, 'cancel'),
+          ),
+        )
+      : null;
 });
 
 const uploadImageMock = jest.fn(async () => ({ id: 'uploaded-1', url: '/uploaded.jpg' }));
