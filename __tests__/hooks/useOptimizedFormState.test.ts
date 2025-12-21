@@ -91,7 +91,11 @@ describe('useOptimizedFormState', () => {
     });
 
     await act(async () => {
-      await result.current.save();
+      try {
+        await result.current.save();
+      } catch {
+        // Expected to throw
+      }
     });
 
     expect(mockSave).toHaveBeenCalledWith(result.current.data);

@@ -75,6 +75,10 @@ function CompactSideBarTravel({
 }: SideBarProps) {
   const { isTablet } = useResponsive();
   const travelAddress = travel.travelAddress;
+  const travelOwnerId = (travel as any).userIds ?? (travel as any).userId ?? (travel as any).user?.id ?? null;
+  const avatar = (travel as any).user?.avatar;
+  const updatedAt = (travel as any).updated_at;
+  const travelId = travel.id;
   const navLinksSource = Array.isArray(links) && links.length ? links : null;
   const [active, setActive] = useState<string>("");
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -101,9 +105,9 @@ function CompactSideBarTravel({
   // Надёжная проверка права редактирования (типы могут отличаться)
   const canEdit = useMemo(() => {
     const a = String(storedUserId ?? "");
-    const b = String((travel as any).userIds ?? (travel as any).userId ?? "");
+    const b = travelOwnerId != null ? String(travelOwnerId) : "";
     return !!(isSuperuser || (a && b && a === b));
-  }, [isSuperuser, storedUserId, travel]);
+  }, [isSuperuser, storedUserId, travelOwnerId]);
 
   // ── Безопасные текстовые поля (ничего "null"/"undefined" не рендерим) ──
   const userName = (travel as any).userName || "";
@@ -129,11 +133,10 @@ function CompactSideBarTravel({
       : null;
 
   const authorUserId = useMemo(() => {
-    const ownerId = (travel as any).userIds ?? (travel as any).userId ?? (travel as any).user?.id ?? null;
-    if (ownerId == null) return null;
-    const v = String(ownerId).trim();
+    if (travelOwnerId == null) return null;
+    const v = String(travelOwnerId).trim();
     return v ? v : null;
-  }, [travel]);
+  }, [travelOwnerId]);
 
   const handleOpenAuthorProfile = useCallback(() => {
     if (!authorUserId) return;
@@ -142,13 +145,12 @@ function CompactSideBarTravel({
 
   // ✅ УЛУЧШЕНИЕ: Оптимизация URL аватара
   const avatarUri = useMemo(() => {
-    const rawUri = (travel as any).user?.avatar;
-    if (!rawUri) return "";
+    if (!avatar) return "";
     
     const versionedUrl = buildVersionedImageUrl(
-      rawUri,
-      (travel as any).updated_at,
-      travel.id
+      avatar,
+      updatedAt,
+      travelId
     );
     
     // Оптимальный размер для аватара (72x72)
@@ -162,7 +164,7 @@ function CompactSideBarTravel({
       quality: 85,
       fit: 'cover',
     }) || versionedUrl;
-  }, [(travel as any).user?.avatar, (travel as any).updated_at, travel.id]);
+  }, [avatar, updatedAt, travelId]);
 
   // Извлекаем координаты из travelAddress
   const firstCoord = useMemo(() => {

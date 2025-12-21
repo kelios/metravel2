@@ -134,7 +134,7 @@ const MapPageComponent: React.FC<Props> = ({
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(max-width: 768px)').matches;
   });
-  const travelData = useMemo(() => (Array.isArray(travel?.data) ? travel.data : []), [travel?.data]);
+  const travelData = Array.isArray(travel?.data) ? travel.data : [];
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -533,7 +533,7 @@ const MapPageComponent: React.FC<Props> = ({
         map.fitBounds(bounds.pad(0.2), { animate: !hasCenteredOnData });
         setHasCenteredOnData(true);
       }
-    }, [L, fitBoundsPoints, hasCenteredOnData, map, shouldFitBounds]);
+    }, [fitBoundsPoints, hasCenteredOnData, map, shouldFitBounds]);
 
     return null;
   };
