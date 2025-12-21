@@ -20,7 +20,7 @@ import { devError } from '@/src/utils/logger';
  */
 export const fetchTravelV2 = async (id: number): Promise<Travel> => {
     try {
-        return await apiClient.get<Travel>(`/api/travels/${id}`);
+        return await apiClient.get<Travel>(`/api/travels/${id}/`);
     } catch (error) {
         if (error instanceof ApiError) {
             devError('Error fetching travel:', error.message);
@@ -60,7 +60,7 @@ export const fetchTravelV2 = async (id: number): Promise<Travel> => {
 export const fetchTravelBySlugV2 = async (slug: string): Promise<Travel> => {
     try {
         const safeSlug = encodeURIComponent(String(slug).replace(/^\/+/, ''));
-        return await apiClient.get<Travel>(`/travels/by-slug/${safeSlug}/`);
+        return await apiClient.get<Travel>(`/travels/${safeSlug}/`);
     } catch (error) {
         if (error instanceof ApiError) {
             devError('Error fetching travel by slug:', error.message);
@@ -170,7 +170,6 @@ export const fetchTravelsV2 = async (
 
         const response = await apiClient.get<{ data: Travel[]; total: number }>(
             `/api/travels?${params}`,
-            // Таймаут можно передать как третий параметр, но apiClient использует DEFAULT_TIMEOUT
         );
 
         // Проверяем структуру ответа
@@ -250,7 +249,7 @@ export const uploadImageV2 = async (formData: FormData): Promise<any> => {
  */
 export const deleteTravelV2 = async (id: string): Promise<void> => {
     try {
-        await apiClient.delete(`/api/travels/${id}`);
+        await apiClient.delete(`/api/travels/${id}/`);
     } catch (error) {
         if (error instanceof ApiError) {
             devError('Error deleting travel:', error.message);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+import { Linking } from 'react-native';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 import type { Travel } from '@/src/types/types';
 
@@ -257,6 +258,23 @@ describe('CompactSideBarTravel', () => {
     );
 
     expect(getByText('1 234')).toBeTruthy();
+  });
+
+  it('opens author travels search with user_id param', () => {
+    const openSpy = jest.spyOn(Linking, 'openURL').mockResolvedValueOnce(undefined as any);
+    const travel = createMockTravel({
+      userId: '555',
+      userName: 'Test User',
+    } as any);
+
+    const { getByText } = render(
+      <CompactSideBarTravel {...defaultProps} travel={travel} />
+    );
+
+    fireEvent.press(getByText('Путешествия Test User'));
+
+    expect(openSpy).toHaveBeenCalledWith('/search?user_id=555');
+    openSpy.mockRestore();
   });
 
   it('should render WeatherWidget', () => {

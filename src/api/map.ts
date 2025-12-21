@@ -19,8 +19,8 @@ const URLAPI = (() => {
 const DEFAULT_TIMEOUT = 10000; // 10 секунд
 const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запросов
 
-// 🔗 Сервер отдаёт 301 на URL без завершающего слэша — добавляем его сразу, чтобы избежать лишних редиректов.
-const SEARCH_TRAVELS_FOR_MAP = `${URLAPI}/travels/search_travels_for_map/`;
+// Для запросов с query (?...) оставляем базу без завершающего слеша, для остальных — со слешем.
+const SEARCH_TRAVELS_FOR_MAP = `${URLAPI}/travels/search_travels_for_map`; // далее добавляется ?...
 const GET_FILTER_FOR_MAP = `${URLAPI}/filterformap/`;
 const GET_TRAVELS = `${URLAPI}/travels/`;
 const GET_TRAVELS_OF_MONTH = `${URLAPI}/travels/of-month/`;

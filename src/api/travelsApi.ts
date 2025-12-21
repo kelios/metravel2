@@ -24,8 +24,8 @@ const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запро�
 
 // Base travels endpoint (no trailing slash to avoid duplicate slashes)
 const GET_TRAVELS = `${URLAPI}/travels`;
-const GET_RANDOM_TRAVELS = `${URLAPI}/travels/random`;
-const GET_TRAVELS_BY_SLUG = `${URLAPI}/travels/by-slug`;
+const GET_RANDOM_TRAVELS = `${URLAPI}/travels/random/`;
+const GET_TRAVELS_BY_SLUG = `${URLAPI}/travels/`;
 
 const travelDef: Travel = {
     name: 'test',
@@ -295,9 +295,8 @@ export const fetchTravels = async (
             where: whereObject,
         });
 
-        // Страхуемся от возможного завершающего слэша в GET_TRAVELS
-        const baseTravels = GET_TRAVELS.replace(/\/+$/, '');
-        const urlTravel = `${baseTravels}?${params}`;
+
+        const urlTravel = `${GET_TRAVELS}?${params}`;
 
         const res = options?.signal
             ? await fetchWithTimeout(urlTravel, { signal: options.signal }, LONG_TIMEOUT)
@@ -392,7 +391,8 @@ export const fetchRandomTravels = async (
             query: search,
         });
 
-        const baseUrl = GET_RANDOM_TRAVELS.endsWith('/') ? GET_RANDOM_TRAVELS : `${GET_RANDOM_TRAVELS}/`;
+        // для запросов с query убираем завершающий слеш
+        const baseUrl = GET_RANDOM_TRAVELS.replace(/\/+$/, '');
         const urlTravel = `${baseUrl}?${params}`;
 
         const res = options?.signal
@@ -466,7 +466,7 @@ export const fetchTravel = async (id: number): Promise<Travel> => {
 
     try {
         const res = await fetchWithTimeout(
-            `${GET_TRAVELS}${id}/`,
+            `${GET_TRAVELS}/${id}/`,
             authHeaders ? { headers: authHeaders } : {},
             DEFAULT_TIMEOUT,
         );
@@ -486,7 +486,7 @@ export const fetchTravelBySlug = async (slug: string): Promise<Travel> => {
         const authHeaders = await buildAuthHeaders();
         const safeSlug = encodeURIComponent(String(slug).replace(/^\/+/, ''));
         const res = await fetchWithTimeout(
-            `${GET_TRAVELS_BY_SLUG}/${safeSlug}/`,
+            `${GET_TRAVELS_BY_SLUG}${safeSlug}/`,
             authHeaders ? { headers: authHeaders } : {},
             DEFAULT_TIMEOUT,
         );

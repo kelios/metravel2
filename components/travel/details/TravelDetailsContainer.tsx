@@ -775,9 +775,10 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
 
 export default function TravelDetails() {
   const { isMobile, width } = useResponsive();
-  const headerOffset = 0;
-  const insets = useSafeAreaInsets();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isFocused = useIsFocused();
   const [, startTransition] = useTransition();
   // ✅ УЛУЧШЕНИЕ: Состояние для похожих путешествий (для навигации)
   const [relatedTravels, setRelatedTravels] = useState<Travel[]>([]);
@@ -973,10 +974,15 @@ export default function TravelDetails() {
   //     }, 1100);
   //   }
   // }, [travel?.id, queryClient]);
-
   /* ---- LCP gate ---- */
   const [lcpLoaded, setLcpLoaded] = useState(Platform.OS !== "web");
   const [deferAllowed, setDeferAllowed] = useState(false);
+  useEffect(() => {
+    if (!isLoading) {
+      setDeferAllowed(true);
+    }
+  }, [isLoading]);
+
   useEffect(() => {
     if (lcpLoaded) setDeferAllowed(true);
     else rIC(() => setDeferAllowed(true), 2000);
@@ -994,114 +1000,6 @@ export default function TravelDetails() {
       openMenuOnDesktop();
     }
   }, [deferAllowed, isMobile, openMenuOnDesktop]);
-
-  const SITE = process.env.EXPO_PUBLIC_SITE_URL || "https://metravel.by";
-  const isFocused = useIsFocused();
-  const canonicalUrl = `${SITE}/travels/${slug}`;
-
-  const loadingTitle = "MeTravel — Путешествие";
-  const loadingDesc = "Загружаем описание путешествия…";
-  const errorTitle = "MeTravel — Ошибка загрузки";
-  const errorDesc = "Не удалось загрузить путешествие.";
-  const readyTitle = travel?.name ? `${travel.name} — MeTravel` : loadingTitle;
-  const readyDesc = stripToDescription(travel?.description);
-  const firstImg = (travel?.gallery?.[0] ?? null) as unknown as ImgLike | null;
-  const readyImage = firstImg?.url
-    ? buildVersioned(firstImg.url, firstImg.updated_at ?? null, firstImg.id)
-    : `${SITE}/og-preview.jpg`;
-  const lcpPreloadImage = useMemo(() => {
-    if (!firstImg?.url) return readyImage;
-    const targetWidth = Math.min(width || 1200, 1440);
-    return (
-      optimizeImageUrl(readyImage, {
-        width: targetWidth,
-        format: "webp",
-        quality: 85,
-        fit: "contain",
-      }) || readyImage
-    );
-  }, [firstImg?.url, readyImage, width]);
-  const firstImgOrigin = getOrigin(firstImg?.url);
-  const headKey = `travel-${slug}`;
-
-  const jsonLd =
-    travel &&
-    ({
-      "@context": "https://schema.org",
-      "@type": "Article",
-      headline: travel.name,
-      image: [readyImage],
-      dateModified: travel.updated_at ?? undefined,
-      datePublished: travel.created_at ?? undefined,
-      author: travel.userName ? [{ "@type": "Person", name: travel.userName }] : undefined,
-      mainEntityOfPage: canonicalUrl,
-      description: readyDesc,
-    } as const);
-
-  /* -------------------- LOADING -------------------- */
-  if (isLoading) {
-    return (
-      <>
-        {isFocused && (
-          <InstantSEO
-            headKey={headKey}
-            title={loadingTitle}
-            description={loadingDesc}
-            canonical={canonicalUrl}
-            image={`${SITE}/og-preview.jpg`}
-            ogType="article"
-            additionalTags={<meta name="theme-color" content="#f9f8f2" />}
-          />
-        )}
-        <TravelDetailsLoadingSkeleton />
-      </>
-    );
-  }
-
-  /* -------------------- ERROR -------------------- */
-  if (isError || !travel) {
-    return (
-      <>
-        {isFocused && (
-          <InstantSEO
-            headKey={headKey}
-            title={errorTitle}
-            description={errorDesc}
-            canonical={canonicalUrl}
-            image={`${SITE}/og-preview.jpg`}
-            ogType="article"
-            additionalTags={<meta name="theme-color" content="#f9f8f2" />}
-          />
-        )}
-        <View style={styles.errorContainer}>
-          <Suspense fallback={<View style={{ width: 64, height: 64 }} />}>
-            <LazyMaterialIcons
-              // @ts-ignore - MaterialIcons name prop
-              {...({ name: 'error-outline', size: 64, color: DESIGN_TOKENS.colors.primary } as any)}
-            />
-          </Suspense>
-          <Text style={styles.errorTitle}>Не удалось загрузить путешествие</Text>
-          <Text style={styles.errorText}>
-            Возможно, страница была удалена или временно недоступна.
-          </Text>
-          <Pressable
-            onPress={() => {
-              if (typeof window !== 'undefined' && Platform.OS === 'web') {
-                window.location.reload();
-              } else {
-                router.replace('/');
-              }
-            }}
-            style={styles.errorButton}
-            accessibilityRole="button"
-            accessibilityLabel="Вернуться на главную"
-          >
-            <Text style={styles.errorButtonText}>Вернуться на главную</Text>
-          </Pressable>
-        </View>
-      </>
-    );
-  }
 
   /* -------------------- READY -------------------- */
   return (
@@ -1275,31 +1173,6 @@ export default function TravelDetails() {
               </View>
             </View>
           </ScrollView>
-
-          {/* ✅ Sticky-панель действий отключена на мобильных, чтобы не мешать чтению */}
-          {/* {isMobile && showStickyActions && (
-            <View
-              testID="travel-details-sticky-actions"
-              pointerEvents="box-none"
-              style={[
-                styles.stickyActionsWrap,
-                {
-                  bottom: stickyActionsBottomOffset,
-                },
-              ]}
-            >
-              <View
-                style={styles.stickyActionsInner}
-                onLayout={(e) => {
-                  const h = e.nativeEvent.layout.height;
-                  setStickyActionsHeight((prev) => (prev === h ? prev : h));
-                }}
-              >
-                <ShareButtons travel={travel} variant="sticky" />
-              </View>
-            </View>
-          )} */}
-            
           {/* ✅ Кнопка "Наверх" */}
           <ScrollToTopButton
             scrollViewRef={scrollRef}
@@ -2146,7 +2019,7 @@ const TravelRelatedContent: React.FC<{
   );
 };
 
-const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boolean }> = ({ travel, isMobile }) => (
+export const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boolean }> = ({ travel, isMobile }) => (
   <>
     <View testID="travel-details-telegram" style={[styles.sectionContainer, styles.authorCardContainer]}>
       <TelegramDiscussionSection travel={travel} />

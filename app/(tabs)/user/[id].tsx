@@ -37,7 +37,7 @@ export default function PublicUserProfileScreen() {
 
   const handleViewTravels = useCallback(() => {
     if (!userId) return;
-    router.push(`/?user_id=${userId}` as any);
+    router.push(`/search?user_id=${encodeURIComponent(userId)}` as any);
   }, [router, userId]);
 
   if (isLoading) {

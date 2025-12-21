@@ -203,9 +203,13 @@ function CompactSideBarTravel({
   // ✅ УЛУЧШЕНИЕ: Группировка пунктов меню по категориям
   const navLinks = navLinksSource ? navLinksSource : buildTravelSectionLinks(travel);
 
-  const handleUserTravels = () =>
-    openUrl(`/?user_id=${(travel as any).userIds ?? (travel as any).userId}`);
-  const handleEdit = () => canEdit && openUrl(`/travel/${travel.id}`);
+  const handleUserTravels = () => {
+    const id = (travel as any).userIds ?? (travel as any).userId;
+    if (id) {
+      openUrl(`/search?user_id=${encodeURIComponent(id)}`);
+    }
+  };
+  const handleEdit = () => canEdit && openUrl(`/travel/${travel.id}/`);
 
   const handleOpenExport = useCallback(() => {
     if (Platform.OS !== 'web') {

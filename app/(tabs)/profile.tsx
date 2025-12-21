@@ -16,7 +16,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
-import { fetchTravels } from '@/src/api/travelsApi';
 import { fetchUserProfile, type UserProfileDto } from '@/src/api/user';
 import { ApiError } from '@/src/api/client';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -106,40 +105,25 @@ export default function ProfileScreen() {
         }
       }
 
-      // ✅ ИСПРАВЛЕНИЕ: Загружаем статистику путешествий из API
-      let travelsCount = 0;
-      if (uid) {
-        try {
-          // Загружаем путешествия пользователя (только опубликованные)
-          const travelsData = await fetchTravels(
-            0, // page
-            1, // itemsPerPage - нам нужен только total
-            '', // search
-            {
-              user_id: uid,
-              publish: 1, // только опубликованные
-              moderation: 1, // только прошедшие модерацию
-            }
-          );
-          travelsCount = travelsData?.total || 0;
-        } catch (error) {
-          console.error('Error loading travels count:', error);
-          // В случае ошибки оставляем 0
-        }
-      }
-
-      // Подсчитываем статистику
-      setStats({
-        travelsCount,
-        favoritesCount: favorites.length,
-        viewsCount: viewHistory.length,
-      });
+      // Подсчитываем статистику (без запроса на путешествия)
+      setStats((prev) => ({
+        ...prev,
+        travelsCount: 0,
+      }));
     } catch (error) {
       console.error('Error loading user data:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [favorites, viewHistory, setUserAvatar, triggerProfileRefresh, userId]);
+  }, [setUserAvatar, triggerProfileRefresh, userId]);
+
+  useEffect(() => {
+    setStats((prev) => ({
+      ...prev,
+      favoritesCount: favorites.length,
+      viewsCount: viewHistory.length,
+    }));
+  }, [favorites.length, viewHistory.length]);
 
   useEffect(() => {
     loadUserData();

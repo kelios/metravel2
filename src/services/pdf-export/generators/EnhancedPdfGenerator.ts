@@ -655,7 +655,7 @@ export class EnhancedPdfGenerator {
     const minusBlocks = travel.minus ? this.parser.parse(travel.minus) : [];
 
     const url = travel.slug
-      ? `https://metravel.by/travels/${travel.slug}`
+      ? `https://metravel.by/travels/${travel.slug}/`
       : travel.url;
 
     const inlineGallery =
@@ -1442,7 +1442,7 @@ export class EnhancedPdfGenerator {
     return Promise.all(
       travels.map((travel) => {
         const url = travel.slug
-          ? `https://metravel.by/travels/${travel.slug}`
+          ? `https://metravel.by/travels/${travel.slug}/`
           : travel.url || '';
         if (!url) return '';
         try {
