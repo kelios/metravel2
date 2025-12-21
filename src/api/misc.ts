@@ -23,7 +23,7 @@ const LONG_TIMEOUT = 30000;
 
 const SAVE_TRAVEL = `${URLAPI}/travels/upsert/`;
 const UPLOAD_IMAGE = `${URLAPI}/upload/`;
-const GALLERY = `${URLAPI}/gallery`;
+const GALLERY = `${URLAPI}/gallery/`;
 const GET_FILTERS = `${URLAPI}/getFiltersTravel/`;
 const GET_FILTERS_COUNTRY = `${URLAPI}/countriesforsearch/`;
 const GET_ALL_COUNTRY = `${URLAPI}/countries/`;
@@ -153,10 +153,13 @@ export const deleteImage = async (imageId: string) => {
 
 export const fetchFilters = async (): Promise<Filters> => {
   try {
+    console.log('Fetching filters from:', GET_FILTERS);
     const res = await fetchWithTimeout(GET_FILTERS, {}, DEFAULT_TIMEOUT);
     const parsed = await safeJsonParse<Filters>(res, [] as unknown as Filters);
+    console.log('Parsed filters:', parsed);
     return parsed;
   } catch (e: any) {
+    console.error('Error fetching filters:', e);
     devError('Error fetching filters:', e);
     return [] as unknown as Filters;
   }

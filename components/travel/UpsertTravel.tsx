@@ -410,7 +410,27 @@ export default function UpsertTravel() {
                     if (prev && Array.isArray(prev.countries) && prev.countries.length > 0) {
                         return prev;
                     }
-                    const normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(filtersData?.categoryTravelAddress);
+                    console.log('Raw filtersData:', filtersData);
+                    console.log('Raw categoryTravelAddress:', filtersData?.categoryTravelAddress);
+                    
+                    let normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(filtersData?.categoryTravelAddress);
+                    
+                    // Fallback: если API не вернул категории точек, используем дефолтные
+                    if (!normalizedCategoryTravelAddress || normalizedCategoryTravelAddress.length === 0) {
+                        console.warn('API returned empty categoryTravelAddress, using fallback values');
+                        normalizedCategoryTravelAddress = [
+                            { id: '1', name: 'Парковка' },
+                            { id: '2', name: 'Отель' },
+                            { id: '3', name: 'Ресторан' },
+                            { id: '4', name: 'Достопримечательность' },
+                            { id: '5', name: 'Смотровая площадка' },
+                            { id: '6', name: 'Заправка' },
+                            { id: '7', name: 'Магазин' },
+                            { id: '8', name: 'Кафе' }
+                        ];
+                    }
+                    
+                    console.log('Normalized categoryTravelAddress:', normalizedCategoryTravelAddress);
                     const normalizedCountries = normalizeCountries(countryData);
                     return {
                         ...filtersData,

@@ -20,7 +20,9 @@ const reverseGeocode = async (latlng: any) => {
             `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latlng.lat}&longitude=${latlng.lng}&localityLanguage=ru`
         );
         if (primary.ok) {
-            return await primary.json();
+            const data = await primary.json();
+            console.log('BigDataCloud geocode response:', data);
+            return data;
         }
     } catch {
         // ignore and fall back
@@ -31,7 +33,9 @@ const reverseGeocode = async (latlng: any) => {
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1&accept-language=ru&extratags=1&namedetails=1`
         );
         if (!response.ok) return null;
-        return await response.json();
+        const data = await response.json();
+        console.log('Nominatim geocode response:', data);
+        return data;
     } catch {
         // Network/parse errors: let caller fallback to empty address
         return null;
@@ -103,15 +107,19 @@ export const buildAddressFromGeocode = (
     latlng: any,
     matchedCountry?: any,
 ) => {
-    // Если есть display_name, используем его как основу
+    console.log('buildAddressFromGeocode called with:', { geocodeData, latlng, matchedCountry });
+    
+    // Если есть display_name (Nominatim), используем его как основу
     if (geocodeData?.display_name) {
         // Очищаем display_name от лишних символов и форматируем
         const displayName = String(geocodeData.display_name)
             .replace(/,\s*/g, ' · ')
             .trim();
         
-        // Если display_name достаточно информативен (больше одного сегмента), возвращаем его
-        if (displayName.includes('·')) {
+        console.log('Formatted display_name:', displayName);
+        
+        // Возвращаем display_name если он не пустой
+        if (displayName) {
             return displayName;
         }
     }
@@ -119,11 +127,13 @@ export const buildAddressFromGeocode = (
     // Если display_name недостаточно информативен, строим адрес из компонентов
     const parts: string[] = [];
 
-    const road = geocodeData?.address?.road;
+    // BigDataCloud использует другую структуру данных
+    const road = geocodeData?.address?.road || geocodeData?.locality;
     const house = geocodeData?.address?.house_number;
     const streetLine = [road, house].filter(Boolean).join(' ');
 
     const city =
+        geocodeData?.city ||
         geocodeData?.address?.city ||
         geocodeData?.address?.town ||
         geocodeData?.address?.village ||
@@ -131,6 +141,7 @@ export const buildAddressFromGeocode = (
         geocodeData?.localityInfo?.locality?.[0]?.name;
 
     const adminRegion =
+        geocodeData?.principalSubdivision ||
         geocodeData?.address?.state ||
         geocodeData?.address?.region ||
         geocodeData?.localityInfo?.administrative?.find((item: any) => item?.order === 2)?.name;
@@ -142,15 +153,18 @@ export const buildAddressFromGeocode = (
     const countryLabel =
         matchedCountry?.title_ru ||
         matchedCountry?.title ||
-        geocodeData?.address?.country ||
         geocodeData?.countryName ||
+        geocodeData?.address?.country ||
         '';
 
-    if (streetLine) parts.push(streetLine);
+    // Добавляем компоненты, избегая дублирования
+    if (streetLine && streetLine !== city) parts.push(streetLine);
     if (city) parts.push(city);
-    if (adminRegion) parts.push(adminRegion);
-    if (adminArea && adminArea !== adminRegion) parts.push(adminArea);
+    if (adminRegion && adminRegion !== countryLabel) parts.push(adminRegion);
+    if (adminArea && adminArea !== adminRegion && adminArea !== countryLabel) parts.push(adminArea);
     if (countryLabel) parts.push(countryLabel);
+
+    console.log('Address parts:', parts);
 
     const separator = ' · ';
     const combined = parts.filter(Boolean).join(separator);

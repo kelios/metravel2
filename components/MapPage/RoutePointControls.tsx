@@ -2,10 +2,12 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
+import type { RoutePoint } from '@/types/route';
+import { CoordinateConverter } from '@/utils/coordinateConverter';
 
 interface RoutePointControlsProps {
-  routePoints: [number, number][];
-  onRemovePoint: (index: number) => void;
+  routePoints: RoutePoint[];
+  onRemovePoint: (id: string) => void;
   onClearRoute: () => void;
 }
 
@@ -37,29 +39,49 @@ export default function RoutePointControls({
       </View>
       
       <View style={styles.pointsList}>
-        {routePoints.map((point, index) => (
-          <View key={index} style={styles.pointItem}>
-            <View style={[styles.pointMarker, index === 0 ? styles.pointMarkerStart : styles.pointMarkerEnd]}>
-              <Text style={styles.pointNumber}>{index === 0 ? 'S' : 'E'}</Text>
+        {routePoints.map((point, index) => {
+          const getPointLabel = () => {
+            if (point.type === 'start') return 'Старт';
+            if (point.type === 'end') return 'Финиш';
+            return `Точка ${index}`;
+          };
+
+          const getMarkerStyle = () => {
+            if (point.type === 'start') return styles.pointMarkerStart;
+            if (point.type === 'end') return styles.pointMarkerEnd;
+            return styles.pointMarkerWaypoint;
+          };
+
+          const getMarkerLabel = () => {
+            if (point.type === 'start') return 'S';
+            if (point.type === 'end') return 'E';
+            return String(index);
+          };
+
+          return (
+            <View key={point.id} style={styles.pointItem}>
+              <View style={[styles.pointMarker, getMarkerStyle()]}>
+                <Text style={styles.pointNumber}>{getMarkerLabel()}</Text>
+              </View>
+              <View style={styles.pointInfo}>
+                <Text style={styles.pointLabel}>
+                  {getPointLabel()}
+                </Text>
+                <Text style={styles.pointCoords} numberOfLines={1}>
+                  {point.address || CoordinateConverter.formatCoordinates(point.coordinates)}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => onRemovePoint(point.id)}
+                style={styles.removeButton}
+                accessibilityRole="button"
+                accessibilityLabel={`Удалить ${getPointLabel()}`}
+              >
+                <Feather name="x-circle" size={18} color="#d94b4b" />
+              </Pressable>
             </View>
-            <View style={styles.pointInfo}>
-              <Text style={styles.pointLabel}>
-                {index === 0 ? 'Старт' : 'Финиш'}
-              </Text>
-              <Text style={styles.pointCoords} numberOfLines={1}>
-                {point[1].toFixed(4)}, {point[0].toFixed(4)}
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => onRemovePoint(index)}
-              style={styles.removeButton}
-              accessibilityRole="button"
-              accessibilityLabel={`Удалить точку ${index + 1}`}
-            >
-              <Feather name="x-circle" size={18} color="#d94b4b" />
-            </Pressable>
-          </View>
-        ))}
+          );
+        })}
       </View>
     </View>
   );
@@ -131,6 +153,9 @@ const styles = StyleSheet.create({
   },
   pointMarkerEnd: {
     backgroundColor: '#d94b4b',
+  },
+  pointMarkerWaypoint: {
+    backgroundColor: '#2b6cb0',
   },
   pointNumber: {
     color: '#fff',

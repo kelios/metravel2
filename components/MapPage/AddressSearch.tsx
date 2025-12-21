@@ -11,10 +11,11 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import type { LatLng } from '@/types/coordinates';
 
 interface AddressSearchProps {
   placeholder?: string;
-  onAddressSelect: (address: string, coords: [number, number]) => void;
+  onAddressSelect: (address: string, coords: LatLng) => void;
   value?: string;
   label?: string;
 }
@@ -102,7 +103,10 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
 
   const handleSelectResult = useCallback(
     (result: SearchResult) => {
-      const coords: [number, number] = [parseFloat(result.lon), parseFloat(result.lat)];
+      const coords: LatLng = {
+        lat: parseFloat(result.lat),
+        lng: parseFloat(result.lon),
+      };
       setQuery(result.display_name);
       setShowResults(false);
       setResults([]);

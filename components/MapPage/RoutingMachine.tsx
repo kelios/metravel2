@@ -81,15 +81,13 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             setRouteDistance(routingState.distance)
             setFullRouteCoords(routingState.coords)
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         routingState.loading,
         routingState.error,
         routingState.distance,
         coordsKeyForSync,
-        setRoutingLoading,
-        setErrors,
-        setRouteDistance,
-        setFullRouteCoords
+        // Не включаем setters в зависимости - они стабильны
     ])
 
     // Draw polyline on map (separate effect)

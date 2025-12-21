@@ -22,8 +22,12 @@ import MapLegend from '@/components/MapPage/MapLegend';
 import RouteStats from '@/components/MapPage/RouteStats';
 import RouteHint from '@/components/MapPage/RouteHint';
 import AddressSearch from '@/components/MapPage/AddressSearch';
+import ValidationMessage from '@/components/MapPage/ValidationMessage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { globalFocusStyles } from '@/styles/globalFocus';
+import type { RoutePoint } from '@/types/route';
+import type { LatLng } from '@/types/coordinates';
+import { RouteValidator } from '@/utils/routeValidator';
 
 // ✅ ИСПРАВЛЕНИЕ: Используем единую палитру DESIGN_TOKENS вместо локальной COLORS
 const COLORS = {
@@ -79,12 +83,12 @@ interface FiltersPanelProps {
   startAddress: string;
   endAddress: string;
   routeDistance: number | null;
-  routePoints?: [number, number][];
-  onRemoveRoutePoint?: (index: number) => void;
+  routePoints?: RoutePoint[];
+  onRemoveRoutePoint?: (id: string) => void;
   onClearRoute?: () => void;
   routeHintDismissed?: boolean;
   onRouteHintDismiss?: () => void;
-  onAddressSelect?: (address: string, coords: [number, number], isStart: boolean) => void;
+  onAddressSelect?: (address: string, coords: LatLng, isStart: boolean) => void;
 }
 
 const FiltersPanel: React.FC<FiltersPanelProps> = ({
@@ -112,6 +116,14 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                                    }) => {
   const windowWidth = Dimensions.get('window').width;
   const styles = useMemo(() => getStyles(isMobile, windowWidth), [isMobile, windowWidth]);
+  
+  // ✅ NEW: Validate route points
+  const validation = useMemo(() => {
+    if (mode === 'route' && routePoints && routePoints.length > 0) {
+      return RouteValidator.validate(routePoints);
+    }
+    return { valid: true, errors: [], warnings: [] };
+  }, [mode, routePoints]);
 
   // Компактная кнопка теперь внутри компонента — видит styles
   const CompactButton = React.useMemo(() => {
@@ -410,6 +422,14 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   onAddressSelect={(address, coords) => onAddressSelect(address, coords, false)}
                 />
               </View>
+            )}
+
+            {/* ✅ NEW: Validation messages */}
+            {!validation.valid && (
+              <ValidationMessage type="error" messages={validation.errors} />
+            )}
+            {validation.warnings.length > 0 && (
+              <ValidationMessage type="warning" messages={validation.warnings} />
             )}
 
             {/* Транспорт */}

@@ -32,6 +32,7 @@ import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/src/utils/filte
 import { useResponsive } from '@/hooks/useResponsive';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
 import ErrorDisplay from '@/components/ErrorDisplay';
+import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 
 interface Coordinates { latitude: number; longitude: number; }
 interface FilterValues { categories: string[]; radius: string; address: string; }
@@ -61,13 +62,30 @@ export default function MapScreen() {
         radius: '60', // Радиус по умолчанию 60 км
         address: '',
     });
-    const [routePoints, setRoutePoints] = useState<[number, number][]>([]);
-    const [mode, setMode] = useState<'radius' | 'route'>('radius');
-    const [transportMode, setTransportMode] = useState<'car' | 'bike' | 'foot'>('car');
-    const [routeDistance, setRouteDistance] = useState<number | null>(null);
-    const [fullRouteCoords, setFullRouteCoords] = useState<[number, number][]>([]);
-    const [startAddress, setStartAddress] = useState('');
-    const [endAddress, setEndAddress] = useState('');
+    
+    // ✅ NEW: Use RouteStore via adapter for route state management
+    const routeStore = useRouteStoreAdapter();
+    const {
+        mode,
+        setMode,
+        transportMode,
+        setTransportMode,
+        routePoints,
+        startAddress,
+        endAddress,
+        routeDistance,
+        fullRouteCoords,
+        setRoutePoints,
+        setRouteDistance,
+        setFullRouteCoords,
+        handleRemoveRoutePoint,
+        handleClearRoute,
+        handleAddressSelect,
+        points: routeStorePoints,
+        isBuilding: routingLoading,
+        error: routingError,
+    } = routeStore;
+    
     const [rightPanelTab, setRightPanelTab] = useState<'filters' | 'travels'>('filters');
     const [rightPanelVisible, setRightPanelVisible] = useState(true);
     const [routeHintDismissed, setRouteHintDismissed] = useState(false);
@@ -299,35 +317,11 @@ export default function MapScreen() {
     const handleMapClick = useCallback((lng: number, lat: number) => {
         if (mode === 'route' && routePoints.length < 2) {
             const newPoint: [number, number] = [lng, lat];
-            if (routePoints.length === 0) {
-                setRoutePoints([newPoint]);
-                setStartAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-            } else {
-                setRoutePoints([routePoints[0], newPoint]);
-                setEndAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-            }
+            setRoutePoints([...routePoints, newPoint]);
         }
-    }, [mode, routePoints]);
+    }, [mode, routePoints, setRoutePoints]);
 
-    const handleRemoveRoutePoint = useCallback((index: number) => {
-        setRoutePoints(prev => prev.filter((_, i) => i !== index));
-        if (index === 0) {
-            setStartAddress('');
-        } else {
-            setEndAddress('');
-        }
-        if (routePoints.length === 2) {
-            setRouteDistance(null);
-        }
-    }, [routePoints.length]);
-
-    const handleClearRoute = useCallback(() => {
-        setRoutePoints([]);
-        setStartAddress('');
-        setEndAddress('');
-        setRouteDistance(null);
-        setFullRouteCoords([]);
-    }, []);
+    // handleRemoveRoutePoint and handleClearRoute now come from routeStore adapter
 
     const buildRouteTo = useCallback((item: any) => {
         if (item.coord) {
@@ -336,31 +330,8 @@ export default function MapScreen() {
         }
     }, []);
 
-    const handleSetFullRouteCoords = useCallback((coords: [number, number][]) => {
-        setFullRouteCoords(coords);
-    }, []);
-
-    const handleAddressSelect = useCallback((address: string, coords: [number, number], isStart: boolean) => {
-        if (isStart) {
-            setStartAddress(address);
-            if (routePoints.length === 0) {
-                setRoutePoints([coords]);
-            } else if (routePoints.length === 1) {
-                setRoutePoints([coords, routePoints[0]]);
-            } else {
-                setRoutePoints([coords, routePoints[1]]);
-            }
-        } else {
-            setEndAddress(address);
-            if (routePoints.length === 0) {
-                setRoutePoints([coords]);
-            } else if (routePoints.length === 1) {
-                setRoutePoints([routePoints[0], coords]);
-            } else {
-                setRoutePoints([routePoints[0], coords]);
-            }
-        }
-    }, [routePoints]);
+    // handleAddressSelect now comes from routeStore adapter
+    const handleSetFullRouteCoords = setFullRouteCoords;
 
     // ✅ РЕАЛИЗАЦИЯ: Фильтрация данных на фронтенде по выбранным категориям
     const travelsData = useMemo(() => {
@@ -560,8 +531,8 @@ export default function MapScreen() {
                                     startAddress={startAddress}
                                     endAddress={endAddress}
                                     routeDistance={routeDistance}
-                                    routePoints={routePoints}
-                                    onRemoveRoutePoint={handleRemoveRoutePoint}
+                                    routePoints={routeStorePoints}
+                                    onRemoveRoutePoint={(id: string) => routeStore.removePoint(id)}
                                     onClearRoute={handleClearRoute}
                                     routeHintDismissed={routeHintDismissed}
                                     onRouteHintDismiss={() => setRouteHintDismissed(true)}
@@ -619,12 +590,15 @@ export default function MapScreen() {
 const getStyles = (isMobile: boolean, insetTop: number) => StyleSheet.create({
     container: {
         flex: 1,
-        ...(Platform.OS === 'web' ? ({ height: '100vh', minHeight: '100vh' } as any) : null),
+        ...(Platform.OS === 'web' ? ({ 
+            height: '100vh',           // растягиваем на высоту окна
+            minHeight: '100vh',
+            paddingTop: 88,            // отступ под хедер (резерв высоты хедера)
+        } as any) : null),
         backgroundColor: '#f5f5f5',
     },
     content: {
         flex: 1,
-        ...(Platform.OS === 'web' ? ({ height: '100vh', minHeight: '100vh' } as any) : null),
         position: 'relative',
     },
     togglePanelButton: {
