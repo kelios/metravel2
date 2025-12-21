@@ -35,8 +35,8 @@ export default function FiltersPanelCollapsible({
   isSuperuser = false,
   isExpanded = false,
   isHidden = false,
-  onToggleExpanded,
-  onToggleHidden,
+  onToggleExpanded: _onToggleExpanded,
+  onToggleHidden: _onToggleHidden,
   isMobile = false,
 }: FiltersPanelCollapsibleProps) {
   if (isHidden) return null;

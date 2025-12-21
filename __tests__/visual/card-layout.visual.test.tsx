@@ -27,13 +27,10 @@ describe('Card Layout Visual Tests', () => {
   describe('Margin and Padding', () => {
     it('should have correct marginBottom on mobile', () => {
       // ✅ ИСПРАВЛЕНО: marginBottom теперь только из enhancedTravelCardStyles
-      const expectedMarginBottom = 12; // mobile
-      const spacingSm = DESIGN_TOKENS.spacing.sm; // 12px
-      
       // Раньше было: 12px + 12px = 24px (ПРОБЛЕМА)
       // Теперь: 12px (ПРАВИЛЬНО)
-      expect(expectedMarginBottom).toBe(12);
-      expect(spacingSm).toBe(12);
+      expect(12).toBe(12);
+      expect(DESIGN_TOKENS.spacing.sm).toBe(12);
     });
 
     it('should not have double marginBottom', () => {
@@ -44,9 +41,6 @@ describe('Card Layout Visual Tests', () => {
       const originalOS = Platform.OS;
       (Platform as any).OS = 'web';
 
-      const expectedMarginBottom = Platform.select({ default: 12, web: 16 });
-      const spacingSm = DESIGN_TOKENS.spacing.sm; // 10px
-      
       const queryClient = new QueryClient({
         defaultOptions: {
           queries: { retry: false },
@@ -113,7 +107,6 @@ describe('Card Layout Visual Tests', () => {
       
       const navigationHeight = 60;
       const safeAreaBottom = 20;
-      const additionalPadding = 20;
       const minimumPaddingBottom = navigationHeight + safeAreaBottom;
       const recommendedPaddingBottom = 100;
       

@@ -2,9 +2,8 @@
 // ✅ РЕДИЗАЙН: Блок вкладок для переключения между разделами
 
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface Tab {

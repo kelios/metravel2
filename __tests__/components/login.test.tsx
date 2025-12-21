@@ -1,10 +1,8 @@
-import React from 'react';
-import { render, fireEvent, waitFor, screen } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { TextInput } from 'react-native';
 import Login from '@/app/(tabs)/login';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@/context/AuthContext';
 
 // Polyfill for Formik / DOM usage in Jest + React Native environment
 // Formik references HTMLButtonElement in its internals, which is not defined in jsdom for RN tests.

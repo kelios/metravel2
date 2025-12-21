@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { optimizeLCPImage, ultraCriticalCSS } from '@/utils/advancedPerformanceOptimization';
 
@@ -60,7 +60,7 @@ export function OptimizedLCPImage({
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1];
-        console.log(`[LCP] Optimized image loaded in: ${lastEntry.startTime.toFixed(2)}ms`);
+        console.info(`[LCP] Optimized image loaded in: ${lastEntry.startTime.toFixed(2)}ms`);
       });
       observer.observe({ entryTypes: ['largest-contentful-paint'] });
     }

@@ -22,7 +22,7 @@ export default function PhotoGalleryPage({
     return { cols: 4, rows: Math.ceil(count / 4) };
   };
 
-  const { cols, rows } = getGridLayout(photos.length);
+  const { cols } = getGridLayout(photos.length);
   const gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
   return (

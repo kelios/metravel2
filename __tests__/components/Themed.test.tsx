@@ -1,6 +1,6 @@
 import React from 'react'
 import { render } from '@testing-library/react-native'
-import { Text, View, Button, useThemeColor } from '@/components/Themed'
+import { Text, View, Button } from '@/components/Themed'
 
 describe('Themed Components', () => {
   it('Text renders correctly', () => {

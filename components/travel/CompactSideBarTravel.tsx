@@ -74,6 +74,8 @@ function CompactSideBarTravel({
                                 links,
 }: SideBarProps) {
   const { isTablet } = useResponsive();
+  const travelAddress = travel.travelAddress;
+  const navLinksSource = Array.isArray(links) && links.length ? links : null;
   const [active, setActive] = useState<string>("");
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const {
@@ -164,18 +166,18 @@ function CompactSideBarTravel({
 
   // Извлекаем координаты из travelAddress
   const firstCoord = useMemo(() => {
-    if (travel.travelAddress && Array.isArray(travel.travelAddress) && travel.travelAddress.length > 0) {
-      const first = travel.travelAddress[0] as any;
+    if (travelAddress && Array.isArray(travelAddress) && travelAddress.length > 0) {
+      const first = travelAddress[0] as any;
       return first?.coord || first?.coordsMeTravel?.[0] || null;
     }
     return null;
-  }, [travel.travelAddress]);
+  }, [travelAddress]);
 
   // Извлекаем категории
   const categories = useMemo(() => {
-    if (travel.travelAddress && Array.isArray(travel.travelAddress)) {
+    if (travelAddress && Array.isArray(travelAddress)) {
       const cats = new Set<string>();
-      travel.travelAddress.forEach((addr: any) => {
+      travelAddress.forEach((addr: any) => {
         if (addr?.categoryName) {
           // ✅ ИСПРАВЛЕНИЕ: Обрабатываем случай, когда categoryName может быть объектом с {id, name}
           let categoryNameStr: string;
@@ -194,12 +196,12 @@ function CompactSideBarTravel({
       return Array.from(cats);
     }
     return [];
-  }, [travel.travelAddress]);
+  }, [travelAddress]);
 
   // ✅ УЛУЧШЕНИЕ: Группировка пунктов меню по категориям
   const navLinks = useMemo(
-    () => (Array.isArray(links) && links.length ? links : buildTravelSectionLinks(travel)),
-    [links, travel]
+    () => (navLinksSource ? navLinksSource : buildTravelSectionLinks(travel)),
+    [navLinksSource, travel]
   );
 
   const handleUserTravels = () =>
@@ -451,7 +453,7 @@ function CompactSideBarTravel({
                     currentActive === key && styles.linkActive,
                     pressed && styles.linkPressed,
                   ]}
-                  onPress={() => setActiveNavigateAndOpen(key as keyof typeof refs)}
+                  onPress={() => setActiveNavigateAndOpen(key as keyof SideBarProps["refs"])}
                   android_ripple={{ color: "#E7DAC6" }}
                   accessibilityRole="button"
                   accessibilityLabel={label}

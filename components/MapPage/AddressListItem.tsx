@@ -13,7 +13,6 @@ import { Text, IconButton } from 'react-native-paper';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 import { TravelCoords } from '@/src/types/types';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import PopupContentComponent from './PopupContentComponent';
 import { useResponsive } from '@/hooks/useResponsive';

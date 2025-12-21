@@ -5,7 +5,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Linking,
   KeyboardAvoidingView,
   Platform,
@@ -15,13 +14,12 @@ import {
   StatusBar,
 } from 'react-native';
 import { Title, Paragraph } from 'react-native-paper';
-import { usePathname, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import InstantSEO from '@/components/seo/InstantSEO';
 import { sendFeedback } from '@/src/api/misc';
 import { useIsFocused } from '@react-navigation/native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus'; 
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -43,7 +41,6 @@ function AboutAndContactScreen() {
 
   const router = useRouter();
 
-  const pathname = usePathname();
   const isFocused = useIsFocused();
   const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
   // стабильный canonical и ключ для <head>
@@ -72,13 +69,6 @@ function AboutAndContactScreen() {
     setAgree(false);
     setTouched({});
     setHp('');
-  };
-
-  const validate = () => {
-    if (!name.trim() || !email.trim() || !message.trim()) return false;
-    if (!isEmailValid(email)) return false;
-    if (!agree) return false;
-    return true;
   };
 
   const handleSubmit = useCallback(async () => {

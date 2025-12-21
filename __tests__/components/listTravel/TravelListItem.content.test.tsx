@@ -13,7 +13,7 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('expo-image', () => ({
-  Image: ({ testID }: { testID?: string }) => <></>,
+  Image: ({ testID: _testID }: { testID?: string }) => <></>,
 }));
 
 const baseTravel: Travel = {
@@ -54,7 +54,6 @@ const renderItem = (overrides: Partial<Travel> = {}) => {
             travel={travel}
             currentUserId={null}
             isSuperuser={false}
-            isMetravel={false}
             isMobile={false}
           />
         </FavoritesProvider>

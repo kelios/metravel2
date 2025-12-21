@@ -134,6 +134,7 @@ const MapPageComponent: React.FC<Props> = ({
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(max-width: 768px)').matches;
   });
+  const travelData = useMemo(() => (Array.isArray(travel?.data) ? travel.data : []), [travel?.data]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -399,6 +400,22 @@ const MapPageComponent: React.FC<Props> = ({
     const map = useMap();
     useMapEvents({ click: handleMapClick });
     const [hasCenteredOnData, setHasCenteredOnData] = useState(false);
+    const fitBoundsPoints = useMemo<[number, number][]>(() => {
+      const points: [number, number][] = [];
+
+      if (travelData.length > 0) {
+        const travelPoints = travelData
+          .map((p) => strToLatLng(p.coord))
+          .filter(Boolean) as [number, number][];
+        points.push(...travelPoints);
+      }
+
+      if (points.length === 0 && userLocation) {
+        points.push([userLocation.longitude, userLocation.latitude]);
+      }
+
+      return points;
+    }, [travelData, userLocation]);
     
     // Сохраняем ссылку на карту
     useEffect(() => {
@@ -499,43 +516,24 @@ const MapPageComponent: React.FC<Props> = ({
     }, [map]);
 
     // Автоматическое подгонка границ при изменении данных (но только если не отключено)
+    const shouldFitBounds = !disableFitBounds && mode !== 'route';
+
     useEffect(() => {
-      if (disableFitBounds || !map) return;
-      
-      // ✅ ИСПРАВЛЕНИЕ: В режиме route НИКОГДА не делаем автоматический зум
-      // Это предотвращает зум при клике на старт/финиш и при переключении вкладок
-      if (mode === 'route') return;
+      if (!map || !shouldFitBounds) return;
 
       // Защита от отсутствия Leaflet в тестовой/серверной среде
       if (!L || typeof (L as any).latLngBounds !== 'function' || typeof (L as any).latLng !== 'function') {
         return;
       }
 
-      const allPoints: [number, number][] = [];
-      
-      // Добавляем точки путешествий
-      if (travel.data && travel.data.length > 0) {
-        const travelPoints = (travel.data || [])
-          .map((p) => strToLatLng(p.coord))
-          .filter(Boolean) as [number, number][];
-        allPoints.push(...travelPoints);
-      }
-      
-      // ✅ ИСПРАВЛЕНИЕ: Не добавляем местоположение пользователя при установке точек маршрута
-      // Это предотвращает нежелательный зум к текущему местоположению
-      // Добавляем местоположение пользователя ТОЛЬКО если нет других точек
-      if (allPoints.length === 0 && userLocation) {
-        allPoints.push([userLocation.longitude, userLocation.latitude]);
-      }
-
-      if (allPoints.length > 0) {
+      if (fitBoundsPoints.length > 0) {
         const bounds = L.latLngBounds(
-          allPoints.map(([lng, lat]) => L.latLng(lat, lng))
+          fitBoundsPoints.map(([lng, lat]) => L.latLng(lat, lng))
         );
         map.fitBounds(bounds.pad(0.2), { animate: !hasCenteredOnData });
         setHasCenteredOnData(true);
       }
-    }, [map]);
+    }, [L, fitBoundsPoints, hasCenteredOnData, map, shouldFitBounds]);
 
     return null;
   };
@@ -714,9 +712,9 @@ const MapPageComponent: React.FC<Props> = ({
           )}
 
           {/* ✅ ИСПРАВЛЕНИЕ: Маркеры путешествий - всегда оранжевые стандартные */}
-          {customIcons?.meTravel && travel?.data && Array.isArray(travel.data) && travel.data.length > 0 && (
+          {customIcons?.meTravel && travelData.length > 0 && (
             <TravelMarkersMemo
-              points={travel.data}
+              points={travelData}
               icon={customIcons.meTravel}
               Marker={Marker}
               Popup={Popup}
@@ -778,12 +776,6 @@ const Loader: React.FC<{ message: string }> = ({ message }) => (
     <View style={styles.loader}>
       <ActivityIndicator size="large" />
       <Text>{message}</Text>
-    </View>
-);
-
-const Error: React.FC<{ message: string }> = ({ message }) => (
-    <View style={styles.loader}>
-      <Text style={styles.errorText}>{message}</Text>
     </View>
 );
 

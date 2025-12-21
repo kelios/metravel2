@@ -1,7 +1,6 @@
 import {
   Button as DefaultButton,
   ButtonProps as RNButtonProps,
-  StyleSheet,
   Text as DefaultText,
   TextProps as RNTextProps,
   useColorScheme,
@@ -60,5 +59,3 @@ export function Button(props: ButtonProps) {
 
   return <DefaultButton color={color} {...otherProps} />;
 }
-
-const styles = StyleSheet.create({});

@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import MapPanel from '@/components/MapPage/MapPanel';

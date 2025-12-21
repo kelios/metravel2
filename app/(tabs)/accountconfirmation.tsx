@@ -35,7 +35,7 @@ export default function AccountConfirmation() {
         if (hash) {
             confirm();
         }
-    }, [hash]);
+    }, [hash, router, setIsAuthenticated]);
 
     return (
         <View style={styles.container}>

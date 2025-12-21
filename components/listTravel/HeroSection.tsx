@@ -1,5 +1,5 @@
 // HeroSection.tsx
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, memo } from 'react';
 import {
   View,
   Text,

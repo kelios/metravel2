@@ -2,7 +2,7 @@
 // ✅ УЛУЧШЕНИЕ: Модальное окно настроек фотоальбома
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, TextInput, Platform } from 'react-native';
+import { Modal, Platform } from 'react-native';
 import ThemePreview from './ThemePreview';
 import PresetSelector from './PresetSelector';
 import GalleryLayoutSelector from './GalleryLayoutSelector';
@@ -126,7 +126,7 @@ export default function BookSettingsModal({
   defaultSettings,
   travelCount,
   userName,
-  mode = 'save',
+  mode: _mode = 'save',
 }: BookSettingsModalProps) {
   const [settings, setSettings] = useState<BookSettings>(() =>
     buildInitialSettings(defaultSettings, userName)

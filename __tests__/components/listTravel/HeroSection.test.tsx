@@ -23,7 +23,7 @@ jest.mock('expo-linear-gradient', () => ({
 
 // Mock Feather icons
 jest.mock('@expo/vector-icons', () => ({
-  Feather: ({ name, size, color, ...props }: any) => {
+  Feather: ({ name, ...props }: any) => {
     const { View, Text } = require('react-native');
     return (
       <View testID={`feather-${name}`} {...props}>

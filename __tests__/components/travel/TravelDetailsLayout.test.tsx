@@ -2,14 +2,7 @@
  * @jest-environment jsdom
  */
 
-import React from 'react';
-import { render } from '@testing-library/react-native';
 import { Platform } from 'react-native';
-
-// Mock компонент для тестирования
-const MockTravelDetails = ({ children }: { children: React.ReactNode }) => {
-  return <>{children}</>;
-};
 
 describe('TravelDetailsLayout', () => {
   describe('Sidebar Width Tests', () => {

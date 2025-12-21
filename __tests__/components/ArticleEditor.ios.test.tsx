@@ -67,16 +67,6 @@ describe('ArticleEditor.ios Component', () => {
     jest.clearAllMocks();
   });
 
-  const makeEditorReady = (getByTestId: any) => {
-    const webView = getByTestId('editor-webview');
-    fireEvent(webView, 'message', {
-      nativeEvent: {
-        data: JSON.stringify({ type: 'ready' }),
-      },
-    });
-    return webView;
-  };
-
   const renderComponent = (props = {}) => render(
     <ArticleEditor
       content=""

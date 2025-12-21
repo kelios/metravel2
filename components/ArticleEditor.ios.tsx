@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
@@ -225,7 +224,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
         html: content
       }));
     }
-  }, [content, isReady]);
+  }, [content, html, isReady]);
 
   // Очистка таймера при размонтировании
   useEffect(() => {

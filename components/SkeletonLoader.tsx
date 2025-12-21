@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Platform, ViewStyle, StyleProp } from 'react-native';
+import React from 'react';
+import { View, StyleSheet, Platform, ViewStyle, StyleProp } from 'react-native';
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
 import { BREAKPOINTS, TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT, TRAVEL_CARD_WEB_MOBILE_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -68,8 +68,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
  * ✅ ИСПРАВЛЕНИЕ: Высоты должны совпадать с реальными карточками
  */
 export const TravelCardSkeleton: React.FC = () => {
-  const { width, isPhone, isLargePhone } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
+  const { width } = useResponsive();
 
   // ✅ FIX: Унифицированная высота изображения с реальными карточками и учетом маленьких экранов
   const imageHeight = TRAVEL_CARD_IMAGE_HEIGHT;

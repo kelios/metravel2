@@ -9,7 +9,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AIRY_COLORS } from '@/constants/airyColors';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
-import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 
 const COLLAPSED_KEY = 'personalization_collapsed';
@@ -45,19 +44,6 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
         };
         checkCollapsed();
     }, []);
-
-    const handleCollapse = useCallback(() => {
-        setIsCollapsed(true);
-        if (Platform.OS === 'web') {
-            sessionStorage.setItem(COLLAPSED_KEY, 'true');
-        } else {
-            AsyncStorage.setItem(COLLAPSED_KEY, 'true');
-        }
-        // Уведомляем родителя о сворачивании
-        if (onVisibilityChange) {
-            onVisibilityChange(false);
-        }
-    }, [onVisibilityChange]);
 
     const handleExpand = useCallback(() => {
         setIsCollapsed(false);

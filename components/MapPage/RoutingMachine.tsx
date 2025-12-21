@@ -1,5 +1,5 @@
 // components/MapPage/RoutingMachine.tsx
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 interface RoutingMachineProps {
     map: any
@@ -51,10 +51,6 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
     useEffect(() => {
         const L = (window as any).L
         if (!map || !L) return
-        const avoidAutoFit = typeof window !== 'undefined'
-            ? window.matchMedia('(max-width: 768px)').matches
-            : false
-
         // если точек недостаточно — убираем линию и выходим
         if (!hasTwoPoints) {
             if (polylineRef.current) {

@@ -30,11 +30,7 @@ const AuthorProgress = ({ userId, compact = false }: AuthorProgressProps) => {
   const [currentXP, setCurrentXP] = useState(0);
   const [currentLevel, setCurrentLevel] = useState<AuthorLevel>(AUTHOR_LEVELS[0]);
 
-  useEffect(() => {
-    loadXP();
-  }, [userId]);
-
-  const loadXP = async () => {
+  const loadXP = useCallback(async () => {
     try {
       const xpData = await AsyncStorage.getItem(STORAGE_KEY_XP);
       if (xpData) {
@@ -45,7 +41,11 @@ const AuthorProgress = ({ userId, compact = false }: AuthorProgressProps) => {
     } catch (error) {
       console.error('Error loading XP:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadXP();
+  }, [userId, loadXP]);
 
   const updateLevel = (xp: number) => {
     const level = AUTHOR_LEVELS.find((l) => xp >= l.minXP && xp < l.maxXP) || AUTHOR_LEVELS[0];
@@ -313,7 +313,7 @@ export const addExperience = async (xp: number, reason?: string) => {
     await AsyncStorage.setItem(STORAGE_KEY_XP, newXP.toString());
     
     // Здесь можно показать уведомление о получении опыта
-    console.log(`+${xp} XP${reason ? ` за ${reason}` : ''}`);
+    console.info(`+${xp} XP${reason ? ` за ${reason}` : ''}`);
     
     return newXP;
   } catch (error) {

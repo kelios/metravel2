@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { TouchableOpacity, StyleSheet, Platform, AppState, Pressable, View } from 'react-native';
+import { TouchableOpacity, StyleSheet, Platform, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { useFavorites } from '@/context/FavoritesContext';

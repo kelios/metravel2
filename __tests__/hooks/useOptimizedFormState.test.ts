@@ -114,11 +114,7 @@ describe('useOptimizedFormState', () => {
     });
 
     await act(async () => {
-      try {
-        await result.current.save();
-      } catch (error) {
-        // Expected to throw
-      }
+      await expect(result.current.save()).rejects.toThrow('Save failed');
     });
 
     expect(mockOnError).toHaveBeenCalled();

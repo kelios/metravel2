@@ -70,6 +70,58 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
     setIsInitialLoading(false);
   }, [initialImages]);
 
+  const handleUploadImages = useCallback(
+    async (assets: ImagePicker.ImagePickerAsset[]) => {
+      if (images.length + assets.length > maxImages) {
+        Alert.alert('Лимит', `Максимум ${maxImages} изображений`);
+        return;
+      }
+
+      setIsUploading(true);
+      const newLoading = [...loading];
+
+      const uploads = assets.map(async (asset, index) => {
+        const currentIndex = images.length + index;
+        newLoading[currentIndex] = true;
+        setLoading([...newLoading]);
+
+        try {
+          const formData = new FormData();
+          const uri = asset.uri;
+          const filename = uri.split('/').pop() || 'image.jpg';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+          formData.append('file', {
+            uri,
+            name: filename,
+            type,
+          } as any);
+          formData.append('collection', collection);
+          formData.append('id', idTravel);
+
+          const response = await uploadImage(formData);
+          if (response?.url) {
+            setImages((prev) => [
+              ...prev,
+              { id: response.id, url: ensureAbsoluteUrl(String(response.url)) },
+            ]);
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          Alert.alert('Ошибка', 'Не удалось загрузить изображение');
+        } finally {
+          newLoading[currentIndex] = false;
+          setLoading([...newLoading]);
+        }
+      });
+
+      await Promise.all(uploads);
+      setIsUploading(false);
+    },
+    [images, loading, collection, idTravel, maxImages]
+  );
+
   const handlePickImages = useCallback(async () => {
     if (images.length >= maxImages) {
       Alert.alert('Лимит', `Максимум ${maxImages} изображений`);
@@ -130,58 +182,6 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
     }
   }, [handleUploadImages, images.length, maxImages]);
 
-  const handleUploadImages = useCallback(
-    async (assets: ImagePicker.ImagePickerAsset[]) => {
-      if (images.length + assets.length > maxImages) {
-        Alert.alert('Лимит', `Максимум ${maxImages} изображений`);
-        return;
-      }
-
-      setIsUploading(true);
-      const newLoading = [...loading];
-
-      const uploads = assets.map(async (asset, index) => {
-        const currentIndex = images.length + index;
-        newLoading[currentIndex] = true;
-        setLoading([...newLoading]);
-
-        try {
-          const formData = new FormData();
-          const uri = asset.uri;
-          const filename = uri.split('/').pop() || 'image.jpg';
-          const match = /\.(\w+)$/.exec(filename);
-          const type = match ? `image/${match[1]}` : 'image/jpeg';
-
-          formData.append('file', {
-            uri,
-            name: filename,
-            type,
-          } as any);
-          formData.append('collection', collection);
-          formData.append('id', idTravel);
-
-          const response = await uploadImage(formData);
-          if (response?.url) {
-            setImages((prev) => [
-              ...prev,
-              { id: response.id, url: ensureAbsoluteUrl(String(response.url)) },
-            ]);
-          }
-        } catch (error) {
-          console.error('Upload error:', error);
-          Alert.alert('Ошибка', 'Не удалось загрузить изображение');
-        } finally {
-          newLoading[currentIndex] = false;
-          setLoading([...newLoading]);
-        }
-      });
-
-      await Promise.all(uploads);
-      setIsUploading(false);
-    },
-    [images, loading, collection, idTravel, maxImages]
-  );
-
   const handleDeleteImage = (imageId: string) => {
     setSelectedImageId(imageId);
     setDialogVisible(true);
@@ -192,8 +192,9 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
     try {
       await deleteImage(selectedImageId);
       setImages((prev) => prev.filter((img) => img.id !== selectedImageId));
-    } catch (_error) {
+    } catch (error) {
       Alert.alert('Ошибка', 'Не удалось удалить изображение');
+      console.error('Error deleting image:', error);
     } finally {
       setDialogVisible(false);
       setSelectedImageId(null);

@@ -1,5 +1,5 @@
 import React, {useState} from 'react'
-import {Dimensions, Image, StyleSheet, TextInput, View, Text, Platform} from 'react-native'
+import {Image, StyleSheet, TextInput, View, Text, Platform} from 'react-native'
 import {Button, Card} from 'react-native-paper'
 import {useNavigation} from '@react-navigation/native'
 import {useRoute} from "@react-navigation/core";
@@ -10,8 +10,6 @@ import FormFieldWithValidation from '@/components/FormFieldWithValidation'; // �
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
-
-const {width, height} = Dimensions.get('window')
 
 interface SetPasswordFormValues {
     password: string;

@@ -1,9 +1,8 @@
 // components/RecentViews.tsx
 // ✅ РЕДИЗАЙН: Блок недавних просмотров
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, FlatList, Platform, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -29,7 +28,6 @@ export default function RecentViews({
   compact = false,
   initialTravels,
 }: RecentViewsProps) {
-  const router = useRouter();
   const [recentTravels, setRecentTravels] = React.useState<Travel[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 

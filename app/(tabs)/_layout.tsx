@@ -1,13 +1,12 @@
 // TabLayout.tsx — кастомный header + полный офф таббара
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import { Platform, View } from 'react-native';
-import { Tabs, usePathname } from 'expo-router';
+import { Tabs } from 'expo-router';
 import CustomHeader from '@/components/CustomHeader';
 
 const Header = React.memo(function Header() {
     const [mounted, setMounted] = useState(Platform.OS !== 'web');
     const [measuredHeight, setMeasuredHeight] = useState<number>(0);
-    const pathname = usePathname();
     useEffect(() => {
         if (Platform.OS !== 'web') return;
         setMounted(true);

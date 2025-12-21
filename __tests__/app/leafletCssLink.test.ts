@@ -1,4 +1,3 @@
-import React from 'react'
 import Root from '@/app/+html'
 
 const LEAFLET_CSS_HREF = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'

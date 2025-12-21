@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, waitFor, act, fireEvent } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListTravel from '@/components/listTravel/ListTravel';
 import { fetchTravels } from '@/src/api/travelsApi';

@@ -1,4 +1,3 @@
-import { Alert } from 'react-native';
 import {
   loginApi,
   registration,
@@ -11,7 +10,7 @@ import { validatePassword } from '@/src/utils/validation';
 import { sanitizeInput } from '@/src/utils/security';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { devError } from '@/src/utils/logger';
-import { getSecureItem, setSecureItem } from '@/src/utils/secureStorage';
+import { setSecureItem } from '@/src/utils/secureStorage';
 
 jest.mock('react-native', () => ({
   Alert: {
@@ -40,7 +39,6 @@ jest.mock('@/src/utils/logger', () => ({
 }));
 
 jest.mock('@/src/utils/secureStorage', () => ({
-  getSecureItem: jest.fn(),
   setSecureItem: jest.fn(),
 }));
 
@@ -48,7 +46,6 @@ const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fe
 const mockedSafeJsonParse = safeJsonParse as jest.MockedFunction<typeof safeJsonParse>;
 const mockedValidatePassword = validatePassword as jest.MockedFunction<typeof validatePassword>;
 const mockedSanitizeInput = sanitizeInput as jest.MockedFunction<typeof sanitizeInput>;
-const mockedGetSecureItem = getSecureItem as jest.MockedFunction<typeof getSecureItem>;
 
 describe('src/api/auth.ts auth/password API', () => {
   beforeEach(() => {

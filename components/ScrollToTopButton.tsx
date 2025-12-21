@@ -1,6 +1,6 @@
 // Кнопка "Наверх" с анимацией и прогресс-баром
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Pressable, StyleSheet, Animated, Platform } from 'react-native';
+import { Pressable, StyleSheet, Animated, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
@@ -71,7 +71,7 @@ export default function ScrollToTopButton({
       // ✅ УЛУЧШЕНИЕ: Улучшенная прокрутка для FlatList
       try {
         flatListRef.current.scrollToOffset({ offset: 0, animated: true });
-      } catch (e) {
+      } catch {
         // Fallback для веб-версии
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           window.scrollTo({ top: 0, behavior: 'smooth' });

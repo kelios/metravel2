@@ -3,8 +3,6 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from '
 import {
   Alert,
   FlatList,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   Platform,
   Pressable,
   StyleSheet,
@@ -29,14 +27,13 @@ import ProgressIndicator from '@/components/ProgressIndicator'
 import type { Travel } from '@/src/types/types'
 import {
   BREAKPOINTS,
-  MAX_VISIBLE_CATEGORIES,
   RECOMMENDATIONS_VISIBLE_KEY
 } from './utils/listTravelConstants'
 import { useListTravelVisibility } from './hooks/useListTravelVisibility'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
 import { useListTravelExport } from './hooks/useListTravelExport'
-import { calculateCategoriesWithCount, calculateColumns } from './utils/listTravelHelpers'
+import { calculateColumns } from './utils/listTravelHelpers'
 
 // Define styles at the top level before any component definitions
 const styles = StyleSheet.create({
@@ -290,9 +287,9 @@ const ExportBar = memo(function ExportBar({
                        allCount,
                        onToggleSelectAll,
                        onClearSelection,
-                       onPreview,
+                       onPreview: _onPreview,
                        onSave,
-                       onSettings,
+                       onSettings: _onSettings,
                        isGenerating,
                        progress,
                        settingsSummary,
@@ -399,7 +396,7 @@ function ListTravel({
         onToggleWeeklyHighlights,
     });
 
-    const { width, height, isPhone, isLargePhone, isTablet: isTabletSize, isDesktop: isDesktopSize, isPortrait } = useResponsive();
+    const { width, isPhone, isLargePhone, isTablet: isTabletSize, isDesktop: isDesktopSize, isPortrait } = useResponsive();
     const route = useRoute();
     const pathname = usePathname();
 
@@ -574,8 +571,6 @@ function ListTravel({
 
     const onMomentumRef = useRef(false);
     const lastEndReachedAtRef = useRef<number>(0);
-    const saveScrollTimeoutRef = useRef<number | null>(null);
-    const lastScrollOffsetRef = useRef<number>(0);
     const deleteInFlightRef = useRef<number | null>(null);
 
     /* UI / dialogs */
@@ -651,13 +646,6 @@ function ListTravel({
         search: debSearch,
         isQueryEnabled,
     });
-    // ✅ АДАПТИВНОСТЬ: Количество видимых категорий зависит от устройства
-    const maxVisibleCategories = useMemo(() => {
-      if (isMobileDevice) return 6;
-      if (isTablet) return 8;
-      return MAX_VISIBLE_CATEGORIES;
-    }, [isMobileDevice, isTablet]);
-
     /* Delete */
     const handleDelete = useCallback(
       async (explicitId?: number) => {
@@ -758,11 +746,10 @@ function ListTravel({
         isSelected,
         hasSelection,
         selectionCount,
-        pdfExport,
+        pdfExport: _pdfExport,
         lastSettings: _lastSettings,
         handleSaveWithSettings: _handleSaveWithSettings,
         handlePreviewWithSettings: _handlePreviewWithSettings,
-        settingsSummary,
     } = exportState;
 
     const renderTravelListItem = useCallback(
@@ -834,45 +821,6 @@ function ListTravel({
 
         handleEndReached();
     }, [handleEndReached, hasAnyItems]);
-
-    const onMomentumBegin = useCallback(() => {
-        onMomentumRef.current = false;
-    }, []);
-    
-    // ✅ A2.1: Оптимизированный обработчик прокрутки с улучшенным debounce и без requestAnimationFrame
-    const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-        const { contentSize, layoutMeasurement, contentOffset } = e.nativeEvent;
-
-        // Проверка для автоматической подгрузки
-        if (contentSize.height <= layoutMeasurement.height * 1.05) {
-            onMomentumRef.current = true;
-        }
-
-        // Сохранение позиции скролла только для web с оптимизацией
-        if (Platform.OS === 'web') {
-            const offsetY = contentOffset.y;
-
-            // ✅ A2.1: Увеличен порог до 300px для web, 200px для mobile (меньше частоты)
-            const threshold = isMobileDevice ? 200 : 300;
-
-            if (Math.abs(offsetY - lastScrollOffsetRef.current) > threshold) {
-                // Отменяем предыдущий таймер
-                if (saveScrollTimeoutRef.current) {
-                    clearTimeout(saveScrollTimeoutRef.current);
-                }
-
-                // ✅ A2.1: Увеличен debounce до 800ms для web, 600ms для mobile
-                saveScrollTimeoutRef.current = setTimeout(() => {
-                    try {
-                        window.sessionStorage.setItem('travel-list-scroll', String(offsetY));
-                        lastScrollOffsetRef.current = offsetY;
-                    } catch (_error) {
-                        // Игнорируем ошибки sessionStorage
-                    }
-                }, isMobileDevice ? 600 : 800) as any;
-            }
-        }
-    }, [isMobileDevice]);
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;

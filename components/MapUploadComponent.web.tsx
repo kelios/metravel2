@@ -62,7 +62,7 @@ const MapUploadComponent: React.FC<MapUploadComponentProps> = ({ collection, idT
                 }
             } catch (err) {
                 if (DocumentPicker.isCancel(err)) {
-                    console.log('User canceled the picker');
+                    console.info('User canceled the picker');
                 } else {
                     throw err;
                 }

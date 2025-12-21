@@ -99,8 +99,6 @@ export default function QuestsMapScreen() {
     }, []);
 
     const [routePoints, setRoutePoints] = useState<[number, number][]>([]);
-    const [distance, setDistance] = useState(0);
-    const [fullRoute, setFullRoute] = useState<[number, number][]>([]);
 
     const handleBack = () => {
         router.replace('/quests'); // всегда уходим на страницу квестов
@@ -127,9 +125,9 @@ export default function QuestsMapScreen() {
                 transportMode="foot"
                 routePoints={routePoints}
                 setRoutePoints={setRoutePoints}
-                onMapClick={(lng: number, lat: number) => {}}
-                setRouteDistance={setDistance}
-                setFullRouteCoords={setFullRoute}
+                onMapClick={() => {}}
+                setRouteDistance={() => {}}
+                setFullRouteCoords={() => {}}
             />
 
             {/* Плавающая кнопка Назад поверх карты */}

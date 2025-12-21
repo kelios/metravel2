@@ -364,13 +364,6 @@ describe('Travel Card - Regression Tests', () => {
    * Bug #1: В браузере на 375px карточки были огромными
    */
   test('Bug #1: Карточки в браузере (375px) должны быть компактными', () => {
-    const width = 375;
-    const platform = 'web'; // В браузере всегда 'web'
-    
-    // ❌ СТАРЫЙ КОД (неправильно):
-    // const padding = platform === 'web' ? 24 : 12; // Всегда 24!
-    
-    // ✅ НОВЫЙ КОД (правильно):
     const padding = 12; // Мобильное значение по умолчанию
     
     expect(padding).toBe(12);

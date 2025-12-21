@@ -8,7 +8,6 @@ import {
   SafeAreaView,
   Pressable,
   Platform,
-  ActivityIndicator,
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -68,11 +67,7 @@ export default function ProfileScreen() {
     scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
   }, []);
 
-  useEffect(() => {
-    loadUserData();
-  }, [favorites, viewHistory]);
-
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     setIsLoading(true);
     try {
       // ✅ FIX-004: Используем батчинг для загрузки данных
@@ -144,7 +139,11 @@ export default function ProfileScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [favorites, viewHistory, setUserAvatar, triggerProfileRefresh, userId]);
+
+  useEffect(() => {
+    loadUserData();
+  }, [loadUserData]);
 
   const handleLogout = useCallback(async () => {
     try {

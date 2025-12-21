@@ -127,7 +127,7 @@ describe('PopupContentComponent (web popup template)', () => {
     const longDescription = 'Очень длинное описание '.repeat(100);
     const manyCats = Array.from({ length: 20 }, (_, i) => `Категория ${i + 1}`).join(', ');
 
-    const { UNSAFE_root, getByText } = render(
+    const { UNSAFE_root } = render(
       <PopupContentComponent
         travel={{
           ...baseTravel,

@@ -1,5 +1,5 @@
 import React, { memo, useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import BadgeCard, { Badge } from './BadgeCard';
@@ -53,46 +53,8 @@ interface BadgeSystemProps {
 
 const BadgeSystem = ({ userId, compact = false }: BadgeSystemProps) => {
   const [badges, setBadges] = useState<Badge[]>(AVAILABLE_BADGES);
-  const [stats, setStats] = useState<UserStats>({
-    articlesPublished: 0,
-    photosUploaded: 0,
-    routesCreated: 0,
-    likesReceived: 0,
-    commentsReceived: 0,
-  });
 
-  useEffect(() => {
-    loadBadgesAndStats();
-  }, [userId]);
-
-  const loadBadgesAndStats = async () => {
-    try {
-      const [badgesData, statsData] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_KEY_BADGES),
-        AsyncStorage.getItem(STORAGE_KEY_STATS),
-      ]);
-
-      if (statsData) {
-        const userStats: UserStats = JSON.parse(statsData);
-        setStats(userStats);
-        updateBadgesProgress(userStats);
-      }
-
-      if (badgesData) {
-        const earnedBadges: string[] = JSON.parse(badgesData);
-        setBadges((prev) =>
-          prev.map((badge) => ({
-            ...badge,
-            earned: earnedBadges.includes(badge.id),
-          }))
-        );
-      }
-    } catch (error) {
-      console.error('Error loading badges:', error);
-    }
-  };
-
-  const updateBadgesProgress = (userStats: UserStats) => {
+  const updateBadgesProgress = useCallback((userStats: UserStats) => {
     setBadges((prev) =>
       prev.map((badge) => {
         let progress = 0;
@@ -120,7 +82,37 @@ const BadgeSystem = ({ userId, compact = false }: BadgeSystemProps) => {
         };
       })
     );
-  };
+  }, []);
+
+  const loadBadgesAndStats = useCallback(async () => {
+    try {
+      const [badgesData, statsData] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_KEY_BADGES),
+        AsyncStorage.getItem(STORAGE_KEY_STATS),
+      ]);
+
+      if (statsData) {
+        const userStats: UserStats = JSON.parse(statsData);
+        updateBadgesProgress(userStats);
+      }
+
+      if (badgesData) {
+        const earnedBadges: string[] = JSON.parse(badgesData);
+        setBadges((prev) =>
+          prev.map((badge) => ({
+            ...badge,
+            earned: earnedBadges.includes(badge.id),
+          }))
+        );
+      }
+    } catch (error) {
+      console.error('Error loading badges:', error);
+    }
+  }, [updateBadgesProgress]);
+
+  useEffect(() => {
+    loadBadgesAndStats();
+  }, [userId, loadBadgesAndStats]);
 
   const earnedCount = badges.filter((b) => b.earned).length;
 

@@ -4,7 +4,6 @@ import React, {
     lazy,
     useEffect,
     useState,
-    useRef,
     useCallback,
     useMemo,
 } from 'react';
@@ -15,8 +14,6 @@ import {
     Text,
     ActivityIndicator,
     Pressable,
-    Animated,
-    Dimensions,
     Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,10 +42,6 @@ interface Filters {
 }
 
 const DEFAULT_COORDINATES = { latitude: 53.9006, longitude: 27.5590 };
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-const INFO_PANEL_MIN_HEIGHT = 100;
-const FILTERS_PANEL_HEIGHT = 300;
 
 const LazyMapPanel = lazy(() => import('@/components/MapPage/MapPanel'));
 
@@ -74,7 +67,6 @@ export default function MapScreen() {
     const [routeDistance, setRouteDistance] = useState<number | null>(null);
     const [startAddress, setStartAddress] = useState('');
     const [endAddress, setEndAddress] = useState('');
-    const [infoPanelHeight, setInfoPanelHeight] = useState(INFO_PANEL_MIN_HEIGHT);
     const [rightPanelTab, setRightPanelTab] = useState<'filters' | 'travels'>('filters');
     const [rightPanelVisible, setRightPanelVisible] = useState(true);
     const [routeHintDismissed, setRouteHintDismissed] = useState(false);
@@ -135,10 +127,6 @@ export default function MapScreen() {
             backendFilters,
         ]
     );
-
-    // Refs for animations
-    const panY = useRef(new Animated.Value(0)).current;
-    const filtersPanelY = useRef(new Animated.Value(-FILTERS_PANEL_HEIGHT)).current;
 
     // Load filters on mount
     useEffect(() => {
@@ -281,10 +269,6 @@ export default function MapScreen() {
         setFilterValues(prev => ({ ...prev, [field]: value }));
     }, []);
 
-    const handleTextFilterChange = useCallback((value: string) => {
-        setFilterValues(prev => ({ ...prev, address: value }));
-    }, []);
-
     const resetFilters = useCallback(() => {
         setFilterValues({ categories: [], radius: '60', address: '' });
         // Не сбрасываем маршрут при сбросе фильтров, только если пользователь явно хочет
@@ -331,10 +315,6 @@ export default function MapScreen() {
             const [lat, lng] = item.coord.split(',').map(Number);
             setCoordinates({ latitude: lat, longitude: lng });
         }
-    }, []);
-
-    const closeMenu = useCallback(() => {
-        setRightPanelVisible(false);
     }, []);
 
     const setFullRouteCoords = useCallback((coords: [number, number][]) => {
@@ -545,6 +525,7 @@ export default function MapScreen() {
                                     onClearRoute={handleClearRoute}
                                     routeHintDismissed={routeHintDismissed}
                                     onRouteHintDismiss={() => setRouteHintDismissed(true)}
+                                    closeMenu={() => setRightPanelVisible(false)}
                                 />
                             ) : (
                                 <View style={styles.travelsListContainer}>

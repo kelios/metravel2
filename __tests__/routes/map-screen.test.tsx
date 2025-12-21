@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, waitFor, fireEvent } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import MapScreen from '@/app/(tabs)/map'
@@ -26,7 +25,8 @@ jest.mock('@/components/seo/InstantSEO', () => {
   const React = require('react')
   return {
     __esModule: true,
-    default: ({ children }: any) => (children ? <>{children}</> : null),
+    default: ({ children }: any) =>
+      children ? React.createElement(React.Fragment, null, children) : null,
   }
 })
 
@@ -36,12 +36,13 @@ jest.mock('@/components/MapPage/MapPanel', () => {
   const { View, Text } = require('react-native')
   return {
     __esModule: true,
-    default: ({ travelsData }: any) => (
-      <View testID="map-panel">
-        <Text>MockMapPanel</Text>
-        <Text testID="travels-count">{travelsData?.length ?? 0}</Text>
-      </View>
-    ),
+    default: ({ travelsData }: any) =>
+      React.createElement(
+        View,
+        { testID: 'map-panel' },
+        React.createElement(Text, null, 'MockMapPanel'),
+        React.createElement(Text, { testID: 'travels-count' }, travelsData?.length ?? 0),
+      ),
   }
 })
 
@@ -51,11 +52,12 @@ jest.mock('@/components/MapPage/FiltersPanel', () => {
   const { View, Text } = require('react-native')
   return {
     __esModule: true,
-    default: () => (
-      <View testID="filters-panel">
-        <Text>FiltersPanel</Text>
-      </View>
-    ),
+    default: () =>
+      React.createElement(
+        View,
+        { testID: 'filters-panel' },
+        React.createElement(Text, null, 'FiltersPanel'),
+      ),
   }
 })
 
@@ -65,12 +67,13 @@ jest.mock('@/components/MapPage/TravelListPanel', () => {
   const { View, Text } = require('react-native')
   return {
     __esModule: true,
-    default: ({ travelsData }: any) => (
-      <View testID="travel-list-panel">
-        <Text>TravelListPanel</Text>
-        <Text testID="list-count">{travelsData?.length ?? 0}</Text>
-      </View>
-    ),
+    default: ({ travelsData }: any) =>
+      React.createElement(
+        View,
+        { testID: 'travel-list-panel' },
+        React.createElement(Text, null, 'TravelListPanel'),
+        React.createElement(Text, { testID: 'list-count' }, travelsData?.length ?? 0),
+      ),
   }
 })
 
@@ -104,11 +107,12 @@ jest.mock('@/components/ErrorDisplay', () => {
   const { View, Text } = require('react-native');
   return {
     __esModule: true,
-    default: ({ message }: any) => (
-      <View testID="error-display">
-        <Text>{message}</Text>
-      </View>
-    ),
+    default: ({ message }: any) =>
+      React.createElement(
+        View,
+        { testID: 'error-display' },
+        React.createElement(Text, null, message),
+      ),
   };
 });
 

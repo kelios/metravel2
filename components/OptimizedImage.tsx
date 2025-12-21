@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, View, StyleSheet } from 'react-native';
-import { createOptimizedImageSrc, addImageDimensions } from '@/utils/pagespeedOptimizations';
+import { createOptimizedImageSrc } from '@/utils/pagespeedOptimizations';
 
 interface OptimizedImageProps {
   src: string;

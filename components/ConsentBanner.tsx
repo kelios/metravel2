@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LAYOUT, METRICS } from '@/constants/layout';
+import { LAYOUT } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 
 const CONSENT_KEY = 'metravel_consent_v1';

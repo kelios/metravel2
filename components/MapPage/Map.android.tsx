@@ -43,7 +43,10 @@ const getLatLng = (coord: string) => {
 };
 
 const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) => {
-  const travelAddress = travel?.travelAddress?.data || [];
+  const travelAddress = React.useMemo(
+    () => travel?.travelAddress?.data || [],
+    [travel?.travelAddress?.data]
+  );
 
   const [localCoordinates, setLocalCoordinates] = useState<Coordinates | null>(propCoordinates);
 

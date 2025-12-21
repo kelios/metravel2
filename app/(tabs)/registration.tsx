@@ -15,7 +15,6 @@ import {
 import { Button, Card } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Formik, FormikHelpers } from 'formik';
-import * as Yup from 'yup';
 import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
@@ -48,12 +47,15 @@ export default function RegisterForm() {
         setMsg({ text: '', error: false });
         try {
             const res = await registration(values);
-            if (!res.ok) {
-                setMsg({ text: res.message || 'Не удалось зарегистрироваться.', error: true });
+            const ok = typeof res === 'object' && 'ok' in res ? res.ok : false;
+            const message = typeof res === 'object' && 'message' in res ? res.message : String(res ?? '');
+
+            if (!ok) {
+                setMsg({ text: message || 'Не удалось зарегистрироваться.', error: true });
                 return;
             }
 
-            setMsg({ text: res.message, error: false });
+            setMsg({ text: message, error: false });
             resetForm();
             if (intent) {
                 sendAnalyticsEvent('AuthSuccess', { source: 'home', intent });

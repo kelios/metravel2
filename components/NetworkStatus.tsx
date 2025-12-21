@@ -2,7 +2,7 @@
 // ✅ FIX-005: Компонент для отображения статуса сети
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { Text, StyleSheet, Platform } from 'react-native';
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 

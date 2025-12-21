@@ -56,7 +56,6 @@ describe('Logo', () => {
   it('should not render logo text on mobile', () => {
     const { toJSON } = render(<Logo />);
     const tree = toJSON();
-    const treeStr = JSON.stringify(tree);
     
     // На мобильном текста не должно быть (или он скрыт)
     // Проверяем что компонент рендерится

@@ -17,8 +17,7 @@ import { SafeHtml } from '@/components/SafeHtml'
 import { useResponsive } from '@/hooks/useResponsive'
 
 export default function ArticleDetails() {
-  const { width, isPhone, isLargePhone } = useResponsive()
-  const isMobile = isPhone || isLargePhone
+  const { width } = useResponsive()
 
   const params = useLocalSearchParams()
   const id = typeof params.id === 'string' ? Number(params.id) : undefined

@@ -1,10 +1,8 @@
-import { Alert } from 'react-native';
 import { 
   fetchTravel, 
   fetchTravelBySlug, 
   fetchTravels, 
-  fetchRandomTravels, 
-  fetchMyTravels 
+  fetchRandomTravels 
 } from '@/src/api/travelsApi';
 import { 
   fetchTravelsNear, 
@@ -25,7 +23,6 @@ import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { devError } from '@/src/utils/logger';
 import { getSecureItem } from '@/src/utils/secureStorage';
-import { retry } from '@/src/utils/retry';
 
 jest.mock('react-native', () => ({
   Alert: {
@@ -45,11 +42,6 @@ jest.mock('@/src/utils/logger', () => ({
   devError: jest.fn(),
   devWarn: jest.fn(),
   devLog: jest.fn(),
-}));
-
-jest.mock('@/src/utils/retry', () => ({
-  retry: jest.fn(async (fn) => fn()),
-  isRetryableError: jest.fn(() => true),
 }));
 
 const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>;

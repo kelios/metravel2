@@ -18,11 +18,7 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
   const [visible, setVisible] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
 
-  useEffect(() => {
-    checkShouldShow();
-  }, [userId]);
-
-  const checkShouldShow = async () => {
+  const checkShouldShow = useCallback(async () => {
     try {
       // Проверяем количество статей пользователя
       const articlesData = await AsyncStorage.getItem(STORAGE_KEY_ARTICLES_COUNT);
@@ -60,7 +56,11 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
     } catch (error) {
       console.error('Error checking banner visibility:', error);
     }
-  };
+  }, [fadeAnim]);
+
+  useEffect(() => {
+    checkShouldShow();
+  }, [userId, checkShouldShow]);
 
   const handleDismiss = useCallback(async (remind: boolean) => {
     // Анимация скрытия

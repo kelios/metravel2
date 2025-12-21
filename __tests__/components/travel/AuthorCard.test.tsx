@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
-import { Linking, Platform } from 'react-native'
+import { Linking } from 'react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import AuthorCard from '@/components/travel/AuthorCard'

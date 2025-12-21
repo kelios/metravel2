@@ -255,7 +255,7 @@ export default function MapRoute({ data = [], profile = 'driving', map }: MapRou
             }
             clearLayers()
         }
-    }, [map, waypointsLatLng, profile, ORS_API_KEY, L])
+    }, [map, waypointsLatLng, profile, ORS_API_KEY, L, meTravelIcon])
 
     if (!isWeb) {
         console.warn('⚠ Компонент `MapRoute` работает только в браузере.')

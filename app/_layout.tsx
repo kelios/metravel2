@@ -1,5 +1,5 @@
 import "@expo/metro-runtime";
-import React, { Suspense, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, StyleSheet, View, LogBox } from "react-native";
 import { MD3LightTheme as DefaultTheme, PaperProvider } from "react-native-paper";
 import { SplashScreen, Stack, usePathname } from "expo-router";
@@ -17,7 +17,6 @@ import Footer from "@/components/Footer";
 import { useFonts } from "expo-font";
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
-import { METRICS } from "@/constants/layout";
 import { useResponsive } from "@/hooks/useResponsive"; 
 import { createOptimizedQueryClient } from "@/src/utils/reactQueryConfig";
 
@@ -137,7 +136,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
     const pathname = usePathname();
-    const { width, isPhone, isLargePhone } = useResponsive();
+    const { width } = useResponsive();
     // ✅ ИСПРАВЛЕНИЕ: Используем единый breakpoint из DESIGN_TOKENS
     // На web useResponsive() обрабатывает SSR и возвращает корректную ширину.
     const effectiveWidth =
@@ -166,7 +165,7 @@ function RootLayoutNav() {
       [pathname]
     );
 
-    const idleReady = useIdleFlag(1200);
+    useIdleFlag(1200);
     const defaultTitle = "MeTravel — путешествия и маршруты";
     const defaultDescription = "Маршруты, места и впечатления от путешественников.";
 

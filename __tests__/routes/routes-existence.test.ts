@@ -81,7 +81,7 @@ describe('Routes Existence Tests', () => {
       }
 
       return true;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   };

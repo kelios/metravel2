@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Divider, Menu } from 'react-native-paper';
+import { Menu } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -8,7 +8,6 @@ import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useFilters } from '@/providers/FiltersProvider';
-import { METRICS } from '@/constants/layout';
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 
 function AccountMenu() {
@@ -356,7 +355,7 @@ const styles = StyleSheet.create({
     elevation: 8,
     ...(Platform.OS === 'web'
       ? ({
-          marginTop: METRICS.spacing.xs,
+          marginTop: 4,
           // @ts-ignore
           boxShadow: '0 18px 40px rgba(17, 24, 39, 0.16), 0 6px 14px rgba(17, 24, 39, 0.10)' as any,
         } as any)

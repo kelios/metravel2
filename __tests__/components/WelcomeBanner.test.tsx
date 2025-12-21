@@ -4,7 +4,7 @@ import WelcomeBanner from '@/components/WelcomeBanner';
 
 // Mock Feather icons
 jest.mock('@expo/vector-icons', () => ({
-  Feather: ({ name, size, color, ...props }: any) => {
+  Feather: ({ name, ...props }: any) => {
     const React = require('react');
     const { View } = require('react-native');
     return React.createElement(View, { testID: `feather-${name}`, ...props });

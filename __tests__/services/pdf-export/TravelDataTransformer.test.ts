@@ -2,7 +2,7 @@
 // ✅ ТЕСТЫ: Проверка трансформации данных для PDF экспорта
 
 import { TravelDataTransformer } from '@/src/services/pdf-export/TravelDataTransformer';
-import { ExportError, ExportErrorType } from '@/src/types/pdf-export';
+import { ExportError } from '@/src/types/pdf-export';
 import type { Travel } from '@/src/types/types';
 
 describe('TravelDataTransformer', () => {

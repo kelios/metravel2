@@ -1,5 +1,4 @@
 import { renderHook, act } from '@testing-library/react-native';
-import React from 'react';
 import { useTravelDetails } from '@/hooks/useTravelDetails';
 
 jest.mock('expo-router', () => ({

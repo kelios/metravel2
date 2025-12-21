@@ -7,7 +7,7 @@ import type { Travel } from '@/src/types/types';
 jest.mock('expo-image', () => ({
   Image: ({ source, style, ...props }: any) => {
     const React = require('react');
-    const { View, Image } = require('react-native');
+    const { Image } = require('react-native');
     return React.createElement(Image, { source, style, ...props });
   },
 }));
@@ -16,7 +16,7 @@ jest.mock('expo-image', () => ({
 jest.mock('@/components/WeatherWidget', () => {
   const React = require('react');
   const { View, Text } = require('react-native');
-  return ({ points }: any) => (
+  return ({ points: _points }: any) => (
     React.createElement(View, { testID: 'weather-widget' },
       React.createElement(Text, null, 'Weather Widget')
     )

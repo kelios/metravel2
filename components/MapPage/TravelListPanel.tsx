@@ -8,8 +8,6 @@ type Props = {
   buildRouteTo: (item: any) => void;
 
   onHideTravel?: (id: string | number) => void;
-  hiddenIds?: (string | number)[];
-  onResetHidden?: () => void;
 
   isMobile?: boolean;
   isLoading?: boolean;
@@ -26,8 +24,6 @@ const TravelListPanel: React.FC<Props> = ({
                                             buildRouteTo,
 
                                             onHideTravel,
-                                            hiddenIds,
-                                            onResetHidden,
 
                                             isMobile = false,
                                             isLoading = false,

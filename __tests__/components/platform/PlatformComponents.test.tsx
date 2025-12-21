@@ -1,6 +1,3 @@
-import React from 'react';
-import { Platform } from 'react-native';
-
 // Mock dependencies
 jest.mock('react-native-webview', () => ({
   WebView: 'WebView',

@@ -1,6 +1,4 @@
-import React from 'react';
 import { renderHook, act } from '@testing-library/react-native';
-import { ScrollView, View } from 'react-native';
 import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 
 jest.mock('react-native', () => {

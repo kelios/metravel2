@@ -3,9 +3,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 // ✅ ДИЗАЙН: Импорт максимально легкой и воздушной палитры
-import { AIRY_COLORS, AIRY_GRADIENTS, AIRY_BOX_SHADOWS } from '@/constants/airyColors';
+import { AIRY_COLORS } from '@/constants/airyColors';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 interface EmptyStateProps {

@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
     ActivityIndicator,
-    Dimensions,
     Image,
     Platform,
     StyleSheet,
@@ -45,7 +44,6 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
     const [uploadMessage, setUploadMessage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null); // ✅ УЛУЧШЕНИЕ: Превью перед загрузкой
-    const [previewFile, setPreviewFile] = useState<File | null>(null); // ✅ УЛУЧШЕНИЕ: Сохраняем файл для загрузки
     const [uploadProgress, setUploadProgress] = useState(0); // ✅ УЛУЧШЕНИЕ: Прогресс загрузки
     const [error, setError] = useState<string | null>(null); // ✅ УЛУЧШЕНИЕ: Ошибки валидации
 
@@ -96,7 +94,6 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
     const createPreview = useCallback((file: File | { uri: string; name: string; type: string }) => {
         if (Platform.OS === 'web' && file instanceof File) {
             // Используем ObjectURL, чтобы мгновенно показать превью без ожидания FileReader
-            setPreviewFile(file);
             const objectUrl = URL.createObjectURL(file);
             setPreviewUrl(objectUrl);
             return objectUrl;
@@ -119,7 +116,6 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
             if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') {
                 setError('Сначала сохраните точку маршрута, затем попробуйте загрузить фото.');
                 setPreviewUrl(null);
-                setPreviewFile(null);
                 return;
             }
 
@@ -179,7 +175,6 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
                 const visualNormalized = uploadedUrl ? uploadedUrl : visualUrl;
                 setImageUri(visualNormalized);
                 setPreviewUrl(visualNormalized);
-                setPreviewFile(null); // Очищаем файл
                 setUploadMessage('Фотография успешно загружена');
                 onUpload?.(persistedUrl);
                 setIsManuallySelected(true);
@@ -187,13 +182,11 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
             } else {
                 setError('Ошибка при загрузке');
                 setPreviewUrl(null);
-                setPreviewFile(null);
             }
         } catch (error) {
             console.error('Ошибка при загрузке:', error);
             setError('Произошла ошибка при загрузке');
             setPreviewUrl(null);
-            setPreviewFile(null);
         } finally {
             setLoading(false);
             setUploadProgress(0);
@@ -252,7 +245,6 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
 
     const handleRemovePreview = () => {
         setPreviewUrl(null);
-        setPreviewFile(null);
         setError(null);
     };
 

@@ -40,7 +40,7 @@ export default function SkipLinks({ links = DEFAULT_LINKS }: SkipLinksProps) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const handleSkip = (targetId: string, index: number) => {
+  const handleSkip = (targetId: string) => {
     if (Platform.OS !== 'web') return;
 
     const target = document.getElementById(targetId);
@@ -64,7 +64,7 @@ export default function SkipLinks({ links = DEFAULT_LINKS }: SkipLinksProps) {
             styles.link,
             focusedIndex === index && styles.linkFocused,
           ]}
-          onPress={() => handleSkip(link.targetId, index)}
+          onPress={() => handleSkip(link.targetId)}
           onFocus={() => setFocusedIndex(index)}
           onBlur={() => {
             // Скрываем при потере фокуса, если не перешли на другой skip link

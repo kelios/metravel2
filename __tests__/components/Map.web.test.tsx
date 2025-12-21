@@ -1,5 +1,4 @@
-import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
 import MapClientSideComponent from '@/components/Map.web';
 
 // Mock leaflet modules
@@ -9,7 +8,7 @@ const mockLeaflet = {
     _getIconUrl: jest.fn(),
   })),
   latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
-  latLngBounds: jest.fn((points: any[]) => ({
+  latLngBounds: jest.fn((_points: any[]) => ({
     isValid: jest.fn(() => true),
     pad: jest.fn((padding: number) => ({ pad: padding })),
   })),
@@ -88,7 +87,6 @@ jest.mock('react-native', () => {
 
 // Mock PopupContentComponent
 jest.mock('@/components/MapPage/PopupContentComponent', () => {
-  const React = require('react')
   const MockComponent = () => <div data-testid="popup-content" />
   return {
     __esModule: true,

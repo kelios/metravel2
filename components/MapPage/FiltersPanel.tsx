@@ -1,15 +1,11 @@
 // FiltersPanel.tsx
 import React, {
   useMemo,
-  useRef,
   useCallback,
-  useEffect,
 } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   LayoutAnimation,
@@ -27,8 +23,6 @@ import RouteStats from '@/components/MapPage/RouteStats';
 import RouteHint from '@/components/MapPage/RouteHint';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-
-const DEBOUNCE_MS = 300;
 
 // ✅ ИСПРАВЛЕНИЕ: Используем единую палитру DESIGN_TOKENS вместо локальной COLORS
 const COLORS = {
@@ -523,9 +517,8 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
 
 // ——— Styles
 const getStyles = (isMobile: boolean) => {
-  const { width, height } = Dimensions.get('window');
+  const { width } = Dimensions.get('window');
   const panelWidth = isMobile ? Math.min(width - 24, 480) : 340;
-  const panelMaxHeight = isMobile ? Math.round(height * 0.8) : 520;
 
   return StyleSheet.create({
     card: {

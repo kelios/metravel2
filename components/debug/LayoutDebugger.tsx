@@ -2,8 +2,7 @@
 // Компонент для визуальной отладки отступов и границ
 
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { View, Text, StyleSheet } from 'react-native';
 
 interface LayoutDebuggerProps {
   children: React.ReactNode;

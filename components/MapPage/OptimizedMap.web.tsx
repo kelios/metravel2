@@ -44,7 +44,7 @@ const OptimizedMap: React.FC<OptimizedMapProps> = ({
   transportMode,
   setRouteDistance,
   setFullRouteCoords,
-  placesAlongRoute, // Accepted but not passed to Map.web
+  placesAlongRoute: _placesAlongRoute, // Accepted but not passed to Map.web
 }) => {
   return (
     <MapPageComponent

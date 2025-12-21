@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import SortSelector, { SortOption } from '@/components/SortSelector';
+import SortSelector from '@/components/SortSelector';
 
 describe('SortSelector', () => {
   const mockOnChange = jest.fn();

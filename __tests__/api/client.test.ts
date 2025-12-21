@@ -1,6 +1,6 @@
 import { apiClient, ApiError } from '@/src/api/client';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
-import { getSecureItem, setSecureItem, removeSecureItems } from '@/src/utils/secureStorage';
+import { getSecureItem, setSecureItem } from '@/src/utils/secureStorage';
 import { devError } from '@/src/utils/logger';
 
 jest.mock('@/src/utils/fetchWithTimeout', () => ({
@@ -10,7 +10,6 @@ jest.mock('@/src/utils/fetchWithTimeout', () => ({
 jest.mock('@/src/utils/secureStorage', () => ({
   getSecureItem: jest.fn(),
   setSecureItem: jest.fn(),
-  removeSecureItems: jest.fn(),
 }));
 
 jest.mock('@/src/utils/logger', () => ({

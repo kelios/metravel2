@@ -9,8 +9,6 @@ import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/EmptyState';
 import Button from '@/components/ui/Button';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
-import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/src/utils/confirmAction';
 import { fetchUserProfile, updateUserProfile, uploadUserProfileAvatarFile, type UpdateUserProfilePayload, type UploadUserProfileAvatarFile, type UserProfileDto } from '@/src/api/user';
@@ -19,8 +17,6 @@ import { ApiError } from '@/src/api/client';
 export default function SettingsScreen() {
     const router = useRouter();
     const { isAuthenticated, logout, username, userId, triggerProfileRefresh } = useAuth();
-    const { isPhone, isLargePhone } = useResponsive();
-    const isMobile = isPhone || isLargePhone;
     const isWeb = Platform.OS === 'web';
     const favoritesContext = useFavorites();
     const {
@@ -153,7 +149,7 @@ export default function SettingsScreen() {
                 setAvatarFile(file);
                 setAvatarPreviewUrl(asset.uri);
             }
-        } catch (error) {
+        } catch {
             Alert.alert('Ошибка', 'Не удалось выбрать изображение');
         }
     }, []);

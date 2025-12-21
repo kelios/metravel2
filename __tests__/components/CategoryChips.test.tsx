@@ -1,5 +1,4 @@
 // CategoryChips.test.tsx - Тесты для компонента CategoryChips
-import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import CategoryChips from '@/components/CategoryChips';
 
@@ -26,7 +25,7 @@ jest.mock('@/components/ui/Chip', () => {
 
 // Mock Feather icons
 jest.mock('@expo/vector-icons', () => ({
-  Feather: ({ name, size, color, ...props }: any) => {
+  Feather: ({ name, size: _size, color: _color, ...props }: any) => {
     const { View, Text } = require('react-native');
     return (
       <View testID={`feather-${name}`} {...props}>

@@ -1,5 +1,5 @@
 // components/imageUpload/ImageUploadComponent.ios.tsx
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -33,7 +33,6 @@ const ImageUploadComponentIOS: React.FC<ImageUploadComponentProps> = ({
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isManuallySelected, setIsManuallySelected] = useState(false);
 
@@ -55,7 +54,6 @@ const ImageUploadComponentIOS: React.FC<ImageUploadComponentProps> = ({
       const normalizedId = (idTravel ?? '').toString();
       if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') {
         setError('Сначала сохраните точку маршрута, затем попробуйте загрузить фото.');
-        setPreviewUrl(null);
         return;
       }
 
@@ -72,7 +70,6 @@ const ImageUploadComponentIOS: React.FC<ImageUploadComponentProps> = ({
 
       if (response?.url) {
         setImageUri(response.url);
-        setPreviewUrl(null);
         setUploadMessage('Фотография успешно загружена');
         onUpload?.(response.url);
         setIsManuallySelected(true);
@@ -82,7 +79,6 @@ const ImageUploadComponentIOS: React.FC<ImageUploadComponentProps> = ({
     } catch (error) {
       console.error('Ошибка при загрузке:', error);
       setError('Произошла ошибка при загрузке');
-      setPreviewUrl(null);
       Alert.alert('Ошибка', 'Не удалось загрузить изображение');
     } finally {
       setLoading(false);
@@ -106,8 +102,7 @@ const ImageUploadComponentIOS: React.FC<ImageUploadComponentProps> = ({
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        setPreviewUrl(asset.uri);
-        
+
         await handleUploadImage({
           uri: asset.uri,
           name: asset.fileName || 'photo.jpg',
@@ -135,8 +130,7 @@ const ImageUploadComponentIOS: React.FC<ImageUploadComponentProps> = ({
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        setPreviewUrl(asset.uri);
-        
+
         await handleUploadImage({
           uri: asset.uri,
           name: `photo_${Date.now()}.jpg`,
@@ -185,7 +179,6 @@ const ImageUploadComponentIOS: React.FC<ImageUploadComponentProps> = ({
           style: 'destructive',
           onPress: () => {
             setImageUri(null);
-            setPreviewUrl(null);
             setIsManuallySelected(false);
             setUploadMessage(null);
             setError(null);

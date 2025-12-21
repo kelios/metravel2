@@ -1,5 +1,5 @@
 // components/belkraj/BelkrajWidget.tsx
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 
 interface TravelAddress {
     id: number;
@@ -24,7 +24,7 @@ export default function BelkrajWidget({
                                           expandedHeight = 1200,
                                           className,
                                       }: Props) {
-    const [expanded, setExpanded] = useState(false);
+    const expanded = false;
     const containerRef = useRef<HTMLDivElement>(null);
 
     const firstCoord = useMemo(() => {

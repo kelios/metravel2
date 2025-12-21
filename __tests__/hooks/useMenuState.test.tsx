@@ -1,4 +1,3 @@
-import React from 'react';
 import { renderHook, act } from '@testing-library/react-native';
 import * as RN from 'react-native';
 import { useMenuState } from '@/hooks/useMenuState';

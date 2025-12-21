@@ -76,7 +76,7 @@ export default function DetailedProgressBar({
       duration: 300,
       useNativeDriver: false,
     }).start();
-  }, [progress]);
+  }, [progress, animatedProgress]);
 
   const progressWidth = animatedProgress.interpolate({
     inputRange: [0, 100],

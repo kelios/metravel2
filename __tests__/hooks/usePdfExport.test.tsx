@@ -1,7 +1,5 @@
 // __tests__/hooks/usePdfExport.test.tsx
 // ✅ ТЕСТЫ: Тесты для usePdfExport hook
-
-import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { Platform, Alert } from 'react-native';
 import { usePdfExport } from '@/src/hooks/usePdfExport';

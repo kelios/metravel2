@@ -4,7 +4,6 @@ import {
   setSecureItem,
   getSecureItem,
   removeSecureItem,
-  removeSecureItems,
   isSecureStorageAvailable,
 } from '@/src/utils/secureStorage'
 

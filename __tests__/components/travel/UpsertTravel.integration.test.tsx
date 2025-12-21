@@ -25,10 +25,12 @@ const TravelWizardStepPublish: React.FC<any> = ({
   onManualSave,
   onGoBack,
   onFinish,
-  currentStep,
-  totalSteps,
+  currentStep: _currentStep,
+  totalSteps: _totalSteps,
   onNavigateToIssue,
 }) => {
+  void _currentStep;
+  void _totalSteps;
   const [status, setStatus] = useState<'draft' | 'moderation'>(
     formData.moderation ? 'moderation' : 'draft',
   );

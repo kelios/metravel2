@@ -4,7 +4,7 @@ import MultiSelectField from '@/components/MultiSelectField'
 
 // Мокаем MultiSelect, чтобы контролировать его поведение
 jest.mock('react-native-element-dropdown', () => ({
-  MultiSelect: ({ onChange, value, data, ...rest }: any) => {
+  MultiSelect: ({ onChange: _onChange, value, data, ...rest }: any) => {
     return (
       <div
         testID="multi-select-mock"

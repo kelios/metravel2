@@ -109,9 +109,6 @@ describe('Map Component - Platform Specific', () => {
 
     it('should render Map component on iOS', () => {
       const Map = require('../../../components/Map.ios').default;
-      const { getByTestId } = render(
-        <Map travel={mockTravel} coordinates={mockCoordinates} />
-      );
       // iOS использует react-native-maps, который мы замокали как View
       expect(() => render(<Map travel={mockTravel} coordinates={mockCoordinates} />)).not.toThrow();
     });
@@ -139,7 +136,6 @@ describe('Map Component - Platform Specific', () => {
 
     it('should use same implementation as iOS', () => {
       const MapAndroid = require('../../../components/Map.android').default;
-      const MapIOS = require('../../../components/Map.ios').default;
       // Android экспортирует iOS версию
       expect(MapAndroid).toBeDefined();
     });

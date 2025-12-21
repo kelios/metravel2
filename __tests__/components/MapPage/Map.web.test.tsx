@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, act, fireEvent, waitFor } from '@testing-library/react-native'
 import MapPageComponent from '@/components/MapPage/Map.web'
 
@@ -632,7 +631,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         radius: '10',
       }
 
-      const { getByTestId } = render(<MapPageComponent {...props} />)
+      render(<MapPageComponent {...props} />)
       await act(async () => {})
 
       const circleProps = (globalThis as any).lastCircleProps

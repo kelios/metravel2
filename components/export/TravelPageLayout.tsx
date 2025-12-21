@@ -2,7 +2,6 @@
 // ✅ УЛУЧШЕНИЕ: Разворот путешествия - фото на левой странице, текст на правой
 
 import React from 'react';
-import QRCode from 'qrcode';
 import { sanitizeRichTextForPdf } from '@/src/utils/sanitizeRichText';
 
 interface Travel {

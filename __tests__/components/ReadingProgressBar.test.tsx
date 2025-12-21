@@ -27,7 +27,6 @@ describe('ReadingProgressBar', () => {
   it('should calculate progress correctly', () => {
     const contentHeight = 1000;
     const viewportHeight = 500;
-    const scrollableHeight = contentHeight - viewportHeight; // 500
 
     render(
       <ReadingProgressBar
@@ -46,7 +45,7 @@ describe('ReadingProgressBar', () => {
   });
 
   it('should handle zero scrollable height', () => {
-    const { UNSAFE_getByType } = render(
+    render(
       <ReadingProgressBar
         scrollY={scrollY}
         contentHeight={500}

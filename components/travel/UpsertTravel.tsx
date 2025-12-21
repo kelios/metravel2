@@ -194,7 +194,6 @@ export default function UpsertTravel() {
     const totalSteps = 6;
     const [markers, setMarkers] = useState<MarkerData[]>([]);
     const [travelDataOld, setTravelDataOld] = useState<Travel | null>(null);
-    const markersUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [filters, setFilters] = useState<ReturnType<typeof initFilters>>(initFilters());
     const [isFiltersLoading, setIsFiltersLoading] = useState(true);
     const [isInitialLoading, setIsInitialLoading] = useState(true);

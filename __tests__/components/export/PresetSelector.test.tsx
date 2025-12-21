@@ -5,7 +5,6 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import PresetSelector from '@/components/export/PresetSelector';
 import { BOOK_PRESETS } from '@/src/types/pdf-presets';
-import type { BookPreset } from '@/src/types/pdf-presets';
 
 describe('PresetSelector', () => {
   const mockOnPresetSelect = jest.fn();

@@ -12,7 +12,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { fetchMyTravels } from '@/src/api/travelsApi';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
-import { ResponsiveContainer, ResponsiveStack, ResponsiveText } from '@/components/layout';
+import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 import HomeHero from './HomeHero';
 import HomeHowItWorks from './HomeHowItWorks';
@@ -49,7 +49,7 @@ const SectionSkeleton = () => {
 export default function HomeAdaptive() {
   const isFocused = useIsFocused();
   const { isAuthenticated, userId } = useAuth();
-  const { isSmallPhone, isPhone, isTablet } = useResponsive();
+  const { isSmallPhone, isPhone } = useResponsive();
   
   const [showHeavyContent, setShowHeavyContent] = useState(false);
 

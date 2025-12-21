@@ -81,7 +81,7 @@ describe('SearchAndFilterBar', () => {
   });
 
   it('shows clear button when search has value', () => {
-    const { getByPlaceholderText, queryByLabelText } = render(
+    const { queryByLabelText } = render(
       <SearchAndFilterBar {...defaultProps} search="test" />
     );
     

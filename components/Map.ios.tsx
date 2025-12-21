@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import MapView, { Marker, Callout } from 'react-native-maps';
 
@@ -43,7 +43,7 @@ const getLatLng = (coord: string) => {
 };
 
 const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) => {
-  const travelAddress = travel?.travelAddress?.data || [];
+  const travelAddress = useMemo(() => travel?.travelAddress?.data || [], [travel?.travelAddress]);
 
   const [localCoordinates, setLocalCoordinates] = useState<Coordinates | null>(propCoordinates);
 

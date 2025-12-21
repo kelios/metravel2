@@ -13,7 +13,6 @@ import {
     Image,
 } from 'react-native';
 import { Button, Card } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
 import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
@@ -39,7 +38,6 @@ export default function Login() {
     const passwordRef = useRef<TextInput>(null);
 
     /* ---------- helpers ---------- */
-    const navigation = useNavigation();
     const router = useRouter();
     const { login, sendPassword } = useAuth();
     const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();

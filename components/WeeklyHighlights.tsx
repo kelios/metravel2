@@ -8,8 +8,6 @@ import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AIRY_COLORS } from '@/constants/airyColors'; 
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
-import { METRICS } from '@/constants/layout';
-import { useResponsive } from '@/hooks/useResponsive';
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
 
@@ -22,8 +20,6 @@ interface WeeklyHighlightsProps {
 
 function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true, enabled = true }: WeeklyHighlightsProps) {
     const router = useRouter();
-    const { isPhone, isLargePhone } = useResponsive();
-    const isMobile = isPhone || isLargePhone;
     const { viewHistory } = useFavorites();
     
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -61,19 +57,6 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
             isMounted = false;
         };
     }, []);
-
-    const handleCollapse = useCallback(() => {
-        setIsCollapsed(true);
-        if (Platform.OS === 'web') {
-            sessionStorage.setItem(COLLAPSED_KEY, 'true');
-        } else {
-            AsyncStorage.setItem(COLLAPSED_KEY, 'true');
-        }
-        // Уведомляем родителя о сворачивании
-        if (onVisibilityChange) {
-            onVisibilityChange(false);
-        }
-    }, [onVisibilityChange]);
 
     const handleExpand = useCallback(() => {
         setIsCollapsed(false);

@@ -1,7 +1,7 @@
 import React from 'react'
 import { render } from '@testing-library/react-native'
 
-const mockUseQuery = jest.fn((opts: any) => ({ data: null }))
+const mockUseQuery = jest.fn((_opts: any) => ({ data: null }))
 
 jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => ({ viewHistory: [] }),

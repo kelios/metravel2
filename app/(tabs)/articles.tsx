@@ -1,6 +1,6 @@
-import {ActivityIndicator, Dimensions, FlatList, SafeAreaView, StyleSheet, View, Text} from 'react-native'
+import {ActivityIndicator, Dimensions, FlatList, SafeAreaView, StyleSheet, View} from 'react-native'
 import ArticleListItem from '@/components/ArticleListItem'
-import React, {useEffect, useState} from 'react'
+import React, {useCallback, useEffect, useState} from 'react'
 import {Articles} from '@/src/types/types'
 import { SkeletonLoader } from '@/components/SkeletonLoader'
 import {fetchArticles} from '@/src/api/articles'
@@ -14,8 +14,6 @@ export default function TabOneScreen() {
   const windowWidth = Dimensions.get('window').width
   const styles = getStyles(windowWidth)
 
-  const isMobile = windowWidth <= 768
-
   const [articles, setArticles] = useState<Articles | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -27,16 +25,7 @@ export default function TabOneScreen() {
   const params = useLocalSearchParams()
   const user_id = typeof params.user_id === 'string' ? params.user_id : undefined
 
-  // 👇 загрузка данных при пагинации или изменении user_id
-  useEffect(() => {
-    fetchMore()
-  }, [currentPage, itemsPerPage])
-
-  useEffect(() => {
-    setCurrentPage(0)
-  }, [itemsPerPage, user_id])
-
-  const fetchMore = async () => {
+  const fetchMore = useCallback(async () => {
     if (isLoading) return
     setIsLoading(true)
     setError(null)
@@ -52,7 +41,16 @@ export default function TabOneScreen() {
     } finally {
     setIsLoading(false)
     }
-  }
+  }, [isLoading, currentPage, itemsPerPage, user_id])
+
+  // 👇 загрузка данных при пагинации или изменении user_id
+  useEffect(() => {
+    fetchMore()
+  }, [currentPage, itemsPerPage, fetchMore])
+
+  useEffect(() => {
+    setCurrentPage(0)
+  }, [itemsPerPage, user_id])
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage)

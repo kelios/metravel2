@@ -15,7 +15,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 
 export default function HistoryScreen() {
     const router = useRouter();
-    const { width, isPhone, isLargePhone } = useResponsive();
+    const { width } = useResponsive();
     const { isAuthenticated } = useAuth();
     const { viewHistory, clearHistory } = useFavorites() as any;
     const [isLoading, setIsLoading] = useState(true);

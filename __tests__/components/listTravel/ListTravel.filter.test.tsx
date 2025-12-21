@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListTravel from '@/components/listTravel/ListTravel';
 import { FavoritesProvider } from '@/context/FavoritesContext';
 import { fetchTravels } from '@/src/api/travelsApi';
-import { fetchFilters, fetchFiltersCountry } from '@/src/api/misc';
 
 jest.mock('@/context/AuthContext', () => ({
     useAuth: () => ({
@@ -78,7 +77,7 @@ describe('ListTravel - Filter Management', () => {
 
             (fetchTravels as jest.Mock).mockResolvedValue(mockData);
 
-            const { getByText } = renderComponent();
+            renderComponent();
 
             // Wait for initial load
             await waitFor(() => {
@@ -226,7 +225,7 @@ describe('ListTravel - Filter Management', () => {
                 if (calls.length > 0) {
                     const params = calls[calls.length - 1][3];
                     // Should not have empty arrays
-                    Object.entries(params).forEach(([key, value]) => {
+                    Object.entries(params).forEach(([_key, value]) => {
                         if (Array.isArray(value)) {
                             expect(value.length).toBeGreaterThan(0);
                         }

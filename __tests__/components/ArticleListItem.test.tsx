@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 import ArticleListItem from '@/components/ArticleListItem'
 
@@ -13,7 +12,7 @@ jest.mock('expo-router', () => ({
 
 // Mock react-native-render-html
 jest.mock('react-native-render-html', () => {
-  const React = require('react')
+  const _React = require('react')
   const { Text } = require('react-native')
   return function RenderHTML({ source }: any) {
     return <Text>{source.html}</Text>
@@ -22,7 +21,7 @@ jest.mock('react-native-render-html', () => {
 
 // Mock react-native-paper components used in ArticleListItem
 jest.mock('react-native-paper', () => {
-  const React = require('react')
+  const _React = require('react')
   const { View, Text } = require('react-native')
 
   const Card = ({ children }: any) => <View>{children}</View>

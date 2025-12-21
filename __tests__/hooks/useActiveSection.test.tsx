@@ -1,4 +1,3 @@
-import React, { createRef } from 'react'
 import { act, renderHook } from '@testing-library/react-native'
 import { useActiveSection } from '@/hooks/useActiveSection'
 

@@ -67,7 +67,9 @@ export default function FlightWidget({ country }: { country?: string }) {
     useEffect(() => {
         if (Platform.OS !== 'web' || !mainCountry || !widgetRef.current || !inView) return;
 
-        widgetRef.current.innerHTML = '';
+        const container = widgetRef.current;
+
+        container.innerHTML = '';
         document.getElementById('tp-widget-script')?.remove();
 
         const destination = countryToIata[mainCountry] ?? 'ANY';
@@ -86,10 +88,10 @@ export default function FlightWidget({ country }: { country?: string }) {
             `&destination=${destination}` +
             (origin ? `&origin=${origin}` : '');
 
-        widgetRef.current.appendChild(script);
+        container.appendChild(script);
 
         const enforceSafeLinks = () => {
-            const links = widgetRef.current?.querySelectorAll('a') || [];
+            const links = container?.querySelectorAll('a') || [];
             links.forEach(link => {
                 link.setAttribute('target', '_blank');
                 link.setAttribute('rel', 'noopener noreferrer');
@@ -103,9 +105,7 @@ export default function FlightWidget({ country }: { country?: string }) {
 
         return () => {
             document.getElementById('tp-widget-script')?.remove();
-            if (widgetRef.current) {
-                widgetRef.current.innerHTML = '';
-            }
+            container.innerHTML = '';
         };
     }, [mainCountry, origin, inView]);
 

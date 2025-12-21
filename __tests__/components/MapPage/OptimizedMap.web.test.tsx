@@ -1,5 +1,4 @@
-import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
 import OptimizedMap from '@/components/MapPage/OptimizedMap.web';
 
 // Mock Map.web component using React Native primitives so testIDs work
@@ -86,7 +85,7 @@ describe('OptimizedMap.web', () => {
   });
 
   it('handles missing travel prop', () => {
-    const { travel, ...propsWithoutTravel } = defaultProps;
+    const { travel: _travel, ...propsWithoutTravel } = defaultProps;
     const { getByTestId } = render(<OptimizedMap {...propsWithoutTravel} />);
     const data = getByTestId('map-travel-data');
     expect(data.props.children).toBe(0);

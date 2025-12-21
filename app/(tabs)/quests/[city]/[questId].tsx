@@ -35,7 +35,7 @@ const UI = {
 };
 
 export default function QuestByIdScreen() {
-    const { questId, city } = useLocalSearchParams<{ questId: string; city: string }>();
+    const { questId } = useLocalSearchParams<{ questId: string; city: string }>();
     const isFocused = useIsFocused();
 
     const [bundle, setBundle] = useState<QuestBundle | null>(null);

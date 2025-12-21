@@ -115,7 +115,7 @@ export default function RouletteScreen() {
         if (!cancelled && result.length > 0) {
           setDefaultCountries(result);
         }
-      } catch (_e) {
+      } catch {
         if (!cancelled) {
           setDefaultCountries(null);
         }
@@ -291,7 +291,7 @@ export default function RouletteScreen() {
         const flattened = normalized.flatMap((page: any) => page.items || []);
         freshTravels = deduplicateTravels(flattened as Travel[]);
       }
-    } catch (_e) {
+    } catch {
       // В случае ошибки используем уже загруженные travels
     }
 
