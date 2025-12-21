@@ -336,14 +336,13 @@ const MapPageComponent: React.FC<Props> = ({
   }, []);
 
   const handleMapClick = useCallback(
-      (e: any) => {
-        if (mode !== 'route' || routePoints.length >= 2) return;
-        const newPoint: [number, number] = [e.latlng.lng, e.latlng.lat];
-        setRoutePoints([...routePoints, newPoint]);
-        setDisableFitBounds(true);
-        onMapClick(e.latlng.lng, e.latlng.lat);
-      },
-      [mode, routePoints, setRoutePoints, onMapClick]
+    (e: any) => {
+      if (mode !== 'route' || routePoints.length >= 2) return;
+      // Avoid double updates: delegate point creation to parent handler only
+      setDisableFitBounds(true);
+      onMapClick(e.latlng.lng, e.latlng.lat);
+    },
+    [mode, routePoints.length, onMapClick]
   );
 
   // Вычисляем радиус в метрах для отображения круга (должен быть до условных возвратов)

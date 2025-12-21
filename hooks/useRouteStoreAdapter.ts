@@ -48,14 +48,47 @@ export function useRouteStoreAdapter() {
   }, [store]);
 
   const setRouteDistance = useCallback((distance: number) => {
-    // Distance is managed by store automatically
-    // This is a no-op for compatibility
-  }, []);
+    const existingCoords =
+      store.route?.coordinates ?? store.points.map((p) => p.coordinates);
+
+    const prevDistance = store.route?.distance;
+    const sameDistance = typeof prevDistance === 'number' && prevDistance === distance;
+
+    // If we already have the same distance and coordinates, avoid a store update.
+    if (sameDistance && store.route?.coordinates === existingCoords) {
+      return;
+    }
+
+    store.setRoute({
+      coordinates: existingCoords,
+      distance,
+      duration: 0,
+      isOptimal: true,
+    });
+  }, [store]);
 
   const setFullRouteCoords = useCallback((coords: [number, number][]) => {
-    // Route coords are managed by store automatically
-    // This is a no-op for compatibility
-  }, []);
+    const latLngCoords: LatLng[] = coords.map(([lng, lat]) => ({ lat, lng }));
+    const distance = store.route?.distance ?? 0;
+
+    const prevCoords = store.route?.coordinates;
+    const sameLength = Array.isArray(prevCoords) && prevCoords.length === latLngCoords.length;
+    const sameCoords = !!prevCoords && sameLength && prevCoords.every((p, i) => {
+      const next = latLngCoords[i];
+      return !!next && p.lat === next.lat && p.lng === next.lng;
+    });
+
+    if (sameCoords && store.route?.distance === distance) {
+      return;
+    }
+
+    store.setRoute({
+      coordinates: latLngCoords,
+      distance,
+      duration: 0,
+      isOptimal: true,
+    });
+  }, [store]);
 
   const handleRemoveRoutePoint = useCallback((index: number) => {
     const point = store.points[index];

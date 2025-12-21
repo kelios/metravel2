@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 
-import { getStyles } from '@/app/(tabs)/map';
+import { getStyles } from '@/app/(tabs)/map.styles';
 
 describe('map layout header offset', () => {
   const originalOS = Platform.OS;

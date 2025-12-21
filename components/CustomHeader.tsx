@@ -433,22 +433,21 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     );
 };
 
-const styles = StyleSheet.create({
+export const headerStyles = StyleSheet.create({
     container: {
         backgroundColor: Platform.OS === 'web' ? '#FBFAF8' : palette.surface,
-        // Sticky header для лучшей навигации
-        // (на web положение управляется родительским layout)
-        ...Platform.select({
-            web: {
-                // @ts-ignore: web-only position value
-                position: 'sticky' as any,
-                top: 0,
-            },
-            default: {
-                position: 'relative',
-            },
-        }),
-        zIndex: 1000,
+        paddingTop: Platform.OS === 'ios' ? (StatusBar.currentHeight || 0) : 0,
+        paddingBottom: Platform.OS === 'web' ? 12 : 0,
+        borderBottomWidth: Platform.OS === 'web' ? StyleSheet.hairlineWidth : 0,
+        borderBottomColor: 'rgba(0,0,0,0.05)',
+        ...(Platform.OS === 'web'
+            ? ({
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 2000,
+                  width: '100%',
+              } as any)
+            : { zIndex: 10 }),
     },
     wrapper: {
         width: '100%',
@@ -780,6 +779,8 @@ const styles = StyleSheet.create({
         height: 1,
         backgroundColor: palette.border,
         marginVertical: 8,
-        marginHorizontal: 20,
     },
 });
+
+// Alias to preserve existing usages in component JSX
+const styles = headerStyles;

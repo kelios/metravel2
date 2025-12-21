@@ -3,6 +3,7 @@ import React, {
     Suspense,
     lazy,
     useEffect,
+    useRef,
     useState,
     useCallback,
     useMemo,
@@ -33,6 +34,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
+import { getStyles } from './map.styles';
 
 interface Coordinates { latitude: number; longitude: number; }
 interface FilterValues { categories: string[]; radius: string; address: string; }
@@ -96,10 +98,22 @@ export default function MapScreen() {
         return () => cancelAnimationFrame(frame);
     }, [mapReady]);
 
+    useEffect(() => {
+        if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+        // Leaflet relies on container size; when we show/hide the side panel we change
+        // available width via paddingRight, so force a resize event to trigger invalidate.
+        window.dispatchEvent(new Event('resize'));
+    }, [rightPanelVisible, isMobile]);
+
     // ✅ ОПТИМИЗАЦИЯ: Debounce для фильтров и координат
     const debouncedCoordinates = useDebouncedValue(coordinates, 500);
     const debouncedFilterValues = useDebouncedValue(filterValues, 300);
-    const debouncedRoutePoints = useDebouncedValue(routePoints, 500);
+    // ✅ ИСПРАВЛЕНИЕ: Создаем стабильный строковый ключ для routePoints вместо массива
+    const routePointsKey = useMemo(
+        () => routePoints.length > 0 ? routePoints.map(p => p.join(',')).join('|') : '',
+        [routePoints]
+    );
+    const debouncedRoutePointsKey = useDebouncedValue(routePointsKey, 500);
 
     const normalizedCategoryIds = useMemo(
         () => mapCategoryNamesToIds(filterValues.categories, filters.categories),
@@ -122,6 +136,18 @@ export default function MapScreen() {
         [fullRouteCoords]
     );
 
+    // Keep the actual coordinate array out of react-query keys; store it in a ref.
+    // This avoids refetch/cancel loops caused by new array references with the same coordinates.
+    const fullRouteCoordsRef = useRef<[number, number][]>([]);
+    useEffect(() => {
+        if (!routeSignature) {
+            fullRouteCoordsRef.current = [];
+            return;
+        }
+        fullRouteCoordsRef.current = fullRouteCoords;
+    }, [routeSignature, fullRouteCoords]);
+
+    // ✅ ИСПРАВЛЕНИЕ: Используем только примитивные значения в queryKey для предотвращения cancelled запросов
     const mapQueryDescriptor = useMemo(
         () => ({
             lat: debouncedCoordinates?.latitude,
@@ -129,11 +155,10 @@ export default function MapScreen() {
             radius: debouncedFilterValues.radius || '60',
             address: debouncedFilterValues.address || '',
             mode,
-            routePoints: debouncedRoutePoints,
-            fullRouteCoords: fullRouteCoords,
+            routePointsKey: debouncedRoutePointsKey, // Строка вместо массива
             routeKey: routeSignature,
             transportMode,
-            filters: backendFilters,
+            filtersKey: JSON.stringify(backendFilters), // Строка вместо объекта
         }),
         [
             debouncedCoordinates?.latitude,
@@ -141,8 +166,7 @@ export default function MapScreen() {
             debouncedFilterValues.radius,
             debouncedFilterValues.address,
             mode,
-            debouncedRoutePoints,
-            fullRouteCoords,
+            debouncedRoutePointsKey,
             routeSignature,
             transportMode,
             backendFilters,
@@ -221,11 +245,10 @@ export default function MapScreen() {
                     radius: string;
                     address: string;
                     mode: 'radius' | 'route';
-                    routePoints: [number, number][];
-                    fullRouteCoords: [number, number][];
+                    routePointsKey: string; // ✅ Строка вместо массива
                     routeKey: string;
                     transportMode: typeof transportMode;
-                    filters: Record<string, any>;
+                    filtersKey: string; // ✅ Строка вместо объекта
                 },
             ];
 
@@ -234,6 +257,9 @@ export default function MapScreen() {
             }
 
             let data: any[] = [];
+            
+            // ✅ ИСПРАВЛЕНИЕ: Парсим фильтры из строки
+            const parsedFilters = params.filtersKey ? JSON.parse(params.filtersKey) : {};
 
             try {
                 if (params.mode === 'radius') {
@@ -241,11 +267,14 @@ export default function MapScreen() {
                         lat: params.lat.toString(),
                         lng: params.lng.toString(),
                         radius: params.radius,
-                        categories: params.filters.categories,
+                        categories: parsedFilters.categories,
                     });
                     data = Object.values(result || {});
-                } else if (params.mode === 'route' && params.fullRouteCoords.length >= 2) {
-                    const result = await fetchTravelsNearRoute(params.fullRouteCoords, 2);
+                } else if (params.mode === 'route' && params.routeKey) {
+                    const coords = fullRouteCoordsRef.current;
+                    if (coords.length < 2) return [];
+
+                    const result = await fetchTravelsNearRoute(coords, 2);
                     if (result && typeof result === 'object') {
                         data = Array.isArray(result) ? result : Object.values(result);
                     }
@@ -387,7 +416,13 @@ export default function MapScreen() {
                 />
             )}
             <SafeAreaView style={styles.container}>
-                <View style={styles.content}>
+                <View
+                    style={[
+                        styles.content,
+                        // ✅ ИСПРАВЛЕНИЕ: paddingRight должен соответствовать ширине панели (360px)
+                        !isMobile && rightPanelVisible ? { paddingRight: 360 } : null,
+                    ]}
+                >
                     {mapReady ? (
                         <Suspense fallback={mapPanelPlaceholder}>
                             <LazyMapPanel
@@ -592,197 +627,3 @@ export default function MapScreen() {
         </>
     );
 }
-
-export const getStyles = (isMobile: boolean, insetTop: number, headerOffset: number) => StyleSheet.create({
-    container: {
-        flex: 1,
-        ...(Platform.OS === 'web' ? ({ 
-            height: '100vh',           // растягиваем на высоту окна
-            minHeight: '100vh',
-        } as any) : null),
-        backgroundColor: '#f5f5f5',
-        paddingTop: headerOffset,
-    },
-    content: {
-        flex: 1,
-        position: 'relative',
-    },
-    togglePanelButton: {
-        position: 'absolute',
-        right: 16,
-        top: 16,
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: '#4a8c8c',
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 4,
-        zIndex: 1001,
-    },
-    rightPanel: {
-        position: 'absolute',
-        right: 0,
-        top: headerOffset,
-        bottom: 0,
-        width: isMobile ? '100%' : 360,
-        maxWidth: isMobile ? '100%' : 400,
-        backgroundColor: '#fff',
-        shadowColor: '#000',
-        shadowOffset: { width: -2, height: 0 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 8,
-        zIndex: 1000,
-    },
-    overlay: {
-        position: 'absolute',
-        top: headerOffset,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        zIndex: 999,
-    },
-    tabsContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingTop: (isMobile ? insetTop + 6 : 8) + headerOffset,
-        paddingBottom: 10,
-        paddingHorizontal: isMobile ? 12 : 8,
-        backgroundColor: '#fff',
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: '#e2e8f0',
-        columnGap: 8,
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: isMobile ? 0.08 : 0.05,
-        shadowRadius: 8,
-        elevation: isMobile ? 5 : 2,
-        zIndex: 1001,
-    },
-    tabsSegment: {
-        flex: 1,
-        flexDirection: 'row',
-        backgroundColor: '#f1f5f9',
-        borderRadius: 16,
-        padding: 4,
-        columnGap: 6,
-    },
-    tab: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 10,
-        borderRadius: 12,
-        gap: 10,
-    },
-    tabActive: {
-        backgroundColor: '#4a8c8c',
-    },
-    tabPressed: {
-        opacity: 0.92,
-    },
-    tabIconBubble: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#e2e8f0',
-    },
-    tabIconBubbleActive: {
-        backgroundColor: 'rgba(255,255,255,0.18)',
-    },
-    tabLabelColumn: {
-        flex: 1,
-    },
-    tabText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#1f2933',
-    },
-    tabTextActive: {
-        color: '#fff',
-    },
-    tabHint: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: '#64748b',
-    },
-    tabHintActive: {
-        color: 'rgba(255,255,255,0.85)',
-    },
-    panelContent: {
-        flex: 1,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-    },
-    closePanelButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: '#eef2f6',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    travelsListContainer: {
-        flex: 1,
-        padding: 12,
-    },
-    loader: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-    },
-    loaderText: {
-        marginTop: 8,
-        color: '#666',
-        fontSize: 14,
-    },
-    updatingIndicator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        backgroundColor: '#f0f7ff',
-        borderRadius: 8,
-        marginBottom: 8,
-    },
-    updatingText: {
-        marginLeft: 8,
-        color: '#4a8c8c',
-        fontSize: 12,
-        fontWeight: '500',
-    },
-    mapPlaceholder: {
-        flex: 1,
-        minHeight: 260,
-        borderRadius: 20,
-        backgroundColor: '#fff',
-        marginLeft: 16,
-        marginRight: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: '#e2e8f0',
-    },
-    mapPlaceholderText: {
-        marginTop: 8,
-        fontSize: 14,
-        color: '#8c99a6',
-    },
-    errorContainer: {
-        flex: 1,
-        padding: 16,
-        justifyContent: 'center',
-    },
-});

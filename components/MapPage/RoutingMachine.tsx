@@ -1,5 +1,5 @@
 // components/MapPage/RoutingMachine.tsx
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { useRouting } from './useRouting'
 
 interface RoutingMachineProps {
@@ -38,6 +38,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
     ORS_API_KEY,
 }) => {
     const polylineRef = useRef<any>(null)
+    const lastFitKeyRef = useRef<string | null>(null)
     const prevStateRef = useRef<{
         loading: boolean
         error: string | boolean
@@ -93,6 +94,11 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
     // Draw polyline on map (separate effect)
     // Use coordsKey to avoid infinite loops from array reference changes
     const coordsKeyForDraw = JSON.stringify(routingState.coords)
+    // ✅ ИСПРАВЛЕНИЕ: Мемоизируем fitKey чтобы избежать пересоздания на каждом рендере
+    const fitKey = useMemo(
+        () => `${transportMode}-${routePoints.map((p) => p.join(',')).join('|')}`,
+        [transportMode, routePoints]
+    )
     
     useEffect(() => {
         if (!map || typeof window === 'undefined') return
@@ -135,24 +141,29 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             line.addTo(map)
             polylineRef.current = line
             
-            // Центрируем карту на маршруте только при первом построении
-            try {
-                const bounds = line.getBounds()
-                if (bounds.isValid()) {
-                    map.fitBounds(bounds.pad(0.1), { 
-                        animate: true,
-                        duration: 0.5,
-                        maxZoom: 14
-                    })
-                }
-            } catch (error) {
-                if (__DEV__) {
-                    const { devWarn } = require('@/src/utils/logger')
-                    devWarn('Ошибка центрирования на маршруте:', error)
+            // Центрируем карту на маршруте только при изменении старт/финиш.
+            // Иначе при каждом обновлении coords (или store sync) карта будет "дергаться",
+            // создавая ощущение бесконечной перестройки.
+            if (lastFitKeyRef.current !== fitKey) {
+                lastFitKeyRef.current = fitKey
+                try {
+                    const bounds = line.getBounds()
+                    if (bounds.isValid()) {
+                        map.fitBounds(bounds.pad(0.1), { 
+                            animate: true,
+                            duration: 0.5,
+                            maxZoom: 14
+                        })
+                    }
+                } catch (error) {
+                    if (__DEV__) {
+                        const { devWarn } = require('@/src/utils/logger')
+                        devWarn('Ошибка центрирования на маршруте:', error)
+                    }
                 }
             }
         }
-    }, [map, coordsKeyForDraw, routingState.error])
+    }, [map, coordsKeyForDraw, routingState.error, fitKey])
 
     // Cleanup on unmount
     useEffect(() => {
@@ -165,6 +176,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                 }
                 polylineRef.current = null
             }
+            lastFitKeyRef.current = null
         }
     }, [map])
 
