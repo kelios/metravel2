@@ -179,6 +179,8 @@ const STEP_CONFIG: StepMeta[] = [
     },
 ];
 
+export { normalizeCategoryTravelAddress, normalizeCountries, initFilters };
+
 export default function UpsertTravel() {
     const router = useRouter();
     const { id } = useLocalSearchParams();
@@ -406,15 +408,16 @@ export default function UpsertTravel() {
                 ]);
                 if (!isMounted) return;
                 setFilters((prev) => {
-                    // Если страны уже загружены ранее, повторно не трогаем
-                    if (prev && Array.isArray(prev.countries) && prev.countries.length > 0) {
-                        return prev;
-                    }
+                    // Всегда обновляем категории точек, даже если страны уже были загружены ранее
+                    const base = prev && Array.isArray(prev.countries) && prev.countries.length > 0
+                        ? { ...prev }
+                        : {} as any;
+
                     console.log('Raw filtersData:', filtersData);
                     console.log('Raw categoryTravelAddress:', filtersData?.categoryTravelAddress);
-                    
+
                     let normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(filtersData?.categoryTravelAddress);
-                    
+
                     // Fallback: если API не вернул категории точек, используем дефолтные
                     if (!normalizedCategoryTravelAddress || normalizedCategoryTravelAddress.length === 0) {
                         console.warn('API returned empty categoryTravelAddress, using fallback values');
@@ -429,10 +432,15 @@ export default function UpsertTravel() {
                             { id: '8', name: 'Кафе' }
                         ];
                     }
-                    
+
                     console.log('Normalized categoryTravelAddress:', normalizedCategoryTravelAddress);
-                    const normalizedCountries = normalizeCountries(countryData);
+
+                    const normalizedCountries = (base.countries && base.countries.length > 0)
+                        ? base.countries
+                        : normalizeCountries(countryData);
+
                     return {
+                        ...base,
                         ...filtersData,
                         categoryTravelAddress: normalizedCategoryTravelAddress,
                         countries: normalizedCountries,

@@ -22,7 +22,7 @@ const DEFAULT_TIMEOUT = 10000;
 const LONG_TIMEOUT = 30000;
 
 const SAVE_TRAVEL = `${URLAPI}/travels/upsert/`;
-const UPLOAD_IMAGE = `${URLAPI}/upload/`;
+const UPLOAD_IMAGE = `${URLAPI}/upload`;
 const GALLERY = `${URLAPI}/gallery/`;
 const GET_FILTERS = `${URLAPI}/getFiltersTravel/`;
 const GET_FILTERS_COUNTRY = `${URLAPI}/countriesforsearch/`;
@@ -139,7 +139,7 @@ export const deleteImage = async (imageId: string) => {
     throw new Error('Пользователь не авторизован');
   }
 
-  const response = await fetchWithTimeout(`${GALLERY}/${imageId}`, {
+  const response = await fetchWithTimeout(`${GALLERY}${imageId}`, {
     method: 'DELETE',
     headers: { Authorization: `Token ${token}` },
   }, DEFAULT_TIMEOUT);

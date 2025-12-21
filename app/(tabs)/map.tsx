@@ -362,7 +362,13 @@ export default function MapScreen() {
     const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
     const canonical = useMemo(() => `${SITE}${pathname || '/map'}`, [SITE, pathname]);
     
-    const styles = useMemo(() => getStyles(isMobile, insets.top), [isMobile, insets.top]);
+    const HEADER_HEIGHT_WEB = 88; // matches reserved header height in (tabs)/_layout
+    const headerOffset = Platform.OS === 'web' ? HEADER_HEIGHT_WEB : 0;
+
+    const styles = useMemo(
+        () => getStyles(isMobile, insets.top, headerOffset),
+        [isMobile, insets.top, headerOffset],
+    );
     const mapPanelPlaceholder = (
         <View style={styles.mapPlaceholder}>
             <ActivityIndicator size="large" color="#4a8c8c" />
@@ -587,15 +593,15 @@ export default function MapScreen() {
     );
 }
 
-const getStyles = (isMobile: boolean, insetTop: number) => StyleSheet.create({
+export const getStyles = (isMobile: boolean, insetTop: number, headerOffset: number) => StyleSheet.create({
     container: {
         flex: 1,
         ...(Platform.OS === 'web' ? ({ 
             height: '100vh',           // растягиваем на высоту окна
             minHeight: '100vh',
-            paddingTop: 88,            // отступ под хедер (резерв высоты хедера)
         } as any) : null),
         backgroundColor: '#f5f5f5',
+        paddingTop: headerOffset,
     },
     content: {
         flex: 1,
@@ -621,7 +627,7 @@ const getStyles = (isMobile: boolean, insetTop: number) => StyleSheet.create({
     rightPanel: {
         position: 'absolute',
         right: 0,
-        top: 0,
+        top: headerOffset,
         bottom: 0,
         width: isMobile ? '100%' : 360,
         maxWidth: isMobile ? '100%' : 400,
@@ -635,7 +641,7 @@ const getStyles = (isMobile: boolean, insetTop: number) => StyleSheet.create({
     },
     overlay: {
         position: 'absolute',
-        top: 0,
+        top: headerOffset,
         left: 0,
         right: 0,
         bottom: 0,
@@ -645,7 +651,7 @@ const getStyles = (isMobile: boolean, insetTop: number) => StyleSheet.create({
     tabsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingTop: isMobile ? insetTop + 6 : 8,
+        paddingTop: (isMobile ? insetTop + 6 : 8) + headerOffset,
         paddingBottom: 10,
         paddingHorizontal: isMobile ? 12 : 8,
         backgroundColor: '#fff',
