@@ -131,7 +131,7 @@ export const LCPOptimizedTravelCard = memo(function LCPOptimizedTravelCard({
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1];
-        console.log(`[LCP] First card loaded in: ${lastEntry.startTime.toFixed(2)}ms`);
+        console.info(`[LCP] First card loaded in: ${lastEntry.startTime.toFixed(2)}ms`);
       });
       observer.observe({ entryTypes: ['largest-contentful-paint'] });
     }

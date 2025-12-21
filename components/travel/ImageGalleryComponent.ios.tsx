@@ -99,7 +99,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       console.error('Error picking images:', error);
       Alert.alert('Ошибка', 'Не удалось выбрать изображения');
     }
-  }, [images.length, maxImages]);
+  }, [handleUploadImages, images.length, maxImages]);
 
   const handleTakePhoto = useCallback(async () => {
     if (images.length >= maxImages) {
@@ -128,7 +128,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       console.error('Error taking photo:', error);
       Alert.alert('Ошибка', 'Не удалось сделать фото');
     }
-  }, [images.length, maxImages]);
+  }, [handleUploadImages, images.length, maxImages]);
 
   const handleUploadImages = useCallback(
     async (assets: ImagePicker.ImagePickerAsset[]) => {
@@ -192,7 +192,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
     try {
       await deleteImage(selectedImageId);
       setImages((prev) => prev.filter((img) => img.id !== selectedImageId));
-    } catch (error) {
+    } catch (_error) {
       Alert.alert('Ошибка', 'Не удалось удалить изображение');
     } finally {
       setDialogVisible(false);

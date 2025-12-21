@@ -63,7 +63,7 @@ type SideBarProps = {
 };
 
 function CompactSideBarTravel({
-                                refs,
+                                refs: _refs,
                                 travel,
                                 isMobile,
                                 onNavigate,
@@ -73,13 +73,12 @@ function CompactSideBarTravel({
                                 activeSection: externalActiveSection, // ✅ УЛУЧШЕНИЕ: Внешняя активная секция
                                 links,
 }: SideBarProps) {
-  const { width, isTablet } = useResponsive();
+  const { isTablet } = useResponsive();
   const [active, setActive] = useState<string>("");
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const {
     pdfExport,
     lastSettings,
-    settingsSummary,
     handleOpenPrintBookWithSettings,
   } = useSingleTravelExport(travel);
 
@@ -87,7 +86,7 @@ function CompactSideBarTravel({
   const currentActive = externalActiveSection !== undefined ? externalActiveSection : active;
 
   const setActiveNavigateAndOpen = useCallback(
-    (key: keyof typeof refs) => {
+    (key: keyof SideBarProps["refs"]) => {
       const k = String(key);
       setActive(k);
       onNavigate(key); // скролл
@@ -200,7 +199,7 @@ function CompactSideBarTravel({
   // ✅ УЛУЧШЕНИЕ: Группировка пунктов меню по категориям
   const navLinks = useMemo(
     () => (Array.isArray(links) && links.length ? links : buildTravelSectionLinks(travel)),
-    [links, travel],
+    [links, travel]
   );
 
   const handleUserTravels = () =>

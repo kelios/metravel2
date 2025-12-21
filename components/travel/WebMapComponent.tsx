@@ -1,7 +1,14 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-// CSS загружается через CDN в Map.web.tsx
 import MarkersListComponent from '../MarkersListComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+
+const normalizeImageUrl = (url?: string | null) => {
+    if (!url) return '';
+    const trimmed = url.trim();
+    if (/^(https?:\/\/|data:|blob:)/i.test(trimmed)) return trimmed;
+    const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
+    return `${base}/${trimmed.replace(/^\/+/, '')}`;
+};
 
 type LeafletNS = any;
 type ReactLeafletNS = typeof import('react-leaflet');
@@ -21,7 +28,7 @@ const reverseGeocode = async (latlng: any) => {
 
     try {
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1&accept-language=ru`
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1&accept-language=ru&extratags=1&namedetails=1`
         );
         if (!response.ok) return null;
         return await response.json();
@@ -442,7 +449,7 @@ const WebMapComponent = ({
                                         <Popup>
                                             <div style={styles.popupContent}>
                                                 {marker.image && (
-                                                    <img src={marker.image} alt="Фото" style={styles.popupImage} />
+                                                    <img src={normalizeImageUrl(marker.image)} alt="Фото" style={styles.popupImage} />
                                                 )}
                                                 <p><strong>Адрес:</strong> {marker.address || 'Не указан'}</p>
                                                 <p><strong>Категории:</strong>

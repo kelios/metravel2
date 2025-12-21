@@ -6,7 +6,6 @@ import {
     Platform,
     Pressable,
     Text,
-    Dimensions,
     TouchableOpacity,
     Modal,
     Alert,
@@ -133,8 +132,6 @@ export default function QuestFullMap({
     const [exportMenuVisible, setExportMenuVisible] = useState(false);
     const mapDivRef = useRef<HTMLDivElement | null>(null);
     const insets = useSafeAreaInsets();
-    const { width: screenWidth } = Dimensions.get('window');
-
     useEffect(() => {
         (async () => {
             try {
@@ -327,7 +324,6 @@ export default function QuestFullMap({
     }
 
     const { L, MapContainer, TileLayer, Marker, Polyline, Popup, FeatureGroup, useMap } = mods;
-    const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng] as [number, number])).pad(0.15);
 
     // Безопасное подгоняние границ
     const FitBounds: React.FC = () => {
@@ -335,6 +331,8 @@ export default function QuestFullMap({
 
         useEffect(() => {
             if (!map) return;
+
+            const nextBounds = L.latLngBounds(points.map(p => [p.lat, p.lng] as [number, number])).pad(0.15);
 
             map.whenReady(() => {
                 const container: HTMLElement | undefined = map.getContainer?.();
@@ -344,15 +342,15 @@ export default function QuestFullMap({
                 if (!clientWidth || !clientHeight) return;
 
                 const current = map.getBounds?.();
-                const already = current && current.contains(bounds) && bounds.contains(current);
+                const already = current && current.contains(nextBounds) && nextBounds.contains(current);
 
                 if (!already) {
-                    map.fitBounds(bounds, { animate: false });
+                    map.fitBounds(nextBounds, { animate: false });
                 }
 
                 requestAnimationFrame(() => map.invalidateSize());
             });
-        }, [map, bounds]);
+        }, [map]);
 
         return null;
     };

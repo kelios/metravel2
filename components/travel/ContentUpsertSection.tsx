@@ -283,7 +283,17 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                 </View>
             );
         },
-        [descriptionPlainLength, descriptionPlainText, descriptionStatusText, idTravelStr, isDescriptionFullscreen, isMobile]
+        [
+            autosaveStatus,
+            descriptionPlainLength,
+            descriptionPlainText,
+            descriptionProgress,
+            descriptionProgressColor,
+            descriptionStatusText,
+            idTravelStr,
+            isDescriptionFullscreen,
+            isMobile,
+        ]
     );
 
     useEffect(() => {

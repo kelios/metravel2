@@ -3,12 +3,11 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import * as Location from 'expo-location';
 import 'leaflet/dist/leaflet.css';
-type LeafletNS = any;
 type ReactLeafletNS = typeof import('react-leaflet');
 // CSS загружается через CDN ниже в коде
 import RoutingMachine from '@/components/MapPage/RoutingMachine';
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
-import MapLegend from '@/components/MapPage/MapLegend';
+// MapLegend is currently unused in the web map
 
 type Point = {
   id?: number;
@@ -44,16 +43,6 @@ interface Props {
 const strToLatLng = (s: string): [number, number] | null => {
   const [lat, lng] = s.split(',').map(Number);
   return Number.isFinite(lat) && Number.isFinite(lng) ? [lng, lat] : null;
-};
-
-const generateUniqueKey = (
-    point: Point,
-    index: number,
-    coords: [number, number] | null
-): string => {
-  if (point.id) return `point-${point.id}`;
-  if (coords) return `point-${index}-${coords.join('-')}`;
-  return `point-${index}-${Date.now()}`;
 };
 
 // ✅ ОПТИМИЗАЦИЯ: Мемоизированный компонент маркеров для предотвращения лишних перерисовок
@@ -471,7 +460,7 @@ const MapPageComponent: React.FC<Props> = ({
         map.off('moveend', saveView);
         map.off('zoomend', saveView);
       };
-    }, [map, mode]);
+    }, [map]);
 
     // Центрирование на местоположение пользователя при первой загрузке
     useEffect(() => {
@@ -507,7 +496,7 @@ const MapPageComponent: React.FC<Props> = ({
       }
       
       lastModeRef.current = mode;
-    }, [map, userLocation, coordinates, mode]);
+    }, [map]);
 
     // Автоматическое подгонка границ при изменении данных (но только если не отключено)
     useEffect(() => {
@@ -546,7 +535,7 @@ const MapPageComponent: React.FC<Props> = ({
         map.fitBounds(bounds.pad(0.2), { animate: !hasCenteredOnData });
         setHasCenteredOnData(true);
       }
-    }, [disableFitBounds, mode, routePoints, travel.data, userLocation, map, hasCenteredOnData, isMobileScreen]);
+    }, [map]);
 
     return null;
   };

@@ -22,10 +22,12 @@ interface MarkersListComponentProps {
 }
 const normalizeImageUrl = (url?: string | null) => {
     if (!url) return '';
-    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+    const trimmed = url.trim();
+    // Поддерживаем превью blob:/data:, а также абсолютные ссылки
+    if (/^(https?:\/\/|data:|blob:)/i.test(trimmed)) return trimmed;
     const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
-    if (!base) return url;
-    return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+    if (!base) return trimmed;
+    return `${base}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 };
 
 const MarkersListComponent: React.FC<MarkersListComponentProps> = ({

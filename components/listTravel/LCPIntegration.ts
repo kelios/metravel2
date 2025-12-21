@@ -76,7 +76,7 @@ export const useLCPOptimizations = (travel: any, isFirst: boolean = false) => {
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1];
-        console.log(`[LCP] Travel card loaded: ${lastEntry.startTime.toFixed(2)}ms`);
+        console.info(`[LCP] Travel card loaded: ${lastEntry.startTime.toFixed(2)}ms`);
       });
       observer.observe({ entryTypes: ['largest-contentful-paint'] });
     }

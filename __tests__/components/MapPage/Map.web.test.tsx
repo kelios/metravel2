@@ -9,7 +9,7 @@ const mockLeaflet = {
     _getIconUrl: jest.fn(),
   })),
   latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
-  latLngBounds: jest.fn((points: any[]) => ({
+  latLngBounds: jest.fn((_points: any[]) => ({
     pad: jest.fn((padding: number) => ({ pad: padding })),
   })),
 }
@@ -118,7 +118,6 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    // Reset window.L
     ;(window as any).L = mockLeaflet
     // Reset marker click handler
     delete (window as any).lastMarkerClickHandler
@@ -363,7 +362,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         routePoints: [] as [number, number][],
       }
       
-      const { rerender } = render(<MapPageComponent {...props} />)
+      const { rerender } = render(<MapPageComponent {...props} />);
       await act(async () => {})
       
       // Очищаем моки перед переключением
@@ -406,7 +405,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       expect(setViewCalls.length).toBeLessThanOrEqual(1)
       
       if (setViewCalls.length > 0) {
-        const [center, zoom] = setViewCalls[0]
+        const [center, _zoom] = setViewCalls[0]
         // Должен использовать coordinates, а не userLocation
         expect(center).toEqual([53.9, 27.5667]) // coordinates из defaultProps
       }
@@ -438,8 +437,9 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       await act(async () => {})
       
       // Сохраняем текущую позицию
-      const initialCenter = mockGetCenter()
-      const initialZoom = mockGetZoom()
+      const _initialCenter = [0, 0];
+      const _initialZoom = 4;
+      mockGetZoom()
       
       // Очищаем моки
       mockSetView.mockClear()
@@ -588,7 +588,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       const { rerender } = render(<MapPageComponent {...props} />)
       await act(async () => {})
       
-      const initialSetViewCalls = mockSetView.mock.calls.length
+      const _initialSetViewCalls = mockSetView.mock.calls.length
       
       // Симулируем несколько обновлений (как при переключении вкладок)
       for (let i = 0; i < 3; i++) {
@@ -613,7 +613,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         // radius не передаем, должен использоваться дефолт 60км -> 60000м
       }
 
-      const { getByTestId } = render(<MapPageComponent {...props} />)
+      render(<MapPageComponent {...props} />)
       await act(async () => {})
 
       // Проверяем радиус через пропсы, сохранённые в моке Circle

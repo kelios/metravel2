@@ -114,7 +114,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
             await Promise.all(uploads);
             setIsUploading(false);
         },
-        [images, loading, collection, idTravel, maxImages]
+        [collection, idTravel, images.length, maxImages]
     );
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({

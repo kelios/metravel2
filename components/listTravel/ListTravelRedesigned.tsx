@@ -103,8 +103,8 @@ export default function ListTravelRedesigned(_: ListTravelRedesignedProps) {
         icon="clock"
         defaultExpanded={getBlockState('recentViews').expanded}
         defaultHidden={getBlockState('recentViews').hidden}
-        onToggle={(expanded) => toggleExpanded('recentViews')}
-        onHide={(hidden) => toggleHidden('recentViews')}
+        onToggle={(_expanded) => toggleExpanded('recentViews')}
+        onHide={(_hidden) => toggleHidden('recentViews')}
         compactMode={mode === 'compact'}
       >
         <RecentViews compact={mode === 'compact'} />

@@ -7,7 +7,6 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import FavoriteButton from '@/components/FavoriteButton';
 import type { Travel } from '@/src/types/types';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface TravelCardHoverActionsProps {
   travel: Travel;

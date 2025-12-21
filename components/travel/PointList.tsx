@@ -323,7 +323,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
       } else {
         await Clipboard.setStringAsync(coordStr);
       }
-    } catch (_err) {
+    } catch {
       // ignore clipboard failures
     }
   }, []);
@@ -346,7 +346,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
           await Linking.openURL(deeplink);
           return;
         }
-      } catch (_err) {
+      } catch {
         // ignore deep link failures
       }
     }
@@ -403,7 +403,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
         )}
       </View>
     ),
-    [isMobile, numColumns, onCopy, onOpenMap, onShare, responsive]
+    [baseUrl, isMobile, numColumns, onCopy, onOpenMap, onShare, responsive]
   );
 
   return (

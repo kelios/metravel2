@@ -4,8 +4,6 @@ import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 
 import { TAB_CARD_TEMPLATE, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';

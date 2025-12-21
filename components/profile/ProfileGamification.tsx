@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import AuthorProgress from '@/components/gamification/AuthorProgress';
 import BadgeSystem from '@/components/gamification/BadgeSystem';

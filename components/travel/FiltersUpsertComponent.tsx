@@ -80,27 +80,6 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     const form: any = formData!;
     const resolvedFilters = filters!;
 
-    const handleResetFilters = () => {
-        setFormData({
-            ...(form as any),
-            publish: false,
-            moderation: false,
-            countries: [],
-            categories: [],
-            transports: [],
-            complexity: [],
-            companions: [],
-            over_nights_stay: [],
-            month: [],
-            visa: false,
-            year: '',
-            number_peoples: '',
-            number_days: '',
-            budget: '',
-            travel_image_thumb_small_url: '', // очищаем картинку
-        } as any);
-    };
-
     const openPreview = () => {
         if (!form.slug) return;
         const url = `/travels/${form.slug}`;

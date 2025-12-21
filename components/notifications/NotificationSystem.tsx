@@ -37,50 +37,55 @@ const NotificationSystem = ({ onNotificationPress }: NotificationSystemProps) =>
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        const notificationsData = await AsyncStorage.getItem(STORAGE_KEY_NOTIFICATIONS);
+        if (notificationsData) {
+          const allNotifications: Notification[] = JSON.parse(notificationsData);
+          setNotifications(allNotifications);
+          setUnreadCount(allNotifications.filter((n) => !n.read).length);
+        }
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+      }
+    };
+
     loadNotifications();
   }, []);
 
-  const loadNotifications = async () => {
+  const markAsRead = useCallback(async (notificationId: string) => {
     try {
-      const notificationsData = await AsyncStorage.getItem(STORAGE_KEY_NOTIFICATIONS);
-      if (notificationsData) {
-        const allNotifications: Notification[] = JSON.parse(notificationsData);
-        setNotifications(allNotifications);
-        setUnreadCount(allNotifications.filter((n) => !n.read).length);
-      }
-    } catch (error) {
-      console.error('Error loading notifications:', error);
-    }
-  };
-
-  const markAsRead = async (notificationId: string) => {
-    try {
-      const updatedNotifications = notifications.map((n) =>
-        n.id === notificationId ? { ...n, read: true } : n
-      );
-      setNotifications(updatedNotifications);
-      setUnreadCount(updatedNotifications.filter((n) => !n.read).length);
-      await AsyncStorage.setItem(STORAGE_KEY_NOTIFICATIONS, JSON.stringify(updatedNotifications));
+      setNotifications((prev) => {
+        const updated = prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n));
+        setUnreadCount(updated.filter((n) => !n.read).length);
+        void AsyncStorage.setItem(STORAGE_KEY_NOTIFICATIONS, JSON.stringify(updated));
+        return updated;
+      });
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
-  };
+  }, []);
 
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
     try {
-      const updatedNotifications = notifications.map((n) => ({ ...n, read: true }));
-      setNotifications(updatedNotifications);
-      setUnreadCount(0);
-      await AsyncStorage.setItem(STORAGE_KEY_NOTIFICATIONS, JSON.stringify(updatedNotifications));
+      setNotifications((prev) => {
+        const updated = prev.map((n) => ({ ...n, read: true }));
+        setUnreadCount(0);
+        void AsyncStorage.setItem(STORAGE_KEY_NOTIFICATIONS, JSON.stringify(updated));
+        return updated;
+      });
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
-  };
+  }, []);
 
-  const handleNotificationPress = (notification: Notification) => {
-    markAsRead(notification.id);
-    onNotificationPress?.(notification);
-  };
+  const handleNotificationPress = useCallback(
+    (notification: Notification) => {
+      markAsRead(notification.id);
+      onNotificationPress?.(notification);
+    },
+    [markAsRead, onNotificationPress]
+  );
 
   const renderNotification = useCallback(
     ({ item }: { item: Notification }) => (
@@ -147,7 +152,7 @@ const NotificationItem = memo(({ notification, onPress }: NotificationItemProps)
         useNativeDriver: true,
       }).start();
     }
-  }, [read]);
+  }, [fadeAnim, read]);
 
   const getTimeAgo = (timestamp: string): string => {
     const now = new Date();

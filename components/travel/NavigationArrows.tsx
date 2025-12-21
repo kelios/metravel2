@@ -13,7 +13,6 @@ import type { Travel } from '@/src/types/types';
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 
 interface NavigationArrowsProps {

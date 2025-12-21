@@ -858,7 +858,6 @@ export default function TravelDetails() {
   const [viewportHeight, setViewportHeight] = useState(0);
   const [showMobileSectionTabs, setShowMobileSectionTabs] = useState(false);
   const [showStickyActions, setShowStickyActions] = useState(false);
-  const [stickyActionsHeight, setStickyActionsHeight] = useState(0);
   const [heroBlockHeight, setHeroBlockHeight] = useState(0);
   
   // ✅ АРХИТЕКТУРА: activeSection теперь управляется через useActiveSection
@@ -910,8 +909,8 @@ export default function TravelDetails() {
     if (!isMobile) return 0;
     if (!showStickyActions) return 0;
     // +16 — небольшой зазор, чтобы последний контент не прилипал к панели
-    return stickyActionsBottomOffset + stickyActionsHeight + 16;
-  }, [isMobile, showStickyActions, stickyActionsBottomOffset, stickyActionsHeight]);
+    return stickyActionsBottomOffset + 16;
+  }, [isMobile, showStickyActions, stickyActionsBottomOffset]);
 
   // ✅ АРХИТЕКТУРА: Intersection Observer логика теперь в useActiveSection
   // Остается только логика установки data-section-key атрибутов
