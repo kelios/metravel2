@@ -20,18 +20,19 @@ index a78bff9..fb50431 100644
      }
      this._remeasureMetricsOnActivation = _utils.remeasure.bind(this);
 diff --git a/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js b/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
-index 32b5db7..aace074 100644
+index 32b5db7..a1a9cf7 100644
 --- a/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
 +++ b/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
-@@ -5,6 +5,7 @@ Object.defineProperty(exports, "__esModule", {
+@@ -5,6 +5,8 @@ Object.defineProperty(exports, "__esModule", {
  });
  exports.prepare = void 0;
  var _ = require(".");
 +const _hasTouchableProperty = typeof _.hasTouchableProperty === 'function' ? _.hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);
++const _parseTransformProp = typeof _.parseTransformProp === 'function' ? _.parseTransformProp : () => undefined;
  var _resolve = require("../../lib/resolve");
  var _resolveAssetUri2 = require("../../lib/resolveAssetUri");
  /**
-@@ -34,7 +35,7 @@ const prepare = (self, props = self.props) => {
+@@ -34,7 +36,7 @@ const prepare = (self, props = self.props) => {
      ...rest
    } = props;
    const clean = {
@@ -40,12 +41,31 @@ index 32b5db7..aace074 100644
        onStartShouldSetResponder: self.touchableHandleStartShouldSetResponder,
        onResponderTerminationRequest: self.touchableHandleResponderTerminationRequest,
        onResponderGrant: self.touchableHandleResponderGrant,
+@@ -54,13 +56,13 @@ const prepare = (self, props = self.props) => {
+   }
+ 
+   // we do it like this because setting transform as undefined causes error in web
+-  const parsedTransform = (0, _.parseTransformProp)(transform, props);
++  const parsedTransform = (0, _parseTransformProp)(transform, props);
+   if (parsedTransform) {
+     clean.transform = parsedTransform;
+   }
+-  const parsedGradientTransform = (0, _.parseTransformProp)(gradientTransform);
++  const parsedGradientTransform = (0, _parseTransformProp)(gradientTransform);
+   if (parsedGradientTransform) {
+     clean.gradientTransform = parsedGradientTransform;
+   }
+-  const parsedPatternTransform = (0, _.parseTransformProp)(patternTransform);
++  const parsedPatternTransform = (0, _parseTransformProp)(patternTransform);
+   if (parsedPatternTransform) {
+     clean.patternTransform = parsedPatternTransform;
+   }
 diff --git a/node_modules/react-native-svg/lib/module/web/WebShape.js b/node_modules/react-native-svg/lib/module/web/WebShape.js
 index 64801fc..bd46e49 100644
 --- a/node_modules/react-native-svg/lib/module/web/WebShape.js
 +++ b/node_modules/react-native-svg/lib/module/web/WebShape.js
 @@ -4,8 +4,9 @@ import {
- unstable_createElement as createElement } from 'react-native';
+  unstable_createElement as createElement } from 'react-native';
  import { prepare } from './utils/prepare';
  import { convertInt32ColorToRGBA } from './utils/convertInt32Color';
 -import { camelCaseToDashed, hasTouchableProperty, remeasure } from './utils';
@@ -56,15 +76,44 @@ index 64801fc..bd46e49 100644
    prepareProps(props) {
      return props;
 diff --git a/node_modules/react-native-svg/lib/module/web/utils/prepare.js b/node_modules/react-native-svg/lib/module/web/utils/prepare.js
-index 796b489..f8c50cf 100644
+index 796b489..2816c8c 100644
 --- a/node_modules/react-native-svg/lib/module/web/utils/prepare.js
 +++ b/node_modules/react-native-svg/lib/module/web/utils/prepare.js
-@@ -1,6 +1,7 @@
+@@ -1,6 +1,8 @@
 -import { hasTouchableProperty, parseTransformProp } from '.';
-+import { hasTouchableProperty as _hasTouchableProperty, parseTransformProp } from '.';
++import { hasTouchableProperty as _hasTouchableProperty, parseTransformProp as _parseTransformProp } from '.';
  import { resolve } from '../../lib/resolve';
  import { resolveAssetUri } from '../../lib/resolveAssetUri';
-+const hasTouchableProperty = typeof _hasTouchableProperty === 'function' ? _hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);
+ const hasTouchableProperty = typeof _hasTouchableProperty === 'function' ? _hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);
++const parseTransformProp = typeof _parseTransformProp === 'function' ? _parseTransformProp : () => undefined;
  /**
   * `react-native-svg` supports additional props that aren't defined in the spec.
   * This function replaces them in a spec conforming manner.
+@@ -32,7 +34,7 @@ export const prepare = (self, props = self.props) => {
+     ...rest
+   } = props;
+   const clean = {
+-    ...(hasTouchableProperty(props) ? {
++    ...(hasTouchableProperty(props) ? {
+       onStartShouldSetResponder: self.touchableHandleStartShouldSetResponder,
+       onResponderTerminationRequest: self.touchableHandleResponderTerminationRequest,
+       onResponderGrant: self.touchableHandleResponderGrant,
+@@ -48,13 +50,13 @@ export const prepare = (self, props = self.props) => {
+   }
+ 
+   // we do it like this because setting transform as undefined causes error in web
+-  const parsedTransform = parseTransformProp(transform, props);
++  const parsedTransform = parseTransformProp(transform, props);
+   if (parsedTransform) {
+     clean.transform = parsedTransform;
+   }
+-  const parsedGradientTransform = parseTransformProp(gradientTransform);
++  const parsedGradientTransform = parseTransformProp(gradientTransform);
+   if (parsedGradientTransform) {
+     clean.gradientTransform = parsedGradientTransform;
+   }
+-  const parsedPatternTransform = parseTransformProp(patternTransform);
++  const parsedPatternTransform = parseTransformProp(patternTransform);
+   if (parsedPatternTransform) {
+     clean.patternTransform = parsedPatternTransform;
+   }
