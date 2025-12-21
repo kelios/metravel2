@@ -15,8 +15,6 @@ interface TravelCardHoverActionsProps {
   visible?: boolean;
 }
 
-const palette = DESIGN_TOKENS.colors;
-
 export default function TravelCardHoverActions({
   travel,
   onShare,
@@ -49,7 +47,7 @@ export default function TravelCardHoverActions({
       }
     } catch (error) {
       // Игнорируем ошибки (пользователь отменил и т.д.)
-      console.log('Share cancelled or failed:', error);
+      console.info('Share cancelled or failed:', error);
     }
   };
 

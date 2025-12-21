@@ -1,15 +1,14 @@
 // src/components/listTravel/RenderTravelItem.tsx
 import React, { memo, useMemo } from "react";
-import { Platform, View, ViewStyle } from "react-native";
+import { Platform, ViewStyle } from "react-native";
 import TravelListItem from "./TravelListItem";
 import AnimatedCard from "../AnimatedCard";
 import type { Travel } from "@/src/types/types";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
-import { router } from 'expo-router';
 import { TRAVEL_CARD_WEB_HEIGHT, TRAVEL_CARD_WEB_MOBILE_HEIGHT } from './utils/listTravelConstants';
 
-const { spacing, radii, shadows } = DESIGN_TOKENS;
+const { radii, shadows } = DESIGN_TOKENS;
 
 interface ContainerStyle extends ViewStyle {
     ':hover'?: ViewStyle;

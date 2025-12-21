@@ -7,6 +7,7 @@ import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { MarkerData } from '@/src/types/types';
 import MultiSelectField from '@/components/MultiSelectField';
+import { matchCountryId } from '@/components/travel/WebMapComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 
@@ -238,10 +239,15 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                 data?.countryName ||
                 data?.localityInfo?.administrative?.find((item: any) => item?.order === 2)?.name ||
                 '';
-            if (countryName) {
-                const foundCountry = (countries || []).find((c: any) => c?.title_ru === countryName);
-                if (foundCountry?.country_id) {
-                    derivedCountryId = foundCountry.country_id;
+            const countryCode =
+                data?.address?.country_code ||
+                data?.countryCode ||
+                data?.address?.ISO3166_1_alpha2 ||
+                null;
+            if (countryName || countryCode) {
+                const matchedId = matchCountryId(countryName || '', countries || [], countryCode);
+                if (matchedId != null) {
+                    derivedCountryId = String(matchedId);
                 }
             }
         } catch {

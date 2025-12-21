@@ -38,7 +38,33 @@ const normalizeCountryString = (value?: string | null) =>
         .replace(/\s+/g, ' ')
         .trim();
 
-export const matchCountryId = (countryName: string, countrylist: any[]): number | null => {
+export const matchCountryId = (
+    countryName: string,
+    countrylist: any[],
+    countryCode?: string | null,
+): number | null => {
+    const normalizedCode = (countryCode || '').toString().trim().toUpperCase();
+    if (normalizedCode) {
+        const byCode = countrylist.find((c: any) => {
+            const candidates = [
+                c?.code,
+                c?.country_code,
+                c?.countryCode,
+                c?.iso2,
+                c?.iso,
+                c?.alpha2,
+                c?.alpha_2,
+            ]
+                .map((v: any) => (v == null ? '' : String(v).trim().toUpperCase()))
+                .filter(Boolean);
+            return candidates.includes(normalizedCode);
+        });
+        if (byCode?.country_id != null) {
+            const num = Number(byCode.country_id);
+            if (Number.isFinite(num)) return num;
+        }
+    }
+
     const target = normalizeCountryString(countryName);
     if (!target) return null;
 
@@ -70,20 +96,26 @@ export const buildAddressFromGeocode = (
     latlng: any,
     matchedCountry?: any,
 ) => {
-    const localityParts: string[] = [];
-    const locality = geocodeData?.localityInfo?.locality?.[0]?.name;
-    const adminRegion = geocodeData?.localityInfo?.administrative?.find((item: any) => item?.order === 2)?.name;
-    const adminArea = geocodeData?.localityInfo?.administrative?.find((item: any) => item?.order === 4)?.name;
+    const parts: string[] = [];
 
-    if (locality) localityParts.push(locality);
-    if (adminRegion) localityParts.push(adminRegion);
-    if (adminArea && adminArea !== adminRegion) localityParts.push(adminArea);
+    const road = geocodeData?.address?.road;
+    const house = geocodeData?.address?.house_number;
+    const streetLine = [road, house].filter(Boolean).join(' ');
 
-    const baseAddress =
-        geocodeData?.display_name ||
-        geocodeData?.address?.road ||
+    const city =
         geocodeData?.address?.city ||
-        '';
+        geocodeData?.address?.town ||
+        geocodeData?.address?.village ||
+        geocodeData?.address?.municipality ||
+        geocodeData?.localityInfo?.locality?.[0]?.name;
+
+    const adminRegion =
+        geocodeData?.address?.state ||
+        geocodeData?.localityInfo?.administrative?.find((item: any) => item?.order === 2)?.name;
+
+    const adminArea =
+        geocodeData?.address?.county ||
+        geocodeData?.localityInfo?.administrative?.find((item: any) => item?.order === 4)?.name;
 
     const countryLabel =
         matchedCountry?.title_ru ||
@@ -92,10 +124,17 @@ export const buildAddressFromGeocode = (
         geocodeData?.countryName ||
         '';
 
-    const localityStr = localityParts.filter(Boolean).join(', ');
-    const combined = [baseAddress, localityStr, countryLabel].filter(Boolean).join(' · ');
+    if (streetLine) parts.push(streetLine);
+    if (city) parts.push(city);
+    if (adminRegion) parts.push(adminRegion);
+    if (adminArea && adminArea !== adminRegion) parts.push(adminArea);
+    if (countryLabel) parts.push(countryLabel);
 
-    return combined || `${latlng.lat}, ${latlng.lng}`;
+    const combined = parts.filter(Boolean).join(', ');
+    if (combined) return combined;
+
+    // fallback to provider display_name or coords
+    return geocodeData?.display_name || `${latlng.lat}, ${latlng.lng}`;
 };
 
 type WebMapComponentProps = {
@@ -192,7 +231,6 @@ const WebMapComponent = ({
     
     // Локальное состояние маркеров для немедленного отображения изменений
     const [localMarkers, setLocalMarkers] = useState(markers);
-    const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const lastMarkersRef = useRef(markers);
     
     // Синхронизируем локальное состояние с пропсами только при реальных изменениях
@@ -209,31 +247,12 @@ const WebMapComponent = ({
         }
     }, [markers]);
     
-    // Debounced обновление родительского компонента
+    // Немедленное обновление родительского компонента (без дебаунса)
     const debouncedMarkersChange = useCallback((updatedMarkers: any[]) => {
-        // Обновляем локальное состояние немедленно для UI
         setLocalMarkers(updatedMarkers);
-        
-        // Отменяем предыдущий таймер
-        if (updateTimeoutRef.current) {
-            clearTimeout(updateTimeoutRef.current);
-        }
-        
-        // Увеличен debounce до 1000ms для синхронизации с UpsertTravel
-        updateTimeoutRef.current = setTimeout(() => {
-            onMarkersChange(updatedMarkers);
-            lastMarkersRef.current = updatedMarkers;
-        }, 1000);
+        onMarkersChange(updatedMarkers);
+        lastMarkersRef.current = updatedMarkers;
     }, [onMarkersChange]);
-    
-    // Cleanup при размонтировании
-    useEffect(() => {
-        return () => {
-            if (updateTimeoutRef.current) {
-                clearTimeout(updateTimeoutRef.current);
-            }
-        };
-    }, []);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -272,10 +291,15 @@ const WebMapComponent = ({
             geocodeData?.countryName ||
             geocodeData?.localityInfo?.administrative?.find((item: any) => item?.order === 2)?.name ||
             '';
+        const countryCode =
+            geocodeData?.address?.country_code ||
+            geocodeData?.countryCode ||
+            geocodeData?.address?.ISO3166_1_alpha2 ||
+            null;
 
         let derivedCountryId: number | null = null;
 
-        const matchedId = country ? matchCountryId(country, countrylist) : null;
+        const matchedId = country ? matchCountryId(country, countrylist, countryCode) : null;
         const matchedCountry = matchedId != null
             ? countrylist.find((c: any) => Number(c?.country_id) === matchedId)
             : null;

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import {
-  ScrollView,
   ActivityIndicator,
   StyleSheet,
   SafeAreaView,
   Platform,
+  ScrollView,
 } from 'react-native'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import { Article } from '@/src/types/types'
@@ -33,7 +33,7 @@ export default function ArticleDetails() {
           setArticle(articleData)
         })
         .catch((error) => {
-          console.log('Failed to fetch article data:', error)
+          console.error('Failed to fetch article data:', error)
         })
   }, [id])
 

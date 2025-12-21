@@ -113,7 +113,7 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
       ({ item: rowItems, index: rowIndex }: { item: any[]; index: number }) => {
         return (
           <View style={styles.webRow}>
-            {rowItems.map((item, itemIndex) => (
+            {rowItems.map((item, _itemIndex) => (
               <View key={keyExtractor(item)} style={styles.webItemContainer}>
                 <TravelTmlRound travel={item as any} />
               </View>

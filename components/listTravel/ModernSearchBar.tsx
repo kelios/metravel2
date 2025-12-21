@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Platform,
   Animated,
-  Keyboard,
 } from 'react-native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { MODERN_DESIGN_TOKENS } from '@/styles/modernRedesign';

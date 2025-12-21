@@ -17,14 +17,11 @@ import {
   Platform,
   Animated,
   FlatList,
-  RefreshControl,
 } from 'react-native';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
-import { useResponsive } from '@/hooks/useResponsive';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
@@ -39,13 +36,6 @@ const PersonalizedRecommendations = lazy(() =>
 
 const WeeklyHighlights = lazy(() =>
   import('@/components/WeeklyHighlights') as any
-);
-
-const ErrorFallback = ({ message }: { message: string }) => (
-  <View style={styles.errorContainer}>
-    <MaterialIcons name="error-outline" size={48} color={DESIGN_TOKENS.colors.error} />
-    <Text style={styles.errorText}>{message}</Text>
-  </View>
 );
 
 /* ---------------- Types ---------------- */
@@ -116,7 +106,6 @@ const RecommendationsTabs = memo(
   ({ forceVisible = false, onVisibilityChange }: RecommendationsTabsProps) => {
     const [activeTab, setActiveTab] = useState<TabType>('highlights');
     const [collapsed, setCollapsed] = useState(false);
-    const [refreshing, setRefreshing] = useState(false);
 
     const router = useRouter();
     const { favorites = [], viewHistory = [], clearFavorites, clearHistory, ensureServerData } = useFavorites() as any;

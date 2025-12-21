@@ -62,7 +62,6 @@ function StickySearchBar({
   const isMobile = isPhone || isLargePhone;
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
-  const webWidth = Platform.OS === 'web' ? Dimensions.get('window').width : 0;
 
   // UX УЛУЧШЕНИЕ: Показываем счетчик только если есть результаты
   const showResultsCount = resultsCount !== undefined && resultsCount > 0 && !isMobile;
@@ -85,8 +84,8 @@ function StickySearchBar({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Mobile web specific styles
-  const isMobileWeb = Platform.OS === 'web' && webWidth > 0 && webWidth <= 1024;
+  // Mobile web specific styles (оставлено для будущего использования)
+  // const isMobileWeb = Platform.OS === 'web' && webWidth > 0 && webWidth <= 1024;
 
   return (
     <View

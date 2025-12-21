@@ -26,7 +26,7 @@ const STABLE_PLACEHOLDER_HEIGHT = 1200; // Reserve vertical space on web mobile 
 const RecommendationsTabs = lazy(async () => {
   try {
     return await import('./RecommendationsTabs')
-  } catch (error) {
+  } catch {
     return {
       default: memo(() => (
         <View style={{ padding: 16, alignItems: 'center' }}>
@@ -119,7 +119,6 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     const router = useRouter()
     const listRef = useRef<FlatList<Travel[]> | null>(null)
     const recommendationsOffsetRef = useRef(0)
-    const shouldScrollRef = useRef(false)
     const prevVisibilityRef = useRef(isRecommendationsVisible)
 
     // ✅ CLS FIX P1: Remove auto-scroll to recommendations to prevent perceived layout shift
@@ -179,7 +178,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       }
 
       return resetPadding
-    }, [cardsContainerStyle, isWebMobile])
+    }, [cardsContainerStyle, isWebMobile, isMobile])
 
     const rows = useMemo(() => {
       const cols = Math.max(1, (isMobile ? 1 : gridColumns) || 1)

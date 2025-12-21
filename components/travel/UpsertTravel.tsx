@@ -63,6 +63,13 @@ function normalizeCountries(raw: any): Array<{
     title_en?: string;
     title?: string;
     name?: string;
+    country_code?: string;
+    code?: string;
+    iso2?: string;
+    iso?: string;
+    alpha2?: string;
+    alpha_2?: string;
+    ISO3166_1_alpha2?: string;
 }> {
     if (!Array.isArray(raw)) return [];
     return raw
@@ -93,12 +100,29 @@ function normalizeCountries(raw: any): Array<{
                 item.name_en ??
                 item.name ??
                 '';
+            const countryCode =
+                item.country_code ??
+                item.code ??
+                item.iso2 ??
+                item.iso ??
+                item.alpha2 ??
+                item.alpha_2 ??
+                item.ISO3166_1_alpha2 ??
+                '';
+            const normalizedCode = countryCode ? String(countryCode).trim().toUpperCase() : '';
             return {
                 country_id: String(id),
                 title_ru: String(titleRu),
                 title_en: titleEn ? String(titleEn) : undefined,
                 title: item.title ? String(item.title) : undefined,
                 name: item.name ? String(item.name) : undefined,
+                country_code: normalizedCode || undefined,
+                code: normalizedCode || undefined,
+                iso2: normalizedCode || undefined,
+                iso: normalizedCode || undefined,
+                alpha2: normalizedCode || undefined,
+                alpha_2: normalizedCode || undefined,
+                ISO3166_1_alpha2: normalizedCode || undefined,
             };
         })
         .filter(Boolean);
@@ -364,57 +388,6 @@ export default function UpsertTravel() {
         let isMounted = true;
         (async () => {
             try {
-                // Ленивая инициализация фильтров с кешированием стран, чтобы избежать повторных запросов
-                const [filtersData, countryData] = await Promise.all([
-                    fetchFilters(),
-                    fetchAllCountries(),
-                ]);
-                if (isMounted) {
-                    setFilters((prev) => {
-                        // Если страны уже загружены ранее, повторно не трогаем
-                        if (prev && Array.isArray(prev.countries) && prev.countries.length > 0) {
-                            return prev;
-                        }
-                        const normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(filtersData?.categoryTravelAddress);
-                        const normalizedCountries = normalizeCountries(countryData);
-                        return {
-                            ...filtersData,
-                            categoryTravelAddress: normalizedCategoryTravelAddress,
-                            countries: normalizedCountries,
-                        } as any;
-                    });
-                    setIsFiltersLoading(false);
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки фильтров:', error);
-                if (isMounted) {
-                    setFilters(initFilters());
-                    setIsFiltersLoading(false);
-                }
-            }
-        })();
-        if (!isNew && id) {
-            loadTravelData(id as string);
-        } else if (isNew) {
-            // Для нового путешествия не редиректим гостя — покажем гостевой экран.
-            setHasAccess(true);
-            setIsInitialLoading(false);
-        }
-        return () => {
-            isMounted = false;
-        };
-    }, [id, isNew, loadTravelData]);
-
-    const handleManualSave = useCallback(async (): Promise<TravelFormData | void> => {
-        try {
-            await trackWizardEvent('wizard_manual_save', {
-                step: currentStep,
-                is_new: isNew,
-                is_edit: !isNew,
-                status: formState.data.moderation ? 'moderation' : 'draft',
-            });
-
-            const savedData = await autosave.saveNow();
             applySavedData(savedData);
 
             showToast('Сохранено');
@@ -438,13 +411,17 @@ export default function UpsertTravel() {
     }, [currentStep]);
 
     const handleCountrySelect = useCallback((countryId: string) => {
-        if (countryId && !formState.data.countries.includes(countryId)) {
-            formState.updateField('countries', [...formState.data.countries, countryId]);
+        const id = String(countryId);
+        const current = (formState.data.countries || []).map(String);
+        if (id && !current.includes(id)) {
+            formState.updateField('countries', [...current, id]);
         }
     }, [formState]);
 
     const handleCountryDeselect = useCallback((countryId: string) => {
-        formState.updateField('countries', formState.data.countries.filter(id => id !== countryId));
+        const id = String(countryId);
+        const current = (formState.data.countries || []).map(String);
+        formState.updateField('countries', current.filter(c => c !== id));
     }, [formState]); // Only depend on the data we read
 
     // Create a stable wrapper for setFormData that works with all wizard steps
@@ -576,20 +553,10 @@ export default function UpsertTravel() {
     }
 
     if (currentStep === 2) {
-        // Debounced marker update to prevent constant autosave
+        // Немедленное сохранение при изменении маркеров (add/edit/delete)
         const handleMarkersUpdate = (updatedMarkers: MarkerData[]) => {
-            // Update UI immediately
             setMarkers(updatedMarkers);
-            
-            // Clear previous timeout
-            if (markersUpdateTimeoutRef.current) {
-                clearTimeout(markersUpdateTimeoutRef.current);
-            }
-            
-            // Update formState after 1 second of inactivity to prevent constant autosave
-            markersUpdateTimeoutRef.current = setTimeout(() => {
-                formState.updateField('coordsMeTravel', updatedMarkers as any);
-            }, 1000);
+            formState.updateField('coordsMeTravel', updatedMarkers as any);
         };
 
         return (
