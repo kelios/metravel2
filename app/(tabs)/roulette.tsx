@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Modal, Platform, ScrollView, StyleSheet, Text, View, Pressable, FlatList, Image } from 'react-native';
+import { Animated, Easing, Modal, Platform, StyleSheet, Text, View, Pressable, FlatList, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -11,7 +11,6 @@ import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import UIButton from '@/components/ui/Button';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useListTravelFilters } from '@/components/listTravel/hooks/useListTravelFilters';
 import { useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
@@ -116,7 +115,7 @@ export default function RouletteScreen() {
         if (!cancelled && result.length > 0) {
           setDefaultCountries(result);
         }
-      } catch (e) {
+      } catch (_e) {
         if (!cancelled) {
           setDefaultCountries(null);
         }
@@ -136,7 +135,6 @@ export default function RouletteScreen() {
     queryParams,
     resetFilters,
     onSelect,
-    applyFilter,
   } = useListTravelFilters({
     options,
     isMeTravel: false,
@@ -293,7 +291,7 @@ export default function RouletteScreen() {
         const flattened = normalized.flatMap((page: any) => page.items || []);
         freshTravels = deduplicateTravels(flattened as Travel[]);
       }
-    } catch (e) {
+    } catch (_e) {
       // В случае ошибки используем уже загруженные travels
     }
 
@@ -325,32 +323,7 @@ export default function RouletteScreen() {
   const showLoading = isLoading || isFetching || filtersLoading;
 
   // Анимации карты и маркера маршрута
-  const mapScale = useMemo(
-    () =>
-      spinAnim.interpolate({
-        inputRange: [0, 0.4, 1],
-        outputRange: [0.6, 1.05, 1],
-      }),
-    [spinAnim],
-  );
-
-  const mapBorderRadius = useMemo(
-    () =>
-      spinAnim.interpolate({
-        inputRange: [0, 0.4, 1],
-        outputRange: [40, 20, 16],
-      }),
-    [spinAnim],
-  );
-
-  const routeProgress = useMemo(
-    () =>
-      spinAnim.interpolate({
-        inputRange: [0, 0.3, 1],
-        outputRange: [0, 0, 1],
-      }),
-    [spinAnim],
-  );
+  // Анимации карты и маркера маршрута (зарезервированы для будущих эффектов)
 
   return (
     <View style={styles.root}>

@@ -287,6 +287,18 @@ export default function UpsertTravel() {
         console.error('Autosave error:', error);
     }, [showToast]);
     
+    // Apply saved data with markers synchronization
+    const applySavedData = useCallback((savedData: TravelFormData) => {
+        const markersFromData = (savedData.coordsMeTravel as any) || [];
+        const syncedCountries = syncCountriesFromMarkers(markersFromData, savedData.countries || []);
+
+        formState.updateFields({
+            ...savedData,
+            countries: syncedCountries,
+        });
+        setMarkers(markersFromData);
+    }, [formState, setMarkers]);
+
     // Improved autosave with stable callbacks
     const autosave = useImprovedAutoSave(
         formState.data,
@@ -306,17 +318,18 @@ export default function UpsertTravel() {
         }
     );
     
-    // Apply saved data with markers synchronization
-    const applySavedData = useCallback((savedData: TravelFormData) => {
-        const markersFromData = (savedData.coordsMeTravel as any) || [];
-        const syncedCountries = syncCountriesFromMarkers(markersFromData, savedData.countries || []);
-
-        formState.updateFields({
-            ...savedData,
-            countries: syncedCountries,
-        });
-        setMarkers(markersFromData);
-    }, [formState, setMarkers]);
+    const handleManualSave = useCallback(async () => {
+        try {
+            const savedData = await autosave.saveNow();
+            applySavedData(savedData);
+            showToast('Сохранено');
+            return savedData;
+        } catch (error) {
+            showToast('Ошибка сохранения', 'error');
+            console.error('Manual save error:', error);
+            return;
+        }
+    }, [applySavedData, autosave, showToast]);
 
     // Load travel data from server
     const loadTravelData = useCallback(async (travelId: string) => {
@@ -388,16 +401,78 @@ export default function UpsertTravel() {
         let isMounted = true;
         (async () => {
             try {
-            applySavedData(savedData);
-
-            showToast('Сохранено');
-            return savedData;
-        } catch (error) {
-            showToast('Ошибка сохранения', 'error');
-            console.error('Manual save error:', error);
-            return;
+                const [filtersData, countryData] = await Promise.all([
+                    fetchFilters(),
+                    fetchAllCountries(),
+                ]);
+                if (!isMounted) return;
+                setFilters((prev) => {
+                    // Если страны уже загружены ранее, повторно не трогаем
+                    if (prev && Array.isArray(prev.countries) && prev.countries.length > 0) {
+                        return prev;
+                    }
+                    const normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(filtersData?.categoryTravelAddress);
+                    const normalizedCountries = normalizeCountries(countryData);
+                    return {
+                        ...filtersData,
+                        categoryTravelAddress: normalizedCategoryTravelAddress,
+                        countries: normalizedCountries,
+                    } as any;
+                });
+                setIsFiltersLoading(false);
+            } catch (error) {
+                console.error('Ошибка загрузки фильтров:', error);
+                if (isMounted) {
+                    setFilters(initFilters());
+                    setIsFiltersLoading(false);
+                }
+            }
+        })();
+        if (!isNew && id) {
+            loadTravelData(id as string);
+        } else if (isNew) {
+            // Для нового путешествия не редиректим гостя — покажем гостевой экран.
+            setHasAccess(true);
+            setIsInitialLoading(false);
         }
-    }, [applySavedData, autosave, currentStep, formState.data.moderation, isNew, showToast]);
+
+        return () => {
+            isMounted = false;
+        };
+    }, [id, isNew, loadTravelData]);
+
+    // Повторная загрузка стран, если список пуст при переходе на шаг 2
+    useEffect(() => {
+        const needCountries = currentStep === 2 && (!filters?.countries || filters.countries.length === 0);
+        if (!needCountries) return;
+        let cancelled = false;
+        const loadCountries = async () => {
+            try {
+                setIsFiltersLoading(true);
+                const countryData = await fetchAllCountries();
+                if (cancelled) return;
+                setFilters((prev) => {
+                    const normalizedCountries = normalizeCountries(countryData);
+                    const base = prev || initFilters();
+                    return {
+                        ...base,
+                        countries: normalizedCountries,
+                    } as any;
+                });
+            } catch (error) {
+                console.error('Ошибка повторной загрузки стран:', error);
+                if (!cancelled) {
+                    setFilters((prev) => prev || initFilters());
+                }
+            } finally {
+                if (!cancelled) setIsFiltersLoading(false);
+            }
+        };
+        loadCountries();
+        return () => {
+            cancelled = true;
+        };
+    }, [currentStep, filters?.countries]);
 
     const handleFinishWizard = useCallback(async () => {
         await handleManualSave();

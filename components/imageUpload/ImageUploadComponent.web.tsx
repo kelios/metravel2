@@ -26,12 +26,21 @@ interface ImageUploadComponentProps {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
 
+const normalizeImageUrl = (url?: string | null) => {
+    if (!url) return '';
+    const safeUrl = url.trim();
+    if (/^(data:|blob:|https?:\/\/)/i.test(safeUrl)) return safeUrl;
+    const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
+    if (!base) return safeUrl;
+    return `${base}${safeUrl.startsWith('/') ? '' : '/'}${safeUrl}`;
+};
+
 const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
-                                                                       collection,
-                                                                       idTravel,
-                                                                       oldImage,
-                                                                       onUpload,
-                                                                   }) => {
+    collection,
+    idTravel,
+    oldImage,
+    onUpload,
+}) => {
     const [imageUri, setImageUri] = useState<string | null>(null);
     const [uploadMessage, setUploadMessage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -46,7 +55,7 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
     useEffect(() => {
         // Если пользователь не выбрал картинку вручную → можно подгружать oldImage
         if (oldImage && !isManuallySelected) {
-            setImageUri(oldImage);
+            setImageUri(normalizeImageUrl(oldImage));
         }
         // если oldImage сбросился (например, ''), тоже сбрасываем imageUri
         if (!oldImage && !isManuallySelected) {
@@ -159,14 +168,17 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
             clearInterval(progressInterval);
             setUploadProgress(100);
 
-            const uploadedUrl = response?.url || response?.data?.url || response?.path || response?.file_url;
+            const uploadedUrlRaw = response?.url || response?.data?.url || response?.path || response?.file_url;
+            const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : null;
             const visualUrl = previewCandidate || uploadedUrl || previewUrl;
 
             if (uploadedUrl || visualUrl) {
                 // Показываем локальный preview в UI, но наружу отдаём URL с бэкенда (если есть)
                 const persistedUrl = uploadedUrl || visualUrl!;
-                setImageUri(visualUrl);
-                setPreviewUrl(visualUrl);
+                // Для отображения в UI используем нормализованный URL, но не трогаем blob/data превью
+                const visualNormalized = uploadedUrl ? uploadedUrl : visualUrl;
+                setImageUri(visualNormalized);
+                setPreviewUrl(visualNormalized);
                 setPreviewFile(null); // Очищаем файл
                 setUploadMessage('Фотография успешно загружена');
                 onUpload?.(persistedUrl);

@@ -9,7 +9,6 @@ import {
   Pressable,
   Text,
   Platform,
-  Dimensions,
 } from 'react-native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
