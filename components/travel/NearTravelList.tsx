@@ -178,6 +178,10 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
 
     // ✅ ИСПРАВЛЕНИЕ: Используем useRef для предотвращения бесконечных запросов
     const hasLoadedRef = useRef(false);
+    const onTravelsLoadedRef = useRef(onTravelsLoaded);
+    useEffect(() => {
+      onTravelsLoadedRef.current = onTravelsLoaded;
+    }, [onTravelsLoaded]);
     const controllerRef = useRef<AbortController | null>(null);
 
     // Оптимизированная загрузка данных с защитой от повторных запросов
@@ -210,7 +214,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         if (!controller.signal.aborted) {
           const travelsArray = Array.isArray(data) ? data.slice(0, 50) : [];
           setTravelsNear(travelsArray);
-          onTravelsLoaded?.(travelsArray);
+          onTravelsLoadedRef.current?.(travelsArray);
         }
       } catch (e: any) {
         if (controller.signal.aborted) return;
@@ -231,7 +235,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           setIsLoading(false);
         }
       }
-    }, [travel.id, onTravelsLoaded]);
+    }, [travel.id]);
 
     // ✅ ИСПРАВЛЕНИЕ: Загружаем данные только один раз при монтировании или изменении travel.id
     useEffect(() => {

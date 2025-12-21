@@ -125,6 +125,18 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
         icon: <Feather name="map-pin" size={18} color={iconColor} />,
       },
       {
+        key: "favorites",
+        label: "Избранное",
+        route: "/favorites" as any,
+        icon: <Feather name="heart" size={18} color={iconColor} />,
+      },
+      {
+        key: "create",
+        label: "Создать",
+        route: "/travel/new" as any,
+        icon: <Feather name="plus-circle" size={18} color={iconColor} />,
+      },
+      {
         key: "more",
         label: "Ещё",
         route: "/more" as any,

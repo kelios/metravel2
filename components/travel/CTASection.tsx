@@ -65,7 +65,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
   const handleViewAuthorTravels = useCallback(() => {
     const userId = (travel as any).userIds ?? (travel as any).userId;
     if (userId) {
-      router.push(`/?user_id=${userId}` as any);
+      router.push(`/search?user_id=${userId}` as any);
     }
   }, [travel, router]);
 

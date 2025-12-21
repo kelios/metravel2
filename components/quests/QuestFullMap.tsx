@@ -132,6 +132,13 @@ export default function QuestFullMap({
     const [exportMenuVisible, setExportMenuVisible] = useState(false);
     const mapDivRef = useRef<HTMLDivElement | null>(null);
     const insets = useSafeAreaInsets();
+    const bounds = useMemo(() => {
+        if (!steps?.length) return undefined;
+        const coords = steps
+            .filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng))
+            .map(p => [p.lat, p.lng] as [number, number]);
+        return coords.length ? coords : undefined;
+    }, [steps]);
     useEffect(() => {
         (async () => {
             try {

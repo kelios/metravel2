@@ -186,13 +186,13 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
             ) : images.length > 0 ? (
                 <View style={styles.galleryGrid}>
                     {images.map((image, index) => (
-                        <View key={image.id} style={styles.imageWrapper}>
+                        <View key={image.id} style={styles.imageWrapper} testID="gallery-image">
                             {loading[index] ? (
                                 <ActivityIndicator size="large" color="#ffffff" />
                             ) : (
                                 <>
                                     <OptimizedImage
-                                        source={{ uri: image.url }}
+                                        source={{ uri: image.url || '' }}
                                         style={styles.image}
                                         contentFit="cover"
                                         loading="lazy"

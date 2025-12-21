@@ -18,16 +18,16 @@ describe('logger dev/prod behaviour', () => {
   let origError: any
 
   beforeEach(() => {
-    origLog = console.log
+    origLog = console.info
     origWarn = console.warn
     origError = console.error
-    console.log = jest.fn()
+    console.info = jest.fn()
     console.warn = jest.fn()
     console.error = jest.fn()
   })
 
   afterEach(() => {
-    console.log = origLog
+    console.info = origLog
     console.warn = origWarn
     console.error = origError
     process.env = originalEnv
@@ -42,9 +42,9 @@ describe('logger dev/prod behaviour', () => {
     devModule.pdfLog('pdf log')
     devModule.pdfWarn('pdf warn')
 
-    expect(console.log).toHaveBeenCalledWith('msg')
+    expect(console.info).toHaveBeenCalledWith('msg')
     expect(console.warn).toHaveBeenCalledWith('warn')
-    expect(console.log).toHaveBeenCalledWith('[PDF]', 'pdf log')
+    expect(console.info).toHaveBeenCalledWith('[PDF]', 'pdf log')
     expect(console.warn).toHaveBeenCalledWith('[PDF]', 'pdf warn')
   })
 
@@ -56,7 +56,7 @@ describe('logger dev/prod behaviour', () => {
     prodModule.pdfLog('pdf log')
     prodModule.pdfWarn('pdf warn')
 
-    expect(console.log).not.toHaveBeenCalled()
+    expect(console.info).not.toHaveBeenCalled()
     expect(console.warn).not.toHaveBeenCalled()
   })
 
@@ -101,7 +101,7 @@ describe('logger dev/prod behaviour', () => {
     devModule.logMessage('warn msg', 'warning', { b: 2 })
     devModule.logMessage('err msg', 'error', { c: 3 })
 
-    expect(console.log).toHaveBeenCalledWith('info msg', { a: 1 })
+    expect(console.info).toHaveBeenCalledWith('info msg', { a: 1 })
     expect(console.warn).toHaveBeenCalledWith('warn msg', { b: 2 })
     expect(console.error).toHaveBeenCalledWith('err msg', { c: 3 })
     expect(devMonitoring.captureMessage).not.toHaveBeenCalled()

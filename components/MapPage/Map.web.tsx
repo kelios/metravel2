@@ -677,7 +677,7 @@ const MapPageComponent: React.FC<Props> = ({
               </Marker>
           )}
 
-          {mode === 'route' && routePoints.length >= 2 && ORS_API_KEY && rl && (
+          {mode === 'route' && routePoints.length >= 2 && rl && (
               <RoutingMachineWithMapInner
                   routePoints={routePoints}
                   transportMode={transportMode}

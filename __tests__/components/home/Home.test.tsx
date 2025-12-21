@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Home from '@/components/home/Home';
 import { useAuth } from '@/context/AuthContext';
@@ -96,9 +96,10 @@ describe('Home Component', () => {
 
       const { queryByTestId } = renderHome();
       expect(queryByTestId('travel-card-skeleton')).toBeNull();
+      expect(mockFetchMyTravels).not.toHaveBeenCalled();
     });
 
-    it('should show loading skeleton for authenticated users while loading', async () => {
+    it('should not fetch travels on home even when authenticated', () => {
       mockUseAuth.mockReturnValue({
         isAuthenticated: true,
         userId: '123',
@@ -106,41 +107,13 @@ describe('Home Component', () => {
         logout: jest.fn(),
         setUserAvatar: jest.fn(),
         triggerProfileRefresh: jest.fn(),
-      } as any);
-
-      mockFetchMyTravels.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({ data: [] }), 100))
-      );
-
-      const { UNSAFE_getAllByType } = renderHome();
-      
-      // Check for SkeletonLoader components (there are multiple)
-      const SkeletonLoader = require('@/components/SkeletonLoader').SkeletonLoader;
-      const skeletons = UNSAFE_getAllByType(SkeletonLoader);
-      expect(skeletons.length).toBeGreaterThan(0);
-    });
-
-    it('should pass correct travelsCount to HomeHero when authenticated', async () => {
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: true,
-        userId: '123',
-        login: jest.fn(),
-        logout: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-      } as any);
-
-      mockFetchMyTravels.mockResolvedValue({
-        data: [{ id: 1 }, { id: 2 }, { id: 3 }],
       } as any);
 
       const { UNSAFE_getByType } = renderHome();
-      
-      await waitFor(() => {
-        const HomeHero = require('@/components/home/HomeHero').default;
-        const heroInstance = UNSAFE_getByType(HomeHero);
-        expect(heroInstance.props.travelsCount).toBe(3);
-      });
+      const HomeHero = require('@/components/home/HomeHero').default;
+      const heroInstance = UNSAFE_getByType(HomeHero);
+      expect(heroInstance.props.travelsCount).toBe(0);
+      expect(mockFetchMyTravels).not.toHaveBeenCalled();
     });
   });
 
@@ -211,92 +184,7 @@ describe('Home Component', () => {
     });
   });
 
-  describe('Data Handling', () => {
-    it('should handle different API response formats for travels count', async () => {
-      const freshQueryClient = new QueryClient({
-        defaultOptions: {
-          queries: { retry: false, staleTime: 0 },
-        },
-      });
-
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: true,
-        userId: '123',
-        login: jest.fn(),
-        logout: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-      } as any);
-
-      // Test array format
-      mockFetchMyTravels.mockResolvedValueOnce([{ id: 1 }, { id: 2 }] as any);
-      const { rerender } = render(
-        <QueryClientProvider client={freshQueryClient}>
-          <Home />
-        </QueryClientProvider>
-      );
-      await waitFor(() => expect(mockFetchMyTravels).toHaveBeenCalled());
-
-      // Test data property format
-      mockFetchMyTravels.mockResolvedValueOnce({ data: [{ id: 1 }, { id: 2 }, { id: 3 }] } as any);
-      rerender(
-        <QueryClientProvider client={freshQueryClient}>
-          <Home />
-        </QueryClientProvider>
-      );
-
-      // Test total property format
-      mockFetchMyTravels.mockResolvedValueOnce({ total: 5 } as any);
-      rerender(
-        <QueryClientProvider client={freshQueryClient}>
-          <Home />
-        </QueryClientProvider>
-      );
-    });
-
-    it('should handle empty travels data', async () => {
-      // Create completely isolated query client
-      const isolatedQueryClient = new QueryClient({
-        defaultOptions: {
-          queries: { 
-            retry: false, 
-            staleTime: 0,
-            refetchOnMount: true,
-            refetchOnWindowFocus: false,
-          },
-        },
-      });
-
-      const uniqueUserId = 'test-empty-user-' + Date.now();
-      
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: true,
-        userId: uniqueUserId,
-        login: jest.fn(),
-        logout: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-      } as any);
-
-      // Clear all previous mock calls and set new return value
-      mockFetchMyTravels.mockReset();
-      mockFetchMyTravels.mockResolvedValue({ data: [] } as any);
-
-      const { UNSAFE_getByType } = render(
-        <QueryClientProvider client={isolatedQueryClient}>
-          <Home />
-        </QueryClientProvider>
-      );
-      
-      // Wait for query to complete and component to render
-      await waitFor(() => {
-        expect(mockFetchMyTravels).toHaveBeenCalledWith({ user_id: uniqueUserId });
-        const HomeHero = require('@/components/home/HomeHero').default;
-        const heroInstance = UNSAFE_getByType(HomeHero);
-        expect(heroInstance.props.travelsCount).toBe(0);
-      }, { timeout: 3000 });
-    }, 10000);
-  });
+  // Data fetching is intentionally disabled on home; no data-handling tests needed here.
 
   describe('Performance', () => {
     it('should use lazy loading for heavy components', () => {

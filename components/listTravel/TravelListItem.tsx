@@ -161,6 +161,7 @@ type Props = {
     travel: Travel;
     currentUserId?: string | null;
     isSuperuser?: boolean;
+    isMetravel?: boolean;
     onDeletePress?: (id: number) => void;
     isFirst?: boolean;
     isSingle?: boolean;
@@ -176,6 +177,7 @@ function TravelListItem({
                             travel,
                             currentUserId,
                             isSuperuser,
+                            isMetravel: _isMetravel = false,
                             onDeletePress,
                             isFirst = false,
                             isSingle = false,
@@ -1191,6 +1193,7 @@ function areEqual(prev: Props, next: Props) {
     // Флаги, влияющие на оформление/обработчики
     if (
         prev.isSuperuser !== next.isSuperuser ||
+        prev.isMetravel !== next.isMetravel ||
         prev.isSingle !== next.isSingle ||
         prev.selectable !== next.selectable ||
         prev.isSelected !== next.isSelected

@@ -40,7 +40,8 @@ export default function MapLegend({ showRouteMode = false }: MapLegendProps) {
 
   if (showRouteMode) {
     legendItems.push({
-      icon: 'route',
+      // Feather не имеет иконки "route" — используем "trending-up" как аналог направления
+      icon: 'trending-up',
       color: '#ff9800',
       label: 'Маршрут',
       description: 'Построенный путь',

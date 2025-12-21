@@ -21,6 +21,10 @@ import { fetchTravelsPopular } from "@/src/api/map";
 import type { TravelsMap } from "@/src/types/types";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import {
+  FLATLIST_CONFIG,
+  FLATLIST_CONFIG_MOBILE,
+} from '@/components/listTravel/utils/listTravelConstants';
 
 type PopularTravelListProps = {
   onLayout?: (event: any) => void;
@@ -30,6 +34,7 @@ type PopularTravelListProps = {
 };
 
 const SEPARATOR_HEIGHT = 20;
+const WEB_LIST_WINDOW_SIZE = 3;
 
 const PopularTravelList: React.FC<PopularTravelListProps> = memo(
   ({ onLayout, scrollToAnchor, title = "Популярные маршруты", maxColumns = 3 }) => {
@@ -39,6 +44,7 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
     const { width } = useResponsive();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const mountedRef = useRef(true);
+    const listConfig = Platform.OS === 'web' ? FLATLIST_CONFIG : FLATLIST_CONFIG_MOBILE;
 
     // ✅ УЛУЧШЕНИЕ: Более точные брейкпоинты для адаптивности
     const numColumns = useMemo(() => {
@@ -213,12 +219,15 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
               contentContainerStyle={styles.flatListContent}
               ItemSeparatorComponent={ItemSeparatorComponent}
               showsVerticalScrollIndicator={false}
-              initialNumToRender={Math.min(INITIAL_NUM_TO_RENDER, popularRows.length)}
-              maxToRenderPerBatch={4}
+              initialNumToRender={Math.min(
+                listConfig?.INITIAL_NUM_TO_RENDER ?? FLATLIST_CONFIG.INITIAL_NUM_TO_RENDER,
+                popularRows.length
+              )}
+              maxToRenderPerBatch={listConfig.MAX_TO_RENDER_PER_BATCH}
               windowSize={WEB_LIST_WINDOW_SIZE}
               removeClippedSubviews={false}
               onContentSizeChange={handleContentChange}
-              updateCellsBatchingPeriod={50}
+              updateCellsBatchingPeriod={listConfig.UPDATE_CELLS_BATCHING_PERIOD}
               disableVirtualization={false}
               accessibilityRole="list"
             />
@@ -233,12 +242,14 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
               columnWrapperStyle={numColumns > 1 ? columnWrapperStyle : undefined}
               ItemSeparatorComponent={ItemSeparatorComponent}
               showsVerticalScrollIndicator={false}
-              initialNumToRender={INITIAL_NUM_TO_RENDER}
-              maxToRenderPerBatch={4} // Уменьшено для производительности
-              windowSize={5}
+              initialNumToRender={
+                listConfig?.INITIAL_NUM_TO_RENDER ?? FLATLIST_CONFIG_MOBILE.INITIAL_NUM_TO_RENDER
+              }
+              maxToRenderPerBatch={listConfig.MAX_TO_RENDER_PER_BATCH}
+              windowSize={listConfig.WINDOW_SIZE}
               removeClippedSubviews={false}
               onContentSizeChange={handleContentChange}
-              updateCellsBatchingPeriod={50} // Батчинг обновлений
+              updateCellsBatchingPeriod={listConfig.UPDATE_CELLS_BATCHING_PERIOD} // Батчинг обновлений
               disableVirtualization={false} // Всегда использовать виртуализацию
               accessibilityRole="list"
             />

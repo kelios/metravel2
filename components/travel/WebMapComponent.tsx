@@ -137,7 +137,21 @@ export const buildAddressFromGeocode = (
     if (adminArea && adminArea !== adminRegion) parts.push(adminArea);
     if (countryLabel) parts.push(countryLabel);
 
-    const combined = parts.filter(Boolean).join(', ');
+    if (parts.length < 2 && geocodeData?.display_name) {
+        const fallbackSegments = String(geocodeData.display_name)
+            .split(/[·,]/)
+            .map((s: string) => s.trim())
+            .filter(Boolean);
+        for (const segment of fallbackSegments) {
+            if (parts.length >= 2) break;
+            if (!parts.includes(segment)) {
+                parts.push(segment);
+            }
+        }
+    }
+
+    const separator = ' · ';
+    const combined = parts.filter(Boolean).join(separator);
     if (combined) return combined;
 
     // fallback to provider display_name or coords

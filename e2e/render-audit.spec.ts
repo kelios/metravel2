@@ -164,7 +164,7 @@ test.describe('Render audit: main and travel details (responsive + perf)', () =>
       await waitForAppShell(page);
 
       const cards = page.locator('[data-testid="travel-card-link"]');
-      await expect(cards).toHaveCountGreaterThan(0, { timeout: 30_000 });
+      await expect(cards.first()).toBeVisible({ timeout: 30_000 });
       await cards.first().click();
       await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 45_000 });
 

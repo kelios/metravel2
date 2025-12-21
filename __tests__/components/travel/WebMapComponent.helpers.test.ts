@@ -1,5 +1,13 @@
 import { buildAddressFromGeocode, matchCountryId } from '@/components/travel/WebMapComponent';
 
+jest.mock('expo-image-picker', () => ({
+  __esModule: true,
+  requestMediaLibraryPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+  launchImageLibraryAsync: jest.fn(async () => ({ canceled: true })),
+  MediaTypeOptions: {},
+  PermissionStatus: { GRANTED: 'granted' },
+}));
+
 describe('WebMapComponent helpers', () => {
     const countrylist = [
         { country_id: 10, title_ru: 'Франция', title_en: 'France', title: 'France' },

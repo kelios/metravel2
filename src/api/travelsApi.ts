@@ -22,8 +22,8 @@ const URLAPI = (() => {
 const DEFAULT_TIMEOUT = 10000; // 10 секунд
 const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запросов
 
-// Use trailing slash to avoid backend 301 redirects
-const GET_TRAVELS = `${URLAPI}/travels/`;
+// Base travels endpoint (no trailing slash to avoid duplicate slashes)
+const GET_TRAVELS = `${URLAPI}/travels`;
 const GET_RANDOM_TRAVELS = `${URLAPI}/travels/random`;
 const GET_TRAVELS_BY_SLUG = `${URLAPI}/travels/by-slug`;
 
@@ -295,7 +295,9 @@ export const fetchTravels = async (
             where: whereObject,
         });
 
-        const urlTravel = `${GET_TRAVELS}?${params}`;
+        // Страхуемся от возможного завершающего слэша в GET_TRAVELS
+        const baseTravels = GET_TRAVELS.replace(/\/+$/, '');
+        const urlTravel = `${baseTravels}?${params}`;
 
         const res = options?.signal
             ? await fetchWithTimeout(urlTravel, { signal: options.signal }, LONG_TIMEOUT)
@@ -528,7 +530,8 @@ export const fetchMyTravels = async (params: {
             where: JSON.stringify(whereObject),
         }).toString();
 
-        const url = `${GET_TRAVELS}?${query}`;
+        const baseTravels = GET_TRAVELS.replace(/\/+$/, '');
+        const url = `${baseTravels}?${query}`;
         const res = await fetchWithTimeout(url, {}, LONG_TIMEOUT);
         if (!res.ok) {
             const errorText = await res.text().catch(() => 'Unknown error');

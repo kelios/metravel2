@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import AuthorCard from '@/components/travel/AuthorCard'
 
 jest.mock('@/src/hooks/useUserProfileCached', () => ({
-  useUserProfileCached: () => ({ profile: null }),
+  useUserProfileCached: () => ({ profile: mockProfile }),
 }))
 
 // Мокаем expo-router useRouter
@@ -28,6 +28,8 @@ jest.mock('react-native', () => {
     useWindowDimensions: () => ({ width: 1024, height: 768 }),
   }
 })
+
+let mockProfile: any = null
 
 const baseTravel: any = {
   id: 1,
@@ -57,10 +59,11 @@ describe('AuthorCard', () => {
   })
 
   it('renders author info with placeholder avatar when no image', () => {
-    const { getByText, getByLabelText } = renderWithClient(<AuthorCard travel={baseTravel} />)
+    mockProfile = null
+    const { getByText, getByLabelText, queryByText } = renderWithClient(<AuthorCard travel={baseTravel} />)
 
     expect(getByText('Test User')).toBeTruthy()
-    expect(getByText('Беларусь')).toBeTruthy()
+    expect(queryByText('Беларусь')).toBeNull()
     expect(getByText('3 путешествия')).toBeTruthy()
 
     // Кнопка "Все путешествия"
@@ -88,6 +91,22 @@ describe('AuthorCard', () => {
 
     const button = getByLabelText('Смотреть все путешествия автора Test User')
     fireEvent.press(button)
-    // smoke-тест: клик по кнопке не должен приводить к ошибкам
+    expect(mockPush).toHaveBeenCalledWith('/search?user_id=42')
+  })
+
+  it('does not show travel countries when profile is absent', () => {
+    mockProfile = null
+    const { queryByText } = renderWithClient(
+      <AuthorCard travel={{ ...baseTravel, countryName: 'Россия, Беларусь' }} />,
+    )
+    expect(queryByText('Россия, Беларусь')).toBeNull()
+  })
+
+  it('shows author country from profile when available', () => {
+    mockProfile = { countryName: 'Испания' }
+    const { getByText } = renderWithClient(
+      <AuthorCard travel={{ ...baseTravel, countryName: 'Россия, Беларусь' }} />,
+    )
+    expect(getByText('Испания')).toBeTruthy()
   })
 })

@@ -130,9 +130,11 @@ export default function MapScreen() {
 
     // Load filters on mount
     useEffect(() => {
+        let isMounted = true;
         const loadFilters = async () => {
             try {
                 const data = await fetchFiltersMap();
+                if (!isMounted) return;
                 // Transform Filters to match our interface
                 setFilters({
                     categories: (data.categories || [])
@@ -160,10 +162,15 @@ export default function MapScreen() {
                     address: data.categoryTravelAddress?.[0] || '',
                 });
             } catch (error) {
-                console.error('Error loading filters:', error);
+                if (isMounted) {
+                    console.error('Error loading filters:', error);
+                }
             }
         };
         loadFilters();
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     // ✅ РЕАЛИЗАЦИЯ: Всегда запрашиваем все данные с единым слоем нормализации фильтров
@@ -238,9 +245,11 @@ export default function MapScreen() {
 
     // Get user location
     useEffect(() => {
+        let isMounted = true;
         const getLocation = async () => {
             try {
                 const { status } = await Location.requestForegroundPermissionsAsync();
+                if (!isMounted) return;
                 if (status !== 'granted') {
                     // If user denied permissions, fall back to default coords explicitly.
                     setCoordinates(DEFAULT_COORDINATES);
@@ -250,12 +259,14 @@ export default function MapScreen() {
                 const location = await Location.getCurrentPositionAsync({
                     accuracy: Location.Accuracy.Balanced,
                 });
+                if (!isMounted) return;
 
                 setCoordinates({
                     latitude: location.coords.latitude,
                     longitude: location.coords.longitude,
                 });
             } catch (error) {
+                if (!isMounted) return;
                 console.error('Error getting location:', error);
                 // If geolocation fails, fall back to default coords explicitly.
                 setCoordinates(DEFAULT_COORDINATES);
@@ -263,6 +274,9 @@ export default function MapScreen() {
         };
 
         getLocation();
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     const handleFilterChange = useCallback((field: string, value: any) => {
