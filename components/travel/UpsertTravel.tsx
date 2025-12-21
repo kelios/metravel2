@@ -57,6 +57,53 @@ function normalizeCategoryTravelAddress(raw: any): Array<{ id: string; name: str
         .filter(Boolean);
 }
 
+function normalizeCountries(raw: any): Array<{
+    country_id: string;
+    title_ru: string;
+    title_en?: string;
+    title?: string;
+    name?: string;
+}> {
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .map((item, idx) => {
+            if (!item || typeof item !== 'object') {
+                return {
+                    country_id: String(idx),
+                    title_ru: String(item ?? ''),
+                };
+            }
+            const id =
+                item.country_id ??
+                item.id ??
+                item.pk ??
+                item.value ??
+                idx;
+            const titleRu =
+                item.title_ru ??
+                item.name_ru ??
+                item.name ??
+                item.title ??
+                item.title_en ??
+                item.text ??
+                '';
+            const titleEn =
+                item.title_en ??
+                item.title ??
+                item.name_en ??
+                item.name ??
+                '';
+            return {
+                country_id: String(id),
+                title_ru: String(titleRu),
+                title_en: titleEn ? String(titleEn) : undefined,
+                title: item.title ? String(item.title) : undefined,
+                name: item.name ? String(item.name) : undefined,
+            };
+        })
+        .filter(Boolean);
+}
+
 const STEP_CONFIG: StepMeta[] = [
     {
         id: 1,
@@ -124,7 +171,8 @@ export default function UpsertTravel() {
     const [markers, setMarkers] = useState<MarkerData[]>([]);
     const [travelDataOld, setTravelDataOld] = useState<Travel | null>(null);
     const markersUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const [filters, setFilters] = useState<ReturnType<typeof initFilters> | null>(null);
+    const [filters, setFilters] = useState<ReturnType<typeof initFilters>>(initFilters());
+    const [isFiltersLoading, setIsFiltersLoading] = useState(true);
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
 
@@ -328,17 +376,20 @@ export default function UpsertTravel() {
                             return prev;
                         }
                         const normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(filtersData?.categoryTravelAddress);
+                        const normalizedCountries = normalizeCountries(countryData);
                         return {
                             ...filtersData,
                             categoryTravelAddress: normalizedCategoryTravelAddress,
-                            countries: countryData,
+                            countries: normalizedCountries,
                         } as any;
                     });
+                    setIsFiltersLoading(false);
                 }
             } catch (error) {
                 console.error('Ошибка загрузки фильтров:', error);
                 if (isMounted) {
                     setFilters(initFilters());
+                    setIsFiltersLoading(false);
                 }
             }
         })();
@@ -477,7 +528,6 @@ export default function UpsertTravel() {
     const progressValue = currentStep / totalSteps;
     const countries = (filters?.countries ?? []) as any[];
     const selectedCountryIds = (formState.data.countries ?? []) as any[];
-    const isFiltersLoading = !filters;
     const autosaveBadge = (() => {
         if (autosave.status === 'saving' || autosave.status === 'debouncing') {
             return 'Сохраняем черновик…';
@@ -550,6 +600,7 @@ export default function UpsertTravel() {
                 setMarkers={handleMarkersUpdate}
                 categoryTravelAddress={filters?.categoryTravelAddress ?? []}
                 countries={countries}
+                isFiltersLoading={isFiltersLoading}
                 travelId={formState.data.id}
                 selectedCountryIds={selectedCountryIds}
                 onCountrySelect={handleCountrySelect}
@@ -570,7 +621,6 @@ export default function UpsertTravel() {
                     });
                     setCurrentStep(3);
                 }}
-                isFiltersLoading={isFiltersLoading}
                 onManualSave={handleManualSave}
                 stepMeta={stepMeta}
                 progress={progressValue}

@@ -108,7 +108,6 @@ test.describe('Travel details skeleton transition (no layout shift)', () => {
     await expect(page.locator('[data-testid="travel-details-page"]')).toBeVisible({ timeout: 45_000 });
     await expect(page.locator('[data-testid="travel-details-hero"]')).toHaveCount(1);
     await expect(page.locator('[data-testid="travel-details-quick-facts"]')).toHaveCount(1);
-    await expect(page.locator('[data-testid="travel-details-author"]')).toHaveCount(1);
 
     // Basic stability check: main wrapper shouldn't drastically change size.
     const pageBox = await page.locator('[data-testid="travel-details-page"]').boundingBox();

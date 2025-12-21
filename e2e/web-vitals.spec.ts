@@ -41,7 +41,7 @@ async function gotoWithRetry(page: any, url: string) {
        
       try {
         await page.waitForTimeout(isTransient ? Math.min(1200 + attempt * 600, 8000) : 500);
-      } catch (_e) {
+      } catch {
         break;
       }
     }
@@ -186,7 +186,7 @@ test.describe('Web Vitals (CLS/LCP/INP)', () => {
             (window as any).__e2eVitals._lcpFinalized = true;
           }, 1500);
         });
-      } catch (e) {
+      } catch {
         // ignore
       }
 
@@ -202,7 +202,7 @@ test.describe('Web Vitals (CLS/LCP/INP)', () => {
           }
         });
         inpObserver.observe({ type: 'event', buffered: true, durationThreshold: 40 } as any);
-      } catch (e) {
+      } catch {
         // ignore
       }
     });

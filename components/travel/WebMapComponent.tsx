@@ -10,7 +10,7 @@ const reverseGeocode = async (latlng: any) => {
     // Use a CORS-friendly provider first, then fall back to Nominatim
     try {
         const primary = await fetch(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latlng.lat}&longitude=${latlng.lng}&localityLanguage=en`
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latlng.lat}&longitude=${latlng.lng}&localityLanguage=ru`
         );
         if (primary.ok) {
             return await primary.json();
@@ -21,7 +21,7 @@ const reverseGeocode = async (latlng: any) => {
 
     try {
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1`
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1&accept-language=ru`
         );
         if (!response.ok) return null;
         return await response.json();
@@ -275,6 +275,13 @@ const WebMapComponent = ({
 
         let derivedCountryId: number | null = null;
 
+        const matchedId = country ? matchCountryId(country, countrylist) : null;
+        const matchedCountry = matchedId != null
+            ? countrylist.find((c: any) => Number(c?.country_id) === matchedId)
+            : null;
+
+        const address = buildAddressFromGeocode(geocodeData, latlng, matchedCountry);
+
         const newMarker = {
             id: null,
             lat: latlng.lat,
@@ -284,13 +291,6 @@ const WebMapComponent = ({
             image: null,
             country: null as number | null,
         };
-
-        const matchedId = country ? matchCountryId(country, countrylist) : null;
-        const matchedCountry = matchedId != null
-            ? countrylist.find((c: any) => Number(c?.country_id) === matchedId)
-            : null;
-
-        const address = buildAddressFromGeocode(geocodeData, latlng, matchedCountry);
 
         if (matchedId != null) {
             derivedCountryId = matchedId;

@@ -117,19 +117,6 @@ export default function Home() {
       scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
       removeClippedSubviews={Platform.OS !== 'web'}
     >
-      {/* Встроенная строка поиска для стабильных e2e селекторов */}
-      <ResponsiveContainer padding>
-        <View style={styles.searchWrapper}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Поиск путешествий"
-            accessibilityLabel="Поиск путешествий"
-            testID="home-search-input"
-          />
-          <Text style={styles.searchHint}>Ctrl+K</Text>
-        </View>
-      </ResponsiveContainer>
-
       <HomeHero travelsCount={travelsCount} />
       <HomeHowItWorks />
       
@@ -159,24 +146,5 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flexGrow: 1,
-  },
-  searchWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-  },
-  searchInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    paddingHorizontal: 12,
-    paddingVertical: Platform.select({ web: 10, default: 8 }),
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-  },
-  searchHint: {
-    color: DESIGN_TOKENS.colors.textSubtle,
-    fontSize: 12,
   },
 });

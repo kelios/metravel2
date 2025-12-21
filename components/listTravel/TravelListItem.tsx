@@ -1,10 +1,9 @@
 // src/components/listTravel/TravelListItem.tsx
 import React, { memo, useCallback, useMemo, useState, useRef, useEffect } from "react";
-import { View, Pressable, Text, StyleSheet, Platform, Image } from "react-native";
+import { View, Pressable, Text, StyleSheet, Platform } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/src/types/types";
 import OptimizedFavoriteButton from "@/components/OptimizedFavoriteButton";
@@ -12,7 +11,7 @@ import ReactionButtons from "@/components/social/ReactionButtons";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travelsApi";
 import { generateSrcSet, optimizeImageUrl } from "@/utils/imageOptimization";
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
-import { enhancedTravelCardStyles, getResponsiveCardValues } from './enhancedTravelCardStyles';
+import { getResponsiveCardValues } from './enhancedTravelCardStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { formatViewCount } from "@/components/travel/utils/travelHelpers";
 import { TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT } from './utils/listTravelConstants';
@@ -20,6 +19,7 @@ import { TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT } from './utils/listTr
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
 const ICON_COLOR = "#111827"; // тёмкие иконки под светлое стекло
+const ENABLE_TRAVEL_DETAILS_PREFETCH = false;
 
 // Простая эвристика для отбрасывания изображений с водяными знаками / стоковых доменов
 const WATERMARK_DOMAINS = [
@@ -161,7 +161,6 @@ type Props = {
     travel: Travel;
     currentUserId?: string | null;
     isSuperuser?: boolean;
-    isMetravel?: boolean;
     onDeletePress?: (id: number) => void;
     isFirst?: boolean;
     isSingle?: boolean;
@@ -177,7 +176,6 @@ function TravelListItem({
                             travel,
                             currentUserId,
                             isSuperuser,
-                            isMetravel,
                             onDeletePress,
                             isFirst = false,
                             isSingle = false,
@@ -237,7 +235,7 @@ function TravelListItem({
         
         // 4. Ничего не найдено
         return '';
-    }, [userName, travel.user?.name, travel.user?.first_name, travel.user?.last_name]);
+    }, [userName, travel]);
 
     const views = Number(countUnicIpView) || 0;
 
@@ -381,10 +379,8 @@ function TravelListItem({
             }
             router.push(`/user/${authorUserId}` as any);
         },
-        [authorUserId, router]
+        [authorUserId]
     );
-
-    const ENABLE_TRAVEL_DETAILS_PREFETCH = false;
 
     const prefetchTravelDetails = useCallback(() => {
         if (!ENABLE_TRAVEL_DETAILS_PREFETCH) return;
@@ -458,7 +454,7 @@ function TravelListItem({
             // На всякий: если слуг нет — откроем по ID
             router.push(`/travels/${slug ?? id}`);
         }
-    }, [selectable, onToggle, slug, id, router, queryClient, ENABLE_TRAVEL_DETAILS_PREFETCH]);
+    }, [selectable, onToggle, slug, id, queryClient]);
 
     const handleEdit = useCallback((e?: any) => {
         // Предотвращаем всплытие и стандартное поведение на веб-платформе
@@ -1195,7 +1191,6 @@ function areEqual(prev: Props, next: Props) {
     // Флаги, влияющие на оформление/обработчики
     if (
         prev.isSuperuser !== next.isSuperuser ||
-        prev.isMetravel !== next.isMetravel ||
         prev.isSingle !== next.isSingle ||
         prev.selectable !== next.selectable ||
         prev.isSelected !== next.isSelected

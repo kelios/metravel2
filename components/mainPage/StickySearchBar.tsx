@@ -1,7 +1,7 @@
 // StickySearchBar.tsx
 // ✅ НОВЫЙ КОМПОНЕНТ: Sticky поисковая строка с быстрыми действиями
 
-import React, { useState, useRef, useEffect, useMemo, memo } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import {
   View,
   TextInput,
@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 
 interface StickySearchBarProps {
@@ -47,12 +46,12 @@ function StickySearchBar({
   onSearchChange,
   onFiltersPress,
   hasActiveFilters,
-  availableWidth,
-  primaryAction,
+  availableWidth: _availableWidth,
+  primaryAction: _primaryAction,
   resultsCount,
-  sortOptions = [],
-  onSortChange,
-  currentSort,
+  sortOptions: _sortOptions = [],
+  onSortChange: _onSortChange,
+  currentSort: _currentSort,
   placeholder = 'Найти путешествия...',
   onToggleRecommendations,
   isRecommendationsVisible,

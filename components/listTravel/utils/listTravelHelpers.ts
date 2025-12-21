@@ -4,9 +4,8 @@
  */
 
 import type { Travel } from "@/src/types/types";
-import type { TravelsApiResponse, FilterState, FilterOptions, CategoryWithCount } from "./listTravelTypes";
-import { BREAKPOINTS, GRID_COLUMNS, BADGE_THRESHOLDS } from "./listTravelConstants";
-import { buildTravelQueryParams } from '@/src/utils/filterQuery';
+import type { FilterOptions, CategoryWithCount } from "./listTravelTypes";
+import { BREAKPOINTS, BADGE_THRESHOLDS } from "./listTravelConstants";
 
 // ✅ АРХИТЕКТУРА: Нормализация ответа API
 export function normalizeApiResponse(data: any): { items: Travel[]; total: number } {
@@ -62,7 +61,6 @@ export function deduplicateTravels(travels: Travel[]): Travel[] {
 
 // ✅ B1.2: Улучшенный расчет количества колонок на основе минимальной ширины карточки
 const MIN_CARD_WIDTH = 320; // Минимальная комфортная ширина карточки
-const MAX_CARD_WIDTH = 360; // Максимальная ширина карточки
 const GAP = 16; // Отступ между карточками
 
 // Функция для расчета padding контейнера
