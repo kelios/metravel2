@@ -11,7 +11,7 @@ import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { QualityIndicator } from '@/components/travel/ValidationFeedback';
 import { TravelFormData, Travel } from '@/src/types/types';
 import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
-import { getQualityScore, isReadyForModeration } from '@/utils/travelWizardValidation';
+import { getQualityScore } from '@/utils/travelWizardValidation';
 import { trackWizardEvent } from '@/src/utils/analytics';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 

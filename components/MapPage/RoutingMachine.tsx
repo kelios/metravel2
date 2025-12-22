@@ -78,10 +78,9 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
 
         // Удаляем линию, если была
         if (polylineRef.current && map) {
-            try { map.removeLayer(polylineRef.current) } catch {}
+            try { map.removeLayer(polylineRef.current) } catch (_error) { /* noop */ }
             polylineRef.current = null
         }
-        lastFitKeyRef.current = null
     }, [hasTwoPoints, map, setErrors, setFullRouteCoords, setRouteDistance, setRoutingLoading])
 
     useEffect(() => {
@@ -211,7 +210,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                 }
             }
         }
-    }, [map, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints])
+    }, [map, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints, routingState.coords])
 
     // Cleanup on unmount
     useEffect(() => {
@@ -219,7 +218,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             if (polylineRef.current && map) {
                 try {
                     map.removeLayer(polylineRef.current)
-                } catch (error) {
+                } catch (_error) {
                     // Игнорируем ошибки при очистке
                 }
                 polylineRef.current = null

@@ -95,7 +95,7 @@ interface FieldValidationMessageProps {
  */
 export const FieldValidationMessage: React.FC<FieldValidationMessageProps> = ({
   validation,
-  fieldName,
+  fieldName: _fieldName,
 }) => {
   if (validation.isValid && !validation.warning) {
     return null;
@@ -188,7 +188,7 @@ interface ValidationSummaryProps {
 export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
   errorCount,
   warningCount,
-  onErrorClick,
+  onErrorClick: _onErrorClick,
 }) => {
   if (errorCount === 0 && warningCount === 0) {
     return (
@@ -239,7 +239,6 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 2,
-    transition: 'width 0.3s ease',
   },
   messageContainer: {
     marginTop: 6,

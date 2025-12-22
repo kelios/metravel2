@@ -17,11 +17,11 @@ const reverseGeocode = async (latlng: any) => {
     // Use a CORS-friendly provider first, then fall back to Nominatim
     try {
         const primary = await fetch(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latlng.lat}&longitude=${latlng.lng}&localityLanguage=ru`
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latlng.lat}&longitude=${latlng.lng}&localityLanguage=en`
         );
         if (primary.ok) {
             const data = await primary.json();
-            console.log('BigDataCloud geocode response:', data);
+            console.info('BigDataCloud geocode response:', data);
             return data;
         }
     } catch {
@@ -34,7 +34,7 @@ const reverseGeocode = async (latlng: any) => {
         );
         if (!response.ok) return null;
         const data = await response.json();
-        console.log('Nominatim geocode response:', data);
+        console.info('Nominatim geocode response:', data);
         return data;
     } catch {
         // Network/parse errors: let caller fallback to empty address
@@ -107,7 +107,7 @@ export const buildAddressFromGeocode = (
     latlng: any,
     matchedCountry?: any,
 ) => {
-    console.log('buildAddressFromGeocode called with:', { geocodeData, latlng, matchedCountry });
+    console.info('buildAddressFromGeocode called with:', { geocodeData, latlng, matchedCountry });
     
     // Если display_name есть, попробуем построить адрес из частей, чтобы добавить регион и страну
     // display_name используем как финальный fallback
@@ -150,7 +150,7 @@ export const buildAddressFromGeocode = (
     if (adminArea && adminArea !== adminRegion && adminArea !== countryLabel) parts.push(adminArea);
     if (countryLabel) parts.push(countryLabel);
 
-    console.log('Address parts:', parts);
+    console.info('Address parts:', parts);
 
     const separator = ' · ';
     const combined = parts.filter(Boolean).join(separator);
@@ -372,10 +372,8 @@ const WebMapComponent = ({
     };
 
     const handleImageUpload = (index: number, imageUrl: string) => {
-        console.log('handleImageUpload called:', { index, imageUrl });
         const updated = [...localMarkers];
         updated[index] = { ...updated[index], image: imageUrl };
-        console.log('Updated marker:', updated[index]);
         
         // Немедленное обновление локального состояния
         setLocalMarkers(updated);

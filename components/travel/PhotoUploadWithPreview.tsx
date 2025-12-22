@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Platform, ActivityIndicator, Pressable, View, Text, StyleSheet } from 'react-native';
+import { Platform, ActivityIndicator, Pressable, View, Text } from 'react-native';
 import * as ImagePicker from 'react-native-image-picker';
 import { useDropzone } from 'react-dropzone';
 import { uploadImage } from '@/src/api/misc';
@@ -17,16 +17,27 @@ interface PhotoUploadWithPreviewProps {
     maxSizeMB?: number;
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
 
 const normalizeImageUrl = (url?: string | null) => {
     if (!url || !url.trim()) return '';
     const safeUrl = url.trim();
-    if (/^(data:|blob:|https?:\/\/)/i.test(safeUrl)) return safeUrl;
-    const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
-    if (!base) return safeUrl;
-    return `${base}${safeUrl.startsWith('/') ? '' : '/'}${safeUrl}`;
+
+    // Data/blob stay as-is
+    if (/^(data:|blob:)/i.test(safeUrl)) return safeUrl;
+
+    const baseRaw = process.env.EXPO_PUBLIC_API_URL || '';
+    if (!baseRaw.trim()) return safeUrl;
+    const hostWithoutApi = baseRaw.replace(/\/+$/, '').replace(/\/api$/i, '');
+
+    // If backend returns absolute URL, keep as-is (will fallback on error handler if needed)
+    if (/^https?:\/\//i.test(safeUrl)) {
+        return safeUrl;
+    }
+
+    // Relative media path → resolve against API host without /api
+    const prefix = hostWithoutApi || baseRaw.replace(/\/+$/, '');
+    return `${prefix}${safeUrl.startsWith('/') ? '' : '/'}${safeUrl}`;
 };
 
 const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
@@ -46,26 +57,34 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [uploadMessage, setUploadMessage] = useState<string | null>(null);
     const [isManuallySelected, setIsManuallySelected] = useState(false);
+    const [fallbackImageUrl, setFallbackImageUrl] = useState<string | null>(null);
+    const [hasTriedFallback, setHasTriedFallback] = useState(false);
 
     // Синхронизация с oldImage
     useEffect(() => {
-        console.log('PhotoUploadWithPreview: oldImage changed', { oldImage, isManuallySelected });
+        console.info('PhotoUploadWithPreview: oldImage changed', { oldImage, isManuallySelected });
         if (!isManuallySelected) {
             if (oldImage && oldImage.trim()) {
                 const normalized = normalizeImageUrl(oldImage);
-                console.log('PhotoUploadWithPreview: normalized URL', normalized);
+                console.info('PhotoUploadWithPreview: normalized URL', normalized);
                 if (normalized && normalized.length > 0) {
                     setImageUri(normalized);
+                    setFallbackImageUrl(oldImage);
+                    setHasTriedFallback(false);
                     setPreviewUrl(null);
                 } else {
-                    console.log('PhotoUploadWithPreview: normalized URL is empty, clearing image');
+                    console.info('PhotoUploadWithPreview: normalized URL is empty, clearing image');
                     setImageUri(null);
                     setPreviewUrl(null);
+                    setFallbackImageUrl(null);
+                    setHasTriedFallback(false);
                 }
             } else {
-                console.log('PhotoUploadWithPreview: oldImage is empty, clearing image');
+                console.info('PhotoUploadWithPreview: oldImage is empty, clearing image');
                 setImageUri(null);
                 setPreviewUrl(null);
+                setFallbackImageUrl(null);
+                setHasTriedFallback(false);
             }
         }
     }, [oldImage, isManuallySelected]);
@@ -96,27 +115,12 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         return null;
     }, [maxSizeMB]);
 
-    const createPreview = useCallback((file: File | { uri: string; name: string; type: string }) => {
-        if (Platform.OS === 'web' && file instanceof File) {
-            const objectUrl = URL.createObjectURL(file);
-            console.log('Created preview URL:', objectUrl);
-            setPreviewUrl(objectUrl);
-            setIsManuallySelected(true);
-            return objectUrl;
-        } else {
-            const rnFile = file as { uri: string };
-            console.log('Created preview URI:', rnFile.uri);
-            setPreviewUrl(rnFile.uri);
-            setIsManuallySelected(true);
-            return rnFile.uri;
-        }
-    }, []);
-
     const handleUploadImage = async (file: File | { uri: string; name: string; type: string }) => {
         try {
             setError(null);
             setUploadMessage(null);
             setUploadProgress(0);
+            setHasTriedFallback(false);
 
             // Валидация файла
             const validationError = validateFile(file);
@@ -130,10 +134,10 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
             let previewCandidate: string;
             if (Platform.OS === 'web' && file instanceof File) {
                 previewCandidate = URL.createObjectURL(file);
-                console.log('Created blob URL:', previewCandidate);
+                console.info('Created blob URL:', previewCandidate);
             } else {
                 previewCandidate = (file as { uri: string }).uri;
-                console.log('Using file URI:', previewCandidate);
+                console.info('Using file URI:', previewCandidate);
             }
             
             // Устанавливаем превью сразу
@@ -187,7 +191,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
             const uploadedUrlRaw = response?.url || response?.data?.url || response?.path || response?.file_url;
             const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : null;
             
-            console.log('Upload response:', { uploadedUrlRaw, uploadedUrl });
+            console.info('Upload response:', { uploadedUrlRaw, uploadedUrl });
 
             if (uploadedUrl) {
                 // Успешная загрузка - показываем URL с сервера
@@ -202,6 +206,8 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                 setPreviewUrl(null);
                 setUploadMessage('Превью сохранено. Попробуйте загрузить позже.');
                 onUpload?.(previewCandidate);
+                setFallbackImageUrl(null);
+                setHasTriedFallback(false);
                 setError(null);
             } else {
                 setError('Ошибка при загрузке');
@@ -259,7 +265,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
 
             const file = acceptedFiles[0];
             if (file) {
-                console.log('File selected:', file.name, file.type, file.size);
+                console.info('File selected:', file.name, file.type, file.size);
                 const validationError = validateFile(file);
                 if (validationError) {
                     setError(validationError);
@@ -279,18 +285,6 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         multiple: false,
         disabled,
     });
-
-    const handleRemoveImage = () => {
-        setImageUri(null);
-        setPreviewUrl(null);
-        setIsManuallySelected(false);
-        setUploadMessage(null);
-        setError(null);
-        onUpload?.('');
-    };
-
-    const currentDisplayUrl = previewUrl || imageUri;
-    const hasValidImage = currentDisplayUrl && currentDisplayUrl.trim().length > 0;
 
     if (Platform.OS === 'web') {
         return (
@@ -321,11 +315,22 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                 alt="Предпросмотр"
                                 style={styles.previewImage as any}
                                 onLoad={() => {
-                                    console.log('Image loaded successfully:', currentDisplayUrl);
+                                    console.info('Image loaded successfully:', currentDisplayUrl);
                                 }}
-                                onError={(e) => {
-                                    console.error('Image load error:', currentDisplayUrl);
-                                    // При ошибке загрузки показываем placeholder
+                                onError={(_e) => {
+                                    console.error('Image load error:', currentDisplayUrl, 'fallback:', fallbackImageUrl);
+                                    if (
+                                        fallbackImageUrl &&
+                                        !hasTriedFallback &&
+                                        currentDisplayUrl !== fallbackImageUrl
+                                    ) {
+                                        setHasTriedFallback(true);
+                                        setImageUri(fallbackImageUrl);
+                                        setPreviewUrl(null);
+                                        setError(null);
+                                        return;
+                                    }
+                                    // При повторной ошибке показываем placeholder
                                     setImageUri(null);
                                     setPreviewUrl(null);
                                     setError('Изображение не найдено');

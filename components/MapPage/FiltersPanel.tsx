@@ -255,6 +255,11 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     [mode, routePoints.length]
   );
 
+  const totalPoints = useMemo(() => {
+    const dataset = filteredTravelsData ?? travelsData;
+    return Array.isArray(dataset) ? dataset.length : 0;
+  }, [filteredTravelsData, travelsData]);
+
   return (
     <View style={styles.card}>
       {/* Sticky header + status */}
@@ -278,6 +283,11 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 </Pressable>
               )}
             </View>
+          </View>
+
+          <View style={styles.counterRow}>
+            <Text style={styles.counterLabel}>Найдено точек:</Text>
+            <Text style={styles.counterValue}>{totalPoints}</Text>
           </View>
 
           {/* Переключение режимов */}
@@ -309,15 +319,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               );
             })}
           </View>
-
-          <View style={styles.modeHelper}>
-            <Icon name={mode === 'route' ? 'alt-route' : 'my-location'} size={16} color={COLORS.textMuted} />
-            <Text style={styles.modeHelperText}>
-              {mode === 'route'
-                ? 'Режим «Построить маршрут»: выберите старт и финиш, переключите транспорт.'
-                : 'Режим «Найти в радиусе»: задайте радиус вокруг точки, чтобы увидеть места.'}
-            </Text>
-          </View>
         </View>
 
         <View style={styles.statusCard}>
@@ -338,12 +339,11 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled={true}
       >
-        {/* Шаги отображаем только в режиме маршрута, чтобы не перегружать радиус */}
         {mode === 'route' && (
           <View style={styles.infoBox}>
             <Text style={styles.infoTitle}>Как построить маршрут</Text>
-            <Text style={styles.infoItem}>1. Выберите режим: радиус или маршрут.</Text>
-            <Text style={styles.infoItem}>2. Введите адреса или кликните на карте: старт → финиш.</Text>
+            <Text style={styles.infoItem}>1. Кликните на карте: сначала старт, затем финиш.</Text>
+            <Text style={styles.infoItem}>2. Можно ввести адрес или координаты в полях ниже.</Text>
             <Text style={styles.infoItem}>3. Нажмите «Построить» или очистите/поменяйте точки.</Text>
           </View>
         )}
@@ -472,45 +472,11 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   enableCoordinateInput
                   onAddressSelect={(address, coords) => onAddressSelect(address, coords, false)}
                 />
-                {(onClearRoute || swapStartEnd) && (
-                  <View style={styles.actionRow}>
-                    {onClearRoute && (
-                      <Pressable
-                        style={styles.actionGhost}
-                        onPress={onClearRoute}
-                        accessibilityRole="button"
-                        accessibilityLabel="Очистить точки маршрута"
-                      >
-                        <Icon name="delete-sweep" size={18} color={COLORS.text} />
-                        <Text style={styles.actionGhostText}>Очистить точки</Text>
-                      </Pressable>
-                    )}
-                    {swapStartEnd && (
-                      <Pressable
-                        style={styles.actionGhost}
-                        onPress={swapStartEnd}
-                        accessibilityRole="button"
-                        accessibilityLabel="Поменять старт и финиш местами"
-                      >
-                        <Icon name="swap-horiz" size={18} color={COLORS.text} />
-                        <Text style={styles.actionGhostText}>S ↔ F</Text>
-                      </Pressable>
-                    )}
-                  </View>
-                )}
               </View>
             )}
 
-            {/* ✅ NEW: Validation messages */}
-            {!validation.valid && (
-              <ValidationMessage type="error" messages={validation.errors} />
-            )}
-            {validation.warnings.length > 0 && (
-              <ValidationMessage type="warning" messages={validation.warnings} />
-            )}
-
-            {/* Транспорт */}
-            <View style={styles.section}>
+            {/* Транспорт сразу под полями */}
+            <View style={[styles.section, styles.sectionTight]}>
               <Text style={styles.sectionLabel}>Транспорт</Text>
               <View style={styles.transportTabs}>
                 {TRANSPORT_MODES.map(({ key, label, emoji }) => {
@@ -539,6 +505,41 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 })}
               </View>
             </View>
+
+            {(onClearRoute || swapStartEnd) && (
+              <View style={styles.actionRow}>
+                {onClearRoute && (
+                  <Pressable
+                    style={styles.actionGhost}
+                    onPress={onClearRoute}
+                    accessibilityRole="button"
+                    accessibilityLabel="Очистить точки маршрута"
+                  >
+                    <Icon name="delete-sweep" size={18} color={COLORS.text} />
+                    <Text style={styles.actionGhostText}>Очистить точки</Text>
+                  </Pressable>
+                )}
+                {swapStartEnd && (
+                  <Pressable
+                    style={styles.actionGhost}
+                    onPress={swapStartEnd}
+                    accessibilityRole="button"
+                    accessibilityLabel="Поменять старт и финиш местами"
+                  >
+                    <Icon name="swap-horiz" size={18} color={COLORS.text} />
+                    <Text style={styles.actionGhostText}>S ↔ F</Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+
+            {/* ✅ NEW: Validation messages */}
+            {!validation.valid && (
+              <ValidationMessage type="error" messages={validation.errors} />
+            )}
+            {validation.warnings.length > 0 && (
+              <ValidationMessage type="warning" messages={validation.warnings} />
+            )}
 
             {/* ✅ ОПТИМИЗАЦИЯ: Управление точками маршрута */}
             {routePoints.length > 0 && onRemoveRoutePoint && onClearRoute && (
@@ -597,27 +598,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         )}
 
         {/* ✅ РЕАЛИЗАЦИЯ: Информация о найденных точках - показываем отфильтрованные данные */}
-        {(filteredTravelsData || travelsData).length > 0 && (
-          <View style={styles.infoBox}>
-            <View style={styles.infoRow}>
-              <Icon name="place" size={18} color={COLORS.primary} />
-              <Text style={styles.infoText}>
-                Найдено точек: <Text style={styles.infoBold}>
-                  {(filteredTravelsData || travelsData).length}
-                </Text>
-              </Text>
-            </View>
-            {filterValue.radius && (
-              <View style={styles.infoRow}>
-                <Icon name="radio-button-unchecked" size={18} color={COLORS.textMuted} />
-                <Text style={styles.infoText}>
-                  Радиус поиска: <Text style={styles.infoBold}>{filterValue.radius} км</Text>
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
         {/* ✅ Аккордеон легенды */}
         <Pressable
           style={[styles.accordionHeader, globalFocusStyles.focusable]}
@@ -671,7 +651,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
 
 // ——— Styles
 const getStyles = (isMobile: boolean, windowWidth: number) => {
-  const panelWidth = isMobile ? Math.min(windowWidth - 24, 480) : 340;
+  const panelWidth = isMobile ? Math.max(Math.min(windowWidth - 24, 480), 280) : '100%';
 
   return StyleSheet.create({
     card: {

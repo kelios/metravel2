@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Text, Dimensions, LayoutChangeEvent } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Dimensions, LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Snackbar } from 'react-native-paper';
 
@@ -56,7 +56,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     snackbarMessage,
     onDismissSnackbar,
     onGoNext,
-    stepErrors,
+    stepErrors: _stepErrors,
     firstErrorField,
     autosaveStatus,
     autosaveBadge,

@@ -413,8 +413,8 @@ export default function UpsertTravel() {
                         ? { ...prev }
                         : {} as any;
 
-                    console.log('Raw filtersData:', filtersData);
-                    console.log('Raw categoryTravelAddress:', filtersData?.categoryTravelAddress);
+                    console.info('Raw filtersData:', filtersData);
+                    console.info('Raw categoryTravelAddress:', filtersData?.categoryTravelAddress);
 
                     let normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(filtersData?.categoryTravelAddress);
 
@@ -433,7 +433,7 @@ export default function UpsertTravel() {
                         ];
                     }
 
-                    console.log('Normalized categoryTravelAddress:', normalizedCategoryTravelAddress);
+                    console.info('Normalized categoryTravelAddress:', normalizedCategoryTravelAddress);
 
                     const normalizedCountries = (base.countries && base.countries.length > 0)
                         ? base.countries

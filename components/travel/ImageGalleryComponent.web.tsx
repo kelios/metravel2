@@ -64,7 +64,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     const theme = useColorScheme();
     const isDarkMode = theme === 'dark';
     
-    const uploadingCount = useMemo(() => images.filter(img => img.isUploading).length, [images]);
+    const _uploadingCount = useMemo(() => images.filter(img => img.isUploading).length, [images]);
     const hasErrors = useMemo(() => images.some(img => img.error), [images]);
 
     useEffect(() => {
@@ -82,11 +82,12 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     
     // Cleanup blob URLs on unmount
     useEffect(() => {
+        const urls = new Set(blobUrlsRef.current);
         return () => {
-            blobUrlsRef.current.forEach(url => {
+            urls.forEach(url => {
                 try {
                     URL.revokeObjectURL(url);
-                } catch (e) {
+                } catch (_e) {
                     // Ignore errors
                 }
             });

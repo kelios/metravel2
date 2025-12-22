@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { RoutePoint, RouteData, TransportMode } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
-import { CoordinateConverter } from '@/utils/coordinateConverter';
 
 interface RouteState {
   // Mode

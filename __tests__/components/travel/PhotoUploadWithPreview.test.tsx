@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor, screen } from '@testing-library/react-native';
+import { render, waitFor } from '@testing-library/react-native';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { uploadImage } from '@/src/api/misc';
 
@@ -55,7 +55,7 @@ describe('PhotoUploadWithPreview', () => {
 
         it('should show existing image when oldImage is provided', async () => {
             const oldImageUrl = 'https://example.com/image.jpg';
-            const { findByTestId } = render(
+            render(
                 <PhotoUploadWithPreview {...defaultProps} oldImage={oldImageUrl} />
             );
             

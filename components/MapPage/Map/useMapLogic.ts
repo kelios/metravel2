@@ -86,7 +86,7 @@ export function useMapLogic({
             const coords = CoordinateConverter.fromString(point.coord);
             points.push(coords);
           }
-        } catch (e) {
+        } catch {
           // Skip invalid coordinates
         }
       });

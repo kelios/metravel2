@@ -545,6 +545,7 @@ export default function MapScreen() {
                         tabIndex={-1}
                     >
                         {/* Табы для переключения */}
+                        {rightPanelVisible && (
                             <View style={styles.tabsContainer}>
                                     <View style={styles.tabsSegment}>
                                         <Pressable
@@ -620,6 +621,7 @@ export default function MapScreen() {
                                         <IconMaterial name="chevron-right" size={22} color="#4a5568" />
                                     </Pressable>
                                 </View>
+                        )}
 
                         {/* Контент панели */}
                         <View style={styles.panelContent}>

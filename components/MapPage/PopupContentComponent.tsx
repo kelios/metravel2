@@ -37,7 +37,7 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
   // Optimize and version the image URL
   const optimizedImageUrl = useMemo(() => {
     if (!travelImageThumbUrl) {
-      console.log('[PopupContent] No travelImageThumbUrl provided');
+      console.info('[PopupContent] No travelImageThumbUrl provided');
       return undefined;
     }
     
@@ -55,7 +55,7 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
       fit: 'contain',
     }) || versionedUrl;
     
-    console.log('[PopupContent] Image URLs:', {
+    console.info('[PopupContent] Image URLs:', {
       original: travelImageThumbUrl,
       versioned: versionedUrl,
       optimized,
@@ -152,7 +152,7 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
                 loading="lazy"
                 decoding="async"
                 onLoad={() => {
-                  console.log('[PopupContent] Image loaded successfully:', optimizedImageUrl);
+                  console.info('[PopupContent] Image loaded successfully:', optimizedImageUrl);
                 }}
                 onError={(e) => {
                   console.error('[PopupContent] Image failed to load:', {

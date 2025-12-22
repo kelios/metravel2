@@ -62,7 +62,7 @@ export const useRouting = (
     
     useEffect(() => {
         routePointsRef.current = routePoints
-    }, [routePointsKey]) // Обновляем только при изменении ключа, не массива
+    }, [routePoints, routePointsKey]) // Обновляем только при изменении ключа, не массива
 
     const hasTwoPoints = Array.isArray(routePoints) && routePoints.length >= 2
     const routeKey = hasTwoPoints 
@@ -337,7 +337,7 @@ export const useRouting = (
                 rateLimitTimerRef.current = null
             }
         }
-    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY])
+    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, fetchORS, fetchOSRM, forceOsrm])
 
     useEffect(() => {
         return () => {
