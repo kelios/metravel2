@@ -46,7 +46,7 @@ const COLORS = {
 
 const SEARCH_MODES = [
   { key: 'radius' as const, icon: 'my-location', label: 'Найти в радиусе', subtitle: 'Поиск мест вокруг точки' },
-  { key: 'route' as const, icon: 'alt-route', label: 'Построить маршрут', subtitle: 'Старт → финиш + транспорт' },
+  { key: 'route' as const, icon: 'alt-route', label: 'Маршрут', subtitle: 'Старт → финиш + транспорт' },
 ];
 
 const TRANSPORT_MODES = [
@@ -285,9 +285,14 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
             </View>
           </View>
 
-          <View style={styles.counterRow}>
-            <Text style={styles.counterLabel}>Найдено точек:</Text>
-            <Text style={styles.counterValue}>{totalPoints}</Text>
+          <View style={styles.counterRow} accessible accessibilityRole="text">
+            <View style={styles.counterBadge}>
+              <Text style={styles.counterValue}>{totalPoints}</Text>
+              <Text style={styles.counterLabel}>точек</Text>
+            </View>
+            {_hasActiveFilters && (
+              <Text style={styles.counterHint}>Фильтры применены</Text>
+            )}
           </View>
 
           {/* Переключение режимов */}
@@ -341,10 +346,10 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       >
         {mode === 'route' && (
           <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>Как построить маршрут</Text>
-            <Text style={styles.infoItem}>1. Кликните на карте: сначала старт, затем финиш.</Text>
-            <Text style={styles.infoItem}>2. Можно ввести адрес или координаты в полях ниже.</Text>
-            <Text style={styles.infoItem}>3. Нажмите «Построить» или очистите/поменяйте точки.</Text>
+            <Text style={styles.infoTitle}>Построение маршрута</Text>
+            <Text style={styles.infoItem}>1) Выберите старт и финиш на карте или введите адреса.</Text>
+            <Text style={styles.infoItem}>2) Укажите транспорт и нажмите «Построить».</Text>
+            <Text style={styles.infoItem}>3) При необходимости поменяйте точки или очистите маршрут.</Text>
           </View>
         )}
 
@@ -354,7 +359,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
             {categoriesWithCount.length > 0 && (
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>Категории</Text>
-                <Text style={styles.sectionHint}>Выберите 1–3 тематики, чтобы сузить выдачу.</Text>
+                <Text style={styles.sectionHint}>Выберите подходящие тематики, чтобы сузить выдачу.</Text>
                 <MultiSelectField
                   items={categoriesWithCount}
                   value={Array.isArray(filterValue.categories) 
@@ -454,55 +459,56 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           </>
         ) : (
           <>
-            {/* Поиск адресов */}
-            {onAddressSelect && (
-              <View style={styles.section}>
-                <AddressSearch
-                  label="Точка старта"
-                  placeholder="Введите адрес начала маршрута..."
-                  value={startAddress}
-                  enableCoordinateInput
-                  onAddressSelect={(address, coords) => onAddressSelect(address, coords, true)}
-                />
-                <View style={{ height: 12 }} />
-                <AddressSearch
-                  label="Точка финиша"
-                  placeholder="Введите адрес конца маршрута..."
-                  value={endAddress}
-                  enableCoordinateInput
-                  onAddressSelect={(address, coords) => onAddressSelect(address, coords, false)}
-                />
-              </View>
-            )}
+            {/* Поиск адресов и транспорт в едином блоке */}
+            <View style={styles.sectionCard}>
+              {onAddressSelect && (
+                <View style={styles.dualInputRow}>
+                  <AddressSearch
+                    label="Старт"
+                    placeholder="Введите адрес начала маршрута..."
+                    value={startAddress}
+                    enableCoordinateInput
+                    onAddressSelect={(address, coords) => onAddressSelect(address, coords, true)}
+                  />
+                  <View style={styles.separator} />
+                  <AddressSearch
+                    label="Финиш"
+                    placeholder="Введите адрес конца маршрута..."
+                    value={endAddress}
+                    enableCoordinateInput
+                    onAddressSelect={(address, coords) => onAddressSelect(address, coords, false)}
+                  />
+                </View>
+              )}
 
-            {/* Транспорт сразу под полями */}
-            <View style={[styles.section, styles.sectionTight]}>
-              <Text style={styles.sectionLabel}>Транспорт</Text>
-              <View style={styles.transportTabs}>
-                {TRANSPORT_MODES.map(({ key, label, emoji }) => {
-                  const active = transportMode === key;
-                  return (
-                    <Pressable
-                      key={key}
-                      style={[
-                        styles.transportTab, 
-                        active && styles.transportTabActive,
-                        globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                      ]}
-                      onPress={() => setTransportMode(key)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Выбрать транспорт: ${TRANSPORT_MODES.find(m => m.key === key)?.label}`}
-                      accessibilityState={{ selected: active }}
-                    >
-                      <Text style={styles.transportEmoji}>{emoji}</Text>
-                      <Text
-                        style={[styles.transportTabText, active && styles.transportTabTextActive]}
+              <View style={[styles.section, styles.sectionTight, styles.transportSection]}>
+                <Text style={styles.sectionLabel}>Транспорт</Text>
+                <View style={styles.transportTabs}>
+                  {TRANSPORT_MODES.map(({ key, label, emoji }) => {
+                    const active = transportMode === key;
+                    return (
+                      <Pressable
+                        key={key}
+                        style={[
+                          styles.transportTab, 
+                          active && styles.transportTabActive,
+                          globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                        ]}
+                        onPress={() => setTransportMode(key)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Выбрать транспорт: ${TRANSPORT_MODES.find(m => m.key === key)?.label}`}
+                        accessibilityState={{ selected: active }}
                       >
-                        {label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                        <Text style={styles.transportEmoji}>{emoji}</Text>
+                        <Text
+                          style={[styles.transportTabText, active && styles.transportTabTextActive]}
+                        >
+                          {label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
             </View>
 
@@ -552,21 +558,24 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
 
             {/* Информация о маршруте */}
             <View style={styles.routeInfo}>
-              <View style={styles.routeItem}>
-                <Text style={styles.routeLabel}>Старт:</Text>
-                <Text style={styles.routeValue} numberOfLines={1}>
-                  {startAddress || 'Не выбран'}
-                </Text>
-              </View>
-              <View style={styles.routeItem}>
-                <Text style={styles.routeLabel}>Финиш:</Text>
-                <Text style={styles.routeValue} numberOfLines={1}>
-                  {endAddress || 'Не выбран'}
-                </Text>
+              <View style={styles.routeInfoRow}>
+                <View style={styles.routePill}>
+                  <Text style={styles.routePillLabel}>Старт</Text>
+                  <Text style={styles.routePillValue} numberOfLines={1}>
+                    {startAddress || 'Не выбран'}
+                  </Text>
+                </View>
+                <View style={styles.routePillDivider} />
+                <View style={styles.routePill}>
+                  <Text style={styles.routePillLabel}>Финиш</Text>
+                  <Text style={styles.routePillValue} numberOfLines={1}>
+                    {endAddress || 'Не выбран'}
+                  </Text>
+                </View>
               </View>
               {routeDistance != null && (
-                <View style={styles.routeItem}>
-                  <Text style={styles.routeLabel}>Дистанция:</Text>
+                <View style={styles.routeDistanceRow}>
+                  <Text style={styles.routeLabel}>Дистанция</Text>
                   <Text style={styles.routeDistance}>
                     {(routeDistance / 1000).toFixed(1)} км
                   </Text>
@@ -781,8 +790,22 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       gap: 6,
       marginBottom: 8,
     },
+    counterBadge: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: COLORS.card,
+    },
     counterLabel: {
       fontSize: 13,
+      color: COLORS.textMuted,
+      fontWeight: '600',
+    },
+    counterHint: {
+      fontSize: 12,
       color: COLORS.textMuted,
       fontWeight: '600',
     },
@@ -813,6 +836,30 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     },
     section: {
       marginBottom: 12,
+    },
+    sectionCard: {
+      backgroundColor: COLORS.card,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 12,
+      gap: 10,
+      shadowColor: '#1f1f1f',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.04,
+      shadowRadius: 3,
+      elevation: 1,
+    },
+    dualInputRow: {
+      flexDirection: 'row',
+      gap: 12,
+      alignItems: 'stretch',
+    },
+    separator: {
+      width: 1,
+      backgroundColor: COLORS.border,
+    },
+    transportSection: {
+      marginTop: 4,
     },
     sectionTight: {
       marginBottom: 8,
@@ -964,6 +1011,43 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       shadowOpacity: 0.04,
       shadowRadius: 3,
       elevation: 1,
+    },
+    routeInfoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 8,
+    },
+    routePill: {
+      flex: 1,
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderRadius: 10,
+      backgroundColor: COLORS.bg,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    routePillLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: COLORS.textMuted,
+      marginBottom: 4,
+    },
+    routePillValue: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: COLORS.text,
+    },
+    routePillDivider: {
+      width: 1,
+      alignSelf: 'stretch',
+      backgroundColor: COLORS.border,
+    },
+    routeDistanceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 4,
     },
     routeItem: {
       flexDirection: 'row',

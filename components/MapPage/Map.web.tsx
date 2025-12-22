@@ -33,6 +33,7 @@ interface Props {
   travel?: { data?: Point[] };
   coordinates: Coordinates;
   routePoints: [number, number][];
+  setRoutePoints?: (points: [number, number][]) => void;
   onMapClick: (lng: number, lat: number) => void;
   mode: MapMode;
   transportMode: TransportMode;

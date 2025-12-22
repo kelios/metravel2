@@ -1,6 +1,6 @@
 // Оптимизированный FavoriteButton для списков
 import React, { memo } from 'react';
-import { Pressable, StyleSheet, Platform } from 'react-native';
+import { Pressable, StyleSheet, Platform, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFavorites } from '@/context/FavoritesContext';
 
@@ -54,20 +54,38 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
         }
     };
 
+    // On web, avoid rendering a <button> to prevent nested button warnings inside other Pressables.
+    if (Platform.OS === 'web') {
+        return (
+            <View
+                role="button"
+                tabIndex={0}
+                onClick={handlePress as any}
+                onKeyDown={(e: any) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handlePress(e);
+                    }
+                }}
+                onMouseDown={(e: any) => e.stopPropagation()}
+                style={[styles.favoriteButton, style, { cursor: 'pointer' } as any]}
+                data-testid="favorite-button"
+            >
+                <MaterialIcons
+                    name={serverIsFav ? 'favorite' : 'favorite-border'}
+                    size={size}
+                    color={serverIsFav ? '#ef4444' : '#6b7280'}
+                />
+            </View>
+        );
+    }
+
     return (
         <Pressable
             onPress={handlePress}
             style={[styles.favoriteButton, style]}
             hitSlop={10}
             testID="favorite-button"
-            {...(Platform.OS === 'web' && {
-                onClick: (e: any) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    handlePress(e);
-                },
-                onMouseDown: (e: any) => e.stopPropagation(),
-            })}
         >
             <MaterialIcons
                 name={serverIsFav ? 'favorite' : 'favorite-border'}

@@ -40,6 +40,18 @@ const normalizeImageUrl = (url?: string | null) => {
     return `${prefix}${safeUrl.startsWith('/') ? '' : '/'}${safeUrl}`;
 };
 
+export const chooseFallbackUrl = (
+    currentDisplayUrl: string,
+    fallbackImageUrl: string | null,
+    lastPreviewUrl: string | null,
+    hasTriedFallback: boolean
+) => {
+    if (hasTriedFallback) return null;
+    if (lastPreviewUrl && lastPreviewUrl !== currentDisplayUrl) return lastPreviewUrl;
+    if (fallbackImageUrl && fallbackImageUrl !== currentDisplayUrl) return fallbackImageUrl;
+    return null;
+};
+
 const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     collection,
     idTravel,
@@ -59,6 +71,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     const [isManuallySelected, setIsManuallySelected] = useState(false);
     const [fallbackImageUrl, setFallbackImageUrl] = useState<string | null>(null);
     const [hasTriedFallback, setHasTriedFallback] = useState(false);
+    const [lastPreviewUrl, setLastPreviewUrl] = useState<string | null>(null);
     const hasValidImage = Boolean(previewUrl || imageUri);
     const currentDisplayUrl = previewUrl ?? imageUri ?? '';
 
@@ -157,6 +170,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
             // Устанавливаем превью сразу
             setPreviewUrl(previewCandidate);
             setIsManuallySelected(true);
+            setLastPreviewUrl(previewCandidate);
 
             // Если нет ID точки, показываем только превью без загрузки
             const normalizedId = (idTravel ?? '').toString();
@@ -211,6 +225,8 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                 // Успешная загрузка - показываем URL с сервера
                 setImageUri(uploadedUrl);
                 setPreviewUrl(null);
+                setFallbackImageUrl(lastPreviewUrl || uploadedUrlRaw || uploadedUrl);
+                setHasTriedFallback(false);
                 setUploadMessage('Фотография успешно загружена');
                 onUpload?.(uploadedUrl);
                 setError(null);
@@ -332,14 +348,16 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                     console.info('Image loaded successfully:', currentDisplayUrl);
                                 }}
                                 onError={(_e) => {
-                                    console.error('Image load error:', currentDisplayUrl, 'fallback:', fallbackImageUrl);
-                                    if (
-                                        fallbackImageUrl &&
-                                        !hasTriedFallback &&
-                                        currentDisplayUrl !== fallbackImageUrl
-                                    ) {
+                                    const candidateFallback = chooseFallbackUrl(
+                                        currentDisplayUrl,
+                                        fallbackImageUrl,
+                                        lastPreviewUrl,
+                                        hasTriedFallback
+                                    );
+                                    console.error('Image load error:', currentDisplayUrl, 'fallback:', candidateFallback);
+                                    if (candidateFallback) {
                                         setHasTriedFallback(true);
-                                        setImageUri(fallbackImageUrl);
+                                        setImageUri(candidateFallback);
                                         setPreviewUrl(null);
                                         setError(null);
                                         return;

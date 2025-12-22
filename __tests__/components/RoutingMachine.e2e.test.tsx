@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 import RoutingMachine from '@/components/MapPage/RoutingMachine';
+import { clearResolvedRouteKeys } from '@/components/MapPage/useRouting';
 
 // Mock Leaflet
 const mockLeaflet = {
@@ -46,6 +47,7 @@ describe('RoutingMachine E2E Tests', () => {
     (global.fetch as jest.Mock).mockClear();
     const { routeCache } = require('@/src/utils/routeCache');
     routeCache.clear();
+    clearResolvedRouteKeys();
     mockLeaflet.latLng.mockClear();
     mockLeaflet.polyline.mockClear();
   });

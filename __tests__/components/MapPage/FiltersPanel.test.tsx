@@ -67,7 +67,7 @@ describe('FiltersPanel', () => {
             },
         };
         const { getByLabelText } = render(<FiltersPanel {...propsWithFilters} />);
-        expect(getByLabelText('Сбросить фильтры')).toBeTruthy();
+        expect(getByLabelText('Сбросить')).toBeTruthy();
     });
 
     it('calls resetFilters when reset button is pressed', () => {
@@ -79,7 +79,7 @@ describe('FiltersPanel', () => {
             },
         };
         const { getByLabelText } = render(<FiltersPanel {...propsWithFilters} />);
-        const resetButton = getByLabelText('Сбросить фильтры');
+        const resetButton = getByLabelText('Сбросить');
         fireEvent.press(resetButton);
         expect(defaultProps.resetFilters).toHaveBeenCalled();
     });
@@ -108,18 +108,22 @@ describe('FiltersPanel', () => {
         expect(defaultProps.onFilterChange).toHaveBeenCalled();
     });
 
-    it('displays categories with counts when travelsData is provided', () => {
+    it('displays total counter and applied hint when filters active', () => {
       const propsWithData = {
         ...defaultProps,
+        filterValue: {
+          ...mockFilterValue,
+          categories: ['Музеи'],
+        },
         travelsData: [
           { categoryName: 'Музеи' },
           { categoryName: 'Музеи' },
           { categoryName: 'Парки' },
         ],
       };
-        const { getByText } = render(<FiltersPanel {...propsWithData} />);
-        // Проверяем, что информация о количестве точек отображается корректно
-        expect(getByText(/Найдено точек:/)).toBeTruthy();
-        expect(getByText(/3/)).toBeTruthy();
-    });
+      const { getByText } = render(<FiltersPanel {...propsWithData} />);
+      expect(getByText('3')).toBeTruthy();
+      expect(getByText('точек')).toBeTruthy();
+      expect(getByText('Фильтры применены')).toBeTruthy();
+  });
 });

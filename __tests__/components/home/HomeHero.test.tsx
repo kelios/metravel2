@@ -147,9 +147,9 @@ describe('HomeHero Component', () => {
       expect(mockPush).toHaveBeenCalledWith('/export');
     });
 
-    it('should navigate to search when clicking "Найти вдохновение"', () => {
+    it('should navigate to search when clicking "Выбрать, куда поехать"', () => {
       const { getByText } = render(<HomeHero />);
-      const button = getByText('Найти вдохновение');
+      const button = getByText('Выбрать, куда поехать');
       
       fireEvent.press(button);
       
@@ -212,7 +212,7 @@ describe('HomeHero Component', () => {
     it('should have accessible buttons with proper labels', () => {
       const { getByLabelText } = render(<HomeHero />);
       expect(getByLabelText('Рассказать о путешествии')).toBeTruthy();
-      expect(getByLabelText('Найти вдохновение')).toBeTruthy();
+      expect(getByLabelText('Выбрать, куда поехать')).toBeTruthy();
     });
   });
 });

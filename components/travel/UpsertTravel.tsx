@@ -418,6 +418,16 @@ export default function UpsertTravel() {
 
                     let normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(filtersData?.categoryTravelAddress);
 
+                    // Если бэкенд вернул категории точек в поле categories (а categoryTravelAddress пуст),
+                    // используем их как источник категорий точек.
+                    if (
+                        (!normalizedCategoryTravelAddress || normalizedCategoryTravelAddress.length === 0) &&
+                        Array.isArray((filtersData as any)?.categories) &&
+                        (filtersData as any).categories.length > 0
+                    ) {
+                        normalizedCategoryTravelAddress = normalizeCategoryTravelAddress((filtersData as any).categories);
+                    }
+
                     // Fallback: если API не вернул категории точек, используем дефолтные
                     if (!normalizedCategoryTravelAddress || normalizedCategoryTravelAddress.length === 0) {
                         console.warn('API returned empty categoryTravelAddress, using fallback values');

@@ -52,7 +52,7 @@ export default function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
           </ResponsiveText>
           
           <ResponsiveText variant="h4" style={styles.subtitle}>
-            Делись маршрутами и историями, собирай их в красивую книгу — или ищи вдохновение, куда отправиться в этот раз.
+            Делись маршрутами и историями, собирай их в красивую книгу — или выбирай, куда поехать дальше, читая поездки других.
           </ResponsiveText>
 
           {travelsCount === 0 && isAuthenticated && (
@@ -87,9 +87,9 @@ export default function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 globalFocusStyles.focusable,
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Найти вдохновение">
+              accessibilityLabel="Выбрать, куда поехать">
               <Feather name="compass" size={18} color={DESIGN_TOKENS.colors.text} />
-              <Text style={styles.secondaryButtonText}>Найти вдохновение</Text>
+              <Text style={styles.secondaryButtonText}>Выбрать, куда поехать</Text>
             </Pressable>
           </ResponsiveStack>
         </View>

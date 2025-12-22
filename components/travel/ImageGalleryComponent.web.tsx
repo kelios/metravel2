@@ -133,9 +133,17 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                     formData.append('id', idTravel);
                     
                     const response = await uploadImage(formData);
-                    
-                    if (response?.url) {
-                        const finalUrl = ensureAbsoluteUrl(String(response.url));
+                    const uploadedUrlRaw =
+                        response?.url ||
+                        (response as any)?.data?.url ||
+                        (response as any)?.path ||
+                        (response as any)?.file_url;
+                    const uploadedId =
+                        (response as any)?.id ||
+                        (response as any)?.data?.id ||
+                        placeholder.id;
+                    if (uploadedUrlRaw) {
+                        const finalUrl = ensureAbsoluteUrl(String(uploadedUrlRaw));
                         
                         // Cleanup blob URL
                         if (blobUrlsRef.current.has(placeholder.url)) {
@@ -146,7 +154,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                         setImages(prev =>
                             prev.map(img => 
                                 img.id === placeholder.id 
-                                    ? { id: response.id || placeholder.id, url: finalUrl, isUploading: false, uploadProgress: 100, error: null }
+                                    ? { id: String(uploadedId), url: finalUrl, isUploading: false, uploadProgress: 100, error: null }
                                     : img
                             )
                         );

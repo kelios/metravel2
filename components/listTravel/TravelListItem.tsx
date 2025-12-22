@@ -481,11 +481,30 @@ function TravelListItem({
     }, [id, onDeletePress]);
 
     
-    // ✅ FIX: On web (non-selectable), we wrap card in <a>, so use View instead of Pressable to avoid nested buttons
-    const CardWrapper = (Platform.OS === 'web' && !selectable) ? View : Pressable;
+    // ✅ FIX: На web всегда используем View, чтобы избежать вложенных button ↔ button
+    const CardWrapper = Platform.OS === 'web' ? View : Pressable;
     // ✅ B5.1: Улучшенные accessibility атрибуты
-    const cardWrapperProps = (Platform.OS === 'web' && !selectable) 
-        ? {} 
+    const cardWrapperProps =
+      Platform.OS === 'web'
+        ? selectable
+          ? {
+              role: 'button',
+              tabIndex: 0,
+              onClick: (e: any) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handlePress();
+              },
+              onKeyDown: (e: any) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handlePress();
+                }
+              },
+              'aria-pressed': isSelected,
+              'aria-label': `Путешествие: ${name}${countries.length > 0 ? `. Страны: ${countries.join(', ')}` : ''}. Просмотров: ${viewsFormatted}`,
+            }
+          : {}
         : {
             onPress: handlePress,
             android_ripple: Platform.OS === "android" ? { color: "rgba(17,24,39,0.06)" } : undefined,
@@ -495,7 +514,7 @@ function TravelListItem({
             accessibilityHint: selectable ? 'Двойное нажатие для выбора' : 'Двойное нажатие для просмотра деталей',
             // ✅ B5.1: Дополнительные ARIA атрибуты для web
             // @ts-ignore - aria attributes for web accessibility
-        };
+          };
 
     const cardTestId = 'travel-card';
     const card = (
