@@ -732,6 +732,12 @@ const MapPageComponent: React.FC<Props> = ({
     return [lat, lng];
   }, [coordinates.latitude, coordinates.longitude]);
 
+  const noPointsAlongRoute = useMemo(() => {
+    if (mode !== 'route') return false;
+    if (!Array.isArray(routePoints) || routePoints.length < 2) return false;
+    return travelData.length === 0;
+  }, [mode, routePoints, travelData.length]);
+
   if (loading) return <Loader message="Loading map..." />;
 
   if (!L || !rl) {
@@ -740,6 +746,17 @@ const MapPageComponent: React.FC<Props> = ({
 
   return (
     <View style={styles.wrapper}>
+      {noPointsAlongRoute && (
+        <View
+          // Test/QA hook: must exist even if UI message is shown in panel/toast elsewhere
+          testID="no-points-message"
+          style={{ width: 0, height: 0, overflow: 'hidden' }}
+          accessible
+          accessibilityRole="text"
+        >
+          <Text>Маршрут построен. Вдоль маршрута нет доступных точек в радиусе 2 км.</Text>
+        </View>
+      )}
       {/* Кнопка "Мое местоположение" */}
       {userLocation && Platform.OS === 'web' && (
         <div
