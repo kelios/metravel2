@@ -1,14 +1,13 @@
 // components/MapPage/Map.web.tsx
 import React from 'react';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { METRICS } from '@/constants/layout';
 import * as Location from 'expo-location';
 import 'leaflet/dist/leaflet.css';
 type ReactLeafletNS = typeof import('react-leaflet');
 // CSS загружается через CDN ниже в коде
 import RoutingMachine from '@/components/MapPage/RoutingMachine';
-import RoutingStatus from '@/components/MapPage/RoutingStatus';
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
 // MapLegend is currently unused in the web map
 
@@ -34,7 +33,6 @@ interface Props {
   travel?: { data?: Point[] };
   coordinates: Coordinates;
   routePoints: [number, number][];
-  setRoutePoints: (points: [number, number][]) => void;
   onMapClick: (lng: number, lat: number) => void;
   mode: MapMode;
   transportMode: TransportMode;
@@ -116,7 +114,6 @@ const MapPageComponent: React.FC<Props> = ({
                                              travel = { data: [] },
                                              coordinates,
                                              routePoints,
-                                             setRoutePoints,
                                              onMapClick,
                                              mode,
                                              transportMode,
@@ -133,7 +130,7 @@ const MapPageComponent: React.FC<Props> = ({
     routing: false,
   });
   const [loading, setLoading] = useState(false);
-  const [routingLoading, setRoutingLoading] = useState(false);
+  const [, setRoutingLoading] = useState(false);
   const [disableFitBounds, setDisableFitBounds] = useState(false);
   const [isMobileScreen, setIsMobileScreen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;

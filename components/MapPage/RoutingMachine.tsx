@@ -63,7 +63,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
     
     // Если точек меньше двух — сбрасываем состояние и выходим (без лишних setState на каждом рендере)
     useEffect(() => {
-        if (hasTwoPoints) {
+        if (!hasTwoPoints) {
             clearedNoPointsRef.current = false
             return
         }
@@ -71,7 +71,6 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         if (clearedNoPointsRef.current) return
         clearedNoPointsRef.current = true
 
-        setRoutingLoading(false)
         setErrors({ routing: false })
         setRouteDistance(0)
         setFullRouteCoords([])
@@ -81,7 +80,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             try { map.removeLayer(polylineRef.current) } catch (_error) { /* noop */ }
             polylineRef.current = null
         }
-    }, [hasTwoPoints, map, setErrors, setFullRouteCoords, setRouteDistance, setRoutingLoading])
+    }, [hasTwoPoints, map, setErrors, setFullRouteCoords, setRouteDistance])
 
     useEffect(() => {
         if (!hasTwoPoints) return
@@ -157,10 +156,10 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         if (polylineRef.current) {
             try {
                 map.removeLayer(polylineRef.current)
-            } catch (error) {
+            } catch (_error) {
                 if (__DEV__) {
                     const { devWarn } = require('@/src/utils/logger')
-                    devWarn('Ошибка удаления полилинии:', error)
+                    devWarn('Ошибка удаления полилинии:', _error)
                 }
             }
             polylineRef.current = null
@@ -202,10 +201,10 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                             maxZoom: 14
                         })
                     }
-                } catch (error) {
+                } catch (_error) {
                     if (__DEV__) {
                         const { devWarn } = require('@/src/utils/logger')
-                        devWarn('Ошибка центрирования на маршруте:', error)
+                        devWarn('Ошибка центрирования на маршруте:', _error)
                     }
                 }
             }

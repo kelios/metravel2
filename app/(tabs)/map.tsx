@@ -10,12 +10,11 @@ import React, {
 } from 'react';
 import {
     SafeAreaView,
-    StyleSheet,
     View,
     Text,
     ActivityIndicator,
-    Pressable,
     Platform,
+    Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import IconMaterial from 'react-native-vector-icons/MaterialIcons';
@@ -80,7 +79,6 @@ export default function MapScreen() {
         setRoutePoints,
         setRouteDistance,
         setFullRouteCoords,
-        handleRemoveRoutePoint,
         handleClearRoute,
         handleAddressSelect,
         points: routeStorePoints,
@@ -135,39 +133,6 @@ export default function MapScreen() {
         });
         return () => cancelAnimationFrame(id);
     }, [isMobile, rightPanelVisible]);
-
-    const handlePanelKeyDown = useCallback(
-        (e: any) => {
-            const key = e?.nativeEvent?.key || e?.key;
-            const isTab = key === 'Tab';
-            const isEsc = key === 'Escape';
-            if (isEsc) {
-                setRightPanelVisible(false);
-                return;
-            }
-            if (Platform.OS !== 'web' || !isTab) return;
-            const container = (panelRef.current as any)?._node || document.getElementById('map-panel');
-            if (!container) return;
-            const focusables = Array.from(
-                container.querySelectorAll(
-                    'a[href],button,textarea,input,select,[tabindex]:not([tabindex="-1"])'
-                )
-            ).filter((el: any) => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden'));
-            if (focusables.length === 0) return;
-            const first = focusables[0] as HTMLElement;
-            const last = focusables[focusables.length - 1] as HTMLElement;
-            const active = document.activeElement as HTMLElement | null;
-            const shift = !!e?.shiftKey;
-            if (!shift && active === last) {
-                e.preventDefault();
-                first.focus();
-            } else if (shift && active === first) {
-                e.preventDefault();
-                last.focus();
-            }
-        },
-        [],
-    );
 
     // ✅ ОПТИМИЗАЦИЯ: Debounce для фильтров и координат
     const debouncedCoordinates = useDebouncedValue(coordinates, 500);
@@ -412,7 +377,7 @@ export default function MapScreen() {
         }
     }, [mode, routePoints, setRoutePoints]);
 
-    // handleRemoveRoutePoint and handleClearRoute now come from routeStore adapter
+    // handleClearRoute now comes from routeStore adapter
 
     const buildRouteTo = useCallback((item: any) => {
         if (item.coord) {

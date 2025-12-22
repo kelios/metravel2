@@ -82,12 +82,12 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     
     // Cleanup blob URLs on unmount
     useEffect(() => {
-        const urls = new Set(blobUrlsRef.current);
+        const urlsSnapshot = Array.from(blobUrlsRef.current);
         return () => {
-            urls.forEach(url => {
+            urlsSnapshot.forEach(url => {
                 try {
                     URL.revokeObjectURL(url);
-                } catch (_e) {
+                } catch (_error) {
                     // Ignore errors
                 }
             });

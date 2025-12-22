@@ -4,6 +4,9 @@ import { routeCache } from '@/src/utils/routeCache'
 // Глобальный кеш успешно/аварийно обработанных routeKey, чтобы избегать повторных запросов в сессию
 const resolvedRouteKeys = new Set<string>()
 
+// Helper for tests to reset memoized route keys
+export const clearResolvedRouteKeys = () => resolvedRouteKeys.clear()
+
 interface RouteResult {
     coords: [number, number][]
     distance: number
@@ -68,6 +71,10 @@ export const useRouting = (
     const routeKey = hasTwoPoints 
         ? `${transportMode}-${routePointsKey}`
         : null
+    const hasTwoPointsRef = useRef(hasTwoPoints)
+    useEffect(() => {
+        hasTwoPointsRef.current = hasTwoPoints
+    }, [hasTwoPoints])
 
     const forceOsrm = useMemo(() => {
         // В dev можно включить форс-OSRM чтобы не ловить CORS от ORS

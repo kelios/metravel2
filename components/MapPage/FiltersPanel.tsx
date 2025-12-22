@@ -137,7 +137,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   }, [mode, routePoints]);
 
   // Компактная кнопка теперь внутри компонента — видит styles
-  const CompactButton = React.useMemo(() => {
+  const _CompactButton = React.useMemo(() => {
     return React.memo(({
                          onPress,
                          icon,
@@ -245,7 +245,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     [filterValue.categories, onFilterChange]
   );
 
-  const hasActiveFilters = useMemo(
+  const _hasActiveFilters = useMemo(
     () => filterValue.categories.length > 0 || filterValue.radius !== '',
     [filterValue.categories.length, filterValue.radius]
   );
@@ -775,6 +775,22 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     modeTabHintActive: {
       color: '#e8f2ff',
     },
+    counterRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 8,
+    },
+    counterLabel: {
+      fontSize: 13,
+      color: COLORS.textMuted,
+      fontWeight: '600',
+    },
+    counterValue: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: COLORS.primary,
+    },
     modeHelper: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -797,6 +813,9 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     },
     section: {
       marginBottom: 12,
+    },
+    sectionTight: {
+      marginBottom: 8,
     },
     sectionLabel: {
       fontSize: 13,

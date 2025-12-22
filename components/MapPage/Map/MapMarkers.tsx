@@ -38,7 +38,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
               ? `travel-${point.id}` 
               : `travel-${point.coord.replace(/,/g, '-')}-${index}`,
           };
-        } catch (e) {
+        } catch {
           return null;
         }
       })

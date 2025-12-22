@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Platform, ActivityIndicator, Pressable, View, Text } from 'react-native';
+import { Platform, ActivityIndicator, Pressable, View, Text, Image } from 'react-native';
 import * as ImagePicker from 'react-native-image-picker';
 import { useDropzone } from 'react-dropzone';
 import { uploadImage } from '@/src/api/misc';
@@ -59,6 +59,20 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     const [isManuallySelected, setIsManuallySelected] = useState(false);
     const [fallbackImageUrl, setFallbackImageUrl] = useState<string | null>(null);
     const [hasTriedFallback, setHasTriedFallback] = useState(false);
+    const hasValidImage = Boolean(previewUrl || imageUri);
+    const currentDisplayUrl = previewUrl ?? imageUri ?? '';
+
+    const handleRemoveImage = useCallback(() => {
+        setImageUri(null);
+        setPreviewUrl(null);
+        setFallbackImageUrl(null);
+        setHasTriedFallback(false);
+        setUploadMessage(null);
+        setError(null);
+        setIsManuallySelected(false);
+        onPreviewChange?.(null);
+        onUpload?.('');
+    }, [onPreviewChange, onUpload]);
 
     // Синхронизация с oldImage
     useEffect(() => {
@@ -395,12 +409,12 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                 )}
             </Pressable>
 
-            {currentDisplayUrl && (
+            {currentDisplayUrl ? (
                 <View style={styles.nativePreviewContainer}>
-                    <img
-                        src={currentDisplayUrl}
-                        alt="Предпросмотр"
+                    <Image
+                        source={{ uri: currentDisplayUrl }}
                         style={styles.nativePreviewImage as any}
+                        accessibilityIgnoresInvertColors
                     />
                     {!disabled && (
                         <Pressable style={styles.nativeRemoveButton} onPress={handleRemoveImage}>
@@ -409,7 +423,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                         </Pressable>
                     )}
                 </View>
-            )}
+            ) : null}
 
             {error && (
                 <View style={styles.errorContainer}>

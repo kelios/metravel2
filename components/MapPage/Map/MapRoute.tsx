@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import { CoordinateConverter } from '@/utils/coordinateConverter';
 import type { LatLng } from '@/types/coordinates';
 
 interface MapRouteProps {
@@ -25,8 +24,8 @@ const MapRoute: React.FC<MapRouteProps> = ({
     if (polylineRef.current) {
       try {
         map.removeLayer(polylineRef.current);
-      } catch (error) {
-        console.warn('Error removing polyline:', error);
+      } catch (_error) {
+        console.warn('Error removing polyline:', _error);
       }
       polylineRef.current = null;
     }
@@ -65,8 +64,8 @@ const MapRoute: React.FC<MapRouteProps> = ({
             maxZoom: 14,
           });
         }
-      } catch (error) {
-        console.warn('Error centering on route:', error);
+      } catch (_error) {
+        console.warn('Error centering on route:', _error);
       }
     }
 
@@ -75,7 +74,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
       if (polylineRef.current && map) {
         try {
           map.removeLayer(polylineRef.current);
-        } catch (error) {
+        } catch (_error) {
           // Ignore cleanup errors
         }
         polylineRef.current = null;

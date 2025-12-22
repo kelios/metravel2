@@ -153,13 +153,10 @@ export const deleteImage = async (imageId: string) => {
 
 export const fetchFilters = async (): Promise<Filters> => {
   try {
-    console.info('Fetching filters from:', GET_FILTERS);
     const res = await fetchWithTimeout(GET_FILTERS, {}, DEFAULT_TIMEOUT);
     const parsed = await safeJsonParse<Filters>(res, [] as unknown as Filters);
-    console.info('Parsed filters:', parsed);
     return parsed;
   } catch (e: any) {
-    console.error('Error fetching filters:', e);
     devError('Error fetching filters:', e);
     return [] as unknown as Filters;
   }
