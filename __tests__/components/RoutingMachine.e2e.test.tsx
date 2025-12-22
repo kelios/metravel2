@@ -265,7 +265,17 @@ describe('RoutingMachine E2E Tests', () => {
       expect(mockSetFullRouteCoords).toHaveBeenCalledWith(routeCoords);
     }, { timeout: 3000 });
 
-    expect(mockLeaflet.latLng).toHaveBeenCalledTimes(4);
+    // Do not assert exact call counts: React effects and fitBounds logic may trigger extra `latLng` calls.
+    // What we care about is that a polyline is created from all route coordinates.
+    await waitFor(() => {
+      expect(mockLeaflet.polyline).toHaveBeenCalled();
+    }, { timeout: 3000 });
+
+    // Polyline can be drawn once with 2 points (direct line) before the async routing
+    // returns the full geometry. We assert that at least one polyline call uses all 4 points.
+    const polylineCalls = (mockLeaflet.polyline as jest.Mock).mock.calls;
+    const hasFourPointsCall = polylineCalls.some((call) => Array.isArray(call?.[0]) && call[0].length === 4);
+    expect(hasFourPointsCall).toBe(true);
   });
 
   it('should fallback to direct line when routing fails', async () => {

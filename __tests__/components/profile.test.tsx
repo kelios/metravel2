@@ -38,6 +38,8 @@ jest.mock('@/src/utils/storageBatch', () => ({
     userId: '123',
     userEmail: 'user@example.com',
   }),
+  setStorageBatch: jest.fn().mockResolvedValue(undefined),
+  removeStorageBatch: jest.fn().mockResolvedValue(undefined),
 }));
 
 const ProfileScreen = require('@/app/(tabs)/profile').default;
@@ -114,9 +116,10 @@ describe('ProfileScreen', () => {
 
     const { findByText, getAllByText, queryByText } = render(<ProfileScreen />);
 
-    // Дожидаемся финального состояния (данные грузятся через эффекты)
-    expect(await findByText('Test User', {}, { timeout: 5000 })).toBeTruthy();
+    // Дожидаемся завершения загрузки: после этого гарантированно доступны данные пользователя.
+    expect(await findByText('Выйти', {}, { timeout: 5000 })).toBeTruthy();
     expect(await findByText('user@example.com', {}, { timeout: 5000 })).toBeTruthy();
+    expect(await findByText('Test User', {}, { timeout: 5000 })).toBeTruthy();
 
     // Статы могут обновиться чуть позже (после параллельных эффектов)
     await waitFor(() => {

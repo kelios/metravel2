@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, waitFor } from '@testing-library/react-native';
+import { act, render } from '@testing-library/react-native';
 
 import NearTravelList from '@/components/travel/NearTravelList';
 import type { Travel } from '@/src/types/types';
@@ -52,7 +52,7 @@ describe('NearTravelList', () => {
     const { rerender } = render(<NearTravelList travel={travel} />);
 
     await flush();
-    await waitFor(() => expect(fetchTravelsNear).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    expect(fetchTravelsNear).toHaveBeenCalledTimes(1);
 
     // rerender with the same id should not trigger another fetch
     rerender(<NearTravelList travel={travel} />);
@@ -62,6 +62,6 @@ describe('NearTravelList', () => {
     // change id -> should fetch again
     rerender(<NearTravelList travel={{ id: 2 }} />);
     await flush();
-    await waitFor(() => expect(fetchTravelsNear).toHaveBeenCalledTimes(2), { timeout: 3000 });
+    expect(fetchTravelsNear).toHaveBeenCalledTimes(2);
   });
 });
