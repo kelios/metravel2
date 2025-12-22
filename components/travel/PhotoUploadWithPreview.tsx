@@ -521,14 +521,16 @@ const styles: any = {
     previewContainer: {
         position: 'relative',
         width: '100%',
-        height: '100%',
+        height: 180,
         minHeight: 180,
+        overflow: 'hidden',
+        borderRadius: DESIGN_TOKENS.radii.md,
     },
     previewImage: {
+        display: 'block',
         width: '100%',
         height: '100%',
         objectFit: 'cover',
-        borderRadius: DESIGN_TOKENS.radii.md,
     },
     removeButton: {
         position: 'absolute',

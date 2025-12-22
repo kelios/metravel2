@@ -119,10 +119,11 @@ const ClusterLayer: React.FC<{
   points: Point[];
   Marker: React.ComponentType<any>;
   Popup: React.ComponentType<any>;
+  PopupContent: React.ComponentType<{ point: Point }>;
   onClusterZoom: (center: [number, number], bounds: [[number, number], [number, number]]) => void;
   markerIcon?: any;
   markerOpacity?: number;
-}> = ({ points, Marker, Popup, onClusterZoom, markerIcon, markerOpacity = 1 }) => {
+}> = ({ points, Marker, Popup, PopupContent, onClusterZoom, markerIcon, markerOpacity = 1 }) => {
   const clusters = useMemo(() => {
     const byCell: Record<string, { items: Point[]; minLat: number; maxLat: number; minLng: number; maxLng: number }> = {};
     points.forEach((p) => {
@@ -197,7 +198,7 @@ const ClusterLayer: React.FC<{
               opacity={markerOpacity}
             >
               <Popup>
-                <PopupContentComponent travel={item} onClose={() => {}} />
+                <PopupContent point={item} />
               </Popup>
             </Marker>
           );
@@ -222,9 +223,7 @@ const ClusterLayer: React.FC<{
               },
             }}
           >
-            <Popup>
-              <Text style={{ fontWeight: '700' }}>{cluster.count} мест поблизости</Text>
-            </Popup>
+            {/* Intentionally no Popup for clusters: clicking should zoom only (prevents stuck popups). */}
           </Marker>
         );
       })}
@@ -303,9 +302,9 @@ const MapPageComponent: React.FC<Props> = ({
 
     const ensureLeaflet = async (): Promise<any> => {
       const w = window as any;
-      if (w.L) return w.L;
-
+      // Always make sure CSS is present, even if Leaflet was loaded elsewhere
       ensureLeafletCSS();
+      if (w.L) return w.L;
 
       if (!(ensureLeaflet as any)._loader) {
         (ensureLeaflet as any)._loader = new Promise<void>((resolve, reject) => {
@@ -356,12 +355,15 @@ const MapPageComponent: React.FC<Props> = ({
 
   const ORS_API_KEY = process.env.EXPO_PUBLIC_ROUTE_SERVICE;
 
-  const RoutingMachineWithMapInner: React.FC<any> = (props) => {
+  const RoutingMachineWithMapInner = useMemo(() => {
+    if (!rl) return null;
     const useMap = (rl as any).useMap;
-    const map = useMap();
-
-    return <RoutingMachine map={map} {...props} />;
-  };
+    const Comp: React.FC<any> = (props) => {
+      const map = useMap();
+      return <RoutingMachine map={map} {...props} />;
+    };
+    return Comp;
+  }, [rl]);
 
   const customIcons = useMemo(() => {
     // Защита от отсутствия Leaflet в тестовой/серверной среде
@@ -544,24 +546,22 @@ const MapPageComponent: React.FC<Props> = ({
     }
   }, [mode, routePoints.length]);
 
-  if (loading) return <Loader message="Loading map..." />;
-
-  if (!L || !rl) {
-    return <Loader message={errors.loadingModules ? 'Loading map modules failed' : 'Loading map...'} />;
-  }
-
-  const { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } = rl as ReactLeafletNS;
+  const rlSafe = (rl ?? {}) as ReactLeafletNS;
+  const { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } = rlSafe;
 
   // Компонент для управления закрытием попапа (внутри MapContainer)
-  const PopupWithClose: React.FC<{ point: Point }> = ({ point }) => {
-    const map = useMap();
+  const PopupWithClose = useMemo(() => {
+    const Comp: React.FC<{ point: Point }> = ({ point }) => {
+      const map = useMap();
 
-    const handleClose = useCallback(() => {
-      map.closePopup();
-    }, [map]);
+      const handleClose = useCallback(() => {
+        map.closePopup();
+      }, [map]);
 
-    return <PopupContentComponent travel={point} onClose={handleClose} />;
-  };
+      return <PopupContentComponent travel={point} onClose={handleClose} />;
+    };
+    return Comp;
+  }, [useMap]);
 
   const MapLogic: React.FC<{
     travelData: Point[];
@@ -594,6 +594,25 @@ const MapPageComponent: React.FC<Props> = ({
     // Сохраняем ссылку на карту
     useEffect(() => {
       mapRef.current = map;
+    }, [map]);
+
+    // ✅ Popup behavior: close reliably on map click or zoom.
+    // This must NOT trigger rerenders (no state), only imperative map calls.
+    useEffect(() => {
+      if (!map) return;
+      const close = () => {
+        try {
+          map.closePopup();
+        } catch {
+          // noop
+        }
+      };
+      map.on('click', close);
+      map.on('zoomstart', close);
+      return () => {
+        map.off('click', close);
+        map.off('zoomstart', close);
+      };
     }, [map]);
 
     // Сохраняем текущую позицию карты при изменении (только в режиме route)
@@ -678,28 +697,40 @@ const MapPageComponent: React.FC<Props> = ({
     // Фокус на выбранных точках маршрута
     useEffect(() => {
       if (!map || mode !== 'route') return;
-      if (!routePoints || routePoints.length === 0) return;
-      if (routePoints.length === 1) {
-        const [lng, lat] = routePoints[0];
+      if (!Array.isArray(routePoints) || routePoints.length === 0) return;
+
+      const validPoints = routePoints.filter(
+        (p) => Array.isArray(p) && p.length === 2 && Number.isFinite(p[0]) && Number.isFinite(p[1])
+      );
+      if (validPoints.length === 0) return;
+
+      if (validPoints.length === 1) {
+        const [lng, lat] = validPoints[0];
         map.setView([lat, lng], 13, { animate: true });
         return;
       }
-      if (routePoints.length >= 2) {
-        try {
-          const bounds = (window as any)?.L?.latLngBounds(
-            routePoints.map(([lng, lat]) => (window as any).L.latLng(lat, lng))
-          );
-          if (bounds) {
-            map.fitBounds(bounds.pad(0.2), { animate: true });
-          }
-        } catch {
-          // noop
+
+      try {
+        const bounds = (window as any)?.L?.latLngBounds(
+          validPoints.map(([lng, lat]) => (window as any).L.latLng(lat, lng))
+        );
+        if (bounds && bounds.isValid()) {
+          map.fitBounds(bounds.pad(0.2), { animate: true });
         }
+      } catch {
+        // ignore invalid coords
       }
     }, [map, mode, routePoints]);
 
     return null;
   };
+
+  // Compute center before any early returns to keep hook order stable
+  const safeCenter = useMemo<[number, number]>(() => {
+    const lat = Number.isFinite(coordinates.latitude) ? coordinates.latitude : 53.8828449;
+    const lng = Number.isFinite(coordinates.longitude) ? coordinates.longitude : 27.7273595;
+    return [lat, lng];
+  }, [coordinates.latitude, coordinates.longitude]);
 
   if (loading) return <Loader message="Loading map..." />;
 
@@ -754,12 +785,6 @@ const MapPageComponent: React.FC<Props> = ({
         </div>
       )}
 
-      {mode === 'route' && routePoints.length >= 2 && (!travel?.data || travel.data.length === 0) && (
-        <Text testID="no-points-message" style={styles.noPointsMessage}>
-          Маршрут построен. Вдоль маршрута нет доступных точек в радиусе 2 км.
-        </Text>
-      )}
-
       {isMobileScreen && mode === 'route' && routePoints.length < 2 && (
         <div style={styles.mobileRouteHint}>
           <div style={styles.mobileRouteHintIcon}>➜</div>
@@ -772,8 +797,8 @@ const MapPageComponent: React.FC<Props> = ({
 
       <MapContainer
         style={styles.map as any}
-        center={[coordinates.latitude, coordinates.longitude]}
-        zoom={11}
+        center={safeCenter}
+        zoom={Number.isFinite((coordinates as any).zoom) ? (coordinates as any).zoom : 11}
         scrollWheelZoom
         zoomControl
       >
@@ -833,7 +858,7 @@ const MapPageComponent: React.FC<Props> = ({
           </Marker>
         )}
 
-        {mode === 'route' && routePoints.length >= 2 && rl && (
+        {mode === 'route' && routePoints.length >= 2 && rl && RoutingMachineWithMapInner && (
           <RoutingMachineWithMapInner
             routePoints={routePoints}
             transportMode={transportMode}
@@ -868,14 +893,21 @@ const MapPageComponent: React.FC<Props> = ({
             points={travelData}
             Marker={Marker}
             Popup={Popup}
+            PopupContent={PopupWithClose}
             markerIcon={customIcons.meTravel}
             markerOpacity={travelMarkerOpacity}
             onClusterZoom={(center, bounds) => {
               if (!mapRef.current) return;
               try {
                 const map = mapRef.current;
-                map.fitBounds([bounds[0].reverse(), bounds[1].reverse()], { padding: [40, 40] });
-                map.flyTo([center[0], center[1]], map.getZoom());
+                map.closePopup();
+                map.fitBounds(
+                  [
+                    [bounds[0][0], bounds[0][1]],
+                    [bounds[1][0], bounds[1][1]],
+                  ],
+                  { padding: [40, 40], animate: true }
+                );
               } catch {
                 // noop
               }
@@ -994,18 +1026,6 @@ mobileRouteHintText: {
 fontSize: 14,
 fontWeight: '600',
 marginBottom: 4,
-},
-noPointsMessage: {
-position: 'absolute',
-bottom: 12,
-left: 12,
-right: 12,
-padding: 10,
-backgroundColor: 'rgba(12, 43, 67, 0.9)',
-color: '#fff',
-borderRadius: 10,
-fontSize: 13,
-zIndex: 900,
 },
 });
 

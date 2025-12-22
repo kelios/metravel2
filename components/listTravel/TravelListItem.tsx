@@ -487,9 +487,9 @@ function TravelListItem({
     const cardWrapperProps =
       Platform.OS === 'web'
         ? selectable
-          ? {
+          ? ({
               role: 'button',
-              tabIndex: 0,
+              tabIndex: 0 as const,
               onClick: (e: any) => {
                 e.stopPropagation();
                 e.preventDefault();
@@ -503,7 +503,7 @@ function TravelListItem({
               },
               'aria-pressed': isSelected,
               'aria-label': `Путешествие: ${name}${countries.length > 0 ? `. Страны: ${countries.join(', ')}` : ''}. Просмотров: ${viewsFormatted}`,
-            }
+            } as any)
           : {}
         : {
             onPress: handlePress,
@@ -533,24 +533,6 @@ function TravelListItem({
           selectable && isSelected && styles.selected,
         ]}
       >
-    {selectable && (
-      <View
-        style={[
-          {
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: isSelected ? "rgba(5,150,105,0.12)" : "rgba(96,165,250,0.08)",
-            zIndex: 2,
-            opacity: 1,
-            transitionDuration: "150ms",
-            pointerEvents: 'none',
-          } as any,
-        ]}
-      />
-    )}
         {selectable && (
           <View
             style={[
@@ -569,7 +551,6 @@ function TravelListItem({
             ]}
           />
         )}
-
         {/* Блок изображения */}
         <View style={styles.imageContainer}>
           {imgUrl && !isLikelyWatermarked(imgUrl) ? (
@@ -813,55 +794,54 @@ function TravelListItem({
     {Platform.OS === 'web' ? (
       // На вебе различаем два режима:
       // 1) selectable === true (страница экспорта) — карточка только выбирает, без перехода по ссылке
-      // 2) selectable === false — поведение как раньше, с <a href> и SPA-навигацией
+      // 2) selectable === false — поведение как раньше, но без вложенных <button>/<a>
       selectable ? (
         card
       ) : (
-        <> 
-          <View
-            testID="travel-card-link"
-            ref={anchorRef}
-            style={{}}
-            {...(Platform.OS === 'web'
-              ? (
-                  {
-                    'data-testid': 'travel-card-link',
-                    onClick: (e: any) => {
-                      // Не даём событию дойти до внутренних Pressable
-                      e.stopPropagation();
+        <View
+          testID="travel-card-link"
+          ref={anchorRef}
+          style={{}}
+          {...(Platform.OS === 'web'
+            ? ({
+                'data-testid': 'travel-card-link',
+                role: 'link',
+                tabIndex: 0,
+                onClick: (e: any) => {
+                  // Не даём событию дойти до внутренних Pressable
+                  e.stopPropagation();
 
-                      const hasModifier =
-                        e.metaKey ||
-                        e.ctrlKey ||
-                        e.shiftKey ||
-                        e.altKey ||
-                        e.button === 1;
+                  const hasModifier =
+                    e.metaKey ||
+                    e.ctrlKey ||
+                    e.shiftKey ||
+                    e.altKey ||
+                    e.button === 1;
 
-                      if (hasModifier) {
-                        // Открываем ТОЛЬКО в новой вкладке, текущую не трогаем
-                        e.preventDefault();
-                        if (typeof window !== 'undefined') {
-                          window.open(travelUrl, '_blank', 'noopener,noreferrer');
-                        }
-                        return;
-                      }
+                  if (hasModifier) {
+                    // Открываем ТОЛЬКО в новой вкладке, текущую не трогаем
+                    e.preventDefault();
+                    if (typeof window !== 'undefined') {
+                      window.open(travelUrl, '_blank', 'noopener,noreferrer');
+                    }
+                    return;
+                  }
 
-                      // Обычный клик: SPA-навигация в текущей вкладке
-                      e.preventDefault();
-                      handlePress();
-                    },
-                  } as any
-                )
-              : {})}
-          >
-            <a
-              href={travelUrl}
-              style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-            >
-              {card}
-            </a>
-          </View>
-        </>
+                  // Обычный клик: SPA-навигация в текущей вкладке
+                  e.preventDefault();
+                  handlePress();
+                },
+                onKeyDown: (e: any) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handlePress();
+                  }
+                },
+              } as any)
+            : {})}
+        >
+          {card}
+        </View>
       )
     ) : (
       card

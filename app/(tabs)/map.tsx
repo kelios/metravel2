@@ -35,6 +35,9 @@ import ErrorDisplay from '@/components/ErrorDisplay';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { getStyles } from './map.styles';
 
+// Ensure RouteHint is bundled (used inside FiltersPanel)
+import '@/components/MapPage/RouteHint';
+
 interface Coordinates { latitude: number; longitude: number; }
 interface FilterValues { categories: string[]; radius: string; address: string; }
 interface Filters {

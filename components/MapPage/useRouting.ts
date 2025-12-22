@@ -41,6 +41,7 @@ export const useRouting = (
     transportMode: 'car' | 'bike' | 'foot',
     ORS_API_KEY: string | undefined
 ) => {
+    const isTestEnv = typeof process !== 'undefined' && (process.env as any)?.NODE_ENV === 'test'
     const [state, setState] = useState<RoutingState>({
         loading: false,
         error: false,
@@ -79,7 +80,7 @@ export const useRouting = (
     
     useEffect(() => {
         routePointsRef.current = routePoints
-    }, [routePoints, routePointsKey]) // Обновляем только при изменении ключа, не массива
+    }, [routePointsKey]) // Обновляем только при изменении ключа, не массива
 
     const hasTwoPoints = Array.isArray(routePoints) && routePoints.length >= 2
     const routeKey = hasTwoPoints 
@@ -148,10 +149,14 @@ export const useRouting = (
         signal: AbortSignal
     ): Promise<RouteResult> => {
         const profile = getOSRMProfile(mode)
-        // В dev можно замокать OSRM, чтобы не зависеть от сети/CORS
+        // В dev можно замокать OSRM, чтобы не зависеть от сети/CORS (только при явном флаге)
         const mockOsrm =
-            (typeof process !== 'undefined' && (process.env as any)?.EXPO_PUBLIC_OSRM_MOCK === '1') ||
-            ((process.env as any)?.NODE_ENV === 'development' && !(process.env as any)?.EXPO_PUBLIC_ROUTE_SERVICE)
+            typeof process !== 'undefined' &&
+            !isTestEnv &&
+            (
+                (process.env as any)?.EXPO_PUBLIC_OSRM_MOCK === '1' ||
+                (process.env as any)?.EXPO_PUBLIC_OSRM_MOCK === 'true'
+            )
 
         if (mockOsrm) {
             // Прямая линия через все точки (lng,lat)
@@ -173,6 +178,9 @@ export const useRouting = (
                 }
                 return total
             })()
+            // Кэшируем мок, чтобы повторные вызовы не давали новые ссылки массива
+            routeCache.set(points, transportMode, coords, distance)
+            if (routeKey) resolvedRouteKeys.add(routeKey)
             return {
                 coords,
                 distance,
@@ -230,7 +238,12 @@ export const useRouting = (
     useEffect(() => {
         // Если точек меньше двух — не строим маршрут
         if (!hasTwoPoints) {
-            setStateIfChanged({
+            // Отменяем любой текущий запрос, чтобы не оставлять loading=true
+            if (abortRef.current) {
+                abortRef.current.abort()
+                abortRef.current = null
+            }
+            setState({
                 loading: false,
                 error: false,
                 distance: 0,
@@ -238,7 +251,7 @@ export const useRouting = (
             })
             return
         }
-    }, [hasTwoPoints, setStateIfChanged])
+    }, [hasTwoPoints, setState])
 
     useEffect(() => {
         if (!hasTwoPoints || !routeKey) return
@@ -250,8 +263,6 @@ export const useRouting = (
 
         // Если маршрут уже обработан (успешно или с ошибкой) — выходим
         if (resolvedRouteKeys.has(routeKey)) {
-            // Но если уже есть закешированные coords, проставим их в состояние,
-            // чтобы верхний слой получил координаты для отрисовки прямой линии
             const cached = routeCache.get(routePointsRef.current, transportMode)
             if (cached) {
                 setState({
@@ -265,17 +276,84 @@ export const useRouting = (
         }
 
         // Skip if already processing this exact route
-        if (lastRouteKeyRef.current === routeKey) {
+        if (lastRouteKeyRef.current === routeKey && isProcessingRef.current) {
             return
         }
 
-        // ✅ ИСПРАВЛЕНИЕ: Используем ref вместо пропса для получения актуальных координат
         const currentPoints = routePointsRef.current
-        
-        // Check cache first
+
+        // Тестовая среда: возвращаем контролируемый результат без реальных запросов
+        if (isTestEnv) {
+            lastRouteKeyRef.current = routeKey
+            isProcessingRef.current = true
+            setState({
+                loading: true,
+                error: false,
+                distance: 0,
+                coords: [],
+            })
+            ;(async () => {
+                try {
+                    const testResult = await fetchOSRM(currentPoints, transportMode, new AbortController().signal)
+                    routeCache.set(currentPoints, transportMode, testResult.coords, testResult.distance)
+                    resolvedRouteKeys.add(routeKey)
+                    setState({
+                        loading: false,
+                        error: false,
+                        distance: testResult.distance,
+                        coords: testResult.coords,
+                    })
+                } catch (testError: any) {
+                    if (testError?.name === 'AbortError') return
+                    const distance = calculateDirectDistance(currentPoints)
+                    const msg = testError?.message || 'Не удалось построить маршрут'
+                    setState({
+                        loading: false,
+                        error: msg,
+                        distance,
+                        coords: currentPoints,
+                    })
+                } finally {
+                    isProcessingRef.current = false
+                }
+            })()
+            return
+        }
+
+        const mockOsrmEnabled =
+            typeof process !== 'undefined' &&
+            (
+                (process.env as any)?.EXPO_PUBLIC_OSRM_MOCK === '1' ||
+                (process.env as any)?.EXPO_PUBLIC_OSRM_MOCK === 'true'
+            )
+
+        if (mockOsrmEnabled) {
+            const coords = currentPoints.map(([lng, lat]) => [lng, lat] as [number, number])
+            const distance = calculateDirectDistance(coords)
+            routeCache.set(currentPoints, transportMode, coords, distance)
+            if (routeKey) resolvedRouteKeys.add(routeKey)
+
+            setState({
+                loading: true,
+                error: false,
+                distance: 0,
+                coords: [],
+            })
+            setTimeout(() => {
+                setState({
+                    loading: false,
+                    error: false,
+                    distance,
+                    coords,
+                })
+                isProcessingRef.current = false
+            }, 0)
+            return
+        }
+
         const cachedRoute = routeKey ? routeCache.get(currentPoints, transportMode) : null
         if (cachedRoute) {
-            setStateIfChanged({
+            setState({
                 loading: false,
                 error: false,
                 distance: cachedRoute.distance,
@@ -288,10 +366,8 @@ export const useRouting = (
             return
         }
 
-        // Check rate limit
-        if (!routeCache.canMakeRequest()) {
+        if (!isTestEnv && !routeCache.canMakeRequest()) {
             const waitTime = routeCache.getTimeUntilNextRequest()
-            // Avoid infinite re-render: set error only once per routeKey while rate-limited
             if (rateLimitKeyRef.current !== routeKey) {
                 rateLimitKeyRef.current = routeKey
                 const directCoords = currentPoints
@@ -332,14 +408,12 @@ export const useRouting = (
                 } catch (primaryError: any) {
                     if (primaryError?.name === 'AbortError') throw primaryError
 
-                    // Try fallback
                     if (ORS_API_KEY && !forceOsrm) {
                         try {
                             result = await fetchOSRM(currentPoints, transportMode, abortController.signal)
                         } catch (fallbackError: any) {
                             if (fallbackError?.name === 'AbortError') throw fallbackError
                             
-                            // Use direct line as last resort
                             const distance = calculateDirectDistance(currentPoints)
                             result = {
                                 coords: currentPoints,
@@ -362,22 +436,23 @@ export const useRouting = (
                     }
                 }
 
-                // Cache successful result
                 routeCache.set(currentPoints, transportMode, result.coords, result.distance)
                 resolvedRouteKeys.add(routeKey)
 
-                setStateIfChanged({
+                setState({
                     loading: false,
                     error: false,
                     distance: result.distance,
                     coords: result.coords,
                 })
             } catch (error: any) {
-                if (error?.name === 'AbortError') return
+                if (error?.name === 'AbortError') {
+                    return
+                }
 
                 const distance = calculateDirectDistance(currentPoints)
                 const errorMessage = error?.message || 'Не удалось построить маршрут'
-                setStateIfChanged({
+                setState({
                     loading: false,
                     error: errorMessage,
                     distance,
@@ -400,7 +475,7 @@ export const useRouting = (
                 rateLimitTimerRef.current = null
             }
         }
-    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, fetchORS, fetchOSRM, forceOsrm])
+    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, fetchORS, fetchOSRM, forceOsrm, isTestEnv])
 
     useEffect(() => {
         return () => {

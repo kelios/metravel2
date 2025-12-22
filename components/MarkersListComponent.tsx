@@ -10,7 +10,7 @@ const MultiSelectFieldAny: any = MultiSelectField;
  
 interface MarkersListComponentProps {
     markers: MarkerData[];
-    categoryTravelAddress: { id: number; name: string }[];
+    categoryTravelAddress: { id: number | string; name: string }[];
     handleMarkerChange: (index: number, field: string, value: string | string[]) => void;
     handleImageUpload: (index: number, imageUrl: string) => void;
     handleMarkerRemove: (index: number) => void;
@@ -199,13 +199,23 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                                                              onClose,
                                                              onRemove,
                                                          }) => {
+    const normalizedCategoryItems = useMemo(
+        () => categoryTravelAddress.map((cat) => ({ ...cat, id: String(cat.id) })),
+        [categoryTravelAddress],
+    );
+
+    const normalizeCategories = useCallback(
+        (cats?: any[]) => (Array.isArray(cats) ? cats.map((c) => String(c)) : []),
+        [],
+    );
+
     const [address, setAddress] = useState<string>(marker.address || '');
-    const [categories, setCategories] = useState<any[]>(marker.categories || []);
+    const [categories, setCategories] = useState<any[]>(normalizeCategories(marker.categories));
 
     useEffect(() => {
         setAddress(marker.address || '');
-        setCategories(marker.categories || []);
-    }, [marker, index]);
+        setCategories(normalizeCategories(marker.categories));
+    }, [marker, index, normalizeCategories]);
 
     if (typeof document === 'undefined') return null;
 
@@ -264,9 +274,9 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                         <label style={styles.fieldLabel}>Категории точки</label>
                         <MultiSelectFieldAny
                             label=""
-                            items={categoryTravelAddress}
+                            items={normalizedCategoryItems}
                             value={categories}
-                            onChange={(selected: any) => setCategories(selected as any[])}
+                            onChange={(selected: any) => setCategories(normalizeCategories(selected as any[]))}
                             labelField="name"
                             valueField="id"
                             placeholder="Выберите..."

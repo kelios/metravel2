@@ -264,12 +264,11 @@ const WebMapComponent = ({
     
     // Синхронизируем локальное состояние с пропсами только при реальных изменениях
     useEffect(() => {
-        // Проверяем, действительно ли маркеры изменились (по длине и первому элементу)
-        const markersChanged = 
+        // Обновляем локальные маркеры, если изменился любой элемент (длина или ссылка на элемент)
+        const markersChanged =
             markers.length !== lastMarkersRef.current.length ||
-            (markers.length > 0 && lastMarkersRef.current.length > 0 && 
-             markers[0] !== lastMarkersRef.current[0]);
-        
+            markers.some((m, idx) => m !== lastMarkersRef.current[idx]);
+
         if (markersChanged) {
             setLocalMarkers(markers);
             lastMarkersRef.current = markers;

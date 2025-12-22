@@ -17,6 +17,7 @@ import Footer from "@/components/Footer";
 import { useFonts } from "expo-font";
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
+import { LAYOUT } from "@/constants/layout";
 import { useResponsive } from "@/hooks/useResponsive"; 
 import { createOptimizedQueryClient } from "@/src/utils/reactQueryConfig";
 
@@ -321,7 +322,7 @@ function RootLayoutNav() {
                             {/* ✅ FIX-005: Индикатор статуса сети */}
                             <NetworkStatus position="top" />
 
-                            <View style={[styles.content, isWeb && isMobile ? ({ paddingBottom: WEB_FOOTER_RESERVE_HEIGHT } as any) : null]}>
+                            <View style={[styles.content]}>
                                 <Stack screenOptions={{ headerShown: false }}>
                                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                                 </Stack>

@@ -56,6 +56,11 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
     const routingState = useRouting(routePoints, transportMode, ORS_API_KEY)
     const hasTwoPoints = routePoints.length >= 2
     const clearedNoPointsRef = useRef(false)
+    const routeKey = useMemo(
+        () => routePoints.length >= 2 ? `${transportMode}-${routePoints.map(p => p.join(',')).join('|')}` : '',
+        [routePoints, transportMode]
+    )
+    const lastRouteKeyLoadingRef = useRef<string | null>(null)
 
     // Sync routing state to parent callbacks (only when changed)
     // Use coordsKey to prevent infinite loops from array reference changes
@@ -82,6 +87,14 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         }
     }, [hasTwoPoints, map, setErrors, setFullRouteCoords, setRouteDistance])
 
+    // Явно сигнализируем о старте построения маршрута при смене ключа маршрута
+    useEffect(() => {
+        if (!hasTwoPoints || !routeKey) return
+        if (lastRouteKeyLoadingRef.current === routeKey) return
+        lastRouteKeyLoadingRef.current = routeKey
+        setRoutingLoading(true)
+    }, [hasTwoPoints, routeKey, setRoutingLoading])
+
     useEffect(() => {
         if (!hasTwoPoints) return
 
@@ -93,6 +106,11 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         }
 
         const prevState = prevStateRef.current
+        // Пропускаем первоначальный синк пустого состояния (loading=false, coords=[])
+        if (!prevState && !routingState.loading && routingState.distance === 0 && routingState.coords.length === 0) {
+            prevStateRef.current = currentState
+            return
+        }
         const hasChanged = !prevState ||
             prevState.loading !== currentState.loading ||
             prevState.error !== currentState.error ||
@@ -114,6 +132,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
 
             lastSentRef.current = currentState
 
+            // Передаем фактический флаг загрузки (без учета дистанции), чтобы тесты видели завершение
             setRoutingLoading(routingState.loading)
             
             // Передаем ошибку только если она есть
@@ -213,7 +232,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                 }
             }
         }
-    }, [map, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints, routingState.coords])
+    }, [map, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints])
 
     // Cleanup on unmount
     useEffect(() => {

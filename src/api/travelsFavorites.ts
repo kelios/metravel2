@@ -1,9 +1,10 @@
 import { apiClient } from '@/src/api/client';
 
+// apiClient already prefixes /api, so use relative paths without the extra segment
 export const markTravelAsFavorite = async (travelId: string | number): Promise<unknown> => {
-    return apiClient.patch<unknown>(`/api/travels/${travelId}/mark-as-favorite/`);
+    return apiClient.patch<unknown>(`/travels/${travelId}/mark-as-favorite/`);
 };
 
 export const unmarkTravelAsFavorite = async (travelId: string | number): Promise<unknown> => {
-    return apiClient.patch<unknown>(`/api/travels/${travelId}/unmark-as-favorite/`);
+    return apiClient.patch<unknown>(`/travels/${travelId}/unmark-as-favorite/`);
 };

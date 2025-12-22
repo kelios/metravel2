@@ -29,6 +29,7 @@ import {
   BREAKPOINTS,
   RECOMMENDATIONS_VISIBLE_KEY
 } from './utils/listTravelConstants'
+import { LAYOUT } from '@/constants/layout'
 import { useListTravelVisibility } from './hooks/useListTravelVisibility'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
@@ -235,7 +236,9 @@ const styles = StyleSheet.create({
     }),
   },
   cardsContainerMobile: {
-    paddingBottom: 0,
+    // Reserve space for the fixed mobile footer/dock so the last card is not covered.
+    // Uses tabBarHeight as a stable dock height across platforms.
+    paddingBottom: LAYOUT.tabBarHeight + TOKENS.spacing.xl,
     minHeight: 720,
   },
   // ✅ CARDS GRID: Flexbox layout for both platforms
@@ -746,10 +749,10 @@ function ListTravel({
         isSelected,
         hasSelection,
         selectionCount,
-        pdfExport: _pdfExport,
-        lastSettings: _lastSettings,
-        handleSaveWithSettings: _handleSaveWithSettings,
-        handlePreviewWithSettings: _handlePreviewWithSettings,
+        pdfExport,
+        lastSettings,
+        handleSaveWithSettings,
+        handlePreviewWithSettings,
     } = exportState;
 
     const renderTravelListItem = useCallback(
@@ -770,18 +773,14 @@ function ListTravel({
       [isMobileDevice, isSuper, isMeTravel, isExport, handleDeletePress, isSelected, toggleSelect]
     );
 
-    const [ _showSettingsModal, setShowSettingsModal] = useState(false);
-    const [_settingsModalMode, setSettingsModalMode] = useState<'save' | 'preview'>('save');
+    const handleImmediateSave = useCallback(() => {
+      // Используем последние выбранные настройки для мгновенного экспорта
+      handleSaveWithSettings(lastSettings);
+    }, [handleSaveWithSettings, lastSettings]);
 
-    const handleOpenSettingsForSave = useCallback(() => {
-      setSettingsModalMode('save');
-      setShowSettingsModal(true);
-    }, []);
-
-    const handleOpenSettingsForPreview = useCallback(() => {
-      setSettingsModalMode('preview');
-      setShowSettingsModal(true);
-    }, []);
+    const handleImmediatePreview = useCallback(() => {
+      handlePreviewWithSettings(lastSettings);
+    }, [handlePreviewWithSettings, lastSettings]);
 
 
     /* Loading helpers */
@@ -1090,11 +1089,11 @@ function ListTravel({
               allCount={travels.length}
               onToggleSelectAll={toggleSelectAll}
               onClearSelection={clearSelection}
-              onPreview={handleOpenSettingsForPreview}
-              onSave={handleOpenSettingsForSave}
-              onSettings={handleOpenSettingsForSave}
-              isGenerating={exportState.pdfExport.isGenerating}
-              progress={exportState.pdfExport.progress}
+              onPreview={handleImmediatePreview}
+              onSave={handleImmediateSave}
+              onSettings={handleImmediateSave}
+              isGenerating={pdfExport.isGenerating}
+              progress={pdfExport.progress}
               settingsSummary={exportState.settingsSummary}
               hasSelection={hasSelection}
             />

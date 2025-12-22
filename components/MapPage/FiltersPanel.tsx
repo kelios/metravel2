@@ -567,6 +567,8 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                               disabledTransport && styles.transportTabTextDisabled,
                             ]}
                             accessibilityState={{ disabled: disabledTransport }}
+                            accessibilityRole="text"
+                            disabled={disabledTransport}
                           >
                             {label}
                           </Text>
@@ -652,6 +654,9 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     <Text style={styles.stepSubtitle} numberOfLines={1}>
                       {routeStepState.startSelected ? startLabel : 'Выберите старт'}
                     </Text>
+                    {!routeStepState.startSelected && (
+                      <Text style={styles.stepInlineHint}>Кликните на карте</Text>
+                    )}
                   </View>
                 </View>
 
@@ -715,7 +720,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       <View style={styles.stickyFooter}>
         {!canBuildRoute && mode === 'route' && (
           <Text style={styles.helperText}>
-            Добавьте старт и финиш на карте — кнопка «Построить» активируется автоматически
+            Добавьте старт и финиш — кнопка «Построить маршрут» станет активной
           </Text>
         )}
         <View style={styles.footerButtons}>
@@ -752,7 +757,9 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               accessibilityRole="button"
               accessibilityLabel="Построить маршрут"
               accessibilityState={{ disabled: !canBuildRoute || routingLoading }}
-            ><Text style={styles.ctaPrimaryText}>{ctaLabel}</Text></Pressable>
+            >
+              <Text style={styles.ctaPrimaryText}>{ctaLabel}</Text>
+            </Pressable>
           )}
         </View>
       </View>
