@@ -146,5 +146,6 @@ export function useRouteStoreAdapter() {
     addPoint: store.addPoint,
     removePoint: store.removePoint,
     clearRoute: store.clearRoute,
+    swapStartEnd: store.swapStartEnd,
   };
 }

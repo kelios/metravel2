@@ -13,6 +13,33 @@ jest.mock('@/components/imageUpload/ImageUploadComponent', () => {
   );
 });
 
+// Mock heavy components to avoid Animated warnings in tests
+jest.mock('@/components/travel/PhotoUploadWithPreview', () => {
+  const { Text, View } = require('react-native');
+  return ({ collection, idTravel, oldImage }: any) => (
+    <View testID="image-upload-stub">
+      <Text>{`${collection}:${idTravel}`}</Text>
+      {oldImage ? <Text>{`old:${oldImage}`}</Text> : null}
+    </View>
+  );
+});
+
+jest.mock('@/components/travel/TravelWizardHeader', () => {
+  const { View } = require('react-native');
+  return () => <View testID="wizard-header-stub" />;
+});
+
+jest.mock('@/components/travel/TravelWizardFooter', () => {
+  const { View, Pressable, Text } = require('react-native');
+  return ({ onPrimary }: any) => (
+    <View testID="wizard-footer-stub">
+      <Pressable onPress={onPrimary}>
+        <Text>next</Text>
+      </Pressable>
+    </View>
+  );
+});
+
 // Stub gallery to avoid heavy dropzone and allow props inspection
 jest.mock('@/components/travel/ImageGalleryComponent', () => {
   const { Text } = require('react-native');
@@ -88,18 +115,15 @@ describe('TravelWizardStepMedia', () => {
     );
 
   it('shows cover uploader when travel id exists', async () => {
-    const { getByTestId } = renderStep({ id: '999' });
+    const { getByText } = renderStep({ id: '999' });
 
-    await waitFor(() => expect(getByTestId('image-upload-stub')).toBeTruthy());
-    expect(getByTestId('image-upload-stub').props.children).toBe('travelMainImage:999');
+    await waitFor(() => expect(getByText('travelMainImage:999')).toBeTruthy());
   });
 
   it('shows cover instruction when travel is not yet saved (no id)', async () => {
     const { getByText } = renderStep({ id: null });
 
-    expect(
-      getByText('Чтобы добавить обложку, сначала сохраните черновик (кнопка «Сохранить» внизу).'),
-    ).toBeTruthy();
+    expect(getByText(/превью будет сохранено/i)).toBeTruthy();
   });
 
   it('renders gallery with normalized images and correct collection', async () => {

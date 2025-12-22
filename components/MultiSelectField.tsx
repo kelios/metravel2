@@ -18,13 +18,16 @@ type MultiSelectFieldProps = {
 
 const MultiSelectField = forwardRef<any, MultiSelectFieldProps>(
     ({ label, items, value = [], onChange, labelField, valueField, single = false, compact = false, ...rest }, _ref) => {
-        const handleChange = (selectedItems: any) => {
+        const extractValue = (item: any) =>
+            item && typeof item === 'object' && valueField in item ? item[valueField] : item;
+
+        const handleChange = (selectedItems: any[]) => {
+            const normalized = Array.isArray(selectedItems) ? selectedItems.map(extractValue) : [];
+
             if (single) {
-                // For single select, take first item or empty string
-                onChange(selectedItems?.[0] || '');
+                onChange(normalized[0] ?? '');
             } else {
-                // For multi select, pass array as-is
-                onChange(selectedItems);
+                onChange(normalized);
             }
         };
 

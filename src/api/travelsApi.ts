@@ -8,7 +8,7 @@ import { retry, isRetryableError } from '@/src/utils/retry';
 import { getSecureItem } from '@/src/utils/secureStorage';
 
 const rawApiUrl: string =
-    process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
+    process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'http://example.test/api' : '');
 if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }

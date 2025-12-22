@@ -45,15 +45,48 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         distance: number
         coords: string
     } | null>(null)
+    const lastSentRef = useRef<{
+        loading: boolean
+        error: string | boolean
+        distance: number
+        coords: string
+    } | null>(null)
 
     // Use custom hook for routing logic
     const routingState = useRouting(routePoints, transportMode, ORS_API_KEY)
+    const hasTwoPoints = routePoints.length >= 2
+    const clearedNoPointsRef = useRef(false)
 
     // Sync routing state to parent callbacks (only when changed)
     // Use coordsKey to prevent infinite loops from array reference changes
     const coordsKeyForSync = JSON.stringify(routingState.coords)
     
+    // Если точек меньше двух — сбрасываем состояние и выходим (без лишних setState на каждом рендере)
     useEffect(() => {
+        if (hasTwoPoints) {
+            clearedNoPointsRef.current = false
+            return
+        }
+
+        if (clearedNoPointsRef.current) return
+        clearedNoPointsRef.current = true
+
+        setRoutingLoading(false)
+        setErrors({ routing: false })
+        setRouteDistance(0)
+        setFullRouteCoords([])
+
+        // Удаляем линию, если была
+        if (polylineRef.current && map) {
+            try { map.removeLayer(polylineRef.current) } catch {}
+            polylineRef.current = null
+        }
+        lastFitKeyRef.current = null
+    }, [hasTwoPoints, map, setErrors, setFullRouteCoords, setRouteDistance, setRoutingLoading])
+
+    useEffect(() => {
+        if (!hasTwoPoints) return
+
         const currentState = {
             loading: routingState.loading,
             error: routingState.error,
@@ -70,6 +103,19 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
 
         if (hasChanged) {
             prevStateRef.current = currentState
+            // Дополнительно предотвращаем зацикливание: шлём обновления вверх только если реально новое состояние
+            const lastSent = lastSentRef.current
+            const isNew =
+                !lastSent ||
+                lastSent.loading !== currentState.loading ||
+                lastSent.error !== currentState.error ||
+                lastSent.distance !== currentState.distance ||
+                lastSent.coords !== currentState.coords
+
+            if (!isNew) return
+
+            lastSentRef.current = currentState
+
             setRoutingLoading(routingState.loading)
             
             // Передаем ошибку только если она есть
@@ -88,6 +134,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         routingState.error,
         routingState.distance,
         coordsKeyForSync,
+        hasTwoPoints,
         // Не включаем setters в зависимости - они стабильны
     ])
 
@@ -101,6 +148,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
     )
     
     useEffect(() => {
+        if (!hasTwoPoints) return
         if (!map || typeof window === 'undefined') return
 
         const L = (window as any).L
@@ -163,7 +211,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                 }
             }
         }
-    }, [map, coordsKeyForDraw, routingState.error, fitKey])
+    }, [map, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints])
 
     // Cleanup on unmount
     useEffect(() => {

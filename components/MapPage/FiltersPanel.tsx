@@ -2,6 +2,7 @@
 import React, {
   useMemo,
   useCallback,
+  useState,
 } from 'react';
 import {
   View,
@@ -23,6 +24,7 @@ import RouteStats from '@/components/MapPage/RouteStats';
 import RouteHint from '@/components/MapPage/RouteHint';
 import AddressSearch from '@/components/MapPage/AddressSearch';
 import ValidationMessage from '@/components/MapPage/ValidationMessage';
+import RoutingStatus from '@/components/MapPage/RoutingStatus';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import type { RoutePoint } from '@/types/route';
@@ -43,8 +45,8 @@ const COLORS = {
 };
 
 const SEARCH_MODES = [
-  { key: 'radius' as const, icon: 'my-location', label: 'Радиус' },
-  { key: 'route' as const, icon: 'alt-route', label: 'Маршрут' },
+  { key: 'radius' as const, icon: 'my-location', label: 'Найти в радиусе', subtitle: 'Поиск мест вокруг точки' },
+  { key: 'route' as const, icon: 'alt-route', label: 'Построить маршрут', subtitle: 'Старт → финиш + транспорт' },
 ];
 
 const TRANSPORT_MODES = [
@@ -86,9 +88,13 @@ interface FiltersPanelProps {
   routePoints?: RoutePoint[];
   onRemoveRoutePoint?: (id: string) => void;
   onClearRoute?: () => void;
+  swapStartEnd?: () => void;
   routeHintDismissed?: boolean;
   onRouteHintDismiss?: () => void;
   onAddressSelect?: (address: string, coords: LatLng, isStart: boolean) => void;
+  routingLoading?: boolean;
+  routingError?: string | boolean | null;
+  onBuildRoute?: () => void;
 }
 
 const FiltersPanel: React.FC<FiltersPanelProps> = ({
@@ -110,12 +116,17 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                                      routePoints = [],
                                                      onRemoveRoutePoint,
                                                      onClearRoute,
+                                                     swapStartEnd,
                                                      routeHintDismissed = false,
                                                      onRouteHintDismiss,
                                                      onAddressSelect,
-                                                   }) => {
+                                                     routingLoading,
+                                                     routingError,
+                                                     onBuildRoute,
+}) => {
   const windowWidth = Dimensions.get('window').width;
   const styles = useMemo(() => getStyles(isMobile, windowWidth), [isMobile, windowWidth]);
+  const [legendOpen, setLegendOpen] = useState(false);
   
   // ✅ NEW: Validate route points
   const validation = useMemo(() => {
@@ -239,56 +250,83 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     [filterValue.categories.length, filterValue.radius]
   );
 
+  const canBuildRoute = useMemo(
+    () => mode === 'route' ? routePoints.length >= 2 : true,
+    [mode, routePoints.length]
+  );
+
   return (
     <View style={styles.card}>
-      {/* Заголовок - фиксированный */}
-      <View style={styles.headerContainer}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Фильтры</Text>
-          <View style={styles.headerActions}>
-            {hasActiveFilters && (
-              <CompactButton
-                onPress={resetFilters}
-                icon="refresh"
-                compact
-                color={COLORS.danger}
-                accessibilityLabel="Сбросить фильтры"
-              />
-            )}
-            {isMobile && (
-              <CompactButton
-                onPress={closeMenu}
-                icon="close"
-                compact
-                accessibilityLabel="Закрыть панель"
-              />
-            )}
+      {/* Sticky header + status */}
+      <View style={styles.stickyTop}>
+        <View style={styles.headerContainer}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Фильтры</Text>
+            <View style={styles.headerActions}>
+              {isMobile && (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.headerActionButton,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                  onPress={closeMenu}
+                  accessibilityRole="button"
+                  accessibilityLabel="Закрыть панель"
+                >
+                  <Icon name="close" size={16} color={COLORS.text} />
+                  <Text style={styles.headerActionText}>Закрыть</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+
+          {/* Переключение режимов */}
+          <View style={styles.modeTabs} accessibilityRole="tablist">
+            {SEARCH_MODES.map(({ key, icon, label, subtitle }) => {
+              const active = mode === key;
+              return (
+                <Pressable
+                  key={key}
+                  style={[
+                    styles.modeTab, 
+                    active && styles.modeTabActive,
+                    globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                  ]}
+                  onPress={() => handleSetMode(key)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                >
+                  <Icon name={icon} size={18} color={active ? '#fff' : COLORS.textMuted} />
+                  <View style={styles.modeTabTextCol}>
+                    <Text style={[styles.modeTabText, active && styles.modeTabTextActive]}>
+                      {label}
+                    </Text>
+                    <Text style={[styles.modeTabHint, active && styles.modeTabHintActive]}>
+                      {subtitle}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={styles.modeHelper}>
+            <Icon name={mode === 'route' ? 'alt-route' : 'my-location'} size={16} color={COLORS.textMuted} />
+            <Text style={styles.modeHelperText}>
+              {mode === 'route'
+                ? 'Режим «Построить маршрут»: выберите старт и финиш, переключите транспорт.'
+                : 'Режим «Найти в радиусе»: задайте радиус вокруг точки, чтобы увидеть места.'}
+            </Text>
           </View>
         </View>
 
-        {/* Переключение режимов */}
-        <View style={styles.modeTabs} accessibilityRole="tablist">
-          {SEARCH_MODES.map(({ key, icon, label }) => {
-            const active = mode === key;
-            return (
-              <Pressable
-                key={key}
-                style={[
-                  styles.modeTab, 
-                  active && styles.modeTabActive,
-                  globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                ]}
-                onPress={() => handleSetMode(key)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-              >
-                <Icon name={icon} size={18} color={active ? '#fff' : COLORS.textMuted} />
-                <Text style={[styles.modeTabText, active && styles.modeTabTextActive]}>
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
+        <View style={styles.statusCard}>
+          <RoutingStatus
+            isLoading={!!routingLoading}
+            error={routingError || null}
+            distance={routeDistance}
+            transportMode={transportMode}
+          />
         </View>
       </View>
 
@@ -300,12 +338,23 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled={true}
       >
+        {/* Шаги отображаем только в режиме маршрута, чтобы не перегружать радиус */}
+        {mode === 'route' && (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoTitle}>Как построить маршрут</Text>
+            <Text style={styles.infoItem}>1. Выберите режим: радиус или маршрут.</Text>
+            <Text style={styles.infoItem}>2. Введите адреса или кликните на карте: старт → финиш.</Text>
+            <Text style={styles.infoItem}>3. Нажмите «Построить» или очистите/поменяйте точки.</Text>
+          </View>
+        )}
+
         {mode === 'radius' ? (
           <>
             {/* Категории */}
             {categoriesWithCount.length > 0 && (
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>Категории</Text>
+                <Text style={styles.sectionHint}>Выберите 1–3 тематики, чтобы сузить выдачу.</Text>
                 <MultiSelectField
                   items={categoriesWithCount}
                   value={Array.isArray(filterValue.categories) 
@@ -412,6 +461,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   label="Точка старта"
                   placeholder="Введите адрес начала маршрута..."
                   value={startAddress}
+                  enableCoordinateInput
                   onAddressSelect={(address, coords) => onAddressSelect(address, coords, true)}
                 />
                 <View style={{ height: 12 }} />
@@ -419,8 +469,35 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   label="Точка финиша"
                   placeholder="Введите адрес конца маршрута..."
                   value={endAddress}
+                  enableCoordinateInput
                   onAddressSelect={(address, coords) => onAddressSelect(address, coords, false)}
                 />
+                {(onClearRoute || swapStartEnd) && (
+                  <View style={styles.actionRow}>
+                    {onClearRoute && (
+                      <Pressable
+                        style={styles.actionGhost}
+                        onPress={onClearRoute}
+                        accessibilityRole="button"
+                        accessibilityLabel="Очистить точки маршрута"
+                      >
+                        <Icon name="delete-sweep" size={18} color={COLORS.text} />
+                        <Text style={styles.actionGhostText}>Очистить точки</Text>
+                      </Pressable>
+                    )}
+                    {swapStartEnd && (
+                      <Pressable
+                        style={styles.actionGhost}
+                        onPress={swapStartEnd}
+                        accessibilityRole="button"
+                        accessibilityLabel="Поменять старт и финиш местами"
+                      >
+                        <Icon name="swap-horiz" size={18} color={COLORS.text} />
+                        <Text style={styles.actionGhostText}>S ↔ F</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                )}
               </View>
             )}
 
@@ -541,21 +618,53 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           </View>
         )}
 
-        {/* ✅ ИСПРАВЛЕНИЕ: Легенда карты - внутри ScrollView после фильтров */}
-        <MapLegend showRouteMode={mode === 'route'} />
+        {/* ✅ Аккордеон легенды */}
+        <Pressable
+          style={[styles.accordionHeader, globalFocusStyles.focusable]}
+          onPress={() => setLegendOpen((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel="Легенда карты"
+          accessibilityState={{ expanded: legendOpen }}
+        >
+          <Text style={styles.accordionTitle}>Легенда карты</Text>
+          <Icon name={legendOpen ? 'expand-less' : 'expand-more'} size={20} color={COLORS.textMuted} />
+        </Pressable>
+        {legendOpen && <MapLegend showRouteMode={mode === 'route'} />}
       </ScrollView>
 
-      {/* Быстрые действия (десктоп) */}
-      {!isMobile && hasActiveFilters && (
-        <View style={styles.footer}>
-          <CompactButton
+      {/* Sticky footer CTA */}
+      <View style={styles.stickyFooter}>
+        {!canBuildRoute && mode === 'route' && (
+          <Text style={styles.helperText}>Добавьте старт и финиш, чтобы построить маршрут</Text>
+        )}
+        <View style={styles.footerButtons}>
+          <Pressable
+            style={[styles.ctaButton, styles.ctaOutline]}
             onPress={resetFilters}
-            icon="refresh"
-            title="Сбросить"
-            color={COLORS.danger}
-          />
+            accessibilityRole="button"
+            accessibilityLabel="Сбросить"
+          >
+            <Text style={styles.ctaOutlineText}>Сбросить</Text>
+          </Pressable>
+          {onBuildRoute && (
+            <Pressable
+              style={[
+                styles.ctaButton,
+                styles.ctaPrimary,
+                (!canBuildRoute || routingLoading) && styles.ctaDisabled,
+              ]}
+              disabled={!canBuildRoute || routingLoading}
+              onPress={onBuildRoute}
+              accessibilityRole="button"
+              accessibilityLabel="Построить"
+            >
+              <Text style={styles.ctaPrimaryText}>
+                {routingLoading ? 'Строим...' : 'Построить'}
+              </Text>
+            </Pressable>
+          )}
         </View>
-      )}
+      </View>
     </View>
   );
 };
@@ -584,6 +693,18 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       // Фиксированный контейнер для заголовка и табов
       marginBottom: 12,
     },
+    stickyTop: {
+      gap: 8,
+      ...(Platform.OS === 'web'
+        ? ({
+            position: 'sticky',
+            top: 0,
+            zIndex: 5,
+            backgroundColor: COLORS.bg,
+            paddingTop: 4,
+          } as any)
+        : null),
+    },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -597,6 +718,30 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     },
     headerActions: {
       flexDirection: 'row',
+      gap: 8,
+    },
+    headerActionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.card,
+      minHeight: 36,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          transition: 'all 0.16s ease',
+        } as any,
+      }),
+    },
+    headerActionText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: COLORS.text,
     },
     modeTabs: {
       flexDirection: 'row',
@@ -630,21 +775,44 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     modeTabActive: {
       backgroundColor: COLORS.primary,
     },
+    modeTabTextCol: {
+      marginLeft: 6,
+      flex: 1,
+    },
     modeTabText: {
       fontSize: 13,
       fontWeight: '600',
       color: COLORS.textMuted,
-      marginLeft: 6,
     },
     modeTabTextActive: {
       color: '#fff',
+    },
+    modeTabHint: {
+      fontSize: 11,
+      color: COLORS.textMuted,
+      marginTop: 2,
+    },
+    modeTabHintActive: {
+      color: '#e8f2ff',
+    },
+    modeHelper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 4,
+      paddingVertical: 6,
+    },
+    modeHelperText: {
+      fontSize: 12,
+      color: COLORS.textMuted,
+      flex: 1,
     },
     content: {
       flex: 1,
       flexGrow: 1,
     },
     contentContainer: {
-      paddingBottom: 8,
+      paddingBottom: 16,
       flexGrow: 1,
     },
     section: {
@@ -654,6 +822,11 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       fontSize: 13,
       fontWeight: '700',
       color: COLORS.text,
+      marginBottom: 6,
+    },
+    sectionHint: {
+      fontSize: 12,
+      color: COLORS.textMuted,
       marginBottom: 6,
     },
     input: {
@@ -873,6 +1046,17 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       color: COLORS.text,
       flex: 1,
     },
+    infoTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: COLORS.text,
+      marginBottom: 6,
+    },
+    infoItem: {
+      fontSize: 12,
+      color: COLORS.textMuted,
+      marginBottom: 2,
+    },
     infoBold: {
       fontWeight: '700',
       color: COLORS.primary,
@@ -884,6 +1068,130 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     routeStatsContainer: {
       marginTop: 12,
       marginBottom: 12,
+    },
+    actionRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 12,
+      justifyContent: 'flex-start',
+      flexWrap: 'wrap',
+    },
+    actionGhost: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.card,
+      minHeight: 40,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          transition: 'all 0.16s ease',
+        } as any,
+      }),
+    },
+    actionGhostText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: COLORS.text,
+    },
+    statusCard: {
+      backgroundColor: COLORS.card,
+      borderRadius: 10,
+      padding: 10,
+      shadowColor: '#1f1f1f',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.04,
+      shadowRadius: 3,
+      elevation: 1,
+    },
+    swapButton: {
+      marginTop: 10,
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: 10,
+      backgroundColor: COLORS.primarySoft,
+    },
+    swapButtonText: {
+      color: COLORS.primary,
+      fontWeight: '700',
+      fontSize: 13,
+    },
+    accordionHeader: {
+      marginTop: 4,
+      marginBottom: 6,
+      paddingVertical: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    accordionTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: COLORS.text,
+    },
+    stickyFooter: {
+      ...(Platform.OS === 'web'
+        ? ({
+            position: 'sticky',
+            bottom: 0,
+            backgroundColor: COLORS.bg,
+            paddingTop: 8,
+            paddingBottom: 4,
+          } as any)
+        : {
+            paddingTop: 8,
+          }),
+    },
+    footerButtons: {
+      flexDirection: 'row',
+      gap: 8,
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+    },
+    ctaButton: {
+      borderRadius: DESIGN_TOKENS.radii.md,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      minHeight: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flex: Platform.OS === 'web' ? undefined : 1,
+    },
+    ctaOutline: {
+      borderWidth: 1,
+      borderColor: COLORS.primary,
+      backgroundColor: 'transparent',
+    },
+    ctaOutlineText: {
+      color: COLORS.primary,
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    ctaPrimary: {
+      backgroundColor: COLORS.primary,
+    },
+    ctaPrimaryText: {
+      color: '#fff',
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    ctaDisabled: {
+      opacity: 0.6,
+    },
+    helperText: {
+      fontSize: 12,
+      color: COLORS.textMuted,
+      marginBottom: 6,
     },
   });
 };

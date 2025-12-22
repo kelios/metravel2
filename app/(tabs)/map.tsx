@@ -90,6 +90,8 @@ export default function MapScreen() {
     
     const [rightPanelTab, setRightPanelTab] = useState<'filters' | 'travels'>('filters');
     const [rightPanelVisible, setRightPanelVisible] = useState(true);
+    const filtersTabRef = useRef<any>(null);
+    const panelRef = useRef<any>(null);
     const [routeHintDismissed, setRouteHintDismissed] = useState(false);
     const [mapReady, setMapReady] = useState(false);
     useEffect(() => {
@@ -104,6 +106,68 @@ export default function MapScreen() {
         // available width via paddingRight, so force a resize event to trigger invalidate.
         window.dispatchEvent(new Event('resize'));
     }, [rightPanelVisible, isMobile]);
+
+    // Scroll lock for mobile overlay on web
+    useEffect(() => {
+        if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+        if (!isMobile) return;
+        const body = document.body;
+        const prevOverflow = body.style.overflow;
+        const shouldLock = rightPanelVisible;
+        if (shouldLock) {
+            body.style.overflow = 'hidden';
+        } else {
+            body.style.overflow = prevOverflow || '';
+        }
+        return () => {
+            body.style.overflow = prevOverflow || '';
+        };
+    }, [isMobile, rightPanelVisible]);
+
+    // Focus first tabbable in panel when overlay открывается на мобильном
+    useEffect(() => {
+        if (!isMobile || !rightPanelVisible) return;
+        const id = requestAnimationFrame(() => {
+            const node: any = filtersTabRef.current;
+            if (node && typeof node.focus === 'function') {
+                node.focus();
+            }
+        });
+        return () => cancelAnimationFrame(id);
+    }, [isMobile, rightPanelVisible]);
+
+    const handlePanelKeyDown = useCallback(
+        (e: any) => {
+            const key = e?.nativeEvent?.key || e?.key;
+            const isTab = key === 'Tab';
+            const isEsc = key === 'Escape';
+            if (isEsc) {
+                setRightPanelVisible(false);
+                return;
+            }
+            if (Platform.OS !== 'web' || !isTab) return;
+            const container = (panelRef.current as any)?._node || document.getElementById('map-panel');
+            if (!container) return;
+            const focusables = Array.from(
+                container.querySelectorAll(
+                    'a[href],button,textarea,input,select,[tabindex]:not([tabindex="-1"])'
+                )
+            ).filter((el: any) => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden'));
+            if (focusables.length === 0) return;
+            const first = focusables[0] as HTMLElement;
+            const last = focusables[focusables.length - 1] as HTMLElement;
+            const active = document.activeElement as HTMLElement | null;
+            const shift = !!e?.shiftKey;
+            if (!shift && active === last) {
+                e.preventDefault();
+                first.focus();
+            } else if (shift && active === first) {
+                e.preventDefault();
+                last.focus();
+            }
+        },
+        [],
+    );
 
     // ✅ ОПТИМИЗАЦИЯ: Debounce для фильтров и координат
     const debouncedCoordinates = useDebouncedValue(coordinates, 500);
@@ -336,12 +400,10 @@ export default function MapScreen() {
 
     const resetFilters = useCallback(() => {
         setFilterValues({ categories: [], radius: '60', address: '' });
-        // Не сбрасываем маршрут при сбросе фильтров, только если пользователь явно хочет
-        // setRoutePoints([]);
-        // setStartAddress('');
-        // setEndAddress('');
-        // setRouteDistance(null);
-    }, []);
+        // Полный сброс: очищаем маршрут и возвращаемся к режиму радиуса
+        routeStore.clearRoute();
+        setMode('radius');
+    }, [routeStore, setMode]);
 
     const handleMapClick = useCallback((lng: number, lat: number) => {
         if (mode === 'route' && routePoints.length < 2) {
@@ -417,30 +479,28 @@ export default function MapScreen() {
             )}
             <SafeAreaView style={styles.container}>
                 <View
-                    style={[
-                        styles.content,
-                        // ✅ ИСПРАВЛЕНИЕ: paddingRight должен соответствовать ширине панели (360px)
-                        !isMobile && rightPanelVisible ? { paddingRight: 360 } : null,
-                    ]}
+                    style={styles.content}
                 >
-                    {mapReady ? (
-                        <Suspense fallback={mapPanelPlaceholder}>
-                            <LazyMapPanel
-                                travelsData={travelsData}
-                                coordinates={coordinates ?? DEFAULT_COORDINATES}
-                                routePoints={routePoints}
-                                mode={mode}
-                                setRoutePoints={setRoutePoints}
-                                onMapClick={handleMapClick}
-                                transportMode={transportMode}
-                                setRouteDistance={setRouteDistance}
-                                setFullRouteCoords={handleSetFullRouteCoords}
-                                radius={filterValues.radius}
-                            />
-                        </Suspense>
-                    ) : (
-                        mapPanelPlaceholder
-                    )}
+                    <View style={styles.mapArea}>
+                        {mapReady ? (
+                            <Suspense fallback={mapPanelPlaceholder}>
+                                <LazyMapPanel
+                                    travelsData={travelsData}
+                                    coordinates={coordinates ?? DEFAULT_COORDINATES}
+                                    routePoints={routePoints}
+                                    mode={mode}
+                                    setRoutePoints={setRoutePoints}
+                                    onMapClick={handleMapClick}
+                                    transportMode={transportMode}
+                                    setRouteDistance={setRouteDistance}
+                                    setFullRouteCoords={handleSetFullRouteCoords}
+                                    radius={filterValues.radius}
+                                />
+                            </Suspense>
+                        ) : (
+                            mapPanelPlaceholder
+                        )}
+                    </View>
 
                     {/* ✅ ИСПРАВЛЕНИЕ: RouteHint и RouteStats перенесены в боковую панель */}
 
@@ -457,20 +517,38 @@ export default function MapScreen() {
                     )}
 
                     {/* Overlay для мобильных устройств */}
-                    {rightPanelVisible && isMobile && (
+                    {isMobile && (
                         <Pressable
-                            style={styles.overlay}
+                            style={[
+                                styles.overlay,
+                                rightPanelVisible ? styles.overlayVisible : styles.overlayHidden,
+                            ]}
                             onPress={() => setRightPanelVisible(false)}
+                            accessibilityRole="button"
+                            accessibilityLabel="Закрыть панель"
                         />
                     )}
 
                     {/* Правая панель с табами */}
-                    {rightPanelVisible && (
-                        <View style={styles.rightPanel}>
-                            {/* Табы для переключения */}
-                                <View style={styles.tabsContainer}>
+                    <View
+                        style={[
+                            styles.rightPanel,
+                            isMobile
+                                ? rightPanelVisible
+                                    ? styles.rightPanelMobileOpen
+                                    : styles.rightPanelMobileClosed
+                                : null,
+                        ]}
+                        accessibilityLabel="Панель карты"
+                        id="map-panel"
+                        ref={panelRef}
+                        tabIndex={-1}
+                    >
+                        {/* Табы для переключения */}
+                            <View style={styles.tabsContainer}>
                                     <View style={styles.tabsSegment}>
                                         <Pressable
+                                            ref={filtersTabRef as any}
                                             style={({ pressed }) => [
                                                 styles.tab,
                                                 rightPanelTab === 'filters' && styles.tabActive,
@@ -575,9 +653,18 @@ export default function MapScreen() {
                                     routePoints={routeStorePoints}
                                     onRemoveRoutePoint={(id: string) => routeStore.removePoint(id)}
                                     onClearRoute={handleClearRoute}
+                                    swapStartEnd={routeStore.swapStartEnd}
                                     routeHintDismissed={routeHintDismissed}
                                     onRouteHintDismiss={() => setRouteHintDismissed(true)}
                                     onAddressSelect={handleAddressSelect}
+                                    routingLoading={routingLoading}
+                                    routingError={routingError}
+                                    onBuildRoute={() => {
+                                        // Явное построение маршрута: если есть точки – триггернем пересчёт
+                                        if (routeStorePoints.length >= 2) {
+                                            setRoutePoints(routePoints);
+                                        }
+                                    }}
                                     closeMenu={() => setRightPanelVisible(false)}
                                 />
                             ) : (
@@ -620,8 +707,7 @@ export default function MapScreen() {
                                 </View>
                             )}
                         </View>
-                        </View>
-                    )}
+                    </View>
                 </View>
             </SafeAreaView>
         </>

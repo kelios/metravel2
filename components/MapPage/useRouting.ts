@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { routeCache } from '@/src/utils/routeCache'
 
+// Глобальный кеш успешно/аварийно обработанных routeKey, чтобы избегать повторных запросов в сессию
+const resolvedRouteKeys = new Set<string>()
+
 interface RouteResult {
     coords: [number, number][]
     distance: number
@@ -47,6 +50,7 @@ export const useRouting = (
     const isProcessingRef = useRef(false)
     const rateLimitKeyRef = useRef<string | null>(null)
     const rateLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const resetDoneRef = useRef(false)
     // ✅ ИСПРАВЛЕНИЕ: Храним routePoints в ref чтобы избежать бесконечных ререндеров
     const routePointsRef = useRef<[number, number][]>(routePoints)
     
@@ -64,6 +68,15 @@ export const useRouting = (
     const routeKey = hasTwoPoints 
         ? `${transportMode}-${routePointsKey}`
         : null
+
+    const forceOsrm = useMemo(() => {
+        // В dev можно включить форс-OSRM чтобы не ловить CORS от ORS
+        if (typeof process !== 'undefined') {
+            const envFlag = (process.env as any)?.EXPO_PUBLIC_FORCE_OSRM;
+            if (envFlag === '1' || envFlag === 'true') return true;
+        }
+        return false;
+    }, []);
 
     const fetchORS = useCallback(async (
         points: [number, number][],
@@ -118,7 +131,12 @@ export const useRouting = (
         const coordsStr = points.map(([lng, lat]) => `${lng},${lat}`).join(';')
         const url = `https://router.project-osrm.org/route/v1/${profile}/${coordsStr}?overview=full&geometries=geojson`
         
-        const res = await fetch(url, { signal })
+        let res: Response
+        try {
+            res = await fetch(url, { signal })
+        } catch (e: any) {
+            throw new Error(e?.message || 'OSRM недоступен (network)')
+        }
         
         if (!res.ok) {
             const errorText = await res.text().catch(() => '')
@@ -157,20 +175,34 @@ export const useRouting = (
     }, [])
 
     useEffect(() => {
-        if (!hasTwoPoints || !routeKey) {
-            setState({
-                loading: false,
-                error: false,
-                distance: 0,
-                coords: [],
+        // Если точек меньше двух — не строим маршрут
+        if (!hasTwoPoints) {
+            // избегаем лишних setState, если уже в пустом состоянии
+            setState(prev => {
+                if (!prev.loading && prev.distance === 0 && prev.coords.length === 0 && prev.error === false) {
+                    return prev
+                }
+                return {
+                    loading: false,
+                    error: false,
+                    distance: 0,
+                    coords: [],
+                }
             })
-            lastRouteKeyRef.current = null
-            isProcessingRef.current = false
-            rateLimitKeyRef.current = null
-            if (rateLimitTimerRef.current) {
-                clearTimeout(rateLimitTimerRef.current)
-                rateLimitTimerRef.current = null
-            }
+            return
+        }
+    }, [hasTwoPoints])
+
+    useEffect(() => {
+        if (!hasTwoPoints || !routeKey) return
+
+        // Сбрасываем флаг только при новом routeKey
+        if (lastRouteKeyRef.current !== routeKey) {
+            resetDoneRef.current = false
+        }
+
+        // Если маршрут уже обработан (успешно или с ошибкой) — выходим
+        if (resolvedRouteKeys.has(routeKey)) {
             return
         }
 
@@ -183,7 +215,7 @@ export const useRouting = (
         const currentPoints = routePointsRef.current
         
         // Check cache first
-        const cachedRoute = routeCache.get(currentPoints, transportMode)
+        const cachedRoute = routeKey ? routeCache.get(currentPoints, transportMode) : null
         if (cachedRoute) {
             setState({
                 loading: false,
@@ -202,9 +234,13 @@ export const useRouting = (
             // Avoid infinite re-render: set error only once per routeKey while rate-limited
             if (rateLimitKeyRef.current !== routeKey) {
                 rateLimitKeyRef.current = routeKey
+                const directCoords = currentPoints
+                const directDistance = calculateDirectDistance(directCoords)
                 setState(prev => ({
                     ...prev,
                     error: `Слишком много запросов. Подождите ${Math.ceil(waitTime / 1000)}с`,
+                    coords: directCoords,
+                    distance: directDistance,
                 }))
             }
             return
@@ -229,14 +265,15 @@ export const useRouting = (
                 let result: RouteResult
 
                 try {
-                    result = ORS_API_KEY 
+                    const shouldUseORS = !!ORS_API_KEY && !forceOsrm
+                    result = shouldUseORS
                         ? await fetchORS(currentPoints, transportMode, abortController.signal)
                         : await fetchOSRM(currentPoints, transportMode, abortController.signal)
                 } catch (primaryError: any) {
                     if (primaryError?.name === 'AbortError') throw primaryError
 
                     // Try fallback
-                    if (ORS_API_KEY) {
+                    if (ORS_API_KEY && !forceOsrm) {
                         try {
                             result = await fetchOSRM(currentPoints, transportMode, abortController.signal)
                         } catch (fallbackError: any) {
@@ -256,6 +293,7 @@ export const useRouting = (
                                 distance,
                                 coords: currentPoints,
                             })
+                            resolvedRouteKeys.add(routeKey)
                             isProcessingRef.current = false
                             return
                         }
@@ -266,6 +304,7 @@ export const useRouting = (
 
                 // Cache successful result
                 routeCache.set(currentPoints, transportMode, result.coords, result.distance)
+                resolvedRouteKeys.add(routeKey)
 
                 setState({
                     loading: false,
@@ -284,6 +323,7 @@ export const useRouting = (
                     distance,
                     coords: currentPoints,
                 })
+                if (routeKey) resolvedRouteKeys.add(routeKey)
             } finally {
                 isProcessingRef.current = false
             }
@@ -292,10 +332,12 @@ export const useRouting = (
         fetchRoute()
 
         return () => {
-            abortController.abort()
+            if (rateLimitTimerRef.current) {
+                clearTimeout(rateLimitTimerRef.current)
+                rateLimitTimerRef.current = null
+            }
         }
-    // ✅ ИСПРАВЛЕНИЕ: Убрали routePoints из зависимостей - используем routeKey (строка) вместо массива
-    }, [routeKey, hasTwoPoints, transportMode, ORS_API_KEY, fetchORS, fetchOSRM, calculateDirectDistance])
+    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY])
 
     useEffect(() => {
         return () => {

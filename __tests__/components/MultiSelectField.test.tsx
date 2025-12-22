@@ -55,7 +55,7 @@ describe('MultiSelectField', () => {
       />
     )
 
-    expect(getByTestId('simple-multi-select')).toBeTruthy()
+    expect(getByTestId('multi-select-mock')).toBeTruthy()
   })
 
   it('calls onChange with single value in single mode (primitive)', () => {

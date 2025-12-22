@@ -18,6 +18,7 @@ interface AddressSearchProps {
   onAddressSelect: (address: string, coords: LatLng) => void;
   value?: string;
   label?: string;
+  enableCoordinateInput?: boolean;
 }
 
 interface SearchResult {
@@ -32,6 +33,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   onAddressSelect,
   value = '',
   label,
+  enableCoordinateInput = false,
 }) => {
   const [query, setQuery] = useState(value);
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -121,6 +123,28 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
     setShowResults(false);
   }, []);
 
+  const trySubmitCoords = useCallback(() => {
+    if (!enableCoordinateInput) return false;
+    const parts = query.split(',').map(p => p.trim());
+    if (parts.length !== 2) return false;
+    const [a, b] = parts.map(Number);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+    // допускаем ввод как "lat, lng" или "lng, lat" — считаем второй координатой широту
+    // выберем формат lat,lng (a — широта, b — долгота) по интуитивности пользователя
+    const lat = a;
+    const lng = b;
+    const coords: LatLng = { lat, lng };
+    setResults([]);
+    setShowResults(false);
+    onAddressSelect(`${lat.toFixed(5)}, ${lng.toFixed(5)}`, coords);
+    return true;
+  }, [enableCoordinateInput, onAddressSelect, query]);
+
+  useEffect(() => {
+    // Синхронизируем внешнее значение (например, после swap/очистки)
+    setQuery(value || '');
+  }, [value]);
+
   useEffect(() => {
     return () => {
       if (debounceRef.current) {
@@ -150,6 +174,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
               setShowResults(true);
             }
           }}
+          onSubmitEditing={trySubmitCoords}
         />
 
         {loading && (

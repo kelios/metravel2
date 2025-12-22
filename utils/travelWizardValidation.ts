@@ -410,7 +410,7 @@ export function getQualityScore(formData: TravelFormData): {
   if (formData.transports && formData.transports.length > 0) score += 5;
 
   let level: 'poor' | 'fair' | 'good' | 'excellent';
-  if (score >= 80) level = 'excellent';
+  if (score >= 90) level = 'excellent';
   else if (score >= 60) level = 'good';
   else if (score >= 40) level = 'fair';
   else level = 'poor';

@@ -111,9 +111,13 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         router.push('/travel/new' as any);
     }, [isAuthenticated, router]);
 
+    const webStickyStyle = Platform.OS === 'web'
+        ? { position: 'sticky' as const, top: 0, zIndex: 2000, width: '100%' }
+        : null;
+
     return (
       <View 
-        style={styles.container}
+        style={[styles.container, webStickyStyle]}
         testID="main-header"
         onLayout={(e) => {
             const next = Math.round(e.nativeEvent.layout.height);

@@ -2,6 +2,7 @@
 import React from 'react';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform, ActivityIndicator, Pressable } from 'react-native';
+import { METRICS } from '@/constants/layout';
 import * as Location from 'expo-location';
 import 'leaflet/dist/leaflet.css';
 type ReactLeafletNS = typeof import('react-leaflet');
@@ -41,6 +42,8 @@ interface Props {
   setFullRouteCoords: (coords: [number, number][]) => void;
   radius?: string; // Радиус поиска в км
 }
+
+const MOBILE_BREAKPOINT = METRICS.breakpoints.tablet || 768;
 
 const strToLatLng = (s: string): [number, number] | null => {
   const [lat, lng] = s.split(',').map(Number);
@@ -134,7 +137,7 @@ const MapPageComponent: React.FC<Props> = ({
   const [disableFitBounds, setDisableFitBounds] = useState(false);
   const [isMobileScreen, setIsMobileScreen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    return window.matchMedia('(max-width: 768px)').matches;
+    return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches;
   });
   const travelData = useMemo(
     () => (Array.isArray(travel?.data) ? travel.data : []),
@@ -143,7 +146,7 @@ const MapPageComponent: React.FC<Props> = ({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const media = window.matchMedia('(max-width: 768px)');
+    const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
     const handler = (event: MediaQueryListEvent) => setIsMobileScreen(event.matches);
     if (media.addEventListener) {
       media.addEventListener('change', handler);
@@ -345,6 +348,20 @@ const MapPageComponent: React.FC<Props> = ({
     [mode, routePoints.length, onMapClick]
   );
 
+  // Сбрасываем блокировку fitBounds после выбора точек или переключения режима
+  useEffect(() => {
+    if (mode === 'radius') {
+      setDisableFitBounds(false);
+      return;
+    }
+    if (mode === 'route' && routePoints.length >= 2) {
+      setDisableFitBounds(false);
+    }
+    if (mode === 'route' && routePoints.length === 0) {
+      setDisableFitBounds(false);
+    }
+  }, [mode, routePoints.length]);
+
   // Вычисляем радиус в метрах для отображения круга (должен быть до условных возвратов)
   const radiusInMeters = useMemo(() => {
     if (mode !== 'radius') return null;
@@ -363,12 +380,36 @@ const MapPageComponent: React.FC<Props> = ({
   const hasInitializedRef = useRef(false);
   const lastModeRef = useRef<MapMode | null>(null);
   const savedMapViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const resizeRafRef = useRef<number | null>(null);
 
   // Функция для центрирования на местоположении пользователя (должна быть до условных возвратов)
   const centerOnUserLocation = useCallback(() => {
     if (!mapRef.current || !userLocation) return;
     mapRef.current.setView([userLocation.latitude, userLocation.longitude], 13, { animate: true });
   }, [userLocation]);
+
+  // invalidateSize на resize (полезно для раскрытия/скрытия панели)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const handler = () => {
+      if (!mapRef.current) return;
+      if (resizeRafRef.current) {
+        cancelAnimationFrame(resizeRafRef.current);
+      }
+      resizeRafRef.current = requestAnimationFrame(() => {
+        try {
+          mapRef.current?.invalidateSize?.();
+        } catch {
+          // noop
+        }
+      });
+    };
+    window.addEventListener('resize', handler);
+    return () => {
+      window.removeEventListener('resize', handler);
+      if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
+    };
+  }, []);
 
   // Тестовый экспорт: предоставляем обработчик клика по маркерам старта/финиша,
   // который предотвращает дальнейшую обработку события (и, соответственно, зум).

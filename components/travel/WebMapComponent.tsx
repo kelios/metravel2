@@ -109,22 +109,8 @@ export const buildAddressFromGeocode = (
 ) => {
     console.log('buildAddressFromGeocode called with:', { geocodeData, latlng, matchedCountry });
     
-    // Если есть display_name (Nominatim), используем его как основу
-    if (geocodeData?.display_name) {
-        // Очищаем display_name от лишних символов и форматируем
-        const displayName = String(geocodeData.display_name)
-            .replace(/,\s*/g, ' · ')
-            .trim();
-        
-        console.log('Formatted display_name:', displayName);
-        
-        // Возвращаем display_name если он не пустой
-        if (displayName) {
-            return displayName;
-        }
-    }
-
-    // Если display_name недостаточно информативен, строим адрес из компонентов
+    // Если display_name есть, попробуем построить адрес из частей, чтобы добавить регион и страну
+    // display_name используем как финальный fallback
     const parts: string[] = [];
 
     // BigDataCloud использует другую структуру данных
@@ -171,7 +157,13 @@ export const buildAddressFromGeocode = (
     if (combined) return combined;
 
     // Финальный fallback - display_name или координаты
-    return geocodeData?.display_name || `${latlng.lat}, ${latlng.lng}`;
+    if (geocodeData?.display_name) {
+        const displayName = String(geocodeData.display_name)
+            .replace(/,\s*/g, ' · ')
+            .trim();
+        if (displayName) return displayName;
+    }
+    return `${latlng.lat}, ${latlng.lng}`;
 };
 
 type WebMapComponentProps = {

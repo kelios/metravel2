@@ -27,6 +27,7 @@ interface RouteState {
   removePoint: (id: string) => void;
   updatePoint: (id: string, updates: Partial<RoutePoint>) => void;
   reorderPoints: (points: RoutePoint[]) => void;
+  swapStartEnd: () => void;
   clearRoute: () => void;
   
   setRoute: (route: RouteData | null) => void;
@@ -127,6 +128,28 @@ export const useRouteStore = create<RouteState>()(
         set({ 
           points: updatedPoints,
           route: null,
+        });
+      },
+
+      swapStartEnd: () => {
+        const points = get().points;
+        if (points.length < 2) return;
+        const swapped = [...points];
+        // swap first and last entries
+        const first = swapped[0];
+        swapped[0] = swapped[swapped.length - 1];
+        swapped[swapped.length - 1] = first;
+        // Recalculate types
+        const updatedPoints = swapped.map((p, i) => ({
+          ...p,
+          type: i === 0 ? 'start' as const :
+                i === swapped.length - 1 ? 'end' as const :
+                'waypoint' as const,
+        }));
+        set({
+          points: updatedPoints,
+          route: null,
+          error: null,
         });
       },
 
