@@ -118,12 +118,12 @@ describe('ProfileScreen', () => {
     expect(await findByText('Test User', {}, { timeout: 5000 })).toBeTruthy();
     expect(await findByText('user@example.com', {}, { timeout: 5000 })).toBeTruthy();
 
-    // travelsCount из fetchMyTravels (3)
-    expect(getAllByText('3').length).toBeGreaterThan(0);
-    // favoritesCount
-    expect(getAllByText('2').length).toBeGreaterThan(0);
-    // viewsCount
-    expect(getAllByText('5').length).toBeGreaterThan(0);
+    // Статы могут обновиться чуть позже (после параллельных эффектов)
+    await waitFor(() => {
+      expect(getAllByText('3').length).toBeGreaterThan(0);
+      expect(getAllByText('2').length).toBeGreaterThan(0);
+      expect(getAllByText('5').length).toBeGreaterThan(0);
+    }, { timeout: 5000 });
 
     // Проверяем наличие основных пунктов меню (может быть несколько в иерархии, поэтому используем getAllByText)
     expect(getAllByText('Избранное').length).toBeGreaterThan(0);

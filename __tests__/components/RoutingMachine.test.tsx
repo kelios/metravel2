@@ -272,6 +272,9 @@ describe('RoutingMachine', () => {
     const prevNodeEnv = process.env.NODE_ENV;
     (process.env as any).NODE_ENV = 'development';
 
+    const { routeCache } = require('@/src/utils/routeCache');
+    jest.spyOn(routeCache, 'canMakeRequest').mockReturnValue(true);
+
     const abortSpy = jest.fn();
     const mockAbortController = {
       abort: abortSpy,
@@ -321,6 +324,7 @@ describe('RoutingMachine', () => {
       });
     }
 
+    ;(routeCache.canMakeRequest as jest.Mock).mockRestore?.();
     (process.env as any).NODE_ENV = prevNodeEnv;
   });
 });
