@@ -75,6 +75,7 @@ export class TocPageGenerator {
     return `
       <div style="
         break-inside: avoid;
+        page-break-inside: avoid;
         display: flex;
         gap: 8mm;
         padding: 6mm;
@@ -111,9 +112,12 @@ export class TocPageGenerator {
             color: ${colors.text};
             margin-bottom: 2mm;
             font-family: ${typography.headingFont};
+            line-height: 1.25;
+            max-height: 2.5em;
             overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            hyphens: auto;
           ">
             ${index + 1}. ${this.escapeHtml(travel.name)}
           </div>
@@ -122,6 +126,9 @@ export class TocPageGenerator {
             font-size: 10pt;
             color: ${colors.textSecondary};
             font-family: ${typography.bodyFont};
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            hyphens: auto;
           ">
             ${travel.countryName || '—'} • ${travel.year || '—'}
           </div>

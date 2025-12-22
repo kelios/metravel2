@@ -45,6 +45,18 @@ interface Props {
 const MOBILE_BREAKPOINT = METRICS.breakpoints.tablet || 768;
 const CLUSTER_THRESHOLD = 50;
 const CLUSTER_GRID = 0.045; // ~5 км ячейка на широте 55-60
+const CLUSTER_EXPAND_ZOOM = 15;
+
+const getClusterGridForZoom = (zoom: number) => {
+  if (!Number.isFinite(zoom)) return CLUSTER_GRID;
+  if (zoom >= 16) return 0.0015;
+  if (zoom >= 15) return 0.0025;
+  if (zoom >= 14) return 0.005;
+  if (zoom >= 13) return 0.01;
+  if (zoom >= 12) return 0.02;
+  if (zoom >= 11) return 0.03;
+  return CLUSTER_GRID;
+};
 
 const strToLatLng = (s: string): [number, number] | null => {
   const [lat, lng] = s.split(',').map(Number);
@@ -121,17 +133,33 @@ const ClusterLayer: React.FC<{
   Popup: React.ComponentType<any>;
   PopupContent: React.ComponentType<{ point: Point }>;
   onClusterZoom: (center: [number, number], bounds: [[number, number], [number, number]]) => void;
+  expandedClusterKey?: string | null;
+  expandedClusterItems?: Point[] | null;
   markerIcon?: any;
   markerOpacity?: number;
-}> = ({ points, Marker, Popup, PopupContent, onClusterZoom, markerIcon, markerOpacity = 1 }) => {
+  grid: number;
+  expandClusters: boolean;
+}> = ({
+  points,
+  Marker,
+  Popup,
+  PopupContent,
+  onClusterZoom,
+  expandedClusterKey,
+  expandedClusterItems,
+  markerIcon,
+  markerOpacity = 1,
+  grid,
+  expandClusters,
+}) => {
   const clusters = useMemo(() => {
     const byCell: Record<string, { items: Point[]; minLat: number; maxLat: number; minLng: number; maxLng: number }> = {};
     points.forEach((p) => {
       const ll = strToLatLng(p.coord);
       if (!ll) return;
       const [lng, lat] = ll;
-      const cellLat = Math.floor(lat / CLUSTER_GRID) * CLUSTER_GRID;
-      const cellLng = Math.floor(lng / CLUSTER_GRID) * CLUSTER_GRID;
+      const cellLat = Math.floor(lat / grid) * grid;
+      const cellLng = Math.floor(lng / grid) * grid;
       const key = `${cellLat.toFixed(3)}|${cellLng.toFixed(3)}`;
       if (!byCell[key]) {
         byCell[key] = { items: [], minLat: lat, maxLat: lat, minLng: lng, maxLng: lng };
@@ -146,7 +174,9 @@ const ClusterLayer: React.FC<{
       const count = cell.items.length;
       const centerLat = (cell.minLat + cell.maxLat) / 2;
       const centerLng = (cell.minLng + cell.maxLng) / 2;
+      const key = `${centerLat.toFixed(5)}|${centerLng.toFixed(5)}|${count}`;
       return {
+        key,
         count,
         center: [centerLat, centerLng] as [number, number],
         bounds: [
@@ -156,7 +186,7 @@ const ClusterLayer: React.FC<{
         items: cell.items,
       };
     });
-  }, [points]);
+  }, [points, grid]);
 
   const clusterIcon = useCallback(
     (count: number) =>
@@ -185,6 +215,60 @@ const ClusterLayer: React.FC<{
   return (
     <>
       {clusters.map((cluster, idx) => {
+        if (expandClusters) {
+          return (
+            <React.Fragment key={`cluster-auto-expanded-${cluster.key}-${idx}`}>
+              {cluster.items.map((item, itemIdx) => {
+                const ll = strToLatLng(item.coord);
+                if (!ll) return null;
+                const markerKey = item.id
+                  ? `cluster-auto-expanded-${cluster.key}-${item.id}`
+                  : `cluster-auto-expanded-${cluster.key}-${item.coord.replace(/,/g, '-')}-${itemIdx}`;
+                return (
+                  <Marker
+                    key={markerKey}
+                    position={[ll[1], ll[0]]}
+                    icon={markerIcon}
+                    opacity={markerOpacity}
+                  >
+                    <Popup>
+                      <PopupContent point={item} />
+                    </Popup>
+                  </Marker>
+                );
+              })}
+            </React.Fragment>
+          );
+        }
+
+        // Expanded cluster: render individual markers instead of a single cluster bubble
+        if (expandedClusterKey && cluster.key === expandedClusterKey) {
+          const items = expandedClusterItems ?? cluster.items;
+          return (
+            <React.Fragment key={`expanded-${cluster.key}-${idx}`}>
+              {items.map((item, itemIdx) => {
+                const ll = strToLatLng(item.coord);
+                if (!ll) return null;
+                const markerKey = item.id
+                  ? `cluster-expanded-${cluster.key}-${item.id}`
+                  : `cluster-expanded-${cluster.key}-${item.coord.replace(/,/g, '-')}-${itemIdx}`;
+                return (
+                  <Marker
+                    key={markerKey}
+                    position={[ll[1], ll[0]]}
+                    icon={markerIcon}
+                    opacity={markerOpacity}
+                  >
+                    <Popup>
+                      <PopupContent point={item} />
+                    </Popup>
+                  </Marker>
+                );
+              })}
+            </React.Fragment>
+          );
+        }
+
         const icon = clusterIcon(cluster.count);
         if (cluster.count === 1 && cluster.items[0]) {
           const item = cluster.items[0];
@@ -223,7 +307,22 @@ const ClusterLayer: React.FC<{
               },
             }}
           >
-            {/* Intentionally no Popup for clusters: clicking should zoom only (prevents stuck popups). */}
+            <Popup>
+              <View style={{ gap: 6, maxWidth: 260 }}>
+                <Text style={{ fontWeight: '800' }}>{cluster.count} мест поблизости</Text>
+                <Text style={{ color: '#666', fontSize: 12 }}>
+                  Нажмите, чтобы приблизить и раскрыть маркеры
+                </Text>
+                {cluster.items.slice(0, 6).map((p, i) => (
+                  <Text key={`${cluster.key}-item-${i}`} numberOfLines={1} style={{ fontSize: 12 }}>
+                    {p.categoryName ? `${p.categoryName}: ` : ''}{p.address || 'Без названия'}
+                  </Text>
+                ))}
+                {cluster.items.length > 6 && (
+                  <Text style={{ fontSize: 12, color: '#666' }}>…и ещё {cluster.items.length - 6}</Text>
+                )}
+              </View>
+            </Popup>
           </Marker>
         );
       })}
@@ -253,16 +352,20 @@ const MapPageComponent: React.FC<Props> = ({
   const [loading, setLoading] = useState(false);
   const [, setRoutingLoading] = useState(false);
   const [disableFitBounds, setDisableFitBounds] = useState(false);
+  const [expandedCluster, setExpandedCluster] = useState<{ key: string; items: Point[] } | null>(null);
   const [isMobileScreen, setIsMobileScreen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches;
   });
+  const [mapZoom, setMapZoom] = useState<number>(11);
   const travelData = useMemo(
     () => (Array.isArray(travel?.data) ? travel.data : []),
     [travel?.data]
   );
   const shouldCluster = travelData.length > CLUSTER_THRESHOLD;
   const travelMarkerOpacity = mode === 'route' ? 0.45 : 1;
+  const clusterGrid = useMemo(() => getClusterGridForZoom(mapZoom), [mapZoom]);
+  const expandClusters = mapZoom >= CLUSTER_EXPAND_ZOOM;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -476,6 +579,7 @@ const MapPageComponent: React.FC<Props> = ({
   useEffect(() => {
     if (mode === 'radius') {
       setDisableFitBounds(false);
+      setExpandedCluster(null);
       return;
     }
     if (mode === 'route' && routePoints.length >= 2) {
@@ -483,6 +587,7 @@ const MapPageComponent: React.FC<Props> = ({
     }
     if (mode === 'route' && routePoints.length === 0) {
       setDisableFitBounds(false);
+      setExpandedCluster(null);
     }
   }, [mode, routePoints.length]);
 
@@ -498,6 +603,9 @@ const MapPageComponent: React.FC<Props> = ({
 
   // Сохраняем ссылку на карту для кнопки "Мое местоположение" (должен быть до условных возвратов)
   const mapRef = useRef<any>(null);
+  const initialZoomRef = useRef<number>(
+    Number.isFinite((coordinates as any).zoom) ? (coordinates as any).zoom : 11
+  );
 
   // ✅ ИСПРАВЛЕНИЕ: Используем useRef для отслеживания инициализации
   // Должны быть объявлены ДО условных возвратов, чтобы соблюдать правила хуков
@@ -505,6 +613,7 @@ const MapPageComponent: React.FC<Props> = ({
   const lastModeRef = useRef<MapMode | null>(null);
   const savedMapViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const resizeRafRef = useRef<number | null>(null);
+  const lastAutoFitKeyRef = useRef<string | null>(null);
 
   // Функция для центрирования на местоположении пользователя (должна быть до условных возвратов)
   const centerOnUserLocation = useCallback(() => {
@@ -563,37 +672,37 @@ const MapPageComponent: React.FC<Props> = ({
     return Comp;
   }, [useMap]);
 
-  const MapLogic: React.FC<{
-    travelData: Point[];
-    userLocation: Coordinates | null;
-    mode: MapMode;
-    coordinates: Coordinates;
-    disableFitBounds: boolean;
-    routePoints: [number, number][];
-  }> = ({ travelData, userLocation, mode, coordinates, disableFitBounds, routePoints }) => {
+  const MapLogic: React.FC<{ mapClickHandler: (e: any) => void }> = ({ mapClickHandler }) => {
     const map = useMap();
-    useMapEvents({ click: handleMapClick });
-    const [hasCenteredOnData, setHasCenteredOnData] = useState(false);
-    const fitBoundsPoints = useMemo<[number, number][]>(() => {
-      const points: [number, number][] = [];
 
-      if (travelData.length > 0) {
-        const travelPoints = travelData
-          .map((p) => strToLatLng(p.coord))
-          .filter(Boolean) as [number, number][];
-        points.push(...travelPoints);
-      }
+    useMapEvents({
+      click: mapClickHandler,
+      zoomend: () => {
+        try {
+          const z = map.getZoom();
+          setMapZoom(z);
+        } catch {
+          // noop
+        }
+      },
+      zoomstart: () => {
+        setExpandedCluster(null);
+        try {
+          map.closePopup();
+        } catch {
+          // noop
+        }
+      },
+    });
 
-      if (points.length === 0 && userLocation) {
-        points.push([userLocation.longitude, userLocation.latitude]);
-      }
-
-      return points;
-    }, [travelData, userLocation]);
-
-    // Сохраняем ссылку на карту
+    // Keep map ref for imperative calls (fitBounds, setView)
     useEffect(() => {
       mapRef.current = map;
+      try {
+        setMapZoom(map.getZoom());
+      } catch {
+        // noop
+      }
     }, [map]);
 
     // ✅ Popup behavior: close reliably on map click or zoom.
@@ -615,52 +724,48 @@ const MapPageComponent: React.FC<Props> = ({
       };
     }, [map]);
 
-    // Сохраняем текущую позицию карты при изменении (только в режиме route)
+    // Save current map view (route mode only)
     useEffect(() => {
       if (!map || mode !== 'route') return;
-      
+
       const saveView = () => {
-        const center = map.getCenter();
-        const zoom = map.getZoom();
-        savedMapViewRef.current = {
-          center: [center.lat, center.lng],
-          zoom,
-        };
+        try {
+          const center = map.getCenter();
+          const zoom = map.getZoom();
+          savedMapViewRef.current = {
+            center: [center.lat, center.lng],
+            zoom,
+          };
+        } catch {
+          // noop
+        }
       };
-      
-      // Сохраняем позицию при изменении зума или перемещении
+
       map.on('moveend', saveView);
       map.on('zoomend', saveView);
-      
+
       return () => {
         map.off('moveend', saveView);
         map.off('zoomend', saveView);
       };
-    }, [map, mode]);
+    }, [map]);
 
-    // Центрирование на местоположение пользователя при первой загрузке
+    // Route mode: keep map stable (no auto fitBounds)
     useEffect(() => {
       if (!map) return;
-      
-      // ✅ ИСПРАВЛЕНИЕ: В режиме route НИКОГДА не центрируем автоматически
-      // Пользователь сам выбирает точки на карте, карта должна оставаться на текущей позиции
       if (mode === 'route') {
-        // Только при первой инициализации используем coordinates
         if (!hasInitializedRef.current && coordinates.latitude && coordinates.longitude) {
           map.setView([coordinates.latitude, coordinates.longitude], 13, { animate: false });
           hasInitializedRef.current = true;
         }
-        // После инициализации НЕ трогаем карту - она остается на текущей позиции
         lastModeRef.current = mode;
         return;
       }
-      
-      // Если переключились с route на radius, сбрасываем флаг инициализации
+
       if (lastModeRef.current === 'route' && mode === 'radius') {
         hasInitializedRef.current = false;
       }
-      
-      // Только для режима radius делаем центрирование при первой загрузке
+
       if (!hasInitializedRef.current) {
         if (userLocation) {
           map.setView([userLocation.latitude, userLocation.longitude], 11, { animate: false });
@@ -670,57 +775,40 @@ const MapPageComponent: React.FC<Props> = ({
           hasInitializedRef.current = true;
         }
       }
-      
+
       lastModeRef.current = mode;
     }, [map, mode, coordinates, userLocation]);
 
-    // Автоматическая подгонка границ при изменении данных (но только если не отключено)
-    const shouldFitBounds = !disableFitBounds && mode !== 'route';
-
+    // Fit bounds to all travel points (radius mode only)
     useEffect(() => {
-      if (!map || !shouldFitBounds) return;
+      if (!map) return;
+      if (disableFitBounds || mode === 'route') return;
+      if (!L || typeof (L as any).latLngBounds !== 'function' || typeof (L as any).latLng !== 'function') return;
 
-      // Защита от отсутствия Leaflet в тестовой/серверной среде
-      if (!L || typeof (L as any).latLngBounds !== 'function' || typeof (L as any).latLng !== 'function') {
-        return;
+      const dataKey = (travelData || [])
+        .map((p) => (p.id != null ? `id:${p.id}` : `c:${p.coord}`))
+        .join('|');
+      const autoFitKey = `${mode}:${dataKey}:${userLocation ? `${userLocation.latitude},${userLocation.longitude}` : 'no-user'}`;
+      if (lastAutoFitKeyRef.current === autoFitKey) return;
+
+      const coords = travelData
+        .map((p) => strToLatLng(p.coord))
+        .filter(Boolean) as [number, number][];
+
+      if (coords.length === 0 && userLocation) {
+        coords.push([userLocation.longitude, userLocation.latitude]);
       }
 
-      if (fitBoundsPoints.length > 0) {
-        const bounds = L.latLngBounds(
-          fitBoundsPoints.map(([lng, lat]) => L.latLng(lat, lng))
-        );
-        map.fitBounds(bounds.pad(0.2), { animate: !hasCenteredOnData });
-        setHasCenteredOnData(true);
-      }
-    }, [fitBoundsPoints, hasCenteredOnData, map, shouldFitBounds]);
-
-    // Фокус на выбранных точках маршрута
-    useEffect(() => {
-      if (!map || mode !== 'route') return;
-      if (!Array.isArray(routePoints) || routePoints.length === 0) return;
-
-      const validPoints = routePoints.filter(
-        (p) => Array.isArray(p) && p.length === 2 && Number.isFinite(p[0]) && Number.isFinite(p[1])
-      );
-      if (validPoints.length === 0) return;
-
-      if (validPoints.length === 1) {
-        const [lng, lat] = validPoints[0];
-        map.setView([lat, lng], 13, { animate: true });
-        return;
-      }
+      if (coords.length === 0) return;
 
       try {
-        const bounds = (window as any)?.L?.latLngBounds(
-          validPoints.map(([lng, lat]) => (window as any).L.latLng(lat, lng))
-        );
-        if (bounds && bounds.isValid()) {
-          map.fitBounds(bounds.pad(0.2), { animate: true });
-        }
+        const bounds = (L as any).latLngBounds(coords.map(([lng, lat]) => (L as any).latLng(lat, lng)));
+        map.fitBounds(bounds.pad(0.2), { animate: false });
+        lastAutoFitKeyRef.current = autoFitKey;
       } catch {
-        // ignore invalid coords
+        // noop
       }
-    }, [map, mode, routePoints]);
+    }, [map, mode, disableFitBounds, travelData, userLocation]);
 
     return null;
   };
@@ -748,7 +836,6 @@ const MapPageComponent: React.FC<Props> = ({
     <View style={styles.wrapper}>
       {noPointsAlongRoute && (
         <View
-          // Test/QA hook: must exist even if UI message is shown in panel/toast elsewhere
           testID="no-points-message"
           style={{ width: 0, height: 0, overflow: 'hidden' }}
           accessible
@@ -757,6 +844,7 @@ const MapPageComponent: React.FC<Props> = ({
           <Text>Маршрут построен. Вдоль маршрута нет доступных точек в радиусе 2 км.</Text>
         </View>
       )}
+
       {/* Кнопка "Мое местоположение" */}
       {userLocation && Platform.OS === 'web' && (
         <div
@@ -786,14 +874,6 @@ const MapPageComponent: React.FC<Props> = ({
               transition: 'all 0.2s ease',
               color: '#2b6cb0',
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#f0f7ff';
-              e.currentTarget.style.transform = 'scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#fff';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" fill="currentColor" />
@@ -802,20 +882,10 @@ const MapPageComponent: React.FC<Props> = ({
         </div>
       )}
 
-      {isMobileScreen && mode === 'route' && routePoints.length < 2 && (
-        <div style={styles.mobileRouteHint}>
-          <div style={styles.mobileRouteHintIcon}>➜</div>
-          <div>
-            <div style={styles.mobileRouteHintTitle}>Укажи старт и финиш</div>
-            <div style={styles.mobileRouteHintText}>Нажми по карте: сначала старт, затем финиш. Карта не будет масштабироваться автоматически.</div>
-          </div>
-        </div>
-      )}
-
       <MapContainer
         style={styles.map as any}
         center={safeCenter}
-        zoom={Number.isFinite((coordinates as any).zoom) ? (coordinates as any).zoom : 11}
+        zoom={initialZoomRef.current}
         scrollWheelZoom
         zoomControl
       >
@@ -824,14 +894,7 @@ const MapPageComponent: React.FC<Props> = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <MapLogic
-          travelData={travelData}
-          userLocation={userLocation}
-          mode={mode}
-          coordinates={coordinates}
-          disableFitBounds={disableFitBounds}
-          routePoints={routePoints}
-        />
+        <MapLogic mapClickHandler={handleMapClick} />
 
         {mode === 'radius' && radiusInMeters && (
           <Circle
@@ -853,7 +916,7 @@ const MapPageComponent: React.FC<Props> = ({
             icon={customIcons.start}
             eventHandlers={{
               click: (e: any) => {
-                e.originalEvent?.stopPropagation();
+                e?.originalEvent?.stopPropagation?.();
               },
             }}
           >
@@ -867,7 +930,7 @@ const MapPageComponent: React.FC<Props> = ({
             icon={customIcons.end}
             eventHandlers={{
               click: (e: any) => {
-                e.originalEvent?.stopPropagation();
+                e?.originalEvent?.stopPropagation?.();
               },
             }}
           >
@@ -913,11 +976,28 @@ const MapPageComponent: React.FC<Props> = ({
             PopupContent={PopupWithClose}
             markerIcon={customIcons.meTravel}
             markerOpacity={travelMarkerOpacity}
+            grid={clusterGrid}
+            expandClusters={expandClusters}
+            expandedClusterKey={expandedCluster?.key}
+            expandedClusterItems={expandedCluster?.items}
             onClusterZoom={(center, bounds) => {
               if (!mapRef.current) return;
               try {
                 const map = mapRef.current;
                 map.closePopup();
+                setExpandedCluster({
+                  key: `${center[0].toFixed(5)}|${center[1].toFixed(5)}|${Math.max(2, travelData.length)}`,
+                  items: travelData.filter((p) => {
+                    const ll = strToLatLng(p.coord);
+                    if (!ll) return false;
+                    const [lng, lat] = ll;
+                    const minLat = Math.min(bounds[0][0], bounds[1][0]);
+                    const maxLat = Math.max(bounds[0][0], bounds[1][0]);
+                    const minLng = Math.min(bounds[0][1], bounds[1][1]);
+                    const maxLng = Math.max(bounds[0][1], bounds[1][1]);
+                    return lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng;
+                  }),
+                });
                 map.fitBounds(
                   [
                     [bounds[0][0], bounds[0][1]],

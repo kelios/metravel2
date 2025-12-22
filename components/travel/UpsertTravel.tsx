@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
-import { StyleSheet, View, Dimensions, Platform } from 'react-native';
+import { StyleSheet, View, Dimensions, Platform, Alert, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from 'react-native-paper';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import Toast from 'react-native-toast-message';
 
 import { fetchTravel } from '@/src/api/travelsApi';
@@ -183,6 +183,7 @@ export { normalizeCategoryTravelAddress, normalizeCountries, initFilters };
 
 export default function UpsertTravel() {
     const router = useRouter();
+    const navigation = useNavigation();
     const { id } = useLocalSearchParams();
     const { userId, isAuthenticated, isSuperuser } = useAuth();
     const isSuperAdmin = isSuperuser;
@@ -318,6 +319,120 @@ export default function UpsertTravel() {
             enabled: isAuthenticated && hasAccess,
         }
     );
+
+    const exitGuardPromptVisibleRef = useRef(false);
+
+    const confirmLeaveWizard = useCallback(
+        async (onDiscard: () => void, onSavedAndLeave?: () => void) => {
+            if (exitGuardPromptVisibleRef.current) return;
+            exitGuardPromptVisibleRef.current = true;
+
+            const reset = () => {
+                exitGuardPromptVisibleRef.current = false;
+            };
+
+            const canSaveNow = autosave.canSave;
+            const hasUnsaved = autosave.hasUnsavedChanges;
+
+            if (!hasUnsaved) {
+                reset();
+                onDiscard();
+                return;
+            }
+
+            Alert.alert(
+                'Есть несохранённые изменения',
+                canSaveNow
+                    ? 'Сохранить черновик перед выходом?'
+                    : 'Сейчас сохранить нельзя (нет интернета или идёт сохранение). Выйти без сохранения?'
+                ,
+                [
+                    {
+                        text: 'Остаться',
+                        style: 'cancel',
+                        onPress: reset,
+                    },
+                    ...(canSaveNow
+                        ? [
+                              {
+                                  text: 'Сохранить и выйти',
+                                  onPress: async () => {
+                                      try {
+                                          await autosave.saveNow();
+                                          reset();
+                                          onSavedAndLeave?.();
+                                      } catch (e: any) {
+                                          reset();
+                                          Toast.show({
+                                              type: 'error',
+                                              text1: 'Не удалось сохранить',
+                                              text2: e?.message || 'Попробуйте ещё раз',
+                                          });
+                                      }
+                                  },
+                              },
+                          ]
+                        : []),
+                    {
+                        text: 'Выйти без сохранения',
+                        style: 'destructive',
+                        onPress: () => {
+                            reset();
+                            onDiscard();
+                        },
+                    },
+                ],
+            );
+        },
+        [autosave, exitGuardPromptVisibleRef],
+    );
+
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        if (typeof window === 'undefined') return;
+
+        const handler = (e: BeforeUnloadEvent) => {
+            if (!autosave.hasUnsavedChanges) return;
+            e.preventDefault();
+            e.returnValue = '';
+        };
+
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [autosave.hasUnsavedChanges]);
+
+    useEffect(() => {
+        if (Platform.OS === 'web') return;
+        if (!navigation?.addListener) return;
+
+        const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+            if (!autosave.hasUnsavedChanges) return;
+            e.preventDefault();
+
+            void confirmLeaveWizard(
+                () => navigation.dispatch(e.data.action),
+                () => navigation.dispatch(e.data.action),
+            );
+        });
+
+        return unsubscribe;
+    }, [autosave.hasUnsavedChanges, confirmLeaveWizard, navigation]);
+
+    useEffect(() => {
+        if (Platform.OS === 'web') return;
+
+        const onHardwareBack = () => {
+            if (!autosave.hasUnsavedChanges) return false;
+            void confirmLeaveWizard(
+                () => router.back(),
+                () => router.back(),
+            );
+            return true;
+        };
+
+        const sub = BackHandler.addEventListener('hardwareBackPress', onHardwareBack);
+        return () => sub.remove();
+    }, [autosave.hasUnsavedChanges, confirmLeaveWizard, router]);
     
     const handleManualSave = useCallback(async () => {
         try {

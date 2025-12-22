@@ -183,13 +183,18 @@ describe('RoutingMachine', () => {
       expect(mockSetRoutingLoading).toHaveBeenCalledWith(true);
     });
 
+    // Ensure we only made a single routing request so far.
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
     jest.clearAllMocks();
 
     // Re-render with same props
     rerender(<RoutingMachine {...defaultProps} />);
 
-    // Should not trigger another routing request
-    expect(mockSetRoutingLoading).not.toHaveBeenCalled();
+    // Should not trigger another routing request (component may still sync loading=false).
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it('should clear polyline when route points are removed', async () => {
@@ -264,6 +269,9 @@ describe('RoutingMachine', () => {
   });
 
   it('should abort previous request when new routing starts', async () => {
+    const prevNodeEnv = process.env.NODE_ENV;
+    (process.env as any).NODE_ENV = 'development';
+
     const abortSpy = jest.fn();
     const mockAbortController = {
       abort: abortSpy,
@@ -272,17 +280,13 @@ describe('RoutingMachine', () => {
 
     global.AbortController = jest.fn(() => mockAbortController) as any;
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        routes: [{
-          geometry: {
-            coordinates: [[27.5590, 53.9006], [27.5700, 53.9100]],
-          },
-          distance: 5000,
-        }],
-      }),
-    });
+    // Make first request hang so that the second routing attempt can abort it.
+    let resolveFetch: ((value: any) => void) | undefined;
+    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+      new Promise((resolve) => {
+        resolveFetch = resolve as any;
+      })
+    );
 
     const { rerender } = render(<RoutingMachine {...defaultProps} />);
 
@@ -301,5 +305,22 @@ describe('RoutingMachine', () => {
     await waitFor(() => {
       expect(abortSpy).toHaveBeenCalled();
     });
+
+    // Resolve the hanging fetch to avoid unhandled promise / leaks.
+    if (typeof resolveFetch === 'function') {
+      resolveFetch({
+        ok: true,
+        json: async () => ({
+          routes: [{
+            geometry: {
+              coordinates: [[27.5590, 53.9006], [27.5700, 53.9100]],
+            },
+            distance: 5000,
+          }],
+        }),
+      });
+    }
+
+    (process.env as any).NODE_ENV = prevNodeEnv;
   });
 });

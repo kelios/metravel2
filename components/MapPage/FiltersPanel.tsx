@@ -940,7 +940,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       flexGrow: 1,
     },
     contentContainer: {
-      paddingBottom: 16,
+      paddingBottom: 8,
       flexGrow: 1,
     },
     section: {

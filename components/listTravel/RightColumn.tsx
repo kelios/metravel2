@@ -482,7 +482,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
               contentContainerStyle={{
                 paddingHorizontal: contentPadding,
                 paddingTop: 8,
-                paddingBottom: Platform.OS === 'web' && isMobile ? 36 + 16 : 28,
+                paddingBottom: Platform.OS === 'web' && isMobile ? 32 + 8 : 28,
               }}
               scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
             />

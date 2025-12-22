@@ -19,7 +19,7 @@ export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
 
 export const DOCUMENT_NAV_ITEMS: HeaderNavItem[] = [
   { path: '/privacy', label: 'Политика конфиденциальности', icon: 'shield', priority: 'secondary' },
-  { path: '/cookies', label: 'Настройки cookies', icon: 'cookie', priority: 'secondary' },
+  { path: '/cookies', label: 'Настройки cookies', icon: 'settings', priority: 'secondary' },
 ];
 
 export const PRIMARY_HEADER_NAV_ITEMS = HEADER_NAV_ITEMS.filter((item) => item.priority === 'primary');

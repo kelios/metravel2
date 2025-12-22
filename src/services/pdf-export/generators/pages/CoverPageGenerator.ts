@@ -26,9 +26,9 @@ export class CoverPageGenerator {
     const { colors } = this.theme;
     const travelLabel = this.getTravelLabel(data.travelCount);
     const safeCoverImage = this.buildSafeImageUrl(data.coverImage);
-    
+
     const background = safeCoverImage
-      ? `linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.75) 100%), url('${this.escapeHtml(safeCoverImage)}')`
+      ? `url('${this.escapeHtml(safeCoverImage)}')`
       : `linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%)`;
 
     return `
@@ -37,7 +37,7 @@ export class CoverPageGenerator {
         height: 285mm;
         display: flex;
         flex-direction: column;
-        justify-content: flex-end;
+        justify-content: space-between;
         color: ${colors.cover.text};
         background: ${background};
         background-size: cover;
@@ -45,18 +45,64 @@ export class CoverPageGenerator {
         position: relative;
         overflow: hidden;
       ">
-        ${this.renderDecorativeElements()}
-        
-        <div style="padding: 40mm 30mm; position: relative; z-index: 2;">
-          ${data.subtitle ? this.renderSubtitle(data.subtitle) : ''}
+        ${safeCoverImage ? `
+          <div style="
+            position: absolute;
+            inset: 0;
+            background:
+              linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.10) 45%, rgba(0,0,0,0.60) 100%);
+            z-index: 1;
+          "></div>
+        ` : ''}
+
+        <div style="
+          padding: 26mm 24mm 0 24mm;
+          text-align: center;
+          position: relative;
+          z-index: 2;
+        ">
           ${this.renderTitle(data.title)}
-          ${this.renderStats(data.travelCount, travelLabel, data.yearRange)}
+          ${data.subtitle ? this.renderSubtitle(data.subtitle) : ''}
           ${this.renderUserName(data.userName)}
-          ${this.renderDate()}
           ${data.quote ? this.renderQuote(data.quote) : ''}
         </div>
 
-        ${this.renderLogo()}
+        <div style="
+          padding: 0 24mm 24mm 24mm;
+          position: relative;
+          z-index: 2;
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 10mm;
+        ">
+          <div style="
+            font-size: 11pt;
+            letter-spacing: 0.04em;
+            color: rgba(255,255,255,0.85);
+            font-weight: 500;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            hyphens: auto;
+          ">
+            ${this.escapeHtml(String(data.travelCount))} ${travelLabel}${data.yearRange ? ` • ${this.escapeHtml(data.yearRange)}` : ''}
+          </div>
+          <div style="
+            font-size: 10pt;
+            opacity: 0.7;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+          ">MeTravel</div>
+        </div>
+
+        <div style="
+          position: absolute;
+          bottom: 10mm;
+          left: 24mm;
+          font-size: 9pt;
+          opacity: 0.7;
+          z-index: 2;
+        ">${this.renderDate()}</div>
       </section>
     `;
   }
@@ -90,11 +136,10 @@ export class CoverPageGenerator {
     const { typography } = this.theme;
     return `
       <div style="
-        font-size: 14pt;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        color: rgba(255,255,255,0.8);
-        margin-bottom: 12mm;
+        font-size: 16pt;
+        letter-spacing: 0.02em;
+        color: rgba(255,255,255,0.88);
+        margin-top: 6mm;
         font-family: ${typography.bodyFont};
       ">${this.escapeHtml(subtitle)}</div>
     `;
@@ -107,9 +152,12 @@ export class CoverPageGenerator {
         font-size: ${typography.h1.size};
         font-weight: ${typography.h1.weight};
         line-height: ${typography.h1.lineHeight};
-        margin-bottom: 20mm;
-        text-shadow: 0 10px 30px rgba(0,0,0,0.45);
+        margin: 0;
+        text-shadow: 0 10px 30px rgba(0,0,0,0.35);
         font-family: ${typography.headingFont};
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        hyphens: auto;
       ">${this.escapeHtml(title)}</h1>
     `;
   }
@@ -142,10 +190,9 @@ export class CoverPageGenerator {
     const { typography } = this.theme;
     return `
       <div style="
-        font-size: 16pt;
-        font-style: italic;
-        opacity: 0.95;
-        margin-bottom: 28mm;
+        font-size: 12pt;
+        opacity: 0.85;
+        margin-top: 10mm;
         font-family: ${typography.bodyFont};
       ">${this.escapeHtml(userName)}</div>
     `;
@@ -159,20 +206,21 @@ export class CoverPageGenerator {
       year: 'numeric',
     });
     return `
-      <div style="
-        font-size: 11pt;
+      <span style="
+        font-size: 9pt;
         opacity: 0.75;
         font-family: ${typography.bodyFont};
-      ">Создано ${dateStr}</div>
+      ">Создано ${dateStr}</span>
     `;
   }
 
   private renderQuote(quote: { text: string; author: string }): string {
     return `
       <div style="
-        margin-top: 20mm;
-        padding-top: 20mm;
-        border-top: 1px solid rgba(255,255,255,0.3);
+        margin-top: 14mm;
+        max-width: 120mm;
+        margin-left: auto;
+        margin-right: auto;
         font-style: italic;
         opacity: 0.85;
       ">
@@ -183,19 +231,6 @@ export class CoverPageGenerator {
           — ${this.escapeHtml(quote.author)}
         </div>
       </div>
-    `;
-  }
-
-  private renderLogo(): string {
-    return `
-      <div style="
-        position: absolute;
-        bottom: 15mm;
-        right: 20mm;
-        font-size: 10pt;
-        opacity: 0.6;
-        font-weight: 500;
-      ">MeTravel</div>
     `;
   }
 

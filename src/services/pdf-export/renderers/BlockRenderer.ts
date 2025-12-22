@@ -73,6 +73,9 @@ export class BlockRenderer {
         page-break-after: avoid;
         orphans: 3;
         widows: 3;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        hyphens: auto;
       ">${this.escapeHtml(text)}</h${level}>
     `;
   }
@@ -97,6 +100,9 @@ export class BlockRenderer {
         text-align: justify;
         orphans: 2;
         widows: 2;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        hyphens: auto;
       ">${content}</p>
     `;
   }
@@ -118,6 +124,9 @@ export class BlockRenderer {
         margin-bottom: ${this.theme.spacing.elementSpacing};
         color: ${this.theme.colors.text};
         font-family: ${this.theme.typography.bodyFont};
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        hyphens: auto;
       ">${this.escapeHtml(item)}</li>
     `
       )
@@ -396,6 +405,9 @@ export class BlockRenderer {
               font-size: ${style.size};
               color: ${this.theme.colors.text};
               text-align: left;
+              overflow-wrap: anywhere;
+              word-break: break-word;
+              hyphens: auto;
             ">${this.escapeHtml(header)}</th>
           `).join('')}
         </tr>
@@ -413,6 +425,9 @@ export class BlockRenderer {
             border: 1px solid ${this.theme.colors.border};
             font-size: ${style.size};
             color: ${this.theme.colors.text};
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            hyphens: auto;
           ">${this.escapeHtml(cell)}</td>
         `).join('')}
       </tr>
@@ -432,6 +447,7 @@ export class BlockRenderer {
           border: 1px solid ${this.theme.colors.border};
           border-radius: ${this.theme.blocks.borderRadius};
           overflow: hidden;
+          page-break-inside: avoid;
         ">
           ${headersHtml}
           <tbody>${rowsHtml}</tbody>

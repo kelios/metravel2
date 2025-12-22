@@ -15,8 +15,21 @@ jest.mock('expo-router', () => ({
   }),
 }));
 
+jest.mock('@/src/api/user', () => ({
+  fetchUserProfile: jest.fn().mockResolvedValue({
+    id: '123',
+    first_name: 'Test',
+    last_name: 'User',
+    avatar: null,
+  }),
+}));
+
 jest.mock('@/src/api/travelsApi', () => ({
-  fetchTravels: jest.fn().mockResolvedValue({ data: [], total: 3 }),
+  fetchMyTravels: jest.fn().mockResolvedValue([
+    { id: 1 },
+    { id: 2 },
+    { id: 3 },
+  ]),
 }));
 
 jest.mock('@/src/utils/storageBatch', () => ({
@@ -40,6 +53,8 @@ const setupAuth = (overrides?: Partial<ReturnType<typeof useAuth>>) => {
     username: 'Test User',
     isSuperuser: false,
     user: { id: '123', name: 'Test User', email: 'user@example.com' },
+    setUserAvatar: jest.fn(),
+    triggerProfileRefresh: jest.fn(),
     setIsAuthenticated: jest.fn(),
     setUsername: jest.fn(),
     setIsSuperuser: jest.fn(),
@@ -97,20 +112,18 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(2, 5);
 
-    const { getByText, getAllByText, queryByText } = render(<ProfileScreen />);
+    const { findByText, getAllByText, queryByText } = render(<ProfileScreen />);
 
-    // Пока идёт загрузка, имени пользователя ещё может не быть, но мы проверим финальное состояние
-    await waitFor(() => {
-      expect(getByText('Test User')).toBeTruthy();
-      expect(getByText('user@example.com')).toBeTruthy();
+    // Дожидаемся финального состояния (данные грузятся через эффекты)
+    expect(await findByText('Test User', {}, { timeout: 5000 })).toBeTruthy();
+    expect(await findByText('user@example.com', {}, { timeout: 5000 })).toBeTruthy();
 
-      // travelsCount из fetchTravels.total (3)
-      expect(getAllByText('3').length).toBeGreaterThan(0);
-      // favoritesCount (может отображаться несколько раз)
-      expect(getAllByText('2').length).toBeGreaterThan(0);
-      // viewsCount
-      expect(getAllByText('5').length).toBeGreaterThan(0);
-    });
+    // travelsCount из fetchMyTravels (3)
+    expect(getAllByText('3').length).toBeGreaterThan(0);
+    // favoritesCount
+    expect(getAllByText('2').length).toBeGreaterThan(0);
+    // viewsCount
+    expect(getAllByText('5').length).toBeGreaterThan(0);
 
     // Проверяем наличие основных пунктов меню (может быть несколько в иерархии, поэтому используем getAllByText)
     expect(getAllByText('Избранное').length).toBeGreaterThan(0);
@@ -119,7 +132,7 @@ describe('ProfileScreen', () => {
     expect(getAllByText('Настройки').length).toBeGreaterThan(0);
 
     // Кнопка выхода
-    expect(getByText('Выйти')).toBeTruthy();
+    expect(await findByText('Выйти', {}, { timeout: 5000 })).toBeTruthy();
     expect(queryByText('Войдите в аккаунт')).toBeNull();
   });
 

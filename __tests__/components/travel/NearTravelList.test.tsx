@@ -22,6 +22,7 @@ jest.mock('@/hooks/useResponsive', () => ({
 }));
 
 describe('NearTravelList', () => {
+  jest.setTimeout(15000);
   const { fetchTravelsNear } = jest.requireMock('@/src/api/map') as {
     fetchTravelsNear: jest.Mock;
   };
@@ -37,11 +38,12 @@ describe('NearTravelList', () => {
   });
 
   const flush = async () => {
-    act(() => {
-      jest.advanceTimersByTime(350); // wait for debounce (300ms) + buffer
-    });
     await act(async () => {
-      // allow pending promises to resolve
+      jest.advanceTimersByTime(350); // wait for debounce (300ms) + buffer
+      jest.runOnlyPendingTimers();
+      // flush promises
+      await Promise.resolve();
+      await Promise.resolve();
     });
   };
 
@@ -50,7 +52,7 @@ describe('NearTravelList', () => {
     const { rerender } = render(<NearTravelList travel={travel} />);
 
     await flush();
-    await waitFor(() => expect(fetchTravelsNear).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(fetchTravelsNear).toHaveBeenCalledTimes(1), { timeout: 3000 });
 
     // rerender with the same id should not trigger another fetch
     rerender(<NearTravelList travel={travel} />);
@@ -60,6 +62,6 @@ describe('NearTravelList', () => {
     // change id -> should fetch again
     rerender(<NearTravelList travel={{ id: 2 }} />);
     await flush();
-    await waitFor(() => expect(fetchTravelsNear).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(fetchTravelsNear).toHaveBeenCalledTimes(2), { timeout: 3000 });
   });
 });

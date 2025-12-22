@@ -104,6 +104,27 @@ describe('TocPageGenerator', () => {
       expect(html).toContain('&lt;script&gt;');
     });
 
+    it('должен иметь безопасные переносы для длинных названий (без nowrap)', () => {
+      const entries = [
+        {
+          travel: {
+            id: 1,
+            name: 'Очень-длинное-название-путешествия-с-супердлиннымсловомбезпробелов-1234567890',
+            countryName: 'СупердлиннаяСтранаБезПробеловСупердлиннаяСтранаБезПробелов',
+            year: 2024,
+          },
+          pageNumber: 3,
+        },
+      ];
+
+      const html = generator.generate(entries, 2);
+
+      expect(html).toContain('overflow-wrap: anywhere');
+      expect(html).toContain('word-break: break-word');
+      expect(html).toContain('hyphens: auto');
+      expect(html).not.toContain('white-space: nowrap');
+    });
+
     it('должен работать с пустым списком', () => {
       const entries: any[] = [];
       const html = generator.generate(entries, 2);

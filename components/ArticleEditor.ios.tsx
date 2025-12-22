@@ -1,18 +1,13 @@
 // components/ArticleEditor.ios.tsx
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as ImagePicker from 'expo-image-picker';
+import { MaterialIcons } from '@expo/vector-icons';
+
 import { uploadImage } from '@/src/api/misc';
 import { useAuth } from '@/context/AuthContext';
+import { sanitizeRichText } from '@/src/utils/sanitizeRichText';
 
 export interface ArticleEditorProps {
   label?: string;
@@ -36,12 +31,28 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   idTravel,
   variant = 'default',
 }) => {
-  const [html, setHtml] = useState(content);
+  const sanitizeForEditor = useCallback((value: string) => {
+    return sanitizeRichText(value);
+  }, []);
+
+  const [html, setHtml] = useState(() => sanitizeForEditor(content));
   const [isReady, setIsReady] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const webViewRef = useRef<WebView>(null);
   const autosaveTimer = useRef<NodeJS.Timeout>();
   const { isAuthenticated } = useAuth();
+
+  const safeJsonString = useCallback((value: string) => {
+    // Avoid breaking out of <script> tag and avoid template-literal interpolation issues.
+    return JSON.stringify(value)
+      .replace(/</g, '\\u003c')
+      .replace(/\u2028/g, '\\u2028')
+      .replace(/\u2029/g, '\\u2029');
+  }, []);
+
+  const initialSanitizedContent = useMemo(() => sanitizeForEditor(content), [content, sanitizeForEditor]);
+  const safePlaceholder = useMemo(() => safeJsonString(placeholder), [placeholder, safeJsonString]);
+  const safeInitialContent = useMemo(() => safeJsonString(initialSanitizedContent), [initialSanitizedContent, safeJsonString]);
 
   // Quill HTML template
   const quillHTML = `
@@ -126,6 +137,9 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
 
   <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
   <script>
+    var INITIAL_PLACEHOLDER = ${safePlaceholder};
+    var INITIAL_CONTENT = ${safeInitialContent};
+
     var quill = new Quill('#editor', {
       theme: 'snow',
       modules: {
@@ -136,11 +150,11 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
           userOnly: true
         }
       },
-      placeholder: '${placeholder.replace(/'/g, "\\'")}',
+      placeholder: INITIAL_PLACEHOLDER,
     });
 
     // Установка начального контента
-    quill.root.innerHTML = \`${content.replace(/`/g, '\\`')}\`;
+    quill.root.innerHTML = INITIAL_CONTENT;
 
     // Отправка изменений в React Native
     quill.on('text-change', function() {
@@ -197,9 +211,10 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       }
       
       if (data.type === 'content-change') {
-        const newHtml = data.html;
-        setHtml(newHtml);
-        onChange(newHtml);
+        const newHtml = typeof data.html === 'string' ? data.html : '';
+        const cleaned = sanitizeForEditor(newHtml);
+        setHtml(cleaned);
+        onChange(cleaned);
         
         // Автосохранение
         if (onAutosave) {
@@ -207,24 +222,25 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
             clearTimeout(autosaveTimer.current);
           }
           autosaveTimer.current = setTimeout(() => {
-            onAutosave(newHtml);
+            onAutosave(cleaned);
           }, autosaveDelay);
         }
       }
     } catch (error) {
       console.error('Error parsing WebView message:', error);
     }
-  }, [onChange, onAutosave, autosaveDelay]);
+  }, [onChange, onAutosave, autosaveDelay, sanitizeForEditor]);
 
   // Обновление контента при изменении prop
   useEffect(() => {
-    if (isReady && content !== html) {
+    const cleaned = sanitizeForEditor(content);
+    if (isReady && cleaned !== html) {
       webViewRef.current?.postMessage(JSON.stringify({
         type: 'set-content',
-        html: content
+        html: cleaned
       }));
     }
-  }, [content, html, isReady]);
+  }, [content, html, isReady, sanitizeForEditor]);
 
   // Очистка таймера при размонтировании
   useEffect(() => {

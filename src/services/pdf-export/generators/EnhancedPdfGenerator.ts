@@ -137,9 +137,9 @@ export class EnhancedPdfGenerator {
     const travelLabel = this.getTravelLabel(travelCount);
     const safeCoverImage = this.buildSafeImageUrl(coverImage);
     const coverQuote = this.selectedQuotes?.cover;
-    
+
     const background = safeCoverImage
-      ? `linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.75) 100%), url('${this.escapeHtml(safeCoverImage)}')`
+      ? `url('${this.escapeHtml(safeCoverImage)}')`
       : `linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%)`;
 
     return `
@@ -148,7 +148,7 @@ export class EnhancedPdfGenerator {
         height: 285mm;
         display: flex;
         flex-direction: column;
-        justify-content: flex-end;
+        justify-content: space-between;
         color: ${colors.cover.text};
         background: ${background};
         background-size: cover;
@@ -156,62 +156,71 @@ export class EnhancedPdfGenerator {
         position: relative;
         overflow: hidden;
       ">
-        <div style="padding: 40mm 30mm; position: relative; z-index: 2;">
-          ${settings.subtitle ? `
-            <div style="
-              font-size: 14pt;
-              letter-spacing: 0.2em;
-              text-transform: uppercase;
-              color: rgba(255,255,255,0.8);
-              margin-bottom: 12mm;
-              font-family: ${typography.bodyFont};
-            ">${this.escapeHtml(settings.subtitle)}</div>
-          ` : ''}
+        ${safeCoverImage ? `
+          <div style="
+            position: absolute;
+            inset: 0;
+            background:
+              linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.10) 45%, rgba(0,0,0,0.60) 100%);
+            z-index: 1;
+          "></div>
+        ` : ''}
+
+        <div style="
+          padding: 26mm 24mm 0 24mm;
+          text-align: center;
+          position: relative;
+          z-index: 2;
+        ">
           <h1 style="
             font-size: ${typography.h1.size};
             font-weight: ${typography.h1.weight};
             line-height: ${typography.h1.lineHeight};
-            margin-bottom: 20mm;
-            text-shadow: 0 10px 30px rgba(0,0,0,0.45);
+            margin: 0;
+            text-shadow: 0 10px 30px rgba(0,0,0,0.35);
             font-family: ${typography.headingFont};
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            hyphens: auto;
           ">${this.escapeHtml(settings.title)}</h1>
-          <div style="display: flex; gap: 24mm; align-items: center; margin-bottom: 16mm;">
-            <div>
-              <div style="font-size: 32pt; font-weight: 800; color: ${colors.accent};">
-                ${travelCount}
-              </div>
-              <div style="font-size: 13pt; text-transform: uppercase; letter-spacing: 0.08em;">
-                ${travelLabel}
-              </div>
-            </div>
-            ${yearRange ? `
-              <div style="border-left: 1px solid rgba(255,255,255,0.4); padding-left: 24mm;">
-                <div style="font-size: 32pt; font-weight: 700; color: ${colors.accent};">
-                  ${yearRange}
-                </div>
-                <div style="font-size: 13pt; letter-spacing: 0.08em;">годы</div>
-              </div>
-            ` : ''}
-          </div>
-          <div style="font-size: 16pt; font-style: italic; opacity: 0.95; margin-bottom: 28mm; font-family: ${typography.bodyFont};">
-            ${this.escapeHtml(userName)}
-          </div>
-          <div style="font-size: 11pt; opacity: 0.75; font-family: ${typography.bodyFont};">
-            Создано ${new Date().toLocaleDateString('ru-RU', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })}
-          </div>
+
+          ${settings.subtitle ? `
+            <div style="
+              font-size: 16pt;
+              letter-spacing: 0.02em;
+              color: rgba(255,255,255,0.88);
+              margin-top: 6mm;
+              font-family: ${typography.bodyFont};
+              overflow-wrap: anywhere;
+              word-break: break-word;
+              hyphens: auto;
+            ">${this.escapeHtml(settings.subtitle)}</div>
+          ` : ''}
+
+          <div style="
+            font-size: 12pt;
+            opacity: 0.85;
+            margin-top: 10mm;
+            font-family: ${typography.bodyFont};
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            hyphens: auto;
+          ">${this.escapeHtml(userName)}</div>
+
           ${coverQuote ? `
             <div style="
-              margin-top: 10mm;
-              max-width: 110mm;
+              margin-top: 14mm;
+              max-width: 120mm;
+              margin-left: auto;
+              margin-right: auto;
               font-size: 11pt;
               line-height: 1.6;
               color: rgba(255,255,255,0.9);
               font-style: italic;
               font-family: ${typography.bodyFont};
+              overflow-wrap: anywhere;
+              word-break: break-word;
+              hyphens: auto;
             ">
               «${this.escapeHtml(coverQuote.text)}»
               ${coverQuote.author ? `
@@ -221,6 +230,9 @@ export class EnhancedPdfGenerator {
                   letter-spacing: 0.08em;
                   text-transform: uppercase;
                   opacity: 0.9;
+                  overflow-wrap: anywhere;
+                  word-break: break-word;
+                  hyphens: auto;
                 ">
                   ${this.escapeHtml(coverQuote.author)}
                 </div>
@@ -228,8 +240,50 @@ export class EnhancedPdfGenerator {
             </div>
           ` : ''}
         </div>
-        <div style="position: absolute; bottom: 20mm; right: 25mm; font-weight: 600; letter-spacing: 0.12em; font-family: ${typography.bodyFont};">
-          MeTravel
+
+        <div style="
+          padding: 0 24mm 24mm 24mm;
+          position: relative;
+          z-index: 2;
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 10mm;
+        ">
+          <div style="
+            font-size: 11pt;
+            letter-spacing: 0.04em;
+            color: rgba(255,255,255,0.85);
+            font-weight: 500;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            hyphens: auto;
+          ">
+            ${this.escapeHtml(String(travelCount))} ${travelLabel}${yearRange ? ` • ${this.escapeHtml(yearRange)}` : ''}
+          </div>
+          <div style="
+            font-size: 10pt;
+            opacity: 0.7;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            font-family: ${typography.bodyFont};
+          ">MeTravel</div>
+        </div>
+
+        <div style="
+          position: absolute;
+          bottom: 10mm;
+          left: 24mm;
+          font-size: 9pt;
+          opacity: 0.7;
+          z-index: 2;
+          font-family: ${typography.bodyFont};
+        ">
+          Создано ${new Date().toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          })}
         </div>
       </section>
     `;
@@ -297,26 +351,12 @@ export class EnhancedPdfGenerator {
                 background: ${colors.surfaceAlt};
                 box-shadow: ${this.theme.blocks.shadow};
                 position: relative;
-                ${index === 3 ? `
-                  &::after {
-                    content: '+${remaining}';
-                    position: absolute;
-                    inset: 0;
-                    background: rgba(0,0,0,0.7);
-                    color: white;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 24pt;
-                    font-weight: 700;
-                  }
-                ` : ''}
               ">
                 <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
                   style="width: 100%; height: 45mm; object-fit: cover; display: block;"
                   crossorigin="anonymous"
                   onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
-                ${index === 3 && remaining > 0 ? `
+                ${index === 3 ? `
                   <div style="
                     position: absolute;
                     inset: 0;
@@ -781,6 +821,8 @@ export class EnhancedPdfGenerator {
             grid-template-columns: 1fr 1fr;
             gap: ${spacing.elementSpacing};
             margin-top: ${spacing.blockSpacing};
+            break-inside: avoid;
+            page-break-inside: avoid;
           ">
             ${plusBlocks.length > 0 ? `
               <div style="
@@ -789,6 +831,8 @@ export class EnhancedPdfGenerator {
                 padding: ${spacing.elementSpacing} ${spacing.blockSpacing};
                 border: ${this.theme.blocks.borderWidth} solid ${colors.tipBlock.border};
                 box-shadow: ${this.theme.blocks.shadow};
+                break-inside: avoid;
+                page-break-inside: avoid;
               ">
                 <div style="
                   display: flex;
@@ -820,6 +864,8 @@ export class EnhancedPdfGenerator {
                 padding: ${spacing.elementSpacing} ${spacing.blockSpacing};
                 border: ${this.theme.blocks.borderWidth} solid ${colors.dangerBlock.border};
                 box-shadow: ${this.theme.blocks.shadow};
+                break-inside: avoid;
+                page-break-inside: avoid;
               ">
                 <div style="
                   display: flex;
@@ -1115,6 +1161,8 @@ export class EnhancedPdfGenerator {
           padding: ${spacing.blockSpacing};
           background: ${colors.surface};
           box-shadow: ${this.theme.blocks.shadow};
+          break-inside: avoid;
+          page-break-inside: avoid;
         ">
           <div style="
             display: flex;

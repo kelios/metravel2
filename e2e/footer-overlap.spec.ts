@@ -75,6 +75,6 @@ test.describe('Footer dock (web mobile)', () => {
     expect(gutterHeight, 'bottom gutter height should be measurable').toBeGreaterThan(0);
 
     expect(gutterHeight).toBeGreaterThanOrEqual(dockHeight - 1);
-    expect(gutterHeight, `bottom gutter should not be excessively large (gutterHeight=${gutterHeight}, dockHeight=${dockHeight})`).toBeLessThanOrEqual(dockHeight + 12);
+    expect(gutterHeight, `bottom gutter should not be excessively large (gutterHeight=${gutterHeight}, dockHeight=${dockHeight})`).toBeLessThanOrEqual(dockHeight + 6);
   });
 });

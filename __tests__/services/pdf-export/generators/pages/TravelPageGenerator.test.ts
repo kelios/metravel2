@@ -55,6 +55,19 @@ describe('TravelPageGenerator', () => {
 
       expect(html).toContain('>7<');
     });
+
+    it('должен иметь безопасные переносы для длинного названия в оверлее', () => {
+      const travel = {
+        ...mockTravel,
+        name: 'Очень-длинное-название-путешествия-с-супердлиннымсловомбезпробелов-1234567890',
+      };
+
+      const html = generator.generatePhotoPage(travel, 3);
+
+      expect(html).toContain('overflow-wrap: anywhere');
+      expect(html).toContain('word-break: break-word');
+      expect(html).toContain('hyphens: auto');
+    });
   });
 
   describe('generateContentPage', () => {
@@ -151,6 +164,22 @@ describe('TravelPageGenerator', () => {
 
       expect(html).not.toContain('<script>');
       expect(html).toContain('&lt;script&gt;');
+    });
+
+    it('должен иметь безопасные переносы для длинного названия в заголовке и метаданных', () => {
+      const travel = {
+        ...mockTravel,
+        name: 'Очень-длинное-название-путешествия-с-супердлиннымсловомбезпробелов-1234567890',
+        countryName: 'СупердлиннаяСтранаБезПробеловСупердлиннаяСтранаБезПробелов',
+        number_days: 123456,
+      };
+
+      const html = generator.generateContentPage(travel, 4, { showMetadata: true });
+
+      expect(html).toContain('overflow-wrap: anywhere');
+      expect(html).toContain('word-break: break-word');
+      expect(html).toContain('hyphens: auto');
+      expect(html).toContain('page-break-inside: avoid');
     });
   });
 });

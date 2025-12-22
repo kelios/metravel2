@@ -7,6 +7,9 @@ const mockLeaflet = {
     options,
     _getIconUrl: jest.fn(),
   })),
+  divIcon: jest.fn().mockImplementation((options: any) => ({
+    options,
+  })),
   latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
   latLngBounds: jest.fn((_points: any[]) => ({
     pad: jest.fn((padding: number) => ({ pad: padding })),
@@ -60,6 +63,7 @@ jest.mock('leaflet', () => ({
 
 // Mock react-leaflet module
 jest.mock('react-leaflet', () => {
+  let currentZoom = 11
   return {
     MapContainer: ({ children, ...props }: any) => <div data-testid="map-container" {...props}>{children}</div>,
     TileLayer: (props: any) => <div data-testid="tile-layer" {...props} />,
@@ -72,7 +76,8 @@ jest.mock('react-leaflet', () => {
       if (props.eventHandlers?.click) {
         (globalThis as any).lastMarkerClickHandler = props.eventHandlers.click
       }
-      return <div data-testid="marker" {...props} />
+      const iconClass = props.icon?.options?.className
+      return <div data-testid="marker" data-icon-class={iconClass} {...props} />
     },
     Popup: ({ children }: any) => <div data-testid="popup">{children}</div>,
     useMap: jest.fn(() => ({
@@ -81,11 +86,17 @@ jest.mock('react-leaflet', () => {
       closePopup: jest.fn(),
       latLngToContainerPoint: jest.fn(() => ({ x: 0, y: 0 })),
       getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.5667 })),
-      getZoom: jest.fn(() => 11),
+      getZoom: jest.fn(() => currentZoom),
       on: jest.fn(),
       off: jest.fn(),
     })),
-    useMapEvents: jest.fn(),
+    useMapEvents: jest.fn((handlers: any) => {
+      ;(globalThis as any).lastMapEvents = handlers
+      return null
+    }),
+    __setZoomForTests: (z: number) => {
+      currentZoom = z
+    },
   }
 })
 
@@ -667,22 +678,50 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       expect(Array.isArray(markers)).toBe(true)
     })
 
-    it('shows "no points" message in route mode when routePoints >= 2 and no travel data', async () => {
+    it('expands clusters into individual markers on high zoom', async () => {
       const { Platform } = require('react-native')
       ;(Platform as any).OS = 'web'
 
-      const props = {
-        ...defaultProps,
-        mode: 'route' as const,
-        routePoints: [[27.5667, 53.9], [27.5767, 53.91]] as [number, number][],
-        travel: { data: [] } as any,
+      const rl = require('react-leaflet')
+      // start at low zoom (cluster bubble)
+      rl.__setZoomForTests(11)
+
+      const travel = {
+        data: Array.from({ length: 51 }).map((_, i) => ({
+          id: i + 1,
+          coord: `53.900${i % 5},27.566${i % 5}`,
+          address: `Addr ${i + 1}`,
+          travelImageThumbUrl: 'thumb.jpg',
+          categoryName: 'Test',
+        })),
       }
 
-      const { getByTestId } = render(<MapPageComponent {...props} />)
+      const { queryAllByTestId } = render(
+        <MapPageComponent
+          {...defaultProps}
+          mode="radius"
+          travel={travel as any}
+        />
+      )
+
       await act(async () => {})
 
-      const message = getByTestId('no-points-message')
-      expect(message).toBeTruthy()
+      // Cluster bubble should be created via Leaflet divIcon
+      expect(mockLeaflet.divIcon).toHaveBeenCalled()
+      const divIconCallsBefore = (mockLeaflet.divIcon as jest.Mock).mock.calls.length
+
+      // Simulate zoom in: cluster should expand
+      rl.__setZoomForTests(15)
+      const mapEvents = (globalThis as any).lastMapEvents
+      expect(mapEvents).toBeDefined()
+      await act(async () => {
+        mapEvents.zoomend?.()
+      })
+
+      // On high zoom clusters are rendered as individual markers without cluster bubbles
+      // which means divIcon should NOT be called again during the zoom-driven re-render.
+      const divIconCallsAfter = (mockLeaflet.divIcon as jest.Mock).mock.calls.length
+      expect(divIconCallsAfter).toBe(divIconCallsBefore)
     })
   })
 

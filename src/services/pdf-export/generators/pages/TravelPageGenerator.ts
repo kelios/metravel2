@@ -109,6 +109,7 @@ export class TravelPageGenerator {
         padding: 30mm 25mm;
         background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.7) 100%);
         color: #ffffff;
+        page-break-inside: avoid;
       ">
         <h2 style="
           font-size: 28pt;
@@ -116,12 +117,18 @@ export class TravelPageGenerator {
           margin: 0 0 8mm 0;
           text-shadow: 0 2px 8px rgba(0,0,0,0.3);
           font-family: ${typography.headingFont};
+          overflow-wrap: anywhere;
+          word-break: break-word;
+          hyphens: auto;
         ">${this.escapeHtml(travel.name)}</h2>
         
         <div style="
           font-size: 14pt;
           opacity: 0.95;
           font-family: ${typography.bodyFont};
+          overflow-wrap: anywhere;
+          word-break: break-word;
+          hyphens: auto;
         ">
           ${travel.countryName || ''}${travel.countryName && travel.year ? ' • ' : ''}${travel.year || ''}
         </div>
@@ -141,6 +148,9 @@ export class TravelPageGenerator {
           margin: 0 0 8mm 0;
           color: ${colors.text};
           font-family: ${typography.headingFont};
+          overflow-wrap: anywhere;
+          word-break: break-word;
+          hyphens: auto;
         ">${this.escapeHtml(travel.name)}</h1>
       </div>
     `;
@@ -172,6 +182,8 @@ export class TravelPageGenerator {
         background: ${colors.surface};
         border-radius: ${this.theme.blocks.borderRadius};
         border: ${this.theme.blocks.borderWidth} solid ${colors.border};
+        break-inside: avoid;
+        page-break-inside: avoid;
       ">
         ${metadata.map(item => `
           <div>
@@ -188,6 +200,9 @@ export class TravelPageGenerator {
               font-weight: 600;
               color: ${colors.text};
               font-family: ${typography.bodyFont};
+              overflow-wrap: anywhere;
+              word-break: break-word;
+              hyphens: auto;
             ">
               ${this.escapeHtml(item.value)}
             </div>

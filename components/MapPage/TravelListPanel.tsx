@@ -94,7 +94,7 @@ const TravelListPanel: React.FC<Props> = ({
 export default React.memo(TravelListPanel);
 
 const styles = StyleSheet.create({
-  list: { paddingBottom: 16 },
+  list: { paddingBottom: 8 },
   loader: { paddingVertical: 16, alignItems: 'center' },
   endText: { textAlign: 'center', color: '#777', paddingVertical: 16, fontSize: 12 },
 });

@@ -344,8 +344,35 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                 src={currentDisplayUrl}
                                 alt="Предпросмотр"
                                 style={styles.previewImage as any}
-                                onLoad={() => {
-                                    console.info('Image loaded successfully:', currentDisplayUrl);
+                                onLoad={(e) => {
+                                    const imgEl = e.currentTarget as HTMLImageElement;
+                                    const isDecoded = (imgEl?.naturalWidth ?? 0) > 0 && (imgEl?.naturalHeight ?? 0) > 0;
+                                    console.info('Image loaded successfully:', currentDisplayUrl, {
+                                        naturalWidth: imgEl?.naturalWidth,
+                                        naturalHeight: imgEl?.naturalHeight,
+                                        isDecoded,
+                                    });
+
+                                    if (isDecoded) return;
+
+                                    const candidateFallback = chooseFallbackUrl(
+                                        currentDisplayUrl,
+                                        fallbackImageUrl,
+                                        lastPreviewUrl,
+                                        hasTriedFallback
+                                    );
+                                    console.error('Image decode failed:', currentDisplayUrl, 'fallback:', candidateFallback);
+                                    if (candidateFallback) {
+                                        setHasTriedFallback(true);
+                                        setImageUri(candidateFallback);
+                                        setPreviewUrl(null);
+                                        setError(null);
+                                        return;
+                                    }
+
+                                    setImageUri(null);
+                                    setPreviewUrl(null);
+                                    setError('Изображение не найдено');
                                 }}
                                 onError={(_e) => {
                                     const candidateFallback = chooseFallbackUrl(

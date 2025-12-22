@@ -145,5 +145,31 @@ describe('CoverPageGenerator', () => {
 
       expect(html).toContain('Создано');
     });
+
+    it('должен иметь безопасные переносы для длинного заголовка', () => {
+      const data = {
+        title: 'Очень-длинный-заголовок-с-супердлиннымсловомбезпробелов-1234567890',
+        userName: 'Иван Иванов',
+        travelCount: 5,
+      };
+
+      const html = generator.generate(data);
+
+      expect(html).toContain('overflow-wrap: anywhere');
+      expect(html).toContain('word-break: break-word');
+      expect(html).toContain('hyphens: auto');
+    });
+
+    it('не должен содержать невалидные псевдоселекторы в inline-style', () => {
+      const data = {
+        title: 'Тест',
+        userName: 'Тест',
+        travelCount: 5,
+      };
+
+      const html = generator.generate(data);
+
+      expect(html).not.toContain('&::after');
+    });
   });
 });

@@ -139,7 +139,7 @@ export const deleteImage = async (imageId: string) => {
     throw new Error('Пользователь не авторизован');
   }
 
-  const response = await fetchWithTimeout(`${GALLERY}${imageId}`, {
+  const response = await fetchWithTimeout(`${GALLERY}${imageId}/`, {
     method: 'DELETE',
     headers: { Authorization: `Token ${token}` },
   }, DEFAULT_TIMEOUT);

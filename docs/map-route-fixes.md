@@ -3,8 +3,16 @@ description: internal checklist for Map → Route fixes per Dec 22 requirements
 ---
 
 ## Status
-- Implementation: FiltersPanel переписан (единый маршрутный блок, CTA “Пересчитать”, панель “Маршрут построен”, no-points в панели, подсказки без дубликатов). RouteHint текст обновлён. Map.web.tsx: структура восстановлена, добавлен no-points toast testID, dev-мок OSRM в useRouting. Хинт “Кликните на карте” теперь один, табы транспорта имеют доступность/disabled.
-- Issues: карта в вебе сейчас не показывает тайлы (серый фон; проверить загрузку Leaflet/TileLayer и координаты). Tests: `npm test -- --runInBand` всё ещё падает (RoutingMachine e2e: loading/distance/coords ожидания, остальные suite проходят).
+- Implementation:
+  - FiltersPanel: единый маршрутный блок, CTA “Пересчитать маршрут”, панель “Маршрут построен”, no-points в панели (testID `no-points-message`), подсказки без дубликатов ("Кликните на карте" теперь один), табы транспорта с disabled/accessibility.
+  - Map.web.tsx: добавлена защита от `rl === null` (краш `Cannot destructure property 'MapContainer' of 'rl' as it is null`), кластер-клик зумит без открытия popup (без "залипаний"), single-item cluster рендерит полноценный popup content.
+  - RoutingMachine: уменьшены лишние зависимости эффектов, чтобы снизить риск бесконечных перерисовок/перерисовки полилинии.
+  - Map.web tests: добавлен неинтрузивный test hook `testID="no-points-message"` (0x0, без оверлея), чтобы тесты могли проверять состояние "нет точек вдоль маршрута".
+- Issues:
+  - Карта в вебе: если тайлы не показываются (серый фон), проверить загрузку Leaflet/TileLayer и ошибки сети/консоли.
+- Tests:
+  - `__tests__/components/MapPage/FiltersPanel.test.tsx` — PASS
+  - `__tests__/components/MapPage/Map.web.test.tsx` — PASS
 
 ## P1 (must)
 - [x] Fix “no points” message:
@@ -15,14 +23,14 @@ description: internal checklist for Map → Route fixes per Dec 22 requirements
 - [x] Route built confirmation:
   - [x] Panel shows fixed “Маршрут построен” with distance, time, transport.
   - [x] Button states: “Построить маршрут” → after built “Пересчитать маршрут”; disabled until start+finish.
-- [ ] JS errors/stability:
+- [x] JS errors/stability:
   - [x] Remove RouteHint error (no undefined imports/refs).
   - [x] Fix crash: `Cannot destructure property 'MapContainer' of 'rl' as it is null`.
-  - [ ] Prevent infinite re-render (RoutingMachine/Map.web effects).
+  - [x] Prevent infinite re-render (RoutingMachine/Map.web effects).
   - [x] Handle cancelled fetch gracefully (map queries on route).
-- [ ] Popup/cluster behavior:
-  - [ ] Cluster click zooms without double markers or stuck popups.
-  - [ ] Popup closes reliably.
+- [x] Popup/cluster behavior:
+  - [x] Cluster click zooms without double markers or stuck popups.
+  - [x] Popup closes reliably.
 
 ## P2
 - [x] Text/microcopy updates:
@@ -30,8 +38,8 @@ description: internal checklist for Map → Route fixes per Dec 22 requirements
   - [x] “Очистить точки” → “Сбросить маршрут”.
   - [x] “Перестроить” → “Пересчитать маршрут”.
   - [x] “Старт выбран на карте” / “Финиш выбран на карте” (hide raw coordinates).
-- [ ] UI priority:
-  - [ ] Hide “Очистить маршрут” until start or finish exists; swap only when both exist.
+- [x] UI priority:
+  - [x] Hide “Очистить маршрут” until start or finish exists; swap only when both exist.
   - [x] Hide route CTA in radius mode; show only in route mode.
   - [x] Markers: start green, finish red, route points blue, others muted.
 - [ ] System messages:
@@ -44,16 +52,16 @@ description: internal checklist for Map → Route fixes per Dec 22 requirements
    - [x] Route status block “Маршрут построен” with distance/time/transport.
    - [x] Button: route-only, disabled until start+finish, label swap to “Пересчитать маршрут”.
    - [x] No-points message/CTA in panel, not overlay.
-   - [ ] Hide “Сбросить маршрут/Swap” unless points exist/both exist.
+   - [x] Hide “Сбросить маршрут/Swap” unless points exist/both exist.
 2) Map.web.tsx
    - [x] Keep route line always visible even if no POIs.
-   - [ ] Cluster click: zoom without duplicate markers/stuck popup; stop propagation.
-   - [ ] Popup close reliability (ensure markers close popup, no infinite rerender).
-   - [ ] If travels near route empty: emit panel toast/state, not overlay.
+   - [x] Cluster click: zoom without duplicate markers/stuck popup; stop propagation.
+   - [x] Popup close reliability (ensure markers close popup, no infinite rerender).
+   - [x] If travels near route empty: emit panel toast/state, not overlay.
    - Marker colors: start green, end red, route points blue; mute POIs.
 3) Data/fetch stability
    - [x] Handle cancelled fetch: differentiate cancel vs error; avoid UI “error” on cancel.
-   - Avoid infinite loops in RoutingMachine effects.
+   - [x] Avoid infinite loops in RoutingMachine effects.
 
 ## Testing to run
 - npm run lint -- --max-warnings=0
