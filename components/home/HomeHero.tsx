@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Image, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
@@ -17,6 +17,8 @@ export default function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const { isSmallPhone, isPhone, isTablet, isDesktop } = useResponsive();
+  const articleUrl =
+    'https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele';
 
   const handleCreateBook = () => {
     sendAnalyticsEvent('HomeClick_CreateBook');
@@ -32,6 +34,11 @@ export default function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const handleOpenSearch = () => {
     sendAnalyticsEvent('HomeClick_OpenSearch');
     router.push('/search' as any);
+  };
+
+  const handleOpenArticle = () => {
+    sendAnalyticsEvent('HomeClick_TrainArticle');
+    Linking.openURL(articleUrl);
   };
 
   const primaryButtonLabel = useMemo(() => {
@@ -95,14 +102,19 @@ export default function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
         </View>
 
         {showImage && (
-          <View style={styles.imageContainer}>
+          <Pressable
+            onPress={handleOpenArticle}
+            accessibilityRole="link"
+            accessibilityLabel="Открыть статью о маршруте Харцер Хексенштиг"
+            style={styles.imageContainer}
+          >
             <Image
               source={require('../../assets/images/pdf.webp')}
               style={styles.bookImage}
               resizeMode="contain"
               {...(Platform.OS === 'web' ? { loading: 'lazy' as any } : {})}
             />
-          </View>
+          </Pressable>
         )}
       </ResponsiveStack>
     </ResponsiveContainer>

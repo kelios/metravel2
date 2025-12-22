@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
+import type { RoutePoint } from '@/types/route';
 
 // Моки
 jest.mock('react-native', () => {
@@ -30,6 +31,14 @@ const mockFilterValue = {
     address: '',
 };
 
+const makePoint = (id: string, lat: number, lng: number, type: RoutePoint['type']): RoutePoint => ({
+    id,
+    coordinates: { lat, lng },
+    address: '',
+    type,
+    timestamp: Date.now(),
+});
+
 const defaultProps = {
     filters: mockFilters,
     filterValue: mockFilterValue,
@@ -46,6 +55,8 @@ const defaultProps = {
     startAddress: '',
     endAddress: '',
     routeDistance: null,
+    routePoints: [],
+    onBuildRoute: jest.fn(),
 };
 
 describe('FiltersPanel', () => {
@@ -91,15 +102,6 @@ describe('FiltersPanel', () => {
         expect(defaultProps.setMode).toHaveBeenCalledWith('route');
     });
 
-    it('shows transport modes in route mode', () => {
-        const propsRouteMode = {
-            ...defaultProps,
-            mode: 'route' as const,
-        };
-        const { getByText } = render(<FiltersPanel {...propsRouteMode} />);
-        expect(getByText('Транспорт')).toBeTruthy();
-    });
-
     it('calls onFilterChange when radius is changed', () => {
         const { getByText } = render(<FiltersPanel {...defaultProps} />);
         // Находим и нажимаем на опцию радиуса
@@ -108,7 +110,7 @@ describe('FiltersPanel', () => {
         expect(defaultProps.onFilterChange).toHaveBeenCalled();
     });
 
-    it('displays total counter and applied hint when filters active', () => {
+    it('displays counter with radius wording when filters active', () => {
       const propsWithData = {
         ...defaultProps,
         filterValue: {
@@ -123,7 +125,77 @@ describe('FiltersPanel', () => {
       };
       const { getByText } = render(<FiltersPanel {...propsWithData} />);
       expect(getByText('3')).toBeTruthy();
-      expect(getByText('точек')).toBeTruthy();
-      expect(getByText('Фильтры применены')).toBeTruthy();
+      expect(getByText(/мест в радиусе 60 км/i)).toBeTruthy();
+  });
+
+  it('keeps build button disabled until start and finish are set', () => {
+    const propsRouteMode = {
+      ...defaultProps,
+      mode: 'route' as const,
+    };
+    const { getByLabelText, rerender } = render(<FiltersPanel {...propsRouteMode} />);
+    const buildButton = getByLabelText('Построить маршрут');
+    expect(buildButton.props.accessibilityState?.disabled).toBe(true);
+    expect(buildButton.props.children.props.children).toContain('Добавьте старт и финиш');
+
+    // Only start selected
+    const startOnly: RoutePoint[] = [makePoint('s', 53.9, 27.5, 'start')];
+    rerender(<FiltersPanel {...propsRouteMode} routePoints={startOnly} />);
+    expect(getByLabelText('Построить маршрут').props.accessibilityState?.disabled).toBe(true);
+
+    // Start + finish selected
+    const startFinish: RoutePoint[] = [
+      makePoint('s', 53.9, 27.5, 'start'),
+      makePoint('f', 53.95, 27.6, 'end'),
+    ];
+    rerender(<FiltersPanel {...propsRouteMode} routePoints={startFinish} />);
+    const enabledButton = getByLabelText('Построить маршрут');
+    expect(enabledButton.props.accessibilityState?.disabled).toBe(false);
+    expect(enabledButton.props.children.props.children).toContain('Построить маршрут');
+
+    // After distance calculated -> label changes to Перестроить
+    rerender(<FiltersPanel {...propsRouteMode} routePoints={startFinish} routeDistance={12000} />);
+    expect(getByLabelText('Построить маршрут').props.children.props.children).toContain('Перестроить');
+  });
+
+  it('shows inline step hints for start/end', () => {
+    const propsRouteMode = {
+      ...defaultProps,
+      mode: 'route' as const,
+    };
+    const { getByText, rerender, queryByText } = render(<FiltersPanel {...propsRouteMode} />);
+    expect(getByText(/кликните на карте/i)).toBeTruthy();
+
+    // After start selected, start hint hides, end hint shows
+    rerender(
+      <FiltersPanel
+        {...propsRouteMode}
+        routePoints={[makePoint('s', 53.9, 27.5, 'start')]}
+      />
+    );
+    expect(queryByText(/кликните на карте/i)).toBeNull();
+    expect(getByText(/теперь выберите финиш/i)).toBeTruthy();
+  });
+
+  it('disables transport selection until both points are chosen', () => {
+    const propsRouteMode = {
+      ...defaultProps,
+      mode: 'route' as const,
+    };
+    const { getByText, rerender } = render(<FiltersPanel {...propsRouteMode} />);
+    const carTab = getByText('Авто');
+    expect(carTab.props.accessibilityState?.disabled).toBe(true);
+
+    rerender(
+      <FiltersPanel
+        {...propsRouteMode}
+        routePoints={[
+          makePoint('s', 53.9, 27.5, 'start'),
+          makePoint('f', 53.95, 27.6, 'end'),
+        ]}
+      />
+    );
+    const carTabEnabled = getByText('Авто');
+    expect(carTabEnabled.props.accessibilityState?.disabled).toBe(false);
   });
 });

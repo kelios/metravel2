@@ -1,6 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/components/layout';
@@ -11,25 +13,52 @@ const STEPS = [
     title: 'Расскажи историю',
     description: 'Опиши свой маршрут, добавь фото и впечатления о путешествии',
     icon: 'edit-3',
+    path: '/travel/new',
   },
   {
     number: 2,
     title: 'Собери в книгу',
     description: 'Выбери истории, настрой стиль и создай свою книгу путешествий',
     icon: 'book-open',
+    path: '/export',
   },
   {
     number: 3,
     title: 'Поделись или сохрани',
     description: 'Покажи друзьям или сохрани в PDF на память',
     icon: 'share-2',
+    path: '/export',
   },
 ];
 
 export default function HomeHowItWorks() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const { isSmallPhone, isPhone, isTablet, isDesktop } = useResponsive();
   const isMobile = isSmallPhone || isPhone;
   const showConnectors = isTablet || isDesktop;
+
+  const handleStepPress = useCallback(
+    (path: string) => {
+      const target = path.startsWith('/') ? path : `/${path}`;
+      if (!isAuthenticated) {
+        const redirect = encodeURIComponent(target);
+        router.push(`/login?redirect=${redirect}` as any);
+        return;
+      }
+      router.push(target as any);
+    },
+    [isAuthenticated, router],
+  );
+
+  const pressableProps = useMemo(
+    () =>
+      Platform.select({
+        web: { cursor: 'pointer' },
+        default: {},
+      }),
+    [],
+  );
 
   return (
     <View style={styles.container}>
@@ -47,7 +76,16 @@ export default function HomeHowItWorks() {
         >
           {STEPS.map((step, index) => (
             <View key={step.number} style={styles.stepWrapper}>
-              <View style={styles.step}>
+              <Pressable
+                onPress={() => handleStepPress(step.path)}
+                style={({ pressed, hovered }) => [
+                  styles.step,
+                  (pressed || hovered) && styles.stepHover,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={step.title}
+                {...pressableProps}
+              >
                 <View style={styles.stepHeader}>
                   <View style={styles.iconContainer}>
                     <Feather
@@ -67,7 +105,7 @@ export default function HomeHowItWorks() {
                 <ResponsiveText variant="body" style={styles.stepDescription}>
                   {step.description}
                 </ResponsiveText>
-              </View>
+              </Pressable>
 
               {index < STEPS.length - 1 && showConnectors && (
                 <View style={styles.connector}>
@@ -115,6 +153,15 @@ const styles = StyleSheet.create({
         boxShadow: '0 4px 20px rgba(31, 31, 31, 0.06)',
         transition: 'all 0.3s ease',
       },
+    }),
+  },
+  stepHover: {
+    ...Platform.select({
+      web: {
+        transform: 'translateY(-2px)',
+        boxShadow: '0 10px 26px rgba(31, 31, 31, 0.08)',
+      },
+      default: {},
     }),
   },
   stepHeader: {

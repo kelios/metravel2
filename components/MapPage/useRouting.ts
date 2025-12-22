@@ -47,6 +47,20 @@ export const useRouting = (
         distance: 0,
         coords: [],
     })
+    const setStateIfChanged = useCallback((next: RoutingState) => {
+        setState(prev => {
+            if (
+                prev.loading === next.loading &&
+                prev.error === next.error &&
+                prev.distance === next.distance &&
+                prev.coords.length === next.coords.length &&
+                prev.coords.every((p, i) => p[0] === next.coords[i][0] && p[1] === next.coords[i][1])
+            ) {
+                return prev
+            }
+            return next
+        })
+    }, [])
 
     const abortRef = useRef<AbortController | null>(null)
     const lastRouteKeyRef = useRef<string | null>(null)
@@ -134,6 +148,38 @@ export const useRouting = (
         signal: AbortSignal
     ): Promise<RouteResult> => {
         const profile = getOSRMProfile(mode)
+        // В dev можно замокать OSRM, чтобы не зависеть от сети/CORS
+        const mockOsrm =
+            (typeof process !== 'undefined' && (process.env as any)?.EXPO_PUBLIC_OSRM_MOCK === '1') ||
+            ((process.env as any)?.NODE_ENV === 'development' && !(process.env as any)?.EXPO_PUBLIC_ROUTE_SERVICE)
+
+        if (mockOsrm) {
+            // Прямая линия через все точки (lng,lat)
+            const coords = points.map(([lng, lat]) => [lng, lat] as [number, number])
+            const distance = (() => {
+                const toRad = (deg: number) => (deg * Math.PI) / 180
+                let total = 0
+                for (let i = 1; i < coords.length; i++) {
+                    const [lng1, lat1] = coords[i - 1]
+                    const [lng2, lat2] = coords[i]
+                    const R = 6371000
+                    const dLat = toRad(lat2 - lat1)
+                    const dLng = toRad(lng2 - lng1)
+                    const a =
+                        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+                    total += R * c
+                }
+                return total
+            })()
+            return {
+                coords,
+                distance,
+                isOptimal: true,
+            }
+        }
+
         // OSRM expects coordinates in lng,lat format
         const coordsStr = points.map(([lng, lat]) => `${lng},${lat}`).join(';')
         const url = `https://router.project-osrm.org/route/v1/${profile}/${coordsStr}?overview=full&geometries=geojson`
@@ -184,21 +230,15 @@ export const useRouting = (
     useEffect(() => {
         // Если точек меньше двух — не строим маршрут
         if (!hasTwoPoints) {
-            // избегаем лишних setState, если уже в пустом состоянии
-            setState(prev => {
-                if (!prev.loading && prev.distance === 0 && prev.coords.length === 0 && prev.error === false) {
-                    return prev
-                }
-                return {
-                    loading: false,
-                    error: false,
-                    distance: 0,
-                    coords: [],
-                }
+            setStateIfChanged({
+                loading: false,
+                error: false,
+                distance: 0,
+                coords: [],
             })
             return
         }
-    }, [hasTwoPoints])
+    }, [hasTwoPoints, setStateIfChanged])
 
     useEffect(() => {
         if (!hasTwoPoints || !routeKey) return
@@ -210,6 +250,17 @@ export const useRouting = (
 
         // Если маршрут уже обработан (успешно или с ошибкой) — выходим
         if (resolvedRouteKeys.has(routeKey)) {
+            // Но если уже есть закешированные coords, проставим их в состояние,
+            // чтобы верхний слой получил координаты для отрисовки прямой линии
+            const cached = routeCache.get(routePointsRef.current, transportMode)
+            if (cached) {
+                setState({
+                    loading: false,
+                    error: false,
+                    distance: cached.distance,
+                    coords: cached.coords,
+                })
+            }
             return
         }
 
@@ -224,13 +275,15 @@ export const useRouting = (
         // Check cache first
         const cachedRoute = routeKey ? routeCache.get(currentPoints, transportMode) : null
         if (cachedRoute) {
-            setState({
+            setStateIfChanged({
                 loading: false,
                 error: false,
                 distance: cachedRoute.distance,
                 coords: cachedRoute.coords,
             })
-            lastRouteKeyRef.current = routeKey
+            if (routeKey) {
+                resolvedRouteKeys.add(routeKey)
+            }
             isProcessingRef.current = false
             return
         }
@@ -313,7 +366,7 @@ export const useRouting = (
                 routeCache.set(currentPoints, transportMode, result.coords, result.distance)
                 resolvedRouteKeys.add(routeKey)
 
-                setState({
+                setStateIfChanged({
                     loading: false,
                     error: false,
                     distance: result.distance,
@@ -324,13 +377,16 @@ export const useRouting = (
 
                 const distance = calculateDirectDistance(currentPoints)
                 const errorMessage = error?.message || 'Не удалось построить маршрут'
-                setState({
+                setStateIfChanged({
                     loading: false,
                     error: errorMessage,
                     distance,
                     coords: currentPoints,
                 })
-                if (routeKey) resolvedRouteKeys.add(routeKey)
+                if (routeKey) {
+                    resolvedRouteKeys.add(routeKey)
+                    routeCache.set(currentPoints, transportMode, currentPoints, distance)
+                }
             } finally {
                 isProcessingRef.current = false
             }

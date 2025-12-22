@@ -21,7 +21,7 @@ export default function RouteHint({ onDismiss, routePointsCount }: RouteHintProp
         <View style={styles.textContainer}>
           <Text style={styles.title}>Как построить маршрут</Text>
           <Text style={styles.description}>
-            Кликните на карте, чтобы выбрать начальную точку, затем выберите конечную точку
+            Сначала поставьте старт на карте, затем выберите финиш
           </Text>
         </View>
       </View>

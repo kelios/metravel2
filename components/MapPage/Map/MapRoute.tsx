@@ -64,8 +64,8 @@ const MapRoute: React.FC<MapRouteProps> = ({
             maxZoom: 14,
           });
         }
-      } catch (_error) {
-        console.warn('Error centering on route:', _error);
+      } catch (error) {
+        console.warn('Error centering on route:', error);
       }
     }
 
@@ -74,7 +74,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
       if (polylineRef.current && map) {
         try {
           map.removeLayer(polylineRef.current);
-        } catch (_error) {
+        } catch {
           // Ignore cleanup errors
         }
         polylineRef.current = null;

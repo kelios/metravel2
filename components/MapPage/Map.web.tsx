@@ -43,6 +43,8 @@ interface Props {
 }
 
 const MOBILE_BREAKPOINT = METRICS.breakpoints.tablet || 768;
+const CLUSTER_THRESHOLD = 50;
+const CLUSTER_GRID = 0.045; // ~5 км ячейка на широте 55-60
 
 const strToLatLng = (s: string): [number, number] | null => {
   const [lat, lng] = s.split(',').map(Number);
@@ -56,9 +58,10 @@ interface TravelMarkersProps {
   Marker: React.ComponentType<any>;
   Popup: React.ComponentType<any>;
   PopupContent: React.ComponentType<{ point: Point }>; // Передаем компонент попапа как проп
+  markerOpacity?: number;
 }
 
-const TravelMarkers: React.FC<TravelMarkersProps> = ({ points, icon, Marker, Popup, PopupContent }) => {
+const TravelMarkers: React.FC<TravelMarkersProps> = ({ points, icon, Marker, Popup, PopupContent, markerOpacity = 1 }) => {
   return (
     <>
       {points.map((point, index) => {
@@ -76,6 +79,7 @@ const TravelMarkers: React.FC<TravelMarkersProps> = ({ points, icon, Marker, Pop
             key={markerKey}
             position={[coords[1], coords[0]]}
             icon={icon}
+            opacity={markerOpacity}
           >
             <Popup>
               <PopupContent point={point} />
@@ -111,6 +115,123 @@ const TravelMarkersMemo = React.memo(TravelMarkers, (prev, next) => {
   });
 });
 
+const ClusterLayer: React.FC<{
+  points: Point[];
+  Marker: React.ComponentType<any>;
+  Popup: React.ComponentType<any>;
+  onClusterZoom: (center: [number, number], bounds: [[number, number], [number, number]]) => void;
+  markerIcon?: any;
+  markerOpacity?: number;
+}> = ({ points, Marker, Popup, onClusterZoom, markerIcon, markerOpacity = 1 }) => {
+  const clusters = useMemo(() => {
+    const byCell: Record<string, { items: Point[]; minLat: number; maxLat: number; minLng: number; maxLng: number }> = {};
+    points.forEach((p) => {
+      const ll = strToLatLng(p.coord);
+      if (!ll) return;
+      const [lng, lat] = ll;
+      const cellLat = Math.floor(lat / CLUSTER_GRID) * CLUSTER_GRID;
+      const cellLng = Math.floor(lng / CLUSTER_GRID) * CLUSTER_GRID;
+      const key = `${cellLat.toFixed(3)}|${cellLng.toFixed(3)}`;
+      if (!byCell[key]) {
+        byCell[key] = { items: [], minLat: lat, maxLat: lat, minLng: lng, maxLng: lng };
+      }
+      byCell[key].items.push(p);
+      byCell[key].minLat = Math.min(byCell[key].minLat, lat);
+      byCell[key].maxLat = Math.max(byCell[key].maxLat, lat);
+      byCell[key].minLng = Math.min(byCell[key].minLng, lng);
+      byCell[key].maxLng = Math.max(byCell[key].maxLng, lng);
+    });
+    return Object.values(byCell).map((cell) => {
+      const count = cell.items.length;
+      const centerLat = (cell.minLat + cell.maxLat) / 2;
+      const centerLng = (cell.minLng + cell.maxLng) / 2;
+      return {
+        count,
+        center: [centerLat, centerLng] as [number, number],
+        bounds: [
+          [cell.minLat, cell.minLng] as [number, number],
+          [cell.maxLat, cell.maxLng] as [number, number],
+        ],
+        items: cell.items,
+      };
+    });
+  }, [points]);
+
+  const clusterIcon = useCallback(
+    (count: number) =>
+      (window as any)?.L?.divIcon
+        ? (window as any).L.divIcon({
+            className: 'custom-cluster-icon',
+            html: `<div style="
+              background: rgba(74,140,140,0.9);
+              color:#fff;
+              width:42px;height:42px;
+              border-radius:21px;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              font-weight:800;
+              box-shadow:0 6px 18px rgba(0,0,0,0.18);
+              border:2px solid #f8f5f2;
+            ">${count}</div>`,
+            iconSize: [42, 42],
+            iconAnchor: [21, 21],
+          })
+        : undefined,
+    []
+  );
+
+  return (
+    <>
+      {clusters.map((cluster, idx) => {
+        const icon = clusterIcon(cluster.count);
+        if (cluster.count === 1 && cluster.items[0]) {
+          const item = cluster.items[0];
+          const ll = strToLatLng(item.coord);
+          if (!ll) return null;
+          return (
+            <Marker
+              key={`cluster-single-${idx}`}
+              position={[ll[1], ll[0]]}
+              icon={markerIcon}
+              opacity={markerOpacity}
+            >
+              <Popup>
+                <PopupContentComponent travel={item} onClose={() => {}} />
+              </Popup>
+            </Marker>
+          );
+        }
+
+        return (
+          <Marker
+            key={`cluster-${idx}`}
+            position={[cluster.center[0], cluster.center[1]]}
+            icon={icon as any}
+            eventHandlers={{
+              click: (e: any) => {
+                e?.originalEvent?.preventDefault?.();
+                e?.originalEvent?.stopPropagation?.();
+                onClusterZoom(
+                  [cluster.center[0], cluster.center[1]],
+                  [
+                    [cluster.bounds[0][0], cluster.bounds[0][1]],
+                    [cluster.bounds[1][0], cluster.bounds[1][1]],
+                  ]
+                );
+              },
+            }}
+          >
+            <Popup>
+              <Text style={{ fontWeight: '700' }}>{cluster.count} мест поблизости</Text>
+            </Popup>
+          </Marker>
+        );
+      })}
+    </>
+  );
+};
+
 const MapPageComponent: React.FC<Props> = ({
                                              travel = { data: [] },
                                              coordinates,
@@ -141,6 +262,8 @@ const MapPageComponent: React.FC<Props> = ({
     () => (Array.isArray(travel?.data) ? travel.data : []),
     [travel?.data]
   );
+  const shouldCluster = travelData.length > CLUSTER_THRESHOLD;
+  const travelMarkerOpacity = mode === 'route' ? 0.45 : 1;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -236,6 +359,7 @@ const MapPageComponent: React.FC<Props> = ({
   const RoutingMachineWithMapInner: React.FC<any> = (props) => {
     const useMap = (rl as any).useMap;
     const map = useMap();
+
     return <RoutingMachine map={map} {...props} />;
   };
 
@@ -445,7 +569,8 @@ const MapPageComponent: React.FC<Props> = ({
     mode: MapMode;
     coordinates: Coordinates;
     disableFitBounds: boolean;
-  }> = ({ travelData, userLocation, mode, coordinates, disableFitBounds }) => {
+    routePoints: [number, number][];
+  }> = ({ travelData, userLocation, mode, coordinates, disableFitBounds, routePoints }) => {
     const map = useMap();
     useMapEvents({ click: handleMapClick });
     const [hasCenteredOnData, setHasCenteredOnData] = useState(false);
@@ -550,6 +675,29 @@ const MapPageComponent: React.FC<Props> = ({
       }
     }, [fitBoundsPoints, hasCenteredOnData, map, shouldFitBounds]);
 
+    // Фокус на выбранных точках маршрута
+    useEffect(() => {
+      if (!map || mode !== 'route') return;
+      if (!routePoints || routePoints.length === 0) return;
+      if (routePoints.length === 1) {
+        const [lng, lat] = routePoints[0];
+        map.setView([lat, lng], 13, { animate: true });
+        return;
+      }
+      if (routePoints.length >= 2) {
+        try {
+          const bounds = (window as any)?.L?.latLngBounds(
+            routePoints.map(([lng, lat]) => (window as any).L.latLng(lat, lng))
+          );
+          if (bounds) {
+            map.fitBounds(bounds.pad(0.2), { animate: true });
+          }
+        } catch {
+          // noop
+        }
+      }
+    }, [map, mode, routePoints]);
+
     return null;
   };
 
@@ -560,345 +708,305 @@ const MapPageComponent: React.FC<Props> = ({
   }
 
   return (
-      <View style={styles.wrapper}>
-        {/* Кнопка "Мое местоположение" */}
-        {userLocation && Platform.OS === 'web' && (
-          <div style={{
+    <View style={styles.wrapper}>
+      {/* Кнопка "Мое местоположение" */}
+      {userLocation && Platform.OS === 'web' && (
+        <div
+          style={{
             position: 'absolute',
             top: 10,
             right: 10,
             zIndex: 1000,
-          }}>
-            <button
-              onClick={centerOnUserLocation}
-              style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '50%',
-                backgroundColor: '#fff',
-                border: '2px solid rgba(0,0,0,0.2)',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 0,
-                transition: 'all 0.2s ease',
-                color: '#2b6cb0',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#f0f7ff';
-                e.currentTarget.style.transform = 'scale(1.05)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#fff';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-              title="Мое местоположение"
-              aria-label="Вернуться к моему местоположению"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" fill="currentColor"/>
-              </svg>
-            </button>
+          }}
+        >
+          <button
+            onClick={centerOnUserLocation}
+            title="Мое местоположение"
+            aria-label="Вернуться к моему местоположению"
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              backgroundColor: '#fff',
+              border: '2px solid rgba(0,0,0,0.2)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0,
+              transition: 'all 0.2s ease',
+              color: '#2b6cb0',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f0f7ff';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#fff';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" fill="currentColor" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {mode === 'route' && routePoints.length >= 2 && (!travel?.data || travel.data.length === 0) && (
+        <Text testID="no-points-message" style={styles.noPointsMessage}>
+          Маршрут построен. Вдоль маршрута нет доступных точек в радиусе 2 км.
+        </Text>
+      )}
+
+      {isMobileScreen && mode === 'route' && routePoints.length < 2 && (
+        <div style={styles.mobileRouteHint}>
+          <div style={styles.mobileRouteHintIcon}>➜</div>
+          <div>
+            <div style={styles.mobileRouteHintTitle}>Укажи старт и финиш</div>
+            <div style={styles.mobileRouteHintText}>Нажми по карте: сначала старт, затем финиш. Карта не будет масштабироваться автоматически.</div>
           </div>
+        </div>
+      )}
+
+      <MapContainer
+        style={styles.map as any}
+        center={[coordinates.latitude, coordinates.longitude]}
+        zoom={11}
+        scrollWheelZoom
+        zoomControl
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+
+        <MapLogic
+          travelData={travelData}
+          userLocation={userLocation}
+          mode={mode}
+          coordinates={coordinates}
+          disableFitBounds={disableFitBounds}
+          routePoints={routePoints}
+        />
+
+        {mode === 'radius' && radiusInMeters && (
+          <Circle
+            center={[coordinates.latitude, coordinates.longitude]}
+            radius={radiusInMeters}
+            pathOptions={{
+              color: '#4a8c8c',
+              fillColor: '#4a8c8c',
+              fillOpacity: 0.08,
+              weight: 2,
+              dashArray: '6 6',
+            }}
+          />
         )}
-        {isMobileScreen && mode === 'route' && routePoints.length < 2 && (
-          <div style={styles.mobileRouteHint}>
-            <div style={styles.mobileRouteHintIcon}>➜</div>
-            <div>
-              <div style={styles.mobileRouteHintTitle}>
-                Укажи старт и финиш
-              </div>
-              <div style={styles.mobileRouteHintText}>
-                Нажми по карте: сначала старт, затем финиш. Карта не будет масштабироваться автоматически.
-              </div>
-            </div>
-          </div>
+
+        {routePoints.length >= 1 && customIcons?.start && (
+          <Marker
+            position={[routePoints[0][1], routePoints[0][0]]}
+            icon={customIcons.start}
+            eventHandlers={{
+              click: (e: any) => {
+                e.originalEvent?.stopPropagation();
+              },
+            }}
+          >
+            <Popup>Start</Popup>
+          </Marker>
         )}
-        
-        <MapContainer
-            center={
-              // ✅ ИСПРАВЛЕНИЕ: В режиме route всегда используем только coordinates
-              // Это предотвращает центрирование на пользователя при клике и переключении вкладок
-              mode === 'route' 
-                ? [coordinates.latitude, coordinates.longitude]
-                : (userLocation ? [userLocation.latitude, userLocation.longitude] : [coordinates.latitude, coordinates.longitude])
-            }
-            zoom={mode === 'route' ? 13 : (userLocation ? 11 : 13)}
-            // NOTE: react-leaflet expects a plain DOM style object.
-            // Passing a React Native StyleSheet value here can result in an invalid style
-            // (e.g. a numeric StyleSheet id), which makes the map container collapse.
-            // Also, relying on `flex: 1` for DOM nodes is fragile with React Native Web parents.
-            // Use absolute positioning to guarantee the map fills the wrapper.
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' } as any}
-            zoomAnimation={false}
-            markerZoomAnimation={false}
-            whenReady={(e: any) => {
-              const map = e?.target;
-              if (map) {
-                mapRef.current = map;
-                try {
-                  map.invalidateSize?.(true);
-                } catch {
-                  // noop
-                }
-                requestAnimationFrame(() => {
-                  try {
-                    map.invalidateSize?.(true);
-                  } catch {
-                    // noop
-                  }
-                });
-                setTimeout(() => {
-                  try {
-                    map.invalidateSize?.(true);
-                  } catch {
-                    // noop
-                  }
-                }, 300);
+
+        {routePoints.length === 2 && customIcons?.end && (
+          <Marker
+            position={[routePoints[1][1], routePoints[1][0]]}
+            icon={customIcons.end}
+            eventHandlers={{
+              click: (e: any) => {
+                e.originalEvent?.stopPropagation();
+              },
+            }}
+          >
+            <Popup>End</Popup>
+          </Marker>
+        )}
+
+        {mode === 'route' && routePoints.length >= 2 && rl && (
+          <RoutingMachineWithMapInner
+            routePoints={routePoints}
+            transportMode={transportMode}
+            setRoutingLoading={setRoutingLoading}
+            setErrors={setErrors}
+            setRouteDistance={setRouteDistance}
+            setFullRouteCoords={setFullRouteCoords}
+            ORS_API_KEY={ORS_API_KEY}
+          />
+        )}
+
+        {userLocation && customIcons?.userLocation && (
+          <Marker position={[userLocation.latitude, userLocation.longitude]} icon={customIcons.userLocation}>
+            <Popup>Your location</Popup>
+          </Marker>
+        )}
+
+        {customIcons?.meTravel && travelData.length > 0 && !shouldCluster && (
+          <TravelMarkersMemo
+            points={travelData}
+            icon={customIcons.meTravel}
+            Marker={Marker}
+            Popup={Popup}
+            PopupContent={PopupWithClose}
+            // @ts-ignore
+            opacity={travelMarkerOpacity}
+          />
+        )}
+
+        {customIcons?.meTravel && travelData.length > 0 && shouldCluster && (
+          <ClusterLayer
+            points={travelData}
+            Marker={Marker}
+            Popup={Popup}
+            markerIcon={customIcons.meTravel}
+            markerOpacity={travelMarkerOpacity}
+            onClusterZoom={(center, bounds) => {
+              if (!mapRef.current) return;
+              try {
+                const map = mapRef.current;
+                map.fitBounds([bounds[0].reverse(), bounds[1].reverse()], { padding: [40, 40] });
+                map.flyTo([center[0], center[1]], map.getZoom());
+              } catch {
+                // noop
               }
             }}
-        >
-          <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           />
-
-          <MapLogic
-            travelData={travelData}
-            userLocation={userLocation}
-            mode={mode}
-            coordinates={coordinates}
-            disableFitBounds={disableFitBounds}
-          />
-
-          {/* Круг радиуса поиска */}
-          {mode === 'radius' && radiusInMeters && (
-              <Circle
-                  center={[coordinates.latitude, coordinates.longitude]}
-                  radius={radiusInMeters}
-                  pathOptions={{
-                      color: '#ff9800',
-                      fillColor: '#ff9800',
-                      fillOpacity: 0.2,
-                      weight: 2,
-                  }}
-              />
-          )}
-
-          {routePoints.length >= 1 && customIcons?.start && (
-              <Marker 
-                position={[routePoints[0][1], routePoints[0][0]]} 
-                icon={customIcons.start}
-                eventHandlers={{
-                  // ✅ ИСПРАВЛЕНИЕ: Отключаем зум при клике на маркер старт
-                  click: (e: any) => {
-                    e.originalEvent?.stopPropagation();
-                  }
-                }}
-              >
-                <Popup>Start</Popup>
-              </Marker>
-          )}
-
-          {routePoints.length === 2 && customIcons?.end && (
-              <Marker 
-                position={[routePoints[1][1], routePoints[1][0]]} 
-                icon={customIcons.end}
-                eventHandlers={{
-                  // ✅ ИСПРАВЛЕНИЕ: Отключаем зум при клике на маркер финиш
-                  click: (e: any) => {
-                    e.originalEvent?.stopPropagation();
-                  }
-                }}
-              >
-                <Popup>End</Popup>
-              </Marker>
-          )}
-
-          {mode === 'route' && routePoints.length >= 2 && rl && (
-              <RoutingMachineWithMapInner
-                  routePoints={routePoints}
-                  transportMode={transportMode}
-                  setRoutingLoading={setRoutingLoading}
-                  setErrors={setErrors}
-                  setRouteDistance={setRouteDistance}
-                  setFullRouteCoords={setFullRouteCoords}
-                  ORS_API_KEY={ORS_API_KEY}
-              />
-          )}
-
-          {userLocation && customIcons?.userLocation && (
-              <Marker
-                  position={[userLocation.latitude, userLocation.longitude]}
-                  icon={customIcons.userLocation}
-              >
-                <Popup>Your location</Popup>
-              </Marker>
-          )}
-
-          {/* ✅ ИСПРАВЛЕНИЕ: Маркеры путешествий - всегда оранжевые стандартные */}
-          {customIcons?.meTravel && travelData.length > 0 && (
-            <TravelMarkersMemo
-              points={travelData}
-              icon={customIcons.meTravel}
-              Marker={Marker}
-              Popup={Popup}
-              PopupContent={PopupWithClose}
-            />
-          )}
-
-          {/* Сообщение, если точек нет */}
-          {Platform.OS === 'web' && mode === 'route' && routePoints.length >= 2 && travel.data && travel.data.length === 0 && (
-            <View
-              testID="no-points-message"
-              style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: [{ translateX: -150 }, { translateY: -60 }],
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                paddingVertical: 20,
-                paddingHorizontal: 24,
-                borderRadius: 12,
-                zIndex: 1000,
-                shadowColor: '#000',
-                shadowOpacity: 0.2,
-                shadowRadius: 8,
-                elevation: 4,
-                maxWidth: 300,
-                alignItems: 'center',
-              }}
-            >
-              <Text style={{ marginBottom: 8, fontSize: 16, fontWeight: '600', textAlign: 'center' }}>
-                Точки не найдены
-              </Text>
-              <Text style={{ color: '#666', fontSize: 13, textAlign: 'center' }}>
-                В радиусе 2 км от маршрута нет доступных точек
-              </Text>
-            </View>
-          )}
-
-          {/* RoutingStatus компонент отображается в боковой панели */}
-        </MapContainer>
-        
-        {/* ✅ ИСПРАВЛЕНИЕ: Легенда карты перенесена в боковую панель */}
-      </View>
+        )}
+      </MapContainer>
+    </View>
   );
 };
 
 const Loader: React.FC<{ message: string }> = ({ message }) => (
-    <View style={styles.loader}>
-      <ActivityIndicator size="large" />
-      <Text>{message}</Text>
-    </View>
+<View style={styles.loader}>
+<ActivityIndicator size="large" />
+<Text>{message}</Text>
+</View>
 );
 
 const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#f5f5f5',
-    position: 'relative',
-  },
-  map: { flex: 1, width: '100%', height: '100%', minHeight: 300 },
-  loader: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  errorText: { color: '#d32f2f', textAlign: 'center' },
-  myLocationButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 1000,
-    ...(Platform.OS === 'web' && {
-      // Web-specific styles
-    }),
-  },
-  myLocationButtonInner: {
-    ...(Platform.OS === 'web' && {
-      width: '44px',
-      height: '44px',
-      borderRadius: '50%',
-      backgroundColor: '#fff',
-      border: '2px solid rgba(0,0,0,0.2)',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 0,
-      transition: 'all 0.2s ease',
-      color: '#2b6cb0',
-    }),
-  } as any,
-  routingProgress: {
-    position: 'absolute',
-    top: 60,
-    left: '10%',
-    right: '10%',
-    backgroundColor: 'rgba(100,100,255,0.9)',
-    padding: 10,
-    borderRadius: 8,
-    zIndex: 1000,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  routingProgressText: { color: '#fff', marginLeft: 8 },
-  routingError: {
-    position: 'absolute',
-    top: 20,
-    left: '10%',
-    right: '10%',
-    backgroundColor: 'rgba(255,80,80,0.9)',
-    padding: 10,
-    borderRadius: 8,
-    zIndex: 1000,
-    alignItems: 'center',
-  },
-  routingErrorText: { color: '#fff', fontWeight: '600' },
-  mobileRouteHint: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    top: 12,
-    zIndex: 1000,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 16,
-    padding: 12,
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    boxShadow: '0 8px 24px rgba(15,23,42,0.18)',
-    pointerEvents: 'none',
-  } as any,
-  mobileRouteHintIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(74,140,140,0.12)',
-    color: '#4a8c8c',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 18,
-    fontWeight: '700',
-  } as any,
-  mobileRouteHintTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1f2937',
-    marginBottom: 2,
-  } as any,
-  mobileRouteHintText: {
-    fontSize: 12,
-    color: '#4b5563',
-    lineHeight: 16,
-  } as any,
+wrapper: {
+flex: 1,
+width: '100%',
+height: '100%',
+borderRadius: 16,
+overflow: 'hidden',
+backgroundColor: '#f5f5f5',
+position: 'relative',
+},
+map: { flex: 1, width: '100%', height: '100%', minHeight: 300 },
+loader: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+errorText: { color: '#d32f2f', textAlign: 'center' },
+myLocationButton: {
+position: 'absolute',
+top: 10,
+right: 10,
+zIndex: 1000,
+...(Platform.OS === 'web' && {
+// Web-specific styles
+}),
+},
+myLocationButtonInner: {
+...(Platform.OS === 'web' && {
+width: '44px',
+height: '44px',
+borderRadius: '50%',
+backgroundColor: '#0c2b43',
+border: '2px solid rgba(0,0,0,0.2)',
+boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+cursor: 'pointer',
+display: 'flex',
+alignItems: 'center',
+justifyContent: 'center',
+padding: 0,
+transition: 'all 0.2s ease',
+color: '#fff',
+}),
+} as any,
+routingProgress: {
+position: 'absolute',
+top: 60,
+left: '10%',
+right: '10%',
+backgroundColor: 'rgba(100,100,255,0.9)',
+padding: 10,
+borderRadius: 8,
+zIndex: 1000,
+flexDirection: 'row',
+alignItems: 'center',
+justifyContent: 'center',
+},
+routingProgressText: { color: '#fff', marginLeft: 8 },
+routingError: {
+position: 'absolute',
+top: 20,
+left: '10%',
+right: '10%',
+backgroundColor: 'rgba(255,80,80,0.9)',
+padding: 10,
+borderRadius: 8,
+zIndex: 1000,
+alignItems: 'center',
+},
+routingErrorText: { color: '#fff', fontWeight: '600' },
+mobileRouteHint: {
+display: 'flex',
+gap: 10,
+backgroundColor: '#0c2b43',
+color: '#fff',
+position: 'absolute',
+left: 12,
+right: 12,
+top: 12,
+zIndex: 1000,
+borderRadius: 16,
+padding: 12,
+},
+mobileRouteHintIcon: {
+width: 40,
+height: 40,
+borderRadius: 12,
+backgroundColor: 'rgba(255,255,255,0.12)',
+color: '#fff',
+display: 'flex',
+alignItems: 'center',
+justifyContent: 'center',
+fontSize: 18,
+fontWeight: '700',
+},
+mobileRouteHintTitle: {
+fontSize: 14,
+fontWeight: '700',
+color: '#fff',
+marginBottom: 2,
+},
+mobileRouteHintText: {
+fontSize: 14,
+fontWeight: '600',
+marginBottom: 4,
+},
+noPointsMessage: {
+position: 'absolute',
+bottom: 12,
+left: 12,
+right: 12,
+padding: 10,
+backgroundColor: 'rgba(12, 43, 67, 0.9)',
+color: '#fff',
+borderRadius: 10,
+fontSize: 13,
+zIndex: 900,
+},
 });
 
 export default React.memo(MapPageComponent);

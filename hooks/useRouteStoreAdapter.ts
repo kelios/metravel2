@@ -13,18 +13,18 @@ export function useRouteStoreAdapter() {
   // Convert RoutePoint[] to legacy [lng, lat][] format
   const routePoints = useMemo(() => {
     return store.points.map(p => [p.coordinates.lng, p.coordinates.lat] as [number, number]);
-  }, [store.points]);
+  }, [store, store.points]);
 
   // Get addresses
   const startAddress = useMemo(() => {
     const start = store.getStartPoint();
     return start?.address || '';
-  }, [store.points]);
+  }, [store, store.points]);
 
   const endAddress = useMemo(() => {
     const end = store.getEndPoint();
     return end?.address || '';
-  }, [store.points]);
+  }, [store, store.points]);
 
   // Get route data
   const routeDistance = store.route?.distance ?? null;
@@ -32,7 +32,7 @@ export function useRouteStoreAdapter() {
   const fullRouteCoords = useMemo(() => {
     if (!store.route?.coordinates) return [];
     return store.route.coordinates.map(c => [c.lng, c.lat] as [number, number]);
-  }, [store.route?.coordinates]);
+  }, [store, store.route?.coordinates]);
 
   // Adapter methods
   const setRoutePoints = useCallback((points: [number, number][]) => {

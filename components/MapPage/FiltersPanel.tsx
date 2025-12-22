@@ -3,6 +3,7 @@ import React, {
   useMemo,
   useCallback,
   useState,
+  useEffect,
 } from 'react';
 import {
   View,
@@ -20,8 +21,6 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import RadiusSelect from '@/components/MapPage/RadiusSelect';
 import RoutePointControls from '@/components/MapPage/RoutePointControls';
 import MapLegend from '@/components/MapPage/MapLegend';
-import RouteStats from '@/components/MapPage/RouteStats';
-import RouteHint from '@/components/MapPage/RouteHint';
 import AddressSearch from '@/components/MapPage/AddressSearch';
 import ValidationMessage from '@/components/MapPage/ValidationMessage';
 import RoutingStatus from '@/components/MapPage/RoutingStatus';
@@ -127,6 +126,15 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   const windowWidth = Dimensions.get('window').width;
   const styles = useMemo(() => getStyles(isMobile, windowWidth), [isMobile, windowWidth]);
   const [legendOpen, setLegendOpen] = useState(false);
+  const [hideNoPointsToast, setHideNoPointsToast] = useState(false);
+  const [showStartAddressInput, setShowStartAddressInput] = useState(false);
+  const [showEndAddressInput, setShowEndAddressInput] = useState(false);
+  const increaseRadius = useCallback(() => {
+    const options = filters.radius || [];
+    const currentIdx = options.findIndex((opt) => String(opt.id) === String(filterValue.radius));
+    const next = currentIdx >= 0 && currentIdx < options.length - 1 ? options[currentIdx + 1] : options[currentIdx] || options[options.length - 1];
+    if (next?.id) onFilterChange('radius', next.id);
+  }, [filters.radius, filterValue.radius, onFilterChange]);
   
   // ✅ NEW: Validate route points
   const validation = useMemo(() => {
@@ -254,11 +262,39 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     () => mode === 'route' ? routePoints.length >= 2 : true,
     [mode, routePoints.length]
   );
+  const ctaLabel = routingLoading
+    ? 'Строим…'
+    : routeDistance != null
+      ? 'Пересчитать маршрут'
+      : canBuildRoute
+        ? 'Построить маршрут'
+        : 'Добавьте старт и финиш';
 
   const totalPoints = useMemo(() => {
     const dataset = filteredTravelsData ?? travelsData;
     return Array.isArray(dataset) ? dataset.length : 0;
   }, [filteredTravelsData, travelsData]);
+
+  // ——— UI helpers
+  const routeStepState = {
+    startSelected: !!routePoints[0],
+    endSelected: !!routePoints[1],
+  };
+
+  const hintsAllowed = !(routeHintDismissed || routeDistance != null);
+  const showStartHint = hintsAllowed && mode === 'route' && !routeStepState.startSelected;
+  const showEndHint = hintsAllowed && mode === 'route' && routeStepState.startSelected && !routeStepState.endSelected;
+  const showTransportHint = hintsAllowed && mode === 'route' && routeStepState.startSelected && routeStepState.endSelected;
+  const noPointsAlongRoute = mode === 'route' && routeDistance != null && (filteredTravelsData ?? travelsData).length === 0;
+  const startLabel = startAddress ? startAddress : 'Старт выбран на карте';
+  const endLabel = endAddress ? endAddress : 'Финиш выбран на карте';
+
+  // Автоскрытие подсказок после первого построенного маршрута
+  useEffect(() => {
+    if (routeDistance != null && !routeHintDismissed && onRouteHintDismiss) {
+      onRouteHintDismiss();
+    }
+  }, [routeDistance, routeHintDismissed, onRouteHintDismiss]);
 
   return (
     <View style={styles.card}>
@@ -268,7 +304,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           <View style={styles.header}>
             <Text style={styles.title}>Фильтры</Text>
             <View style={styles.headerActions}>
-              {isMobile && (
+              {isMobile ? (
                 <Pressable
                   style={({ pressed }) => [
                     styles.headerActionButton,
@@ -281,16 +317,20 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   <Icon name="close" size={16} color={COLORS.text} />
                   <Text style={styles.headerActionText}>Закрыть</Text>
                 </Pressable>
-              )}
+              ) : null}
             </View>
           </View>
 
           <View style={styles.counterRow} accessible accessibilityRole="text">
             <View style={styles.counterBadge}>
               <Text style={styles.counterValue}>{totalPoints}</Text>
-              <Text style={styles.counterLabel}>точек</Text>
+              <Text style={styles.counterLabel}>
+                {mode === 'radius'
+                  ? `мест в радиусе ${filterValue.radius || '60'} км`
+                  : 'мест на карте'}
+              </Text>
             </View>
-            {_hasActiveFilters && (
+            {_hasActiveFilters && mode === 'radius' && (
               <Text style={styles.counterHint}>Фильтры применены</Text>
             )}
           </View>
@@ -344,15 +384,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled={true}
       >
-        {mode === 'route' && (
-          <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>Построение маршрута</Text>
-            <Text style={styles.infoItem}>1) Выберите старт и финиш на карте или введите адреса.</Text>
-            <Text style={styles.infoItem}>2) Укажите транспорт и нажмите «Построить».</Text>
-            <Text style={styles.infoItem}>3) При необходимости поменяйте точки или очистите маршрут.</Text>
-          </View>
-        )}
-
         {mode === 'radius' ? (
           <>
             {/* Категории */}
@@ -459,150 +490,209 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           </>
         ) : (
           <>
-            {/* Поиск адресов и транспорт в едином блоке */}
-            <View style={styles.sectionCard}>
-              {onAddressSelect && (
-                <View style={styles.dualInputRow}>
-                  <AddressSearch
-                    label="Старт"
-                    placeholder="Введите адрес начала маршрута..."
-                    value={startAddress}
-                    enableCoordinateInput
-                    onAddressSelect={(address, coords) => onAddressSelect(address, coords, true)}
-                  />
-                  <View style={styles.separator} />
-                  <AddressSearch
-                    label="Финиш"
-                    placeholder="Введите адрес конца маршрута..."
-                    value={endAddress}
-                    enableCoordinateInput
-                    onAddressSelect={(address, coords) => onAddressSelect(address, coords, false)}
-                  />
-                </View>
-              )}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Маршрут</Text>
+              <Text style={styles.sectionHint}>Выберите старт и финиш на карте или через поиск, затем укажите транспорт.</Text>
 
-              <View style={[styles.section, styles.sectionTight, styles.transportSection]}>
-                <Text style={styles.sectionLabel}>Транспорт</Text>
-                <View style={styles.transportTabs}>
-                  {TRANSPORT_MODES.map(({ key, label, emoji }) => {
-                    const active = transportMode === key;
-                    return (
-                      <Pressable
-                        key={key}
-                        style={[
-                          styles.transportTab, 
-                          active && styles.transportTabActive,
-                          globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                        ]}
-                        onPress={() => setTransportMode(key)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Выбрать транспорт: ${TRANSPORT_MODES.find(m => m.key === key)?.label}`}
-                        accessibilityState={{ selected: active }}
-                      >
-                        <Text style={styles.transportEmoji}>{emoji}</Text>
-                        <Text
-                          style={[styles.transportTabText, active && styles.transportTabTextActive]}
+              <View style={styles.sectionCard}>
+                {onAddressSelect && (
+                  <>
+                    <View style={styles.stepBlock}>
+                      <View style={styles.stepHeaderRow}>
+                        <Text style={styles.stepBlockTitle}>Шаг 1. Старт</Text>
+                      </View>
+                      <AddressSearch
+                        label="Старт"
+                        placeholder="Введите адрес старта или выберите на карте"
+                        value={startAddress}
+                        enableCoordinateInput
+                        onAddressSelect={(address, coords) => onAddressSelect(address, coords, true)}
+                      />
+                    </View>
+
+                    <View style={styles.stepBlock}>
+                      <View style={styles.stepHeaderRow}>
+                        <Text style={styles.stepBlockTitle}>Шаг 2. Финиш</Text>
+                      </View>
+                      <AddressSearch
+                        label="Финиш"
+                        placeholder="Выберите точку на карте или введите адрес"
+                        value={endAddress}
+                        enableCoordinateInput
+                        onAddressSelect={(address, coords) => onAddressSelect(address, coords, false)}
+                      />
+                    </View>
+                  </>
+                )}
+
+                <View
+                  style={[
+                    styles.section,
+                    styles.sectionTight,
+                    styles.transportSection,
+                    !(routeStepState.startSelected && routeStepState.endSelected) && styles.sectionDisabled,
+                  ]}
+                >
+                  <Text style={styles.sectionLabel}>Транспорт</Text>
+                  {!routeStepState.startSelected || !routeStepState.endSelected ? (
+                    <Text style={styles.sectionHint}>Доступно после выбора старта и финиша</Text>
+                  ) : null}
+                  <View style={styles.transportTabs}>
+                    {TRANSPORT_MODES.map(({ key, label, emoji }) => {
+                      const active = transportMode === key;
+                      const disabledTransport = !(routeStepState.startSelected && routeStepState.endSelected);
+                      return (
+                        <Pressable
+                          key={key}
+                          style={[
+                            styles.transportTab,
+                            active && styles.transportTabActive,
+                            disabledTransport && styles.transportTabDisabled,
+                            globalFocusStyles.focusable,
+                          ]}
+                          onPress={() => {
+                            if (disabledTransport) return;
+                            setTransportMode(key);
+                          }}
+                          disabled={disabledTransport}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Выбрать транспорт: ${TRANSPORT_MODES.find(m => m.key === key)?.label}`}
+                          accessibilityState={{ selected: active, disabled: disabledTransport }}
                         >
-                          {label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+                          <Text style={styles.transportEmoji}>{emoji}</Text>
+                          <Text
+                            style={[
+                              styles.transportTabText,
+                              active && styles.transportTabTextActive,
+                              disabledTransport && styles.transportTabTextDisabled,
+                            ]}
+                            accessibilityState={{ disabled: disabledTransport }}
+                          >
+                            {label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
                 </View>
               </View>
-            </View>
 
-            {(onClearRoute || swapStartEnd) && (
-              <View style={styles.actionRow}>
-                {onClearRoute && (
-                  <Pressable
-                    style={styles.actionGhost}
-                    onPress={onClearRoute}
-                    accessibilityRole="button"
-                    accessibilityLabel="Очистить точки маршрута"
-                  >
-                    <Icon name="delete-sweep" size={18} color={COLORS.text} />
-                    <Text style={styles.actionGhostText}>Очистить точки</Text>
-                  </Pressable>
-                )}
-                {swapStartEnd && (
-                  <Pressable
-                    style={styles.actionGhost}
-                    onPress={swapStartEnd}
-                    accessibilityRole="button"
-                    accessibilityLabel="Поменять старт и финиш местами"
-                  >
-                    <Icon name="swap-horiz" size={18} color={COLORS.text} />
-                    <Text style={styles.actionGhostText}>S ↔ F</Text>
-                  </Pressable>
-                )}
-              </View>
-            )}
-
-            {/* ✅ NEW: Validation messages */}
-            {!validation.valid && (
-              <ValidationMessage type="error" messages={validation.errors} />
-            )}
-            {validation.warnings.length > 0 && (
-              <ValidationMessage type="warning" messages={validation.warnings} />
-            )}
-
-            {/* ✅ ОПТИМИЗАЦИЯ: Управление точками маршрута */}
-            {routePoints.length > 0 && onRemoveRoutePoint && onClearRoute && (
-              <RoutePointControls
-                routePoints={routePoints}
-                onRemovePoint={onRemoveRoutePoint}
-                onClearRoute={onClearRoute}
-              />
-            )}
-
-            {/* Информация о маршруте */}
-            <View style={styles.routeInfo}>
-              <View style={styles.routeInfoRow}>
-                <View style={styles.routePill}>
-                  <Text style={styles.routePillLabel}>Старт</Text>
-                  <Text style={styles.routePillValue} numberOfLines={1}>
-                    {startAddress || 'Не выбран'}
-                  </Text>
-                </View>
-                <View style={styles.routePillDivider} />
-                <View style={styles.routePill}>
-                  <Text style={styles.routePillLabel}>Финиш</Text>
-                  <Text style={styles.routePillValue} numberOfLines={1}>
-                    {endAddress || 'Не выбран'}
-                  </Text>
-                </View>
-              </View>
-              {routeDistance != null && (
-                <View style={styles.routeDistanceRow}>
-                  <Text style={styles.routeLabel}>Дистанция</Text>
-                  <Text style={styles.routeDistance}>
-                    {(routeDistance / 1000).toFixed(1)} км
-                  </Text>
+              {(onClearRoute || swapStartEnd) && routePoints.length > 0 && (
+                <View style={styles.actionRow}>
+                  {onClearRoute && routePoints.length > 0 && (
+                    <Pressable
+                      style={styles.actionGhost}
+                      onPress={onClearRoute}
+                      accessibilityRole="button"
+                      accessibilityLabel="Сбросить маршрут"
+                    >
+                      <Icon name="delete-outline" size={18} color={COLORS.text} />
+                      <Text style={styles.actionGhostText}>Сбросить маршрут</Text>
+                    </Pressable>
+                  )}
+                  {swapStartEnd && routeStepState.startSelected && routeStepState.endSelected && (
+                    <Pressable
+                      style={styles.actionGhost}
+                      onPress={swapStartEnd}
+                      accessibilityRole="button"
+                      accessibilityLabel="Поменять старт и финиш местами"
+                    >
+                      <Icon name="swap-horiz" size={18} color={COLORS.text} />
+                      <Text style={styles.actionGhostText}>S ↔ F</Text>
+                    </Pressable>
+                  )}
                 </View>
               )}
+
+              {!validation.valid && <ValidationMessage type="error" messages={validation.errors} />}
+              {validation.warnings.length > 0 && <ValidationMessage type="warning" messages={validation.warnings} />}
+
+              {noPointsAlongRoute && !hideNoPointsToast && (
+                <View style={styles.noPointsToast} accessible accessibilityRole="text" testID="no-points-message">
+                  <Text style={styles.noPointsTitle}>Маршрут построен</Text>
+                  <Text style={styles.noPointsSubtitle}>
+                    Маршрут построен. Вдоль маршрута нет доступных точек в радиусе 2 км.
+                  </Text>
+                  <View style={styles.noPointsActions}>
+                    <Pressable
+                      style={[styles.ctaButton, styles.ctaPrimary]}
+                      onPress={increaseRadius}
+                      accessibilityRole="button"
+                      accessibilityLabel="Увеличить радиус"
+                    >
+                      <Text style={styles.ctaPrimaryText}>Увеличить радиус</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.ctaButton, styles.ctaOutline]}
+                      onPress={() => setHideNoPointsToast(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Показать маршрут без точек"
+                    >
+                      <Text style={styles.ctaOutlineText}>Показать маршрут без точек</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
+
+              {routePoints.length > 0 && onRemoveRoutePoint && onClearRoute && (
+                <RoutePointControls
+                  routePoints={routePoints}
+                  onRemovePoint={onRemoveRoutePoint}
+                  onClearRoute={onClearRoute}
+                />
+              )}
+
+              <View style={styles.stepper}>
+                <View style={[styles.stepItem, routeStepState.startSelected && styles.stepItemDone]}>
+                  <View style={[styles.stepBadge, styles.stepBadgeStart]}>
+                    <Text style={styles.stepBadgeText}>1</Text>
+                  </View>
+                  <View style={styles.stepContent}>
+                    <Text style={styles.stepTitle}>Шаг 1. Выберите старт</Text>
+                    <Text style={styles.stepSubtitle} numberOfLines={1}>
+                      {routeStepState.startSelected ? startLabel : 'Выберите старт'}
+                    </Text>
+                  </View>
+                </View>
+
+                {routeStepState.startSelected && (
+                  <View style={[styles.stepItem, routeStepState.endSelected && styles.stepItemDone]}>
+                    <View style={[styles.stepBadge, styles.stepBadgeEnd]}>
+                      <Text style={styles.stepBadgeText}>2</Text>
+                    </View>
+                    <View style={styles.stepContent}>
+                      <Text style={styles.stepTitle}>Шаг 2. Выберите финиш</Text>
+                      <Text style={styles.stepSubtitle} numberOfLines={1}>
+                        {routeStepState.endSelected ? endLabel : 'Теперь выберите финиш'}
+                      </Text>
+                      {showEndHint && <Text style={styles.stepInlineHint}>👆 Теперь выберите точку финиша</Text>}
+                    </View>
+                  </View>
+                )}
+
+                <View style={[styles.stepItem, routeStepState.endSelected && styles.stepItemDone]}>
+                  <View style={[styles.stepBadge, styles.stepBadgeTransport]}>
+                    <Text style={styles.stepBadgeText}>3</Text>
+                  </View>
+                  <View style={styles.stepContent}>
+                    <Text style={styles.stepTitle}>Шаг 3. Транспорт</Text>
+                    <Text style={styles.stepSubtitle} numberOfLines={1}>
+                      {routeStepState.endSelected ? 'Транспорт выбран' : 'Выберите транспорт'}
+                    </Text>
+                    {showTransportHint && <Text style={styles.stepInlineHint}>🚗 Выберите транспорт</Text>}
+                  </View>
+                </View>
+
+                {routeDistance != null && (
+                  <View style={styles.routeBuilt}>
+                    <Text style={styles.routeBuiltTitle}>Маршрут построен</Text>
+                    <Text style={styles.routeBuiltMeta}>
+                      {(routeDistance / 1000).toFixed(1)} км • {transportMode === 'car' ? '🚗' : transportMode === 'bike' ? '🚴' : '🚶'}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
-
-            {/* ✅ ИСПРАВЛЕНИЕ: Подсказка для режима маршрута - в боковой панели */}
-            {mode === 'route' && !routeHintDismissed && onRouteHintDismiss && (
-              <View style={styles.routeHintContainer}>
-                <RouteHint
-                  onDismiss={onRouteHintDismiss}
-                  routePointsCount={routePoints.length}
-                />
-              </View>
-            )}
-
-            {/* ✅ РЕАЛИЗАЦИЯ: Статистика маршрута - используем отфильтрованные данные */}
-            {mode === 'route' && routePoints.length >= 2 && routeDistance !== null && (
-              <View style={styles.routeStatsContainer}>
-                <RouteStats
-                  distance={routeDistance}
-                  pointsCount={(filteredTravelsData || travelsData).length}
-                  mode={transportMode}
-                />
-              </View>
-            )}
           </>
         )}
 
@@ -624,33 +714,45 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       {/* Sticky footer CTA */}
       <View style={styles.stickyFooter}>
         {!canBuildRoute && mode === 'route' && (
-          <Text style={styles.helperText}>Добавьте старт и финиш, чтобы построить маршрут</Text>
+          <Text style={styles.helperText}>
+            Добавьте старт и финиш на карте — кнопка «Построить» активируется автоматически
+          </Text>
         )}
         <View style={styles.footerButtons}>
           <Pressable
-            style={[styles.ctaButton, styles.ctaOutline]}
-            onPress={resetFilters}
+            style={[
+              styles.ctaButton,
+              styles.ctaOutline,
+              mode === 'route' && !routePoints.length && styles.ctaDisabled,
+            ]}
+            onPress={() => {
+              if (mode === 'route' && !routePoints.length) return;
+              resetFilters();
+            }}
+            disabled={mode === 'route' && !routePoints.length}
             accessibilityRole="button"
             accessibilityLabel="Сбросить"
+            accessibilityState={{ disabled: mode === 'route' && !routePoints.length }}
           >
             <Text style={styles.ctaOutlineText}>Сбросить</Text>
           </Pressable>
-          {onBuildRoute && (
+
+          {onBuildRoute && mode === 'route' && (
             <Pressable
               style={[
                 styles.ctaButton,
                 styles.ctaPrimary,
                 (!canBuildRoute || routingLoading) && styles.ctaDisabled,
               ]}
+              onPress={() => {
+                if (!canBuildRoute || routingLoading) return;
+                onBuildRoute();
+              }}
               disabled={!canBuildRoute || routingLoading}
-              onPress={onBuildRoute}
               accessibilityRole="button"
-              accessibilityLabel="Построить"
-            >
-              <Text style={styles.ctaPrimaryText}>
-                {routingLoading ? 'Строим...' : 'Построить'}
-              </Text>
-            </Pressable>
+              accessibilityLabel="Построить маршрут"
+              accessibilityState={{ disabled: !canBuildRoute || routingLoading }}
+            ><Text style={styles.ctaPrimaryText}>{ctaLabel}</Text></Pressable>
           )}
         </View>
       </View>
@@ -1151,6 +1253,150 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     routeStatsContainer: {
       marginTop: 12,
       marginBottom: 12,
+    },
+    stepper: {
+      marginTop: 4,
+      marginBottom: 12,
+      gap: 8,
+    },
+    stepItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      padding: 10,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: COLORS.card,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    stepItemDone: {
+      borderColor: COLORS.primary,
+      backgroundColor: COLORS.primarySoft,
+    },
+    stepBadge: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    stepBadgeStart: {
+      backgroundColor: '#25a562',
+    },
+    stepBadgeEnd: {
+      backgroundColor: '#d94b4b',
+    },
+    stepBadgeTransport: {
+      backgroundColor: COLORS.primary,
+    },
+    stepBadgeText: {
+      color: '#fff',
+      fontWeight: '800',
+      fontSize: 12,
+    },
+    stepContent: {
+      flex: 1,
+      gap: 2,
+    },
+    stepTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: COLORS.text,
+    },
+    stepSubtitle: {
+      fontSize: 12,
+      color: COLORS.textMuted,
+    },
+    routeBuilt: {
+      marginTop: 6,
+      padding: 12,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: COLORS.primarySoft,
+      borderWidth: 1,
+      borderColor: COLORS.primary,
+    },
+    routeBuiltTitle: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: COLORS.primary,
+      marginBottom: 4,
+    },
+    routeBuiltMeta: {
+      fontSize: 13,
+      color: COLORS.text,
+      fontWeight: '600',
+    },
+    noPointsToast: {
+      marginTop: 12,
+      padding: 12,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: '#fff',
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      gap: 8,
+    },
+    noPointsTitle: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: COLORS.text,
+    },
+    noPointsSubtitle: {
+      fontSize: 12,
+      color: COLORS.textMuted,
+      lineHeight: 18,
+    },
+    noPointsActions: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 4,
+    },
+    stepBlock: {
+      padding: 12,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: COLORS.card,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      marginBottom: 12,
+      gap: 8,
+    },
+    stepHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    stepBlockTitle: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: COLORS.text,
+    },
+    stepInlineHint: {
+      fontSize: 12,
+      color: COLORS.primary,
+      fontWeight: '700',
+    },
+    addressToggle: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      backgroundColor: COLORS.primarySoft,
+      borderWidth: 1,
+      borderColor: COLORS.primary,
+      marginTop: 4,
+    },
+    addressToggleText: {
+      color: COLORS.primary,
+      fontWeight: '700',
+      fontSize: 13,
+    },
+    sectionDisabled: {
+      opacity: 0.6,
+    },
+    transportTabDisabled: {
+      opacity: 0.5,
+    },
+    transportTabTextDisabled: {
+      color: COLORS.textMuted,
     },
     actionRow: {
       flexDirection: 'row',

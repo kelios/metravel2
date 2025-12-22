@@ -77,7 +77,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
 
         // Удаляем линию, если была
         if (polylineRef.current && map) {
-            try { map.removeLayer(polylineRef.current) } catch (_error) { /* noop */ }
+            try { map.removeLayer(polylineRef.current) } catch { /* noop */ }
             polylineRef.current = null
         }
     }, [hasTwoPoints, map, setErrors, setFullRouteCoords, setRouteDistance])
@@ -156,18 +156,22 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         if (polylineRef.current) {
             try {
                 map.removeLayer(polylineRef.current)
-            } catch (_error) {
+            } catch (error) {
                 if (__DEV__) {
                     const { devWarn } = require('@/src/utils/logger')
-                    devWarn('Ошибка удаления полилинии:', _error)
+                    devWarn('Ошибка удаления полилинии:', error)
                 }
             }
             polylineRef.current = null
         }
 
         // Draw new polyline if we have coordinates
-        if (routingState.coords.length >= 2) {
-            const latlngs = routingState.coords.map(([lng, lat]) => L.latLng(lat, lng))
+        const coordsToDraw = routingState.coords.length >= 2
+            ? routingState.coords
+            : (hasTwoPoints ? routePoints : [])
+
+        if (coordsToDraw.length >= 2) {
+            const latlngs = coordsToDraw.map(([lng, lat]) => L.latLng(lat, lng))
             
             // Определяем цвет линии в зависимости от статуса
             const isOptimal = routingState.error === false || routingState.error === ''
@@ -201,10 +205,10 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                             maxZoom: 14
                         })
                     }
-                } catch (_error) {
+                } catch (error) {
                     if (__DEV__) {
                         const { devWarn } = require('@/src/utils/logger')
-                        devWarn('Ошибка центрирования на маршруте:', _error)
+                        devWarn('Ошибка центрирования на маршруте:', error)
                     }
                 }
             }
@@ -217,7 +221,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             if (polylineRef.current && map) {
                 try {
                     map.removeLayer(polylineRef.current)
-                } catch (_error) {
+                } catch {
                     // Игнорируем ошибки при очистке
                 }
                 polylineRef.current = null
