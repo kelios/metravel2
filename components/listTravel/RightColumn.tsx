@@ -18,7 +18,6 @@ import { TravelListSkeleton } from '@/components/SkeletonLoader'
 import EmptyState from '@/components/EmptyState'
 import type { Travel } from '@/src/types/types'
 import { PER_PAGE } from './utils/listTravelConstants'
-import { LAYOUT } from '@/constants/layout'
 
 const RECOMMENDATIONS_TOTAL_HEIGHT = 376;
 const STABLE_PLACEHOLDER_HEIGHT = 1200; // Reserve vertical space on web mobile to avoid CLS

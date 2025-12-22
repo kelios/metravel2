@@ -37,6 +37,12 @@ Interactive travel discovery and route planning page combining:
    - Map components (`MapContainer`, `TileLayer`, `Marker`, `Popup`, `Circle`) come from `react-leaflet` once loaded.
    - Marker icons memoized (orange travel, green start, red end, blue user) via Leaflet CDN assets.
    - Travel markers rendered through memoized `TravelMarkersMemo` with strict point comparison to avoid re-renders.
+   - **Zoom behavior**:
+     - `MapContainer` receives an **initial-only** zoom via `initialZoomRef`.
+     - Rationale: treat Leaflet zoom as user-controlled; React rerenders (filters/clusters/location) must not reset the current zoom.
+   - **Auto-fit bounds behavior (radius mode)**:
+     - Radius-mode `fitBounds` is guarded by a dataset key (`lastAutoFitKeyRef`) so it runs **once per dataset** (mode + points + optional user location).
+     - Rationale: prevents “fighting” user zoom / constant re-centering on any state change.
    - User interactions:
      - Map click (route mode, <2 points) delegates to parent handler; sets `disableFitBounds` to avoid auto-centering jank.
      - Popup close uses `useMap` inside `PopupWithClose`.
@@ -46,6 +52,9 @@ Interactive travel discovery and route planning page combining:
    - `RoutingMachine` (Leaflet polyline renderer) consumes `routePoints`, `transportMode`, and `useRouting` hook results.
    - `useRouting` (not detailed here) chooses ORS (env `EXPO_PUBLIC_ROUTE_SERVICE`) or OSRM fallback; returns `{loading,error,distance,coords}`.
    - `RoutingMachine` syncs routing state to parent callbacks (`setRoutingLoading`, `setErrors`, `setRouteDistance`, `setFullRouteCoords`) with change detection to prevent loops.
+   - Web route overlay (in `Map.web.tsx`):
+     - Renders **Start/End markers** when route points exist.
+     - Renders `RoutingMachine` through a wrapper `RoutingMachineWithMapInner` (uses `react-leaflet` `useMap`).
    - Polylines keyed by `fitKey` (transport + points) to avoid repeated fitBounds; fits only when start/end change.
 
 5) **Panels & Layout (map.tsx)**
@@ -83,6 +92,23 @@ Interactive travel discovery and route planning page combining:
 - Memoized markers and icons to reduce rerenders.
 - Lazy loading Leaflet/react-leaflet via `requestIdleCallback`/timeout.
 - `window.resize` dispatch on panel visibility change (web) to invalidate map size.
+
+## Clustering (Web)
+- Custom clustering is implemented in `Map.web.tsx` (not Leaflet.markercluster).
+- Behavior:
+  - Clustering is enabled only when the dataset is large (`CLUSTER_THRESHOLD`).
+  - Grid size is **zoom-dependent** (`getClusterGridForZoom(mapZoom)`), updated from Leaflet zoom events.
+  - When `mapZoom >= CLUSTER_EXPAND_ZOOM`, clusters are **auto-expanded** into individual markers.
+
+## Testing Notes
+- `__tests__/components/MapPage/Map.web.test.tsx`
+  - Verifies that:
+    - zoom is not reset across rerenders (`initialZoomRef` behavior),
+    - route mode renders `RoutingMachine` when 2 points are set,
+    - clusters expand on high zoom (no new cluster bubble icons).
+- `__tests__/components/RoutingMachine.e2e.test.tsx`
+  - E2E-style verification of `RoutingMachine` behavior using mocked Leaflet + fetch.
+  - Avoid strict `latLng` call count assertions; assert meaningful outcomes (polyline creation, full coords propagation).
 
 ## Hypothetical Risks & Mitigations
 - **Routing loop / max update depth** (stack in RoutingMachine): State setters could fire on every render if `useRouting` returns new refs or parent handlers aren’t stable.  

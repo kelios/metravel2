@@ -389,13 +389,16 @@ const MapPageComponent: React.FC<Props> = ({
 
   useEffect(() => {
     let cancelled = false;
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-
     const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+
+    if (!isTestEnv && (Platform.OS !== 'web' || typeof window === 'undefined')) return;
 
     const ensureLeafletCSS = () => {
       const href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      if (!document.querySelector(`link[href="${href}"]`)) {
+      const exists = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some((l) =>
+        (l as HTMLLinkElement).href.includes(href)
+      );
+      if (!exists) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = href;

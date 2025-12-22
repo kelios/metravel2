@@ -64,12 +64,18 @@ jest.mock('leaflet', () => ({
 // Mock react-leaflet module
 jest.mock('react-leaflet', () => {
   let currentZoom = 11
+  const RN = require('react-native')
+  const View = RN.View
   return {
-    MapContainer: ({ children, ...props }: any) => <div data-testid="map-container" {...props}>{children}</div>,
-    TileLayer: (props: any) => <div data-testid="tile-layer" {...props} />,
+    MapContainer: ({ children, ...props }: any) => (
+      <View testID="map-container" {...props}>
+        {children}
+      </View>
+    ),
+    TileLayer: (props: any) => <View testID="tile-layer" {...props} />,
     Circle: (props: any) => {
       ;(globalThis as any).lastCircleProps = props
-      return <div data-testid="circle" {...props} />
+      return <View testID="circle" {...props} />
     },
     Marker: (props: any) => {
       // Сохраняем eventHandlers для тестирования
@@ -77,9 +83,9 @@ jest.mock('react-leaflet', () => {
         (globalThis as any).lastMarkerClickHandler = props.eventHandlers.click
       }
       const iconClass = props.icon?.options?.className
-      return <div data-testid="marker" data-icon-class={iconClass} {...props} />
+      return <View testID="marker" data-icon-class={iconClass} {...props} />
     },
-    Popup: ({ children }: any) => <div data-testid="popup">{children}</div>,
+    Popup: ({ children }: any) => <View testID="popup">{children}</View>,
     useMap: jest.fn(() => ({
       fitBounds: jest.fn(),
       setView: jest.fn(),
@@ -102,15 +108,19 @@ jest.mock('react-leaflet', () => {
 
 // Mock RoutingMachine component
 jest.mock('@/components/MapPage/RoutingMachine', () => {
+  const RN = require('react-native')
+  const View = RN.View
   return function RoutingMachine() {
-    return <div data-testid="routing-machine" />
+    return <View testID="routing-machine" />
   }
 })
 
 // Mock PopupContentComponent
 jest.mock('@/components/MapPage/PopupContentComponent', () => {
+  const RN = require('react-native')
+  const View = RN.View
   return function PopupContentComponent() {
-    return <div data-testid="popup-content" />
+    return <View testID="popup-content" />
   }
 })
 
@@ -131,6 +141,10 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     ;(window as any).L = mockLeaflet
     // Reset marker click handler
     delete (window as any).lastMarkerClickHandler
+  })
+
+  afterEach(() => {
+    // noop
   })
 
   it('renders loading state initially', async () => {
@@ -198,6 +212,60 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
     // Достаточно того, что рендер отработал без исключений
     expect(result).toBeTruthy()
+  })
+
+  it('does not reset zoom on rerender when coordinates.zoom changes (initial zoom is sticky)', async () => {
+    const prevNodeEnv = process.env.NODE_ENV
+    ;(process.env as any).NODE_ENV = 'test'
+    const initialProps = {
+      ...defaultProps,
+      coordinates: { latitude: 53.9, longitude: 27.5667, zoom: 7 } as any,
+    }
+
+    const { getByTestId, rerender } = render(<MapPageComponent {...initialProps} />)
+
+    await act(async () => {})
+
+    await waitFor(() => {
+      expect(getByTestId('map-container')).toBeTruthy()
+    })
+
+    const mapBefore = getByTestId('map-container')
+    expect((mapBefore as any).props.zoom).toBe(7)
+
+    // Change incoming zoom prop; MapContainer zoom should stay at initial value.
+    rerender(
+      <MapPageComponent
+        {...initialProps}
+        coordinates={{ latitude: 53.9, longitude: 27.5667, zoom: 12 } as any}
+      />
+    )
+    await act(async () => {})
+
+    const mapAfter = getByTestId('map-container')
+    expect((mapAfter as any).props.zoom).toBe(7)
+
+    ;(process.env as any).NODE_ENV = prevNodeEnv
+  })
+
+  it('renders RoutingMachine when in route mode with 2 route points', async () => {
+    const prevNodeEnv = process.env.NODE_ENV
+    ;(process.env as any).NODE_ENV = 'test'
+    const props = {
+      ...defaultProps,
+      mode: 'route' as const,
+      routePoints: [[27.5667, 53.9], [27.5767, 53.91]] as [number, number][],
+    }
+
+    const { getByTestId } = render(<MapPageComponent {...props} />)
+
+    await act(async () => {})
+
+    await waitFor(() => {
+      expect(getByTestId('routing-machine')).toBeTruthy()
+    })
+
+    ;(process.env as any).NODE_ENV = prevNodeEnv
   })
 
   it('does not zoom when clicking on route start/finish markers', async () => {

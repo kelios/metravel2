@@ -75,6 +75,7 @@ index 64801fc..bd46e49 100644
  export class WebShape extends React.Component {
    prepareProps(props) {
      return props;
+   }
 diff --git a/node_modules/react-native-svg/lib/module/web/utils/prepare.js b/node_modules/react-native-svg/lib/module/web/utils/prepare.js
 index 796b489..2816c8c 100644
 --- a/node_modules/react-native-svg/lib/module/web/utils/prepare.js

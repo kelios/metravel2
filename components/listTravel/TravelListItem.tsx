@@ -7,14 +7,13 @@ import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/src/types/types";
 import OptimizedFavoriteButton from "@/components/OptimizedFavoriteButton";
-import ReactionButtons from "@/components/social/ReactionButtons";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travelsApi";
 import { generateSrcSet, optimizeImageUrl } from "@/utils/imageOptimization";
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
 import { getResponsiveCardValues } from './enhancedTravelCardStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { formatViewCount } from "@/components/travel/utils/travelHelpers";
-import { TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT } from './utils/listTravelConstants';
+import { TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT, TRAVEL_CARD_WEB_MOBILE_HEIGHT } from './utils/listTravelConstants';
 
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
@@ -523,6 +522,17 @@ function TravelListItem({
         testID={cardTestId}
         style={[
           styles.card,
+          Platform.OS === 'web' &&
+            (isMobile
+              ? {
+                  // На mobile web карточка должна расти по контенту (иначе режутся мета/реакции)
+                  height: undefined,
+                  minHeight: TRAVEL_CARD_WEB_MOBILE_HEIGHT,
+                }
+              : {
+                  // На desktop web сохраняем одинаковую высоту в сетке
+                  height: TRAVEL_CARD_WEB_HEIGHT,
+                }),
           Platform.OS === 'web' && {
             // ✅ Радиус карточки на web теперь зависит от ширины viewport
             borderRadius: responsiveValues.borderRadius,
@@ -764,17 +774,6 @@ function TravelListItem({
               </View>
             )}
           </View>
-
-          {/* Реакции и просмотры */}
-          {!selectable && (
-            <View style={{ marginTop: 8 }}>
-              <ReactionButtons 
-                travelId={String(id)} 
-                compact={true}
-                showViews={false}
-              />
-            </View>
-          )}
         </View>
       </CardWrapper>
     );
@@ -864,12 +863,6 @@ const styles = StyleSheet.create({
     borderWidth: Platform.OS === 'web' ? 1 : 0,
     borderColor: TOKENS.colors.border,
     overflow: 'hidden',
-    // Фиксированная высота на web, чтобы все карточки в ряду были одной высоты
-    ...(Platform.OS === 'web'
-      ? {
-          height: TRAVEL_CARD_WEB_HEIGHT,
-        }
-      : {}),
     // Минимальные тени для глубины - разделены по платформам
     ...(Platform.OS === 'web' 
       ? { boxShadow: TOKENS.shadows.subtle }
