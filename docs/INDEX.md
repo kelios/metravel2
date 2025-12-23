@@ -6,6 +6,10 @@
 - [Release](./RELEASE.md)
 - [Troubleshooting](./TROUBLESHOOTING.md)
 
+## Product specs
+
+ - [Travel Details Performance (TZ)](./travel-details-performance-tz.md)
+
 ## What lives where
 
 - App entry and routing: `app/` (Expo Router)

@@ -105,9 +105,11 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
 
     const handleCreate = useCallback(() => {
         if (!isAuthenticated) {
+            setMobileMenuVisible(false);
             router.push('/login' as any);
             return;
         }
+        setMobileMenuVisible(false);
         router.push('/travel/new' as any);
     }, [isAuthenticated, router]);
 

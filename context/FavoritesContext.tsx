@@ -61,11 +61,15 @@ interface FavoritesContextType {
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
+const AUTH_REQUIRED_ERROR = 'AUTH_REQUIRED';
+
 export const FavoritesProvider = ({ children }: { children: React.ReactNode }) => {
     const { isAuthenticated, userId } = useAuth();
     const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
     const [viewHistory, setViewHistory] = useState<ViewHistoryItem[]>([]);
     const [recommended, setRecommended] = useState<FavoriteItem[]>([]);
+
+    const inFlightRef = useRef(new Set<string>());
 
     const fetchedRef = useRef({
         favorites: false,
@@ -337,9 +341,21 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
     }, [isAuthenticated, loadFavoritesAndHistory, loadServerCached, userId]);
 
     const addFavorite = useCallback(async (item: Omit<FavoriteItem, 'addedAt'>) => {
+        if (!isAuthenticated) {
+            throw new Error(AUTH_REQUIRED_ERROR);
+        }
+
+        const inflightKey = `${item.type}:${String(item.id)}`;
+        if (inFlightRef.current.has(inflightKey)) {
+            return;
+        }
+
+        inFlightRef.current.add(inflightKey);
+
         if (isAuthenticated && userId && item.type === 'travel') {
             const existing = favorites.find((f) => f.id === item.id && f.type === item.type);
             if (existing) {
+                inFlightRef.current.delete(inflightKey);
                 return;
             }
 
@@ -355,8 +371,11 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
                 fetchedRef.current.favorites = true;
             } catch (error) {
                 setFavorites((prev) => prev.filter((f) => !(f.id === item.id && f.type === item.type)));
+                inFlightRef.current.delete(inflightKey);
                 throw error;
             }
+
+            inFlightRef.current.delete(inflightKey);
 
             return;
         }
@@ -398,10 +417,23 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
                 });
             }
             throw error;
+        } finally {
+            inFlightRef.current.delete(inflightKey);
         }
     }, [favorites, isAuthenticated, refreshFromServer, saveFavorites, userId]);
 
     const removeFavorite = useCallback(async (id: number | string, type: FavoriteItem['type'] = 'travel') => {
+        if (!isAuthenticated) {
+            throw new Error(AUTH_REQUIRED_ERROR);
+        }
+
+        const inflightKey = `${type}:${String(id)}`;
+        if (inFlightRef.current.has(inflightKey)) {
+            return;
+        }
+
+        inFlightRef.current.add(inflightKey);
+
         if (isAuthenticated && userId) {
             const before = favorites;
             setFavorites((prev) => prev.filter((f) => !(f.id === id && f.type === type)));
@@ -413,8 +445,11 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
                 fetchedRef.current.favorites = true;
             } catch (error) {
                 setFavorites(before);
+                inFlightRef.current.delete(inflightKey);
                 throw error;
             }
+
+            inFlightRef.current.delete(inflightKey);
 
             return;
         }
@@ -441,6 +476,8 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
         } catch (error) {
             console.error('Ошибка удаления из избранного:', error);
             throw error;
+        } finally {
+            inFlightRef.current.delete(inflightKey);
         }
     }, [favorites, isAuthenticated, refreshFromServer, saveFavorites, userId]);
 

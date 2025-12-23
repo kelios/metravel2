@@ -250,7 +250,8 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
                   <OptimizedImage
                     source={{ uri: image.url }}
                     style={styles.image}
-                    contentFit="cover"
+                    contentFit="contain"
+                    blurBackground
                     loading="lazy"
                     alt={`Gallery image ${index + 1}`}
                   />

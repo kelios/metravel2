@@ -1,5 +1,5 @@
 import React from 'react'
-import { act, fireEvent, render, type RenderAPI } from '@testing-library/react-native'
+import { act, fireEvent, render, waitFor, type RenderAPI } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 import Slider, { type SliderImage } from '@/components/travel/Slider'
 
@@ -84,6 +84,32 @@ describe('Slider', () => {
     expect(getByTestId('slider-placeholder-0')).toBeTruthy()
     expect(getByText('Фото не загрузилось')).toBeTruthy()
     expect(queryByTestId('slider-loading-overlay-0')).toBeNull()
+  })
+
+  it('shows neutral placeholder for first slide when neutralFirstSlideErrorPlaceholder is enabled', async () => {
+    const { getByTestId, queryByTestId, queryByText } = render(
+      <Slider
+        images={[portraitImage]}
+        showArrows={false}
+        showDots={false}
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground
+        neutralFirstSlideErrorPlaceholder
+      />
+    )
+
+    const image = getByTestId('slider-image-0')
+
+    await act(async () => {
+      image.props.onError?.()
+    })
+
+    await waitFor(() => {
+      expect(queryByTestId('slider-neutral-placeholder-0')).toBeTruthy()
+    })
+    expect(queryByTestId('slider-placeholder-0')).toBeNull()
+    expect(queryByText('Фото не загрузилось')).toBeNull()
   })
 
   it('renders arrows on desktop when enabled and hides them on mobile when hideArrowsOnMobile is true', async () => {

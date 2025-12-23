@@ -138,9 +138,7 @@ export class EnhancedPdfGenerator {
     const safeCoverImage = this.buildSafeImageUrl(coverImage);
     const coverQuote = this.selectedQuotes?.cover;
 
-    const background = safeCoverImage
-      ? `url('${this.escapeHtml(safeCoverImage)}')`
-      : `linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%)`;
+    const background = `linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%)`;
 
     return `
       <section class="pdf-page cover-page" style="
@@ -151,18 +149,47 @@ export class EnhancedPdfGenerator {
         justify-content: space-between;
         color: ${colors.cover.text};
         background: ${background};
-        background-size: cover;
-        background-position: center;
         position: relative;
         overflow: hidden;
       ">
         ${safeCoverImage ? `
+          <img
+            src="${this.escapeHtml(safeCoverImage)}"
+            alt=""
+            aria-hidden="true"
+            crossorigin="anonymous"
+            style="
+              position: absolute;
+              inset: 0;
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              filter: blur(18px);
+              transform: scale(1.08);
+              opacity: 0.95;
+              z-index: 0;
+            "
+          />
+          <img
+            src="${this.escapeHtml(safeCoverImage)}"
+            alt=""
+            aria-hidden="true"
+            crossorigin="anonymous"
+            style="
+              position: absolute;
+              inset: 0;
+              width: 100%;
+              height: 100%;
+              object-fit: contain;
+              z-index: 1;
+            "
+          />
           <div style="
             position: absolute;
             inset: 0;
             background:
               linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.10) 45%, rgba(0,0,0,0.60) 100%);
-            z-index: 1;
+            z-index: 2;
           "></div>
         ` : ''}
 
@@ -170,9 +197,10 @@ export class EnhancedPdfGenerator {
           padding: 26mm 24mm 0 24mm;
           text-align: center;
           position: relative;
-          z-index: 2;
+          z-index: 3;
         ">
           <h1 style="
+            color: ${colors.cover.text};
             font-size: ${typography.h1.size};
             font-weight: ${typography.h1.weight};
             line-height: ${typography.h1.lineHeight};
@@ -244,7 +272,7 @@ export class EnhancedPdfGenerator {
         <div style="
           padding: 0 24mm 24mm 24mm;
           position: relative;
-          z-index: 2;
+          z-index: 3;
           display: flex;
           align-items: flex-end;
           justify-content: space-between;
@@ -276,7 +304,7 @@ export class EnhancedPdfGenerator {
           left: 24mm;
           font-size: 9pt;
           opacity: 0.7;
-          z-index: 2;
+          z-index: 3;
           font-family: ${typography.bodyFont};
         ">
           Создано ${new Date().toLocaleDateString('ru-RU', {
@@ -324,7 +352,7 @@ export class EnhancedPdfGenerator {
             padding-bottom: 8px;
             border-bottom: 2px solid ${colors.accentSoft};
           ">
-            <span style="font-size: 20pt; line-height: 1;">📸</span>
+            ${this.renderPdfIcon('camera', colors.accent, 20)}
             <h2 style="
               font-size: ${typography.h2.size};
               font-weight: ${typography.h2.weight};
@@ -339,13 +367,13 @@ export class EnhancedPdfGenerator {
             ">(${photos.length} ${this.getPhotoLabel(photos.length)})</span>
           </div>
           <div style="
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            display: flex;
             gap: 4mm;
-            position: relative;
+            flex-wrap: nowrap;
           ">
             ${previewPhotos.map((photo, index) => `
               <div style="
+                width: calc((100% - 12mm) / 4);
                 border-radius: ${this.theme.blocks.borderRadius};
                 overflow: hidden;
                 background: ${colors.surfaceAlt};
@@ -353,7 +381,7 @@ export class EnhancedPdfGenerator {
                 position: relative;
               ">
                 <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
-                  style="width: 100%; height: 45mm; object-fit: cover; display: block;"
+                  style="width: 100%; height: 48mm; object-fit: cover; display: block;"
                   crossorigin="anonymous"
                   onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
                 ${index === 3 ? `
@@ -373,14 +401,6 @@ export class EnhancedPdfGenerator {
               </div>
             `).join('')}
           </div>
-          <p style="
-            margin-top: ${spacing.elementSpacing};
-            font-size: ${typography.small.size};
-            color: ${colors.textMuted};
-            text-align: center;
-            font-style: italic;
-            font-family: ${typography.bodyFont};
-          ">Полная галерея на следующей странице</p>
         </div>
       `;
     }
@@ -577,18 +597,31 @@ export class EnhancedPdfGenerator {
               left: 0;
               right: 0;
               bottom: 0;
-              background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.85) 100%);
-              padding: 22mm 22mm 18mm 22mm;
+              background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.72) 45%, rgba(0,0,0,0.92) 100%);
+              padding: 20mm 22mm 18mm 22mm;
             ">
-              <h1 style="
-                color: #ffffff;
-                font-size: ${typography.h1.size};
-                margin-bottom: 8mm;
-                font-weight: ${typography.h1.weight};
-                line-height: ${typography.h1.lineHeight};
-                text-shadow: 0 4px 12px rgba(0,0,0,0.5);
-                font-family: ${typography.headingFont};
-              ">${this.escapeHtml(travel.name)}</h1>
+              <div style="
+                display: inline-block;
+                max-width: 100%;
+                padding: 6mm 6mm;
+                border-radius: 10px;
+                background: rgba(0,0,0,0.22);
+                backdrop-filter: blur(2px);
+                -webkit-backdrop-filter: blur(2px);
+              ">
+                <h1 style="
+                  color: #ffffff;
+                  font-size: ${typography.h1.size};
+                  margin: 0 0 6mm 0;
+                  font-weight: ${typography.h1.weight};
+                  line-height: ${typography.h1.lineHeight};
+                  text-shadow: 0 6px 18px rgba(0,0,0,0.55);
+                  font-family: ${typography.headingFont};
+                  overflow-wrap: anywhere;
+                  word-break: break-word;
+                  hyphens: auto;
+                ">${this.escapeHtml(travel.name)}</h1>
+              </div>
               ${metaPieces.length ? `
                 <div style="
                   color: rgba(255,255,255,0.95);
@@ -732,10 +765,7 @@ export class EnhancedPdfGenerator {
               padding-bottom: 8px;
               border-bottom: 2px solid ${colors.accentSoft};
             ">
-              <span style="
-                font-size: 20pt;
-                line-height: 1;
-              ">📝</span>
+              ${this.renderPdfIcon('pen', colors.accent, 20)}
               <h2 style="
                 font-size: ${typography.h2.size};
                 font-weight: ${typography.h2.weight};
@@ -794,10 +824,7 @@ export class EnhancedPdfGenerator {
               padding-bottom: 8px;
               border-bottom: 2px solid ${colors.accentSoft};
             ">
-              <span style="
-                font-size: 20pt;
-                line-height: 1;
-              ">💡</span>
+              ${this.renderPdfIcon('bulb', colors.accent, 20)}
               <h2 style="
                 font-size: ${typography.h2.size};
                 font-weight: ${typography.h2.weight};
@@ -873,7 +900,7 @@ export class EnhancedPdfGenerator {
                   gap: 8px;
                   margin-bottom: ${spacing.elementSpacing};
                 ">
-                  <span style="font-size: 18pt; line-height: 1;">⚠️</span>
+                  ${this.renderPdfIcon('warning', colors.dangerBlock.icon, 18)}
                   <h3 style="
                     margin: 0;
                     color: ${colors.dangerBlock.text};
@@ -928,7 +955,8 @@ export class EnhancedPdfGenerator {
                 font-family: ${typography.headingFont};
               ">Онлайн-версия</div>
               <div style="
-                word-break: break-all;
+                overflow-wrap: anywhere;
+                word-break: break-word;
                 line-height: ${typography.body.lineHeight};
                 color: ${colors.text};
               ">${this.escapeHtml(url)}</div>
@@ -1075,7 +1103,7 @@ export class EnhancedPdfGenerator {
             lat: location.lat as number,
             lng: location.lng as number,
           })),
-          { width: 800, height: 480, zoom: 11 }
+          { width: 1400, height: 900 }
         );
       } catch {
         snapshotDataUrl = null;
@@ -1097,7 +1125,7 @@ export class EnhancedPdfGenerator {
             <div style="
               border-radius: ${this.theme.blocks.borderRadius};
               overflow: hidden;
-              height: 115mm;
+              height: 135mm;
             ">
               ${snapshotDataUrl ? `
                 <img src="${this.escapeHtml(snapshotDataUrl)}" alt="Карта маршрута"
@@ -1340,6 +1368,16 @@ export class EnhancedPdfGenerator {
     const { colors, typography } = this.theme;
 
     const styles = `
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body {
         margin: 0;
@@ -1400,11 +1438,13 @@ export class EnhancedPdfGenerator {
         page-break-after: always;
       }
       @media print {
-        body { background: ${colors.background}; }
+        html, body {
+          background: ${colors.background};
+        }
         .pdf-page {
           page-break-after: always;
           box-shadow: none;
-          margin: 0 auto;
+          margin: 0;
           width: 210mm;
           min-height: 297mm;
         }
@@ -1593,13 +1633,6 @@ export class EnhancedPdfGenerator {
       return { x, y, index };
     });
 
-    const path = normalized
-      .map(
-        (point, index) =>
-          `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)},${point.y.toFixed(2)}`
-      )
-      .join(' ');
-
     const circles = normalized
       .map(
         (point) => `
@@ -1636,8 +1669,6 @@ export class EnhancedPdfGenerator {
         </linearGradient>
       </defs>
       <rect x="0" y="0" width="100" height="60" rx="5" fill="url(#mapGradient)" />
-      <path d="${path}" fill="none" stroke="${this.theme.colors.accentStrong}" stroke-width="1.5"
-        stroke-linecap="round" stroke-linejoin="round" />
       ${circles}
     </svg>
   `;
@@ -1775,8 +1806,36 @@ export class EnhancedPdfGenerator {
 
   private getPhotoLabel(count: number): string {
     if (count === 1) return 'фотография';
-    if (count < 5) return 'фотографии';
+    if (count >= 2 && count <= 4) return 'фотографии';
     return 'фотографий';
+  }
+
+  private renderPdfIcon(
+    name: 'camera' | 'pen' | 'bulb' | 'warning',
+    color: string,
+    sizePt: number
+  ): string {
+    const size = `${sizePt}pt`;
+    const wrapperStyle = `
+      width: ${size};
+      height: ${size};
+      display: inline-block;
+      flex-shrink: 0;
+    `;
+
+    const svgStart = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${sizePt}" height="${sizePt}" fill="none" stroke="${this.escapeHtml(color)}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">`;
+    const svgEnd = `</svg>`;
+
+    const paths: Record<typeof name, string> = {
+      camera: `<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>`,
+      pen: `<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>`,
+      bulb: `<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12c.7.6 1 1.3 1 2v1h6v-1c0-.7.3-1.4 1-2a7 7 0 0 0-4-12z"/>`,
+      warning: `<path d="M10.3 3.2 1.7 18a2 2 0 0 0 1.7 3h17.2a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/>`,
+    };
+
+    return `
+      <span style="${wrapperStyle}">${svgStart}${paths[name]}${svgEnd}</span>
+    `;
   }
 
   private buildSafeImageUrl(url?: string | null): string | undefined {

@@ -5,23 +5,42 @@ import { useQuery } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useResponsive, useResponsiveColumns } from '@/hooks/useResponsive';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { fetchTravelsPopular, fetchTravelsOfMonth } from '@/src/api/map';
-import TravelCardCompact from '@/components/TravelCardCompact';
+import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { ResponsiveContainer } from '@/components/layout';
 
 interface HomeSectionProps {
   title: string;
   subtitle?: string;
   queryKey: string;
   fetchFn: () => Promise<any>;
+  hideAuthor?: boolean;
+  centerRowsOnWebDesktop?: boolean;
 }
 
-function HomeInspirationSection({ title, subtitle, queryKey, fetchFn }: HomeSectionProps) {
+function HomeInspirationSection({
+  title,
+  subtitle,
+  queryKey,
+  fetchFn,
+  hideAuthor = false,
+  centerRowsOnWebDesktop = false,
+}: HomeSectionProps) {
   const router = useRouter();
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
+
+  const isWebDesktop = Platform.OS === 'web' && !isMobile;
+
+  const numColumns = useResponsiveColumns({
+    tablet: 2,
+    largeTablet: 2,
+    desktop: 3,
+    default: 1,
+  });
 
   const { data: travelData = {}, isLoading } = useQuery({
     queryKey: [queryKey],
@@ -64,9 +83,9 @@ function HomeInspirationSection({ title, subtitle, queryKey, fetchFn }: HomeSect
         </View>
         <View style={styles.grid}>
           <View style={styles.row}>
-            {Array.from({ length: isMobile ? 2 : 3 }).map((_, index) => (
+            {Array.from({ length: isMobile ? 1 : 3 }).map((_, index) => (
               <View key={index} style={[styles.cardWrapper, isMobile && styles.cardWrapperMobile]}>
-                <SkeletonLoader width="100%" height={isMobile ? 240 : 280} borderRadius={12} />
+                <SkeletonLoader width="100%" height={isMobile ? 320 : 360} borderRadius={12} />
               </View>
             ))}
           </View>
@@ -99,21 +118,39 @@ function HomeInspirationSection({ title, subtitle, queryKey, fetchFn }: HomeSect
       </View>
 
       <FlatList
-        key={`inspiration-grid-${isMobile ? 2 : 3}`}
+        key={`inspiration-grid-${numColumns}`}
         data={travelsList}
-        renderItem={({ item }) => (
-          <View style={[styles.cardWrapper, isMobile && styles.cardWrapperMobile]}>
-            <TravelCardCompact travel={item} />
+        renderItem={({ item, index }) => (
+          <View
+            style={[
+              styles.cardWrapper,
+              isMobile && styles.cardWrapperMobile,
+              numColumns === 1 ? styles.cardWrapperSingleColumn : null,
+            ]}
+          >
+            <RenderTravelItem item={item} index={index} isMobile={isMobile} hideAuthor={hideAuthor} />
           </View>
         )}
         keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
         scrollEnabled={false}
-        numColumns={isMobile ? 2 : 3}
-        columnWrapperStyle={styles.row}
+        numColumns={numColumns}
+        ItemSeparatorComponent={numColumns === 1 ? Separator : undefined}
+        columnWrapperStyle={
+          numColumns === 1
+            ? undefined
+            : [
+                styles.row,
+                isWebDesktop && centerRowsOnWebDesktop ? styles.rowWebCentered : null,
+              ]
+        }
         contentContainerStyle={styles.grid}
       />
     </View>
   );
+}
+
+function Separator() {
+  return <View style={styles.separator} />;
 }
 
 export default function HomeInspirationSections() {
@@ -121,35 +158,44 @@ export default function HomeInspirationSections() {
   const isMobile = isPhone || isLargePhone;
 
   return (
-    <View style={[styles.container, isMobile && styles.containerMobile]}>
-      <HomeInspirationSection
-        title="Куда отправиться в этом месяце"
-        subtitle="Истории путешественников, которые вдохновляют"
-        queryKey="home-travels-of-month"
-        fetchFn={() => fetchTravelsOfMonth()}
-      />
+    <View style={[styles.band, isMobile && styles.bandMobile]}>
+      <ResponsiveContainer maxWidth="xl" padding>
+        <View style={styles.container}>
+          <HomeInspirationSection
+            title="Куда отправиться в этом месяце"
+            subtitle="Истории путешественников, которые вдохновляют"
+            queryKey="home-travels-of-month"
+            fetchFn={() => fetchTravelsOfMonth()}
+          />
 
-      <HomeInspirationSection
-        title="Популярные направления"
-        subtitle="Маршруты, которые выбирают чаще всего"
-        queryKey="home-popular-travels"
-        fetchFn={() => fetchTravelsPopular()}
-      />
+          <HomeInspirationSection
+            title="Популярные направления"
+            subtitle="Маршруты, которые выбирают чаще всего"
+            queryKey="home-popular-travels"
+            fetchFn={() => fetchTravelsPopular()}
+            hideAuthor
+            centerRowsOnWebDesktop
+          />
+        </View>
+      </ResponsiveContainer>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 60,
-    paddingVertical: 80,
+  band: {
+    paddingVertical: 72,
     backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    gap: 80,
+    width: '100%',
+    alignSelf: 'stretch',
   },
-  containerMobile: {
-    paddingHorizontal: 24,
-    paddingVertical: 60,
-    gap: 60,
+  bandMobile: {
+    paddingVertical: 56,
+  },
+  container: {
+    gap: 72,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   section: {
     gap: 32,
@@ -230,21 +276,42 @@ const styles = StyleSheet.create({
     color: DESIGN_TOKENS.colors.text,
   },
   grid: {
+    width: '100%',
     gap: 20,
+  },
+  separator: {
+    height: 20,
   },
   row: {
     gap: 20,
     justifyContent: 'flex-start',
+    width: '100%',
+    ...Platform.select({
+      web: {
+        justifyContent: 'flex-start',
+      },
+    }),
+  },
+  rowWebCentered: {
+    justifyContent: 'center',
   },
   cardWrapper: {
-    width: 360,
-    minWidth: 320,
-    maxWidth: 360,
-    height: 280,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    minWidth: 0,
+    minHeight: 360,
+  },
+  cardWrapperSingleColumn: {
+    width: '100%',
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    alignSelf: 'stretch',
   },
   cardWrapperMobile: {
-    width: '48%',
+    width: '100%',
     minWidth: 150,
-    height: 240,
+    minHeight: 320,
   },
 });

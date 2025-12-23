@@ -7,6 +7,9 @@ const mockAddFavorite = jest.fn()
 const mockRemoveFavorite = jest.fn()
 const mockIsFavorite = jest.fn()
 
+const mockRouterPush = jest.fn()
+const mockUseAuth = jest.fn()
+
 jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => ({
     isFavorite: mockIsFavorite,
@@ -15,9 +18,20 @@ jest.mock('@/context/FavoritesContext', () => ({
   }),
 }))
 
+jest.mock('expo-router', () => ({
+  useRouter: () => ({
+    push: mockRouterPush,
+  }),
+}))
+
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: () => mockUseAuth(),
+}))
+
 describe('FavoriteButton', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockUseAuth.mockReturnValue({ isAuthenticated: true })
   })
 
   it('renders correctly when not favorite', () => {
@@ -101,6 +115,30 @@ describe('FavoriteButton', () => {
     await waitFor(() => {
       expect(mockRemoveFavorite).toHaveBeenCalledWith('1', 'article')
     })
+  })
+
+  it('redirects to login when unauthenticated and does not call backend', async () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: false })
+    mockIsFavorite.mockReturnValue(false)
+
+    const { getByLabelText } = render(
+      <FavoriteButton
+        id="1"
+        type="travel"
+        title="Test Travel"
+        url="/travels/1"
+      />
+    )
+
+    const button = getByLabelText(/Добавить "Test Travel" в избранное/)
+    fireEvent.press(button)
+
+    await waitFor(() => {
+      expect(mockRouterPush).toHaveBeenCalledWith('/login')
+    })
+
+    expect(mockAddFavorite).not.toHaveBeenCalled()
+    expect(mockRemoveFavorite).not.toHaveBeenCalled()
   })
 
   it('applies custom size and color', () => {

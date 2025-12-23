@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import MarkersListComponent from '../MarkersListComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 
 const normalizeImageUrl = (url?: string | null) => {
     if (!url) return '';
@@ -192,45 +193,9 @@ const WebMapComponent = ({
         let cancelled = false;
         if (typeof window === 'undefined') return;
 
-        const ensureLeafletCSS = () => {
-            const href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-            if (!document.querySelector(`link[href="${href}"]`)) {
-                const link = document.createElement('link');
-                link.rel = 'stylesheet';
-                link.href = href;
-                // avoid setting indexed props on style list; append normally
-                document.head.appendChild(link);
-            }
-        };
-
-        const ensureLeaflet = async (): Promise<any> => {
-            const w = window as any;
-            if (w.L) return w.L;
-
-            ensureLeafletCSS();
-
-            if (!(ensureLeaflet as any)._loader) {
-                (ensureLeaflet as any)._loader = new Promise<void>((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-                    script.async = true;
-                    script.onload = () => resolve();
-                    script.onerror = (err) => {
-                        (ensureLeaflet as any)._loader = null;
-                        reject(err);
-                    };
-                    document.body.appendChild(script);
-                });
-            }
-
-            await (ensureLeaflet as any)._loader;
-            return w.L;
-        };
-
         const load = async () => {
             try {
-                const L = await ensureLeaflet();
-                const rlMod = await import('react-leaflet');
+                const { L, rl: rlMod } = await ensureLeafletAndReactLeaflet();
                 if (!cancelled) {
                     setL(L);
                     setRl(rlMod);

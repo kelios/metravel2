@@ -37,6 +37,8 @@ type NearTravelListProps = {
   travel: Pick<Travel, 'id'>;
   onLayout?: (e: LayoutChangeEvent) => void;
   onTravelsLoaded?: (travels: Travel[]) => void;
+  showHeader?: boolean;
+  embedded?: boolean;
 };
 
 const SegmentSwitch = ({
@@ -111,7 +113,6 @@ const MapContainer = memo(({
   if (!canRenderMap) {
     return (
       <View style={[styles.mapPlaceholder, { height }]}> 
-        <Text style={styles.placeholderIcon}>🌍</Text>
         <Text style={styles.placeholderText}>Загрузка карты...</Text>
       </View>
     );
@@ -123,7 +124,7 @@ const MapContainer = memo(({
     >
       <View style={styles.mapHeader}>
         <Text style={styles.mapTitle}>
-          🗺️ {points.length} {points.length === 1 ? 'точка' :
+          {points.length} {points.length === 1 ? 'точка' :
           points.length < 5 ? 'точки' : 'точек'} на карте
         </Text>
       </View>
@@ -137,7 +138,7 @@ const MapContainer = memo(({
 
       <View style={styles.mapFooter}>
         <Text style={styles.mapHint}>
-          🔍 Приближайте и перемещайтесь для детального просмотра
+          Приближайте и перемещайтесь для детального просмотра
         </Text>
       </View>
     </View>
@@ -145,7 +146,13 @@ const MapContainer = memo(({
 });
 
 const NearTravelList: React.FC<NearTravelListProps> = memo(
-  ({ travel, onLayout, onTravelsLoaded }) => {
+  ({
+     travel,
+     onLayout,
+     onTravelsLoaded,
+     showHeader = true,
+     embedded = false,
+   }) => {
     const [travelsNear, setTravelsNear] = useState<Travel[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -317,14 +324,13 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     if (error) {
       return (
         <View style={styles.errorContainer} onLayout={onLayout}>
-          <Text style={styles.errorIcon}>⚠️</Text>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity
             onPress={fetchNearbyTravels}
             style={styles.retryButton}
             accessibilityRole="button"
           >
-            <Text style={styles.retryButtonText}>🔄 Повторить попытку</Text>
+            <Text style={styles.retryButtonText}>Повторить попытку</Text>
           </TouchableOpacity>
         </View>
       );
@@ -333,11 +339,13 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     const displayedTravels = travelsNear.slice(0, visibleCount);
 
     return (
-      <View style={styles.section} onLayout={onLayout}>
-        <View style={styles.header}>
-          <Title style={styles.title}>Рядом можно посмотреть</Title>
-          <Text style={styles.subtitle}>Маршруты в радиусе ~60 км</Text>
-        </View>
+      <View style={embedded ? styles.embeddedSection : styles.section} onLayout={onLayout}>
+        {showHeader && (
+          <View style={styles.header}>
+            <Title style={styles.title}>Рядом можно посмотреть</Title>
+            <Text style={styles.subtitle}>Маршруты в радиусе ~60 км</Text>
+          </View>
+        )}
 
         {/* Десктоп и планшет: параллельное отображение */}
         {!isMobile ? (
@@ -398,8 +406,10 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                 keyExtractor={keyExtractor}
                 renderItem={renderTravelItem}
                 contentContainerStyle={styles.mobileListContent}
-                onEndReached={handleLoadMore}
-                onEndReachedThreshold={0.2}
+                scrollEnabled={!embedded}
+                nestedScrollEnabled={!embedded}
+                onEndReached={embedded ? undefined : handleLoadMore}
+                onEndReachedThreshold={embedded ? undefined : 0.2}
                 showsVerticalScrollIndicator={false}
                 initialNumToRender={6}
                 maxToRenderPerBatch={2}
@@ -414,7 +424,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                         accessibilityLabel="Загрузить ещё путешествий"
                       >
                         <Text style={styles.loadMoreButtonText}>
-                          📥 Загрузить ещё
+                          Загрузить ещё
                         </Text>
                       </Pressable>
                     </View>
@@ -471,6 +481,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 4,
+  },
+  embeddedSection: {
+    marginTop: 0,
+    marginBottom: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    width: '100%',
+    maxWidth: '100%',
+    alignSelf: 'stretch',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   header: {
     alignItems: 'center',
@@ -582,10 +606,6 @@ const styles = StyleSheet.create({
     borderColor: DESIGN_TOKENS.colors.borderLight,
     borderStyle: 'dashed',
   },
-  placeholderIcon: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xl,
-    marginBottom: 8,
-  },
   placeholderText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: DESIGN_TOKENS.colors.textMuted,
@@ -651,10 +671,6 @@ const styles = StyleSheet.create({
     backgroundColor: backgroundGray,
     borderRadius: 20,
     marginHorizontal: DESIGN_TOKENS.spacing.lg,
-  },
-  errorIcon: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xl,
-    marginBottom: DESIGN_TOKENS.spacing.lg,
   },
   errorText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,

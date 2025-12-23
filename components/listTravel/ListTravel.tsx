@@ -417,6 +417,8 @@ function ListTravel({
     // ✅ АДАПТИВНОСТЬ: Определяем устройство и ориентацию
     // На планшетах в портретной ориентации ведем себя как на мобильном: скрываем сайдбар и даем больше ширины сетке
     const isMobileDevice = isPhone || isLargePhone || (isTabletSize && isPortrait);
+    // Cards layout rule: on mobile widths we always render a single column.
+    const isCardsSingleColumn = windowWidth < BREAKPOINTS.MOBILE;
     const isTablet = isTabletSize;
     const isDesktop = isDesktopSize;
 
@@ -467,6 +469,10 @@ function ListTravel({
     }, [effectiveWidth]); // ✅ ОПТИМИЗАЦИЯ: Только эффективная ширина в зависимостях
 
     const gridColumns = useMemo(() => {
+      if (isCardsSingleColumn) {
+        return 1;
+      }
+
       if (isMobileDevice) {
         return calculateColumns(windowWidth, isPortrait ? 'portrait' : 'landscape');
       }
@@ -476,7 +482,7 @@ function ListTravel({
       }
 
       return calculateColumns(effectiveWidth, 'portrait');
-    }, [effectiveWidth, isMobileDevice, isTablet, isPortrait, windowWidth]);
+    }, [effectiveWidth, isCardsSingleColumn, isMobileDevice, isTablet, isPortrait, windowWidth]);
 
     const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(() => {
         if (Platform.OS !== 'web') return false;
@@ -1110,7 +1116,7 @@ function ListTravel({
         getEmptyStateMessage={getEmptyStateMessage}
         travels={travels}
         gridColumns={gridColumns}
-        isMobile={isMobileDevice}
+        isMobile={isCardsSingleColumn}
         showNextPageLoading={showNextPageLoading}
         refetch={refetch}
         onEndReached={handleListEndReached}

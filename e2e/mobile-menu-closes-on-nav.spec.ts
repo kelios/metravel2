@@ -1,0 +1,107 @@
+import { test, expect } from '@playwright/test';
+import { getTravelsListPath } from './helpers/routes';
+
+async function preacceptCookiesAndStabilize(page: any) {
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem(
+        'metravel_consent_v1',
+        JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
+      );
+    } catch {
+      // ignore
+    }
+
+    try {
+      sessionStorage.setItem('recommendations_visible', 'false');
+    } catch {
+      // ignore
+    }
+  });
+}
+
+async function gotoWithRetry(page: any, url: string) {
+  let lastError: any = null;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      lastError = null;
+      break;
+    } catch (e) {
+      lastError = e;
+      const msg = String((e as any)?.message ?? e ?? '');
+      const isConn =
+        msg.includes('ERR_CONNECTION_REFUSED') ||
+        msg.includes('ERR_EMPTY_RESPONSE') ||
+        msg.includes('NS_ERROR_NET_RESET');
+
+      if (typeof page?.isClosed === 'function' && page.isClosed()) break;
+
+      try {
+        await page.waitForTimeout(isConn ? 800 + attempt * 250 : 500);
+      } catch {
+        break;
+      }
+    }
+  }
+  if (lastError) throw lastError;
+}
+
+async function waitForMainToRender(page: any) {
+  await Promise.race([
+    page.waitForSelector('#search-input', { timeout: 30_000 }),
+    page.waitForSelector(
+      '[data-testid="travel-card-link"], [data-testid="travel-card-skeleton"], [data-testid="list-travel-skeleton"]',
+      { timeout: 30_000 }
+    ),
+    page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
+    page.waitForSelector('text=Найдено:', { timeout: 30_000 }),
+    page.waitForSelector('text=Пиши о своих путешествиях', { timeout: 30_000 }),
+  ]);
+}
+
+test.describe('Mobile menu navigation', () => {
+  test('closes menu overlay after selecting create travel (mobile)', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await preacceptCookiesAndStabilize(page);
+
+    await gotoWithRetry(page, getTravelsListPath());
+    await waitForMainToRender(page);
+
+    const burger = page.getByTestId('mobile-menu-open');
+    await expect(burger).toBeVisible({ timeout: 30_000 });
+    await burger.click();
+
+    const overlay = page.getByTestId('mobile-menu-overlay');
+    await expect(overlay).toBeVisible({ timeout: 10_000 });
+
+    const panel = page.getByTestId('mobile-menu-panel');
+    await expect(panel).toBeVisible({ timeout: 10_000 });
+
+    // This item triggers handleCreate in CustomHeader.
+    // Note: In guest state this item is not rendered.
+    const create = panel.getByText(/Поделиться путешествием/i).first();
+    const createCount = await create.count();
+
+    if (createCount > 0) {
+      await Promise.all([
+        page.waitForURL((url) => url.pathname.includes('/travel/new') || url.pathname.includes('/login'), {
+          timeout: 30_000,
+        }),
+        create.click(),
+      ]);
+    } else {
+      // Fallback: pick any stable nav item and ensure menu closes after navigation.
+      const mapNav = panel.getByRole('button', { name: /Карта/i });
+      await expect(mapNav).toBeVisible({ timeout: 10_000 });
+      await Promise.all([
+        page.waitForURL((url) => url.pathname.includes('/map'), { timeout: 30_000 }),
+        mapNav.click(),
+      ]);
+    }
+
+    // After navigation, the menu overlay must be dismissed.
+    await expect(page.getByTestId('mobile-menu-overlay')).toHaveCount(0, { timeout: 10_000 });
+    await expect(page.getByTestId('mobile-menu-panel')).toHaveCount(0, { timeout: 10_000 });
+  });
+});

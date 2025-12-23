@@ -57,10 +57,17 @@ export function OptimizedImage({
       <View style={[styles.container, { width: containerWidth, height: containerHeight }, style]}>
         <View style={styles.errorPlaceholder}>
           <View style={styles.placeholderContent}>
-            <Image 
+            <Image
+              source={require('@/assets/images/placeholder.webp')}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+              blurRadius={18}
+            />
+            <View style={styles.blurOverlay} />
+            <Image
               source={require('@/assets/images/placeholder.webp')}
               style={styles.placeholderImage}
-              resizeMode="cover"
+              resizeMode="contain"
             />
           </View>
         </View>
@@ -72,6 +79,13 @@ export function OptimizedImage({
     <View style={[styles.container, { width: containerWidth, height: containerHeight }, style]} className={className}>
       {!isLoaded && <View style={styles.skeleton} />}
       <Image
+        source={{ uri: optimizedSrc }}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+        blurRadius={18}
+      />
+      <View style={styles.blurOverlay} />
+      <Image
         ref={imageRef}
         source={{ uri: optimizedSrc }}
         style={[
@@ -79,7 +93,7 @@ export function OptimizedImage({
           { width: containerWidth, height: containerHeight },
           !isLoaded && { opacity: 0 }
         ]}
-        resizeMode="cover"
+        resizeMode="contain"
         onLoad={handleLoad}
         onError={handleError}
         // Add explicit dimensions for layout stability
@@ -139,6 +153,10 @@ const styles = StyleSheet.create({
   },
   image: {
     borderRadius: 8,
+  },
+  blurOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.18)',
   },
   skeleton: {
     position: 'absolute',

@@ -196,7 +196,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     const topContentNodes = useMemo(() => {
       if (!topContent) return null
       const nodes = React.Children.toArray(topContent).filter((child) => {
-        return !(typeof child === 'string' && child.trim().length === 0)
+        return typeof child !== 'string'
       })
       return nodes.length ? nodes : null
     }, [topContent])
@@ -210,7 +210,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             testID={`travel-row-${rowIndex}`}
             style={[
               cardsGridStyle,
-              ({ flexWrap: 'nowrap' } as any),
+              ({ flexWrap: 'nowrap', width: '100%', maxWidth: '100%', minWidth: 0 } as any),
             ]}
           >
             {rowItems.map((travel, itemIndex) => (
@@ -228,11 +228,11 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                             flexBasis: '100%',
                           } as any)
                         : ({
-                            // Keep cards within min/max width and don't stretch a single card to full row width.
-                            flexGrow: 0,
-                            flexShrink: 0,
-                            flexBasis: 320,
-                            minWidth: 320,
+                            // Keep cards within the row width (no overflow / clipping) while preserving a reasonable max width.
+                            flexGrow: 1,
+                            flexShrink: 1,
+                            flexBasis: 0,
+                            minWidth: 0,
                             maxWidth: 360,
                           } as any))
                     : ({
@@ -260,10 +260,10 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                     testID={`travel-row-${rowIndex}-placeholder-${placeholderIndex}`}
                     style={[
                       ({
-                        flexGrow: 0,
-                        flexShrink: 0,
-                        flexBasis: 320,
-                        minWidth: 320,
+                        flexGrow: 1,
+                        flexShrink: 1,
+                        flexBasis: 0,
+                        minWidth: 0,
                         maxWidth: 360,
                         opacity: 0,
                         pointerEvents: 'none',

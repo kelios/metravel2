@@ -8,9 +8,12 @@ import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
 import HomeHero from './HomeHero';
+import HomeTrustBlock from './HomeTrustBlock';
 import HomeHowItWorks from './HomeHowItWorks';
+import HomeFAQSection from './HomeFAQSection';
 
 const HomeInspirationSections = lazy(() => import('./HomeInspirationSection'));
+const HomeFavoritesHistorySection = lazy(() => import('./HomeFavoritesHistorySection'));
 const HomeFinalCTA = lazy(() => import('./HomeFinalCTA'));
 
 const SectionSkeleton = () => {
@@ -63,7 +66,17 @@ export default function Home() {
       removeClippedSubviews={Platform.OS !== 'web'}
     >
       <HomeHero travelsCount={travelsCount} />
+      <HomeTrustBlock />
       <HomeHowItWorks />
+
+      {isAuthenticated &&
+        (showHeavyContent ? (
+          <Suspense fallback={<View style={{ height: 240 }} />}>
+            <HomeFavoritesHistorySection />
+          </Suspense>
+        ) : (
+          <View style={{ height: 240 }} />
+        ))}
       
       {showHeavyContent ? (
         <Suspense fallback={<SectionSkeleton />}>
@@ -72,6 +85,8 @@ export default function Home() {
       ) : (
         <SectionSkeleton />
       )}
+
+      <HomeFAQSection />
       
       {showHeavyContent ? (
         <Suspense fallback={<View style={{ height: 300 }} />}>
@@ -87,9 +102,10 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: DESIGN_TOKENS.colors.background,
   },
   contentContainer: {
     flexGrow: 1,
+    paddingBottom: 96,
   },
 });

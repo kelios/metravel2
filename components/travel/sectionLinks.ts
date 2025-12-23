@@ -4,6 +4,7 @@ export type TravelSectionLink = {
   key: string
   icon: string
   label: string
+  meta?: string
 }
 
 const pushIf = (
@@ -42,7 +43,7 @@ export const buildTravelSectionLinks = (
 
   links.push({ key: "map", icon: "map", label: "Карта" })
   pushIf(hasTravelAddress, links, { key: "points", icon: "list", label: "Координаты" })
-  links.push({ key: "near", icon: "location-on", label: "Рядом (~60км)" })
+  links.push({ key: "near", icon: "location-on", label: "Рядом", meta: "~60км" })
   links.push({ key: "popular", icon: "star", label: "Популярное" })
 
   return links

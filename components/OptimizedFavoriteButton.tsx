@@ -2,7 +2,9 @@
 import React, { memo } from 'react';
 import { Pressable, StyleSheet, Platform, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
+import { useAuth } from '@/context/AuthContext';
 
 type OptimizedFavoriteButtonProps = {
     id: string | number;
@@ -27,6 +29,8 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
     size = 18,
     style,
 }: OptimizedFavoriteButtonProps) {
+    const router = useRouter();
+    const { isAuthenticated } = useAuth();
     const { isFavorite, addFavorite, removeFavorite } = useFavorites();
     const serverIsFav = isFavorite(id, type);
 
@@ -39,17 +43,22 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
             }
         }
         
+        if (!isAuthenticated) {
+            router.push('/login' as any);
+            return;
+        }
+
         if (serverIsFav) {
             await removeFavorite(id, type);
         } else {
-            await addFavorite({ 
-                id, 
-                type, 
-                title, 
-                url, 
-                imageUrl, 
-                country, 
-                city 
+            await addFavorite({
+                id,
+                type,
+                title,
+                url,
+                imageUrl,
+                country,
+                city,
             });
         }
     };

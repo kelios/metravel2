@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { getTravelsListPath } from './helpers/routes';
 
 test.describe('Search', () => {
   test('search box filters list and can be cleared', async ({ page }) => {
@@ -13,7 +14,7 @@ test.describe('Search', () => {
       }
     });
 
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
 
     const search = page.getByRole('textbox', { name: /Поиск путешествий/i });
     await expect(search).toBeVisible({ timeout: 30_000 });

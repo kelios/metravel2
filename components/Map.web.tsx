@@ -2,6 +2,8 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 
+import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
+
 export type Point = {
   id: number;
   coord: string;
@@ -37,16 +39,6 @@ const getLatLng = (latlng: string): [number, number] | null => {
   return isNaN(lat) || isNaN(lng) ? null : [lat, lng];
 };
 
-const ensureLeafletCSS = () => {
-  if (typeof document === 'undefined') return;
-  if (document.querySelector('link[data-leaflet-css]')) return;
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-  link.setAttribute('data-leaflet-css', '1');
-  document.head.appendChild(link);
-};
-
 type LeafletNS = any;
 type RL = typeof import('react-leaflet');
 
@@ -63,34 +55,9 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     if (!isWeb) return;
     let cancelled = false;
 
-    const ensureLeaflet = async (): Promise<any> => {
-      const w = window as any;
-      if (w.L) return w.L;
-
-      ensureLeafletCSS();
-
-      if (!(ensureLeaflet as any)._loader) {
-        (ensureLeaflet as any)._loader = new Promise<void>((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-          script.async = true;
-          script.onload = () => resolve();
-          script.onerror = (err) => {
-            (ensureLeaflet as any)._loader = null;
-            reject(err);
-          };
-          document.body.appendChild(script);
-        });
-      }
-
-      await (ensureLeaflet as any)._loader;
-      return w.L;
-    };
-
     const load = async () => {
       try {
-        const L = await ensureLeaflet();
-        const rlMod = await import('react-leaflet');
+        const { L, rl: rlMod } = await ensureLeafletAndReactLeaflet();
         if (!cancelled) {
           setL(L);
           setRl(rlMod);

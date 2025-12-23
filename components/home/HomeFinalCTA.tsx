@@ -6,6 +6,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
+import { ResponsiveContainer } from '@/components/layout';
 
 interface HomeFinalCTAProps {
   travelsCount?: number;
@@ -36,27 +37,29 @@ export default function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
 
   return (
     <View style={[styles.container, isMobile && styles.containerMobile]}>
-      <View style={styles.content}>
-        <Text style={[styles.title, isMobile && styles.titleMobile]}>
-          Начни писать свою историю
-        </Text>
-        <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>
-          Расскажи о своих путешествиях, вдохнови других — и собери всё в красивую книгу на память.
-        </Text>
+      <ResponsiveContainer maxWidth="xl" padding>
+        <View style={styles.content}>
+          <Text style={[styles.title, isMobile && styles.titleMobile]}>
+            Начни писать свою историю
+          </Text>
+          <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>
+            Расскажи о своих путешествиях, вдохнови других — и собери всё в красивую книгу на память.
+          </Text>
 
-        <Pressable
-          onPress={handleAction}
-          style={({ pressed, hovered }) => [
-            styles.button,
-            (pressed || hovered) && styles.buttonHover,
-            globalFocusStyles.focusable,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={buttonLabel}
-        >
-          <Text style={styles.buttonText}>{buttonLabel}</Text>
-        </Pressable>
-      </View>
+          <Pressable
+            onPress={handleAction}
+            style={({ pressed, hovered }) => [
+              styles.button,
+              (pressed || hovered) && styles.buttonHover,
+              globalFocusStyles.focusable,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={buttonLabel}
+          >
+            <Text style={styles.buttonText}>{buttonLabel}</Text>
+          </Pressable>
+        </View>
+      </ResponsiveContainer>
     </View>
   );
 }
@@ -65,33 +68,32 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     alignSelf: 'stretch',
-    paddingHorizontal: 60,
-    paddingVertical: 100,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    paddingHorizontal: 0,
+    paddingVertical: 88,
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
       web: {
-        backgroundImage: 'linear-gradient(135deg, #5d8c7c 0%, #4d7566 100%)',
+        backgroundImage: 'linear-gradient(135deg, rgba(93, 140, 124, 0.10) 0%, rgba(93, 140, 124, 0.06) 100%)',
         backgroundRepeat: 'no-repeat',
         backgroundSize: '100% 100%',
       },
     }),
   },
   containerMobile: {
-    paddingHorizontal: 24,
-    paddingVertical: 80,
+    paddingHorizontal: 0,
+    paddingVertical: 72,
   },
   content: {
-    maxWidth: 700,
     alignItems: 'center',
     gap: 32,
   },
   title: {
-    fontSize: 44,
+    fontSize: 40,
     fontWeight: '800',
-    color: DESIGN_TOKENS.colors.surface,
-    lineHeight: 52,
+    color: DESIGN_TOKENS.colors.text,
+    lineHeight: 48,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
@@ -102,7 +104,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 20,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: DESIGN_TOKENS.colors.textMuted,
     lineHeight: 32,
     textAlign: 'center',
     maxWidth: 560,
@@ -112,7 +114,7 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
   button: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: DESIGN_TOKENS.colors.primary,
     paddingHorizontal: 40,
     paddingVertical: 20,
     borderRadius: DESIGN_TOKENS.radii.md,
@@ -122,22 +124,22 @@ const styles = StyleSheet.create({
     minWidth: 300,
     ...Platform.select({
       web: {
-        boxShadow: '0 8px 24px rgba(31, 31, 31, 0.2)',
+        boxShadow: '0 10px 26px rgba(93, 140, 124, 0.28)',
         transition: 'all 0.2s ease',
       },
     }),
   },
   buttonHover: {
-    backgroundColor: DESIGN_TOKENS.colors.background,
+    backgroundColor: DESIGN_TOKENS.colors.primaryDark,
     ...Platform.select({
       web: {
-        boxShadow: '0 12px 32px rgba(31, 31, 31, 0.3)',
+        boxShadow: '0 14px 34px rgba(93, 140, 124, 0.35)',
         transform: 'translateY(-2px)',
       },
     }),
   },
   buttonText: {
-    color: DESIGN_TOKENS.colors.primary,
+    color: DESIGN_TOKENS.colors.surface,
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 0.2,

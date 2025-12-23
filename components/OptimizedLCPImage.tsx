@@ -87,10 +87,23 @@ export function OptimizedLCPImage({
     <View style={[styles.container, style]} className={className}>
       {!isLoaded && <View style={styles.skeleton} />}
       <ExpoImage
+        source={{ uri: optimizedSrc }}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        priority={priority === 'high' ? 'high' : 'low'}
+        cachePolicy="disk"
+        accessibilityLabel=""
+        accessibilityRole="image"
+        fadeDuration={0}
+        placeholder="blur"
+        blurRadius={18}
+      />
+      <View style={styles.blurOverlay} />
+      <ExpoImage
         ref={imageRef}
         source={{ uri: optimizedSrc }}
         style={[styles.image, !isLoaded && { opacity: 0 }]}
-        contentFit="cover"
+        contentFit="contain"
         priority={priority === 'high' ? 'high' : 'low'}
         cachePolicy="disk"
         onLoad={handleLoad}
@@ -118,6 +131,10 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  blurOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.18)',
   },
   skeleton: {
     position: 'absolute',

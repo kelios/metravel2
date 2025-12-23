@@ -27,7 +27,7 @@ type DockItem = {
 };
 
 const palette = DESIGN_TOKENS.colors;
-const MOBILE_DOCK_HEIGHT_WEB = 32;
+const MOBILE_DOCK_HEIGHT_WEB = 56;
 
 const DockButton = memo(function DockButton({
   label,
@@ -110,44 +110,44 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
         key: "home",
         label: "Главная",
         route: "/" as any,
-        icon: <Feather name="home" size={18} color={iconColor} />,
+        icon: <Feather name="home" size={22} color={iconColor} />,
       },
       {
         key: "search",
         label: "Поиск",
         route: "/search" as any,
-        icon: <Feather name="search" size={18} color={iconColor} />,
+        icon: <Feather name="search" size={22} color={iconColor} />,
       },
       {
         key: "map",
         label: "Карта",
         route: "/map" as any,
-        icon: <Feather name="map-pin" size={18} color={iconColor} />,
+        icon: <Feather name="map-pin" size={22} color={iconColor} />,
       },
       {
         key: "favorites",
         label: "Избранное",
         route: "/favorites" as any,
-        icon: <Feather name="heart" size={18} color={iconColor} />,
+        icon: <Feather name="heart" size={22} color={iconColor} />,
       },
       {
         key: "create",
         label: "Создать",
         route: "/travel/new" as any,
-        icon: <Feather name="plus-circle" size={18} color={iconColor} />,
+        icon: <Feather name="plus-circle" size={22} color={iconColor} />,
       },
       {
         key: "more",
         label: "Ещё",
         route: "/more" as any,
-        icon: <Feather name="more-horizontal" size={18} color={iconColor} />,
+        icon: <Feather name="more-horizontal" size={22} color={iconColor} />,
         isMore: true,
       },
       {
         key: "profile",
         label: "Профиль",
         route: "/profile" as any,
-        icon: <Feather name="user" size={18} color={iconColor} />,
+        icon: <Feather name="user" size={22} color={iconColor} />,
       },
     ],
     [iconColor]
@@ -217,8 +217,8 @@ const styles = StyleSheet.create({
     zIndex: 50,
   },
   dockWrapper: {
-    paddingTop: 1,
-    paddingBottom: Platform.select({ web: 2, default: 1 }),
+    paddingTop: 6,
+    paddingBottom: Platform.select({ web: 8, default: 6 }),
     paddingHorizontal: 6,
     backgroundColor: palette.dockBackground,
     borderTopLeftRadius: 18,
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     elevation: 12,
     ...Platform.select({
       web: {
-        maxHeight: 36,
+        maxHeight: 72,
         backdropFilter: "blur(14px)",
       } as any,
     }),
@@ -247,8 +247,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexBasis: 0,
     paddingHorizontal: 6,
-    paddingVertical: 0,
-    minHeight: 32,
+    paddingVertical: 6,
+    minHeight: 44,
     borderRadius: 10,
   },
   pressed: { opacity: 0.7 },
@@ -258,8 +258,8 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   iconBox: {
-    width: 20,
-    height: 20,
+    width: 24,
+    height: 24,
     alignItems: "center",
     justifyContent: "center",
   },

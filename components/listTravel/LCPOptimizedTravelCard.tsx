@@ -143,20 +143,33 @@ export const LCPOptimizedTravelCard = memo(function LCPOptimizedTravelCard({
       <View style={styles.imageContainer}>
         {!isLoaded && <View style={styles.skeleton} />}
         {optimizedImageSrc && (
-          <ExpoImage
-            ref={imageRef}
-            source={{ uri: optimizedImageSrc }}
-            style={[styles.image, !isLoaded && { opacity: 0 }]}
-            contentFit="cover"
-            priority={isFirst ? 'high' : 'low'}
-            cachePolicy="disk"
-            onLoad={handleImageLoad}
-            // LCP оптимизации
-            fadeDuration={isFirst ? 0 : 200}
-            placeholder="blur"
-            blurRadius={isFirst ? 0 : 20}
-            recyclingKey={optimizedImageSrc}
-          />
+          <>
+            <ExpoImage
+              source={{ uri: optimizedImageSrc }}
+              style={styles.blurBg}
+              contentFit="cover"
+              priority="low"
+              cachePolicy="disk"
+              transition={0}
+              blurRadius={isFirst ? 0 : 16}
+              recyclingKey={`${optimizedImageSrc}-bg`}
+            />
+            <View style={styles.blurOverlay} />
+            <ExpoImage
+              ref={imageRef}
+              source={{ uri: optimizedImageSrc }}
+              style={[styles.image, !isLoaded && { opacity: 0 }]}
+              contentFit="contain"
+              priority={isFirst ? 'high' : 'low'}
+              cachePolicy="disk"
+              onLoad={handleImageLoad}
+              // LCP оптимизации
+              fadeDuration={isFirst ? 0 : 200}
+              placeholder="blur"
+              blurRadius={isFirst ? 0 : 20}
+              recyclingKey={optimizedImageSrc}
+            />
+          </>
         )}
       </View>
 
@@ -223,6 +236,14 @@ const styles = StyleSheet.create({
     height: 220, // Фиксированная высота для LCP
     backgroundColor: '#f5f5f5',
     position: 'relative',
+    overflow: 'hidden',
+  },
+  blurBg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  blurOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   image: {
     width: '100%',

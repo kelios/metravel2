@@ -82,6 +82,7 @@ function CompactSideBarTravel({
   const navLinksSource = Array.isArray(links) && links.length ? links : null;
   const [active, setActive] = useState<string>("");
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const {
     pdfExport,
     lastSettings,
@@ -250,8 +251,8 @@ function CompactSideBarTravel({
         ]}
         contentContainerStyle={{ 
           paddingBottom: isMobile ? 80 : 32,
-          paddingLeft: Platform.OS === 'web' ? 16 : 10, // ✅ UX: Отступ слева
-          paddingRight: Platform.OS === 'web' ? 8 : 10, // ✅ UX: Меньший отступ справа
+          paddingLeft: Platform.OS === 'web' ? 12 : 10,
+          paddingRight: Platform.OS === 'web' ? 12 : 10,
         }}
         showsHorizontalScrollIndicator={false}
       >
@@ -341,7 +342,7 @@ function CompactSideBarTravel({
                     {Platform.OS === 'web' && (
                       <Pressable
                         onPress={handleOpenExport}
-                        hitSlop={8}
+                        hitSlop={6}
                         disabled={pdfExport.isGenerating}
                         accessibilityRole="button"
                         accessibilityLabel="Экспорт в PDF"
@@ -362,17 +363,12 @@ function CompactSideBarTravel({
                   </View>
                 </View>
 
-                {whenLine ? (
+                {whenLine || daysText ? (
                   <View style={styles.keyInfoRow}>
                     <MaterialIcons name="calendar-today" size={14} color="#6b7280" />
-                    <Text style={styles.userYear}>{whenLine}</Text>
-                  </View>
-                ) : null}
-
-                {daysText ? (
-                  <View style={styles.keyInfoRow}>
-                    <MaterialIcons name="schedule" size={14} color="#6b7280" />
-                    <Text style={styles.userDays}>{daysText}</Text>
+                    <Text style={styles.userYear} numberOfLines={1}>
+                      {[whenLine, daysText].filter(Boolean).join(' ')}
+                    </Text>
                   </View>
                 ) : null}
               </View>
@@ -388,15 +384,40 @@ function CompactSideBarTravel({
                       { marginLeft: DESIGN_TOKENS.spacing.xs, flex: 1 },
                     ]}
                   >
-                    {categories.slice(0, 2).map((cat, idx) => (
-                      <View key={idx} style={styles.categoryTagWrapper}>
+                    {(showAllCategories ? categories : categories.slice(0, 2)).map((cat, idx) => (
+                      <View key={`${cat}-${idx}`} style={styles.categoryTagWrapper}>
                         <Text style={styles.categoryTag} numberOfLines={1}>
                           {cat}
                         </Text>
                       </View>
                     ))}
-                    {categories.length > 2 ? (
-                      <Text style={styles.categoryMore}>+{categories.length - 2}</Text>
+                    {!showAllCategories && categories.length > 2 ? (
+                      <Pressable
+                        onPress={() => setShowAllCategories(true)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Показать все категории (${categories.length})`}
+                        hitSlop={8}
+                        style={({ pressed }) => [
+                          styles.categoryMoreBtn,
+                          pressed ? styles.categoryMoreBtnPressed : null,
+                        ]}
+                      >
+                        <Text style={styles.categoryMore}>+{categories.length - 2}</Text>
+                      </Pressable>
+                    ) : null}
+                    {showAllCategories && categories.length > 2 ? (
+                      <Pressable
+                        onPress={() => setShowAllCategories(false)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Свернуть категории"
+                        hitSlop={8}
+                        style={({ pressed }) => [
+                          styles.categoryMoreBtn,
+                          pressed ? styles.categoryMoreBtnPressed : null,
+                        ]}
+                      >
+                        <Text style={styles.categoryMore}>Свернуть</Text>
+                      </Pressable>
                     ) : null}
                   </View>
                 </View>
@@ -438,7 +459,7 @@ function CompactSideBarTravel({
             </View>
           </View>,
 
-          ...navLinks.map(({ key, icon, label }, index) => {
+          ...navLinks.map(({ key, icon, label, meta }, index) => {
             const shouldAddDivider =
               (index > 0 &&
                 ((key === "recommendation" || key === "plus") &&
@@ -462,23 +483,30 @@ function CompactSideBarTravel({
                   accessibilityLabel={label}
                   accessibilityState={{ selected: currentActive === key }}
                 >
-                  <MaterialIcons
-                    name={icon as any}
-                    size={Platform.select({
-                      default: 18,
-                      web: isTablet ? 20 : 18,
-                    })}
-                    color={currentActive === key ? "#1f2937" : "#2F332E"}
-                  />
-                  <Text
-                    style={[
-                      styles.linkTxt,
-                      isTablet && { fontSize: DESIGN_TOKENS.typography.sizes.sm },
-                      currentActive === key && styles.linkTxtActive,
-                    ]}
-                  >
-                    {label}
-                  </Text>
+                  <View style={styles.linkLeft}>
+                    <MaterialIcons
+                      name={icon as any}
+                      size={Platform.select({
+                        default: 18,
+                        web: isTablet ? 20 : 18,
+                      })}
+                      color={currentActive === key ? "#1f2937" : "#2F332E"}
+                    />
+                    <Text
+                      style={[
+                        styles.linkTxt,
+                        isTablet && { fontSize: DESIGN_TOKENS.typography.sizes.sm },
+                        currentActive === key && styles.linkTxtActive,
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </View>
+                  {meta ? (
+                    <View style={styles.linkMetaPill}>
+                      <Text style={styles.linkMetaText}>{meta}</Text>
+                    </View>
+                  ) : null}
                 </Pressable>
               </React.Fragment>
             );
@@ -715,6 +743,21 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginLeft: 3, // Уменьшено с 4
   },
+  categoryMoreBtn: {
+    marginLeft: 3,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+      },
+      default: {},
+    }),
+  },
+  categoryMoreBtnPressed: {
+    opacity: 0.85,
+  },
 
   userRow: { 
     flexDirection: "row", 
@@ -733,9 +776,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
   },
   actionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.03)',
@@ -816,6 +859,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     width: '100%',
     maxWidth: '100%',
+    justifyContent: "space-between",
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
@@ -823,7 +867,13 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
-  linkPressed: { backgroundColor: "rgba(0, 0, 0, 0.02)", transform: [{ scale: 0.98 }] },
+  linkLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  linkPressed: { backgroundColor: "rgba(0, 0, 0, 0.02)" },
   linkActive: { 
     backgroundColor: "rgba(0, 0, 0, 0.04)", // ✅ УЛУЧШЕНИЕ: Нейтральный фон
     borderLeftWidth: 2, // ✅ УЛУЧШЕНИЕ: Уменьшено с 3
@@ -851,6 +901,23 @@ const styles = StyleSheet.create({
   linkTxtActive: {
     color: "#1f2937", // ✅ УЛУЧШЕНИЕ: Нейтральный темно-серый
     fontWeight: "700",
+  },
+  linkMetaPill: {
+    marginLeft: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: "rgba(0, 0, 0, 0.03)",
+    borderWidth: 0.5,
+    borderColor: "rgba(0, 0, 0, 0.08)",
+    flexShrink: 0,
+  },
+  linkMetaText: {
+    fontSize: 10,
+    color: "#6b7280",
+    fontFamily: "Georgia",
+    fontWeight: "600",
+    lineHeight: 14,
   },
   linkDivider: {
     height: 1,

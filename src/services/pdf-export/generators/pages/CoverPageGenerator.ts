@@ -146,9 +146,10 @@ export class CoverPageGenerator {
   }
 
   private renderTitle(title: string): string {
-    const { typography } = this.theme;
+    const { typography, colors } = this.theme;
     return `
       <h1 style="
+        color: ${colors.cover.text};
         font-size: ${typography.h1.size};
         font-weight: ${typography.h1.weight};
         line-height: ${typography.h1.lineHeight};

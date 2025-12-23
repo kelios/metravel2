@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { expectNoOverlap } from './helpers/layoutAsserts';
+import { getTravelsListPath } from './helpers/routes';
 
 test.describe('Footer dock overlap – last card (web mobile)', () => {
   test('reserves space so last travel card is fully visible', async ({ page }) => {
@@ -70,7 +71,7 @@ test.describe('Footer dock overlap – last card (web mobile)', () => {
     let lastError: any = null;
     for (let attempt = 0; attempt < 8; attempt++) {
       try {
-        await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+        await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded', timeout: 60_000 });
         lastError = null;
         break;
       } catch (e) {

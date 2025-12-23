@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
+import { getTravelsListPath } from './helpers/routes';
 
 async function preacceptCookiesAndStabilize(page: any) {
   await page.addInitScript(() => {
@@ -74,7 +75,7 @@ test.describe('Footer layout invariants (web)', () => {
 
     const guard = installNoConsoleErrorsGuard(page);
 
-    await gotoWithRetry(page, '/');
+    await gotoWithRetry(page, getTravelsListPath());
 
     const desktopBar = page.getByTestId('footer-desktop-bar');
     await expect(desktopBar).toBeVisible({ timeout: 30_000 });
@@ -108,7 +109,7 @@ test.describe('Footer layout invariants (web)', () => {
 
     const guard = installNoConsoleErrorsGuard(page);
 
-    await gotoWithRetry(page, '/');
+    await gotoWithRetry(page, getTravelsListPath());
 
     await assertNoHorizontalScroll(page);
 
@@ -164,7 +165,7 @@ test.describe('Footer layout invariants (web)', () => {
 
     const guard = installNoConsoleErrorsGuard(page);
 
-    await gotoWithRetry(page, '/');
+    await gotoWithRetry(page, getTravelsListPath());
 
     await assertNoHorizontalScroll(page);
 
@@ -225,7 +226,7 @@ test.describe('Footer layout invariants (web)', () => {
     for (const w of widths) {
       await page.setViewportSize({ width: w, height: 844 });
       await preacceptCookiesAndStabilize(page);
-      await gotoWithRetry(page, '/');
+      await gotoWithRetry(page, getTravelsListPath());
 
       const dock = page.getByTestId('footer-dock-wrapper');
       await expect(dock).toBeVisible({ timeout: 30_000 });

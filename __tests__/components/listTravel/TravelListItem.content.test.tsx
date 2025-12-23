@@ -6,11 +6,18 @@ import { FavoritesProvider } from '@/context/FavoritesContext';
 import TravelListItem from '@/components/listTravel/TravelListItem';
 import type { Travel } from '@/src/types/types';
 
-jest.mock('expo-router', () => ({
-  router: {
-    push: jest.fn(),
-  },
-}));
+jest.mock('expo-router', () => {
+  const push = jest.fn();
+  return {
+    router: {
+      push,
+    },
+    useRouter: () => ({
+      push,
+    }),
+    __mockPush: push,
+  };
+});
 
 jest.mock('expo-image', () => ({
   Image: ({ testID: _testID }: { testID?: string }) => <></>,
@@ -104,8 +111,8 @@ describe('TravelListItem content & metadata', () => {
     const authorPressable = getByLabelText('Открыть профиль автора John Doe');
     fireEvent.press(authorPressable);
 
-    const { router } = require('expo-router');
-    expect(router.push).toHaveBeenCalledWith('/user/99');
+    const { __mockPush } = require('expo-router');
+    expect(__mockPush).toHaveBeenCalledWith('/user/99');
   });
 
   it('shows Popular/New badges based on views and created_at', () => {

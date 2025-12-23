@@ -76,31 +76,31 @@ export default function PerformanceMonitor({
       {metrics.lcp && (
         <Text style={styles.metric}>
           LCP: {metrics.lcp.toFixed(2)}ms
-          {metrics.lcp < 2500 ? ' ✅' : metrics.lcp < 4000 ? ' ⚠️' : ' ❌'}
+          {metrics.lcp < 2500 ? ' OK' : metrics.lcp < 4000 ? ' WARN' : ' FAIL'}
         </Text>
       )}
       {metrics.fcp && (
         <Text style={styles.metric}>
           FCP: {metrics.fcp.toFixed(2)}ms
-          {metrics.fcp < 1800 ? ' ✅' : ' ⚠️'}
+          {metrics.fcp < 1800 ? ' OK' : ' WARN'}
         </Text>
       )}
       {metrics.fid && (
         <Text style={styles.metric}>
           FID: {metrics.fid.toFixed(2)}ms
-          {metrics.fid < 100 ? ' ✅' : ' ⚠️'}
+          {metrics.fid < 100 ? ' OK' : ' WARN'}
         </Text>
       )}
       {metrics.cls !== undefined && (
         <Text style={styles.metric}>
           CLS: {metrics.cls.toFixed(4)}
-          {metrics.cls < 0.1 ? ' ✅' : metrics.cls < 0.25 ? ' ⚠️' : ' ❌'}
+          {metrics.cls < 0.1 ? ' OK' : metrics.cls < 0.25 ? ' WARN' : ' FAIL'}
         </Text>
       )}
       {metrics.ttfb && (
         <Text style={styles.metric}>
           TTFB: {metrics.ttfb.toFixed(2)}ms
-          {metrics.ttfb < 800 ? ' ✅' : ' ⚠️'}
+          {metrics.ttfb < 800 ? ' OK' : ' WARN'}
         </Text>
       )}
     </View>

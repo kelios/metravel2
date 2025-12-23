@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { getTravelsListPath } from './helpers/routes';
 
 const VIEWPORTS = [
   { name: 'mobile', width: 375, height: 812 },
@@ -119,7 +120,7 @@ test.describe('Render audit: main and travel details (responsive + perf)', () =>
       await preacceptCookiesAndStabilize(page);
       await installClsAfterRenderMeter(page);
 
-      await page.goto('/', { waitUntil: 'domcontentloaded' });
+      await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
       await waitForAppShell(page);
 
       // Core header/search is expected
@@ -160,10 +161,15 @@ test.describe('Render audit: main and travel details (responsive + perf)', () =>
       await installClsAfterRenderMeter(page);
 
       // Go to list, open first card if available.
-      await page.goto('/', { waitUntil: 'domcontentloaded' });
+      await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
       await waitForAppShell(page);
 
       const cards = page.locator('[data-testid="travel-card-link"]');
+      const count = await cards.count();
+      if (count === 0) {
+        test.skip(true, 'No travel cards available in this environment');
+      }
+
       await expect(cards.first()).toBeVisible({ timeout: 30_000 });
       await cards.first().click();
       await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 45_000 });

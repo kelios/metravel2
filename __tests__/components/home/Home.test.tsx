@@ -27,6 +27,12 @@ jest.mock('@/components/home/HomeFinalCTA', () => {
   };
 });
 
+jest.mock('@/components/home/HomeFavoritesHistorySection', () => {
+  return function MockHomeFavoritesHistorySection() {
+    return null;
+  };
+});
+
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockUseIsFocused = useIsFocused as jest.MockedFunction<typeof useIsFocused>;
 const mockFetchMyTravels = fetchMyTravels as jest.MockedFunction<typeof fetchMyTravels>;
@@ -80,6 +86,16 @@ describe('Home Component', () => {
       const { UNSAFE_getByType } = renderHome();
       const HomeHowItWorks = require('@/components/home/HomeHowItWorks').default;
       expect(UNSAFE_getByType(HomeHowItWorks)).toBeTruthy();
+    });
+
+    it('should render HomeTrustBlock', () => {
+      const { getByTestId } = renderHome();
+      expect(getByTestId('home-trust-block')).toBeTruthy();
+    });
+
+    it('should render HomeFAQSection', () => {
+      const { getByTestId } = renderHome();
+      expect(getByTestId('home-faq')).toBeTruthy();
     });
   });
 

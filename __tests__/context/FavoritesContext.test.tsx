@@ -241,19 +241,19 @@ describe('FavoritesContext', () => {
     });
 
     await act(async () => {
-      await contextValue.addFavorite({
-        id: '2',
-        type: 'article',
-        title: 'Test Article',
-        url: '/article/2',
-        country: 'Poland',
-      });
+      await expect(
+        contextValue.addFavorite({
+          id: '2',
+          type: 'article',
+          title: 'Test Article',
+          url: '/article/2',
+          country: 'Poland',
+        })
+      ).rejects.toThrow('AUTH_REQUIRED');
     });
 
     await waitFor(() => {
-      expect(contextValue.favorites).toHaveLength(1);
-      expect(contextValue.favorites[0].id).toBe('2');
-      expect(AsyncStorage.setItem).toHaveBeenCalled();
+      expect(contextValue.favorites).toHaveLength(0);
     });
   });
 
@@ -293,12 +293,11 @@ describe('FavoritesContext', () => {
     });
 
     await act(async () => {
-      await contextValue.removeFavorite('1', 'travel');
+      await expect(contextValue.removeFavorite('1', 'travel')).rejects.toThrow('AUTH_REQUIRED');
     });
 
     await waitFor(() => {
-      expect(contextValue.favorites).toHaveLength(1);
-      expect(contextValue.favorites[0].id).toBe('2');
+      expect(contextValue.favorites).toHaveLength(2);
     });
   });
 

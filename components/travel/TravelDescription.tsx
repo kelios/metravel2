@@ -35,6 +35,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                                                                  noBox = false,
                                                              }) => {
     const { width, height } = useResponsive();
+    const isMobileLayout = width < 768;
 
     // ✅ ОПТИМИЗАЦИЯ: Адаптивные размеры контейнера
     const pageHeight = useMemo(() => Math.round(height * 0.7), [height]);
@@ -156,8 +157,10 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
               // стили
               const styleMatch = tag.match(/\bstyle="([^"]*)"/i);
               const style = styleMatch?.[1] ?? "";
-              const styleWithHeightAuto =
-                style.includes("height") ? style : (style ? `${style};height:auto` : "height:auto");
+              const baseResponsiveStyle = "max-width:100%;height:auto;display:block;object-fit:contain";
+              const styleWithResponsiveDefaults = style
+                ? `${style};${baseResponsiveStyle}`
+                : baseResponsiveStyle;
 
               // LCP — первая картинка в документе: high priority, не lazy
               const isLcp = idx === LCP_INDEX;
@@ -166,7 +169,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
               const patched = tag
                 // добавим/заменим style (height:auto)
                 .replace(styleMatch ? styleMatch[0] : "", "")
-                .replace(/>$/, ` style="${styleWithHeightAuto}">`)
+                .replace(/>$/, ` style="${styleWithResponsiveDefaults}">`)
                 // установим размеры (если вычислили)
                 .replace(/\bwidth="[^"]*"/i, "")
                 .replace(/\bheight="[^"]*"/i, "")
@@ -273,7 +276,13 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
     );
 
     return (
-      <View style={styles.wrapper} testID="travel-description">
+      <View
+        style={[
+          styles.wrapper,
+          noBox && isMobileLayout && styles.wrapperNoBoxMobile,
+        ]}
+        testID="travel-description"
+      >
           {noBox ? (
             <ScrollView
               style={styles.scrollArea}
@@ -324,6 +333,14 @@ const styles = StyleSheet.create({
             default: 32  // ✅ ОПТИМИЗАЦИЯ: Меньше отступ снизу на мобильных
         }),
         backgroundColor: "transparent",
+    },
+
+    wrapperNoBoxMobile: {
+        alignSelf: "stretch",
+        maxWidth: undefined,
+        paddingHorizontal: 0,
+        paddingTop: 0,
+        paddingBottom: 0,
     },
 
     inner: {

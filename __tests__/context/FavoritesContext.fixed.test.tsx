@@ -8,6 +8,13 @@ import Toast from 'react-native-toast-message'
 import { FavoritesProvider, useFavorites } from '@/context/FavoritesContext'
 import { AuthProvider } from '@/context/AuthContext'
 
+const mockUseAuth = jest.fn()
+
+jest.mock('@/src/api/travelsFavorites', () => ({
+  markTravelAsFavorite: jest.fn(async () => null),
+  unmarkTravelAsFavorite: jest.fn(async () => null),
+}))
+
 jest.mock('@/src/api/user', () => ({
   fetchUserFavoriteTravels: jest.fn(async () => []),
   fetchUserHistory: jest.fn(async () => []),
@@ -39,36 +46,39 @@ jest.mock('react-native', () => {
 
 jest.mock('@/context/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
-  useAuth: () => ({
-    isAuthenticated: false,
-    userId: null,
-  }),
+  useAuth: () => mockUseAuth(),
 }))
 
 const TestComponent = () => {
   const { addFavorite, removeFavorite, isFavorite, favorites } = useFavorites()
+  const [error, setError] = React.useState<string | null>(null)
   
   return (
     <View>
       <Pressable
         testID="add-favorite"
-        onPress={() => addFavorite({
-          id: 'test-1',
-          type: 'travel',
-          title: 'Test Travel',
-          url: '/test-1',
-        })}
+        onPress={() =>
+          addFavorite({
+            id: 'test-1',
+            type: 'travel',
+            title: 'Test Travel',
+            url: '/test-1',
+          }).catch((e: any) => setError(e?.message ?? String(e)))
+        }
       >
         <Text>Add Favorite</Text>
       </Pressable>
       <Pressable
         testID="remove-favorite"
-        onPress={() => removeFavorite('test-1', 'travel')}
+        onPress={() =>
+          removeFavorite('test-1', 'travel').catch((e: any) => setError(e?.message ?? String(e)))
+        }
       >
         <Text>Remove Favorite</Text>
       </Pressable>
       <Text testID="is-favorite">{isFavorite('test-1', 'travel') ? 'true' : 'false'}</Text>
       <Text testID="favorites-count">{favorites.length}</Text>
+      <Text testID="error">{error ?? ''}</Text>
     </View>
   )
 }
@@ -76,6 +86,7 @@ const TestComponent = () => {
 describe('FavoritesContext (Fixed - Local Only)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockUseAuth.mockReturnValue({ isAuthenticated: false, userId: null })
     mockAsyncStorage.getItem.mockResolvedValue(null)
     mockAsyncStorage.setItem.mockResolvedValue(undefined)
     mockAsyncStorage.removeItem.mockResolvedValue(undefined)
@@ -109,19 +120,11 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
     })
 
     await waitFor(() => {
-      expect(getByTestId('favorites-count').props.children).toBe(1)
-      expect(getByTestId('is-favorite').props.children).toBe('true')
+      expect(getByTestId('error').props.children).toBe('AUTH_REQUIRED')
     })
 
-    // Verify localStorage was used
-    expect(mockAsyncStorage.setItem).toHaveBeenCalled()
-    
-    // Verify Toast was shown for local save
-    expect(Toast.show).toHaveBeenCalledWith({
-      type: 'success',
-      text1: 'Добавлено в избранное',
-      text2: 'Сохранено на этом устройстве',
-    })
+    expect(mockAsyncStorage.setItem).not.toHaveBeenCalled()
+    expect(Toast.show).not.toHaveBeenCalled()
   })
 
   it('should remove favorite locally without server sync', async () => {
@@ -160,24 +163,17 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
     })
 
     await waitFor(() => {
-      expect(getByTestId('favorites-count').props.children).toBe(0)
-      expect(getByTestId('is-favorite').props.children).toBe('false')
+      expect(getByTestId('error').props.children).toBe('AUTH_REQUIRED')
     })
 
-    // Verify localStorage was used
-    expect(mockAsyncStorage.setItem).toHaveBeenCalled()
-    
-    // Verify Toast was shown for local removal
-    expect(Toast.show).toHaveBeenCalledWith({
-      type: 'info',
-      text1: 'Удалено из избранного',
-      text2: 'Удалено с этого устройства',
-    })
+    expect(mockAsyncStorage.setItem).not.toHaveBeenCalled()
+    expect(Toast.show).not.toHaveBeenCalled()
   })
 
   it('should handle invalid favorite IDs gracefully', async () => {
     const TestComponentWithInvalid = () => {
       const { addFavorite, favorites } = useFavorites()
+      const [error, setError] = React.useState<string | null>(null)
       
       // Try to add with invalid ID (HTTP error code)
       React.useEffect(() => {
@@ -186,10 +182,15 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
           type: 'travel',
           title: 'Invalid Travel',
           url: '/invalid',
-        })
+        }).catch((e: any) => setError(e?.message ?? String(e)))
       }, [addFavorite])
       
-      return <Text testID="invalid-test">{favorites.length}</Text>
+      return (
+        <View>
+          <Text testID="invalid-test">{favorites.length}</Text>
+          <Text testID="invalid-error">{error ?? ''}</Text>
+        </View>
+      )
     }
 
     const { getByTestId } = render(
@@ -202,6 +203,7 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
 
     await waitFor(() => {
       expect(getByTestId('invalid-test').props.children).toBe(0)
+      expect(getByTestId('invalid-error').props.children).toBe('AUTH_REQUIRED')
     })
   })
 })

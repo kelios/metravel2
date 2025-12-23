@@ -4,12 +4,12 @@ import {
     View,
     StyleSheet,
     Pressable,
-    ImageBackground,
     Linking,
     ActivityIndicator,
     Platform,
 } from 'react-native';
 import { Text, IconButton } from 'react-native-paper';
+import { Image as ExpoImage } from 'expo-image';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 import { TravelCoords } from '@/src/types/types';
@@ -164,6 +164,11 @@ const AddressListItem: React.FC<Props> = ({
     };
     const height = getCardHeight();
 
+    const imgUri = useMemo(() => {
+      if (!travelImageThumbUrl) return null;
+      return addVersion(travelImageThumbUrl, (travel as any).updated_at);
+    }, [travelImageThumbUrl, travel]);
+
     if (Platform.OS === 'web') {
         return (
           <div style={{ padding: 8 }}>
@@ -186,22 +191,44 @@ const AddressListItem: React.FC<Props> = ({
         onHoverIn={() => !isMobile && setHovered(true)}
         onHoverOut={() => !isMobile && setHovered(false)}
       >
-              <ImageBackground
-            source={
-                travelImageThumbUrl
-                  ? { uri: addVersion(travelImageThumbUrl, (travel as any).updated_at) }
-                  : require('@/assets/no-data.webp')
-            }
-            style={styles.image}
-            imageStyle={{ borderRadius: 24 }}
-            onLoadEnd={() => setImgLoaded(true)}
-            resizeMode="cover"
-          >
-              {!imgLoaded && (
-                <View style={styles.loader}>
-                    <ActivityIndicator size="small" color="#fff" />
-                </View>
-              )}
+        <View style={styles.image}>
+          {imgUri ? (
+            <>
+              <ExpoImage
+                source={{ uri: imgUri }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={0}
+                blurRadius={12}
+                onLoadEnd={() => setImgLoaded(true)}
+              />
+              <View style={styles.imageOverlay} />
+              <ExpoImage
+                source={{ uri: imgUri }}
+                style={StyleSheet.absoluteFill}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                transition={200}
+                onLoadEnd={() => setImgLoaded(true)}
+              />
+            </>
+          ) : (
+            <View style={styles.noDataWrap}>
+              <ExpoImage
+                source={require('@/assets/no-data.webp')}
+                style={styles.noDataImage}
+                contentFit="contain"
+                transition={0}
+              />
+            </View>
+          )}
+
+          {!imgLoaded && (
+            <View style={styles.loader}>
+              <ActivityIndicator size="small" color="#fff" />
+            </View>
+          )}
 
               {/* Основной Pressable для всей карточки */}
               <Pressable
@@ -262,7 +289,7 @@ const AddressListItem: React.FC<Props> = ({
                       </Text>
                     )}
 
-                    {!!coord && (
+                    {!!coord && !isMobile && (
                       <Pressable
                         onPress={openMap}
                         style={styles.coordPressable}
@@ -284,7 +311,7 @@ const AddressListItem: React.FC<Props> = ({
                     )}
                 </View>
               )}
-          </ImageBackground>
+        </View>
       </Pressable>
     );
 };
@@ -308,6 +335,23 @@ const styles = StyleSheet.create<Record<string, any>>({
         flex: 1,
         justifyContent: 'flex-end',
         borderRadius: 24,
+        overflow: 'hidden',
+        backgroundColor: '#0b1220',
+    },
+    imageOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(255,255,255,0.12)',
+    },
+    noDataWrap: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#0b1220',
+    },
+    noDataImage: {
+        width: 120,
+        height: 120,
+        opacity: 0.9,
     },
     loader: {
         ...StyleSheet.absoluteFillObject,

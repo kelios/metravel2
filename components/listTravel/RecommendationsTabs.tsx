@@ -229,6 +229,11 @@ const RecommendationsTabs = memo(
           contentContainerStyle={styles.tabPaneContent}
           showsVerticalScrollIndicator={false}
           bounces={false}
+          // IMPORTANT: This component is rendered inside a scrollable page/list.
+          // On native, a nested vertical ScrollView can steal the gesture and make the parent
+          // scroll feel "stuck". We keep the internal scrolling only on web.
+          scrollEnabled={Platform.OS === 'web'}
+          nestedScrollEnabled={Platform.OS === 'web'}
         >
           {children}
         </ScrollView>

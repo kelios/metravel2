@@ -187,7 +187,7 @@ function RootLayoutNav() {
     const defaultTitle = "MeTravel — путешествия и маршруты";
     const defaultDescription = "Маршруты, места и впечатления от путешественников.";
 
-    const WEB_FOOTER_RESERVE_HEIGHT = 32;
+    const WEB_FOOTER_RESERVE_HEIGHT = 56;
 
     /** === динамическая высота ДОКА футера (только иконки) === */
     const [dockHeight, setDockHeight] = useState(0);

@@ -294,7 +294,8 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                     <OptimizedImage
                                         source={{ uri: image.url }}
                                         style={styles.image}
-                                        contentFit="cover"
+                                        contentFit="contain"
+                                        blurBackground
                                         loading="eager"
                                         alt={`Uploading ${index + 1}`}
                                     />
@@ -308,7 +309,8 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                     <OptimizedImage
                                         source={{ uri: image.url }}
                                         style={[styles.image, styles.errorImage]}
-                                        contentFit="cover"
+                                        contentFit="contain"
+                                        blurBackground
                                         loading="lazy"
                                         alt={`Error ${index + 1}`}
                                     />
@@ -328,7 +330,8 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                     <OptimizedImage
                                         source={{ uri: image.url }}
                                         style={styles.image}
-                                        contentFit="cover"
+                                        contentFit="contain"
+                                        blurBackground
                                         loading="lazy"
                                         alt={`Gallery image ${index + 1}`}
                                     />

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { getTravelsListPath } from './helpers/routes';
 
 test.describe('Footer dock (web mobile) - More modal', () => {
   test('shows More (Ещё), opens modal with legal + support links, and aligns dock item', async ({ page }) => {
@@ -27,7 +28,7 @@ test.describe('Footer dock (web mobile) - More modal', () => {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
          
-        await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+        await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded', timeout: 60_000 });
         lastError = null;
         break;
       } catch (e) {

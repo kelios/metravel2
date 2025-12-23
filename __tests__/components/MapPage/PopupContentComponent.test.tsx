@@ -146,11 +146,19 @@ describe('PopupContentComponent (web popup template)', () => {
     const expanded = (UNSAFE_root as any)?.querySelector?.('.popup-expanded-card') as HTMLElement | null;
     expect(expanded).not.toBeNull();
 
-    // Внутри видна хотя бы одна категория (проверяем через DOM, а не RTL-"text")
-    const firstCategory = (UNSAFE_root as any)?.querySelector?.('.popup-category') as HTMLElement | null;
-    expect(firstCategory).not.toBeNull();
-    if (firstCategory) {
-      expect(firstCategory.textContent).toContain('Категория 1');
+    // Первая категория теперь отображается в бейдже на фото, а список категорий в expanded панели
+    // начинается со 2-й категории (cats.slice(1)).
+    const badge = (UNSAFE_root as any)?.querySelector?.('.popup-photo-badge') as HTMLElement | null;
+    expect(badge).not.toBeNull();
+    if (badge) {
+      expect(badge.textContent).toContain('Категория 1');
+    }
+
+    const firstListedCategory = (UNSAFE_root as any)?.querySelector?.('.popup-category') as HTMLElement | null;
+    expect(firstListedCategory).not.toBeNull();
+    if (firstListedCategory) {
+      expect(firstListedCategory.textContent).toContain('Категория 2');
+      expect(firstListedCategory.textContent).not.toContain('Категория 1');
     }
   });
 

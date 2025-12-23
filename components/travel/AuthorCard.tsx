@@ -207,7 +207,6 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
               {userName || 'Аноним'}
             </Text>
           </Pressable>
-          
           {authorCountryName && (
             <View style={styles.locationRow}>
               <Feather name="map-pin" size={14} color="#718096" />

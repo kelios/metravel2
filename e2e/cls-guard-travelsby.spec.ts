@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { getTravelsListPath } from './helpers/routes';
 
 type ClsEntry = {
   value: number;
@@ -19,9 +20,22 @@ function getNumberEnv(name: string, fallback: number): number {
   return Number.isFinite(v) ? v : fallback;
 }
 
-const ROUTE = '/travelsby';
+const ROUTE = getTravelsListPath();
 const CLS_TOTAL_MAX = getNumberEnv('E2E_CLS_GUARD_TOTAL_MAX', 0.35);
 const CLS_AFTER_RENDER_MAX = getNumberEnv('E2E_CLS_GUARD_AFTER_RENDER_MAX', 0.02);
+
+async function waitForMainToRender(page: any) {
+  await Promise.race([
+    page.waitForSelector('#search-input', { timeout: 30_000 }),
+    page.waitForSelector(
+      '[data-testid="travel-card-link"], [data-testid="travel-card-skeleton"], [data-testid="list-travel-skeleton"]',
+      { timeout: 30_000 }
+    ),
+    page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
+    page.waitForSelector('text=Найдено:', { timeout: 30_000 }),
+    page.waitForSelector('text=Пиши о своих путешествиях', { timeout: 30_000 }),
+  ]);
+}
 
 async function initClsCollector(page: any) {
   await page.addInitScript(() => {
@@ -137,14 +151,20 @@ test.describe('CLS guard', () => {
     let lastError: any = null;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-         
-        await page.goto(ROUTE, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+        await page.goto(ROUTE, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+        await waitForMainToRender(page);
         lastError = null;
         break;
       } catch (e) {
         lastError = e;
-         
-        await page.waitForTimeout(500);
+        // If the page was closed (e.g. due to Playwright timeouts), don't keep waiting.
+        if (typeof page?.isClosed === 'function' && page.isClosed()) break;
+
+        try {
+          await page.waitForTimeout(700 + attempt * 400);
+        } catch {
+          break;
+        }
       }
     }
     if (lastError) throw lastError;

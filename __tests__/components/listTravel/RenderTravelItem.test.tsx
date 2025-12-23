@@ -4,6 +4,22 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+const mockRouterPush = jest.fn();
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({
+    push: mockRouterPush,
+  }),
+}));
+
+jest.mock('@/context/AuthContext', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => ({
+    isAuthenticated: true,
+    userId: 'test-user',
+  }),
+}));
+
 const mockTravel = {
   id: 1,
   slug: 'test-travel',

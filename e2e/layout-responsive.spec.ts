@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { getTravelsListPath } from './helpers/routes';
 
 function getNumberEnv(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -114,7 +115,7 @@ test.describe('Responsive layout invariants', () => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await preacceptCookies(page);
 
-      await page.goto('/', { waitUntil: 'domcontentloaded' });
+      await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
       await waitForTravelsListToRender(page);
 
       await assertNoHorizontalScroll(page);
@@ -140,7 +141,7 @@ test.describe('Responsive layout invariants', () => {
     await preacceptCookies(page);
 
     try {
-      await page.goto('/', { waitUntil: 'domcontentloaded' });
+      await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
     } catch (e: any) {
       const msg = e?.message ? String(e.message) : String(e);
       test.skip(true, `Dev server not reachable during strict layout check: ${msg}`);
@@ -199,7 +200,7 @@ test.describe('Responsive layout invariants', () => {
       }
     });
 
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
     await waitForTravelsListToRender(page);
 
     await page.waitForTimeout(1500);

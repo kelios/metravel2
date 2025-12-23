@@ -6,6 +6,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 interface OptimizedImageProps {
   source: { uri: string } | number;
   contentFit?: ImageContentFit;
+  blurBackground?: boolean;
+  blurBackgroundRadius?: number;
   aspectRatio?: number;
   width?: number | string;
   height?: number | string;
@@ -42,6 +44,8 @@ interface OptimizedImageProps {
 function OptimizedImage({
   source,
   contentFit = 'cover',
+  blurBackground = false,
+  blurBackgroundRadius = 16,
   aspectRatio,
   width = '100%',
   height,
@@ -84,6 +88,29 @@ function OptimizedImage({
         style,
       ]}
     >
+      {blurBackground && (
+        <>
+          <ExpoImage
+            source={source}
+            contentFit="cover"
+            transition={0}
+            style={StyleSheet.absoluteFill}
+            cachePolicy="memory-disk"
+            blurRadius={blurBackgroundRadius}
+            {...(Platform.OS === 'web' && {
+              // @ts-ignore - web-specific props
+              alt: '',
+              decoding: 'async',
+            })}
+          />
+          <View
+            style={[
+              StyleSheet.absoluteFillObject,
+              { backgroundColor: 'rgba(255,255,255,0.18)' },
+            ]}
+          />
+        </>
+      )}
       <ExpoImage
         source={source}
         contentFit={contentFit}

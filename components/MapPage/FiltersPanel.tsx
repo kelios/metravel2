@@ -49,9 +49,9 @@ const SEARCH_MODES = [
 ];
 
 const TRANSPORT_MODES = [
-  { key: 'car' as const, icon: 'directions-car', label: 'Авто', emoji: '🚗' },
-  { key: 'foot' as const, icon: 'directions-walk', label: 'Пешком', emoji: '🚶' },
-  { key: 'bike' as const, icon: 'directions-bike', label: 'Велосипед', emoji: '🚴' },
+  { key: 'car' as const, icon: 'directions-car', label: 'Авто' },
+  { key: 'foot' as const, icon: 'directions-walk', label: 'Пешком' },
+  { key: 'bike' as const, icon: 'directions-bike', label: 'Велосипед' },
 ];
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -535,7 +535,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     <Text style={styles.sectionHint}>Доступно после выбора старта и финиша</Text>
                   ) : null}
                   <View style={styles.transportTabs}>
-                    {TRANSPORT_MODES.map(({ key, label, emoji }) => {
+                    {TRANSPORT_MODES.map(({ key, label, icon }) => {
                       const active = transportMode === key;
                       const disabledTransport = !(routeStepState.startSelected && routeStepState.endSelected);
                       return (
@@ -556,7 +556,12 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                           accessibilityLabel={`Выбрать транспорт: ${TRANSPORT_MODES.find(m => m.key === key)?.label}`}
                           accessibilityState={{ selected: active, disabled: disabledTransport }}
                         >
-                          <Text style={styles.transportEmoji}>{emoji}</Text>
+                          <Icon
+                            name={icon}
+                            size={18}
+                            color={active ? '#fff' : COLORS.textMuted}
+                            style={styles.transportIcon}
+                          />
                           <Text
                             style={[
                               styles.transportTabText,
@@ -667,7 +672,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                       <Text style={styles.stepSubtitle} numberOfLines={1}>
                         {routeStepState.endSelected ? endLabel : 'Теперь выберите финиш'}
                       </Text>
-                      {showEndHint && <Text style={styles.stepInlineHint}>👆 Теперь выберите точку финиша</Text>}
+                      {showEndHint && <Text style={styles.stepInlineHint}>Теперь выберите точку финиша</Text>}
                     </View>
                   </View>
                 )}
@@ -681,7 +686,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     <Text style={styles.stepSubtitle} numberOfLines={1}>
                       {routeStepState.endSelected ? 'Транспорт выбран' : 'Выберите транспорт'}
                     </Text>
-                    {showTransportHint && <Text style={styles.stepInlineHint}>🚗 Выберите транспорт</Text>}
+                    {showTransportHint && <Text style={styles.stepInlineHint}>Выберите транспорт</Text>}
                   </View>
                 </View>
 
@@ -689,7 +694,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   <View style={styles.routeBuilt}>
                     <Text style={styles.routeBuiltTitle}>Маршрут построен</Text>
                     <Text style={styles.routeBuiltMeta}>
-                      {(routeDistance / 1000).toFixed(1)} км • {transportMode === 'car' ? '🚗' : transportMode === 'bike' ? '🚴' : '🚶'}
+                      {(routeDistance / 1000).toFixed(1)} км
                     </Text>
                   </View>
                 )}
@@ -1096,8 +1101,8 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     transportTabActive: {
       backgroundColor: COLORS.primary,
     },
-    transportEmoji: {
-      fontSize: 18,
+    transportIcon: {
+      marginBottom: 4,
     },
     transportTabText: {
       fontSize: 13,

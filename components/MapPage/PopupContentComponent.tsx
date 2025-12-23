@@ -266,7 +266,7 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
 
                 {cats.length > 0 ? (
                   <div className="popup-category-container">
-                    {cats.map((cat, i) => (
+                    {cats.slice(1).map((cat, i) => (
                       <span key={`${cat}-${i}`} className="popup-category">{cat}</span>
                     ))}
                   </div>
@@ -312,6 +312,7 @@ const popupStyles = `
   position: relative;
   width: min(320px, calc(100vw - 14px));
   min-width: 210px;
+  max-height: calc(100vh - 220px);
   border-radius: 18px;
   overflow: hidden;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
@@ -828,7 +829,14 @@ const popupStyles = `
 
 @media (max-width: 700px) {
   .popup-card {
-    max-width: min(400px, calc(100vw - 12px));
+    width: calc(100vw - 24px);
+    max-width: 420px;
+    min-width: 0;
+    max-height: calc(100vh - 200px);
+  }
+
+  .popup-photo {
+    height: 220px;
   }
 
   .popup-expanded-card {

@@ -161,13 +161,13 @@ export class TravelPageGenerator {
     const metadata = [];
 
     if (travel.countryName) {
-      metadata.push({ icon: '📍', label: 'Страна', value: travel.countryName });
+      metadata.push({ icon: this.renderPdfIcon('pin', colors.textMuted, 11), label: 'Страна', value: travel.countryName });
     }
     if (travel.year) {
-      metadata.push({ icon: '📅', label: 'Год', value: String(travel.year) });
+      metadata.push({ icon: this.renderPdfIcon('calendar', colors.textMuted, 11), label: 'Год', value: String(travel.year) });
     }
     if (travel.number_days) {
-      metadata.push({ icon: '⏱️', label: 'Длительность', value: `${travel.number_days} ${this.getDaysLabel(travel.number_days)}` });
+      metadata.push({ icon: this.renderPdfIcon('clock', colors.textMuted, 11), label: 'Длительность', value: `${travel.number_days} ${this.getDaysLabel(travel.number_days)}` });
     }
 
     if (metadata.length === 0) return '';
@@ -192,8 +192,11 @@ export class TravelPageGenerator {
               color: ${colors.textMuted};
               margin-bottom: 3mm;
               font-family: ${typography.bodyFont};
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
             ">
-              ${item.icon} ${item.label}
+              ${item.icon}<span>${item.label}</span>
             </div>
             <div style="
               font-size: 13pt;
@@ -239,7 +242,7 @@ export class TravelPageGenerator {
       if (plusItems.length > 0) {
         highlights.push({
           title: 'Понравилось',
-          icon: '✨',
+          icon: this.renderPdfIcon('sparkle', colors.accent, 14),
           items: plusItems,
           color: colors.accent,
         });
@@ -251,7 +254,7 @@ export class TravelPageGenerator {
       if (minusItems.length > 0) {
         highlights.push({
           title: 'Не понравилось',
-          icon: '⚠️',
+          icon: this.renderPdfIcon('warning', colors.textMuted, 14),
           items: minusItems,
           color: colors.textMuted,
         });
@@ -263,7 +266,7 @@ export class TravelPageGenerator {
       if (recItems.length > 0) {
         highlights.push({
           title: 'Рекомендации',
-          icon: '💡',
+          icon: this.renderPdfIcon('bulb', colors.accent, 14),
           items: recItems,
           color: colors.accent,
         });
@@ -282,8 +285,11 @@ export class TravelPageGenerator {
               margin: 0 0 6mm 0;
               color: ${section.color};
               font-family: ${typography.headingFont};
+              display: flex;
+              align-items: center;
+              gap: 8px;
             ">
-              ${section.icon} ${section.title}
+              ${section.icon}<span>${section.title}</span>
             </h3>
             <ul style="
               margin: 0;
@@ -403,5 +409,35 @@ export class TravelPageGenerator {
       "'": '&#039;',
     };
     return text.replace(/[&<>"']/g, (m) => map[m]);
+  }
+
+  private renderPdfIcon(
+    name: 'pin' | 'calendar' | 'clock' | 'bulb' | 'warning' | 'sparkle',
+    color: string,
+    sizePt: number
+  ): string {
+    const size = `${sizePt}pt`;
+    const wrapperStyle = `
+      width: ${size};
+      height: ${size};
+      display: inline-block;
+      flex-shrink: 0;
+    `;
+
+    const svgStart = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${sizePt}" height="${sizePt}" fill="none" stroke="${this.escapeHtml(color)}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">`;
+    const svgEnd = `</svg>`;
+
+    const paths: Record<typeof name, string> = {
+      pin: `<path d="M12 21s-6-5.3-6-10a6 6 0 1 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2"/>`,
+      calendar: `<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>`,
+      clock: `<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>`,
+      bulb: `<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12c.7.6 1 1.3 1 2v1h6v-1c0-.7.3-1.4 1-2a7 7 0 0 0-4-12z"/>`,
+      warning: `<path d="M10.3 3.2 1.7 18a2 2 0 0 0 1.7 3h17.2a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/>`,
+      sparkle: `<path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8z"/>`,
+    };
+
+    return `
+      <span style="${wrapperStyle}">${svgStart}${paths[name]}${svgEnd}</span>
+    `;
   }
 }

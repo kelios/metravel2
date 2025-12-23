@@ -28,6 +28,7 @@ type RenderTravelItemProps = {
     isSelected?: boolean;
     onToggle?: () => void;
     cardWidth?: string | number; // пока не используем для width, оставляем для совместимости пропсов
+    hideAuthor?: boolean;
 };
 
 function RenderTravelItem({
@@ -43,6 +44,7 @@ function RenderTravelItem({
                               isSelected = false,
                               onToggle,
                               cardWidth,
+                              hideAuthor = false,
                           }: RenderTravelItemProps) {
     const { width } = useResponsive();
 
@@ -127,6 +129,7 @@ function RenderTravelItem({
                 isMobile={isMobile}
                 viewportWidth={width}
                 cardWidth={cardWidthNumber}
+                hideAuthor={hideAuthor}
             />
         </AnimatedCard>
     );

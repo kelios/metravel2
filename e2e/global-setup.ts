@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromium, type FullConfig } from '@playwright/test';
+import { getTravelsListPath } from './helpers/routes';
 
 const STORAGE_STATE_PATH = 'e2e/.auth/storageState.json';
 
@@ -28,7 +29,7 @@ export default async function globalSetup(config: FullConfig) {
 
   // Always visit the app once so we have a deterministic storage state file.
   try {
-    await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 120_000 });
+    await page.goto(`${baseURL}${getTravelsListPath()}`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
   } catch {
     await context.storageState({ path: STORAGE_STATE_PATH });
     await browser.close();

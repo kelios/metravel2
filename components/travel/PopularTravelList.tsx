@@ -31,13 +31,21 @@ type PopularTravelListProps = {
   scrollToAnchor?: () => void;
   title?: string | null;
   maxColumns?: number;
+  showHeader?: boolean;
+  embedded?: boolean;
 };
 
 const SEPARATOR_HEIGHT = 20;
-const WEB_LIST_WINDOW_SIZE = 3;
 
 const PopularTravelList: React.FC<PopularTravelListProps> = memo(
-  ({ onLayout, scrollToAnchor, title = "Популярные маршруты", maxColumns = 3 }) => {
+  ({
+     onLayout,
+     scrollToAnchor,
+     title = "Популярные маршруты",
+     maxColumns = 3,
+     showHeader = true,
+     embedded = false,
+   }) => {
     const [travelsPopular, setTravelsPopular] = useState<TravelsMap>({});
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
@@ -48,10 +56,9 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
 
     // ✅ УЛУЧШЕНИЕ: Более точные брейкпоинты для адаптивности
     const numColumns = useMemo(() => {
-      if (width < 640) return 1; // Мобильные
-      if (width < 1024) return Math.min(maxColumns, 2); // Планшеты портретные
-      if (width < 1280) return Math.min(maxColumns, 2); // Планшеты landscape - исправлено на 2 колонки
-      return Math.min(maxColumns, 3); // Десктопы от 1280px
+      if (width <= 640) return 1; // mobile (≤ 640px)
+      if (width <= 1024) return Math.min(maxColumns, 2); // tablet (641–1024px)
+      return Math.min(maxColumns, 3); // desktop (≥ 1025px)
     }, [width, maxColumns]);
 
     const fetchPopularTravels = useCallback(async () => {
@@ -93,15 +100,29 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
       return list.slice(0, Platform.OS === 'web' ? 8 : list.length);
     }, [travelsPopular]);
 
-    const popularRows = useMemo(() => {
-      if (Platform.OS !== 'web') return [];
+    const webGridStyle: any = useMemo(() => {
+      if (Platform.OS !== 'web') return undefined;
 
-      const rows: any[][] = [];
-      for (let i = 0; i < popularList.length; i += numColumns) {
-        rows.push(popularList.slice(i, i + numColumns));
+      // mobile-first: on small screens allow horizontal scroll while keeping CSS Grid as the layout engine
+      if (width <= 640) {
+        return {
+          display: 'grid',
+          gridAutoFlow: 'column',
+          gridAutoColumns: 'minmax(260px, 86vw)',
+          gap: styles.webGrid?.gap ?? DESIGN_TOKENS.spacing.sm,
+          alignItems: 'stretch',
+          width: 'max-content',
+        };
       }
-      return rows;
-    }, [popularList, numColumns]);
+
+      return {
+        display: 'grid',
+        gridTemplateColumns: `repeat(${numColumns}, minmax(0, 1fr))`,
+        gap: styles.webGrid?.gap ?? DESIGN_TOKENS.spacing.sm,
+        alignItems: 'stretch',
+        width: '100%',
+      };
+    }, [numColumns, width]);
 
     // Оптимизированный рендер элемента с предотвращением лишних ререндеров
     const renderItem = useCallback(
@@ -114,28 +135,6 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
     );
 
     const keyExtractor = useCallback((item: any) => `${item.id}-${item.updated_at || ''}`, []);
-
-    const renderWebRow = useCallback(
-      ({ item: rowItems, index: rowIndex }: { item: any[]; index: number }) => {
-        return (
-          <View style={styles.webRow}>
-            {rowItems.map((item, _itemIndex) => (
-              <View key={keyExtractor(item)} style={styles.webItemContainer}>
-                <TravelTmlRound travel={item as any} />
-              </View>
-            ))}
-
-            {rowItems.length < numColumns &&
-              Array(numColumns - rowItems.length)
-                .fill(null)
-                .map((_, i) => (
-                  <View key={`spacer-${rowIndex}-${i}`} style={styles.webItemContainer} />
-                ))}
-          </View>
-        );
-      },
-      [keyExtractor, numColumns]
-    );
 
     const handleContentChange = useCallback(() => {
       scrollToAnchor?.();
@@ -202,8 +201,8 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
     }
 
     return (
-      <View style={styles.section} onLayout={onLayout}>
-        {title !== null && (
+      <View style={embedded ? styles.embeddedSection : styles.section} onLayout={onLayout}>
+        {showHeader && title !== null && (
           <Title style={styles.title} accessibilityRole="header">
             {title}
           </Title>
@@ -211,26 +210,22 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
 
         <Animated.View style={{ opacity: fadeAnim }}>
           {Platform.OS === 'web' ? (
-            <Animated.FlatList
-              key={`rows-${numColumns}`}
-              data={popularRows}
-              renderItem={renderWebRow}
-              keyExtractor={(_, index) => `row-${index}`}
-              contentContainerStyle={styles.flatListContent}
-              ItemSeparatorComponent={ItemSeparatorComponent}
-              showsVerticalScrollIndicator={false}
-              initialNumToRender={Math.min(
-                listConfig?.INITIAL_NUM_TO_RENDER ?? FLATLIST_CONFIG.INITIAL_NUM_TO_RENDER,
-                popularRows.length
-              )}
-              maxToRenderPerBatch={listConfig.MAX_TO_RENDER_PER_BATCH}
-              windowSize={WEB_LIST_WINDOW_SIZE}
-              removeClippedSubviews={false}
-              onContentSizeChange={handleContentChange}
-              updateCellsBatchingPeriod={listConfig.UPDATE_CELLS_BATCHING_PERIOD}
-              disableVirtualization={false}
-              accessibilityRole="list"
-            />
+            <View style={width <= 640 ? styles.webScrollContainer : undefined}>
+              <View
+                accessibilityRole="list"
+                style={[styles.flatListContent, styles.webGrid, webGridStyle]}
+              >
+                {popularList.map((item) => (
+                  <View
+                    key={keyExtractor(item)}
+                    accessibilityRole="listitem"
+                    style={styles.webGridItem}
+                  >
+                    <TravelTmlRound travel={item as any} />
+                  </View>
+                ))}
+              </View>
+            </View>
           ) : (
             <Animated.FlatList
               key={`cols-${numColumns}`}
@@ -241,6 +236,8 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
               contentContainerStyle={styles.flatListContent}
               columnWrapperStyle={numColumns > 1 ? columnWrapperStyle : undefined}
               ItemSeparatorComponent={ItemSeparatorComponent}
+              scrollEnabled={!embedded}
+              nestedScrollEnabled={!embedded}
               showsVerticalScrollIndicator={false}
               initialNumToRender={
                 listConfig?.INITIAL_NUM_TO_RENDER ?? FLATLIST_CONFIG_MOBILE.INITIAL_NUM_TO_RENDER
@@ -295,6 +292,21 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  embeddedSection: {
+    marginTop: 0,
+    marginBottom: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    width: '100%',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    minHeight: 0,
+  },
   loadingContainer: {
     justifyContent: "center",
     alignItems: "center",
@@ -341,14 +353,37 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
-  webRow: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: DESIGN_TOKENS.spacing.xxs,
+  webGrid: {
+    ...Platform.select({
+      web: {
+        display: 'grid' as any,
+        gap: 'clamp(12px, 1.6vw, 16px)' as any,
+      } as any,
+      default: {},
+    }),
   },
-  webItemContainer: {
+  webScrollContainer: {
+    ...Platform.select({
+      web: {
+        overflowX: 'auto' as any,
+        overflowY: 'hidden' as any,
+        WebkitOverflowScrolling: 'touch' as any,
+        paddingBottom: DESIGN_TOKENS.spacing.xxs,
+        scrollSnapType: 'x mandatory' as any,
+        scrollBehavior: 'smooth' as any,
+      } as any,
+      default: {},
+    }),
+  },
+  webGridItem: {
     flex: 1,
     minWidth: 0,
+    ...Platform.select({
+      web: {
+        scrollSnapAlign: 'start' as any,
+      } as any,
+      default: {},
+    }),
   },
   separator: {
     height: SEPARATOR_HEIGHT,

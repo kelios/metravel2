@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import MapView, { Marker, Callout } from 'react-native-maps';
+import { Image as ExpoImage } from 'expo-image';
 
 type Point = {
   id: number;
@@ -79,7 +80,22 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
               <Callout>
                 <View>
                   {point?.travelImageThumbUrl ? (
-                      <Image source={{ uri: point?.travelImageThumbUrl }} style={styles.pointImage} />
+                      <View style={styles.pointImageWrap}>
+                        <ExpoImage
+                          source={{ uri: point.travelImageThumbUrl }}
+                          style={StyleSheet.absoluteFill}
+                          contentFit="cover"
+                          blurRadius={12}
+                          transition={0}
+                        />
+                        <View style={styles.pointImageOverlay} />
+                        <ExpoImage
+                          source={{ uri: point.travelImageThumbUrl }}
+                          style={StyleSheet.absoluteFill}
+                          contentFit="contain"
+                          transition={200}
+                        />
+                      </View>
                   ) : null}
                   <Text style={styles.label}>Адрес места:</Text>
                   <Text>{String(point.address)}</Text>
@@ -107,11 +123,17 @@ const styles = StyleSheet.create({
     borderBottomColor: '#ff9f5a',
     borderRadius: 4,
   },
-  pointImage: {
+  pointImageWrap: {
     width: 150,
     height: 150,
     borderRadius: 10,
     marginBottom: 10,
+    overflow: 'hidden',
+    backgroundColor: '#0b1220',
+  },
+  pointImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
 });
 

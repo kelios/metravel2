@@ -284,9 +284,17 @@ export async function generateLeafletRouteSnapshot(
     latLngs.forEach((latLng, index) => {
       const number = index + 1;
 
+      const isStart = index === 0;
+      const isEnd = index === latLngs.length - 1;
+      const markerUrl = isStart
+        ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png'
+        : isEnd
+          ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png'
+          : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png';
+
       const iconHtml = `
         <div style="position: relative; width: 25px; height: 41px;">
-          <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png"
+          <img src="${markerUrl}"
             style="width: 25px; height: 41px; display: block;" />
           <div style="
             position: absolute;
@@ -321,7 +329,7 @@ export async function generateLeafletRouteSnapshot(
     // Подгоняем границы под маршрут (без плавной анимации)
     if (latLngs.length > 0) {
       const bounds = L.latLngBounds(latLngs);
-      map.fitBounds(bounds, { padding: [16, 16], animate: false });
+      map.fitBounds(bounds, { padding: [28, 28], animate: false });
     }
 
     // Ждем загрузки тайлов (или таймаут как fallback)

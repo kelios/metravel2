@@ -51,77 +51,88 @@ export default function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const showImage = isTablet || isDesktop;
 
   return (
-    <ResponsiveContainer maxWidth="xxl" padding>
-      <ResponsiveStack direction="responsive" gap={60} align="center">
-        <View style={styles.content}>
-          <ResponsiveText variant="h1" style={styles.title}>
-            Пиши о своих путешествиях
-          </ResponsiveText>
-          
-          <ResponsiveText variant="h4" style={styles.subtitle}>
-            Делись маршрутами и историями, собирай их в красивую книгу — или выбирай, куда поехать дальше, читая поездки других.
-          </ResponsiveText>
+    <View style={[styles.band, isMobile && styles.bandMobile]}>
+      <ResponsiveContainer maxWidth="xl" padding>
+        <ResponsiveStack direction="responsive" gap={60} align="center">
+          <View style={styles.content}>
+            <ResponsiveText variant="h1" style={styles.title}>
+              Пиши о своих путешествиях
+            </ResponsiveText>
 
-          {travelsCount === 0 && isAuthenticated && (
-            <Text style={styles.hint}>
-              Расскажи о своём первом путешествии — или найди вдохновение в историях других путешественников.
-            </Text>
-          )}
+            <ResponsiveText variant="h4" style={styles.subtitle}>
+              Делись маршрутами и историями, собирай их в красивую книгу — или выбирай, куда поехать дальше, читая поездки других.
+            </ResponsiveText>
 
-          <ResponsiveStack 
-            direction={isMobile ? 'vertical' : 'horizontal'} 
-            gap={isMobile ? 12 : 16}
-            style={styles.buttonsContainer}
-          >
-            <Pressable
-              onPress={handleCreateBook}
-              style={({ pressed, hovered }) => [
-                styles.primaryButton,
-                (pressed || hovered) && styles.primaryButtonHover,
-                globalFocusStyles.focusable,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={primaryButtonLabel}
+            {travelsCount === 0 && isAuthenticated && (
+              <Text style={styles.hint}>
+                Расскажи о своём первом путешествии — или найди вдохновение в историях других путешественников.
+              </Text>
+            )}
+
+            <ResponsiveStack
+              direction={isMobile ? 'vertical' : 'horizontal'}
+              gap={isMobile ? 12 : 16}
+              style={styles.buttonsContainer}
             >
-              <Text style={styles.primaryButtonText}>{primaryButtonLabel}</Text>
-            </Pressable>
+              <Pressable
+                onPress={handleCreateBook}
+                style={({ pressed, hovered }) => [
+                  styles.primaryButton,
+                  (pressed || hovered) && styles.primaryButtonHover,
+                  globalFocusStyles.focusable,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={primaryButtonLabel}
+              >
+                <Text style={styles.primaryButtonText}>{primaryButtonLabel}</Text>
+              </Pressable>
 
+              <Pressable
+                onPress={handleOpenSearch}
+                style={({ pressed, hovered }) => [
+                  styles.secondaryButton,
+                  (pressed || hovered) && styles.secondaryButtonHover,
+                  globalFocusStyles.focusable,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Выбрать, куда поехать">
+                <Feather name="compass" size={18} color={DESIGN_TOKENS.colors.text} />
+                <Text style={styles.secondaryButtonText}>Выбрать, куда поехать</Text>
+              </Pressable>
+            </ResponsiveStack>
+          </View>
+
+          {showImage && (
             <Pressable
-              onPress={handleOpenSearch}
-              style={({ pressed, hovered }) => [
-                styles.secondaryButton,
-                (pressed || hovered) && styles.secondaryButtonHover,
-                globalFocusStyles.focusable,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Выбрать, куда поехать">
-              <Feather name="compass" size={18} color={DESIGN_TOKENS.colors.text} />
-              <Text style={styles.secondaryButtonText}>Выбрать, куда поехать</Text>
+              onPress={handleOpenArticle}
+              accessibilityRole="link"
+              accessibilityLabel="Открыть статью о маршруте Харцер Хексенштиг"
+              style={styles.imageContainer}
+            >
+              <Image
+                source={require('../../assets/images/pdf.webp')}
+                style={styles.bookImage}
+                resizeMode="contain"
+                {...(Platform.OS === 'web' ? { loading: 'lazy' as any } : {})}
+              />
             </Pressable>
-          </ResponsiveStack>
-        </View>
-
-        {showImage && (
-          <Pressable
-            onPress={handleOpenArticle}
-            accessibilityRole="link"
-            accessibilityLabel="Открыть статью о маршруте Харцер Хексенштиг"
-            style={styles.imageContainer}
-          >
-            <Image
-              source={require('../../assets/images/pdf.webp')}
-              style={styles.bookImage}
-              resizeMode="contain"
-              {...(Platform.OS === 'web' ? { loading: 'lazy' as any } : {})}
-            />
-          </Pressable>
-        )}
-      </ResponsiveStack>
-    </ResponsiveContainer>
+          )}
+        </ResponsiveStack>
+      </ResponsiveContainer>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  band: {
+    paddingVertical: 56,
+    backgroundColor: DESIGN_TOKENS.colors.background,
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  bandMobile: {
+    paddingVertical: 40,
+  },
   content: {
     flex: 1,
     gap: 24,

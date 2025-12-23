@@ -64,6 +64,7 @@ export interface SliderProps {
   blurBackground?: boolean;
   onFirstImageLoad?: () => void;
   mobileHeightPercent?: number;
+  neutralFirstSlideErrorPlaceholder?: boolean;
 }
 
 export interface SliderRef {
@@ -271,6 +272,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     blurBackground = true,
     onFirstImageLoad,
     mobileHeightPercent = MOBILE_HEIGHT_PERCENT,
+    neutralFirstSlideErrorPlaceholder = false,
   } = props;
 
   const insets = useSafeAreaInsets();
@@ -588,7 +590,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
         !(Platform.OS === "web" && isFirstSlide && status !== "loaded");
 
       return (
-        <View style={[styles.slide, { width: containerW, height: slideHeight }]}>
+        <View style={[styles.slide, { width: containerW, height: slideHeight }]}> 
           {shouldRenderBlurBg ? (
             <>
               <ExpoImage
@@ -614,23 +616,30 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
           >
             <View style={styles.imageCardSurface}>
               {status === "error" ? (
-                <View style={styles.placeholder} testID={`slider-placeholder-${index}`}>
-                  <Feather name="image" size={32} color="#94a3b8" />
-                  <Text style={styles.placeholderTitle}>Фото не загрузилось</Text>
-                  <Text style={styles.placeholderSubtitle}>
-                    Проверьте подключение или попробуйте позже
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => retryImage(index)}
-                    style={styles.retryBtn}
-                    accessibilityRole="button"
-                    accessibilityLabel="Повторить загрузку фото"
-                    hitSlop={10}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.retryBtnText}>Повторить</Text>
-                  </TouchableOpacity>
-                </View>
+                neutralFirstSlideErrorPlaceholder && isFirstSlide ? (
+                  <View
+                    style={styles.neutralPlaceholder}
+                    testID={`slider-neutral-placeholder-${index}`}
+                  />
+                ) : (
+                  <View style={styles.placeholder} testID={`slider-placeholder-${index}`}>
+                    <Feather name="image" size={32} color="#94a3b8" />
+                    <Text style={styles.placeholderTitle}>Фото не загрузилось</Text>
+                    <Text style={styles.placeholderSubtitle}>
+                      Проверьте подключение или попробуйте позже
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => retryImage(index)}
+                      style={styles.retryBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel="Повторить загрузку фото"
+                      hitSlop={10}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.retryBtnText}>Повторить</Text>
+                    </TouchableOpacity>
+                  </View>
+                )
               ) : (
                 <ExpoImage
                   testID={`slider-image-${index}`}
@@ -694,6 +703,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
       updateLoadStatus,
       retryImage,
       prefetchEnabled,
+      neutralFirstSlideErrorPlaceholder,
     ]
   );
 
@@ -916,6 +926,21 @@ const styles = StyleSheet.create<Record<string, any>>({
     alignItems: "center",
     paddingHorizontal: DESIGN_TOKENS.spacing.xs,
     paddingVertical: DESIGN_TOKENS.spacing.xs,
+  },
+  neutralPlaceholder: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.04)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    ...Platform.select({
+      web: {
+        backgroundImage:
+          "linear-gradient(180deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.02) 100%)",
+        boxSizing: "border-box",
+      },
+    }),
   },
   placeholderTitle: {
     color: "#0f172a",

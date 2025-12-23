@@ -68,6 +68,27 @@ const normalizeTravelItem = (input: any): Travel => {
         out.slug = String(t.slug);
     }
 
+    // Normalize url field:
+    // - Backend can return relative paths, empty strings, or non-canonical values.
+    // - Ensure we always have a stable canonical route for navigation.
+    const normalizedId = typeof out.id === 'number' ? out.id : Number(out.id) || 0;
+    const normalizedSlug = typeof out.slug === 'string' ? out.slug.trim() : String(out.slug ?? '').trim();
+    const canonicalKey = normalizedSlug || (normalizedId ? String(normalizedId) : '');
+
+    const rawUrl = typeof out.url === 'string' ? out.url.trim() : '';
+    const hasTravelsUrl = rawUrl.includes('/travels/');
+
+    // We do NOT synthesize url if it was not provided by API.
+    // But if API provided a url and it is non-canonical (e.g. '/test' or 'test'),
+    // we fix it to the canonical travel route.
+    if (rawUrl) {
+        if (canonicalKey && !hasTravelsUrl) {
+            out.url = `/travels/${canonicalKey}`;
+        } else if (!rawUrl.startsWith('http') && !rawUrl.startsWith('/')) {
+            out.url = `/${rawUrl}`;
+        }
+    }
+
     if (typeof t.youtube_link === 'undefined' && typeof t.youtubeLink !== 'undefined') {
         out.youtube_link = String(t.youtubeLink ?? '');
     }
@@ -486,7 +507,7 @@ export const fetchTravelBySlug = async (slug: string): Promise<Travel> => {
         const authHeaders = await buildAuthHeaders();
         const safeSlug = encodeURIComponent(String(slug).replace(/^\/+/, ''));
         const res = await fetchWithTimeout(
-            `${GET_TRAVELS_BY_SLUG}${safeSlug}/`,
+            `${GET_TRAVELS_BY_SLUG}${safeSlug}`,
             authHeaders ? { headers: authHeaders } : {},
             DEFAULT_TIMEOUT,
         );

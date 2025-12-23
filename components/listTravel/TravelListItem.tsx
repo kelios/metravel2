@@ -53,6 +53,7 @@ const WebImageOptimized = memo(function WebImageOptimized({
     const [isInView, setIsInView] = useState(priority);
     const [isLoaded, setIsLoaded] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (Platform.OS !== "web" || typeof document === "undefined") {
@@ -65,7 +66,13 @@ const WebImageOptimized = memo(function WebImageOptimized({
             return;
         }
 
-        if (!imgRef.current) return;
+        // ✅ Fallback: если IntersectionObserver недоступен (некоторые браузеры/вебвью), грузим сразу
+        if (typeof (window as any).IntersectionObserver === 'undefined') {
+            setIsInView(true);
+            return;
+        }
+
+        if (!containerRef.current) return;
 
         const observer = new IntersectionObserver(
             (entries) => {
@@ -77,7 +84,7 @@ const WebImageOptimized = memo(function WebImageOptimized({
             { rootMargin: '50px' } // Начинаем загрузку за 50px до появления
         );
 
-        observer.observe(imgRef.current);
+        observer.observe(containerRef.current);
         return () => observer.disconnect();
     }, [priority]);
     
@@ -93,7 +100,45 @@ const WebImageOptimized = memo(function WebImageOptimized({
     }
 
     return (
-        <img
+        <div
+          ref={containerRef}
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            overflow: 'hidden',
+            backgroundColor: TOKENS.colors.backgroundSecondary as any,
+          }}
+        >
+          <img
+            src={isInView ? src : undefined}
+            srcSet={isInView ? imageSrcSet : undefined}
+            sizes={imageSizes}
+            alt=""
+            width={width}
+            height={height}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              filter: 'blur(14px)',
+              transform: 'scale(1.08)',
+              opacity: 1,
+            }}
+            loading={priority ? 'eager' : 'lazy'}
+            decoding="async"
+            aria-hidden="true"
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundColor: 'rgba(255,255,255,0.12)',
+            }}
+          />
+          <img
             ref={imgRef}
             src={isInView ? src : undefined}
             srcSet={isInView ? imageSrcSet : undefined}
@@ -102,20 +147,23 @@ const WebImageOptimized = memo(function WebImageOptimized({
             width={width}
             height={height}
             style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                display: "block",
-                opacity: priority ? 1 : (isLoaded ? 1 : 0),
-                transition: priority ? undefined : 'opacity 0.3s ease',
-                // Prevent layout shifts
-                aspectRatio: `${width} / ${height}`,
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              display: 'block',
+              opacity: priority ? 1 : isLoaded ? 1 : 0,
+              transition: priority ? undefined : 'opacity 0.3s ease',
+              // Prevent layout shifts
+              aspectRatio: `${width} / ${height}`,
             }}
-            loading={priority ? "eager" : "lazy"}
+            loading={priority ? 'eager' : 'lazy'}
             decoding="async"
             onLoad={() => setIsLoaded(true)}
             {...({ fetchpriority: priority ? 'high' : 'auto' } as any)}
-        />
+          />
+        </div>
     );
 });
 
@@ -125,10 +173,24 @@ const NativeImageOptimized = memo(function NativeImageOptimized({
     uri: string;
 }) {
     return (
-        <ExpoImage
+        <View style={styles.imageLayerRoot}>
+          <ExpoImage
+            source={{ uri }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={0}
+            cachePolicy="memory-disk"
+            placeholder={{ blurhash: PLACEHOLDER_BLURHASH }}
+            priority="low"
+            recyclingKey={`${uri}-bg`}
+            accessibilityIgnoresInvertColors
+            blurRadius={14}
+          />
+          <View style={styles.imageOverlay} />
+          <ExpoImage
             source={{ uri }}
             style={styles.img}
-            contentFit="cover"
+            contentFit="contain"
             transition={180}
             cachePolicy="memory-disk"
             placeholder={{ blurhash: PLACEHOLDER_BLURHASH }}
@@ -136,7 +198,8 @@ const NativeImageOptimized = memo(function NativeImageOptimized({
             recyclingKey={uri}
             accessibilityIgnoresInvertColors
             testID="travel-image"
-        />
+          />
+        </View>
     );
 });
 
@@ -170,6 +233,7 @@ type Props = {
     isMobile?: boolean; // ✅ УЛУЧШЕНИЕ: Добавлен проп для определения мобильного устройства
     cardWidth?: number; // ✅ Фактическая ширина карточки (с учётом паддингов и колонок)
     viewportWidth?: number; // ✅ Ширина viewport для width-based адаптивности на web
+    hideAuthor?: boolean;
 };
 
 function TravelListItem({
@@ -186,6 +250,7 @@ function TravelListItem({
                             isMobile = false,
                             cardWidth,
                             viewportWidth,
+                            hideAuthor = false,
                         }: Props) {
 
     const {
@@ -243,7 +308,7 @@ function TravelListItem({
     const viewsFormatted = useMemo(() => formatViewCount(views), [views]);
 
     const travelUrl = useMemo(() => {
-        const key = slug ?? id;
+        const key = (typeof slug === 'string' && slug.trim()) ? slug.trim() : id;
         return `/travels/${key}`;
     }, [id, slug]);
 
@@ -434,7 +499,7 @@ function TravelListItem({
         if (selectable) {
             onToggle?.();
         } else {
-            const travelId = slug ?? id;
+            const travelId = (typeof slug === 'string' && slug.trim()) ? slug.trim() : id;
             const isId = !isNaN(Number(travelId));
             
             if (ENABLE_TRAVEL_DETAILS_PREFETCH && Platform.OS === 'web') {
@@ -453,7 +518,7 @@ function TravelListItem({
             }
             
             // На всякий: если слуг нет — откроем по ID
-            router.push(`/travels/${slug ?? id}`);
+            router.push(`/travels/${travelId}`);
         }
     }, [selectable, onToggle, slug, id, queryClient]);
 
@@ -482,6 +547,7 @@ function TravelListItem({
     
     // ✅ FIX: На web всегда используем View, чтобы избежать вложенных button ↔ button
     const CardWrapper = Platform.OS === 'web' ? View : Pressable;
+    const InlineWebButton = Platform.OS === 'web' ? View : Pressable;
     // ✅ B5.1: Улучшенные accessibility атрибуты
     const cardWrapperProps =
       Platform.OS === 'web'
@@ -610,31 +676,59 @@ function TravelListItem({
           )}
           {canEdit && (
             <View style={styles.adminActionsContainer}>
-              <Pressable
-                accessibilityRole="button"
+              <InlineWebButton
+                accessibilityRole={Platform.OS === 'web' ? undefined : 'button'}
                 accessibilityLabel="Редактировать"
-                onPress={handleEdit}
+                onPress={(handleEdit as any)}
                 style={styles.adminBtn}
+                {...(Platform.OS === 'web'
+                  ? ({
+                      role: 'button',
+                      tabIndex: 0,
+                      onClick: (e: any) => handleEdit(e),
+                      onKeyDown: (e: any) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleEdit(e);
+                        }
+                      },
+                      onMouseDown: (e: any) => e.stopPropagation?.(),
+                    } as any)
+                  : {})}
               >
                 <Feather name="edit-2" size={14} color={TOKENS.colors.text} />
-              </Pressable>
+              </InlineWebButton>
               <View style={styles.adminDivider} />
-              <Pressable
-                accessibilityRole="button"
+              <InlineWebButton
+                accessibilityRole={Platform.OS === 'web' ? undefined : 'button'}
                 accessibilityLabel="Удалить"
-                onPress={handleDelete}
+                onPress={(handleDelete as any)}
                 style={styles.adminBtn}
                 testID="delete-button"
+                {...(Platform.OS === 'web'
+                  ? ({
+                      role: 'button',
+                      tabIndex: 0,
+                      onClick: (e: any) => handleDelete(e),
+                      onKeyDown: (e: any) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleDelete(e);
+                        }
+                      },
+                      onMouseDown: (e: any) => e.stopPropagation?.(),
+                    } as any)
+                  : {})}
               >
                 <Feather name="trash-2" size={14} color={TOKENS.colors.danger} />
-              </Pressable>
+              </InlineWebButton>
             </View>
           )}
           {selectable && (
-            <Pressable
+            <InlineWebButton
               style={styles.checkWrap}
               testID="selection-checkbox"
-              accessibilityRole="checkbox"
+              accessibilityRole={Platform.OS === 'web' ? undefined : 'checkbox'}
               accessibilityState={{ checked: isSelected }}
               onPress={(e: any) => {
                 if (e?.stopPropagation) {
@@ -642,27 +736,35 @@ function TravelListItem({
                 }
                 onToggle?.();
               }}
+              {...(Platform.OS === 'web'
+                ? ({
+                    role: 'checkbox',
+                    tabIndex: 0,
+                    'aria-checked': isSelected,
+                    onClick: (e: any) => {
+                      e.stopPropagation?.();
+                      e.preventDefault?.();
+                      onToggle?.();
+                    },
+                    onKeyDown: (e: any) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onToggle?.();
+                      }
+                    },
+                    onMouseDown: (e: any) => e.stopPropagation?.(),
+                  } as any)
+                : {})}
             >
               <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
                 {isSelected && <Feather name="check" size={14} color="#fff" />}
               </View>
-            </Pressable>
+            </InlineWebButton>
           )}
         </View>
 
         {/* Контент под изображением */}
-        <View
-          style={[
-            styles.contentBelow,
-            // На web делаем компактную, но "дышащую" панель текста с небольшим отступом снизу
-            Platform.OS === 'web' && {
-              paddingHorizontal: 12,
-              paddingTop: 8,
-              paddingBottom: 10,
-              gap: 4,
-            },
-          ]}
-        >
+        <View style={styles.contentBelow}>
           <Text
             style={[
               styles.title,
@@ -694,31 +796,55 @@ function TravelListItem({
           >
             {/* Первая строка: иконка пользователя + имя + просмотры */}
             <View style={styles.metaInfoTopRow}>
-              <View style={styles.metaBox}>
-                <Feather
-                  name="user"
-                  size={Platform.select({ default: 10, web: 11 })}
-                  color="#64748b"
-                  style={{ marginRight: 4 }}
-                />
-                <Pressable
-                  onPress={handleAuthorPress}
-                  disabled={!authorUserId}
-                  accessibilityRole={authorUserId ? 'button' : undefined}
-                  accessibilityLabel={authorUserId ? `Открыть профиль автора ${authorName || 'Аноним'}` : undefined}
-                  {...(Platform.OS === 'web' && authorUserId
-                    ? {
-                        onClick: (e: any) => handleAuthorPress(e),
-                        onMouseDown: (e: any) => e.stopPropagation?.(),
-                        style: { cursor: 'pointer' } as any,
-                      }
-                    : {})}
-                >
-                  <Text style={styles.metaTxt}>
-                    {authorName || 'Аноним'}
-                  </Text>
-                </Pressable>
-              </View>
+              {!hideAuthor && (
+                <View style={styles.metaBox}>
+                  <Feather
+                    name="user"
+                    size={Platform.select({ default: 10, web: 11 })}
+                    color="#64748b"
+                    style={{ marginRight: 4 }}
+                  />
+                  {Platform.OS === 'web' ? (
+                    <View
+                      {...({
+                        ...(authorUserId
+                          ? {
+                              role: 'button',
+                              tabIndex: 0,
+                              'aria-label': `Открыть профиль автора ${authorName || 'Аноним'}`,
+                              onClick: (e: any) => handleAuthorPress(e),
+                              onKeyDown: (e: any) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  handleAuthorPress(e);
+                                }
+                              },
+                              onMouseDown: (e: any) => e.stopPropagation?.(),
+                              style: { cursor: 'pointer' },
+                            }
+                          : {
+                              style: { cursor: 'default' },
+                            }),
+                      } as any)}
+                    >
+                      <Text style={styles.metaTxt}>
+                        {authorName || 'Аноним'}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={handleAuthorPress}
+                      disabled={!authorUserId}
+                      accessibilityRole={authorUserId ? 'button' : undefined}
+                      accessibilityLabel={authorUserId ? `Открыть профиль автора ${authorName || 'Аноним'}` : undefined}
+                    >
+                      <Text style={styles.metaTxt}>
+                        {authorName || 'Аноним'}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
               {views > 0 && (
                 <View
                   style={styles.metaBoxViews}
@@ -907,7 +1033,17 @@ const styles = StyleSheet.create({
   img: {
     width: "100%",
     height: "100%",
-    objectFit: "cover" as any,
+    objectFit: "contain" as any,
+  },
+
+  imageLayerRoot: {
+    width: '100%',
+    height: '100%',
+  },
+
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
 
   imgStub: {
@@ -1009,6 +1145,15 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     gap: 4,
     backgroundColor: TOKENS.colors.surface,
+    width: '100%',
+    minWidth: 0,
+    ...(Platform.OS === 'web'
+      ? {
+          paddingHorizontal: 12,
+          paddingTop: 8,
+          paddingBottom: 10,
+        }
+      : {}),
   },
 
   // Современная типографика

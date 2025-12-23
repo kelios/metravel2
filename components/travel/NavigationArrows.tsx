@@ -120,11 +120,20 @@ export default function NavigationArrows({
               <View style={styles.navImageWrap}>
                 <ExpoImage
                   source={{ uri: buildImageUrl(prevTravel)! }}
-                  style={styles.navImage}
+                  style={StyleSheet.absoluteFill}
                   contentFit="cover"
+                  blurRadius={12}
                   cachePolicy="memory-disk"
                   priority="low"
-                  // ✅ УЛУЧШЕНИЕ: Адаптивное качество для миниатюр
+                  contentPosition="center"
+                />
+                <View style={styles.navImageOverlay} />
+                <ExpoImage
+                  source={{ uri: buildImageUrl(prevTravel)! }}
+                  style={styles.navImage}
+                  contentFit="contain"
+                  cachePolicy="memory-disk"
+                  priority="low"
                   contentPosition="center"
                 />
               </View>
@@ -149,11 +158,20 @@ export default function NavigationArrows({
               <View style={styles.navImageWrap}>
                 <ExpoImage
                   source={{ uri: buildImageUrl(nextTravel)! }}
-                  style={styles.navImage}
+                  style={StyleSheet.absoluteFill}
                   contentFit="cover"
+                  blurRadius={12}
                   cachePolicy="memory-disk"
                   priority="low"
-                  // ✅ УЛУЧШЕНИЕ: Адаптивное качество для миниатюр
+                  contentPosition="center"
+                />
+                <View style={styles.navImageOverlay} />
+                <ExpoImage
+                  source={{ uri: buildImageUrl(nextTravel)! }}
+                  style={styles.navImage}
+                  contentFit="contain"
+                  cachePolicy="memory-disk"
+                  priority="low"
                   contentPosition="center"
                 />
               </View>
@@ -248,6 +266,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#f3f4f6',
+  },
+  navImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.18)',
   },
   navImage: {
     width: '100%',

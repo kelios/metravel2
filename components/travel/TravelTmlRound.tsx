@@ -4,6 +4,8 @@ import {
     Platform,
     Pressable,
     StyleSheet,
+    type ViewStyle,
+    type ImageStyle,
     Text,
     View,
 } from "react-native";
@@ -26,45 +28,74 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
         name = "Без названия",
         slug,
         travel_image_thumb_small_url,
+        travel_image_thumb_url,
         countryName = "Страна не указана",
     } = travel;
+
+    const baseImageUrl = useMemo(() => {
+      const directSmall = (travel_image_thumb_small_url as any) as string | null | undefined;
+      const directThumb = (travel_image_thumb_url as any) as string | null | undefined;
+      const fallbackCandidates = [
+        directSmall,
+        directThumb,
+        (travel as any)?.travel_image_url,
+        (travel as any)?.imageUrl,
+        (travel as any)?.image_url,
+        (travel as any)?.thumb,
+        (travel as any)?.thumbnail,
+      ].filter((v) => typeof v === 'string' && v.trim().length > 0) as string[];
+
+      if (fallbackCandidates.length > 0) return fallbackCandidates[0];
+
+      const gallery = (travel as any)?.gallery;
+      if (Array.isArray(gallery) && gallery.length > 0) {
+        const first = gallery[0];
+        if (typeof first === 'string' && first.trim().length > 0) return first;
+        if (first && typeof first === 'object') {
+          const url = (first as any).url;
+          if (typeof url === 'string' && url.trim().length > 0) return url;
+        }
+      }
+
+      return undefined;
+    }, [travel, travel_image_thumb_small_url, travel_image_thumb_url]);
 
     // ✅ УЛУЧШЕНИЕ: Адаптивные размеры для пропорциональных карточек
     const cardDimensions = useMemo(() => {
       if (isLargeDesktop) {
-        return { imageSize: 240, cardPadding: 16 };
+        return { imageHeight: 240, cardPadding: 0 };
       } else if (isDesktop) {
-        return { imageSize: 220, cardPadding: 14 };
+        return { imageHeight: 220, cardPadding: 0 };
       } else if (isTablet) {
-        return { imageSize: 180, cardPadding: 12 };
+        return { imageHeight: 200, cardPadding: 0 };
       } else {
-        return { imageSize: 160, cardPadding: 12 };
+        return { imageHeight: 180, cardPadding: 0 };
       }
     }, [isTablet, isDesktop, isLargeDesktop]);
     
-    const size = cardDimensions.imageSize;
-    const radius = 16; // ✅ УЛУЧШЕНИЕ: Современные скругленные углы вместо круга
+    const imageHeight = cardDimensions.imageHeight;
+    const radius = 16;
 
     // ✅ УЛУЧШЕНИЕ: Оптимизация URL изображения
     const optimizedImageUrl = useMemo(() => {
-      if (!travel_image_thumb_small_url) return undefined;
+      if (!baseImageUrl) return undefined;
       
       const versionedUrl = buildVersionedImageUrl(
-        travel_image_thumb_small_url,
+        baseImageUrl,
         (travel as any).updated_at,
         travel.id
       );
       
-      const optimalSize = getOptimalImageSize(size, size);
+      const optimalSize = getOptimalImageSize(Math.round(imageHeight * 1.8), imageHeight);
       
       return optimizeImageUrl(versionedUrl, {
         width: optimalSize.width,
         height: optimalSize.height,
         format: 'webp',
         quality: 85,
-        fit: 'cover',
+        fit: 'contain',
       }) || versionedUrl;
-    }, [travel_image_thumb_small_url, size, travel]);
+    }, [baseImageUrl, imageHeight, travel]);
 
     // fallback, если изображение не загрузилось
     const [failed, setFailed] = useState(false);
@@ -78,16 +109,18 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
     // ✅ УЛУЧШЕНИЕ: Пропорциональные стили с aspect ratio
     const imageWrapperStyle = useMemo(
         () => ({
-            width: size,
-            height: size,
+            width: '100%',
+            ...(Platform.OS === 'web'
+              ? ({ aspectRatio: 4 / 3 } as any)
+              : { height: imageHeight }),
             borderRadius: radius,
             overflow: 'hidden' as const,
-        }),
-        [radius, size]
+        }) as ViewStyle,
+        [radius, imageHeight]
     );
     const imgStyle = useMemo(
-        () => ({ width: size, height: size }),
-        [size]
+        () => ({ width: '100%', height: '100%' }) as ImageStyle,
+        []
     );
 
     return (
@@ -108,24 +141,29 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
             >
                 <View style={[styles.imageWrapper, imageWrapperStyle]}>
                     {failed || !optimizedImageUrl ? (
-                        <View style={styles.placeholder}>
-                            <View style={styles.placeholderIcon}>
-                                <Text style={styles.placeholderIconText}>🗺️</Text>
-                            </View>
-                            <Text style={styles.placeholderText} numberOfLines={2}>
-                                Нет изображения
-                            </Text>
-                        </View>
+                        <View style={styles.placeholder} />
                     ) : (
-                        <ExpoImage
-                            source={{ uri: optimizedImageUrl }}
-                            onError={() => setFailed(true)}
-                            style={[styles.image, imgStyle]}
-                            contentFit="cover"
-                            cachePolicy="memory-disk"
-                            transition={200}
-                            {...(Platform.OS === "web" ? { loading: "lazy" as any } : {})}
-                        />
+                        <>
+                            <ExpoImage
+                                source={{ uri: optimizedImageUrl }}
+                                onError={() => setFailed(true)}
+                                style={StyleSheet.absoluteFill}
+                                contentFit="cover"
+                                cachePolicy="memory-disk"
+                                transition={0}
+                                blurRadius={12}
+                            />
+                            <View style={styles.imageOverlay} />
+                            <ExpoImage
+                                source={{ uri: optimizedImageUrl }}
+                                onError={() => setFailed(true)}
+                                style={[styles.image, imgStyle]}
+                                contentFit="cover"
+                                cachePolicy="memory-disk"
+                                transition={200}
+                                {...(Platform.OS === "web" ? { loading: "lazy" as any } : {})}
+                            />
+                        </>
                     )}
 
                     <View style={styles.overlayBottom}>
@@ -155,7 +193,7 @@ export default memo(TravelTmlRound);
 const styles = StyleSheet.create({
     container: { 
         flex: 1, 
-        padding: DESIGN_TOKENS.spacing.sm,
+        padding: 0,
         ...Platform.select({
             web: {
                 display: 'flex' as any,
@@ -184,7 +222,7 @@ const styles = StyleSheet.create({
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 boxShadow: DESIGN_TOKENS.shadows.card,
                 ':hover': {
-                    transform: 'translateY(-4px)',
+                    transform: 'translateY(-2px)',
                     boxShadow: DESIGN_TOKENS.shadows.hover,
                 } as any,
                 ':active': {
@@ -210,11 +248,7 @@ const styles = StyleSheet.create({
         width: '100%',
         overflow: "hidden",
         backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-        ...Platform.select({
-            web: {
-                aspectRatio: '1',
-            },
-        }),
+        borderRadius: DESIGN_TOKENS.radii.lg,
     },
     image: { 
         width: "100%", 
@@ -229,40 +263,19 @@ const styles = StyleSheet.create({
             },
         }),
     },
+    imageOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(255,255,255,0.12)',
+    },
     
     // ✅ УЛУЧШЕНИЕ: Современный placeholder
     placeholder: {
         width: '100%',
         height: '100%',
-        borderRadius: 18,
+        borderRadius: DESIGN_TOKENS.radii.lg,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
-        backgroundColor: 'rgba(255,255,255,0.55)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: DESIGN_TOKENS.spacing.lg,
-        overflow: 'hidden',
-    },
-    placeholderIcon: {
-        marginBottom: 8,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: 'rgba(255,159,90,0.18)',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    placeholderIconText: {
-        fontSize: DESIGN_TOKENS.typography.sizes.xl,
-    },
-    placeholderText: {
-        color: '#ff8f4c',
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        fontWeight: '600',
-        textAlign: 'center',
-        textShadowColor: 'rgba(255,255,255,0.9)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 2,
+        borderColor: DESIGN_TOKENS.colors.borderLight,
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     },
 
     // ✅ Нижний оверлей как в попапе
@@ -276,16 +289,42 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(15,23,42,0.78)',
         flexDirection: 'column',
         gap: DESIGN_TOKENS.spacing.xs,
+        ...Platform.select({
+            web: {
+                paddingHorizontal: 'clamp(12px, 1.4vw, 16px)' as any,
+                paddingVertical: 'clamp(10px, 1.1vw, 14px)' as any,
+                backgroundColor: 'transparent' as any,
+                backgroundImage:
+                    'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.60) 55%, rgba(0,0,0,0.78) 100%)' as any,
+            } as any,
+        }),
     },
     overlayTitle: {
         color: '#f9fafb',
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '700',
         lineHeight: 18,
+        ...Platform.select({
+            web: {
+                fontSize: 'clamp(14px, 1.2vw, 16px)' as any,
+                lineHeight: 'clamp(18px, 1.5vw, 22px)' as any,
+                display: '-webkit-box' as any,
+                WebkitBoxOrient: 'vertical' as any,
+                WebkitLineClamp: 2 as any,
+                overflow: 'hidden' as any,
+            } as any,
+        }),
     },
     overlaySubtitle: {
         color: '#e5e7eb',
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '500',
+        ...Platform.select({
+            web: {
+                fontSize: 'clamp(12px, 1.0vw, 13px)' as any,
+                lineHeight: 'clamp(16px, 1.3vw, 18px)' as any,
+                opacity: 0.9,
+            } as any,
+        }),
     },
 });

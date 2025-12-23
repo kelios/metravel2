@@ -302,14 +302,14 @@ export class BlockRenderer {
       icon: string;
     };
 
-    const icons: Record<string, string> = {
-      'info-block': 'ℹ️',
-      'warning-block': '⚠️',
-      'tip-block': '💡',
-      'danger-block': '🚨',
-    };
-
-    const icon = icons[type] || 'ℹ️';
+    const iconName =
+      type === 'warning-block'
+        ? 'warning'
+        : type === 'tip-block'
+          ? 'bulb'
+          : type === 'danger-block'
+            ? 'danger'
+            : 'info';
     const style = this.theme.typography.body;
 
     return `
@@ -328,10 +328,8 @@ export class BlockRenderer {
           gap: ${this.theme.spacing.elementSpacing};
         ">
           <div style="
-            font-size: 20pt;
-            line-height: 1;
             flex-shrink: 0;
-          ">${icon}</div>
+          ">${this.renderPdfIcon(iconName, config.icon, 20)}</div>
           <div style="flex: 1;">
             ${title ? `<div style="font-weight: 700; font-size: ${this.theme.typography.h4.size}; color: ${config.text}; margin-bottom: ${this.theme.spacing.elementSpacing}; font-family: ${this.theme.typography.headingFont};">
               ${this.escapeHtml(title)}
@@ -345,6 +343,33 @@ export class BlockRenderer {
           </div>
         </div>
       </div>
+    `;
+  }
+
+  private renderPdfIcon(
+    name: 'info' | 'warning' | 'bulb' | 'danger',
+    color: string,
+    sizePt: number
+  ): string {
+    const size = `${sizePt}pt`;
+    const wrapperStyle = `
+      width: ${size};
+      height: ${size};
+      display: inline-block;
+    `;
+
+    const svgStart = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${sizePt}" height="${sizePt}" fill="none" stroke="${this.escapeHtml(color)}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">`;
+    const svgEnd = `</svg>`;
+
+    const paths: Record<typeof name, string> = {
+      info: `<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>`,
+      warning: `<path d="M10.3 3.2 1.7 18a2 2 0 0 0 1.7 3h17.2a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/>`,
+      bulb: `<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12c.7.6 1 1.3 1 2v1h6v-1c0-.7.3-1.4 1-2a7 7 0 0 0-4-12z"/>`,
+      danger: `<path d="M12 2l10 20H2z"/><path d="M12 9v4"/><path d="M12 17h.01"/>`,
+    };
+
+    return `
+      <span style="${wrapperStyle}">${svgStart}${paths[name]}${svgEnd}</span>
     `;
   }
 

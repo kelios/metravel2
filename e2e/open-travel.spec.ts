@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { getTravelsListPath } from './helpers/routes';
 
 test.describe('Travel details', () => {
   test('can open a travel details page from list', async ({ page }) => {
@@ -13,7 +14,7 @@ test.describe('Travel details', () => {
       }
     });
 
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
 
     await page.waitForTimeout(500);
 

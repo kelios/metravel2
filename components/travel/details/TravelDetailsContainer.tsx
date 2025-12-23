@@ -27,12 +27,10 @@ import {
   useWindowDimensions,
 } from "react-native";
 
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import { useIsFocused } from "@react-navigation/native";
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
-import { LAYOUT } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 
 
@@ -365,13 +363,44 @@ type ImgLike = {
   id?: number | string;
 };
 
-const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => void }> = ({
+const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }) => {
+  if (Platform.OS === "web") {
+    return (
+      <div
+        style={{
+          width: "100%",
+          height: height ? `${height}px` : "100%",
+          borderRadius: 12,
+          background: "linear-gradient(180deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.02) 100%)",
+          border: "1px solid rgba(0,0,0,0.06)",
+          boxSizing: "border-box",
+        }}
+        aria-hidden="true"
+      />
+    );
+  }
+
+  return (
+    <View
+      style={{
+        width: "100%",
+        height: height,
+        borderRadius: 12,
+        backgroundColor: "rgba(0,0,0,0.04)",
+        borderWidth: 1,
+        borderColor: "rgba(0,0,0,0.06)",
+      }}
+    />
+  );
+};
+
+const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => void; height?: number }> = ({
                                                                                            img,
                                                                                            alt,
                                                                                            onLoad,
+                                                                                           height,
                                                                                          }) => {
   const [loadError, setLoadError] = useState(false);
-  const [retryToken, setRetryToken] = useState(0);
   const baseSrc = buildVersionedImageUrlLCP(
     buildVersioned(img.url, img.updated_at ?? null, img.id),
     img.updated_at ?? null,
@@ -388,68 +417,43 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
       fit: "contain",
     }) || baseSrc;
 
-  const srcWithRetry = useMemo(() => {
-    if (!retryToken) return optimizedSrc;
-    const sep = optimizedSrc.includes("?") ? "&" : "?";
-    return `${optimizedSrc}${sep}retry=${retryToken}`;
-  }, [optimizedSrc, retryToken]);
-
-  const handleRetry = useCallback(() => {
-    setLoadError(false);
-    setRetryToken((t) => t + 1);
-  }, []);
+  const srcWithRetry = optimizedSrc;
 
   if (Platform.OS !== "web") {
     return (
       <View style={{ width: "100%", height: "100%" }}>
         {loadError ? (
-          <View
-            style={{
-              width: "100%",
-              height: "100%",
-              borderRadius: 12,
-              backgroundColor: "#e9e7df",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 16,
-            }}
-          >
-            <Text style={{ color: "#0f172a", fontWeight: "600", marginBottom: 6 }}>
-              Фото не загрузилось
-            </Text>
-            <Text style={{ color: "#475569", textAlign: "center", marginBottom: 12 }}>
-              Проверьте подключение или попробуйте позже
-            </Text>
-            <Pressable
-              onPress={handleRetry}
-              accessibilityRole="button"
-              accessibilityLabel="Повторить загрузку фото"
-              style={({ pressed }) => [
-                {
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                  borderRadius: 999,
-                  backgroundColor: "#0f172a",
-                },
-                pressed && { opacity: 0.9 },
-              ]}
-            >
-              <Text style={{ color: "#ffffff", fontWeight: "600" }}>Повторить</Text>
-            </Pressable>
-          </View>
+          <NeutralHeroPlaceholder height={height} />
         ) : (
-          <ExpoImage
-            source={{ uri: srcWithRetry }}
-            style={{ width: "100%", height: "100%", borderRadius: 12 }}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            priority="high"
-            onLoad={() => {
-              setLoadError(false);
-              onLoad?.();
-            }}
-            onError={() => setLoadError(true)}
-          />
+          <View style={{ width: "100%", height: "100%", borderRadius: 12, overflow: "hidden" }}>
+            <ExpoImage
+              source={{ uri: srcWithRetry }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              priority="low"
+              blurRadius={12}
+            />
+            <View
+              style={{
+                ...StyleSheet.absoluteFillObject,
+                backgroundColor: "rgba(255,255,255,0.18)",
+              }}
+            />
+            <ExpoImage
+              source={{ uri: srcWithRetry }}
+              style={{ width: "100%", height: "100%" }}
+              contentFit="contain"
+              contentPosition="center"
+              cachePolicy="memory-disk"
+              priority="high"
+              onLoad={() => {
+                setLoadError(false);
+                onLoad?.();
+              }}
+              onError={() => setLoadError(true)}
+            />
+          </View>
         )}
       </View>
     );
@@ -458,63 +462,64 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
   return (
     <div style={{ width: "100%", height: "100%", contain: "layout style paint" as any }}>
       {loadError ? (
+        <NeutralHeroPlaceholder height={height} />
+      ) : (
         <div
           style={{
             width: "100%",
             height: "100%",
             borderRadius: 12,
+            overflow: "hidden",
+            position: "relative",
             backgroundColor: "#e9e7df",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexDirection: "column",
-            padding: 16,
-            boxSizing: "border-box",
           }}
         >
-          <div style={{ fontWeight: 600, color: "#0f172a", marginBottom: 6 }}>Фото не загрузилось</div>
-          <div style={{ color: "#475569", textAlign: "center", marginBottom: 12 }}>
-            Проверьте подключение или попробуйте позже
-          </div>
-          <button
-            type="button"
-            onClick={handleRetry as any}
+          <img
+            src={srcWithRetry}
+            alt=""
+            aria-hidden="true"
             style={{
-              padding: "10px 14px",
-              borderRadius: 999,
-              border: "none",
-              backgroundColor: "#0f172a",
-              color: "#ffffff",
-              fontWeight: 600,
-              cursor: "pointer",
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              filter: "blur(18px)",
+              transform: "scale(1.08)",
             }}
-          >
-            Повторить
-          </button>
+            loading="eager"
+            decoding="async"
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundColor: "rgba(255,255,255,0.18)",
+            }}
+          />
+          <img
+            src={srcWithRetry}
+            alt={alt || ""}
+            width={img.width || 1200}
+            height={img.height || Math.round(1200 / ratio)}
+            style={{
+              position: "relative",
+              zIndex: 1,
+              width: "100%",
+              height: "100%",
+              display: "block",
+              objectFit: "contain",
+            }}
+            loading="eager"
+            decoding="async"
+            // @ts-ignore
+            fetchpriority="high"
+            referrerPolicy="no-referrer"
+            data-lcp
+            onLoad={onLoad as any}
+            onError={() => setLoadError(true)}
+          />
         </div>
-      ) : (
-        <img
-          src={srcWithRetry}
-          alt={alt || ""}
-          width={img.width || 1200}
-          height={img.height || Math.round(1200 / ratio)}
-          style={{
-            width: "100%",
-            height: "100%",
-            borderRadius: 12,
-            display: "block",
-            backgroundColor: "#e9e7df",
-            objectFit: "cover",
-          }}
-          loading="eager"
-          decoding="async"
-          // @ts-ignore
-          fetchpriority="high"
-          referrerPolicy="no-referrer"
-          data-lcp
-          onLoad={onLoad as any}
-          onError={() => setLoadError(true)}
-        />
       )}
     </div>
   );
@@ -706,7 +711,6 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
 
 export default function TravelDetails() {
   const { isMobile, width: responsiveWidth } = useResponsive();
-  const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   // Fallback to true if hook is unavailable (e.g., static render) while preserving hook order
   const useIsFocusedSafe = useIsFocused ?? (() => true);
@@ -789,12 +793,14 @@ export default function TravelDetails() {
     };
   }, [travel]);
   const contentHorizontalPadding = useMemo(() => {
+    // Mobile should use the full width with a compact, consistent gutter.
+    if (isMobile) return 16;
     if (screenWidth >= 1600) return 80;
     if (screenWidth >= 1440) return 64;
     if (screenWidth >= 1024) return 48;
     if (screenWidth >= 768) return 32;
     return 16;
-  }, [screenWidth]);
+  }, [isMobile, screenWidth]);
   const sideMenuPlatformStyles =
     Platform.OS === "web"
       ? isMobile
@@ -854,7 +860,6 @@ export default function TravelDetails() {
   const [contentHeight, setContentHeight] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(0);
   const [showMobileSectionTabs, setShowMobileSectionTabs] = useState(false);
-  const [showStickyActions, setShowStickyActions] = useState(false);
   const [heroBlockHeight, setHeroBlockHeight] = useState(0);
   
   // ✅ АРХИТЕКТУРА: activeSection теперь управляется через useActiveSection
@@ -878,7 +883,6 @@ export default function TravelDetails() {
   useEffect(() => {
     if (!isMobile) {
       if (showMobileSectionTabs) setShowMobileSectionTabs(false);
-      if (showStickyActions) setShowStickyActions(false);
       return;
     }
 
@@ -888,26 +892,11 @@ export default function TravelDetails() {
     const id = scrollY.addListener(({ value }) => {
       const next = value > threshold;
       setShowMobileSectionTabs((prev) => (prev === next ? prev : next));
-      setShowStickyActions((prev) => (prev === next ? prev : next));
     });
     return () => {
       scrollY.removeListener(id);
     };
-  }, [heroBlockHeight, isMobile, scrollY, showMobileSectionTabs, showStickyActions]);
-
-  const stickyActionsBottomOffset = useMemo(() => {
-    if (!isMobile) return 0;
-    // На мобильных (включая mobile web) держим sticky-панель над нижней док/таб-панелью
-    // и учитываем safe-area.
-    return insets.bottom + LAYOUT.tabBarHeight + 8;
-  }, [insets.bottom, isMobile]);
-
-  const scrollBottomPadding = useMemo(() => {
-    if (!isMobile) return 0;
-    if (!showStickyActions) return 0;
-    // +16 — небольшой зазор, чтобы последний контент не прилипал к панели
-    return stickyActionsBottomOffset + 16;
-  }, [isMobile, showStickyActions, stickyActionsBottomOffset]);
+  }, [heroBlockHeight, isMobile, scrollY, showMobileSectionTabs]);
 
   // ✅ АРХИТЕКТУРА: Intersection Observer логика теперь в useActiveSection
   // Остается только логика установки data-section-key атрибутов
@@ -1111,7 +1100,6 @@ export default function TravelDetails() {
             ref={scrollRef}
             contentContainerStyle={[
               styles.scrollContent,
-              isMobile && showStickyActions && { paddingBottom: scrollBottomPadding },
             ]}
             keyboardShouldPersistTaps="handled"
             onScroll={Animated.event(
@@ -1178,7 +1166,6 @@ export default function TravelDetails() {
                         scrollY={scrollY}
                         viewportHeight={viewportHeight}
                       />
-                      <TravelEngagementSection travel={travel} isMobile={isMobile} />
                     </ProgressiveWrapper>
                   </Defer>
                 </SList>
@@ -1224,7 +1211,7 @@ const TravelDeferredSections: React.FC<{
   viewportHeight: number;
 }> = ({ travel, isMobile, forceOpenKey, anchors, relatedTravels, setRelatedTravels, scrollY, viewportHeight }) => {
   const [canRenderHeavy, setCanRenderHeavy] = useState(false);
-  const [showExcursions] = useState(true);
+  const [showExcursions, setShowExcursions] = useState(Platform.OS !== "web");
 
   useEffect(() => {
     if (Platform.OS !== "web") {
@@ -1255,6 +1242,7 @@ const TravelDeferredSections: React.FC<{
         anchors={anchors}
         canRenderHeavy={canRenderHeavy}
         showExcursions={showExcursions}
+        onRequestExcursions={() => setShowExcursions(true)}
       />
 
       <TravelRelatedContent
@@ -1297,7 +1285,7 @@ const TravelHeroSection: React.FC<{
     (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9;
   const resolvedWidth = heroContainerWidth ?? winW;
   const heroHeight = useMemo(() => {
-    if (!resolvedWidth) return undefined;
+    if (!resolvedWidth) return isMobile ? 280 : 420;
     if (isMobile) {
       const mobileHeight = winH * 0.7;
       return Math.max(200, Math.min(mobileHeight, winH * 0.8));
@@ -1336,47 +1324,47 @@ const TravelHeroSection: React.FC<{
           : {})}
       />
 
-      {!!firstImg && (
+      <View
+        testID="travel-details-hero"
+        style={[styles.sectionContainer, styles.contentStable]}
+        collapsable={false}
+      >
         <View
-          testID="travel-details-hero"
-          style={[styles.sectionContainer, styles.contentStable]}
+          style={styles.sliderContainer}
           collapsable={false}
+          onLayout={(e: LayoutChangeEvent) => {
+            const w = e.nativeEvent.layout.width;
+            if (w && Math.abs((heroContainerWidth ?? 0) - w) > 2) {
+              setHeroContainerWidth(w);
+            }
+          }}
         >
-          <View
-            style={styles.sliderContainer}
-            collapsable={false}
-            onLayout={(e: LayoutChangeEvent) => {
-              const w = e.nativeEvent.layout.width;
-              if (w && Math.abs((heroContainerWidth ?? 0) - w) > 2) {
-                setHeroContainerWidth(w);
-              }
-            }}
-          >
-            {shouldShowOptimizedHero && !renderSlider && (
-              <View style={heroHeight ? { height: heroHeight } : undefined}>
-                <OptimizedLCPHero
-                  img={{
-                    url: typeof firstImg === "string" ? firstImg : firstImg.url,
-                    width: firstImg.width,
-                    height: firstImg.height,
-                    updated_at: firstImg.updated_at,
-                    id: firstImg.id,
-                  }}
-                  alt={heroAlt}
-                  onLoad={onFirstImageLoad}
-                />
-              </View>
-            )}
-
-            {(Platform.OS !== "web" || renderSlider) && (
+          <View style={heroHeight ? { height: heroHeight } : undefined}>
+            {!firstImg ? (
+              <NeutralHeroPlaceholder height={heroHeight} />
+            ) : shouldShowOptimizedHero && !renderSlider ? (
+              <OptimizedLCPHero
+                img={{
+                  url: typeof firstImg === "string" ? firstImg : firstImg.url,
+                  width: firstImg.width,
+                  height: firstImg.height,
+                  updated_at: firstImg.updated_at,
+                  id: firstImg.id,
+                }}
+                alt={heroAlt}
+                height={heroHeight}
+                onLoad={onFirstImageLoad}
+              />
+            ) : (
               <Slider
-                key={`${isMobile ? "mobile" : "desktop"}-${renderSlider ? "ready" : "pending"}`}
+                key={`${isMobile ? "mobile" : "desktop"}`}
                 images={galleryImages}
                 showArrows={!isMobile}
                 hideArrowsOnMobile
                 showDots={isMobile}
                 preloadCount={isMobile ? 1 : 2}
                 blurBackground
+                neutralFirstSlideErrorPlaceholder
                 aspectRatio={aspectRatio as number}
                 mobileHeightPercent={0.7}
                 onFirstImageLoad={onFirstImageLoad}
@@ -1384,7 +1372,7 @@ const TravelHeroSection: React.FC<{
             )}
           </View>
         </View>
-      )}
+      </View>
 
       <View
         testID="travel-details-quick-facts"
@@ -1770,18 +1758,27 @@ const TravelVisualSections: React.FC<{
   anchors: AnchorsMap;
   canRenderHeavy: boolean;
   showExcursions: boolean;
-}> = ({ travel, anchors, canRenderHeavy, showExcursions }) => {
+  onRequestExcursions: () => void;
+}> = ({ travel, anchors, canRenderHeavy, showExcursions, onRequestExcursions }) => {
   const { width } = useWindowDimensions();
   const hasMapData = (travel.coordsMeTravel?.length ?? 0) > 0;
   const { shouldLoad: shouldLoadMap, setElementRef } = useLazyMap({ enabled: Platform.OS === 'web' });
   const shouldRenderMap = canRenderHeavy && (Platform.OS !== 'web' || shouldLoadMap) && hasMapData;
+  const [hasMountedMap, setHasMountedMap] = useState(false);
+
+  useEffect(() => {
+    if (shouldRenderMap && !hasMountedMap) {
+      setHasMountedMap(true);
+    }
+  }, [shouldRenderMap, hasMountedMap]);
+
+  const shouldMountMap = hasMapData && (hasMountedMap || shouldRenderMap);
 
   const isMobileWeb = Platform.OS === 'web' && width <= METRICS.breakpoints.tablet;
 
   return (
     <>
       {Platform.OS === "web" &&
-        showExcursions &&
         (travel.travelAddress?.length ?? 0) > 0 && (
           <Suspense fallback={<Fallback />}>
             <ExcursionsLazySection>
@@ -1792,14 +1789,29 @@ const TravelVisualSections: React.FC<{
                 {...(Platform.OS === "web" ? { "data-section-key": "excursions" } : {})}
               >
                 <Text style={styles.sectionHeaderText}>Экскурсии</Text>
-                <View style={{ marginTop: 12, minHeight: 600 }}>
-                  <BelkrajWidgetComponent
-                    countryCode={travel.countryCode}
-                    points={travel.travelAddress as any}
-                    collapsedHeight={600}
-                    expandedHeight={1000}
-                  />
-                </View>
+                <Text style={styles.sectionSubtitle}>Покажем экскурсии рядом с точками маршрута</Text>
+
+                {!showExcursions ? (
+                  <View style={{ marginTop: 12, minHeight: 600 }}>
+                    <Pressable
+                      onPress={onRequestExcursions}
+                      accessibilityRole="button"
+                      accessibilityLabel="Показать экскурсии"
+                      style={({ pressed }) => [styles.neutralActionButton, pressed && styles.neutralActionButtonPressed]}
+                    >
+                      <Text style={styles.neutralActionButtonText}>Показать экскурсии</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={{ marginTop: 12, minHeight: 600 }}>
+                    <BelkrajWidgetComponent
+                      countryCode={travel.countryCode}
+                      points={travel.travelAddress as any}
+                      collapsedHeight={600}
+                      expandedHeight={1000}
+                    />
+                  </View>
+                )}
               </View>
             </ExcursionsLazySection>
           </Suspense>
@@ -1828,10 +1840,11 @@ const TravelVisualSections: React.FC<{
           {hasMapData ? (
             <ToggleableMap
               initiallyOpen={isMobileWeb ? false : true}
+              keepMounted
               isLoading={!shouldRenderMap}
               loadingLabel="Подгружаем карту маршрута..."
             >
-              {shouldRenderMap ? (
+              {shouldMountMap ? (
                 <Suspense fallback={<MapFallback />}>
                   <MapClientSide travel={{ data: travel.travelAddress as any }} />
                 </Suspense>
@@ -1920,6 +1933,59 @@ const TravelRelatedContent: React.FC<{
   const shouldLoadNear = isWeb ? shouldLoadNearWeb : shouldLoadNearNative;
   const shouldLoadPopular = isWeb ? shouldLoadPopularWeb : shouldLoadPopularNative;
 
+  // Latch once loaded to avoid remount/unmount cycles when scroll-based triggers toggle.
+  const [hasLoadedNear, setHasLoadedNear] = useState(false);
+  const [hasLoadedPopular, setHasLoadedPopular] = useState(false);
+
+  useEffect(() => {
+    if (shouldLoadNear && !hasLoadedNear) setHasLoadedNear(true);
+  }, [shouldLoadNear, hasLoadedNear]);
+
+  useEffect(() => {
+    if (shouldLoadPopular && !hasLoadedPopular) setHasLoadedPopular(true);
+  }, [shouldLoadPopular, hasLoadedPopular]);
+
+  const shouldRenderNear = shouldLoadNear || hasLoadedNear;
+  const shouldRenderPopular = shouldLoadPopular || hasLoadedPopular;
+
+  // Defer mounting heavy lists to idle/afterInteractions to reduce scroll jank.
+  const [canMountNear, setCanMountNear] = useState(false);
+  const [canMountPopular, setCanMountPopular] = useState(false);
+
+  useEffect(() => {
+    if (!shouldRenderNear || canMountNear) return;
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof (window as any).requestIdleCallback === 'function') {
+      const id = (window as any).requestIdleCallback(() => setCanMountNear(true), { timeout: 1200 });
+      return () => {
+        try {
+          (window as any).cancelIdleCallback?.(id);
+        } catch {
+          // noop
+        }
+      };
+    }
+
+    const task = InteractionManager.runAfterInteractions(() => setCanMountNear(true));
+    return () => task.cancel();
+  }, [shouldRenderNear, canMountNear]);
+
+  useEffect(() => {
+    if (!shouldRenderPopular || canMountPopular) return;
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof (window as any).requestIdleCallback === 'function') {
+      const id = (window as any).requestIdleCallback(() => setCanMountPopular(true), { timeout: 1200 });
+      return () => {
+        try {
+          (window as any).cancelIdleCallback?.(id);
+        } catch {
+          // noop
+        }
+      };
+    }
+
+    const task = InteractionManager.runAfterInteractions(() => setCanMountPopular(true));
+    return () => task.cancel();
+  }, [shouldRenderPopular, canMountPopular]);
+
   return (
     <>
     <View
@@ -1944,25 +2010,18 @@ const TravelRelatedContent: React.FC<{
       ) : (
         <View />
       )}
-      <Text style={styles.sectionHeaderText}>Рядом (~60км)</Text>
-      <Text style={[styles.sectionSubtitle, styles.nearSubtitle]}>
-        Маршруты поблизости — пригодятся для импровизации
-      </Text>
-      <View style={styles.sectionBadgeRow}>
-        <View style={[styles.sectionBadgePill, styles.sectionBadgeNear]}>
-          <Text style={[styles.sectionBadgeText, styles.sectionBadgeTextNear]}>
-            Рядом с этим маршрутом
-          </Text>
-        </View>
-      </View>
-      <View style={{ marginTop: 12 }}>
+      <Text style={styles.sectionHeaderText}>Рядом можно посмотреть</Text>
+      <Text style={styles.sectionSubtitle}>Маршруты в радиусе ~60 км</Text>
+      <View style={{ marginTop: 8 }}>
         {travel.travelAddress &&
-          (shouldLoadNear ? (
+          (shouldRenderNear && canMountNear ? (
             <View testID="travel-details-near-loaded">
               <Suspense fallback={<TravelListFallback />}>
                 <NearTravelList
                   travel={travel}
                   onTravelsLoaded={(travels) => setRelatedTravels(travels)}
+                  showHeader={false}
+                  embedded
                 />
               </Suspense>
             </View>
@@ -2002,22 +2061,13 @@ const TravelRelatedContent: React.FC<{
       ) : (
         <View />
       )}
-      <Text style={styles.sectionHeaderText}>Популярные путешествия</Text>
-      <Text style={[styles.sectionSubtitle, styles.popularSubtitle]}>
-        Самые просматриваемые направления за последнюю неделю
-      </Text>
-      <View style={styles.sectionBadgeRow}>
-        <View style={[styles.sectionBadgePill, styles.sectionBadgePopular]}>
-          <Text style={[styles.sectionBadgeText, styles.sectionBadgeTextPopular]}>
-            Тренды сообщества
-          </Text>
-        </View>
-      </View>
-      <View style={{ marginTop: 12 }}>
-        {shouldLoadPopular ? (
+      <Text style={styles.sectionHeaderText}>Популярные маршруты</Text>
+      <Text style={styles.sectionSubtitle}>Самые просматриваемые направления за неделю</Text>
+      <View style={{ marginTop: 8 }}>
+        {shouldRenderPopular && canMountPopular ? (
           <View testID="travel-details-popular-loaded">
             <Suspense fallback={<TravelListFallback />}>
-              <PopularTravelList />
+              <PopularTravelList title={null} showHeader={false} embedded />
             </Suspense>
           </View>
         ) : (
@@ -2060,36 +2110,15 @@ const styles = StyleSheet.create({
   mainContainer: { 
     flex: 1, 
     flexDirection: "row",
-    maxWidth: 1440,
+    maxWidth: 1600,
     width: "100%",
     marginHorizontal: "auto" as any,
   },
   mainContainerMobile: {
     flexDirection: "column",
     alignItems: "stretch",
-  },
-  stickyActionsWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    paddingHorizontal: 16,
-    zIndex: 2000,
-  },
-  stickyActionsInner: {
-    borderRadius: 999,
-    overflow: 'hidden',
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderWidth: 1,
-    borderColor: 'rgba(15, 23, 42, 0.08)',
-    ...Platform.select({
-      web: ({
-        // @ts-ignore - web-only shadow
-        boxShadow: '0px 8px 24px rgba(15, 23, 42, 0.12)',
-      } as any),
-      default: {
-        elevation: 6,
-      },
-    }),
+    maxWidth: '100%',
+    marginHorizontal: 0 as any,
   },
   lazySectionReserved: {
     width: '100%',
@@ -2115,11 +2144,13 @@ const styles = StyleSheet.create({
     }),
   },
   sectionContainer: {
-    marginBottom: DESIGN_TOKENS.spacing.xxl,
-    paddingHorizontal: Platform.select({
+    marginBottom: Platform.select({
       default: DESIGN_TOKENS.spacing.lg,
-      web: 0,
+      web: DESIGN_TOKENS.spacing.xxl,
     }),
+    // Horizontal gutters are applied once at the page level (contentWrapper).
+    // Keeping additional padding here makes mobile content look "squeezed".
+    width: "100%",
   },
   
   contentStable: {
@@ -2157,8 +2188,8 @@ const styles = StyleSheet.create({
   quickJumpChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: Platform.select({ default: 10, web: 12 }),
+    paddingHorizontal: Platform.select({ default: 14, web: 20 }),
     borderRadius: 999,
     borderWidth: 1,
     borderColor: DESIGN_TOKENS.colors.borderLight,
@@ -2325,11 +2356,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: Platform.select({
-      default: DESIGN_TOKENS.spacing.lg,
+      default: DESIGN_TOKENS.spacing.md,
       web: DESIGN_TOKENS.spacing.xl,
     }),
     paddingHorizontal: Platform.select({
-      default: DESIGN_TOKENS.spacing.lg,
+      default: DESIGN_TOKENS.spacing.md,
       web: DESIGN_TOKENS.spacing.xl,
     }),
     backgroundColor: DESIGN_TOKENS.colors.surface,
@@ -2461,6 +2492,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
+  neutralActionButton: {
+    alignSelf: "flex-start",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.10)",
+    backgroundColor: "rgba(0,0,0,0.03)",
+  },
+  neutralActionButtonPressed: {
+    opacity: 0.92,
+    backgroundColor: "rgba(0,0,0,0.05)",
+  },
+  neutralActionButtonText: {
+    color: DESIGN_TOKENS.colors.text,
+    fontSize: 14,
+    fontWeight: "600" as any,
+  },
   videoHintText: {
     color: DESIGN_TOKENS.colors.surface,
     fontSize: Platform.select({ default: 12, web: 13 }),
@@ -2474,7 +2523,7 @@ const styles = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
     padding: Platform.select({
-      default: DESIGN_TOKENS.spacing.lg,
+      default: DESIGN_TOKENS.spacing.md,
       web: DESIGN_TOKENS.spacing.xl,
     }),
     borderWidth: 1,

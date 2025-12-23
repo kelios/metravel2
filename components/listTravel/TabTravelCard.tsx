@@ -48,13 +48,24 @@ function TabTravelCard({ item, onPress, badge, testID, style }: Props) {
     >
       <View style={styles.imageContainer}>
         {item?.imageUrl ? (
-          <ExpoImage
-            source={{ uri: item.imageUrl }}
-            style={styles.image}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={200}
-          />
+          <>
+            <ExpoImage
+              source={{ uri: item.imageUrl }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={0}
+              blurRadius={12}
+            />
+            <View style={styles.imageOverlay} />
+            <ExpoImage
+              source={{ uri: item.imageUrl }}
+              style={styles.image}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              transition={200}
+            />
+          </>
         ) : (
           <View style={styles.imagePlaceholder}>
             <MaterialIcons name="route" size={28} color="#9ca3af" />
@@ -106,6 +117,10 @@ const styles = StyleSheet.create({
   },
   image: {
     ...TAB_CARD_TEMPLATE.image,
+  },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   imagePlaceholder: {
     ...StyleSheet.absoluteFillObject,

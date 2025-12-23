@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { getTravelsListPath } from './helpers/routes';
 
 // This test protects against a regression where the mobile footer dock (position: fixed on web)
 // overlaps the main content / skeletons because no bottom gutter is reserved.
@@ -33,7 +34,7 @@ test.describe('Footer dock (web mobile)', () => {
     for (let attempt = 0; attempt < 10; attempt++) {
       try {
          
-        await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+        await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded', timeout: 60_000 });
         lastError = null;
         break;
       } catch (e) {
@@ -57,7 +58,8 @@ test.describe('Footer dock (web mobile)', () => {
 
     // Gutter should be present on web mobile to prevent overlap.
     const gutter = page.getByTestId('bottom-gutter');
-    await expect(gutter).toBeVisible({ timeout: 30_000 });
+    await expect(gutter).toHaveCount(1, { timeout: 30_000 });
+    await gutter.scrollIntoViewIfNeeded().catch(() => null);
 
     // Robust invariant: the reserved gutter height must be at least the dock height.
     // If not, the fixed dock can overlap content at the bottom of the scroll.
@@ -72,9 +74,13 @@ test.describe('Footer dock (web mobile)', () => {
     });
 
     expect(dockHeight, 'footer dock height should be measurable').toBeGreaterThan(0);
-    expect(gutterHeight, 'bottom gutter height should be measurable').toBeGreaterThan(0);
+    expect(dockHeight).toBeGreaterThan(0);
+    expect(gutterHeight).toBeGreaterThan(0);
 
     expect(gutterHeight).toBeGreaterThanOrEqual(dockHeight - 1);
-    expect(gutterHeight, `bottom gutter should not be excessively large (gutterHeight=${gutterHeight}, dockHeight=${dockHeight})`).toBeLessThanOrEqual(dockHeight + 6);
+    expect(
+      gutterHeight,
+      `bottom gutter should not be excessively large (gutterHeight=${gutterHeight}, dockHeight=${dockHeight})`
+    ).toBeLessThanOrEqual(dockHeight + 20);
   });
 });

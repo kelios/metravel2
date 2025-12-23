@@ -9,6 +9,7 @@ type ToggleableMapSectionProps = {
     initiallyOpen?: boolean;
     isLoading?: boolean;
     loadingLabel?: string;
+    keepMounted?: boolean;
 };
 
 const ToggleableMapSection = ({
@@ -16,8 +17,10 @@ const ToggleableMapSection = ({
     initiallyOpen = true,
     isLoading = false,
     loadingLabel = 'Загружаем карту...',
+    keepMounted = false,
 }: ToggleableMapSectionProps) => {
     const [showMap, setShowMap] = useState(initiallyOpen);
+    const [hasOpened, setHasOpened] = useState(initiallyOpen);
     const { isPhone } = useResponsive();
     const isMobile = isPhone;
     const hintText = useMemo(
@@ -25,10 +28,22 @@ const ToggleableMapSection = ({
         [isLoading, loadingLabel, showMap],
     );
 
+    const shouldRenderContainer = showMap || (keepMounted && hasOpened);
+
+    const handleToggle = () => {
+        setShowMap((prev) => {
+            const next = !prev;
+            if (next && !hasOpened) {
+                setHasOpened(true);
+            }
+            return next;
+        });
+    };
+
     return (
         <View style={styles.wrapper}>
             <Pressable
-                onPress={() => setShowMap((prev) => !prev)}
+                onPress={handleToggle}
                 style={({ pressed }) => [
                     styles.toggleButton,
                     pressed && styles.toggleButtonPressed,
@@ -41,13 +56,23 @@ const ToggleableMapSection = ({
                 <Feather name={showMap ? 'chevron-up' : 'chevron-down'} size={18} color="#3B2C24" />
             </Pressable>
 
-            {showMap && (
-                <View style={[styles.mapContainer, isMobile && styles.mapContainerMobile]}>
-                    {isLoading ? (
-                        <View style={styles.loadingState}>
-                            {Platform.OS === 'web' ? <View style={styles.loadingSkeleton} /> : <ActivityIndicator color="#ff9f5a" />}
-                            <Text style={styles.loadingText}>{loadingLabel}</Text>
-                        </View>
+            {shouldRenderContainer && (
+                <View
+                    style={[
+                        styles.mapContainer,
+                        isMobile && styles.mapContainerMobile,
+                        !showMap && keepMounted ? { height: 0, minHeight: 0, marginTop: 0 } : null,
+                    ]}
+                >
+                    {showMap ? (
+                        isLoading ? (
+                            <View style={styles.loadingState}>
+                                {Platform.OS === 'web' ? <View style={styles.loadingSkeleton} /> : <ActivityIndicator color="#ff9f5a" />}
+                                <Text style={styles.loadingText}>{loadingLabel}</Text>
+                            </View>
+                        ) : (
+                            children
+                        )
                     ) : (
                         children
                     )}

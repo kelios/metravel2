@@ -1,15 +1,14 @@
 // components/MapPage/Map.web.tsx
-import React from 'react';
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { METRICS } from '@/constants/layout';
 import * as Location from 'expo-location';
-import 'leaflet/dist/leaflet.css';
-type ReactLeafletNS = typeof import('react-leaflet');
-// CSS загружается через CDN ниже в коде
-import RoutingMachine from '@/components/MapPage/RoutingMachine';
+import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
+import RoutingMachine from './RoutingMachine';
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
 // MapLegend is currently unused in the web map
+
+type ReactLeafletNS = typeof import('react-leaflet');
 
 type Point = {
   id?: number;
@@ -389,47 +388,9 @@ const MapPageComponent: React.FC<Props> = ({
 
     if (!isTestEnv && (Platform.OS !== 'web' || typeof window === 'undefined')) return;
 
-    const ensureLeafletCSS = () => {
-      const href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      const exists = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some((l) =>
-        (l as HTMLLinkElement).href.includes(href)
-      );
-      if (!exists) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = href;
-        document.head.appendChild(link);
-      }
-    };
-
-    const ensureLeaflet = async (): Promise<any> => {
-      const w = window as any;
-      // Always make sure CSS is present, even if Leaflet was loaded elsewhere
-      ensureLeafletCSS();
-      if (w.L) return w.L;
-
-      if (!(ensureLeaflet as any)._loader) {
-        (ensureLeaflet as any)._loader = new Promise<void>((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-          script.async = true;
-          script.onload = () => resolve();
-          script.onerror = (err) => {
-            (ensureLeaflet as any)._loader = null;
-            reject(err);
-          };
-          document.body.appendChild(script);
-        });
-      }
-
-      await (ensureLeaflet as any)._loader;
-      return w.L;
-    };
-
     const load = async () => {
       try {
-        const L = await ensureLeaflet();
-        const rlMod = await import('react-leaflet');
+        const { L, rl: rlMod } = await ensureLeafletAndReactLeaflet();
         if (!cancelled) {
           setL(L);
           setRl(rlMod);

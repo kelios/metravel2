@@ -122,11 +122,11 @@ export default function HomeHowItWorks() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 80,
+    paddingVertical: 64,
     backgroundColor: DESIGN_TOKENS.colors.background,
   },
   header: {
-    marginBottom: 56,
+    marginBottom: 40,
     alignItems: 'center',
   },
   title: {
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
-    padding: 32,
+    padding: 28,
     gap: 16,
     borderWidth: 1,
     borderColor: DESIGN_TOKENS.colors.borderLight,

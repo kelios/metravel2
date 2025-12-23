@@ -1,8 +1,10 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { TouchableOpacity, StyleSheet, Platform, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
+import { useAuth } from '@/context/AuthContext';
 import { devLog } from '@/src/utils/logger';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
@@ -32,11 +34,14 @@ export default function FavoriteButton({
     color,
     style,
 }: FavoriteButtonProps) {
+    const router = useRouter();
+    const { isAuthenticated } = useAuth();
     const { isFavorite, addFavorite, removeFavorite } = useFavorites();
     const serverIsFav = isFavorite(id, type);
     // Оптимистичное состояние для мгновенного отклика
     const [optimisticIsFav, setOptimisticIsFav] = useState(serverIsFav);
     const [pendingSync, setPendingSync] = useState(false);
+    const inFlightRef = useRef(false);
     
     // Синхронизируем с серверным состоянием
     useEffect(() => {
@@ -62,7 +67,23 @@ export default function FavoriteButton({
 
     const isFav = optimisticIsFav;
 
-    const handlePress = useCallback(async () => {
+    const handlePress = useCallback(async (e?: any) => {
+        if (e) {
+            if (e.stopPropagation) e.stopPropagation();
+            if (e.preventDefault) e.preventDefault();
+        }
+
+        if (!isAuthenticated) {
+            router.push('/login' as any);
+            return;
+        }
+
+        if (inFlightRef.current) {
+            return;
+        }
+
+        inFlightRef.current = true;
+
         // Оптимистичное обновление UI
         const newState = !isFav;
         setOptimisticIsFav(newState);
@@ -116,8 +137,10 @@ export default function FavoriteButton({
                 position: 'bottom',
                 visibilityTime: 4000,
             });
+        } finally {
+            inFlightRef.current = false;
         }
-    }, [isFav, id, type, title, imageUrl, url, country, city, addFavorite, removeFavorite]);
+    }, [isAuthenticated, router, isFav, id, type, title, imageUrl, url, country, city, addFavorite, removeFavorite]);
 
     // ✅ FIX: Use Pressable on web to avoid button nesting when inside another Pressable
     const ButtonComponent = Platform.OS === 'web' ? Pressable : TouchableOpacity;
@@ -125,7 +148,17 @@ export default function FavoriteButton({
     return (
         <ButtonComponent
             style={[styles.button, globalFocusStyles.focusable, style]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-            onPress={handlePress}
+            onPress={handlePress as any}
+            {...(Platform.OS === 'web'
+                ? {
+                      onPressIn: (e: any) => {
+                          if (e?.stopPropagation) e.stopPropagation();
+                      },
+                      onMouseDown: (e: any) => {
+                          if (e?.stopPropagation) e.stopPropagation();
+                      },
+                  }
+                : null)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel={isFav ? `Удалить "${title}" из избранного` : `Добавить "${title}" в избранное`}
@@ -135,16 +168,6 @@ export default function FavoriteButton({
             aria-label={Platform.OS === 'web' ? (isFav ? 'Удалить из избранного' : 'Добавить в избранное') : undefined}
             // @ts-ignore
             aria-pressed={Platform.OS === 'web' ? isFav : undefined}
-//             {...(Platform.OS === 'web' && {
-//                 // Prevent event propagation on web to avoid triggering parent Pressable
-//                 onPressIn: (e: any) => {
-//                     e.stopPropagation();
-//                 },
-//                 onPress: (e: any) => {
-//                     e.stopPropagation();
-//                     handlePress();
-//                 },
-//             })}
         >
             <MaterialIcons
                 name={isFav ? 'favorite' : 'favorite-border'}

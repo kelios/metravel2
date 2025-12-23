@@ -7,6 +7,15 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { View, Platform, StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+jest.mock('@/context/AuthContext', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => ({
+    isAuthenticated: true,
+    userId: 'test-user',
+  }),
+}));
+
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { TravelCardSkeleton } from '@/components/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';

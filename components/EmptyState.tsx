@@ -56,7 +56,7 @@ export default function EmptyState({
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
-      
+
       {/* ✅ UX УЛУЧШЕНИЕ: Предложения для поиска */}
       {suggestions.length > 0 && (
         <View style={styles.suggestionsContainer}>
