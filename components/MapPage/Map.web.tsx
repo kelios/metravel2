@@ -353,10 +353,6 @@ const MapPageComponent: React.FC<Props> = ({
   const [, setRoutingLoading] = useState(false);
   const [disableFitBounds, setDisableFitBounds] = useState(false);
   const [expandedCluster, setExpandedCluster] = useState<{ key: string; items: Point[] } | null>(null);
-  const [isMobileScreen, setIsMobileScreen] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches;
-  });
   const [mapZoom, setMapZoom] = useState<number>(11);
   const travelData = useMemo(
     () => (Array.isArray(travel?.data) ? travel.data : []),
@@ -370,7 +366,7 @@ const MapPageComponent: React.FC<Props> = ({
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
-    const handler = (event: MediaQueryListEvent) => setIsMobileScreen(event.matches);
+    const handler = () => {};
     if (media.addEventListener) {
       media.addEventListener('change', handler);
     } else {
@@ -675,7 +671,37 @@ const MapPageComponent: React.FC<Props> = ({
     return Comp;
   }, [useMap]);
 
-  const MapLogic: React.FC<{ mapClickHandler: (e: any) => void }> = ({ mapClickHandler }) => {
+  const MapLogic: React.FC<{
+    mapClickHandler: (e: any) => void;
+    mode: MapMode;
+    coordinates: Coordinates;
+    userLocation: Coordinates | null;
+    disableFitBounds: boolean;
+    L: any;
+    travelData: Point[];
+    setMapZoom: (z: number) => void;
+    setExpandedCluster: (v: { key: string; items: Point[] } | null) => void;
+    mapRef: React.MutableRefObject<any>;
+    savedMapViewRef: React.MutableRefObject<any>;
+    hasInitializedRef: React.MutableRefObject<boolean>;
+    lastModeRef: React.MutableRefObject<MapMode | null>;
+    lastAutoFitKeyRef: React.MutableRefObject<string | null>;
+  }> = ({
+    mapClickHandler,
+    mode,
+    coordinates,
+    userLocation,
+    disableFitBounds,
+    L,
+    travelData,
+    setMapZoom,
+    setExpandedCluster,
+    mapRef,
+    savedMapViewRef,
+    hasInitializedRef,
+    lastModeRef,
+    lastAutoFitKeyRef,
+  }) => {
     const map = useMap();
 
     useMapEvents({
@@ -706,7 +732,7 @@ const MapPageComponent: React.FC<Props> = ({
       } catch {
         // noop
       }
-    }, [map]);
+    }, [map, mapRef, setMapZoom]);
 
     // ✅ Popup behavior: close reliably on map click or zoom.
     // This must NOT trigger rerenders (no state), only imperative map calls.
@@ -751,7 +777,7 @@ const MapPageComponent: React.FC<Props> = ({
         map.off('moveend', saveView);
         map.off('zoomend', saveView);
       };
-    }, [map]);
+    }, [map, mode, savedMapViewRef]);
 
     // Route mode: keep map stable (no auto fitBounds)
     useEffect(() => {
@@ -780,7 +806,7 @@ const MapPageComponent: React.FC<Props> = ({
       }
 
       lastModeRef.current = mode;
-    }, [map, mode, coordinates, userLocation]);
+    }, [map, mode, coordinates, userLocation, hasInitializedRef, lastModeRef]);
 
     // Fit bounds to all travel points (radius mode only)
     useEffect(() => {
@@ -811,7 +837,7 @@ const MapPageComponent: React.FC<Props> = ({
       } catch {
         // noop
       }
-    }, [map, mode, disableFitBounds, travelData, userLocation]);
+    }, [map, disableFitBounds, mode, L, travelData, userLocation, lastAutoFitKeyRef]);
 
     return null;
   };
@@ -889,15 +915,28 @@ const MapPageComponent: React.FC<Props> = ({
         style={styles.map as any}
         center={safeCenter}
         zoom={initialZoomRef.current}
-        scrollWheelZoom
-        zoomControl
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <MapLogic mapClickHandler={handleMapClick} />
+        <MapLogic
+          mapClickHandler={handleMapClick}
+          mode={mode}
+          coordinates={coordinates}
+          userLocation={userLocation}
+          disableFitBounds={disableFitBounds}
+          L={L}
+          travelData={travelData}
+          setMapZoom={setMapZoom}
+          setExpandedCluster={setExpandedCluster}
+          mapRef={mapRef}
+          savedMapViewRef={savedMapViewRef}
+          hasInitializedRef={hasInitializedRef}
+          lastModeRef={lastModeRef}
+          lastAutoFitKeyRef={lastAutoFitKeyRef}
+        />
 
         {mode === 'radius' && radiusInMeters && (
           <Circle
@@ -1020,10 +1059,10 @@ const MapPageComponent: React.FC<Props> = ({
 };
 
 const Loader: React.FC<{ message: string }> = ({ message }) => (
-<View style={styles.loader}>
-<ActivityIndicator size="large" />
-<Text>{message}</Text>
-</View>
+  <View style={styles.loader}>
+    <ActivityIndicator size="large" />
+    <Text>{message}</Text>
+  </View>
 );
 
 const styles = StyleSheet.create({

@@ -127,8 +127,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   const styles = useMemo(() => getStyles(isMobile, windowWidth), [isMobile, windowWidth]);
   const [legendOpen, setLegendOpen] = useState(false);
   const [hideNoPointsToast, setHideNoPointsToast] = useState(false);
-  const [showStartAddressInput, setShowStartAddressInput] = useState(false);
-  const [showEndAddressInput, setShowEndAddressInput] = useState(false);
   const increaseRadius = useCallback(() => {
     const options = filters.radius || [];
     const currentIdx = options.findIndex((opt) => String(opt.id) === String(filterValue.radius));
@@ -282,7 +280,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   };
 
   const hintsAllowed = !(routeHintDismissed || routeDistance != null);
-  const showStartHint = hintsAllowed && mode === 'route' && !routeStepState.startSelected;
   const showEndHint = hintsAllowed && mode === 'route' && routeStepState.startSelected && !routeStepState.endSelected;
   const showTransportHint = hintsAllowed && mode === 'route' && routeStepState.startSelected && routeStepState.endSelected;
   const noPointsAlongRoute = mode === 'route' && routeDistance != null && (filteredTravelsData ?? travelsData).length === 0;

@@ -48,20 +48,6 @@ export const useRouting = (
         distance: 0,
         coords: [],
     })
-    const setStateIfChanged = useCallback((next: RoutingState) => {
-        setState(prev => {
-            if (
-                prev.loading === next.loading &&
-                prev.error === next.error &&
-                prev.distance === next.distance &&
-                prev.coords.length === next.coords.length &&
-                prev.coords.every((p, i) => p[0] === next.coords[i][0] && p[1] === next.coords[i][1])
-            ) {
-                return prev
-            }
-            return next
-        })
-    }, [])
 
     const abortRef = useRef<AbortController | null>(null)
     const lastRouteKeyRef = useRef<string | null>(null)
@@ -80,7 +66,7 @@ export const useRouting = (
     
     useEffect(() => {
         routePointsRef.current = routePoints
-    }, [routePointsKey]) // Обновляем только при изменении ключа, не массива
+    }, [routePoints, routePointsKey]) // routePointsKey ensures semantic change; include routePoints to satisfy hooks lint
 
     const hasTwoPoints = Array.isArray(routePoints) && routePoints.length >= 2
     const routeKey = hasTwoPoints 
@@ -216,7 +202,7 @@ export const useRouting = (
             distance: route.distance || 0,
             isOptimal: true,
         }
-    }, [])
+    }, [isTestEnv, routeKey, transportMode])
 
     const calculateDirectDistance = useCallback((points: [number, number][]): number => {
         if (typeof window === 'undefined' || !(window as any).L) return 0

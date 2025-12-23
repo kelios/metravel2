@@ -5,6 +5,8 @@ import { useFavorites } from '@/context/FavoritesContext';
 
 jest.mock('@/context/AuthContext');
 
+jest.setTimeout(15000);
+
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
 

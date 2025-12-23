@@ -764,7 +764,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         })),
       }
 
-      const { queryAllByTestId } = render(
+      render(
         <MapPageComponent
           {...defaultProps}
           mode="radius"

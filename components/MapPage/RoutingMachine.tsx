@@ -232,7 +232,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                 }
             }
         }
-    }, [map, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints])
+    }, [map, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints, routePoints, routingState.coords])
 
     // Cleanup on unmount
     useEffect(() => {
