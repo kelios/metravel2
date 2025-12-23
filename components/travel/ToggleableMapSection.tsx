@@ -1,8 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, Pressable, Text, ActivityIndicator, Platform } from 'react-native';
-import ChevronDown from 'lucide-react-native/dist/esm/icons/chevron-down';
-import ChevronUp from 'lucide-react-native/dist/esm/icons/chevron-up';
-import MapPinned from 'lucide-react-native/dist/esm/icons/map-pinned';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -37,21 +34,11 @@ const ToggleableMapSection = ({
                     pressed && styles.toggleButtonPressed,
                 ]}
             >
-                {Platform.OS === 'web' ? (
-                  <Feather name="map-pin" size={18} color="#3B2C24" style={{ marginRight: DESIGN_TOKENS.spacing.xs }} />
-                ) : (
-                  <MapPinned size={18} color="#3B2C24" style={{ marginRight: DESIGN_TOKENS.spacing.xs }} />
-                )}
+                <Feather name="map-pin" size={18} color="#3B2C24" style={{ marginRight: DESIGN_TOKENS.spacing.xs }} />
                 <Text style={[styles.toggleText, isMobile && styles.toggleTextMobile]}>
                     {hintText}
                 </Text>
-                {Platform.OS === 'web' ? (
-                  <Feather name={showMap ? 'chevron-up' : 'chevron-down'} size={18} color="#3B2C24" />
-                ) : showMap ? (
-                  <ChevronUp size={18} color="#3B2C24" />
-                ) : (
-                  <ChevronDown size={18} color="#3B2C24" />
-                )}
+                <Feather name={showMap ? 'chevron-up' : 'chevron-down'} size={18} color="#3B2C24" />
             </Pressable>
 
             {showMap && (

@@ -12,13 +12,7 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Image as ExpoImage } from 'expo-image';
-import MapPinned from 'lucide-react-native/dist/esm/icons/map-pinned';
-import ChevronUp from 'lucide-react-native/dist/esm/icons/chevron-up';
-import ChevronDown from 'lucide-react-native/dist/esm/icons/chevron-down';
-import Copy from 'lucide-react-native/dist/esm/icons/copy';
-import Send from 'lucide-react-native/dist/esm/icons/send';
-import Map from 'lucide-react-native/dist/esm/icons/map';
-import LinkIcon from 'lucide-react-native/dist/esm/icons/link';
+import { Feather } from '@expo/vector-icons';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -162,7 +156,7 @@ const PointCard = React.memo(function PointCard({
             />
           ) : (
             <View style={[styles.noImage, { minHeight: responsive.imageMinHeight }]}>
-              <Map size={48} color="#fff" />
+              <Feather name="map" size={48} color="#fff" />
               <Text style={styles.noImageText} numberOfLines={3}>
                 {point.address}
               </Text>
@@ -188,7 +182,7 @@ const PointCard = React.memo(function PointCard({
                   accessibilityLabel="Открыть в картах"
                   accessibilityRole="button"
                 >
-                  <LinkIcon size={18} color="#fff" />
+                  <Feather name="external-link" size={18} color="#fff" />
                 </Pressable>
                 <Pressable
                   style={styles.actionBtn}
@@ -199,7 +193,7 @@ const PointCard = React.memo(function PointCard({
                   accessibilityLabel="Скопировать координаты"
                   accessibilityRole="button"
                 >
-                  <Copy size={18} color="#fff" />
+                  <Feather name="copy" size={18} color="#fff" />
                 </Pressable>
                 <Pressable
                   style={styles.actionBtn}
@@ -210,7 +204,7 @@ const PointCard = React.memo(function PointCard({
                   accessibilityLabel="Поделиться"
                   accessibilityRole="button"
                 >
-                  <Send size={18} color="#fff" />
+                  <Feather name="send" size={18} color="#fff" />
                 </Pressable>
               </View>
             </View>
@@ -234,7 +228,7 @@ const PointCard = React.memo(function PointCard({
               accessibilityLabel={`Координаты: ${point.coord}`}
               accessibilityRole="button"
             >
-              <MapPinned size={14} color="#e5e7eb" />
+              <Feather name="map-pin" size={14} color="#e5e7eb" />
               <Text
                 style={[styles.overlayCoordText, { fontSize: responsive.coordSize }]}
                 numberOfLines={1}
@@ -418,14 +412,14 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
       >
         <View style={styles.toggleRow}>
           {[
-            <MapPinned key="icon" size={22} color={DESIGN_TOKENS.colors.text} />,
+            <Feather key="icon" name="map-pin" size={22} color={DESIGN_TOKENS.colors.text as any} />,
             <Text key="text" style={[styles.toggleText, isMobile && styles.toggleTextSm]}>
               {showList ? 'Скрыть координаты мест' : 'Показать координаты мест'}
             </Text>,
             showList ? (
-              <ChevronUp key="chevron" size={18} color={DESIGN_TOKENS.colors.text} />
+              <Feather key="chevron" name="chevron-up" size={18} color={DESIGN_TOKENS.colors.text as any} />
             ) : (
-              <ChevronDown key="chevron" size={18} color={DESIGN_TOKENS.colors.text} />
+              <Feather key="chevron" name="chevron-down" size={18} color={DESIGN_TOKENS.colors.text as any} />
             ),
           ]}
         </View>

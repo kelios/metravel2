@@ -137,17 +137,35 @@ export default function RootLayout() {
 function RootLayoutNav() {
     const pathname = usePathname();
     const { width } = useResponsive();
+    const [clientWidth, setClientWidth] = useState<number | null>(null);
+
+    useEffect(() => {
+      if (!isWeb) return;
+      if (typeof window === 'undefined') return;
+
+      const update = () => setClientWidth(window.innerWidth);
+      update();
+
+      window.addEventListener('resize', update);
+      return () => window.removeEventListener('resize', update);
+    }, []);
+
     // ✅ ИСПРАВЛЕНИЕ: Используем единый breakpoint из DESIGN_TOKENS
     // На web useResponsive() обрабатывает SSR и возвращает корректную ширину.
     const effectiveWidth =
       Platform.OS === 'web'
         ? width === 0
-          ? typeof window !== 'undefined'
-            ? window.innerWidth
-            : 0
+          ? (clientWidth ?? 0)
           : width
         : width;
-    const isMobile = Platform.OS !== "web" ? true : effectiveWidth < DESIGN_TOKENS.breakpoints.mobile;
+    // Важно: на SSR/первом клиентском рендере effectiveWidth может быть 0.
+    // Делаем детерминированное значение (не читаем window в рендере), чтобы избежать hydration mismatch.
+    const isMobile =
+      Platform.OS !== "web"
+        ? true
+        : effectiveWidth > 0
+          ? effectiveWidth < DESIGN_TOKENS.breakpoints.mobile
+          : false;
 
     const SITE = process.env.EXPO_PUBLIC_SITE_URL || "https://metravel.by";
     const canonical = `${SITE}${pathname || "/"}`;

@@ -60,9 +60,6 @@ import { initPerformanceMonitoring } from '@/utils/performanceMonitoring';
 import { SectionSkeleton } from '@/components/SectionSkeleton';
 import { optimizeCriticalPath } from '@/utils/advancedPerformanceOptimization';
 
-/* ---------- LCP-компонент грузим СИНХРОННО ---------- */
-import Slider from "@/components/travel/Slider";
-
 /* ✅ УЛУЧШЕНИЕ: Skeleton loaders для улучшенного UX */
 import { 
   DescriptionSkeleton, 
@@ -103,6 +100,9 @@ const withLazy = <T extends React.ComponentType<any>>(f: () => Promise<{ default
       };
     }
   });
+
+/* ---------- LCP-компонент грузим СИНХРОННО ---------- */
+const Slider = withLazy(() => import("@/components/travel/Slider"));
 
 /* -------------------- lazy imports (второстепенные) -------------------- */
 const TravelDescription = withLazy(() => import("@/components/travel/TravelDescription"));
@@ -327,13 +327,12 @@ const useLCPPreload = (travel?: Travel) => {
         fit: "contain",
       }) || versionedHref;
 
-    // Use prefetch (instead of preload) to avoid "preloaded but not used" warnings when the hero image
-    // isn't consumed immediately (e.g. route transitions / hydration timing).
-    if (!document.querySelector(`link[rel="prefetch"][as="image"][href="${optimizedHref}"]`)) {
+    if (!document.querySelector(`link[rel="preload"][as="image"][href="${optimizedHref}"]`)) {
       const link = document.createElement("link");
-      link.rel = "prefetch";
+      link.rel = "preload";
       link.as = "image";
       link.href = optimizedHref;
+      link.setAttribute('fetchpriority', 'high');
       link.setAttribute("referrerpolicy", "no-referrer");
       document.head.appendChild(link);
     }

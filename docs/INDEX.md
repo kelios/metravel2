@@ -18,3 +18,4 @@
 
 - Prefer dev-only logging via `src/utils/logger.ts` helpers.
 - Keep web console clean in production builds.
+- For web-rendered UI, avoid SVG icon stacks (`react-native-svg`, `lucide-react-native`); prefer `@expo/vector-icons`.

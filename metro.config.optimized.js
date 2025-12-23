@@ -30,6 +30,10 @@ config.transformer = {
 // 2. Optimized resolver configuration
 config.resolver = {
   ...config.resolver,
+  // Prefer CommonJS "main" over ESM "module" for better compatibility on web.
+  // This avoids cases where packages (e.g. react-native-svg) resolve to an ESM build
+  // that Metro/web ends up bundling incorrectly, leading to runtime export mismatches.
+  resolverMainFields: ['react-native', 'browser', 'main', 'module'],
   // Enable asset optimization
   assetExts: [
     ...config.resolver.assetExts,
@@ -59,10 +63,6 @@ config.server = {
   // Enable compression
   enhanceMiddleware: (middleware) => {
     return (req, res, next) => {
-      // Enable gzip compression
-      res.setHeader('Content-Encoding', 'gzip');
-      res.setHeader('Vary', 'Accept-Encoding');
-      
       // Enable HTTP/2 Server Push for critical resources
       if (req.url === '/' || req.url === '/travel/') {
         res.setHeader('Link', [

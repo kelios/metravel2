@@ -21,6 +21,11 @@ npm run ios
 npm run android
 ```
 
+## UI icons (Web)
+
+- Avoid SVG-based icon stacks (`react-native-svg`, `lucide-react-native`) in components rendered on web.
+- Prefer `@expo/vector-icons` (e.g. `Feather`) for cross-platform stability.
+
 ## Environments
 
 - Use `./env.sh dev|preprod|prod` if you need explicit environment switching.
