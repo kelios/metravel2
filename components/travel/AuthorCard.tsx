@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, type ViewProps } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
@@ -17,6 +17,11 @@ import { useResponsive } from '@/hooks/useResponsive';
 interface AuthorCardProps {
   travel: Travel;
   onViewAuthorTravels?: () => void;
+}
+
+function SafeView({ children, ...rest }: ViewProps) {
+  const safeChildren = React.Children.toArray(children).filter((child) => typeof child !== 'string');
+  return <View {...rest}>{safeChildren}</View>;
 }
 
 export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
@@ -167,8 +172,8 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
   }
 
   return (
-    <View style={[styles.container, isMobile && styles.containerMobile]}>
-      <View style={[styles.content, isMobile && styles.contentMobile]}>
+    <SafeView style={[styles.container, isMobile && styles.containerMobile]}>
+      <SafeView style={[styles.content, isMobile && styles.contentMobile]}>
         {/* Аватар */}
         <Pressable
           style={styles.avatarSection}
@@ -188,14 +193,14 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
               placeholder={require("@/assets/placeholder.webp")}
             />
           ) : (
-            <View style={[styles.avatarPlaceholder, isMobile && styles.avatarMobile]}>
+            <SafeView style={[styles.avatarPlaceholder, isMobile && styles.avatarMobile]}>
               <MaterialIcons name="person" size={isMobile ? 32 : 40} color="#94a3b8" />
-            </View>
+            </SafeView>
           )}
         </Pressable>
 
         {/* Информация об авторе */}
-        <View style={styles.infoSection}>
+        <SafeView style={styles.infoSection}>
           <Pressable
             onPress={handleOpenAuthorProfile}
             disabled={!userId}
@@ -208,14 +213,14 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
             </Text>
           </Pressable>
           {authorCountryName && (
-            <View style={styles.locationRow}>
+            <SafeView style={styles.locationRow}>
               <Feather name="map-pin" size={14} color="#718096" />
               <Text style={styles.locationText}>{authorCountryName}</Text>
-            </View>
+            </SafeView>
           )}
 
           {socials.length > 0 && (
-            <View style={styles.socialsRow}>
+            <SafeView style={styles.socialsRow}>
               {socials.map((s) => (
                 <Pressable
                   key={s.key}
@@ -227,19 +232,19 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
                   <Text style={styles.socialChipText}>{s.label}</Text>
                 </Pressable>
               ))}
-            </View>
+            </SafeView>
           )}
 
           {travelsCount !== null && (
-            <View style={styles.statsRow}>
+            <SafeView style={styles.statsRow}>
               {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
               <MaterialIcons name="explore" size={16} color="#6b7280" />
               <Text style={styles.statsText}>
                 {travelsCount} {travelsCount === 1 ? 'путешествие' : travelsCount < 5 ? 'путешествия' : 'путешествий'}
               </Text>
-            </View>
+            </SafeView>
           )}
-        </View>
+        </SafeView>
 
         {/* Кнопка "Смотреть все путешествия" */}
         {userId && (
@@ -260,8 +265,8 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
             <Feather name="arrow-right" size={16} color="#6b7280" />
           </Pressable>
         )}
-      </View>
-    </View>
+      </SafeView>
+    </SafeView>
   );
 }
 

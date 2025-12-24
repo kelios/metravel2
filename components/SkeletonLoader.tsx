@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Platform, ViewStyle, StyleProp } from 'react-native';
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
-import { BREAKPOINTS, TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT, TRAVEL_CARD_WEB_MOBILE_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
+import { BREAKPOINTS, TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT, TRAVEL_CARD_WEB_MOBILE_HEIGHT, TRAVEL_CARD_MIN_WIDTH, TRAVEL_CARD_MAX_WIDTH } from '@/components/listTravel/utils/listTravelConstants';
 import { useResponsive } from '@/hooks/useResponsive';
 
 interface SkeletonLoaderProps {
@@ -158,8 +158,8 @@ export const TravelListSkeleton: React.FC<{
             flexGrow: 0,
             flexShrink: 0,
             flexBasis: 320,
-            minWidth: 320,
-            maxWidth: 360,
+            minWidth: TRAVEL_CARD_MIN_WIDTH,
+            maxWidth: TRAVEL_CARD_MAX_WIDTH,
           } as any);
 
     const rowsCount = Math.ceil(itemsCount / cols);

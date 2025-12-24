@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { Travel } from '@/src/types/types';
 import FavoriteButton from '@/components/FavoriteButton';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { TRAVEL_CARD_MAX_WIDTH } from '@/components/listTravel/utils/listTravelConstants';
 
 interface TravelCardCompactProps {
   travel: Travel;
@@ -130,6 +131,7 @@ export default memo(TravelCardCompact);
 const styles = StyleSheet.create({
   card: {
     height: '100%',
+    maxWidth: TRAVEL_CARD_MAX_WIDTH,
     backgroundColor: palette.surface,
     borderRadius: radii.md,
     overflow: 'hidden',

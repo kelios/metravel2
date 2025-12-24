@@ -1,6 +1,7 @@
 import { StyleSheet, Platform } from 'react-native';
 import { designTokens } from '../../constants/designTokens';
 import { METRICS } from '@/constants/layout';
+import { TRAVEL_CARD_MAX_WIDTH } from './utils/listTravelConstants';
 
 // Создаем отдельные стили для web и native с правильными типами
 const webStyles: any = {
@@ -129,7 +130,7 @@ export const enhancedTravelCardStyles = StyleSheet.create({
   // Основная карточка с улучшенной тенью и анимацией
   card: {
     width: getCardWidth() as any,
-    maxWidth: 360,
+    maxWidth: TRAVEL_CARD_MAX_WIDTH,
     borderRadius: designTokens.radius.lg, // Используем design token
     backgroundColor: designTokens.colors.neutral[50], // Используем design token
     borderWidth: 1,

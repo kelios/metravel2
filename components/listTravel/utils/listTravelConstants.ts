@@ -49,6 +49,9 @@ export const TRAVEL_CARD_IMAGE_HEIGHT = 220;
 export const TRAVEL_CARD_WEB_MOBILE_HEIGHT = 320;
 export const TRAVEL_CARD_WEB_HEIGHT = 360;
 
+export const TRAVEL_CARD_MIN_WIDTH = 320;
+export const TRAVEL_CARD_MAX_WIDTH = 360;
+
 // ✅ АРХИТЕКТУРА: Время кеширования для React Query (staleTime)
 export const STALE_TIME = {
   FILTERS: 10 * 60 * 1000, // 10 минут

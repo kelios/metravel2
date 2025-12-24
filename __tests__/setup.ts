@@ -1,14 +1,15 @@
-import '@testing-library/jest-native/extend-expect'
-
 // Suppress React Native deprecation warnings
 const originalWarn = console.warn;
 console.warn = (message, ...args) => {
+  const text = String(message)
   // Suppress specific deprecation warnings
-  if (/(ProgressBarAndroid|Clipboard|PushNotificationIOS) has been extracted/.test(message)) {
+  if (/(ProgressBarAndroid|Clipboard|PushNotificationIOS) has been extracted/.test(text)) {
     return;
   }
   originalWarn(message, ...args);
 };
+
+require('@testing-library/jest-native/extend-expect')
 
 // Mock console.error to avoid error logs in test output
 const originalError = console.error;

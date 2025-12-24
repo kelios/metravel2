@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { optimizeLCPImage, ultraCriticalCSS } from '@/utils/advancedPerformanceOptimization';
 import { fetchUserProfile } from '@/src/api/user';
+import { TRAVEL_CARD_MAX_WIDTH } from './utils/listTravelConstants';
 
 interface LCPOptimizedTravelCardProps {
   travel: any;
@@ -216,6 +217,7 @@ export const LCPOptimizedTravelCard = memo(function LCPOptimizedTravelCard({
 const styles = StyleSheet.create({
   card: {
     width: '100%',
+    maxWidth: TRAVEL_CARD_MAX_WIDTH,
     backgroundColor: '#ffffff',
     borderRadius: 16,
     overflow: 'hidden',
