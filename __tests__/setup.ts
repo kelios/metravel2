@@ -16,8 +16,14 @@ require('@testing-library/jest-native/extend-expect')
 // Mock console.error to avoid error logs in test output
 const originalError = console.error;
 console.error = (message, ...args) => {
+  const text = String(message)
+  const joined = [message, ...args].map((v) => String(v)).join(' ')
   // Suppress specific error messages from tests
-  if (/(Ошибка при создании формы|Ошибка при отправке обратной связи|Error: AI request failed)/.test(message)) {
+  if (/(Ошибка при создании формы|Ошибка при отправке обратной связи|Error: AI request failed)/.test(text)) {
+    return;
+  }
+  // Suppress expected map snapshot errors in tests
+  if (/\bMAP_SNAPSHOT_DOM\b/.test(joined)) {
     return;
   }
   originalError(message, ...args);
