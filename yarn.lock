@@ -2952,9 +2952,9 @@
   integrity sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==
 
 "@sinclair/typebox@^0.34.0":
-  version "0.34.41"
-  resolved "https://registry.yarnpkg.com/@sinclair/typebox/-/typebox-0.34.41.tgz#aa51a6c1946df2c5a11494a2cdb9318e026db16c"
-  integrity sha512-6gS8pZzSXdyRHTIqoqSVknxolr1kzfy4/CeDnrzsVz8TTIWUbOBr6gnzOmTYJ3eXQNh4IYHIGi5aIL7sOZ2G/g==
+  version "0.34.43"
+  resolved "https://registry.yarnpkg.com/@sinclair/typebox/-/typebox-0.34.43.tgz#485601f27252b7b756d8ca5e1e9ddf49d745923c"
+  integrity sha512-zD2/pAP6nq+ypyNPxsDhc5as3BamstGwCvhOEFTvull2qog9fdb/sj4m/431mk6iuXXW+WE1PER94uBDqxkoIg==
 
 "@sinonjs/commons@^3.0.0":
   version "3.0.1"
@@ -5936,9 +5936,9 @@ fast-uri@^3.0.1:
   integrity sha512-iPeeDKJSWf4IEOasVVrknXpaBV0IApz/gp7S2bb7Z4Lljbl2MGJRqInZiUrQwV16cpzw/D3S5j5Julj/gT52AA==
 
 fastq@^1.6.0:
-  version "1.19.1"
-  resolved "https://registry.yarnpkg.com/fastq/-/fastq-1.19.1.tgz#d50eaba803c8846a883c16492821ebcd2cda55f5"
-  integrity sha512-GwLTyxkCXjXbxqIhTsMI2Nui8huMPtnxg7krajPJAjnEG/iiOS7i+zCtWGZR9G0NBKbXKh6X9m9UIsYX/N6vvQ==
+  version "1.20.1"
+  resolved "https://registry.yarnpkg.com/fastq/-/fastq-1.20.1.tgz#ca750a10dc925bc8b18839fd203e3ef4b3ced675"
+  integrity sha512-GGToxJ/w1x32s/D2EKND7kTil4n8OVk/9mycTc4VDza13lOvpUZTGX3mFSCtV9ksdGBVzvsyAVLM6mHFThxXxw==
   dependencies:
     reusify "^1.0.4"
 

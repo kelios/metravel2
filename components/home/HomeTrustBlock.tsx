@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
+import { ResponsiveContainer } from '@/components/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 
 type TrustItem = {
@@ -37,7 +37,7 @@ export default function HomeTrustBlock() {
     <View style={styles.band} testID="home-trust-block">
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.card}>
-          <ResponsiveStack direction={isMobile ? 'vertical' : 'responsive'} gap={16} wrap={!isMobile}>
+          <View style={[styles.items, isMobile && styles.itemsMobile]}>
             {ITEMS.map((item) => (
               <View key={item.title} style={[styles.item, isMobile && styles.itemMobile]}>
                 <View style={styles.iconWrap}>
@@ -49,7 +49,7 @@ export default function HomeTrustBlock() {
                 </View>
               </View>
             ))}
-          </ResponsiveStack>
+          </View>
         </View>
       </ResponsiveContainer>
     </View>
@@ -75,6 +75,22 @@ const styles = StyleSheet.create({
         boxShadow: '0 6px 22px rgba(31, 31, 31, 0.06)',
       },
     }),
+  },
+  items: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    ...Platform.select({
+      web: {
+        rowGap: 16,
+        columnGap: 16,
+      },
+    }),
+  },
+  itemsMobile: {
+    flexDirection: 'column',
+    flexWrap: 'nowrap',
   },
   item: {
     flexDirection: 'row',
@@ -108,6 +124,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: DESIGN_TOKENS.colors.text,
     marginBottom: 4,
+    lineHeight: 18,
   },
   subtitle: {
     fontSize: 13,
