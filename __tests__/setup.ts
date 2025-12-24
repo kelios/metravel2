@@ -1,4 +1,6 @@
 // Suppress React Native deprecation warnings
+;(global as any).__DEV__ = false
+
 const originalWarn = console.warn;
 console.warn = (message, ...args) => {
   const text = String(message)
