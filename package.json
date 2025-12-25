@@ -98,6 +98,7 @@
     "leaflet": "^1.9.4",
     "lightningcss": "^1.30.2",
     "lint": "^1.1.2",
+    "lucide-react": "^0.487.0",
     "lucide-react-native": "^0.487.0",
     "metro-react-native-babel-transformer": "^0.77.0",
     "ms": "^2.1.3",

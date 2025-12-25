@@ -179,12 +179,21 @@ const patchPrepareEsm = (src) => {
     "const hasTouchableProperty = typeof _hasTouchableProperty === 'function' ? _hasTouchableProperty : (props => props.onPress || props.onPressIn || props.onPressOut || props.onLongPress);";
   const rewritten = src
     .replace(
-      /import\s+\{\s*hasTouchableProperty\s*,\s*parseTransformProp\s*\}\s+from\s+['"].['"];?/,
-      "import { hasTouchableProperty as _hasTouchableProperty, parseTransformProp } from '.';"
+      /import\s+\{\s*hasTouchableProperty\s*,\s*parseTransformProp\s*\}\s+from\s+['"]\.['"];?/,
+      "import { hasTouchableProperty as _hasTouchableProperty, parseTransformProp } from './index';"
     )
     .replace(
-      /import\s+\{\s*parseTransformProp\s*,\s*hasTouchableProperty\s*\}\s+from\s+['"].['"];?/,
-      "import { parseTransformProp, hasTouchableProperty as _hasTouchableProperty } from '.';"
+      /import\s+\{\s*parseTransformProp\s*,\s*hasTouchableProperty\s*\}\s+from\s+['"]\.['"];?/,
+      "import { parseTransformProp, hasTouchableProperty as _hasTouchableProperty } from './index';"
+    )
+    // tolerate already-correct './index' while still aliasing hasTouchableProperty
+    .replace(
+      /import\s+\{\s*hasTouchableProperty\s*,\s*parseTransformProp\s*\}\s+from\s+['"]\.\/index['"];?/,
+      "import { hasTouchableProperty as _hasTouchableProperty, parseTransformProp } from './index';"
+    )
+    .replace(
+      /import\s+\{\s*parseTransformProp\s*,\s*hasTouchableProperty\s*\}\s+from\s+['"]\.\/index['"];?/,
+      "import { parseTransformProp, hasTouchableProperty as _hasTouchableProperty } from './index';"
     );
 
   // IMPORTANT: never insert non-import code between imports in ESM.
@@ -206,7 +215,7 @@ const patchPrepareCjs = (src) => {
   if (src.includes("const _hasTouchableProperty = typeof _.hasTouchableProperty")) {
     return src;
   }
-  const requireLine = 'var _ = require(".");';
+  const requireLine = 'var _ = require("./index");';
   let next = src;
   if (next.includes(requireLine)) {
     next = next.replace(

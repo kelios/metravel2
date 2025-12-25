@@ -117,6 +117,26 @@ describe('ImageGalleryComponent.web', () => {
     expect(image).toBeTruthy();
   });
 
+  it('shows initial images with delete buttons', () => {
+    const { getAllByTestId } = render(
+      <ImageGalleryComponent
+        collection="gallery"
+        idTravel="42"
+        initialImages={[
+          { id: '1', url: 'https://example.com/pic1.jpg' },
+          { id: '2', url: 'https://example.com/pic2.jpg' },
+          { id: '3', url: 'https://example.com/pic3.jpg' },
+        ]}
+        maxImages={5}
+      />,
+    );
+
+    const images = getAllByTestId('gallery-image');
+    expect(images.length).toBeGreaterThanOrEqual(3);
+    const deleteButtons = getAllByTestId('delete-image-button');
+    expect(deleteButtons.length).toBeGreaterThanOrEqual(3); // overlay + corner buttons
+  });
+
   it('uploads files via dropzone with optimistic preview and finalizes', async () => {
     const file = new File(['data'], 'test.jpg', { type: 'image/jpeg' });
 
@@ -132,8 +152,26 @@ describe('ImageGalleryComponent.web', () => {
     expect(images.length).toBeGreaterThan(0);
   });
 
+  it('shows optimistic preview immediately while upload is in-flight', async () => {
+    const file = new File(['data'], 'test.jpg', { type: 'image/jpeg' });
+    uploadImageMock.mockImplementationOnce(
+      () => new Promise((resolve) => setTimeout(() => resolve({ id: 'uploaded-1', url: '/uploaded.jpg' }), 10)),
+    );
+
+    const { findAllByTestId } = render(
+      <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
+    );
+
+    await runDrop([file]);
+
+    // optimistic preview uses blob:// URL from createObjectURL
+    expect(URL.createObjectURL).toHaveBeenCalledWith(file);
+    const images = await findAllByTestId('gallery-image');
+    expect(images.length).toBeGreaterThan(0);
+  });
+
   it('deletes an image after confirmation', async () => {
-    const { getAllByText, getByTestId, queryAllByTestId } = render(
+    const { getByTestId, queryAllByTestId, getAllByTestId } = render(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -148,12 +186,42 @@ describe('ImageGalleryComponent.web', () => {
       expect(initialCount).toBeGreaterThan(0);
     });
 
-    fireEvent.press(getAllByText('✖')[0]);
+    fireEvent.press(getAllByTestId('delete-image-button')[0]);
     fireEvent.press(getByTestId('confirm-delete'));
 
     await waitFor(() => expect(deleteImageMock).toHaveBeenCalledWith('del-1'));
     await waitFor(() =>
       expect(queryAllByTestId('gallery-image').length).toBeLessThan(initialCount),
     );
+  });
+
+  it('allows deleting failed upload from overlay action', async () => {
+    uploadImageMock.mockImplementationOnce(() => {
+      throw new Error('upload failed');
+    });
+    const file = new File(['data'], 'broken.jpg', { type: 'image/jpeg' });
+
+    const { getAllByTestId, queryAllByTestId, getByTestId, getByText } = render(
+      <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
+    );
+
+    await runDrop([file]);
+
+    let buttonsCount = 0;
+    await waitFor(() => {
+      buttonsCount = getAllByTestId('delete-image-button').length;
+      expect(buttonsCount).toBeGreaterThan(0);
+    });
+    expect(getByText('Ошибка загрузки')).toBeTruthy();
+    expect(getByText('Удалить')).toBeTruthy();
+
+    const before = queryAllByTestId('gallery-image').length;
+    fireEvent.press(getAllByTestId('delete-image-button')[0]);
+    fireEvent.press(getByTestId('confirm-delete'));
+
+    await waitFor(() =>
+      expect(queryAllByTestId('gallery-image').length).toBeLessThan(before),
+    );
+    expect(deleteImageMock).not.toHaveBeenCalled();
   });
 });

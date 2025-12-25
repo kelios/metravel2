@@ -8,6 +8,7 @@ import {
     Platform,
     useColorScheme,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useDropzone } from 'react-dropzone';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -65,6 +66,23 @@ const buildApiPrefixedUrl = (value: string): string | null => {
     }
 };
 
+const normalizeDisplayUrl = (value: string): string => {
+    const absolute = ensureAbsoluteUrl(value);
+    if (typeof window === 'undefined') return absolute;
+
+    // Если страница открыта по HTTPS, а картинка с того же хоста по HTTP — переключаем на HTTPS, чтобы избежать mixed content.
+    try {
+        const parsed = new URL(absolute, window.location.origin);
+        if (window.location.protocol === 'https:' && parsed.protocol === 'http:' && parsed.hostname === window.location.hostname) {
+            parsed.protocol = 'https:';
+            return parsed.toString();
+        }
+        return parsed.toString();
+    } catch {
+        return absolute;
+    }
+};
+
 interface GalleryItem {
     id: string;
     url: string;
@@ -104,7 +122,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
         if (initialImages?.length) {
             setImages(initialImages.map((img) => ({ 
                 ...img, 
-                url: ensureAbsoluteUrl(img.url),
+                url: normalizeDisplayUrl(img.url),
                 isUploading: false,
                 uploadProgress: 0,
                 error: null
@@ -177,7 +195,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                         (response as any)?.data?.id ||
                         placeholder.id;
                     if (uploadedUrlRaw) {
-                        const finalUrl = ensureAbsoluteUrl(String(uploadedUrlRaw));
+                        const finalUrl = normalizeDisplayUrl(String(uploadedUrlRaw));
                         
                         // Cleanup blob URL
                         if (blobUrlsRef.current.has(placeholder.url)) {
@@ -304,7 +322,14 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     return (
         <View style={[styles.container, isDarkMode && styles.darkContainer]}>
             <View style={styles.headerContainer}>
-                <Text style={[styles.galleryTitle, isDarkMode && styles.darkText]}>📷 Галерея</Text>
+                <View style={styles.titleRow}>
+                    <MaterialIcons
+                        name="photo-camera"
+                        size={20}
+                        color={isDarkMode ? DESIGN_TOKENS.colors.textInverse : DESIGN_TOKENS.colors.text}
+                    />
+                    <Text style={[styles.galleryTitle, isDarkMode && styles.darkText]}>Галерея</Text>
+                </View>
                 <Text style={[styles.imageCount, isDarkMode && styles.darkText]}>
                     Загружено <Text style={styles.highlight}>{images.length}</Text> из {maxImages}
                 </Text>
@@ -373,7 +398,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         onLoad={() => handleImageLoad(image.id)}
                                     />
                                     <View style={styles.uploadingOverlayImage}>
-                                        <ActivityIndicator size="large" color="#ffffff" />
+                                        <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.textInverse} />
                                         <Text style={styles.uploadingImageText}>Загрузка...</Text>
                                     </View>
                                 </View>
@@ -390,14 +415,22 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         onLoad={() => handleImageLoad(image.id)}
                                     />
                                     <View style={styles.errorOverlay}>
-                                        <Text style={styles.errorOverlayText}>⚠️</Text>
+                                        <MaterialIcons name="warning-amber" size={24} color={DESIGN_TOKENS.colors.warningDark} />
                                         <Text style={styles.errorOverlaySubtext}>{image.error}</Text>
+                                        <TouchableOpacity
+                                            onPress={() => handleDeleteImage(image.id)}
+                                            style={styles.errorActionButton}
+                                            testID="delete-image-button"
+                                        >
+                                            <Text style={styles.errorActionText}>Удалить</Text>
+                                        </TouchableOpacity>
                                     </View>
                                     <TouchableOpacity
                                         onPress={() => handleDeleteImage(image.id)}
                                         style={styles.deleteButton}
+                                        testID="delete-image-button"
                                     >
-                                        <Text style={styles.deleteButtonText}>✖</Text>
+                                        <MaterialIcons name="close" size={14} color={DESIGN_TOKENS.colors.textInverse} />
                                     </TouchableOpacity>
                                 </View>
                             ) : (
@@ -415,8 +448,9 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                     <TouchableOpacity
                                         onPress={() => handleDeleteImage(image.id)}
                                         style={styles.deleteButton}
+                                        testID="delete-image-button"
                                     >
-                                        <Text style={styles.deleteButtonText}>✖</Text>
+                                        <MaterialIcons name="close" size={14} color={DESIGN_TOKENS.colors.textInverse} />
                                     </TouchableOpacity>
                                 </>
                             )}
@@ -431,8 +465,9 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
 
             {hasErrors && (
                 <View style={styles.errorBanner}>
+                    <MaterialIcons name="warning-amber" size={18} color={DESIGN_TOKENS.colors.warningDark} />
                     <Text style={styles.errorBannerText}>
-                        ⚠️ Некоторые изображения не удалось загрузить. Удалите их и попробуйте снова.
+                        Некоторые изображения не удалось загрузить. Удалите их и попробуйте снова.
                     </Text>
                 </View>
             )}
@@ -458,7 +493,7 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     darkContainer: {
-        backgroundColor: '#222',
+        backgroundColor: DESIGN_TOKENS.colors.background,
     },
     headerContainer: {
         flexDirection: 'row',
@@ -467,82 +502,90 @@ const styles = StyleSheet.create({
         marginBottom: DESIGN_TOKENS.spacing.sm,
         paddingVertical: 8,
         borderBottomWidth: 1,
-        borderBottomColor: '#ddd',
+        borderBottomColor: DESIGN_TOKENS.colors.borderLight,
+    },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.xs,
     },
     galleryTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.xl,
         fontWeight: 'bold',
-        color: '#333',
+        color: DESIGN_TOKENS.colors.text,
     },
     imageCount: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#666',
+        color: DESIGN_TOKENS.colors.textMuted,
     },
     highlight: {
         fontWeight: 'bold',
-        color: '#4b7c6f',
+        color: DESIGN_TOKENS.colors.primary,
     },
     galleryGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: DESIGN_TOKENS.spacing.md,
+        justifyContent: 'space-between',
     },
     imageWrapper: {
-        width: '31.5%',
+        flexBasis: '32%',
+        maxWidth: '32%',
+        minWidth: 220,
+        flexGrow: 1,
         aspectRatio: 1,
-        borderRadius: 10,
+        borderRadius: DESIGN_TOKENS.radii.md,
         overflow: 'hidden',
         position: 'relative',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: DESIGN_TOKENS.colors.cardMuted,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.borderLight,
     },
     image: {
         width: '100%',
         height: '100%',
-        borderRadius: 10,
+        borderRadius: DESIGN_TOKENS.radii.md,
     },
     deleteButton: {
         position: 'absolute',
         top: 8,
         right: 8,
-        backgroundColor: 'rgba(0,0,0,0.35)',
+        backgroundColor: DESIGN_TOKENS.colors.overlay,
         width: 24,
         height: 24,
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    deleteButtonText: {
-        color: '#fff',
-    },
     dropzone: {
         width: '100%',
         padding: DESIGN_TOKENS.spacing.lg,
         borderWidth: 2,
-        borderRadius: 10,
-        borderColor: '#4b7c6f',
-        backgroundColor: '#f0f0f0',
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderColor: DESIGN_TOKENS.colors.primary,
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
         alignItems: 'center',
         marginBottom: DESIGN_TOKENS.spacing.xl,
     },
     activeDropzone: {
-        borderColor: '#2b5c53',
-        backgroundColor: '#e0f2f1',
+        borderColor: DESIGN_TOKENS.colors.primaryDark,
+        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
     },
     darkDropzone: {
-        backgroundColor: '#333',
-        borderColor: '#888',
+        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+        borderColor: DESIGN_TOKENS.colors.border,
     },
     dropzoneText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#666',
+        color: DESIGN_TOKENS.colors.textMuted,
     },
     darkText: {
-        color: '#ddd',
+        color: DESIGN_TOKENS.colors.textInverse,
     },
     noImagesText: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         textAlign: 'center',
-        color: '#888',
+        color: DESIGN_TOKENS.colors.textMuted,
         marginTop: DESIGN_TOKENS.spacing.xl,
     },
     loader: {
@@ -551,10 +594,10 @@ const styles = StyleSheet.create({
     skeleton: {
         width: '100%',
         height: '100%',
-        backgroundColor: '#e0e0e0',
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     },
     skeletonDark: {
-        backgroundColor: '#444',
+        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
     },
     uploadingImageContainer: {
         width: '100%',
@@ -567,22 +610,22 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)',
+        backgroundColor: DESIGN_TOKENS.colors.overlay,
         justifyContent: 'center',
         alignItems: 'center',
     },
     uploadingImageText: {
-        color: '#fff',
+        color: DESIGN_TOKENS.colors.textInverse,
         marginTop: DESIGN_TOKENS.spacing.xs,
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '600',
     },
     errorImageContainer: {
-        backgroundColor: '#f9f4f0',
-        borderRadius: 12,
+        backgroundColor: DESIGN_TOKENS.colors.warningSoft,
+        borderRadius: DESIGN_TOKENS.radii.md,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: '#f0dbd6',
+        borderColor: DESIGN_TOKENS.colors.warningLight,
         position: 'relative',
     },
     errorImage: {
@@ -593,57 +636,67 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: 'rgba(255,255,255,0.6)',
-    },
-    errorOverlayText: {
-        fontSize: 28,
-        color: '#cc8a45',
+        backgroundColor: DESIGN_TOKENS.colors.overlayLight,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
     },
     errorOverlaySubtext: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#8a6b52',
+        color: DESIGN_TOKENS.colors.warningDark,
         textAlign: 'center',
+    },
+    errorActionButton: {
+        marginTop: DESIGN_TOKENS.spacing.xs,
+        backgroundColor: DESIGN_TOKENS.colors.primary,
+        paddingVertical: DESIGN_TOKENS.spacing.xs,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        shadowColor: 'transparent',
+    },
+    errorActionText: {
+        color: DESIGN_TOKENS.colors.textInverse,
+        fontWeight: '700',
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
     },
     batchProgressContainer: {
         marginBottom: DESIGN_TOKENS.spacing.lg,
         padding: DESIGN_TOKENS.spacing.md,
-        backgroundColor: '#f0f9ff',
-        borderRadius: 8,
+        backgroundColor: DESIGN_TOKENS.colors.infoSoft,
+        borderRadius: DESIGN_TOKENS.radii.sm,
         borderWidth: 1,
-        borderColor: '#bae6fd',
+        borderColor: DESIGN_TOKENS.colors.infoLight,
     },
     batchProgressBar: {
         width: '100%',
         height: 8,
-        backgroundColor: '#e0f2fe',
-        borderRadius: 4,
+        backgroundColor: DESIGN_TOKENS.colors.infoLight,
+        borderRadius: DESIGN_TOKENS.radii.sm,
         overflow: 'hidden',
         marginBottom: DESIGN_TOKENS.spacing.xs,
     },
     batchProgressFill: {
         height: '100%',
-        backgroundColor: '#0ea5e9',
+        backgroundColor: DESIGN_TOKENS.colors.info,
     },
     batchProgressText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#0369a1',
+        color: DESIGN_TOKENS.colors.infoDark,
         fontWeight: '600',
         textAlign: 'center',
     },
     errorBanner: {
         marginTop: DESIGN_TOKENS.spacing.md,
         padding: DESIGN_TOKENS.spacing.sm,
-        backgroundColor: '#f9f4f0',
-        borderRadius: 10,
+        backgroundColor: DESIGN_TOKENS.colors.warningSoft,
+        borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,
-        borderColor: '#f0dbd6',
+        borderColor: DESIGN_TOKENS.colors.warningLight,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
     },
     errorBannerText: {
-        color: '#8a6b52',
+        color: DESIGN_TOKENS.colors.warningDark,
         fontSize: 13,
         textAlign: 'left',
     },
