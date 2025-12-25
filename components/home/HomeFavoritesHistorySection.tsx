@@ -78,7 +78,7 @@ function HorizontalCards({
             title: item.title,
             imageUrl: item.imageUrl,
             city: item.city ?? null,
-            country: item.country ?? null,
+            country: item.country ?? (item as any).countryName ?? null,
           }}
           badge={
             badge?.icon === 'history'

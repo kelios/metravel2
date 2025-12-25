@@ -111,15 +111,21 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
             >
                 {name}
             </Text>
-            <Text
-                numberOfLines={1}
-                ellipsizeMode="tail"
-                style={styles.overlaySubtitle}
-            >
-                {countryName}
-            </Text>
         </View>
     );
+
+    // Create content slot to show only country information
+    const contentSlot = useMemo(() => {
+        if (!countryName || countryName === "Страна не указана") return null;
+        
+        return (
+            <View style={styles.locationRow}>
+                <Text style={styles.locationText} numberOfLines={1}>
+                    {countryName}
+                </Text>
+            </View>
+        );
+    }, [countryName]);
 
     return (
         <View style={styles.container}>
@@ -128,7 +134,9 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
                 imageUrl={optimizedImageUrl ?? null}
                 onPress={onPress}
                 mediaFit="contain"
+                heroTitleOverlay={false}
                 containerOverlaySlot={overlay}
+                contentSlot={contentSlot}
                 imageHeight={imageHeight}
                 style={[
                     styles.card,
@@ -283,5 +291,32 @@ const styles = StyleSheet.create({
                 opacity: 0.9,
             } as any,
         }),
+    },
+
+    locationRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        minHeight: 18,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    },
+
+    locationText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: DESIGN_TOKENS.colors.textMuted,
+        flex: 1,
+    },
+
+    contentSlot: {
+        gap: DESIGN_TOKENS.spacing.xs,
+    },
+
+    contentTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: DESIGN_TOKENS.colors.text,
+        lineHeight: 18,
+        letterSpacing: -0.2,
+        minHeight: 36,
     },
 });

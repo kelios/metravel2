@@ -189,13 +189,28 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
                     : await AsyncStorage.getItem(recommendationsKey);
 
             if (favoritesRaw) {
-                setFavorites(safeJsonParseString(favoritesRaw, []));
+                const parsed = safeJsonParseString(favoritesRaw, []);
+                const normalized = parsed.map((item: any) => ({
+                    ...item,
+                    country: item.country ?? item.countryName ?? undefined,
+                }));
+                setFavorites(normalized);
             }
             if (historyRaw) {
-                setViewHistory(safeJsonParseString(historyRaw, []));
+                const parsed = safeJsonParseString(historyRaw, []);
+                const normalized = parsed.map((item: any) => ({
+                    ...item,
+                    country: item.country ?? item.countryName ?? undefined,
+                }));
+                setViewHistory(normalized);
             }
             if (recommendationsRaw) {
-                setRecommended(safeJsonParseString(recommendationsRaw, []));
+                const parsed = safeJsonParseString(recommendationsRaw, []);
+                const normalized = parsed.map((item: any) => ({
+                    ...item,
+                    country: item.country ?? item.countryName ?? undefined,
+                }));
+                setRecommended(normalized);
             }
         } catch (error) {
             devError('Ошибка загрузки серверного кеша:', error);
@@ -234,7 +249,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
                         url: t.url || `/travels/${t.slug || t.id}`,
                         imageUrl: t.travel_image_thumb_url,
                         addedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
-                        country: t.countryName,
+                        country: t.countryName ?? undefined,
                     }));
 
                     setFavorites((prev) => {
@@ -253,7 +268,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
                         url: t.url || `/travels/${t.slug || t.id}`,
                         imageUrl: t.travel_image_thumb_url,
                         viewedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
-                        country: t.countryName,
+                        country: t.countryName ?? undefined,
                     }));
 
                     setViewHistory((prev) => {
@@ -272,7 +287,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
                         url: t.url || `/travels/${t.slug || t.id}`,
                         imageUrl: t.travel_image_thumb_url,
                         addedAt: t.updated_at ? new Date(t.updated_at).getTime() : Date.now(),
-                        country: t.countryName,
+                        country: t.countryName ?? undefined,
                     }));
 
                     setRecommended((prev) => {

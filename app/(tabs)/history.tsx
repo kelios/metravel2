@@ -37,6 +37,29 @@ export default function HistoryScreen() {
         [router]
     );
 
+    // Функция для очистки заголовка от информации о стране
+    const cleanTitle = useCallback((title: string, country: string | null) => {
+        if (!country || !title) return title;
+        
+        // Удаляем страну из заголовка
+        const countryPatterns = [
+            `в ${country}`,
+            `в ${country.toLowerCase()}`,
+            `${country}`,
+            `${country.toLowerCase()}`,
+        ];
+        
+        let cleanedTitle = title;
+        countryPatterns.forEach(pattern => {
+            cleanedTitle = cleanedTitle.replace(pattern, '').trim();
+        });
+        
+        // Удаляем лишние пробелы и знаки препинания в конце
+        cleanedTitle = cleanedTitle.replace(/\s*[,.\-:]\s*$/, '').trim();
+        
+        return cleanedTitle || title; // Возвращаем оригинал если что-то пошло не так
+    }, []);
+
     const handleClear = useCallback(async () => {
         if (!clearHistory) return;
 
@@ -136,10 +159,10 @@ export default function HistoryScreen() {
                         <TabTravelCard
                             item={{
                                 id: item.id,
-                                title: item.title,
+                                title: cleanTitle(item.title, item.country ?? item.countryName),
                                 imageUrl: item.imageUrl,
                                 city: item.city ?? null,
-                                country: item.country ?? null,
+                                country: item.country ?? item.countryName ?? null,
                             }}
                             badge={{ icon: 'history', backgroundColor: 'rgba(0,0,0,0.75)', iconColor: '#ffffff' }}
                             onPress={() => handleOpen(item.url)}

@@ -515,17 +515,19 @@ const leftTopSlot = canEdit ? (
   </View>
 ) : null;
 
-const contentSlot = (
-  <>
-    <Text
-      style={[
-        styles.title,
-      ]}
-      numberOfLines={2}
-    >
-      {name}
-    </Text>
+// Проверяем, есть ли какая-либо информация для отображения в контентной области
+const hasContentInfo = useMemo(() => {
+  return (
+    (!hideAuthor && (authorName || authorNameDisplay)) ||
+    countries.length > 0 ||
+    (countUnicIpView && countUnicIpView !== '0') ||
+    popularityFlags.isPopular ||
+    popularityFlags.isNew
+  );
+}, [hideAuthor, authorName, authorNameDisplay, countries.length, countUnicIpView, popularityFlags.isPopular, popularityFlags.isNew]);
 
+const contentSlotWithoutTitle = hasContentInfo ? (
+  <>
     <View style={styles.countrySlot}>
       {countries.length > 0 ? <CountriesList countries={countries} /> : null}
     </View>
@@ -555,35 +557,27 @@ const contentSlot = (
                         role: 'button',
                         tabIndex: 0,
                         'aria-label': `Открыть профиль автора ${authorName || 'Аноним'}`,
-                        onClick: (e: any) => handleAuthorPress(e),
-                        onKeyDown: (e: any) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleAuthorPress(e);
-                          }
-                        },
-                        onMouseDown: (e: any) => e.stopPropagation?.(),
-                        style: { cursor: 'pointer' },
                       }
-                    : {
-                        style: {},
-                      }),
+                    : {}),
                 } as any)}
+                onClick={handleAuthorPress}
               >
-                <Text style={styles.metaTxt} numberOfLines={1}>
-                  {authorNameDisplay}
+                <Text
+                  style={[
+                    styles.metaTxt,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {authorName || 'Аноним'}
                 </Text>
               </View>
             ) : (
               <Pressable
                 onPress={handleAuthorPress}
-                disabled={!authorUserId}
-                accessibilityRole={authorUserId ? 'button' : undefined}
-                accessibilityLabel={authorUserId ? `Открыть профиль автора ${authorNameDisplay}` : undefined}
                 style={({ pressed }) => [pressed && authorUserId ? { opacity: 0.85 } : null]}
               >
                 <Text style={styles.metaTxt} numberOfLines={1}>
-                  {authorNameDisplay}
+                  {authorName || 'Аноним'}
                 </Text>
               </Pressable>
             )}
@@ -602,14 +596,10 @@ const contentSlot = (
         </View>
       </View>
 
-      <View style={styles.metaBadgesRow}>
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
         {popularityFlags.isPopular && (
           <View style={[styles.statusBadge, styles.statusBadgePopular]}>
-            <Feather
-              name="trending-up"
-              size={Platform.select({ default: 10, web: 12 })}
-              color={TOKENS.colors.primary}
-            />
+            <Feather name="trending-up" size={Platform.select({ default: 10, web: 12 })} color={TOKENS.colors.accent} />
             <Text style={[styles.statusBadgeText, styles.statusBadgeTextPopular]}>Популярное</Text>
           </View>
         )}
@@ -622,7 +612,7 @@ const contentSlot = (
       </View>
     </View>
   </>
-);
+) : null;
 
 const unifiedCard = (
   <UnifiedTravelCard
@@ -630,7 +620,7 @@ const unifiedCard = (
     imageUrl={imgUrl && !isLikelyWatermarked(imgUrl) ? imgUrl : null}
     onPress={handlePress}
     mediaFit="contain"
-    heroTitleOverlay={false}
+    heroTitleOverlay={true}
     testID={cardTestId}
     style={[
       styles.card,
@@ -646,7 +636,7 @@ const unifiedCard = (
     leftTopSlot={leftTopSlot}
     rightTopSlot={selectable ? null : rightTopSlot}
     containerOverlaySlot={selectableOverlay}
-    contentSlot={contentSlot}
+    contentSlot={contentSlotWithoutTitle}
     webAsView={Platform.OS === 'web'}
     webPressableProps={selectable ? cardWrapperProps : {}}
     mediaProps={{
@@ -918,7 +908,7 @@ return (
     fontSize: TOKENS.card.title.size,
     fontWeight: TOKENS.card.title.weight,
     lineHeight: TOKENS.card.title.lineHeight,
-    color: TOKENS.colors.text,
+    color: Platform.OS === 'web' ? '#0f172a' : TOKENS.colors.text,
     marginBottom: 0,
   },
 

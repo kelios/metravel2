@@ -1,6 +1,6 @@
 // Оптимизированный FavoriteButton для списков
 import React, { memo } from 'react';
-import { Pressable, StyleSheet, Platform, View } from 'react-native';
+import { StyleSheet, Platform, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
@@ -66,17 +66,10 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
     // On web, avoid rendering a <button> to prevent nested button warnings inside other Pressables.
     if (Platform.OS === 'web') {
         return (
-            <View
+            <Pressable
                 role="button"
                 tabIndex={0}
-                onClick={handlePress as any}
-                onKeyDown={(e: any) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handlePress(e);
-                    }
-                }}
-                onMouseDown={(e: any) => e.stopPropagation()}
+                onPress={handlePress}
                 style={[styles.favoriteButton, style, { cursor: 'pointer' } as any]}
                 data-testid="favorite-button"
             >
@@ -85,7 +78,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                     size={size}
                     color={serverIsFav ? '#ef4444' : '#6b7280'}
                 />
-            </View>
+            </Pressable>
         );
     }
 

@@ -110,12 +110,12 @@ function UnifiedTravelCard({
           />
         ) : (
           <View style={styles.imagePlaceholder} testID="image-stub">
-            <MaterialIcons name="image" size={28} color="#9ca3af" />
+            <MaterialIcons name="image" size={32} color="#d1d5db" />
           </View>
         )}
 
         {heroTitleOverlay ? (
-          <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+          <View style={StyleSheet.absoluteFillObject}>
             <View style={styles.imageVignetteOverlay} />
             <View style={styles.imageTitleOverlay}>
               <View style={styles.imageTitleOverlayBg} />
@@ -137,13 +137,15 @@ function UnifiedTravelCard({
         {bottomLeftSlot ? <View style={styles.bottomLeftSlot}>{bottomLeftSlot}</View> : null}
       </View>
 
-      {contentSlot ? (
+      {contentSlot !== null ? (
         <View style={styles.content}>{contentSlot}</View>
       ) : (
         <View style={styles.content}>
-          <Text style={styles.title} numberOfLines={2}>
-            {title}
-          </Text>
+          {!heroTitleOverlay && (
+            <Text style={styles.title} numberOfLines={2}>
+              {title}
+            </Text>
+          )}
           <View style={styles.metaRow}>
             <MaterialIcons name="place" size={12} color={DESIGN_TOKENS.colors.textMuted} style={{ marginRight: 4 }} />
             <Text style={styles.metaText} numberOfLines={1}>
@@ -175,12 +177,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: Platform.OS === 'web' ? 200 : 180,
     position: 'relative',
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: '#f8f9fa',
   },
   imagePlaceholder: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f8f9fa',
   },
   imageTitleOverlay: {
     position: 'absolute',

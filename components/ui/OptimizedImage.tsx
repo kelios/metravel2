@@ -1,5 +1,5 @@
 import React, { memo, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Platform, Text } from 'react-native';
 import { Image as ExpoImage, ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -162,9 +162,7 @@ function OptimizedImage({
       {/* Заглушка при ошибке */}
       {!blurOnly && hasError && (
         <View style={[styles.errorContainer, { borderRadius }]} testID="optimized-image-error">
-          <View style={styles.errorIcon}>
-            <View style={styles.errorIconInner} />
-          </View>
+          <Text style={styles.errorText}>Нет фото</Text>
         </View>
       )}
     </View>
@@ -193,19 +191,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
   },
-  errorIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: DESIGN_TOKENS.colors.disabled,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorIconInner: {
-    width: 24,
-    height: 2,
-    backgroundColor: DESIGN_TOKENS.colors.disabledText,
-    transform: [{ rotate: '45deg' }],
+  errorText: {
+    fontSize: 14,
+    color: DESIGN_TOKENS.colors.disabledText,
+    textAlign: 'center',
   },
 });
 

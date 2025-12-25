@@ -218,7 +218,7 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
                 {popularList.map((item) => (
                   <View
                     key={keyExtractor(item)}
-                    accessibilityRole="listitem"
+                    accessibilityRole="none"
                     style={styles.webGridItem}
                   >
                     <TravelTmlRound travel={item as any} />

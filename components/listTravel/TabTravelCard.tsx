@@ -40,6 +40,20 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
     return [item?.city, item?.country].filter(Boolean).join(', ');
   }, [item?.city, item?.country]);
 
+  // Create content slot to show location even with heroTitleOverlay
+  const contentSlot = useMemo(() => {
+    if (!location) return null;
+    
+    return (
+      <View style={styles.locationRow}>
+        <MaterialIcons name="place" size={12} color="#6b7280" style={{ marginRight: 4 }} />
+        <Text style={styles.locationText} numberOfLines={1}>
+          {location}
+        </Text>
+      </View>
+    );
+  }, [location]);
+
   return (
     <UnifiedTravelCard
       title={title}
@@ -48,6 +62,8 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
       metaText={location || ' '}
       badge={badge}
       mediaFit="contain"
+      heroTitleOverlay={true}
+      contentSlot={contentSlot}
       width={layout === 'grid' ? undefined : (isMobile ? MOBILE_CARD_WIDTH : (TAB_CARD_TEMPLATE.container as any)?.width)}
       imageHeight={Platform.OS === 'web' ? 200 : 180}
       testID={testID}
@@ -81,6 +97,19 @@ const styles = StyleSheet.create({
       } as any,
       default: {},
     }),
+  },
+
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 18,
+  },
+
+  locationText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
+    flex: 1,
   },
 });
 

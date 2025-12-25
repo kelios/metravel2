@@ -87,10 +87,11 @@ describe('PersonalizedRecommendations', () => {
     mockFavorites.push(testFavorite)
     mockGetRecommendations.mockReturnValue([testFavorite])
     
-    const { findByText } = render(<PersonalizedRecommendations />)
+    const { findByText, findByLabelText } = render(<PersonalizedRecommendations />)
     
     expect(await findByText('Избранное')).toBeTruthy()
-    expect(await findByText('Test Travel')).toBeTruthy()
+    // Travel names are in accessibility labels, not as text content
+    expect(await findByLabelText('Test Travel')).toBeTruthy()
   })
 
   it('renders view history section when authenticated with history', async () => {
@@ -120,8 +121,8 @@ describe('PersonalizedRecommendations', () => {
     mockFavorites.push(testFavorite)
     mockGetRecommendations.mockReturnValue([testFavorite])
     
-    const { findByText } = render(<PersonalizedRecommendations />)
-    const item = await findByText('Test Travel')
+    const { findByText: _findByText, findByLabelText } = render(<PersonalizedRecommendations />)
+    const item = await findByLabelText('Test Travel')
     
     fireEvent.press(item)
     

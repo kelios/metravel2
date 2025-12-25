@@ -79,12 +79,13 @@ describe('WeeklyHighlights', () => {
       data: mockData,
     })
 
-    const { getByText } = render(<WeeklyHighlights />)
+    const { getByText, getByLabelText } = render(<WeeklyHighlights />)
 
     expect(getByText('Подборка месяца')).toBeTruthy()
     expect(getByText('Самые популярные маршруты этого месяца')).toBeTruthy()
-    expect(getByText('Test Travel 1')).toBeTruthy()
-    expect(getByText('Test Travel 2')).toBeTruthy()
+    // Travel names are in accessibility labels, not as text content
+    expect(getByLabelText('Test Travel 1')).toBeTruthy()
+    expect(getByLabelText('Test Travel 2')).toBeTruthy()
   })
 
   it('filters out viewed items', () => {
@@ -110,10 +111,10 @@ describe('WeeklyHighlights', () => {
       data: mockData,
     })
 
-    const { queryByText, getByText } = render(<WeeklyHighlights />)
+    const { queryByText, getByLabelText } = render(<WeeklyHighlights />)
     
     expect(queryByText('Viewed Travel')).toBeNull()
-    expect(getByText('New Travel')).toBeTruthy()
+    expect(getByLabelText('New Travel')).toBeTruthy()
   })
 
   it('handles item press', () => {
@@ -131,8 +132,8 @@ describe('WeeklyHighlights', () => {
       data: mockData,
     })
 
-    const { getByText } = render(<WeeklyHighlights />)
-    const item = getByText('Test Travel')
+    const { getByLabelText } = render(<WeeklyHighlights />)
+    const item = getByLabelText('Test Travel')
     
     fireEvent.press(item)
     
@@ -154,9 +155,9 @@ describe('WeeklyHighlights', () => {
       data: mockData,
     })
 
-    const { getByText } = render(<WeeklyHighlights />)
+    const { getByLabelText } = render(<WeeklyHighlights />)
     
-    expect(getByText('Test Travel')).toBeTruthy()
+    expect(getByLabelText('Test Travel')).toBeTruthy()
   })
 })
 

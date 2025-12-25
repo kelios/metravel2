@@ -50,6 +50,29 @@ export default function FavoritesScreen() {
         [router]
     );
 
+    // Функция для очистки заголовка от информации о стране
+    const cleanTitle = useCallback((title: string, country: string | null) => {
+        if (!country || !title) return title;
+        
+        // Удаляем страну из заголовка
+        const countryPatterns = [
+            `в ${country}`,
+            `в ${country.toLowerCase()}`,
+            `${country}`,
+            `${country.toLowerCase()}`,
+        ];
+        
+        let cleanedTitle = title;
+        countryPatterns.forEach(pattern => {
+            cleanedTitle = cleanedTitle.replace(pattern, '').trim();
+        });
+        
+        // Удаляем лишние пробелы и знаки препинания в конце
+        cleanedTitle = cleanedTitle.replace(/\s*[,.\-:]\s*$/, '').trim();
+        
+        return cleanedTitle || title; // Возвращаем оригинал если что-то пошло не так
+    }, []);
+
     const horizontalPadding = 16;
     const columnGap = 14;
     const minCardWidth = 320;
@@ -148,10 +171,10 @@ export default function FavoritesScreen() {
                         <TabTravelCard
                             item={{
                                 id: item.id,
-                                title: item.title,
+                                title: cleanTitle(item.title, item.country ?? item.countryName),
                                 imageUrl: item.imageUrl,
                                 city: item.city ?? null,
-                                country: item.country ?? null,
+                                country: item.country ?? item.countryName ?? null,
                             }}
                             onPress={() => handleOpen(item.url)}
                             layout="grid"
@@ -242,6 +265,9 @@ const styles = StyleSheet.create({
         minWidth: 0,
         maxWidth: '100%',
         marginRight: 0,
+    },
+    cardWrap: {
+        marginBottom: 14,
     },
     removeButton: {
         position: 'absolute',
