@@ -40,9 +40,9 @@ export const BREAKPOINTS = {
 export const GRID_COLUMNS = {
   MOBILE: 1,
   TABLET: 2,
-  TABLET_LANDSCAPE: 2, // Исправлено: 2 колонки вместо 3 для планшетов в landscape
-  DESKTOP: 3,
-  DESKTOP_LARGE: 3,
+  TABLET_LANDSCAPE: 3, // 3 колонки на промежутке 1280-1439px
+  DESKTOP: 4,
+  DESKTOP_LARGE: 4,
 } as const;
 
 export const TRAVEL_CARD_IMAGE_HEIGHT = 220;

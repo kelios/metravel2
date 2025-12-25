@@ -170,16 +170,16 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   listContent: {
-    padding: getSpacing('m'),
+    padding: getSpacing('xs'),
   },
   row: {
     flexDirection: 'row',
-    marginBottom: getSpacing('m'),
+    marginBottom: getSpacing('xs'),
   },
   itemContainer: {
     flexGrow: 0,
     flexShrink: 0,
-    padding: getSpacing('s'),
+    padding: 2,
   },
 });
 

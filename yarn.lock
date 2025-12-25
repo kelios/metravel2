@@ -2952,9 +2952,9 @@
   integrity sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==
 
 "@sinclair/typebox@^0.34.0":
-  version "0.34.43"
-  resolved "https://registry.yarnpkg.com/@sinclair/typebox/-/typebox-0.34.43.tgz#485601f27252b7b756d8ca5e1e9ddf49d745923c"
-  integrity sha512-zD2/pAP6nq+ypyNPxsDhc5as3BamstGwCvhOEFTvull2qog9fdb/sj4m/431mk6iuXXW+WE1PER94uBDqxkoIg==
+  version "0.34.45"
+  resolved "https://registry.yarnpkg.com/@sinclair/typebox/-/typebox-0.34.45.tgz#6c0426b584c74d57625ed6b180ac59a62f139f7c"
+  integrity sha512-qJcFVfCa5jxBFSuv7S5WYbA8XdeCPmhnaVVfX/2Y6L8WYg8sk3XY2+6W0zH+3mq1Cz+YC7Ki66HfqX6IHAwnkg==
 
 "@sinonjs/commons@^3.0.0":
   version "3.0.1"
@@ -2976,9 +2976,9 @@
   integrity sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==
 
 "@swc/helpers@^0.5.12":
-  version "0.5.17"
-  resolved "https://registry.yarnpkg.com/@swc/helpers/-/helpers-0.5.17.tgz#5a7be95ac0f0bf186e7e6e890e7a6f6cda6ce971"
-  integrity sha512-5IKx/Y13RsYd+sauPb2x+U/xZikHjolzfuDgTAl/Tdf3Q8rslRvC19NKDLgAJQ6wsqADk10ntlv08nPFw/gO/A==
+  version "0.5.18"
+  resolved "https://registry.yarnpkg.com/@swc/helpers/-/helpers-0.5.18.tgz#feeeabea0d10106ee25aaf900165df911ab6d3b1"
+  integrity sha512-TXTnIcNJQEKwThMMqBXsZ4VGAza6bvN4pa41Rkqoio6QBKMvo+5lexeTMScGCIxtzgQJzElcvIltani+adC5PQ==
   dependencies:
     tslib "^2.8.0"
 
@@ -6618,9 +6618,9 @@ human-signals@^2.1.0:
   integrity sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==
 
 hyphen@^1.6.4:
-  version "1.12.0"
-  resolved "https://registry.yarnpkg.com/hyphen/-/hyphen-1.12.0.tgz#694530554c828e74687b6e2fa89ddfec91abd6b6"
-  integrity sha512-vLZZHXFOaSlmKtNQ89KRF2Q6qS7ejdmgNILIzlxd2z3EyZTZyLWGYOecljkT0mXxPvN4/dQK495FgBe5ERQp1w==
+  version "1.13.0"
+  resolved "https://registry.yarnpkg.com/hyphen/-/hyphen-1.13.0.tgz#760cff8d696919fe1ce3098f251416a279dfeb96"
+  integrity sha512-flZoIooovWALhu04Z3ooPWQldjTOgLDs5DlbUxTjnIyhQKu9ukljKWwElFCUyVi6TBk210bMBlaMG8eW3bXU+g==
 
 hyphenate-style-name@^1.0.3:
   version "1.1.0"

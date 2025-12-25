@@ -89,6 +89,7 @@ interface GalleryItem {
     isUploading?: boolean;
     uploadProgress?: number;
     error?: string | null;
+    hasLoaded?: boolean;
 }
 
 interface ImageGalleryComponentProps {
@@ -125,7 +126,8 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                 url: normalizeDisplayUrl(img.url),
                 isUploading: false,
                 uploadProgress: 0,
-                error: null
+                error: null,
+                hasLoaded: false,
             })));
         }
         setIsInitialLoading(false);
@@ -287,10 +289,30 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
         retryRef.current.delete(imageId);
         setImages(prev =>
             prev.map(img =>
-                img.id === imageId ? { ...img, error: null, isUploading: false } : img
+                img.id === imageId ? { ...img, error: null, isUploading: false, hasLoaded: true } : img
             )
         );
     }, []);
+
+    // Fallback: mark as error if image neither loads nor errors within timeout
+    useEffect(() => {
+        const timers = images
+            .filter(img => !img.isUploading && !img.error && !img.hasLoaded)
+            .map(img =>
+                setTimeout(() => {
+                    setImages(prev =>
+                        prev.map(item =>
+                            item.id === img.id
+                                ? { ...item, error: 'Ошибка загрузки', isUploading: false }
+                                : item
+                        )
+                    );
+                }, 5000)
+            );
+        return () => {
+            timers.forEach(clearTimeout);
+        };
+    }, [images]);
 
     const confirmDeleteImage = async () => {
         if (!selectedImageId) return;
@@ -401,6 +423,13 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.textInverse} />
                                         <Text style={styles.uploadingImageText}>Загрузка...</Text>
                                     </View>
+                                    <TouchableOpacity
+                                        onPress={() => handleDeleteImage(image.id)}
+                                        style={styles.deleteButton}
+                                        testID="delete-image-button"
+                                    >
+                                        <MaterialIcons name="close" size={14} color={DESIGN_TOKENS.colors.textInverse} />
+                                    </TouchableOpacity>
                                 </View>
                             ) : image.error ? (
                                 <View style={styles.errorImageContainer}>

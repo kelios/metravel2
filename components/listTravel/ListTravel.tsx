@@ -424,16 +424,16 @@ function ListTravel({
 
     const gapSize =
       windowWidth < BREAKPOINTS.XS
-        ? 12
+        ? 6
         : windowWidth < BREAKPOINTS.SM
-          ? 14
+          ? 8
           : windowWidth < BREAKPOINTS.MOBILE
-            ? 16
+            ? 10
             : windowWidth < BREAKPOINTS.TABLET
-              ? 18
+              ? 12
               : windowWidth < BREAKPOINTS.DESKTOP
-                ? 20
-                : 24;
+                ? 14
+                : 16;
 
     const cardsGridDynamicStyle = useMemo(() => {
       const styleArray: ViewStyle[] = [styles.cardsGrid]
@@ -459,13 +459,13 @@ function ListTravel({
 
     const contentPadding = useMemo(() => {
       // ✅ ОПТИМИЗАЦИЯ: Используем стабильные breakpoints для избежания лишних перерасчетов
-      if (effectiveWidth < BREAKPOINTS.XS) return 16;  // XS: компактные устройства
-      if (effectiveWidth < BREAKPOINTS.SM) return 12; // SM: чуть уже карточки на очень маленьких телефонах
-      if (effectiveWidth < BREAKPOINTS.MOBILE) return 12; // Mobile: стандартные телефоны — синхронизировано
-      if (effectiveWidth < BREAKPOINTS.TABLET) return 20; // Tablet
-      if (effectiveWidth < BREAKPOINTS.DESKTOP) return 20; // Desktop
-      if (effectiveWidth < BREAKPOINTS.DESKTOP_LARGE) return 24; // Large Desktop
-      return 32; // XXL
+      if (effectiveWidth < BREAKPOINTS.XS) return 12;  // XS: компактные устройства
+      if (effectiveWidth < BREAKPOINTS.SM) return 8; // SM: чуть уже карточки на очень маленьких телефонах
+      if (effectiveWidth < BREAKPOINTS.MOBILE) return 10; // Mobile: стандартные телефоны — синхронизировано
+      if (effectiveWidth < BREAKPOINTS.TABLET) return 12; // Tablet
+      if (effectiveWidth < BREAKPOINTS.DESKTOP) return 12; // Desktop
+      if (effectiveWidth < BREAKPOINTS.DESKTOP_LARGE) return 16; // Large Desktop
+      return 20; // XXL
     }, [effectiveWidth]); // ✅ ОПТИМИЗАЦИЯ: Только эффективная ширина в зависимостях
 
     const gridColumns = useMemo(() => {
