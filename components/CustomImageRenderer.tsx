@@ -7,8 +7,8 @@ import {
   Text,
 } from "react-native";
 import { CustomRendererProps } from "react-native-render-html";
-import { Image as ExpoImage } from "expo-image";
 import { useResponsive } from '@/hooks/useResponsive';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 interface CustomImageRendererProps extends CustomRendererProps<any> {
   contentWidth: number;
@@ -131,20 +131,8 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
 
   if (!raw || isSmallIcon) return null;
 
-  // ✅ FIX: Убрали fetchpriority из webAttrs, так как ExpoImage не поддерживает этот проп
-  // Для веба ExpoImage использует priority prop вместо fetchpriority
-  const webAttrs =
-    Platform.OS === "web"
-      ? ({
-        loading: "lazy",
-        decoding: "async",
-        referrerPolicy: "no-referrer",
-        sizes: `(min-width: ${MAX_WIDTH}px) ${MAX_WIDTH}px, 100vw`,
-      } as any)
-      : {};
-
   return (
-    <View style={[styles.container, { width: boxWidth }]}>
+    <View style={[styles.container, { width: boxWidth }]}> 
       <View style={{ width: boxWidth, height: boxHeight, position: 'relative' }}>
         {!imageLoaded && !err && (
           <View
@@ -159,17 +147,17 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
           </View>
         )}
 
-        <ExpoImage
-          source={{ uri: src }}
-          style={[StyleSheet.absoluteFillObject, styles.image]}
-          contentFit="contain"
-          transition={200}
-          cachePolicy="disk-memory"
+        <ImageCardMedia
+          src={src}
+          alt=""
+          fit="contain"
+          blurBackground
+          blurRadius={16}
           priority={Platform.OS === 'web' ? 'low' : 'normal'}
-          recyclingKey={src}
+          loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
+          style={[StyleSheet.absoluteFillObject, styles.image]}
           onLoad={() => { setImageLoaded(true); }}
           onError={() => { setErr(true); }}
-          {...webAttrs}
         />
 
         {err && (

@@ -6,7 +6,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Image as ExpoImage } from 'expo-image';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { Travel } from '@/src/types/types';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
@@ -118,23 +118,15 @@ export default function NavigationArrows({
             </View>
             {buildImageUrl(prevTravel) && (
               <View style={styles.navImageWrap}>
-                <ExpoImage
-                  source={{ uri: buildImageUrl(prevTravel)! }}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
+                <ImageCardMedia
+                  src={buildImageUrl(prevTravel)!}
+                  fit="contain"
+                  blurBackground
                   blurRadius={12}
-                  cachePolicy="memory-disk"
+                  loading="lazy"
                   priority="low"
-                  contentPosition="center"
-                />
-                <View style={styles.navImageOverlay} />
-                <ExpoImage
-                  source={{ uri: buildImageUrl(prevTravel)! }}
-                  style={styles.navImage}
-                  contentFit="contain"
-                  cachePolicy="memory-disk"
-                  priority="low"
-                  contentPosition="center"
+                  borderRadius={8}
+                  style={StyleSheet.absoluteFillObject}
                 />
               </View>
             )}
@@ -156,23 +148,15 @@ export default function NavigationArrows({
           <View style={styles.navContent}>
             {buildImageUrl(nextTravel) && (
               <View style={styles.navImageWrap}>
-                <ExpoImage
-                  source={{ uri: buildImageUrl(nextTravel)! }}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
+                <ImageCardMedia
+                  src={buildImageUrl(nextTravel)!}
+                  fit="contain"
+                  blurBackground
                   blurRadius={12}
-                  cachePolicy="memory-disk"
+                  loading="lazy"
                   priority="low"
-                  contentPosition="center"
-                />
-                <View style={styles.navImageOverlay} />
-                <ExpoImage
-                  source={{ uri: buildImageUrl(nextTravel)! }}
-                  style={styles.navImage}
-                  contentFit="contain"
-                  cachePolicy="memory-disk"
-                  priority="low"
-                  contentPosition="center"
+                  borderRadius={8}
+                  style={StyleSheet.absoluteFillObject}
                 />
               </View>
             )}
@@ -267,13 +251,4 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#f3f4f6',
   },
-  navImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-  },
-  navImage: {
-    width: '100%',
-    height: '100%',
-  },
 });
-

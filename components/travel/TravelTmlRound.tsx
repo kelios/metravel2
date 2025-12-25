@@ -1,22 +1,19 @@
 // components/travel/TravelTmlRound.tsx
-import React, { memo, useMemo, useState } from "react";
+import React, { memo, useMemo } from "react";
 import {
     Platform,
-    Pressable,
     StyleSheet,
-    type ViewStyle,
-    type ImageStyle,
     Text,
     View,
 } from "react-native";
-import { Image as ExpoImage } from "expo-image";
 import { router } from "expo-router";
 import type { Travel } from "@/src/types/types";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
-import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from "@/utils/imageOptimization";
+import { buildVersionedImageUrl, getOptimalImageSize, optimizeImageUrl } from "@/utils/imageOptimization";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useResponsive } from '@/hooks/useResponsive';
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 
 type Props = { travel: Travel };
 
@@ -38,6 +35,8 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
       const fallbackCandidates = [
         directSmall,
         directThumb,
+        (travel as any)?.travelImageThumbSmallUrl,
+        (travel as any)?.travelImageThumbUrl,
         (travel as any)?.travel_image_url,
         (travel as any)?.imageUrl,
         (travel as any)?.image_url,
@@ -74,7 +73,6 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
     }, [isTablet, isDesktop, isLargeDesktop]);
     
     const imageHeight = cardDimensions.imageHeight;
-    const radius = 16;
 
     // ✅ УЛУЧШЕНИЕ: Оптимизация URL изображения
     const optimizedImageUrl = useMemo(() => {
@@ -97,93 +95,52 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
       }) || versionedUrl;
     }, [baseImageUrl, imageHeight, travel]);
 
-    // fallback, если изображение не загрузилось
-    const [failed, setFailed] = useState(false);
-    const canOpen = Boolean(slug);
+    const canOpen = Boolean(slug || travel?.id);
 
     const onPress = () => {
         if (!canOpen) return;
-        router.push(`/travels/${slug}`);
+        router.push(`/travels/${slug || travel.id}`);
     };
 
-    // ✅ УЛУЧШЕНИЕ: Пропорциональные стили с aspect ratio
-    const imageWrapperStyle = useMemo(
-        () => ({
-            width: '100%',
-            ...(Platform.OS === 'web'
-              ? ({ aspectRatio: 4 / 3 } as any)
-              : { height: imageHeight }),
-            borderRadius: radius,
-            overflow: 'hidden' as const,
-        }) as ViewStyle,
-        [radius, imageHeight]
-    );
-    const imgStyle = useMemo(
-        () => ({ width: '100%', height: '100%' }) as ImageStyle,
-        []
+    const overlay = (
+        <View style={styles.overlayBottom}>
+            <Text
+                numberOfLines={2}
+                ellipsizeMode="tail"
+                style={styles.overlayTitle}
+            >
+                {name}
+            </Text>
+            <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={styles.overlaySubtitle}
+            >
+                {countryName}
+            </Text>
+        </View>
     );
 
     return (
         <View style={styles.container}>
-            <Pressable
+            <UnifiedTravelCard
+                title={name}
+                imageUrl={optimizedImageUrl ?? null}
                 onPress={onPress}
-                disabled={!canOpen}
-                android_ripple={{ color: `${DESIGN_TOKENS.colors.primary}33`, borderless: false }} // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
-                style={({ pressed }) => [
+                mediaFit="contain"
+                containerOverlaySlot={overlay}
+                imageHeight={imageHeight}
+                style={[
                     styles.card,
-                    globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                    globalFocusStyles.focusable,
                     { padding: cardDimensions.cardPadding },
-                    pressed && styles.cardPressed,
                     !canOpen && styles.cardDisabled,
                 ]}
-                accessibilityRole="link"
-                accessibilityLabel={`${name}, ${countryName}`}
-            >
-                <View style={[styles.imageWrapper, imageWrapperStyle]}>
-                    {failed || !optimizedImageUrl ? (
-                        <View style={styles.placeholder} />
-                    ) : (
-                        <>
-                            <ExpoImage
-                                source={{ uri: optimizedImageUrl }}
-                                onError={() => setFailed(true)}
-                                style={StyleSheet.absoluteFill}
-                                contentFit="cover"
-                                cachePolicy="memory-disk"
-                                transition={0}
-                                blurRadius={12}
-                            />
-                            <View style={styles.imageOverlay} />
-                            <ExpoImage
-                                source={{ uri: optimizedImageUrl }}
-                                onError={() => setFailed(true)}
-                                style={[styles.image, imgStyle]}
-                                contentFit="cover"
-                                cachePolicy="memory-disk"
-                                transition={200}
-                                {...(Platform.OS === "web" ? { loading: "lazy" as any } : {})}
-                            />
-                        </>
-                    )}
-
-                    <View style={styles.overlayBottom}>
-                        <Text
-                            numberOfLines={2}
-                            ellipsizeMode="tail"
-                            style={styles.overlayTitle}
-                        >
-                            {name}
-                        </Text>
-                        <Text
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                            style={styles.overlaySubtitle}
-                        >
-                            {countryName}
-                        </Text>
-                    </View>
-                </View>
-            </Pressable>
+                webAsView={Platform.OS === 'web'}
+                mediaProps={{
+                    blurBackground: true,
+                }}
+            />
         </View>
     );
 };

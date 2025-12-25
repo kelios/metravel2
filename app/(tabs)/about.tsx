@@ -2,20 +2,20 @@
 import React, { useCallback, useRef, useState, useMemo, memo } from 'react';
 import {
   ScrollView,
-  View,
-  Text,
-  StyleSheet,
-  Linking,
-  KeyboardAvoidingView,
-  Platform,
-  TextInput,
   ActivityIndicator,
+  Platform,
+  KeyboardAvoidingView,
   Pressable,
   StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  Linking,
+  View,
 } from 'react-native';
 import { Title, Paragraph } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import { Image as ExpoImage } from 'expo-image';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import InstantSEO from '@/components/seo/InstantSEO';
 import { sendFeedback } from '@/src/api/misc';
 import { useIsFocused } from '@react-navigation/native';
@@ -102,7 +102,9 @@ function AboutAndContactScreen() {
 
   const sendMail = useCallback(() => {
     const url = `mailto:${EMAIL}?subject=${encodeURIComponent(MAIL_SUBJECT)}&body=${encodeURIComponent(MAIL_BODY)}`;
-    Linking.canOpenURL(url).then((supported) => supported && Linking.openURL(url)).catch(() => {});
+    Linking.canOpenURL(url)
+      .then((supported: boolean) => supported && Linking.openURL(url))
+      .catch(() => {});
   }, []);
 
   const openYoutube = useCallback(() => {
@@ -304,14 +306,15 @@ function AboutAndContactScreen() {
                                 decoding="async"
                               />
                             ) : (
-                              <ExpoImage
-                                source={{ uri: YT_THUMB }}
-                                style={styles.videoThumb}
-                                contentFit="cover"
+                              <ImageCardMedia
+                                src={YT_THUMB}
+                                fit="cover"
+                                blurBackground={false}
                                 transition={200}
                                 cachePolicy="memory-disk"
-                                placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgRj" }}
                                 priority="low"
+                                placeholderBlurhash="L6PZfSi_.AyE_3t7t7R**0o#DgRj"
+                                style={styles.videoThumb}
                               />
                             )}
                             <View style={styles.playBadge}>

@@ -176,9 +176,10 @@ describe('PopupContentComponent (web popup template)', () => {
 
     if (styleTag) {
       const css = styleTag.innerHTML.replace(/\s+/g, ' ');
-      // Проверяем, что у .popup-photo зашита фиксированная высота 280px
+      // Проверяем, что у .popup-photo задана явная высота (через clamp для адаптива),
+      // чтобы карточки с фото и без фото не "скакали" по высоте.
       expect(css).toContain('popup-photo {');
-      expect(css).toContain('height: 280px;');
+      expect(css).toContain('height: clamp(');
     }
   });
 

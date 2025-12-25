@@ -32,6 +32,19 @@ console.error = (message, ...args) => {
 // Ensure critical Expo env vars exist for API clients referenced in tests
 process.env.EXPO_PUBLIC_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://example.test/api'
 
+// JSDOM doesn't implement canvas APIs by default; mock them to avoid noisy errors.
+if (typeof window !== 'undefined' && (window as any).HTMLCanvasElement?.prototype) {
+  const proto = (window as any).HTMLCanvasElement.prototype
+  if (typeof proto.getContext !== 'function') {
+    proto.getContext = jest.fn(() => ({}))
+  } else {
+    // Some jsdom versions throw a "Not implemented" error - override.
+    proto.getContext = jest.fn(() => ({}))
+  }
+  // Some jsdom versions implement toDataURL but return null/throw; override to keep tests stable.
+  proto.toDataURL = jest.fn(() => 'data:image/webp;base64,AAAA')
+}
+
 // Polyfill TextEncoder/TextDecoder for JSDOM environment
 import { TextEncoder, TextDecoder } from 'util'
 global.TextEncoder = TextEncoder

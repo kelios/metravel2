@@ -11,7 +11,6 @@ import {
   DeviceEventEmitter,
   Alert,
 } from "react-native";
-import { Image as ExpoImage } from "expo-image";
 import { MaterialIcons, MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import { Text } from "react-native-paper";
 import type { Travel } from "@/src/types/types";
@@ -23,6 +22,7 @@ import type { BookSettings } from "@/components/export/BookSettingsModal";
 import { useSingleTravelExport } from "@/components/travel/hooks/useSingleTravelExport";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 const Fallback = () => (
   <View style={styles.fallback}>
@@ -275,15 +275,17 @@ function CompactSideBarTravel({
             <View style={styles.cardRow}>
               <View style={styles.avatarWrap}>
                 {avatarUri ? (
-                  <ExpoImage
-                    source={{ uri: avatarUri }}
-                    style={styles.avatar}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
+                  <ImageCardMedia
+                    src={avatarUri}
+                    alt={userName || 'Автор'}
+                    width={styles.avatar.width as any}
+                    height={styles.avatar.height as any}
+                    borderRadius={styles.avatar.borderRadius as any}
+                    fit="cover"
+                    blurBackground={false}
                     priority="low"
-                    transition={200}
-                    placeholder={require("@/assets/placeholder.webp")}
-                    {...(Platform.OS === "web" ? ({ loading: "lazy" } as any) : {})}
+                    loading="lazy"
+                    style={styles.avatar}
                   />
                 ) : (
                   <MaterialIcons name="image" size={60} color="#ccc" />

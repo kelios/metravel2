@@ -6,13 +6,13 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, type ViewProps } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Image as ExpoImage } from 'expo-image';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import type { Travel } from '@/src/types/types';
 import { openExternalUrl } from '@/src/utils/externalLinks';
 import { useUserProfileCached } from '@/src/hooks/useUserProfileCached';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 interface AuthorCardProps {
   travel: Travel;
@@ -166,6 +166,12 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
     return normalizedUri;
   }, [authorProfile?.avatar, travelUserAvatar, normalizeMediaUrl]);
 
+  const avatarSize = useMemo(
+    () => (isMobile ? 64 : Platform.select({ default: 72, web: 96 })!),
+    [isMobile]
+  );
+  const avatarBorderRadius = useMemo(() => Math.round(avatarSize / 2), [avatarSize]);
+
   // Не показываем если нет данных об авторе
   if (!userName && !authorCountryName && !userId) {
     return null;
@@ -183,14 +189,17 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
           disabled={!userId}
         >
           {avatarUri ? (
-            <ExpoImage
-              source={{ uri: avatarUri }}
-              style={[styles.avatar, isMobile && styles.avatarMobile]}
-              contentFit="cover"
-              cachePolicy="memory-disk"
+            <ImageCardMedia
+              src={avatarUri}
+              alt={userName || 'Автор'}
+              width={avatarSize}
+              height={avatarSize}
+              borderRadius={avatarBorderRadius}
+              fit="cover"
+              blurBackground={false}
               priority="low"
-              transition={200}
-              placeholder={require("@/assets/placeholder.webp")}
+              loading="lazy"
+              style={[styles.avatar, isMobile && styles.avatarMobile]}
             />
           ) : (
             <SafeView style={[styles.avatarPlaceholder, isMobile && styles.avatarMobile]}>

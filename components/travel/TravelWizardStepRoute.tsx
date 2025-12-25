@@ -511,7 +511,11 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
 };
 
 const styles = StyleSheet.create({
-    safeContainer: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
+    safeContainer: {
+        flex: 1,
+        backgroundColor: DESIGN_TOKENS.colors.background,
+        ...(Platform.OS === 'web' ? ({ minHeight: '100vh' } as any) : null),
+    },
     keyboardAvoid: { flex: 1 },
     validationSummaryWrapper: {
         paddingHorizontal: DESIGN_TOKENS.spacing.md,

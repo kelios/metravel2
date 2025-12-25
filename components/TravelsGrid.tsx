@@ -99,18 +99,18 @@ function TravelsGridComponent<T>({
         ))}
         
         {/* Fill remaining space in the last row if needed */}
-        {rowItems.length < columns && numColumns === 'responsive' &&
+        {rowItems.length < columns &&
           Array(columns - rowItems.length)
             .fill(null)
             .map((_, i) => (
-              <View 
-                key={`spacer-${rowIndex}-${i}`} 
+              <View
+                key={`spacer-${rowIndex}-${i}`}
                 style={itemContainerStyle}
               />
             ))}
       </View>
     );
-  }, [renderItem, keyExtractor, numColumns, columns, columnWrapperStyle, itemContainerStyle]);
+  }, [renderItem, keyExtractor, columns, columnWrapperStyle, itemContainerStyle]);
 
   // Memoize the list key to prevent unnecessary re-renders
   const listKey = useMemo(() => `travels-grid-${rows.length}-${columns}`, [rows.length, columns]);

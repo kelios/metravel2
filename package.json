@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "check-deps": "node scripts/check-dependencies.js",
+    "check:image-architecture": "node scripts/check-image-architecture.js",
     "start": "npx expo start",
     "android": "npx expo start --android",
     "ios": "npx expo start --ios",
@@ -14,7 +15,7 @@
     "e2e:headed": "playwright test --headed",
     "e2e:ui": "playwright test --ui",
     "test": "jest --watchAll",
-    "test:ci": "jest --ci --runInBand --reporters=default --testLocationInResults --json --outputFile=jest-results.json | tee jest-full.log",
+    "test:ci": "npm run check:image-architecture && jest --ci --runInBand --reporters=default --testLocationInResults --json --outputFile=jest-results.json | tee jest-full.log",
     "test:coverage": "jest --coverage",
     "format": "npx prettier --write .",
     "build:web": "npx expo export -p web",

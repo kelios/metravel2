@@ -29,7 +29,7 @@ function build_env() {
   apply_env $ENV
 
   echo "🛠️ NODE_ENV=dev"
-  NODE_ENV=production \
+  NODE_ENV=dev \
   EXPO_ENV=$ENV \
   EXPO_NO_METRO_LAZY=true \
   EXPO_WEB_BUILD_MINIFY=true \
@@ -38,13 +38,38 @@ function build_env() {
 
 }
 
+function deploy_dev() {
+  rsync -avzhe "ssh" --delete \
+    ./dist/ \
+    sergey@192.168.50.36:/home/sergey/metravel/dist/
+
+  rsync -avzhe "ssh" --delete \
+    ./assets/icons/ \
+    sergey@192.168.50.36:/home/sergey/metravel/icons/
+
+  rsync -avzhe "ssh" --delete \
+    ./assets/images/ \
+    sergey@192.168.50.36:/home/sergey/metravel/images/
+
+  ssh sergey@192.168.50.36 "set -e
+    cd /home/sergey/metravel
+    rm -rf static/dist
+    mv dist/dev static/dist
+    mkdir -p static/dist/assets/icons static/dist/assets/images
+    cp -R icons/. static/dist/assets/icons/
+    cp -R images/. static/dist/assets/images/
+    docker-compose restart app nginx
+    rm -rf dist icons images
+  "
+  rm -rf dist
+}
 echo "🔁 Старт полной сборки..."
 
 clean_all
 
 build_env dev
+echo "🔁 Старт деплоя ..."
+deploy_dev
 
-echo "📂 Общий размер папки dist:"
-du -sh dist/
 
 echo "🎉 Сборка завершена успешно!"

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import MapView, { Marker, Callout } from 'react-native-maps';
-import { Image as ExpoImage } from 'expo-image';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 type Point = {
   id: number;
@@ -81,19 +81,16 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
                 <View>
                   {point?.travelImageThumbUrl ? (
                       <View style={styles.pointImageWrap}>
-                        <ExpoImage
-                          source={{ uri: point.travelImageThumbUrl }}
-                          style={StyleSheet.absoluteFill}
-                          contentFit="cover"
+                        <ImageCardMedia
+                          src={point.travelImageThumbUrl}
+                          fit="contain"
+                          blurBackground
                           blurRadius={12}
-                          transition={0}
-                        />
-                        <View style={styles.pointImageOverlay} />
-                        <ExpoImage
-                          source={{ uri: point.travelImageThumbUrl }}
-                          style={StyleSheet.absoluteFill}
-                          contentFit="contain"
+                          overlayColor="rgba(255,255,255,0.12)"
                           transition={200}
+                          loading="lazy"
+                          priority="low"
+                          style={StyleSheet.absoluteFillObject}
                         />
                       </View>
                   ) : null}

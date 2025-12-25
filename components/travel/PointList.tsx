@@ -11,7 +11,6 @@ import {
   ListRenderItemInfo,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { Image as ExpoImage } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
@@ -19,6 +18,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
 import { useResponsive } from '@/hooks/useResponsive';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 type Point = {
   id: string;
@@ -145,14 +145,16 @@ const PointCard = React.memo(function PointCard({
           ]}
         >
           {imgUri && !imageError ? (
-            <ExpoImage
-              source={{ uri: imgUri }}
-              style={styles.image}
-              contentFit="contain"
-              cachePolicy="memory-disk"
-              transition={120}
+            <ImageCardMedia
+              src={imgUri}
+              alt={point.address}
+              fit="contain"
+              blurBackground
+              blurRadius={16}
               priority="low"
+              loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
               onError={handleImageError}
+              style={StyleSheet.absoluteFill}
             />
           ) : (
             <View style={[styles.noImage, { minHeight: responsive.imageMinHeight }]}>

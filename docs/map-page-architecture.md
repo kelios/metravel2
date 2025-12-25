@@ -110,6 +110,13 @@ Interactive travel discovery and route planning page combining:
   - E2E-style verification of `RoutingMachine` behavior using mocked Leaflet + fetch.
   - Avoid strict `latLng` call count assertions; assert meaningful outcomes (polyline creation, full coords propagation).
 
+## Reverse Geocoding Locale (Travel Wizard)
+- Route-building map clicks in the Travel Wizard (web) use reverse geocoding to derive a human-readable address and auto-select a country.
+- Reverse geocoding requests are localized to Russian:
+  - BigDataCloud uses `localityLanguage=ru`.
+  - Nominatim uses `accept-language=ru`.
+- Country selection is matched primarily by ISO2 country code (e.g. `PL`) when available, with a fallback to matching by country name.
+
 ## Hypothetical Risks & Mitigations
 - **Routing loop / max update depth** (stack in RoutingMachine): State setters could fire on every render if `useRouting` returns new refs or parent handlers aren’t stable.  
   - Mitigation: ensure `useRouting` memoizes results; wrap parent setters in `useCallback`; keep deps primitive; add guard to skip setter calls when values unchanged.

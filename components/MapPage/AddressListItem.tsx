@@ -9,7 +9,7 @@ import {
     Platform,
 } from 'react-native';
 import { Text, IconButton } from 'react-native-paper';
-import { Image as ExpoImage } from 'expo-image';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 import { TravelCoords } from '@/src/types/types';
@@ -193,33 +193,30 @@ const AddressListItem: React.FC<Props> = ({
       >
         <View style={styles.image}>
           {imgUri ? (
-            <>
-              <ExpoImage
-                source={{ uri: imgUri }}
-                style={StyleSheet.absoluteFill}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                transition={0}
-                blurRadius={12}
-                onLoadEnd={() => setImgLoaded(true)}
-              />
-              <View style={styles.imageOverlay} />
-              <ExpoImage
-                source={{ uri: imgUri }}
-                style={StyleSheet.absoluteFill}
-                contentFit="contain"
-                cachePolicy="memory-disk"
-                transition={200}
-                onLoadEnd={() => setImgLoaded(true)}
-              />
-            </>
+            <ImageCardMedia
+              src={imgUri}
+              fit="contain"
+              blurBackground
+              blurRadius={12}
+              overlayColor="rgba(255,255,255,0.12)"
+              cachePolicy="memory-disk"
+              transition={200}
+              loading="lazy"
+              priority="low"
+              style={StyleSheet.absoluteFillObject}
+              onLoad={() => setImgLoaded(true)}
+              onError={() => setImgLoaded(true)}
+            />
           ) : (
             <View style={styles.noDataWrap}>
-              <ExpoImage
+              <ImageCardMedia
                 source={require('@/assets/no-data.webp')}
-                style={styles.noDataImage}
-                contentFit="contain"
+                fit="contain"
+                blurBackground={false}
                 transition={0}
+                loading="lazy"
+                priority="low"
+                style={styles.noDataImage}
               />
             </View>
           )}

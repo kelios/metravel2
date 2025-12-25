@@ -46,6 +46,7 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
         <View
             style={[
                 styles.footer,
+                isWeb ? styles.footerWeb : null,
                 isMobile && (isWeb ? styles.footerMobileWeb : styles.footerMobileNative),
                 isMobile && !isWeb ? { paddingBottom: 8 + insets.bottom } : null,
             ]}
@@ -195,6 +196,12 @@ const styles = StyleSheet.create({
         ...(Platform.OS === 'web'
             ? ({ boxShadow: '0 -2px 8px rgba(0,0,0,0.06)' } as any)
             : {}),
+    },
+    footerWeb: {
+        position: 'sticky' as any,
+        left: 0,
+        right: 0,
+        bottom: 0,
     },
     footerMobileNative: {
         position: 'absolute',

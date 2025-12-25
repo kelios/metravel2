@@ -1,19 +1,19 @@
 // src/components/listTravel/TravelListItem.tsx
-import React, { memo, useCallback, useMemo, useState, useRef, useEffect } from "react";
+import React, { memo, useCallback, useMemo, useRef, useEffect } from "react";
 import { View, Pressable, Text, StyleSheet, Platform } from "react-native";
-import { Image as ExpoImage } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/src/types/types";
 import OptimizedFavoriteButton from "@/components/OptimizedFavoriteButton";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travelsApi";
-import { generateSrcSet, optimizeImageUrl } from "@/utils/imageOptimization";
+import { optimizeImageUrl } from "@/utils/imageOptimization";
+import UnifiedTravelCard from "@/components/ui/UnifiedTravelCard";
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
 import { getResponsiveCardValues } from './enhancedTravelCardStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { formatViewCount } from "@/components/travel/utils/travelHelpers";
-import { TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT, TRAVEL_CARD_WEB_MOBILE_HEIGHT } from './utils/listTravelConstants';
+import { TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_MAX_WIDTH } from './utils/listTravelConstants';
 
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
@@ -36,187 +36,20 @@ const isLikelyWatermarked = (url: string | null | undefined): boolean => {
   return WATERMARK_DOMAINS.some((domain) => lower.includes(domain));
 };
 
-const WebImageOptimized = memo(function WebImageOptimized({
-                                                              src,
-                                                              alt,
-                                                              priority = false,
-                                                              width,
-                                                              height,
-                                                          }: {
-    src: string;
-    alt: string;
-    priority?: boolean;
-    width: number;
-    height: number;
-}) {
-    // ✅ ОПТИМИЗАЦИЯ: Intersection Observer для lazy loading (кроме приоритетных картинок)
-    const [isInView, setIsInView] = useState(priority);
-    const [isLoaded, setIsLoaded] = useState(false);
-    const imgRef = useRef<HTMLImageElement>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (Platform.OS !== "web" || typeof document === "undefined") {
-            return;
-        }
-
-        // Для приоритетных изображений (первой карточки) не используем lazy loading — грузим сразу
-        if (priority) {
-            setIsInView(true);
-            return;
-        }
-
-        // ✅ Fallback: если IntersectionObserver недоступен (некоторые браузеры/вебвью), грузим сразу
-        if (typeof (window as any).IntersectionObserver === 'undefined') {
-            setIsInView(true);
-            return;
-        }
-
-        if (!containerRef.current) return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0].isIntersecting) {
-                    setIsInView(true);
-                    observer.disconnect();
-                }
-            },
-            { rootMargin: '50px' } // Начинаем загрузку за 50px до появления
-        );
-
-        observer.observe(containerRef.current);
-        return () => observer.disconnect();
-    }, [priority]);
-    
-    const imageSrcSet = useMemo(() => generateSrcSet(src, [400, 800, 1200]), [src]);
-    // Для трёх колонок с левой панелью уточняем sizes, чтобы не тянуть лишнее
-    const imageSizes = useMemo(
-      () => "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 30vw",
-      []
-    );
-
-    if (Platform.OS !== 'web' || typeof document === 'undefined') {
-        return null;
-    }
-
-    return (
-        <div
-          ref={containerRef}
-          style={{
-            position: 'relative',
-            width: '100%',
-            height: '100%',
-            overflow: 'hidden',
-            backgroundColor: TOKENS.colors.backgroundSecondary as any,
-          }}
-        >
-          <img
-            src={isInView ? src : undefined}
-            srcSet={isInView ? imageSrcSet : undefined}
-            sizes={imageSizes}
-            alt=""
-            width={width}
-            height={height}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              filter: 'blur(14px)',
-              transform: 'scale(1.08)',
-              opacity: 1,
-            }}
-            loading={priority ? 'eager' : 'lazy'}
-            decoding="async"
-            aria-hidden="true"
-          />
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundColor: 'rgba(255,255,255,0.12)',
-            }}
-          />
-          <img
-            ref={imgRef}
-            src={isInView ? src : undefined}
-            srcSet={isInView ? imageSrcSet : undefined}
-            sizes={imageSizes}
-            alt={alt}
-            width={width}
-            height={height}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              display: 'block',
-              opacity: priority ? 1 : isLoaded ? 1 : 0,
-              transition: priority ? undefined : 'opacity 0.3s ease',
-              // Prevent layout shifts
-              aspectRatio: `${width} / ${height}`,
-            }}
-            loading={priority ? 'eager' : 'lazy'}
-            decoding="async"
-            onLoad={() => setIsLoaded(true)}
-            {...({ fetchpriority: priority ? 'high' : 'auto' } as any)}
-          />
-        </div>
-    );
-});
-
-const NativeImageOptimized = memo(function NativeImageOptimized({
-                                                                    uri,
-                                                                }: {
-    uri: string;
-}) {
-    return (
-        <View style={styles.imageLayerRoot}>
-          <ExpoImage
-            source={{ uri }}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            transition={0}
-            cachePolicy="memory-disk"
-            placeholder={{ blurhash: PLACEHOLDER_BLURHASH }}
-            priority="low"
-            recyclingKey={`${uri}-bg`}
-            accessibilityIgnoresInvertColors
-            blurRadius={14}
-          />
-          <View style={styles.imageOverlay} />
-          <ExpoImage
-            source={{ uri }}
-            style={styles.img}
-            contentFit="contain"
-            transition={180}
-            cachePolicy="memory-disk"
-            placeholder={{ blurhash: PLACEHOLDER_BLURHASH }}
-            priority="low"
-            recyclingKey={uri}
-            accessibilityIgnoresInvertColors
-            testID="travel-image"
-          />
-        </View>
-    );
-});
-
 const CountriesList = memo(function CountriesList({ countries }: { countries: string[] }) {
-    if (!countries.length) return null;
-    return (
-        <View style={styles.tags}>
-            {countries.slice(0, 1).map((c) => (
-                <View key={c} style={styles.tag}>
-                    <Feather name="map-pin" size={11} color={ICON_COLOR} style={{ marginRight: 4 }} />
-                    <Text style={styles.tagTxt} numberOfLines={1} ellipsizeMode="tail">
-                        {c}
-                    </Text>
-                </View>
-            ))}
+  if (!countries.length) return null;
+  return (
+    <View style={styles.tags}>
+      {countries.slice(0, 1).map((c) => (
+        <View key={c} style={styles.tag}>
+          <Feather name="map-pin" size={11} color={ICON_COLOR} style={{ marginRight: 4 }} />
+          <Text style={styles.tagTxt} numberOfLines={1} ellipsizeMode="tail">
+            {c}
+          </Text>
         </View>
-    );
+      ))}
+    </View>
+  );
 });
 
 type Props = {
@@ -303,6 +136,14 @@ function TravelListItem({
         return '';
     }, [userName, travel]);
 
+    const authorNameDisplay = useMemo(() => {
+        const v = (authorName || '').trim();
+        // Если в данных приходит плейсхолдер вроде "....." — показываем нормальный fallback
+        if (!v) return 'Аноним';
+        if (/^[.\s\u00B7\u2022_-]{2,}$/.test(v)) return 'Аноним';
+        return v;
+    }, [authorName]);
+
     const views = Number(countUnicIpView) || 0;
 
     const viewsFormatted = useMemo(() => formatViewCount(views), [views]);
@@ -311,6 +152,10 @@ function TravelListItem({
         const key = (typeof slug === 'string' && slug.trim()) ? slug.trim() : id;
         return `/travels/${key}`;
     }, [id, slug]);
+
+    const cardTestId = useMemo(() => {
+        return selectable ? `travel-card-selectable-${id}` : `travel-card-${id}`;
+    }, [selectable, id]);
 
     // ✅ УЛУЧШЕНИЕ: Оптимизация превью под карточку с использованием новых утилит
     const imgUrl = useMemo(() => {
@@ -546,7 +391,6 @@ function TravelListItem({
 
     
     // ✅ FIX: На web всегда используем View, чтобы избежать вложенных button ↔ button
-    const CardWrapper = Platform.OS === 'web' ? View : Pressable;
     const InlineWebButton = Platform.OS === 'web' ? View : Pressable;
     // ✅ B5.1: Улучшенные accessibility атрибуты
     const cardWrapperProps =
@@ -566,6 +410,7 @@ function TravelListItem({
                   handlePress();
                 }
               },
+              onMouseDown: (e: any) => e.stopPropagation?.(),
               'aria-pressed': isSelected,
               'aria-label': `Путешествие: ${name}${countries.length > 0 ? `. Страны: ${countries.join(', ')}` : ''}. Просмотров: ${viewsFormatted}`,
             } as any)
@@ -577,345 +422,257 @@ function TravelListItem({
             accessibilityLabel: `Путешествие: ${name}${countries.length > 0 ? `. Страны: ${countries.join(', ')}` : ''}. Просмотров: ${viewsFormatted}`,
             accessibilityRole: "button" as const,
             accessibilityHint: selectable ? 'Двойное нажатие для выбора' : 'Двойное нажатие для просмотра деталей',
-            // ✅ B5.1: Дополнительные ARIA атрибуты для web
-            // @ts-ignore - aria attributes for web accessibility
           };
 
-    const cardTestId = 'travel-card';
-    const card = (
-      <CardWrapper
-        {...cardWrapperProps}
-        testID={cardTestId}
-        style={[
-          styles.card,
-          Platform.OS === 'web' &&
-            (isMobile
-              ? {
-                  // На mobile web карточка должна расти по контенту (иначе режутся мета/реакции)
-                  height: undefined,
-                  minHeight: TRAVEL_CARD_WEB_MOBILE_HEIGHT,
-                }
-              : {
-                  // На desktop web сохраняем одинаковую высоту в сетке
-                  height: TRAVEL_CARD_WEB_HEIGHT,
-                }),
-          Platform.OS === 'web' && {
-            // ✅ Радиус карточки на web теперь зависит от ширины viewport
-            borderRadius: responsiveValues.borderRadius,
-          },
-          globalFocusStyles.focusable,
-          Platform.OS === "android" && styles.androidOptimized,
-          isSingle && styles.single,
-          selectable && isSelected && styles.selected,
-        ]}
-      >
-        {selectable && (
-          <View
-            style={[
-              {
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: isSelected ? "rgba(5,150,105,0.12)" : "rgba(96,165,250,0.08)",
-                zIndex: 2,
-                opacity: 1,
-                transitionDuration: "150ms",
-                pointerEvents: 'none',
-              } as any,
-            ]}
-          />
-        )}
-        {/* Блок изображения */}
-        <View style={styles.imageContainer}>
-          {imgUrl && !isLikelyWatermarked(imgUrl) ? (
-            Platform.OS === "web" ? (
-              // Первую карточку загружаем с приоритетом для улучшения LCP
-              <WebImageOptimized
-                src={imgUrl}
-                alt={name}
-                priority={!!isFirst}
-                width={typeof cardWidth === 'number' ? Math.round(cardWidth) : 360}
-                height={TRAVEL_CARD_IMAGE_HEIGHT}
-              />
-            ) : (
-              <NativeImageOptimized uri={imgUrl} />
-            )
-          ) : (
-            <View style={styles.imgStub} testID="image-stub">
-              <Feather name="image" size={40} color="#94a3b8" />
-            </View>
-          )}
+const selectableOverlay = selectable ? (
+  <View style={styles.checkWrap}>
+    <InlineWebButton
+      accessibilityRole={Platform.OS === 'web' ? undefined : 'button'}
+      accessibilityLabel={isSelected ? 'Убрать из выбранного' : 'Выбрать'}
+      testID="selection-checkbox"
+      {...(Platform.OS === 'web'
+        ? (cardWrapperProps as any)
+        : ({ onPress: handlePress } as any))}
+    >
+      <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+        {isSelected && <Feather name="check" size={14} color="#fff" />}
+      </View>
+    </InlineWebButton>
+  </View>
+) : null;
 
-          {/* Избранное (сердечко) в правом верхнем углу */}
-          {!selectable && (
-            <View
-              style={[
-                styles.favoriteButtonContainer,
-                { pointerEvents: 'box-none' } as any,
-              ]}
-              {...(Platform.OS === 'web' && {
-                onClick: (e: any) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                },
-                onMouseDown: (e: any) => e.stopPropagation(),
-              })}
-            >
-              <OptimizedFavoriteButton
-                id={id}
-                type="travel"
-                title={name}
-                imageUrl={travel_image_thumb_url}
-                url={travelUrl}
-                country={countries[0]}
-                size={Platform.select({ default: 16, web: 18 })}
-              />
-            </View>
-          )}
-          {canEdit && (
-            <View style={styles.adminActionsContainer}>
-              <InlineWebButton
-                accessibilityRole={Platform.OS === 'web' ? undefined : 'button'}
-                accessibilityLabel="Редактировать"
-                onPress={(handleEdit as any)}
-                style={styles.adminBtn}
-                {...(Platform.OS === 'web'
-                  ? ({
-                      role: 'button',
-                      tabIndex: 0,
-                      onClick: (e: any) => handleEdit(e),
-                      onKeyDown: (e: any) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleEdit(e);
-                        }
-                      },
-                      onMouseDown: (e: any) => e.stopPropagation?.(),
-                    } as any)
-                  : {})}
-              >
-                <Feather name="edit-2" size={14} color={TOKENS.colors.text} />
-              </InlineWebButton>
-              <View style={styles.adminDivider} />
-              <InlineWebButton
-                accessibilityRole={Platform.OS === 'web' ? undefined : 'button'}
-                accessibilityLabel="Удалить"
-                onPress={(handleDelete as any)}
-                style={styles.adminBtn}
-                testID="delete-button"
-                {...(Platform.OS === 'web'
-                  ? ({
-                      role: 'button',
-                      tabIndex: 0,
-                      onClick: (e: any) => handleDelete(e),
-                      onKeyDown: (e: any) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleDelete(e);
-                        }
-                      },
-                      onMouseDown: (e: any) => e.stopPropagation?.(),
-                    } as any)
-                  : {})}
-              >
-                <Feather name="trash-2" size={14} color={TOKENS.colors.danger} />
-              </InlineWebButton>
-            </View>
-          )}
-          {selectable && (
-            <InlineWebButton
-              style={styles.checkWrap}
-              testID="selection-checkbox"
-              accessibilityRole={Platform.OS === 'web' ? undefined : 'checkbox'}
-              accessibilityState={{ checked: isSelected }}
-              onPress={(e: any) => {
-                if (e?.stopPropagation) {
-                  e.stopPropagation();
-                }
-                onToggle?.();
-              }}
-              {...(Platform.OS === 'web'
-                ? ({
-                    role: 'checkbox',
-                    tabIndex: 0,
-                    'aria-checked': isSelected,
-                    onClick: (e: any) => {
-                      e.stopPropagation?.();
-                      e.preventDefault?.();
-                      onToggle?.();
-                    },
-                    onKeyDown: (e: any) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        onToggle?.();
-                      }
-                    },
-                    onMouseDown: (e: any) => e.stopPropagation?.(),
-                  } as any)
-                : {})}
-            >
-              <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
-                {isSelected && <Feather name="check" size={14} color="#fff" />}
-              </View>
-            </InlineWebButton>
-          )}
-        </View>
+const rightTopSlot = (
+  <View
+    style={[styles.favoriteButtonContainer, { pointerEvents: 'box-none' } as any]}
+    {...(Platform.OS === 'web' && {
+      onClick: (e: any) => {
+        e.stopPropagation();
+        e.preventDefault();
+      },
+      onMouseDown: (e: any) => e.stopPropagation(),
+    })}
+  >
+    <OptimizedFavoriteButton
+      id={id}
+      type="travel"
+      title={name}
+      imageUrl={travel_image_thumb_url}
+      url={travelUrl}
+      country={countries[0]}
+      size={Platform.select({ default: 16, web: 18 })}
+    />
+  </View>
+);
 
-        {/* Контент под изображением */}
-        <View style={styles.contentBelow}>
-          <Text
-            style={[
-              styles.title,
-              Platform.OS === 'web' && {
-                // Фиксированная типографика заголовка на web
-                fontFamily: "Inter, System",
-                fontSize: 17,
-                lineHeight: responsiveValues.titleLineHeight,
-                marginBottom: responsiveValues.titleMarginBottom,
-                minHeight: responsiveValues.titleMinHeight,
-              },
-            ]}
-            numberOfLines={2}
-          >
-            {name}
-          </Text>
+const leftTopSlot = canEdit ? (
+  <View style={styles.adminActionsContainer}>
+    <InlineWebButton
+      accessibilityRole={Platform.OS === 'web' ? undefined : 'button'}
+      accessibilityLabel="Редактировать"
+      onPress={(handleEdit as any)}
+      style={styles.adminBtn}
+      {...(Platform.OS === 'web'
+        ? ({
+            role: 'button',
+            tabIndex: 0,
+            onClick: (e: any) => handleEdit(e),
+            onKeyDown: (e: any) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleEdit(e);
+              }
+            },
+            onMouseDown: (e: any) => e.stopPropagation?.(),
+          } as any)
+        : {})}
+    >
+      <Feather name="edit-2" size={14} color={TOKENS.colors.text} />
+    </InlineWebButton>
+    <View style={styles.adminDivider} />
+    <InlineWebButton
+      accessibilityRole={Platform.OS === 'web' ? undefined : 'button'}
+      accessibilityLabel="Удалить"
+      onPress={(handleDelete as any)}
+      style={styles.adminBtn}
+      testID="delete-button"
+      {...(Platform.OS === 'web'
+        ? ({
+            role: 'button',
+            tabIndex: 0,
+            onClick: (e: any) => handleDelete(e),
+            onKeyDown: (e: any) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleDelete(e);
+              }
+            },
+            onMouseDown: (e: any) => e.stopPropagation?.(),
+          } as any)
+        : {})}
+    >
+      <Feather name="trash-2" size={14} color={TOKENS.colors.danger} />
+    </InlineWebButton>
+  </View>
+) : null;
 
-          {/* Страна путешествия */}
-          {countries.length > 0 && <CountriesList countries={countries} />}
+const contentSlot = (
+  <>
+    <Text
+      style={[
+        styles.title,
+      ]}
+      numberOfLines={2}
+    >
+      {name}
+    </Text>
 
-          <View
-            style={[
-              styles.metaRow,
-              Platform.OS === 'web' && typeof viewportWidth === 'number' && viewportWidth < 375 && {
-                // ✅ На очень узких экранах выравниваем по верху, чтобы элементы могли переноситься на новую строку
-                alignItems: 'flex-start',
-              },
-            ]}
-          >
-            {/* Первая строка: иконка пользователя + имя + просмотры */}
-            <View style={styles.metaInfoTopRow}>
-              {!hideAuthor && (
-                <View style={styles.metaBox}>
-                  <Feather
-                    name="user"
-                    size={Platform.select({ default: 10, web: 11 })}
-                    color="#64748b"
-                    style={{ marginRight: 4 }}
-                  />
-                  {Platform.OS === 'web' ? (
-                    <View
-                      {...({
-                        ...(authorUserId
-                          ? {
-                              role: 'button',
-                              tabIndex: 0,
-                              'aria-label': `Открыть профиль автора ${authorName || 'Аноним'}`,
-                              onClick: (e: any) => handleAuthorPress(e),
-                              onKeyDown: (e: any) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  handleAuthorPress(e);
-                                }
-                              },
-                              onMouseDown: (e: any) => e.stopPropagation?.(),
-                              style: { cursor: 'pointer' },
-                            }
-                          : {
-                              style: { cursor: 'default' },
-                            }),
-                      } as any)}
-                    >
-                      <Text style={styles.metaTxt}>
-                        {authorName || 'Аноним'}
-                      </Text>
-                    </View>
-                  ) : (
-                    <Pressable
-                      onPress={handleAuthorPress}
-                      disabled={!authorUserId}
-                      accessibilityRole={authorUserId ? 'button' : undefined}
-                      accessibilityLabel={authorUserId ? `Открыть профиль автора ${authorName || 'Аноним'}` : undefined}
-                    >
-                      <Text style={styles.metaTxt}>
-                        {authorName || 'Аноним'}
-                      </Text>
-                    </Pressable>
-                  )}
-                </View>
-              )}
-              {views > 0 && (
-                <View
-                  style={styles.metaBoxViews}
-                  testID="views-meta"
-                >
-                  <Feather
-                    name="eye"
-                    size={Platform.select({ default: 10, web: 11 })}
-                    color="#64748b"
-                    style={{ marginRight: 4 }}
-                  />
-                  <Text style={styles.metaTxtViews}>{viewsFormatted}</Text>
-                </View>
-              )}
-            </View>
+    <View style={styles.countrySlot}>
+      {countries.length > 0 ? <CountriesList countries={countries} /> : null}
+    </View>
 
-            {/* Вторая строка: только бейджи Популярное / Новое */}
-            {(popularityFlags.isPopular || popularityFlags.isNew) && (
-              <View
-                style={[
-                  styles.metaBadgesRow,
-                  Platform.OS === 'web' && typeof viewportWidth === 'number' && viewportWidth < 375 && {
-                    // ✅ Бейджи могут переноситься на следующую строку вместо выхода за правый край
-                    flexWrap: 'wrap',
-                    gap: 6,
-                  },
-                ]}
-              >
-                {popularityFlags.isPopular && (
-                  <View style={[styles.statusBadge, styles.statusBadgePopular]}>
-                    <Feather
-                      name="trending-up"
-                      size={Platform.select({ default: 10, web: 12 })}
-                      color={TOKENS.colors.primary}
-                    />
-                    <Text style={[styles.statusBadgeText, styles.statusBadgeTextPopular]}>
-                      Популярное
-                    </Text>
-                  </View>
-                )}
-                {popularityFlags.isNew && (
-                  <View style={[styles.statusBadge, styles.statusBadgeNew]}>
-                    <Feather
-                      name="star"
-                      size={Platform.select({ default: 10, web: 12 })}
-                      color={TOKENS.colors.success}
-                    />
-                    <Text style={[styles.statusBadgeText, styles.statusBadgeTextNew]}>
-                      Новое
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-        </View>
-      </CardWrapper>
-    );
-
-  return (
     <View
       style={[
-        styles.wrap,
-        Platform.OS === 'web' && typeof cardWidth === 'number' && {
-          // ✅ На web ограничиваем фактическую ширину карточки и центрируем её в колонке
-          // maxWidth: cardWidth, // УБРАНО: теперь ширина ограничивается в самих стилях карточки
-          alignSelf: 'center',
-          width: '100%',
+        styles.metaRow,
+        Platform.OS === 'web' && typeof viewportWidth === 'number' && viewportWidth < 375 && {
+          alignItems: 'flex-start',
         },
       ]}
     >
+      <View style={styles.metaInfoTopRow}>
+        {!hideAuthor && (
+          <View style={styles.metaBox}>
+            <Feather
+              name="user"
+              size={Platform.select({ default: 10, web: 11 })}
+              color={Platform.OS === 'web' ? '#334155' : '#64748b'}
+              style={{ marginRight: 4 }}
+            />
+            {Platform.OS === 'web' ? (
+              <View
+                {...({
+                  ...(authorUserId
+                    ? {
+                        role: 'button',
+                        tabIndex: 0,
+                        'aria-label': `Открыть профиль автора ${authorName || 'Аноним'}`,
+                        onClick: (e: any) => handleAuthorPress(e),
+                        onKeyDown: (e: any) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleAuthorPress(e);
+                          }
+                        },
+                        onMouseDown: (e: any) => e.stopPropagation?.(),
+                        style: { cursor: 'pointer' },
+                      }
+                    : {
+                        style: {},
+                      }),
+                } as any)}
+              >
+                <Text style={styles.metaTxt} numberOfLines={1}>
+                  {authorNameDisplay}
+                </Text>
+              </View>
+            ) : (
+              <Pressable
+                onPress={handleAuthorPress}
+                disabled={!authorUserId}
+                accessibilityRole={authorUserId ? 'button' : undefined}
+                accessibilityLabel={authorUserId ? `Открыть профиль автора ${authorNameDisplay}` : undefined}
+                style={({ pressed }) => [pressed && authorUserId ? { opacity: 0.85 } : null]}
+              >
+                <Text style={styles.metaTxt} numberOfLines={1}>
+                  {authorNameDisplay}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        <View style={styles.metaBoxViews} testID="views-meta">
+          <Feather
+            name="eye"
+            size={Platform.select({ default: 10, web: 11 })}
+            color={Platform.OS === 'web' ? '#334155' : '#64748b'}
+          />
+          <Text style={styles.metaTxtViews} numberOfLines={1}>
+            {viewsFormatted}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.metaBadgesRow}>
+        {popularityFlags.isPopular && (
+          <View style={[styles.statusBadge, styles.statusBadgePopular]}>
+            <Feather
+              name="trending-up"
+              size={Platform.select({ default: 10, web: 12 })}
+              color={TOKENS.colors.primary}
+            />
+            <Text style={[styles.statusBadgeText, styles.statusBadgeTextPopular]}>Популярное</Text>
+          </View>
+        )}
+        {popularityFlags.isNew && (
+          <View style={[styles.statusBadge, styles.statusBadgeNew]}>
+            <Feather name="star" size={Platform.select({ default: 10, web: 12 })} color={TOKENS.colors.success} />
+            <Text style={[styles.statusBadgeText, styles.statusBadgeTextNew]}>Новое</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  </>
+);
+
+const unifiedCard = (
+  <UnifiedTravelCard
+    title={name}
+    imageUrl={imgUrl && !isLikelyWatermarked(imgUrl) ? imgUrl : null}
+    onPress={handlePress}
+    mediaFit="contain"
+    heroTitleOverlay={false}
+    testID={cardTestId}
+    style={[
+      styles.card,
+      Platform.OS === 'web' &&
+        { height: '100%' as any },
+      Platform.OS === 'web' && { borderRadius: responsiveValues.borderRadius },
+      globalFocusStyles.focusable,
+      Platform.OS === 'android' && styles.androidOptimized,
+      isSingle && styles.single,
+      selectable && isSelected && styles.selected,
+    ]}
+    imageHeight={TRAVEL_CARD_IMAGE_HEIGHT}
+    leftTopSlot={leftTopSlot}
+    rightTopSlot={selectable ? null : rightTopSlot}
+    containerOverlaySlot={selectableOverlay}
+    contentSlot={contentSlot}
+    webAsView={Platform.OS === 'web'}
+    webPressableProps={selectable ? cardWrapperProps : {}}
+    mediaProps={{
+      placeholderBlurhash: PLACEHOLDER_BLURHASH,
+      blurBackground: true,
+      priority: Platform.OS === 'web' ? (isFirst ? 'high' : 'low') : 'normal',
+      loading: Platform.OS === 'web' ? (isFirst ? 'eager' : 'lazy') : 'lazy',
+      prefetch: Platform.OS === 'web' ? !!isFirst : false,
+    }}
+  />
+);
+
+const card = unifiedCard;
+
+return (
+  <View
+    style={[
+      styles.wrap,
+      Platform.OS === 'web' && typeof cardWidth === 'number' && {
+        // ✅ На web ограничиваем фактическую ширину карточки и центрируем её в колонке
+        // maxWidth: cardWidth, // УБРАНО: теперь ширина ограничивается в самих стилях карточки
+        alignSelf: 'center',
+        width: '100%',
+      },
+    ]}
+  >
     {Platform.OS === 'web' ? (
       // На вебе различаем два режима:
       // 1) selectable === true (страница экспорта) — карточка только выбирает, без перехода по ссылке
@@ -976,7 +733,7 @@ function TravelListItem({
 
 }
 
-const styles = StyleSheet.create({
+ const styles = StyleSheet.create({
   wrap: { 
     width: "100%",
   },
@@ -989,6 +746,12 @@ const styles = StyleSheet.create({
     borderWidth: Platform.OS === 'web' ? 1 : 0,
     borderColor: TOKENS.colors.border,
     overflow: 'hidden',
+    ...(Platform.OS === 'web'
+      ? ({
+          maxWidth: TRAVEL_CARD_MAX_WIDTH,
+          alignSelf: 'center',
+        } as any)
+      : null),
     // Минимальные тени для глубины - разделены по платформам
     ...(Platform.OS === 'web' 
       ? { boxShadow: TOKENS.shadows.subtle }
@@ -1028,22 +791,6 @@ const styles = StyleSheet.create({
   single: {
     maxWidth: 600,
     alignSelf: "center",
-  },
-
-  img: {
-    width: "100%",
-    height: "100%",
-    objectFit: "contain" as any,
-  },
-
-  imageLayerRoot: {
-    width: '100%',
-    height: '100%',
-  },
-
-  imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.12)',
   },
 
   imgStub: {
@@ -1151,9 +898,19 @@ const styles = StyleSheet.create({
       ? {
           paddingHorizontal: 12,
           paddingTop: 8,
-          paddingBottom: 10,
+          paddingBottom: 16,
         }
       : {}),
+  },
+
+  countrySlot: {
+    width: '100%',
+    minWidth: 0,
+    ...(Platform.OS === 'web'
+      ? ({
+          minHeight: 34,
+        } as any)
+      : ({ minHeight: 28 } as any)),
   },
 
   // Современная типографика
@@ -1167,21 +924,20 @@ const styles = StyleSheet.create({
 
   // Упрощенная мета-информация
   metaRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: 'space-between',
-    gap: TOKENS.spacing.xs,
-    flexWrap: 'wrap',
+    flexDirection: "column",
+    alignItems: "stretch",
+    justifyContent: 'flex-start',
+    gap: Platform.OS === 'web' ? 6 : TOKENS.spacing.xs,
   },
 
   // Первая строка: пользователь + просмотры
   metaInfoTopRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     width: '100%',
-    position: 'relative', // Для абсолютного позиционирования просмотров
-    minHeight: 20, // Минимальная высота для размещения элементов
+    minHeight: Platform.OS === 'web' ? 18 : 20,
+    minWidth: 0,
   },
 
   // Вторая строка: бейджи Популярное / Новое
@@ -1189,19 +945,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: TOKENS.spacing.xs,
-    marginTop: TOKENS.spacing.xs * 0.5,
-    marginBottom: TOKENS.spacing.xs, // небольшой визуальный отступ снизу
-    flexWrap: 'wrap',
+    marginTop: Platform.OS === 'web' ? 4 : TOKENS.spacing.xs * 0.5,
+    marginBottom: Platform.OS === 'web' ? 8 : 0,
+    flexWrap: Platform.OS === 'web' ? 'nowrap' : 'wrap',
+    overflow: Platform.OS === 'web' ? 'hidden' : 'visible',
     // Чуть меньшая минимальная высота, чтобы панель была компактнее
-    minHeight: 22,
+    minHeight: Platform.OS === 'web' ? 28 : 22,
   },
 
   metaBox: {
     flexDirection: "row",
     alignItems: "center",
     gap: TOKENS.spacing.xs,
-    width: '100%', // Занимаем всю ширину родителя
-    paddingRight: 120, // Увеличиваем место для просмотров справа
+    flex: 1,
+    minWidth: 0,
   },
 
   // Отдельный стиль для просмотров - абсолютно позиционированы
@@ -1209,28 +966,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: TOKENS.spacing.xs,
-    position: 'absolute',
-    right: 0,
-    top: 0,
     paddingHorizontal: TOKENS.spacing.xs,
     paddingVertical: 2,
+    flexShrink: 0,
   },
 
   metaTxt: {
     fontSize: TOKENS.card.meta.size,
-    color: TOKENS.colors.textSecondary,
-    fontWeight: TOKENS.card.meta.weight,
-    lineHeight: TOKENS.card.meta.lineHeight,
+    color: Platform.OS === 'web' ? TOKENS.colors.text : TOKENS.colors.textSecondary,
+    fontWeight: Platform.OS === 'web' ? '500' : TOKENS.card.meta.weight,
+    lineHeight: Platform.OS === 'web' ? 16 : TOKENS.card.meta.lineHeight,
     flex: 1, // Занимаем доступное пространство в контейнере
     minWidth: 0, // Важно для корректного обрезания текста
+    opacity: 1,
   },
 
   // Отдельный стиль для текста просмотров - не обрезается
   metaTxtViews: {
     fontSize: TOKENS.card.meta.size,
-    color: TOKENS.colors.textSecondary,
-    fontWeight: TOKENS.card.meta.weight,
-    lineHeight: TOKENS.card.meta.lineHeight,
+    color: Platform.OS === 'web' ? TOKENS.colors.text : TOKENS.colors.textSecondary,
+    fontWeight: Platform.OS === 'web' ? '500' : TOKENS.card.meta.weight,
+    lineHeight: Platform.OS === 'web' ? 16 : TOKENS.card.meta.lineHeight,
+    opacity: 1,
   },
 
   // Упрощенные статус-бейджи (современные нейтральные pill-метки)
@@ -1274,12 +1031,12 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.colors.backgroundSecondary,
     borderRadius: TOKENS.radii.sm,
     paddingHorizontal: TOKENS.spacing.sm,
-    paddingVertical: TOKENS.spacing.xs,
+    paddingVertical: Platform.OS === 'web' ? TOKENS.spacing.xxs : TOKENS.spacing.xs,
     gap: TOKENS.spacing.xs,
   },
 
   tagTxt: {
-    fontSize: TOKENS.typography.sizes.sm,
+    fontSize: Platform.OS === 'web' ? TOKENS.typography.sizes.xs : TOKENS.typography.sizes.sm,
     color: TOKENS.colors.textSecondary,
     fontWeight: TOKENS.typography.weights.medium,
   },

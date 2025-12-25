@@ -1,10 +1,9 @@
 import React, { memo, useMemo } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
+import { StyleSheet, Platform, View, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useResponsive } from '@/hooks/useResponsive';
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 
 import { TAB_CARD_TEMPLATE, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
 
@@ -28,73 +27,35 @@ type Props = {
   badge?: TabTravelCardBadge;
   testID?: string;
   style?: StyleProp<ViewStyle>;
+  layout?: 'horizontal' | 'grid';
 };
 
-function TabTravelCard({ item, onPress, badge, testID, style }: Props) {
+function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizontal' }: Props) {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
+
+  const title = item?.title || 'Без названия';
 
   const location = useMemo(() => {
     return [item?.city, item?.country].filter(Boolean).join(', ');
   }, [item?.city, item?.country]);
 
   return (
-    <Pressable
+    <UnifiedTravelCard
+      title={title}
+      imageUrl={item?.imageUrl || null}
       onPress={onPress}
-      style={[styles.container, isMobile && styles.containerMobile, style]}
-      accessibilityRole="button"
-      accessibilityLabel={item?.title ?? 'Открыть'}
+      metaText={location || ' '}
+      badge={badge}
+      mediaFit="contain"
+      width={layout === 'grid' ? undefined : (isMobile ? MOBILE_CARD_WIDTH : (TAB_CARD_TEMPLATE.container as any)?.width)}
+      imageHeight={Platform.OS === 'web' ? 200 : 180}
       testID={testID}
-    >
-      <View style={styles.imageContainer}>
-        {item?.imageUrl ? (
-          <>
-            <ExpoImage
-              source={{ uri: item.imageUrl }}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              transition={0}
-              blurRadius={12}
-            />
-            <View style={styles.imageOverlay} />
-            <ExpoImage
-              source={{ uri: item.imageUrl }}
-              style={styles.image}
-              contentFit="contain"
-              cachePolicy="memory-disk"
-              transition={200}
-            />
-          </>
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <MaterialIcons name="route" size={28} color="#9ca3af" />
-          </View>
-        )}
-
-        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={StyleSheet.absoluteFill} />
-
-        {badge && (
-          <View style={[styles.badge, { backgroundColor: badge.backgroundColor }]}>
-            <MaterialIcons name={badge.icon as any} size={14} color={badge.iconColor} />
-          </View>
-        )}
-      </View>
-
-      <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>
-          {item?.title || 'Без названия'}
-        </Text>
-        {!!location && (
-          <View style={styles.metaRow}>
-            <MaterialIcons name="place" size={12} color="#475569" style={{ marginRight: 4 }} />
-            <Text style={styles.metaText} numberOfLines={1}>
-              {location}
-            </Text>
-          </View>
-        )}
-      </View>
-    </Pressable>
+      style={[layout === 'grid' ? styles.containerGrid : styles.container, style]}
+      mediaProps={{
+        blurBackground: true,
+      }}
+    />
   );
 }
 
@@ -109,47 +70,17 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
-  containerMobile: {
-    width: MOBILE_CARD_WIDTH,
-  },
-  imageContainer: {
-    ...TAB_CARD_TEMPLATE.imageContainer,
-  },
-  image: {
-    ...TAB_CARD_TEMPLATE.image,
-  },
-  imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  imagePlaceholder: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 999,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(15, 23, 42, 0.12)',
-  },
-  content: {
-    ...TAB_CARD_TEMPLATE.content,
-  },
-  title: {
-    ...TAB_CARD_TEMPLATE.title,
-  },
-  metaRow: {
-    ...TAB_CARD_TEMPLATE.metaRow,
-  },
-  metaText: {
-    ...TAB_CARD_TEMPLATE.metaText,
+
+  containerGrid: {
+    ...TAB_CARD_TEMPLATE.container,
+    width: '100%',
+    marginRight: 0,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      } as any,
+      default: {},
+    }),
   },
 });
 

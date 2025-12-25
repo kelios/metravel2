@@ -150,6 +150,7 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
         style.innerHTML = `
       :root{--bg:#fff;--fg:#333;--bar:#f5f5f5}
       @media(prefers-color-scheme:dark){:root{--bg:#1e1e1e;--fg:#e0e0e0;--bar:#2a2a2a}}
+      .quill{display:flex;flex-direction:column;height:100%}
       .ql-editor{background:var(--bg);color:var(--fg)}
       .ql-toolbar{background:var(--bar);position:sticky;top:0;z-index:10;max-width:100%}
       .ql-toolbar.ql-snow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
@@ -158,6 +159,8 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
       .ql-toolbar.ql-snow button{flex:0 0 auto}
       .ql-container{max-width:100%}
       .ql-editor{max-width:100%;overflow-wrap:anywhere}
+      .ql-container.ql-snow{display:flex;flex:1;flex-direction:column;height:100%;min-height:0}
+      .ql-container.ql-snow .ql-editor{flex:1;min-height:0;overflow-y:auto}
       .ql-editor img{max-width:100%;height:auto;max-height:60vh;display:block;margin:12px auto;object-fit:contain}
     `;
         win.document.head.appendChild(style);
@@ -342,7 +345,7 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
     const body = (
         <>
             <Toolbar />
-            {editorArea}
+            <View style={styles.editorArea}>{editorArea}</View>
         </>
     );
 
@@ -431,14 +434,24 @@ const styles = StyleSheet.create({
     },
     row: { flexDirection: 'row' },
     btn: { marginLeft: 12, padding: 4 },
-    editor: { minHeight: 200 },
+    editorArea: {
+        flex: 1,
+        minHeight: 0,
+    },
+    editor: { minHeight: 200, flex: 1 },
     html: {
         minHeight: 200,
+        flex: 1,
         padding: 12,
         fontSize: 14,
         color: Platform.OS === 'web' ? ('var(--fg)' as any) : '#333',
     },
     loadBox: { padding: 20, alignItems: 'center', justifyContent: 'center' },
     loadTxt: { color: '#999' },
-    fullWrap: { flex: 1, backgroundColor: Platform.OS === 'web' ? ('var(--bg)' as any) : '#fff' },
+    fullWrap: {
+        flex: 1,
+        height: '100%',
+        width: '100%',
+        backgroundColor: Platform.OS === 'web' ? ('var(--bg)' as any) : '#fff',
+    },
 });

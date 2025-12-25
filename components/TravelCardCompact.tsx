@@ -1,13 +1,13 @@
 // components/TravelCardCompact.tsx
-// ✅ РЕДИЗАЙН: Компактная карточка путешествия для главной страницы
+// РЕДИЗАЙН: Компактная карточка путешествия для главной страницы
 
 import React, { memo, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import type { Travel } from '@/src/types/types';
 import FavoriteButton from '@/components/FavoriteButton';
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { TRAVEL_CARD_MAX_WIDTH } from '@/components/listTravel/utils/listTravelConstants';
 
@@ -47,82 +47,36 @@ function TravelCardCompact({
     }
   }, [onPress, router, slug, id]);
 
+  const rightTopSlot = showActions ? (
+    <FavoriteButton
+      id={id}
+      type="travel"
+      title={name || ''}
+      imageUrl={travel_image_thumb_url}
+      url={`/travels/${slug || id}`}
+      country={countries[0]}
+      size={18}
+    />
+  ) : null;
+
+  const bottomLeftSlot = Number(countUnicIpView) > 0 ? (
+    <View style={styles.viewsBadge}>
+      <Feather name="eye" size={12} color="#fff" />
+      <Text style={styles.viewsText}>{countUnicIpView}</Text>
+    </View>
+  ) : null;
+
   return (
-    <Pressable
-      style={styles.card}
+    <UnifiedTravelCard
+      title={name}
+      imageUrl={travel_image_thumb_url}
+      metaText={countries.length > 0 ? countries.join(', ') : null}
       onPress={handlePress}
-      accessibilityRole="link"
-      accessibilityLabel={`Путешествие: ${name}`}
-      {...Platform.select({
-        web: {
-          cursor: 'pointer',
-          // @ts-ignore
-          ':hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          },
-        },
-      })}
-    >
-      {/* Изображение */}
-      <View style={styles.imageContainer}>
-        {travel_image_thumb_url ? (
-          <Image
-            source={{ uri: travel_image_thumb_url }}
-            style={styles.image}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Feather name="image" size={24} color={palette.textMuted} />
-          </View>
-        )}
-        
-        {/* Градиент для читаемости */}
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.6)']}
-          style={styles.gradient}
-        />
-
-        {/* Быстрые действия */}
-        {showActions && (
-          <View style={styles.actionsOverlay}>
-            <FavoriteButton
-              id={id}
-              type="travel"
-              title={name || ''}
-              imageUrl={travel_image_thumb_url}
-              url={`/travels/${slug || id}`}
-              country={countries[0]}
-              size={18}
-            />
-          </View>
-        )}
-
-        {/* Просмотры */}
-        {Number(countUnicIpView) > 0 && (
-          <View style={styles.viewsBadge}>
-            <Feather name="eye" size={12} color="#fff" />
-            <Text style={styles.viewsText}>{countUnicIpView}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Контент */}
-      <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>
-          {name}
-        </Text>
-        {countries.length > 0 && (
-          <View style={styles.countries}>
-            <Feather name="map-pin" size={12} color={palette.textMuted} />
-            <Text style={styles.countriesText} numberOfLines={1}>
-              {countries.join(', ')}
-            </Text>
-          </View>
-        )}
-      </View>
-    </Pressable>
+      rightTopSlot={rightTopSlot}
+      bottomLeftSlot={bottomLeftSlot}
+      imageHeight={Platform.OS === 'web' ? 200 : 180}
+      style={styles.card}
+    />
   );
 }
 
@@ -133,52 +87,6 @@ const styles = StyleSheet.create({
     height: '100%',
     maxWidth: TRAVEL_CARD_MAX_WIDTH,
     backgroundColor: palette.surface,
-    borderRadius: radii.md,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: palette.border,
-    ...Platform.select({
-      web: {
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        transition: 'all 0.2s ease',
-      },
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
-      },
-    }),
-  },
-  imageContainer: {
-    width: '100%',
-    height: 180,
-    position: 'relative',
-    backgroundColor: palette.surfaceMuted,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  imagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: palette.surfaceMuted,
-  },
-  gradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-  },
-  actionsOverlay: {
-    position: 'absolute',
-    top: spacing.xs,
-    right: spacing.xs,
   },
   viewsBadge: {
     position: 'absolute',
@@ -197,27 +105,4 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '500',
   },
-  content: {
-    padding: spacing.sm,
-    height: 100,
-    justifyContent: 'space-between',
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: palette.text,
-    marginBottom: spacing.xs,
-    lineHeight: 18,
-  },
-  countries: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  countriesText: {
-    fontSize: 12,
-    color: palette.textMuted,
-    flex: 1,
-  },
 });
-

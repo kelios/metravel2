@@ -1,9 +1,11 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Menu } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
@@ -117,7 +119,16 @@ function AccountMenu() {
         >
           <View style={styles.avatarSlot}>
             {isAuthenticated && avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatar} onError={() => setAvatarLoadError(true)} />
+              <ImageCardMedia
+                src={avatarUri}
+                fit="cover"
+                blurBackground={false}
+                borderRadius={12}
+                style={styles.avatar}
+                loading="lazy"
+                priority="low"
+                onError={() => setAvatarLoadError(true)}
+              />
             ) : (
               <Icon name="account-circle" size={24} color="#333" />
             )}

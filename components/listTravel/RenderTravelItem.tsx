@@ -4,11 +4,8 @@ import { Platform, ViewStyle } from "react-native";
 import TravelListItem from "./TravelListItem";
 import AnimatedCard from "../AnimatedCard";
 import type { Travel } from "@/src/types/types";
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
-import { TRAVEL_CARD_WEB_HEIGHT, TRAVEL_CARD_WEB_MOBILE_HEIGHT } from './utils/listTravelConstants';
-
-const { radii, shadows } = DESIGN_TOKENS;
+ 
 
 interface ContainerStyle extends ViewStyle {
     ':hover'?: ViewStyle;
@@ -58,55 +55,16 @@ function RenderTravelItem({
     }, [cardWidth]);
 
     const containerStyle = useMemo<ContainerStyle>(() => {
-        const base: ContainerStyle = {
-            borderRadius: radii.lg,
-            overflow: Platform.OS === "android" ? "visible" : "hidden",
-            backgroundColor: 'white',
-            // Platform-specific shadows
-            ...(Platform.OS === 'web' 
-                ? ({
-                    boxShadow: shadows.medium,
-                    minHeight: isMobile ? TRAVEL_CARD_WEB_MOBILE_HEIGHT : TRAVEL_CARD_WEB_HEIGHT,
-                  } as any)
-                : DESIGN_TOKENS.shadowsNative.medium
-            ),
-        };
-
-        // Убираем transition и :hover, так как они вызывают ошибки в React Native Web
-        // Анимация уже есть в AnimatedCard компоненте
-
-        if (isSingle) {
-            return {
-                ...base,
-                width: "100%",
-                maxWidth: Platform.OS === 'web' ? 800 : undefined,
-                alignSelf: "center",
-            };
-        }
-
-        if (isMobile) {
-            return {
-                ...base,
-                width: "100%",
-                maxWidth: "100%", // Явно ограничиваем ширину
-                overflow: "hidden",
-                // ✅ FIX: Убран дублирующий marginBottom
-            };
-        }
-
-        // Для desktop/tablet в сетке: карточка занимает всю ширину своей колонки
+        // Внешний wrapper не должен выглядеть как карточка.
+        // Вся визуальная часть (фон/радиус/тени/высота) живёт внутри UnifiedTravelCard (TravelListItem).
         return {
-            ...base,
+            width: '100%',
+            maxWidth: '100%',
             flexShrink: 0,
-            width: "100%",
-            maxWidth: "100%",
+            // Не обрезаем тени внутренней карточки
+            overflow: Platform.OS === 'android' ? 'visible' : 'visible',
         };
-    }, [isMobile, isSingle]);
-
-    const selectedStyle = useMemo<ViewStyle>(() => ({
-        borderWidth: 2,
-        borderColor: DESIGN_TOKENS.colors.primary,
-    }), []);
+    }, []);
 
     if (!item) return null;
 
@@ -114,7 +72,7 @@ function RenderTravelItem({
     return (
         <AnimatedCard 
             index={index || 0} 
-            style={[containerStyle, isSelected && selectedStyle]}
+            style={containerStyle}
         >
             <TravelListItem
                 travel={item}

@@ -13,7 +13,9 @@ describe('Adaptive Layout Tests', () => {
     // Desktop: количество колонок зависит от доступной ширины и min ширины карточки
     expect(calculateColumns(1024)).toBe(2);
     expect(calculateColumns(1440)).toBeGreaterThanOrEqual(3);
-    expect(calculateColumns(2560)).toBeGreaterThanOrEqual(4);
+    // На очень широких экранах мы ограничиваем максимум колонок,
+    // чтобы карточки оставались читабельными и сетка не расползалась.
+    expect(calculateColumns(2560)).toBeLessThanOrEqual(3);
   });
 
   it('should render without errors', () => {

@@ -11,6 +11,7 @@ import { fetchTravelsPopular, fetchTravelsOfMonth } from '@/src/api/map';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { ResponsiveContainer } from '@/components/layout';
+import { TRAVEL_CARD_MAX_WIDTH } from '@/components/listTravel/utils/listTravelConstants';
 
 interface HomeSectionProps {
   title: string;
@@ -174,7 +175,6 @@ export default function HomeInspirationSections() {
             queryKey="home-popular-travels"
             fetchFn={() => fetchTravelsPopular()}
             hideAuthor
-            centerRowsOnWebDesktop
           />
         </View>
       </ResponsiveContainer>
@@ -301,6 +301,16 @@ const styles = StyleSheet.create({
     flexBasis: 0,
     minWidth: 0,
     minHeight: 360,
+    ...Platform.select({
+      web: {
+        // На web desktop фиксируем ширину карточки, чтобы неполный ряд
+        // (например 2 карточки при numColumns=3) не растягивался с огромными пустотами.
+        width: TRAVEL_CARD_MAX_WIDTH,
+        flexGrow: 0,
+        flexShrink: 0,
+        flexBasis: 'auto',
+      } as any,
+    }),
   },
   cardWrapperSingleColumn: {
     width: '100%',

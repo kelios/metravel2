@@ -8,7 +8,7 @@ import {
     Platform,
     useColorScheme,
 } from 'react-native';
-import OptimizedImage from '@/components/ui/OptimizedImage';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useDropzone } from 'react-dropzone';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { uploadImage, deleteImage } from '@/src/api/misc';
@@ -291,13 +291,13 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                         <View key={image.id} style={styles.imageWrapper} testID="gallery-image">
                             {image.isUploading ? (
                                 <View style={styles.uploadingImageContainer}>
-                                    <OptimizedImage
-                                        source={{ uri: image.url }}
-                                        style={styles.image}
-                                        contentFit="contain"
+                                    <ImageCardMedia
+                                        src={image.url}
+                                        fit="contain"
                                         blurBackground
                                         loading="eager"
                                         alt={`Uploading ${index + 1}`}
+                                        style={styles.image}
                                     />
                                     <View style={styles.uploadingOverlayImage}>
                                         <ActivityIndicator size="large" color="#ffffff" />
@@ -306,13 +306,13 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                 </View>
                             ) : image.error ? (
                                 <View style={styles.errorImageContainer}>
-                                    <OptimizedImage
-                                        source={{ uri: image.url }}
-                                        style={[styles.image, styles.errorImage]}
-                                        contentFit="contain"
+                                    <ImageCardMedia
+                                        src={image.url}
+                                        fit="contain"
                                         blurBackground
                                         loading="lazy"
                                         alt={`Error ${index + 1}`}
+                                        style={[styles.image, styles.errorImage]}
                                     />
                                     <View style={styles.errorOverlay}>
                                         <Text style={styles.errorOverlayText}>⚠️</Text>
@@ -327,13 +327,13 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                 </View>
                             ) : (
                                 <>
-                                    <OptimizedImage
-                                        source={{ uri: image.url }}
-                                        style={styles.image}
-                                        contentFit="contain"
+                                    <ImageCardMedia
+                                        src={image.url}
+                                        fit="contain"
                                         blurBackground
                                         loading="lazy"
                                         alt={`Gallery image ${index + 1}`}
+                                        style={styles.image}
                                     />
                                     <TouchableOpacity
                                         onPress={() => handleDeleteImage(image.id)}

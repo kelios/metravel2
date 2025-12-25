@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import OptimizedImage from '@/components/ui/OptimizedImage';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { uploadImage, deleteImage } from '@/src/api/misc';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -247,13 +247,13 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
                 <ActivityIndicator size="large" color="#ffffff" />
               ) : (
                 <>
-                  <OptimizedImage
-                    source={{ uri: image.url }}
-                    style={styles.image}
-                    contentFit="contain"
+                  <ImageCardMedia
+                    src={image.url}
+                    fit="contain"
                     blurBackground
                     loading="lazy"
                     alt={`Gallery image ${index + 1}`}
+                    style={styles.image}
                   />
                   <TouchableOpacity
                     onPress={() => handleDeleteImage(image.id)}

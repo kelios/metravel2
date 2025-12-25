@@ -840,8 +840,9 @@ const MapPageComponent: React.FC<Props> = ({
         <div
           style={{
             position: 'absolute',
-            top: 10,
-            right: 10,
+            top: window.innerWidth < MOBILE_BREAKPOINT ? undefined : 10,
+            right: window.innerWidth < MOBILE_BREAKPOINT ? 16 : 10,
+            bottom: window.innerWidth < MOBILE_BREAKPOINT ? 80 : undefined,
             zIndex: 1000,
           }}
         >

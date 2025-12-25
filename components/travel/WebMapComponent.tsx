@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import MarkersListComponent from '../MarkersListComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 const normalizeImageUrl = (url?: string | null) => {
     if (!url) return '';
@@ -18,7 +19,7 @@ const reverseGeocode = async (latlng: any) => {
     // Use a CORS-friendly provider first, then fall back to Nominatim
     try {
         const primary = await fetch(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latlng.lat}&longitude=${latlng.lng}&localityLanguage=en`
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latlng.lat}&longitude=${latlng.lng}&localityLanguage=ru`
         );
         if (primary.ok) {
             const data = await primary.json();
@@ -292,7 +293,7 @@ const WebMapComponent = ({
 
         let derivedCountryId: number | null = null;
 
-        const matchedId = country ? matchCountryId(country, countrylist, countryCode) : null;
+        const matchedId = matchCountryId(country || '', countrylist, countryCode);
         const matchedCountry = matchedId != null
             ? countrylist.find((c: any) => Number(c?.country_id) === matchedId)
             : null;
@@ -440,7 +441,18 @@ const WebMapComponent = ({
                                         <Popup>
                                             <div style={styles.popupContent}>
                                                 {marker.image && (
-                                                    <img src={normalizeImageUrl(marker.image)} alt="Фото" style={styles.popupImage} />
+                                                    <div style={styles.popupImageWrap}>
+                                                        <ImageCardMedia
+                                                            src={normalizeImageUrl(marker.image)}
+                                                            alt="Фото"
+                                                            fit="cover"
+                                                            blurBackground
+                                                            loading="lazy"
+                                                            priority="low"
+                                                            borderRadius={DESIGN_TOKENS.radii.sm}
+                                                            style={{ width: '100%', height: '100%' } as any}
+                                                        />
+                                                    </div>
                                                 )}
                                                 <p><strong>Адрес:</strong> {marker.address || 'Не указан'}</p>
                                                 <p><strong>Категории:</strong>
@@ -580,12 +592,12 @@ const styles: any = {
         gap: '8px',
         width: '240px',
     },
-    popupImage: {
+    popupImageWrap: {
         width: '100%',
         height: '120px',
-        objectFit: 'cover',
         borderRadius: `${DESIGN_TOKENS.radii.sm}px`,
         backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        overflow: 'hidden',
     },
     popupButtons: {
         display: 'flex',

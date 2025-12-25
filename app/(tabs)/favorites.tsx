@@ -11,9 +11,11 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/src/utils/confirmAction';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { useResponsive } from '@/hooks/useResponsive';
 
 export default function FavoritesScreen() {
     const router = useRouter();
+    const { width } = useResponsive();
     const { isAuthenticated } = useAuth();
     const { favorites, removeFavorite, clearFavorites } = useFavorites() as any;
     const [isLoading, setIsLoading] = useState(true);
@@ -47,6 +49,13 @@ export default function FavoritesScreen() {
         },
         [router]
     );
+
+    const horizontalPadding = 16;
+    const columnGap = 14;
+    const minCardWidth = 320;
+    const availableWidth = Math.max(0, (width || 0) - horizontalPadding * 2);
+    const computedColumns = Math.max(1, Math.floor((availableWidth + columnGap) / (minCardWidth + columnGap)));
+    const numColumns = Math.min(computedColumns, 3);
 
     const data = useMemo(() => (Array.isArray(favorites) ? favorites : []), [favorites]);
 
@@ -130,9 +139,12 @@ export default function FavoritesScreen() {
             <FlatList
                 data={data}
                 keyExtractor={(item: any) => `${item.type || 'travel'}-${item.id}`}
+                numColumns={numColumns}
+                key={numColumns}
                 contentContainerStyle={styles.listContent}
+                columnWrapperStyle={numColumns > 1 ? styles.gridRow : undefined}
                 renderItem={({ item }: { item: any }) => (
-                    <View style={styles.cardWrap}>
+                    <View style={styles.gridItem}>
                         <TabTravelCard
                             item={{
                                 id: item.id,
@@ -142,6 +154,7 @@ export default function FavoritesScreen() {
                                 country: item.country ?? null,
                             }}
                             onPress={() => handleOpen(item.url)}
+                            layout="grid"
                             style={styles.card}
                         />
 
@@ -212,19 +225,22 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingBottom: 24,
         paddingTop: 12,
-        gap: 14,
-        alignItems: 'center',
+        rowGap: 14,
     },
-    cardWrap: {
+    gridRow: {
+        justifyContent: 'space-between',
+        gap: 14,
+    },
+    gridItem: {
+        flex: 1,
+        minWidth: 0,
+        paddingTop: 12,
         position: 'relative',
-        width: '100%',
-        alignItems: 'center',
     },
     card: {
         width: '100%',
-        minWidth: 320,
-        maxWidth: 360,
-        alignSelf: 'center',
+        minWidth: 0,
+        maxWidth: '100%',
         marginRight: 0,
     },
     removeButton: {

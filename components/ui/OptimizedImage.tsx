@@ -1,6 +1,7 @@
 import React, { memo, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { Image as ExpoImage, ImageContentFit } from 'expo-image';
+import type { ImageProps as ExpoImageProps } from 'expo-image';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface OptimizedImageProps {
@@ -8,6 +9,7 @@ interface OptimizedImageProps {
   contentFit?: ImageContentFit;
   blurBackground?: boolean;
   blurBackgroundRadius?: number;
+  blurOnly?: boolean;
   aspectRatio?: number;
   width?: number | string;
   height?: number | string;
@@ -16,6 +18,9 @@ interface OptimizedImageProps {
   priority?: 'low' | 'normal' | 'high';
   loading?: 'lazy' | 'eager';
   alt?: string;
+  transition?: number;
+  cachePolicy?: ExpoImageProps['cachePolicy'];
+  imageProps?: Partial<ExpoImageProps>;
   onLoad?: () => void;
   onError?: () => void;
   style?: any;
@@ -46,6 +51,7 @@ function OptimizedImage({
   contentFit = 'cover',
   blurBackground = false,
   blurBackgroundRadius = 16,
+  blurOnly = false,
   aspectRatio,
   width = '100%',
   height,
@@ -54,6 +60,9 @@ function OptimizedImage({
   priority = 'normal',
   loading = 'lazy',
   alt,
+  transition = 200,
+  cachePolicy = 'memory-disk',
+  imageProps,
   onLoad,
   onError,
   style,
@@ -95,7 +104,7 @@ function OptimizedImage({
             contentFit="cover"
             transition={0}
             style={StyleSheet.absoluteFill}
-            cachePolicy="memory-disk"
+            cachePolicy={cachePolicy}
             blurRadius={blurBackgroundRadius}
             {...(Platform.OS === 'web' && {
               // @ts-ignore - web-specific props
@@ -111,33 +120,37 @@ function OptimizedImage({
           />
         </>
       )}
-      <ExpoImage
-        source={source}
-        contentFit={contentFit}
-        placeholder={placeholder}
-        transition={200}
-        onLoad={handleLoad}
-        onError={handleError}
-        style={[
-          styles.image,
-          {
-            borderRadius,
-          },
-        ]}
-        // Web-specific optimizations
-        {...(Platform.OS === 'web' && {
-          // @ts-ignore - web-specific props
-          loading,
-          fetchpriority: fetchPriority,
-          alt: alt || '',
-          decoding: 'async',
-        })}
-        // Кэширование
-        cachePolicy="memory-disk"
-      />
+
+      {!blurOnly && (
+        <ExpoImage
+          {...(imageProps as any)}
+          source={source}
+          contentFit={contentFit}
+          placeholder={placeholder}
+          transition={transition}
+          onLoad={handleLoad}
+          onError={handleError}
+          style={[
+            styles.image,
+            {
+              borderRadius,
+            },
+          ]}
+          // Web-specific optimizations
+          {...(Platform.OS === 'web' && {
+            // @ts-ignore - web-specific props
+            loading,
+            fetchpriority: fetchPriority,
+            alt: alt || '',
+            decoding: 'async',
+          })}
+          // Кэширование
+          cachePolicy={cachePolicy}
+        />
+      )}
 
       {/* Индикатор загрузки */}
-      {isLoading && !hasError && (
+      {!blurOnly && isLoading && !hasError && (
         <View style={styles.loadingContainer} testID="optimized-image-loading">
           <ActivityIndicator
             size="small"
@@ -147,7 +160,7 @@ function OptimizedImage({
       )}
 
       {/* Заглушка при ошибке */}
-      {hasError && (
+      {!blurOnly && hasError && (
         <View style={[styles.errorContainer, { borderRadius }]} testID="optimized-image-error">
           <View style={styles.errorIcon}>
             <View style={styles.errorIconInner} />
@@ -197,6 +210,14 @@ const styles = StyleSheet.create({
 });
 
 export default memo(OptimizedImage);
+
+export async function prefetchImage(uri: string): Promise<void> {
+  if (!uri) return;
+  const fn = (ExpoImage as any)?.prefetch;
+  if (typeof fn === 'function') {
+    await fn(uri);
+  }
+}
 
 /**
  * Утилита для генерации srcset для responsive images

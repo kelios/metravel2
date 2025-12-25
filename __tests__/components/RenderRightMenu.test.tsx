@@ -85,6 +85,24 @@ jest.mock('react-native', () => {
   };
 });
 
+jest.mock('@/components/ui/ImageCardMedia', () => {
+  const React = require('react');
+  const { Image, View } = require('react-native');
+
+  const MockImageCardMedia = ({ src, source, style, testID, ...rest }: any) => {
+    const resolvedSource = source || (src ? { uri: src } : null);
+    if (!resolvedSource) {
+      return React.createElement(View, { style, testID, ...rest });
+    }
+    return React.createElement(Image, { source: resolvedSource, style, testID, ...rest });
+  };
+
+  return {
+    __esModule: true,
+    default: MockImageCardMedia,
+  };
+});
+
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useFilters } from '@/providers/FiltersProvider';

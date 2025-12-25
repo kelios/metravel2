@@ -5,6 +5,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { MarkerData } from "@/src/types/types";
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import MultiSelectField from '@/components/MultiSelectField';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 const MultiSelectFieldAny: any = MultiSelectField;
  
@@ -119,7 +120,15 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                     <div style={styles.indexBadge}>{index + 1}</div>
                                     <div style={styles.thumbnailWrapper}>
                                         {hasImage ? (
-                                            <img src={normalizeImageUrl(marker.image)} alt="Фото" style={styles.previewImage} />
+                                            <ImageCardMedia
+                                                src={normalizeImageUrl(marker.image)}
+                                                fit="cover"
+                                                blurBackground
+                                                loading="lazy"
+                                                priority="low"
+                                                borderRadius={10}
+                                                style={styles.previewMedia as any}
+                                            />
                                         ) : (
                                             <div style={styles.placeholderImage}>Нет фото</div>
                                         )}
@@ -182,7 +191,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
 interface EditMarkerModalProps {
     marker: MarkerData;
     index: number;
-    categoryTravelAddress: { id: number; name: string }[];
+    categoryTravelAddress: { id: number | string; name: string }[];
     handleMarkerChange: (index: number, field: string, value: string | string[]) => void;
     handleImageUpload: (index: number, imageUrl: string) => void;
     onClose: () => void;
@@ -447,6 +456,10 @@ const styles: any = {
         width: '100%',
         height: '100%',
         objectFit: 'cover',
+    },
+    previewMedia: {
+        width: '100%',
+        height: '100%',
     },
     placeholderImage: {
         fontSize: '10px',

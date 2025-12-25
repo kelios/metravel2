@@ -432,8 +432,8 @@ function ListTravel({
             : windowWidth < BREAKPOINTS.TABLET
               ? 18
               : windowWidth < BREAKPOINTS.DESKTOP
-                ? 24
-                : 32;
+                ? 20
+                : 24;
 
     const cardsGridDynamicStyle = useMemo(() => {
       const styleArray: ViewStyle[] = [styles.cardsGrid]
@@ -463,9 +463,9 @@ function ListTravel({
       if (effectiveWidth < BREAKPOINTS.SM) return 12; // SM: чуть уже карточки на очень маленьких телефонах
       if (effectiveWidth < BREAKPOINTS.MOBILE) return 12; // Mobile: стандартные телефоны — синхронизировано
       if (effectiveWidth < BREAKPOINTS.TABLET) return 20; // Tablet
-      if (effectiveWidth < BREAKPOINTS.DESKTOP) return 24; // Desktop
-      if (effectiveWidth < BREAKPOINTS.DESKTOP_LARGE) return 32; // Large Desktop
-      return 40; // XXL
+      if (effectiveWidth < BREAKPOINTS.DESKTOP) return 20; // Desktop
+      if (effectiveWidth < BREAKPOINTS.DESKTOP_LARGE) return 24; // Large Desktop
+      return 32; // XXL
     }, [effectiveWidth]); // ✅ ОПТИМИЗАЦИЯ: Только эффективная ширина в зависимостях
 
     const gridColumns = useMemo(() => {

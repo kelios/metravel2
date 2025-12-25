@@ -46,8 +46,8 @@ export const GRID_COLUMNS = {
 } as const;
 
 export const TRAVEL_CARD_IMAGE_HEIGHT = 220;
-export const TRAVEL_CARD_WEB_MOBILE_HEIGHT = 320;
-export const TRAVEL_CARD_WEB_HEIGHT = 360;
+export const TRAVEL_CARD_WEB_MOBILE_HEIGHT = 360;
+export const TRAVEL_CARD_WEB_HEIGHT = 400;
 
 export const TRAVEL_CARD_MIN_WIDTH = 320;
 export const TRAVEL_CARD_MAX_WIDTH = 360;

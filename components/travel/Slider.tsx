@@ -21,7 +21,8 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-import { Image as ExpoImage } from "expo-image";
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { prefetchImage } from '@/components/ui/ImageCardMedia';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useAnimatedScrollHandler,
@@ -59,7 +60,7 @@ export interface SliderProps {
   autoPlay?: boolean;
   autoPlayInterval?: number;
   onIndexChanged?: (index: number) => void;
-  imageProps?: Partial<React.ComponentProps<typeof ExpoImage>>;
+  imageProps?: any;
   preloadCount?: number;
   blurBackground?: boolean;
   onFirstImageLoad?: () => void;
@@ -397,15 +398,17 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
 
   const warmNeighbors = useCallback(
     (idx: number) => {
-      if (effectivePreload <= 0) return;
+      if (!prefetchEnabled) return;
+      if (!effectivePreload) return;
       for (let d = -effectivePreload; d <= effectivePreload; d++) {
+        if (d === 0) continue;
         const t = idx + d;
         if (t < 0 || t >= images.length) continue;
         const u = uriMap[t];
-        ExpoImage.prefetch?.(u).catch(() => {});
+        prefetchImage(u).catch(() => {});
       }
     },
-    [images.length, effectivePreload, uriMap]
+    [prefetchEnabled, images.length, effectivePreload, uriMap]
   );
 
   // автоплей
@@ -593,16 +596,17 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
         <View style={[styles.slide, { width: containerW, height: slideHeight }]}> 
           {shouldRenderBlurBg ? (
             <>
-              <ExpoImage
+              <ImageCardMedia
                 testID={`slider-blur-bg-${index}`}
-                source={{ uri }}
-                style={styles.blurBg}
-                contentFit="cover"
-                cachePolicy="disk"
-                priority="low"
+                src={uri}
+                fit="cover"
+                blurBackground
                 blurRadius={12}
+                blurOnly
+                priority="low"
+                loading="lazy"
+                style={styles.blurBg}
               />
-              <View style={styles.blurOverlay} />
             </>
           ) : (
             <View style={styles.flatBackground} testID={`slider-flat-bg-${index}`} />
@@ -641,23 +645,30 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
                   </View>
                 )
               ) : (
-                <ExpoImage
-                  testID={`slider-image-${index}`}
-                  source={{ uri }}
-                  style={styles.img}
-                  // Сохраняем оригинальные пропорции без обрезки, пустые области заполняет размытый фон
-                  contentFit="contain"
-                  cachePolicy="disk"
+                <ImageCardMedia
+                  src={uri}
+                  fit="contain"
+                  blurBackground={shouldBlur}
                   priority={mainPriority as any}
+                  loading={Platform.OS === 'web' ? (isFirstSlide ? 'eager' : 'lazy') : 'lazy'}
                   transition={reduceMotion ? 0 : 250}
-                  contentPosition="center"
-                  accessibilityIgnoresInvertColors
-                  accessibilityRole="image"
-                  accessibilityLabel={
+                  style={styles.img}
+                  alt={
                     item.width && item.height
                       ? `Изображение ${index + 1} из ${images.length}`
                       : `Фотография путешествия ${index + 1} из ${images.length}`
                   }
+                  imageProps={{
+                    ...(imageProps || {}),
+                    testID: `slider-image-${index}`,
+                    accessibilityIgnoresInvertColors: true,
+                    accessibilityRole: 'image',
+                    accessibilityLabel:
+                      item.width && item.height
+                        ? `Изображение ${index + 1} из ${images.length}`
+                        : `Фотография путешествия ${index + 1} из ${images.length}`,
+                    onLoadStart: () => updateLoadStatus(index, 'loading'),
+                  }}
                   onLoad={() => {
                     updateLoadStatus(index, "loaded");
                     if (index === 0) {
@@ -667,9 +678,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
                       }
                     }
                   }}
-                  onLoadStart={() => updateLoadStatus(index, "loading")}
                   onError={() => updateLoadStatus(index, "error")}
-                  {...imageProps}
                 />
               )}
 
@@ -864,20 +873,9 @@ const styles = StyleSheet.create<Record<string, any>>({
   blurBg: {
     ...StyleSheet.absoluteFillObject,
   },
-  blurOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    // Более лёгкая вуаль, чтобы был виден реальный блюр фото, а не плоский белый фон
-    backgroundColor: "rgba(255,255,255,0.18)",
-  },
   flatBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(248,250,252,0.9)",
-    ...Platform.select({
-      web: {
-        backgroundImage:
-          "linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(229,235,241,0.75) 100%)",
-      },
-    }),
+    backgroundColor: "#f1f5f9",
   },
   imageCardWrapper: {
     flex: 1,

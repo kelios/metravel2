@@ -160,20 +160,73 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   };
 
   // Компонент для центрирования карты при открытии попапа
-  const MapCenterOnPopup: React.FC<{ point: Point }> = ({ point }) => {
+  const MapCenterOnPopup: React.FC = () => {
     const map = useMap();
 
-    const handlePopupOpen = useCallback(() => {
-      const coords = getLatLng(point.coord);
-      if (coords) {
-        // Центрируем карту с небольшим сдвигом вверх чтобы попап был виден полностью
-        const [lat, lng] = coords;
-        map.setView([lat - 0.005, lng], map.getZoom(), {
-          animate: true,
-          duration: 0.5
-        });
-      }
-    }, [map, point.coord]);
+    const handlePopupOpen = useCallback(
+      (e: any) => {
+        // Leaflet сам умеет autoPan, но на мобильных хочется, чтобы карточка была ближе к центру.
+        // Делаем мягкий panBy по фактическому DOM-положению попапа относительно контейнера карты.
+        const run = () => {
+          try {
+            const popup = e?.popup;
+            const popupEl: HTMLElement | null = popup?.getElement ? popup.getElement() : null;
+            const mapEl: HTMLElement | null = map?.getContainer ? map.getContainer() : null;
+            if (!popupEl || !mapEl) return;
+
+            const mapRect = mapEl.getBoundingClientRect();
+            const popupRectAbs = popupEl.getBoundingClientRect();
+            const popupRect = {
+              left: popupRectAbs.left - mapRect.left,
+              top: popupRectAbs.top - mapRect.top,
+              right: popupRectAbs.right - mapRect.left,
+              bottom: popupRectAbs.bottom - mapRect.top,
+              width: popupRectAbs.width,
+              height: popupRectAbs.height,
+            };
+
+            const padding = 16;
+            const targetCenterX = mapRect.width / 2;
+            // небольшое смещение вверх, чтобы “хвостик” попапа и маркер оставались видимыми
+            const targetCenterY = mapRect.height * 0.45;
+
+            const currentCenterX = popupRect.left + popupRect.width / 2;
+            const currentCenterY = popupRect.top + popupRect.height / 2;
+
+            let dx = targetCenterX - currentCenterX;
+            let dy = targetCenterY - currentCenterY;
+
+            // Если попап выходит за пределы, приоритет — вернуть его внутрь safe-area.
+            const overflowLeft = padding - popupRect.left;
+            const overflowRight = popupRect.right - (mapRect.width - padding);
+            const overflowTop = padding - popupRect.top;
+            const overflowBottom = popupRect.bottom - (mapRect.height - padding);
+
+            if (overflowLeft > 0) dx = Math.max(dx, overflowLeft);
+            if (overflowRight > 0) dx = Math.min(dx, -overflowRight);
+            if (overflowTop > 0) dy = Math.max(dy, overflowTop);
+            if (overflowBottom > 0) dy = Math.min(dy, -overflowBottom);
+
+            // Избегаем микродвижений (дергания)
+            if (Math.abs(dx) < 6) dx = 0;
+            if (Math.abs(dy) < 6) dy = 0;
+            if (!dx && !dy) return;
+
+            if (typeof map.panBy === 'function') {
+              map.panBy([dx, dy], { animate: true, duration: 0.35 } as any);
+            }
+          } catch {
+            // noop
+          }
+        };
+
+        // Ждём, пока Leaflet вставит попап в DOM и посчитает размеры
+        if (typeof window !== 'undefined') {
+          requestAnimationFrame(() => requestAnimationFrame(run));
+        }
+      },
+      [map]
+    );
 
     useEffect(() => {
       // Слушаем событие открытия попапа
@@ -196,7 +249,14 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     }, [map]);
 
     return (
-      <Popup>
+      <Popup
+        autoPan
+        keepInView
+        autoPanPadding={[16, 16] as any}
+        autoPanPaddingTopLeft={[16, 96] as any}
+        autoPanPaddingBottomRight={[16, 120] as any}
+        closeButton={false}
+      >
         <Suspense fallback={<Text>Загрузка…</Text>}>
           <PopupContent travel={point} onClose={handleClose} />
         </Suspense>
@@ -227,7 +287,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
           if (!latLng) return null;
           return (
             <Marker key={`${point.id}`} position={latLng} icon={meTravelIcon}>
-              <MapCenterOnPopup point={point} />
+              <MapCenterOnPopup />
               <PopupWithClose point={point} />
             </Marker>
           );

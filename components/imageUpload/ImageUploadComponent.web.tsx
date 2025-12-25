@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
     ActivityIndicator,
-    Image,
     Platform,
     StyleSheet,
     Text,
@@ -14,6 +13,7 @@ import { useDropzone } from 'react-dropzone';
 import { uploadImage } from '@/src/api/misc';
 import { FontAwesome, Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 interface ImageUploadComponentProps {
     collection: string;
@@ -325,7 +325,16 @@ const ImageUploadComponent: React.FC<ImageUploadComponentProps> = ({
                             </>
                         )}
                     </TouchableOpacity>
-                    {imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
+                    {imageUri && (
+                      <ImageCardMedia
+                        src={imageUri}
+                        fit="contain"
+                        blurBackground
+                        loading="lazy"
+                        priority="low"
+                        style={styles.image}
+                      />
+                    )}
                 </>
             )}
 

@@ -1,6 +1,7 @@
 // components/travel/PopupContentWeb.tsx
 import React, { useCallback, memo, useEffect, useRef, useState, useMemo } from 'react';
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 interface Travel {
   address: string;
@@ -139,26 +140,23 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
         <div className="popup-content">
           <div
             className="popup-photo"
-            style={optimizedImageUrl && !imageError ? ({
-              // Пробрасываем URL фото в CSS-переменную для размытого фона
-              ['--popup-photo-url' as any]: `url(${optimizedImageUrl})`,
-            } as React.CSSProperties) : undefined}
           >
             {optimizedImageUrl && !imageError ? (
-              <img
+              <ImageCardMedia
                 src={optimizedImageUrl}
                 alt={address || 'Фото точки'}
-                className="popup-photo-img"
+                fit="contain"
+                blurBackground
+                blurRadius={18}
+                overlayColor="rgba(15,23,42,0.18)"
                 loading="lazy"
-                decoding="async"
+                priority="low"
+                style={{ position: 'absolute', inset: 0 } as any}
                 onLoad={() => {
                   console.info('[PopupContent] Image loaded successfully:', optimizedImageUrl);
                 }}
-                onError={(e) => {
-                  console.error('[PopupContent] Image failed to load:', {
-                    src: optimizedImageUrl,
-                    error: e
-                  });
+                onError={() => {
+                  console.error('[PopupContent] Image failed to load:', { src: optimizedImageUrl });
                   setImageError(true);
                 }}
               />
@@ -344,27 +342,8 @@ const popupStyles = `
   overflow: hidden;
   width: 100%;
   /* Фиксированная высота, чтобы карточки с фото и без фото были одинаковыми */
-  height: 280px;
+  height: clamp(180px, 30vh, 280px);
   background-color: #020617;
-}
-
-.popup-photo::before {
-  content: "";
-  position: absolute;
-  inset: -10%;
-  background-image: var(--popup-photo-url);
-  background-size: cover;
-  background-position: center;
-  filter: blur(18px);
-  transform: scale(1.05);
-}
-
-.popup-photo::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(15,23,42,0.0) 30%, rgba(15,23,42,0.45) 100%);
-  pointer-events: none;
 }
 
 .popup-photo-badge {
@@ -832,15 +811,15 @@ const popupStyles = `
     width: calc(100vw - 24px);
     max-width: 420px;
     min-width: 0;
-    max-height: calc(100vh - 200px);
+    max-height: calc(100vh - 160px);
   }
 
   .popup-photo {
-    height: 220px;
+    height: clamp(160px, 26vh, 220px);
   }
 
   .popup-expanded-card {
-    top: 45%;
+    top: 42%;
     border-radius: 16px;
   }
 
@@ -853,6 +832,46 @@ const popupStyles = `
     right: 10px;
     width: 28px;
     height: 28px;
+  }
+}
+
+@media (max-width: 420px), (max-height: 650px) {
+  .popup-card {
+    width: calc(100vw - 32px);
+    max-height: calc(100vh - 120px);
+    border-radius: 16px;
+  }
+
+  .popup-photo {
+    height: clamp(140px, 24vh, 190px);
+  }
+
+  .popup-bottom-bar {
+    left: 10px;
+    right: 10px;
+    bottom: 8px;
+    padding: 7px 10px;
+  }
+
+  .popup-bottom-title {
+    font-size: 11px;
+  }
+
+  .popup-expand-handle {
+    width: 22px;
+    height: 22px;
+  }
+
+  .popup-expanded-card {
+    left: 10px;
+    right: 10px;
+    bottom: 12px;
+    top: 38%;
+  }
+
+  .popup-close-btn {
+    width: 26px;
+    height: 26px;
   }
 }
 .popup-category-container {

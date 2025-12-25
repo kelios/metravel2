@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Platform, ActivityIndicator, Pressable, View, Text, Image } from 'react-native';
+import { Platform, ActivityIndicator, Pressable, View, Text } from 'react-native';
 import * as ImagePicker from 'react-native-image-picker';
 import { useDropzone } from 'react-dropzone';
 import { uploadImage } from '@/src/api/misc';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 interface PhotoUploadWithPreviewProps {
     collection: string;
@@ -456,10 +457,13 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
 
             {currentDisplayUrl ? (
                 <View style={styles.nativePreviewContainer}>
-                    <Image
-                        source={{ uri: currentDisplayUrl }}
+                    <ImageCardMedia
+                        src={currentDisplayUrl}
+                        fit="cover"
+                        blurBackground={false}
+                        loading="lazy"
+                        priority="low"
                         style={styles.nativePreviewImage as any}
-                        accessibilityIgnoresInvertColors
                     />
                     {!disabled && (
                         <Pressable style={styles.nativeRemoveButton} onPress={handleRemoveImage}>

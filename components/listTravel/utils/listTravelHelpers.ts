@@ -5,7 +5,7 @@
 
 import type { Travel } from "@/src/types/types";
 import type { FilterOptions, CategoryWithCount } from "./listTravelTypes";
-import { BREAKPOINTS, BADGE_THRESHOLDS } from "./listTravelConstants";
+import { BREAKPOINTS, BADGE_THRESHOLDS, GRID_COLUMNS } from "./listTravelConstants";
 
 // ✅ АРХИТЕКТУРА: Нормализация ответа API
 export function normalizeApiResponse(data: any): { items: Travel[]; total: number } {
@@ -86,6 +86,23 @@ export function calculateColumns(width: number, orientation: 'portrait' | 'lands
   
   // Рассчитываем максимальное количество колонок на основе минимальной ширины карточки
   let columns = Math.floor((availableWidth + GAP) / (MIN_CARD_WIDTH + GAP));
+
+  // Ограничиваем максимум колонок по брейкпоинтам, чтобы сетка не расползалась на широких экранах
+  // и соответствовала дизайн-решению (desktop/large desktop: 3 колонки).
+  let maxColumns = Number.POSITIVE_INFINITY;
+  if (width >= BREAKPOINTS.DESKTOP_LARGE) {
+    maxColumns = GRID_COLUMNS.DESKTOP_LARGE;
+  } else if (width >= BREAKPOINTS.DESKTOP) {
+    maxColumns = GRID_COLUMNS.DESKTOP;
+  } else if (width >= BREAKPOINTS.TABLET_LANDSCAPE) {
+    maxColumns = GRID_COLUMNS.TABLET_LANDSCAPE;
+  } else if (width >= BREAKPOINTS.TABLET) {
+    maxColumns = GRID_COLUMNS.TABLET;
+  }
+
+  if (Number.isFinite(maxColumns)) {
+    columns = Math.min(columns, maxColumns);
+  }
 
   // Учитываем ориентацию для планшетов
   if (orientation === 'portrait' && width >= BREAKPOINTS.MOBILE && width < BREAKPOINTS.DESKTOP) {

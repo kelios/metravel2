@@ -82,9 +82,10 @@ describe('TravelListItem content & metadata', () => {
     expect(getByTestId('image-stub')).toBeTruthy();
   });
 
-  it('does not render views meta when views are zero or empty', () => {
-    const { queryByTestId } = renderItem({ countUnicIpView: '0' } as any);
-    expect(queryByTestId('views-meta')).toBeNull();
+  it('renders views meta when views are zero (shows 0)', () => {
+    const { getByTestId, getByText } = renderItem({ countUnicIpView: '0' } as any);
+    expect(getByTestId('views-meta')).toBeTruthy();
+    expect(getByText('0')).toBeTruthy();
   });
 
   it('renders views meta when views are greater than zero', () => {

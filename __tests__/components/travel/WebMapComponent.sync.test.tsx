@@ -1,6 +1,24 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import WebMapComponent from '@/components/travel/WebMapComponent';
 
+jest.mock('@/components/ui/ImageCardMedia', () => {
+  const React = require('react');
+
+  const Mock = ({ src, source, alt, style }: any) => {
+    const resolvedSrc = src || source?.uri || '';
+    return React.createElement('img', {
+      src: resolvedSrc,
+      alt: alt || '',
+      style,
+    });
+  };
+
+  return {
+    __esModule: true,
+    default: Mock,
+  };
+});
+
 jest.mock('react-leaflet', () => {
   const React = require('react');
   const DummyContainer = ({ children }: any) => <div data-testid="map">{children}</div>;

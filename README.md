@@ -115,7 +115,40 @@ npm test
 
 # Run tests with coverage
 npm run test:coverage
+
+# Enforce image/card architecture rules
+npm run check:image-architecture
+
+# CI-style run (guard + tests)
+npm run test:ci
 ```
+
+## 🖼 Images & Cards (важно)
+
+После рефакторинга все UI с изображениями должны использовать единый слой.
+
+- **Images (везде)**: используйте `components/ui/ImageCardMedia.tsx`
+  - Единый рендер на web/iOS/Android
+  - `fit` (`contain|cover`), blur-background, overlay, `loading/priority` для web
+
+- **Travel cards / кликабельные карточки**: используйте `components/ui/UnifiedTravelCard.tsx`
+  - Содержит унифицированный layout карточки и использует `ImageCardMedia` внутри
+
+### Что запрещено
+
+- **Не импортировать `expo-image`** в прикладных компонентах `components/**`
+  - `expo-image` должен оставаться в low-level слое (`components/ui/OptimizedImage.tsx`)
+
+- **Не импортировать `components/ui/OptimizedImage`** напрямую из фич/карточек
+  - Используйте `ImageCardMedia` (он инкапсулирует `OptimizedImage`)
+
+### Guard
+
+В проекте есть проверка архитектуры картинок:
+
+- `npm run check:image-architecture`
+
+Она также запускается в `npm run test:ci`.
 
 ## 🛠 Utilities
 

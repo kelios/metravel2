@@ -41,7 +41,13 @@ export const getStyles = (isMobile: boolean, insetTop: number, headerOffset: num
       togglePanelButton: {
         position: 'absolute',
         right: 16,
-        top: 16,
+        ...(isMobile
+          ? ({
+              bottom: 16,
+            } as any)
+          : ({
+              top: 16,
+            } as any)),
         width: 48,
         height: 48,
         borderRadius: 24,

@@ -27,7 +27,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 
-import { Image as ExpoImage } from "expo-image";
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useIsFocused } from "@react-navigation/native";
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
@@ -426,13 +426,16 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
           <NeutralHeroPlaceholder height={height} />
         ) : (
           <View style={{ width: "100%", height: "100%", borderRadius: 12, overflow: "hidden" }}>
-            <ExpoImage
-              source={{ uri: srcWithRetry }}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
+            <ImageCardMedia
+              src={srcWithRetry}
+              fit="cover"
+              blurBackground
+              blurOnly
+              blurRadius={12}
               cachePolicy="memory-disk"
               priority="low"
-              blurRadius={12}
+              style={StyleSheet.absoluteFill}
+              borderRadius={12}
             />
             <View
               style={{
@@ -440,18 +443,22 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
                 backgroundColor: "rgba(255,255,255,0.18)",
               }}
             />
-            <ExpoImage
-              source={{ uri: srcWithRetry }}
-              style={{ width: "100%", height: "100%" }}
-              contentFit="contain"
-              contentPosition="center"
+            <ImageCardMedia
+              src={srcWithRetry}
+              fit="contain"
+              blurBackground={false}
               cachePolicy="memory-disk"
               priority="high"
+              borderRadius={12}
+              imageProps={{
+                contentPosition: 'center',
+              }}
               onLoad={() => {
                 setLoadError(false);
                 onLoad?.();
               }}
               onError={() => setLoadError(true)}
+              style={{ width: "100%", height: "100%" }}
             />
           </View>
         )}
@@ -637,11 +644,13 @@ const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
         accessibilityRole="button"
         accessibilityLabel="Смотреть видео"
       >
-        <ExpoImage
-          source={{ uri: `https://img.youtube.com/vi/${id}/hqdefault.jpg` }}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
+        <ImageCardMedia
+          src={`https://img.youtube.com/vi/${id}/hqdefault.jpg`}
+          fit="cover"
+          blurBackground={false}
           cachePolicy="memory-disk"
+          style={StyleSheet.absoluteFill}
+          borderRadius={DESIGN_TOKENS.radii.md}
         />
         <View style={styles.playOverlay}>
           <Icon name="play-circle-fill" size={64} color={DESIGN_TOKENS.colors.surface} />
