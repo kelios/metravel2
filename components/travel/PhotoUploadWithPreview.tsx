@@ -27,18 +27,41 @@ const normalizeImageUrl = (url?: string | null) => {
     // Data/blob stay as-is
     if (/^(data:|blob:)/i.test(safeUrl)) return safeUrl;
 
-    const baseRaw = process.env.EXPO_PUBLIC_API_URL || '';
-    if (!baseRaw.trim()) return safeUrl;
-    const hostWithoutApi = baseRaw.replace(/\/+$/, '').replace(/\/api$/i, '');
-
-    // If backend returns absolute URL, keep as-is (will fallback on error handler if needed)
+    // Absolute URL → keep as-is
     if (/^https?:\/\//i.test(safeUrl)) {
         return safeUrl;
     }
 
-    // Relative media path → resolve against API host without /api
+    // Try API host first, then fall back to current origin (useful in admin where env may be empty)
+    const baseRaw =
+        process.env.EXPO_PUBLIC_API_URL ||
+        (typeof window !== 'undefined' ? window.location.origin : '');
+    const hostWithoutApi = baseRaw.replace(/\/+$/, '').replace(/\/api$/i, '');
     const prefix = hostWithoutApi || baseRaw.replace(/\/+$/, '');
-    return `${prefix}${safeUrl.startsWith('/') ? '' : '/'}${safeUrl}`;
+
+    if (prefix) {
+        return `${prefix}${safeUrl.startsWith('/') ? '' : '/'}${safeUrl}`;
+    }
+
+    // As a last resort, return original (will error gracefully if invalid)
+    return safeUrl;
+};
+
+const buildApiPrefixedUrl = (url: string): string | null => {
+    try {
+        const baseRaw =
+            process.env.EXPO_PUBLIC_API_URL ||
+            (typeof window !== 'undefined' ? window.location.origin : '');
+        if (!/\/api\/?$/i.test(baseRaw)) return null;
+
+        const parsed = new URL(url, baseRaw.replace(/\/api\/?$/, ''));
+        if (parsed.pathname.startsWith('/api/')) return null;
+
+        const apiOrigin = baseRaw.replace(/\/api\/?$/, '');
+        return `${apiOrigin}/api${parsed.pathname}${parsed.search}`;
+    } catch {
+        return null;
+    }
 };
 
 export const chooseFallbackUrl = (
@@ -371,6 +394,15 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                         return;
                                     }
 
+                                    const apiCandidate = buildApiPrefixedUrl(currentDisplayUrl);
+                                    if (apiCandidate) {
+                                        setHasTriedFallback(true);
+                                        setImageUri(apiCandidate);
+                                        setPreviewUrl(null);
+                                        setError(null);
+                                        return;
+                                    }
+
                                     setImageUri(null);
                                     setPreviewUrl(null);
                                     setError('Изображение не найдено');
@@ -386,6 +418,15 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                     if (candidateFallback) {
                                         setHasTriedFallback(true);
                                         setImageUri(candidateFallback);
+                                        setPreviewUrl(null);
+                                        setError(null);
+                                        return;
+                                    }
+
+                                    const apiCandidate = buildApiPrefixedUrl(currentDisplayUrl);
+                                    if (apiCandidate) {
+                                        setHasTriedFallback(true);
+                                        setImageUri(apiCandidate);
                                         setPreviewUrl(null);
                                         setError(null);
                                         return;
@@ -561,7 +602,7 @@ const styles: any = {
         display: 'block',
         width: '100%',
         height: '100%',
-        objectFit: 'cover',
+        objectFit: 'contain',
     },
     removeButton: {
         position: 'absolute',
@@ -653,7 +694,7 @@ const styles: any = {
     nativePreviewImage: {
         width: '100%',
         height: 200,
-        objectFit: 'cover',
+        objectFit: 'contain',
     },
     nativeRemoveButton: {
         flexDirection: 'row',

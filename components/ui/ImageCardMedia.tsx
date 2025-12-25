@@ -63,6 +63,10 @@ function ImageCardMedia({
   }, [source, src]);
 
   const contentFit: ImageContentFit = fit === 'cover' ? 'cover' : 'contain';
+  const webImageProps = useMemo(() => {
+    if (Platform.OS !== 'web') return undefined;
+    return { crossOrigin: 'anonymous' as const };
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -117,7 +121,7 @@ function ImageCardMedia({
             alt={alt}
             transition={transition}
             cachePolicy={cachePolicy}
-            imageProps={imageProps}
+            imageProps={{ ...(imageProps || {}), ...(webImageProps || {}) }}
             onLoad={onLoad}
             onError={onError}
           />

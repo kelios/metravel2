@@ -126,7 +126,17 @@ function UnifiedTravelCard({
           </View>
         ) : null}
 
-        {containerOverlaySlot ? <View pointerEvents="box-none" style={StyleSheet.absoluteFillObject}>{containerOverlaySlot}</View> : null}
+        {containerOverlaySlot ? (
+          <View
+            {...(Platform.OS === 'web' ? {} : { pointerEvents: 'box-none' })}
+            style={[
+              StyleSheet.absoluteFillObject,
+              Platform.OS === 'web' ? { pointerEvents: 'none' } : null,
+            ]}
+          >
+            {containerOverlaySlot}
+          </View>
+        ) : null}
         {leftTopSlot ? <View style={styles.leftTopSlot}>{leftTopSlot}</View> : null}
         {rightTopSlot ? <View style={styles.rightTopSlot}>{rightTopSlot}</View> : null}
         {badge ? (
@@ -211,9 +221,13 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     letterSpacing: -0.2,
     textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.32)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 6,
+    ...(Platform.OS === 'web'
+      ? { textShadow: '0px 1px 6px rgba(0,0,0,0.32)' }
+      : {
+          textShadowColor: 'rgba(0,0,0,0.32)',
+          textShadowOffset: { width: 0, height: 1 },
+          textShadowRadius: 6,
+        }),
   },
   imageVignetteOverlay: {
     ...StyleSheet.absoluteFillObject,

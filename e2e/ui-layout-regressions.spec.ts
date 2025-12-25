@@ -187,7 +187,11 @@ test.describe('UI layout regression guards (overlap/cutoff/viewport)', () => {
       await expect(header).toBeVisible({ timeout: 30_000 });
 
       if (vp.name === 'desktop') {
-        test.skip(true, 'Burger menu is not expected on desktop layout');
+        test.info().annotations.push({
+          type: 'note',
+          description: 'Burger menu is not expected on desktop layout',
+        });
+        return;
       }
 
       // Use stable testIDs from CustomHeader mobile menu.

@@ -17,19 +17,51 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 const API_BASE_URL: string =
     process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
 
+const safeEncodeUrl = (value: string): string => {
+    try {
+        // Avoid double-encoding: decode first, then encode
+        return encodeURI(decodeURI(value));
+    } catch {
+        return encodeURI(value);
+    }
+};
+
 const ensureAbsoluteUrl = (value: string): string => {
     if (!value) return value;
 
+    // Already absolute
     try {
-        return new URL(value).toString();
+        return safeEncodeUrl(new URL(value).toString());
     } catch {
-        const base = API_BASE_URL ? API_BASE_URL.replace(/\/api\/?$/, '') : undefined;
-        if (!base) return value;
-        try {
-            return new URL(value, base).toString();
-        } catch {
-            return value;
-        }
+        // continue to relative handling
+    }
+
+    const base =
+        API_BASE_URL?.replace(/\/api\/?$/, '') ||
+        (typeof window !== 'undefined' ? window.location.origin : undefined);
+    if (!base) return value;
+
+    try {
+        return safeEncodeUrl(new URL(value, base).toString());
+    } catch {
+        return value;
+    }
+};
+
+const buildApiPrefixedUrl = (value: string): string | null => {
+    try {
+        const baseRaw =
+            process.env.EXPO_PUBLIC_API_URL ||
+            (typeof window !== 'undefined' ? window.location.origin : '');
+        if (!/\/api\/?$/i.test(baseRaw)) return null;
+
+        const apiOrigin = baseRaw.replace(/\/api\/?$/, '');
+        const parsed = new URL(value, apiOrigin);
+        if (parsed.pathname.startsWith('/api/')) return null;
+
+        return `${apiOrigin}/api${parsed.pathname}${parsed.search}`;
+    } catch {
+        return null;
     }
 };
 
@@ -61,6 +93,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     const [batchUploadProgress, setBatchUploadProgress] = useState<{ current: number; total: number } | null>(null);
     
     const blobUrlsRef = useRef<Set<string>>(new Set());
+    const retryRef = useRef<Set<string>>(new Set());
     const theme = useColorScheme();
     const isDarkMode = theme === 'dark';
     
@@ -203,6 +236,44 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
         setDialogVisible(true);
     };
 
+    const handleImageError = useCallback((imageId: string, currentUrl: string) => {
+        if (retryRef.current.has(imageId)) {
+            setImages(prev =>
+                prev.map(img =>
+                    img.id === imageId ? { ...img, isUploading: false, error: 'Ошибка загрузки' } : img
+                )
+            );
+            return;
+        }
+
+        const fallback = buildApiPrefixedUrl(currentUrl);
+        if (fallback) {
+            retryRef.current.add(imageId);
+            setImages(prev =>
+                prev.map(img =>
+                    img.id === imageId ? { ...img, url: fallback, isUploading: false, error: null } : img
+                )
+            );
+            return;
+        }
+
+        retryRef.current.add(imageId);
+        setImages(prev =>
+            prev.map(img =>
+                img.id === imageId ? { ...img, isUploading: false, error: 'Ошибка загрузки' } : img
+            )
+        );
+    }, []);
+
+    const handleImageLoad = useCallback((imageId: string) => {
+        retryRef.current.delete(imageId);
+        setImages(prev =>
+            prev.map(img =>
+                img.id === imageId ? { ...img, error: null, isUploading: false } : img
+            )
+        );
+    }, []);
+
     const confirmDeleteImage = async () => {
         if (!selectedImageId) return;
         
@@ -298,6 +369,8 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         loading="eager"
                                         alt={`Uploading ${index + 1}`}
                                         style={styles.image}
+                                        onError={() => handleImageError(image.id, image.url)}
+                                        onLoad={() => handleImageLoad(image.id)}
                                     />
                                     <View style={styles.uploadingOverlayImage}>
                                         <ActivityIndicator size="large" color="#ffffff" />
@@ -313,6 +386,8 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         loading="lazy"
                                         alt={`Error ${index + 1}`}
                                         style={[styles.image, styles.errorImage]}
+                                        onError={() => handleImageError(image.id, image.url)}
+                                        onLoad={() => handleImageLoad(image.id)}
                                     />
                                     <View style={styles.errorOverlay}>
                                         <Text style={styles.errorOverlayText}>⚠️</Text>
@@ -334,6 +409,8 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         loading="lazy"
                                         alt={`Gallery image ${index + 1}`}
                                         style={styles.image}
+                                        onError={() => handleImageError(image.id, image.url)}
+                                        onLoad={() => handleImageLoad(image.id)}
                                     />
                                     <TouchableOpacity
                                         onPress={() => handleDeleteImage(image.id)}
@@ -425,18 +502,17 @@ const styles = StyleSheet.create({
     },
     deleteButton: {
         position: 'absolute',
-        top: 5,
-        right: 5,
-        backgroundColor: 'rgba(255, 0, 0, 0.8)',
+        top: 8,
+        right: 8,
+        backgroundColor: 'rgba(0,0,0,0.35)',
+        width: 24,
+        height: 24,
         borderRadius: 12,
-        width: 20,
-        height: 20,
-        justifyContent: 'center',
         alignItems: 'center',
+        justifyContent: 'center',
     },
     deleteButtonText: {
         color: '#fff',
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
     },
     dropzone: {
         width: '100%',
@@ -502,33 +578,32 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     errorImageContainer: {
-        width: '100%',
-        height: '100%',
+        backgroundColor: '#f9f4f0',
+        borderRadius: 12,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: '#f0dbd6',
         position: 'relative',
     },
     errorImage: {
-        opacity: 0.5,
+        opacity: 0.08,
     },
     errorOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(239, 68, 68, 0.9)',
+        ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: DESIGN_TOKENS.spacing.xs,
+        gap: 6,
+        backgroundColor: 'rgba(255,255,255,0.6)',
     },
     errorOverlayText: {
-        fontSize: 32,
-        marginBottom: DESIGN_TOKENS.spacing.xxs,
+        fontSize: 28,
+        color: '#cc8a45',
     },
     errorOverlaySubtext: {
-        color: '#fff',
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        textAlign: 'center',
+        fontSize: 13,
         fontWeight: '600',
+        color: '#8a6b52',
+        textAlign: 'center',
     },
     batchProgressContainer: {
         marginBottom: DESIGN_TOKENS.spacing.lg,
@@ -558,15 +633,18 @@ const styles = StyleSheet.create({
     },
     errorBanner: {
         marginTop: DESIGN_TOKENS.spacing.md,
-        padding: DESIGN_TOKENS.spacing.md,
-        backgroundColor: '#fef2f2',
-        borderRadius: 8,
+        padding: DESIGN_TOKENS.spacing.sm,
+        backgroundColor: '#f9f4f0',
+        borderRadius: 10,
         borderWidth: 1,
-        borderColor: '#fecaca',
+        borderColor: '#f0dbd6',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
     },
     errorBannerText: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#991b1b',
-        textAlign: 'center',
+        color: '#8a6b52',
+        fontSize: 13,
+        textAlign: 'left',
     },
 });

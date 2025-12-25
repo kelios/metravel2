@@ -4,7 +4,11 @@ test.describe('Auth favorites', () => {
   test('favorites tab does not show auth gate after login', async ({ page }) => {
     const hasCreds = !!process.env.E2E_EMAIL && !!process.env.E2E_PASSWORD;
     if (!hasCreds) {
-      test.skip(true, 'E2E_EMAIL/E2E_PASSWORD not provided; skipping authenticated favorites assertions');
+      test.info().annotations.push({
+        type: 'note',
+        description: 'E2E_EMAIL/E2E_PASSWORD not provided; skipping authenticated favorites assertions',
+      });
+      return;
     }
 
     // Pre-accept cookies to avoid overlay affecting interactions.

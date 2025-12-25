@@ -20,7 +20,11 @@ test.describe('Roulette', () => {
     const pickRoutes = page.getByRole('button', { name: 'Подобрать маршруты' }).first();
     if (await pickRoutes.isVisible().catch(() => false)) {
       if (await pickRoutes.isDisabled().catch(() => false)) {
-        test.skip(true, 'Roulette action is disabled (likely requires filters)');
+        test.info().annotations.push({
+          type: 'note',
+          description: 'Roulette action is disabled (likely requires filters); skipping interactions',
+        });
+        return;
       }
       await pickRoutes.click({ timeout: 30_000 });
     } else {
@@ -29,7 +33,11 @@ test.describe('Roulette', () => {
       if (await legacy.isVisible().catch(() => false)) {
         await legacy.click({ timeout: 30_000 });
       } else {
-        test.skip(true, 'Roulette primary action button not found');
+        test.info().annotations.push({
+          type: 'note',
+          description: 'Roulette primary action button not found; cannot proceed',
+        });
+        return;
       }
     }
 

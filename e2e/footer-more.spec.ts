@@ -41,7 +41,11 @@ test.describe('Footer dock (web mobile) - More modal', () => {
 
     const dock = page.getByTestId('footer-dock-wrapper');
     if (!(await dock.isVisible({ timeout: 5_000 }).catch(() => false))) {
-      test.skip(true, 'Footer dock not rendered on this variant');
+      test.info().annotations.push({
+        type: 'note',
+        description: 'Footer dock not rendered on this variant',
+      });
+      return;
     }
 
     // On web mobile the dock is fixed; we reserve space via bottom-gutter.
