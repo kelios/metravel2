@@ -10,6 +10,7 @@ interface AuthContextType {
     isSuperuser: boolean;
     userId: string | null;
     userAvatar: string | null;
+    authReady: boolean;
     profileRefreshToken: number;
     setIsAuthenticated: (isAuthenticated: boolean) => void;
     setUsername: (username: string) => void;
@@ -36,6 +37,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     const [isSuperuser, setIsSuperuser] = useState(false);
     const [userId, setUserId] = useState<string | null>(null);
     const [userAvatar, setUserAvatar] = useState<string | null>(null);
+    const [authReady, setAuthReady] = useState(false);
     const [profileRefreshToken, setProfileRefreshToken] = useState(0);
 
     const normalizeAvatar = (value: unknown): string | null => {
@@ -82,6 +84,8 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
             setUsername('');
             setIsSuperuser(false);
             setUserAvatar(null);
+        } finally {
+            setAuthReady(true);
         }
     }, []);
 
@@ -130,6 +134,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
                 setUsername(displayName);
                 setIsSuperuser(userData.is_superuser);
                 setUserAvatar(avatar);
+                setAuthReady(true);
 
                 return true;
             }
@@ -151,6 +156,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
         setUsername('');
         setIsSuperuser(false);
         setUserAvatar(null);
+        setAuthReady(true);
 
         try {
             await logoutApi();
@@ -201,6 +207,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
                 isSuperuser,
                 userId,
                 userAvatar,
+                authReady,
                 profileRefreshToken,
                 setIsAuthenticated,
                 setUsername,

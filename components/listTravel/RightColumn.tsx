@@ -160,8 +160,8 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
     const cardsWrapperStyle = useMemo<StyleProp<ViewStyle>>(() => {
       const resetPadding = {
-        paddingHorizontal: 0,
-        paddingTop: Platform.OS === 'web' && isMobile ? 4 : 12,
+        paddingHorizontal: contentPadding,
+        paddingTop: Platform.OS === 'web' ? cardSpacing + 8 : 12,
         ...(isWebMobile
           ? ({
               minHeight: STABLE_PLACEHOLDER_HEIGHT,
@@ -178,7 +178,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       }
 
       return resetPadding
-    }, [cardsContainerStyle, isWebMobile, isMobile])
+    }, [cardsContainerStyle, isWebMobile, isMobile, contentPadding])
 
     const rows = useMemo(() => {
       const cols = Math.max(1, (isMobile ? 1 : gridColumns) || 1)
@@ -206,6 +206,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
         const cols = Math.max(1, (isMobile ? 1 : gridColumns) || 1);
         const missingSlots = Math.max(0, cols - rowItems.length);
         const percent = `${100 / cols}%`;
+        const calcWidth = cols > 1 ? `calc((100% - ${(cols - 1) * cardSpacing}px) / ${cols})` : '100%';
         return (
           <View
             testID={`travel-row-${rowIndex}`}
@@ -213,14 +214,20 @@ const RightColumn: React.FC<RightColumnProps> = memo(
               cardsGridStyle,
               (Platform.OS === 'web'
                 ? ({
+                    flexWrap: 'wrap',
+                    width: '100%',
+                    maxWidth: '100%',
+                    minWidth: 0,
+                    columnGap: cardSpacing,
+                    rowGap: cardSpacing,
+                    alignItems: 'flex-start',
+                  } as any)
+                : ({
                     flexWrap: 'nowrap',
                     width: '100%',
                     maxWidth: '100%',
                     minWidth: 0,
-                    // Keep spacing without expanding row beyond container width
-                    paddingHorizontal: cardSpacing / 2,
-                  } as any)
-                : ({ flexWrap: 'nowrap', width: '100%', maxWidth: '100%', minWidth: 0 } as any)),
+                  } as any)),
             ]}
           >
             {rowItems.map((travel, itemIndex) => (
@@ -241,11 +248,10 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                             // Equal column widths on web (prevents last-row stretching and uneven widths)
                             flexGrow: 0,
                             flexShrink: 0,
-                            flexBasis: percent,
-                            width: percent,
-                            maxWidth: percent,
+                            flexBasis: calcWidth,
+                            width: calcWidth,
+                            maxWidth: calcWidth,
                             minWidth: 0,
-                            paddingHorizontal: cardSpacing / 2,
                           } as any))
                     : ({
                         flex: 1,

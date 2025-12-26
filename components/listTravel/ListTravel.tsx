@@ -247,6 +247,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'flex-start',
+    alignItems: 'flex-start',
   },
   resultsCount: {
     marginBottom: TOKENS.spacing.lg,

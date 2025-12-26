@@ -185,7 +185,7 @@ export default function UpsertTravel() {
     const router = useRouter();
     const navigation = useNavigation();
     const { id } = useLocalSearchParams();
-    const { userId, isAuthenticated, isSuperuser } = useAuth();
+    const { userId, isAuthenticated, isSuperuser, authReady } = useAuth();
     const isSuperAdmin = isSuperuser;
     const isNew = !id;
     
@@ -510,6 +510,9 @@ export default function UpsertTravel() {
     // чтобы исключить повторные запросы (/countries, /getFiltersTravel, /travels/:id)
     const initialLoadKeyRef = useRef<string | null>(null);
     useEffect(() => {
+        // Ждём завершения восстановления auth-сессии, чтобы не проверять доступ с пустым userId
+        if (!authReady) return;
+
         const loadKey = String(id ?? 'new');
         if (initialLoadKeyRef.current === loadKey) return;
         initialLoadKeyRef.current = loadKey;
@@ -591,7 +594,7 @@ export default function UpsertTravel() {
         return () => {
             isMounted = false;
         };
-    }, [id, isNew, loadTravelData]);
+    }, [authReady, id, isNew, loadTravelData]);
 
     // Повторная загрузка стран, если список пуст при переходе на шаг 2
     useEffect(() => {

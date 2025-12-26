@@ -1,0 +1,111 @@
+import React from 'react';
+import { render, waitFor } from '@testing-library/react-native';
+
+import UpsertTravel from '@/components/travel/UpsertTravel';
+
+// Mocks
+const mockReplace = jest.fn();
+const mockAddListener = jest.fn();
+const mockFetchFilters = jest.fn().mockResolvedValue({ categoryTravelAddress: [], countries: [] });
+const mockFetchCountries = jest.fn().mockResolvedValue([]);
+const mockFetchTravel = jest.fn().mockResolvedValue({
+  id: 123,
+  name: 'Owned travel',
+  user: { id: '42' },
+});
+
+// Mutable auth state to control authReady flips
+let authState = {
+  isAuthenticated: true,
+  isSuperuser: false,
+  userId: '42',
+  authReady: false,
+};
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({
+    replace: mockReplace,
+    push: jest.fn(),
+    back: jest.fn(),
+  }),
+  useLocalSearchParams: () => ({ id: '123' }),
+  useNavigation: () => ({
+    addListener: mockAddListener,
+    dispatch: jest.fn(),
+  }),
+}));
+
+jest.mock('react-native-toast-message', () => ({
+  show: jest.fn(),
+}));
+
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: () => authState,
+}));
+
+jest.mock('@/src/api/misc', () => ({
+  fetchFilters: () => mockFetchFilters(),
+  fetchAllCountries: () => mockFetchCountries(),
+  saveFormData: jest.fn(),
+}));
+
+jest.mock('@/src/api/travelsApi', () => ({
+  fetchTravel: () => mockFetchTravel(),
+}));
+
+describe('UpsertTravel authReady gating', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    authState = {
+      isAuthenticated: true,
+      isSuperuser: false,
+      userId: '42',
+      authReady: false,
+    };
+  });
+
+  it('does not load travel or redirect before authReady is true, then loads after', async () => {
+    const { rerender } = render(<UpsertTravel />);
+
+    // Пока authReady=false не должно быть запросов к путешествию и редиректа
+    expect(mockFetchTravel).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+
+    // Переключаем authReady и делаем повторный рендер
+    authState = { ...authState, authReady: true };
+    rerender(<UpsertTravel />);
+
+    await waitFor(() => {
+      expect(mockFetchTravel).toHaveBeenCalledTimes(1);
+    });
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('redirects to home after authReady when user is not owner and not superuser', async () => {
+    // Пользователь не владелец
+    authState = {
+      isAuthenticated: true,
+      isSuperuser: false,
+      userId: '7',
+      authReady: false,
+    };
+
+    const { rerender } = render(<UpsertTravel />);
+
+    // Пока authReady=false — нет запросов и редиректов
+    expect(mockFetchTravel).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+
+    // Включаем authReady
+    authState = { ...authState, authReady: true };
+    rerender(<UpsertTravel />);
+
+    await waitFor(() => {
+      expect(mockFetchTravel).toHaveBeenCalledTimes(1);
+    });
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/');
+    });
+  });
+});

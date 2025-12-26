@@ -571,6 +571,7 @@ const styles = StyleSheet.create({
   tabPaneContent: {
     flexGrow: 1,
     paddingVertical: 4,
+    alignItems: 'flex-start',
   },
 
   gateContainer: {
