@@ -48,7 +48,7 @@ import { useMenuState } from "@/hooks/useMenuState";
 import InstantSEO from "@/components/seo/InstantSEO";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
 import ReadingProgressBar from "@/components/ReadingProgressBar";
-import TravelSectionTabs from "@/components/travel/TravelSectionTabs";
+import TravelSectionsSheet from "@/components/travel/TravelSectionsSheet";
 import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/travel/sectionLinks";
 import { useProgressiveLoad, ProgressiveWrapper } from '@/hooks/useProgressiveLoading';
 import { useLazyMap } from '@/hooks/useLazyMap';
@@ -1190,13 +1190,13 @@ export default function TravelDetails() {
                   />
                   </View>
 
-                  {isMobile && showMobileSectionTabs && sectionLinks.length > 0 && (
+                  {isMobile && sectionLinks.length > 0 && (
                     <View style={styles.sectionTabsContainer}>
-                      <TravelSectionTabs
+                      <TravelSectionsSheet
                         links={sectionLinks}
                         activeSection={activeSection}
                         onNavigate={scrollToWithMenuClose}
-                        stickyOffset={headerOffset + 8}
+                        testID="travel-sections-sheet-wrapper"
                       />
                     </View>
                   )}

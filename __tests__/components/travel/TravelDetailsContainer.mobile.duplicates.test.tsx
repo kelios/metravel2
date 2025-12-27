@@ -108,7 +108,7 @@ jest.mock('@/components/travel/QuickFacts', () => ({
   default: () => null,
 }));
 
-jest.mock('@/components/travel/TravelSectionTabs', () => ({
+jest.mock('@/components/travel/TravelSectionsSheet', () => ({
   __esModule: true,
   default: () => null,
 }));

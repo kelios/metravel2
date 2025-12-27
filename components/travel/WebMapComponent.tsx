@@ -401,7 +401,42 @@ const WebMapComponent = ({
     };
 
     return (
-        <div style={{ padding: DESIGN_TOKENS.spacing.xxs }}>
+        <div
+            className="metravel-webmap"
+            style={{
+                padding: DESIGN_TOKENS.spacing.xxs,
+                width: '100%',
+                boxSizing: 'border-box',
+            }}
+        >
+            <style>
+                {`
+                .metravel-webmap .leaflet-popup-content-wrapper,
+                .metravel-webmap .leaflet-popup-tip {
+                  background: ${DESIGN_TOKENS.colors.surface} !important;
+                  opacity: 1 !important;
+                }
+                .metravel-webmap .leaflet-popup-content-wrapper {
+                  color: ${DESIGN_TOKENS.colors.text} !important;
+                  border-radius: ${DESIGN_TOKENS.radii.md}px !important;
+                  box-shadow: ${DESIGN_TOKENS.shadows.modal} !important;
+                  border: 1px solid ${DESIGN_TOKENS.colors.border} !important;
+                }
+                .metravel-webmap .leaflet-popup-content {
+                  margin: ${DESIGN_TOKENS.spacing.md}px !important;
+                  color: ${DESIGN_TOKENS.colors.text} !important;
+                }
+                .metravel-webmap .leaflet-popup-content p {
+                  margin: 6px 0 !important;
+                }
+                .metravel-webmap .leaflet-popup-close-button {
+                  color: ${DESIGN_TOKENS.colors.textMuted} !important;
+                }
+                .metravel-webmap .leaflet-popup-close-button:hover {
+                  color: ${DESIGN_TOKENS.colors.text} !important;
+                }
+                `}
+            </style>
             <div style={isWideLayout ? styles.splitLayout : undefined}>
                 <div style={isWideLayout ? styles.mapPane : undefined}>
                     <div style={isWideLayout ? styles.mapCard : undefined}>
@@ -558,10 +593,13 @@ const styles: any = {
         flexDirection: 'row',
         gap: '16px',
         alignItems: 'flex-start',
+        width: '100%',
+        boxSizing: 'border-box',
     },
     mapPane: {
         flex: '1 1 60%',
         minWidth: 0,
+        boxSizing: 'border-box',
     },
     listPane: {
         flex: '0 0 420px',
@@ -573,6 +611,7 @@ const styles: any = {
         overflow: 'hidden',
         backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
         boxShadow: DESIGN_TOKENS.shadows.card,
+        boxSizing: 'border-box',
     },
     listScrollArea: {
         height: '100%',
@@ -591,6 +630,7 @@ const styles: any = {
         flexDirection: 'column',
         gap: '8px',
         width: '240px',
+        color: DESIGN_TOKENS.colors.text,
     },
     popupImageWrap: {
         width: '100%',

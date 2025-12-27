@@ -9,7 +9,6 @@ describe('ExportBar', () => {
   const setup = (overrides: Partial<React.ComponentProps<typeof ExportBar>> = {}) => {
     const onToggleSelectAll = jest.fn();
     const onClearSelection = jest.fn();
-    const onPreview = jest.fn();
     const onSave = jest.fn();
     const onSettings = jest.fn();
 
@@ -19,7 +18,6 @@ describe('ExportBar', () => {
       allCount: 3,
       onToggleSelectAll,
       onClearSelection,
-      onPreview,
       onSave,
       onSettings,
       isGenerating: false,
@@ -30,7 +28,7 @@ describe('ExportBar', () => {
     };
 
     const utils = render(<ExportBar {...props} />);
-    return { ...utils, onToggleSelectAll, onClearSelection, onPreview, onSave, onSettings };
+    return { ...utils, onToggleSelectAll, onClearSelection, onSave, onSettings };
   };
 
   it('отображает текст о выбранных путешествиях и кнопки экспорта', () => {

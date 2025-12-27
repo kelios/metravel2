@@ -27,33 +27,6 @@ const GET_TRAVELS = `${URLAPI}/travels/`;
 const GET_RANDOM_TRAVELS = `${URLAPI}/travels/random/`;
 const GET_TRAVELS_BY_SLUG = `${URLAPI}/travels/by-slug/`;
 
-const travelDef: Travel = {
-    name: 'test',
-    id: 498,
-    travel_image_thumb_url:
-        'https://metravelprod.s3.eu-north-1.amazonaws.com/6880/conversions/p9edKtQrl2wM0xC1yRrkzVJEi4B4qxkxWqSADDLM-webpTravelMainImage_400.webp',
-    url: '',
-    userName: '',
-    slug: '',
-    travel_image_thumb_small_url: '',
-    youtube_link: '',
-    description: '',
-    recommendation: '',
-    plus: '',
-    minus: '',
-    cityName: '',
-    countryName: '',
-    countUnicIpView: '0',
-    gallery: [],
-    travelAddress: [],
-    userIds: '',
-    year: '',
-    monthName: '',
-    number_days: 0,
-    companions: [],
-    countryCode: '',
-} as unknown as Travel;
-
 const travelCache = new Map<number, Travel>();
 const TOKEN_KEY = 'userToken';
 

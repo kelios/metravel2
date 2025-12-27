@@ -5,6 +5,8 @@ import QRCode from 'qrcode';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import type { TravelForBook } from '@/src/types/pdf-export';
 import { generateLeafletRouteSnapshot } from '@/src/utils/mapImageGenerator';
+import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
+import { calculateOptimalColumns } from '@/src/types/pdf-gallery';
 import { getThemeConfig, type PdfThemeName } from '../themes/PdfThemeConfig';
 import { ContentParser } from '../parsers/ContentParser';
 import { BlockRenderer } from '../renderers/BlockRenderer';
@@ -36,6 +38,90 @@ export class EnhancedPdfGenerator {
   private theme: ReturnType<typeof getThemeConfig>;
   private selectedQuotes?: { cover?: TravelQuote; final?: TravelQuote };
   private currentSettings?: BookSettings;
+
+  private getGalleryOptions(): {
+    layout: GalleryLayout;
+    columns?: number;
+    showCaptions: boolean;
+    captionPosition: CaptionPosition;
+    spacing: NonNullable<BookSettings['gallerySpacing']>;
+  } {
+    const settings = this.currentSettings;
+
+    const layout = (settings?.galleryLayout || 'grid') as GalleryLayout;
+    const spacing = (settings?.gallerySpacing || 'normal') as NonNullable<BookSettings['gallerySpacing']>;
+    const showCaptions = settings?.showCaptions !== false;
+    const captionPosition = (settings?.captionPosition || 'bottom') as CaptionPosition;
+    const columns = typeof settings?.galleryColumns === 'number' ? settings.galleryColumns : undefined;
+
+    return {
+      layout,
+      columns,
+      showCaptions,
+      captionPosition,
+      spacing,
+    };
+  }
+
+  private getGalleryGapMm(spacing: NonNullable<BookSettings['gallerySpacing']>): number {
+    switch (spacing) {
+      case 'compact':
+        return 3;
+      case 'spacious':
+        return 8;
+      case 'normal':
+      default:
+        return 6;
+    }
+  }
+
+  private buildGalleryCaption(
+    index: number,
+    position: CaptionPosition,
+    typography: ReturnType<typeof getThemeConfig>['typography']
+  ): { wrapperStart: string; wrapperEnd: string } {
+    if (position === 'none') {
+      return { wrapperStart: '', wrapperEnd: '' };
+    }
+
+    const text = `Фото ${index + 1}`;
+
+    if (position === 'overlay') {
+      return {
+        wrapperStart: `
+          <div style="
+            position: absolute;
+            left: 8px;
+            bottom: 8px;
+            right: 8px;
+            padding: 6px 10px;
+            background: rgba(0,0,0,0.65);
+            color: #fff;
+            border-radius: 10px;
+            font-size: ${typography.caption.size};
+            line-height: 1.25;
+            font-weight: 600;
+            z-index: 2;
+          ">${this.escapeHtml(text)}`, 
+        wrapperEnd: `</div>`,
+      };
+    }
+
+    const top = position === 'top';
+    return {
+      wrapperStart: `
+        <div style="
+          padding: 8px 10px;
+          color: ${this.theme.colors.textMuted};
+          font-size: ${typography.caption.size};
+          font-weight: 600;
+          font-family: ${typography.bodyFont};
+          ${top ? 'border-bottom' : 'border-top'}: 1px solid ${this.theme.colors.border};
+          background: ${this.theme.colors.surface};
+        ">${this.escapeHtml(text)}`, 
+      wrapperEnd: `</div>`,
+    };
+  }
 
   constructor(themeName: PdfThemeName | string) {
     this.theme = getThemeConfig(themeName);
@@ -411,8 +497,14 @@ export class EnhancedPdfGenerator {
       `;
     }
 
+    const { layout, columns: configuredColumns, showCaptions, captionPosition, spacing: gallerySpacing } =
+      this.getGalleryOptions();
+
+    const gapMm = this.getGalleryGapMm(gallerySpacing);
+
     // Для 1-4 фото: компактная встроенная галерея
     if (photos.length === 1) {
+      const caption = showCaptions ? this.buildGalleryCaption(0, captionPosition, typography) : null;
       return `
         <div style="margin-bottom: ${spacing.sectionSpacing};">
           <div style="
@@ -420,40 +512,57 @@ export class EnhancedPdfGenerator {
             overflow: hidden;
             box-shadow: ${this.theme.blocks.shadow};
             background: ${colors.surfaceAlt};
+            position: relative;
           ">
             <img src="${this.escapeHtml(photos[0])}" alt="Фото путешествия"
               style="width: 100%; height: 85mm; object-fit: cover; display: block;"
               crossorigin="anonymous"
               onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+            ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
           </div>
         </div>
       `;
     }
 
     // Для 2-4 фото: сетка
-    const gridColumns = photos.length === 2 ? 2 : photos.length === 3 ? 3 : 2;
-    const imageHeight = photos.length === 2 ? '65mm' : photos.length === 3 ? '55mm' : '50mm';
+    const defaultColumns = photos.length === 2 ? 2 : photos.length === 3 ? 3 : 2;
+    const gridColumns =
+      layout === 'grid' || layout === 'masonry'
+        ? Math.max(1, Math.min(4, configuredColumns ?? defaultColumns))
+        : defaultColumns;
+    const imageHeight = gridColumns >= 3 ? '55mm' : '62mm';
 
     return `
       <div style="margin-bottom: ${spacing.sectionSpacing};">
         <div style="
           display: grid;
           grid-template-columns: repeat(${gridColumns}, 1fr);
-          gap: 5mm;
+          gap: ${gapMm}mm;
         ">
-          ${photos.map((photo, index) => `
+          ${photos
+            .map((photo, index) => {
+              const caption = showCaptions ? this.buildGalleryCaption(index, captionPosition, typography) : null;
+              return `
             <div style="
               border-radius: ${this.theme.blocks.borderRadius};
               overflow: hidden;
               background: ${colors.surfaceAlt};
               box-shadow: ${this.theme.blocks.shadow};
+              position: relative;
+              ${layout === 'polaroid' ? `padding: 6mm 6mm 10mm 6mm; background: #fff;` : ''}
+              ${layout === 'polaroid' ? `transform: rotate(${index % 2 === 0 ? '-1.2deg' : '1.1deg'});` : ''}
             ">
+              ${caption && captionPosition === 'top' ? caption.wrapperStart + caption.wrapperEnd : ''}
               <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
                 style="width: 100%; height: ${imageHeight}; object-fit: cover; display: block;"
                 crossorigin="anonymous"
                 onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+              ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
+              ${caption && captionPosition === 'bottom' ? caption.wrapperStart + caption.wrapperEnd : ''}
             </div>
-          `).join('')}
+          `;
+            })
+            .join('')}
         </div>
       </div>
     `;
@@ -998,8 +1107,27 @@ export class EnhancedPdfGenerator {
 
     if (!photos.length) return '';
 
-    const columns = photos.length <= 4 ? 2 : photos.length <= 6 ? 3 : 4;
-    const imageHeight = photos.length <= 4 ? '80mm' : photos.length <= 6 ? '65mm' : '55mm';
+    const { layout, columns: configuredColumns, showCaptions, captionPosition, spacing: gallerySpacing } =
+      this.getGalleryOptions();
+
+    const gapMm = this.getGalleryGapMm(gallerySpacing);
+
+    const defaultColumns = calculateOptimalColumns(photos.length, layout);
+    const columns = Math.max(1, Math.min(4, configuredColumns ?? defaultColumns));
+
+    const imageHeight =
+      layout === 'slideshow'
+        ? '170mm'
+        : photos.length <= 4
+          ? '80mm'
+          : photos.length <= 6
+            ? '65mm'
+            : '55mm';
+
+    const gridContainerStyle =
+      layout === 'masonry'
+        ? `column-count: ${columns}; column-gap: ${gapMm}mm;`
+        : `display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: ${gapMm}mm;`;
 
     return `
       <section class="pdf-page gallery-page" style="padding: ${spacing.pagePadding};">
@@ -1019,30 +1147,48 @@ export class EnhancedPdfGenerator {
             font-family: ${typography.bodyFont};
           ">${this.escapeHtml(travel.name)}</p>
         </div>
-        <div style="
-          display: grid;
-          grid-template-columns: repeat(${columns}, 1fr);
-          gap: 6mm;
-        ">
+        <div style="${gridContainerStyle}">
           ${photos
-            .map(
-              (photo, index) => `
+            .map((photo, index) => {
+              const caption = showCaptions ? this.buildGalleryCaption(index, captionPosition, typography) : null;
+
+              const wrapperStyle =
+                layout === 'masonry'
+                  ? `break-inside: avoid; margin-bottom: ${gapMm}mm;`
+                  : '';
+
+              const polaroidStyle =
+                layout === 'polaroid'
+                  ? `padding: 6mm 6mm 10mm 6mm; background: #fff; transform: rotate(${index % 2 === 0 ? '-1.4deg' : '1.3deg'});`
+                  : '';
+
+              const collageHero = layout === 'collage' && index === 0;
+              const collageSpan = collageHero ? 'grid-column: span 2; grid-row: span 2;' : '';
+              const resolvedHeight = collageHero ? '120mm' : imageHeight;
+
+              return `
             <div style="
+              ${wrapperStyle}
+              ${collageSpan}
               border-radius: ${this.theme.blocks.borderRadius};
               overflow: hidden;
               position: relative;
               box-shadow: ${this.theme.blocks.shadow};
               background: ${colors.surfaceAlt};
+              ${polaroidStyle}
             ">
+              ${caption && captionPosition === 'top' ? caption.wrapperStart + caption.wrapperEnd : ''}
               <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
                 style="
                   width: 100%;
-                  height: ${imageHeight};
+                  height: ${resolvedHeight};
                   object-fit: cover;
                   display: block;
                 "
                 crossorigin="anonymous"
                 onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+              ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
+              ${caption && captionPosition === 'bottom' ? caption.wrapperStart + caption.wrapperEnd : ''}
               <div style="
                 position: absolute;
                 top: 8px;
@@ -1058,10 +1204,11 @@ export class EnhancedPdfGenerator {
                 font-size: 11pt;
                 font-weight: 700;
                 box-shadow: ${this.theme.blocks.shadow};
+                z-index: 3;
               ">${index + 1}</div>
             </div>
-          `
-            )
+          `;
+            })
             .join('')}
         </div>
         <div style="

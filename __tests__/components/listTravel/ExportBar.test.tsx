@@ -10,7 +10,6 @@ describe('ExportBar', () => {
     allCount: 10,
     onToggleSelectAll: jest.fn(),
     onClearSelection: jest.fn(),
-    onPreview: jest.fn(),
     onSave: jest.fn(),
     onSettings: jest.fn(),
     isGenerating: false,

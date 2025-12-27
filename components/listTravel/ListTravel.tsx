@@ -292,7 +292,6 @@ const ExportBar = memo(function ExportBar({
                        allCount,
                        onToggleSelectAll,
                        onClearSelection,
-                       onPreview,
                        onSave,
                        onSettings,
                        isGenerating,
@@ -305,7 +304,6 @@ const ExportBar = memo(function ExportBar({
     allCount: number;
     onToggleSelectAll: () => void;
     onClearSelection: () => void;
-    onPreview: () => void;
     onSave: () => void;
     onSettings: () => void;
     isGenerating?: boolean;
@@ -786,27 +784,28 @@ function ListTravel({
           onToggle={() => toggleSelect(travel)}
         />
       ),
-      [isMobileDevice, isSuper, isMeTravel, isExport, handleDeletePress, isSelected, toggleSelect]
+      [
+        handleDeletePress,
+        isExport,
+        isMeTravel,
+        isMobileDevice,
+        isSelected,
+        isSuper,
+        toggleSelect,
+      ]
     );
-
-    const handleImmediateSave = useCallback(() => {
-      // Используем последние выбранные настройки для мгновенного экспорта
-      handleSaveWithSettings(lastSettings);
-    }, [handleSaveWithSettings, lastSettings]);
-
-    const handleImmediatePreview = useCallback(() => {
-      handlePreviewWithSettings(lastSettings);
-    }, [handlePreviewWithSettings, lastSettings]);
-
-    const handleOpenSettings = useCallback(() => {
-      if (!hasSelection) return;
-      setIsBookSettingsOpen(true);
-    }, [hasSelection]);
 
     const handleCloseSettings = useCallback(() => {
       setIsBookSettingsOpen(false);
     }, []);
 
+    const handleImmediateSave = useCallback(() => {
+      handleSaveWithSettings(lastSettings);
+    }, [handleSaveWithSettings, lastSettings]);
+
+    const handleOpenSettings = useCallback(() => {
+      setIsBookSettingsOpen(true);
+    }, []);
 
     /* Loading helpers */
     const hasAnyItems = travels.length > 0;
@@ -1131,7 +1130,6 @@ function ListTravel({
               allCount={travels.length}
               onToggleSelectAll={toggleSelectAll}
               onClearSelection={clearSelection}
-              onPreview={handleImmediatePreview}
               onSave={handleImmediateSave}
               onSettings={handleOpenSettings}
               isGenerating={pdfExport.isGenerating}

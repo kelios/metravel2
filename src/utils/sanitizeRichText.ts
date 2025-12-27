@@ -159,57 +159,6 @@ function removeReactNativeComponents(html: string): string {
   return cleaned;
 }
 
-/**
- * Объединяет HTML в один сплошной блок для PDF экспорта
- * Извлекает только текстовое содержимое и объединяет в один блок
- */
-function flattenHtmlForPdf(html: string): string {
-  if (!html || html.trim() === '') return '';
-  
-  // Сначала санитизируем HTML, чтобы убрать опасные элементы
-  // Затем извлекаем только текстовое содержимое
-  
-  // Удаляем все HTML теги, оставляя только текст
-  // Используем более безопасный подход - заменяем закрывающие теги на пробелы
-  let text = html
-    // Удаляем скрипты и стили полностью
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    // Заменяем блочные элементы на пробелы
-    .replace(/<\/p>/gi, ' ')
-    .replace(/<\/div>/gi, ' ')
-    .replace(/<\/h[1-6]>/gi, ' ')
-    .replace(/<\/li>/gi, ' ')
-    .replace(/<\/ul>/gi, ' ')
-    .replace(/<\/ol>/gi, ' ')
-    // Удаляем открывающие теги
-    .replace(/<[^>]+>/g, '')
-    // Заменяем HTML entities
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    // Объединяем множественные пробелы в один
-    .replace(/\s+/g, ' ')
-    .trim();
-  
-  // Если текст пустой после обработки, возвращаем пустую строку
-  if (!text || text.trim() === '') return '';
-  
-  // Оборачиваем в простой div для правильного отображения
-  // Экранируем HTML для безопасности
-  const escaped = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-  
-  return `<div>${escaped}</div>`;
-}
-
 export function sanitizeRichText(html?: string | null): string {
   if (!html) return ''
 

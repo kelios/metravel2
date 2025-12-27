@@ -117,16 +117,17 @@ describe('usePdfExport', () => {
     subtitle: '',
     coverType: 'auto' as const,
     template: 'minimal' as const,
-    format: 'A4',
-    orientation: 'portrait',
-    margins: 'standard',
-    imageQuality: 'high',
     sortOrder: 'date-desc' as const,
     includeToc: true,
     includeGallery: true,
     includeMap: true,
     includeChecklists: false,
     checklistSections: ['clothing', 'food', 'electronics'] as ChecklistSection[],
+    galleryLayout: 'grid' as const,
+    galleryColumns: 3,
+    showCaptions: true,
+    captionPosition: 'bottom' as const,
+    gallerySpacing: 'normal' as const,
   };
 
   beforeEach(() => {
@@ -226,6 +227,22 @@ describe('usePdfExport', () => {
       });
 
       expect(mockGenerateTravelsHtml).toHaveBeenCalledTimes(1);
+      expect(mockGenerateTravelsHtml).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({
+          title: 'Test Book',
+          template: 'minimal',
+          includeToc: true,
+          includeGallery: true,
+          includeMap: true,
+          includeChecklists: false,
+          galleryLayout: 'grid',
+          galleryColumns: 3,
+          showCaptions: true,
+          captionPosition: 'bottom',
+          gallerySpacing: 'normal',
+        })
+      );
       expect(mockOpenBookPreviewWindow).toHaveBeenCalledTimes(1);
 
       await waitFor(() => {
