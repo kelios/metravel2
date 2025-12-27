@@ -224,19 +224,18 @@ const RecommendationsTabs = memo(
 
     const renderTabPane = (children: React.ReactNode) => (
       <View style={styles.tabPane}>
-        <ScrollView
-          style={styles.tabPaneScroll}
-          contentContainerStyle={styles.tabPaneContent}
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-          // IMPORTANT: This component is rendered inside a scrollable page/list.
-          // On native, a nested vertical ScrollView can steal the gesture and make the parent
-          // scroll feel "stuck". We keep the internal scrolling only on web.
-          scrollEnabled={Platform.OS === 'web'}
-          nestedScrollEnabled={Platform.OS === 'web'}
-        >
-          {children}
-        </ScrollView>
+        {Platform.OS === 'web' ? (
+          <View style={[styles.tabPaneScroll, styles.tabPaneContent]}>{children}</View>
+        ) : (
+          <ScrollView
+            style={styles.tabPaneScroll}
+            contentContainerStyle={styles.tabPaneContent}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            {children}
+          </ScrollView>
+        )}
       </View>
     )
 
@@ -415,7 +414,7 @@ const RecommendationsTabs = memo(
                 <MaterialIcons
                   name={tab.icon as any}
                   size={18}
-                  color={activeTab === tab.id ? DESIGN_TOKENS.colors.primary : '#666'}
+                  color={activeTab === tab.id ? DESIGN_TOKENS.colors.primary : DESIGN_TOKENS.colors.textMuted}
                 />
                 <Text
                   style={[
@@ -478,14 +477,17 @@ const EmptyState = ({ message, icon }: { message: string; icon: any }) => (
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 16,
     overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
+    ...Platform.select({
+      web: {
+        boxShadow: DESIGN_TOKENS.shadows.card,
+      } as any,
+      default: DESIGN_TOKENS.shadowsNative.light,
+    }),
   },
   containerFixedHeight: {
     height: TAB_TOTAL_HEIGHT,
@@ -494,47 +496,55 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: DESIGN_TOKENS.colors.borderLight,
     minHeight: TAB_HEADER_HEIGHT,
+    paddingHorizontal: 12,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
   },
   tabsContainer: {
     paddingHorizontal: 0,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
     marginRight: 8,
-    minHeight: 40,
+    minHeight: 34,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   activeTab: {
-    backgroundColor: '#f0f8ff',
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    borderColor: 'rgba(15, 23, 42, 0.08)',
   },
   tabLabel: {
     marginLeft: 6,
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: DESIGN_TOKENS.colors.textMuted,
+    fontWeight: '600',
   },
   activeTabLabel: {
     color: DESIGN_TOKENS.colors.primary,
     fontWeight: '600',
   },
   badge: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
+    backgroundColor: 'rgba(15, 23, 42, 0.08)',
+    borderRadius: 999,
+    minWidth: 20,
+    height: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 6,
+    paddingHorizontal: 6,
   },
   badgeText: {
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.text,
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   tabUnderline: {
     position: 'absolute',
@@ -542,21 +552,25 @@ const styles = StyleSheet.create({
     height: 3,
     backgroundColor: DESIGN_TOKENS.colors.primary,
     borderRadius: 2,
+    opacity: 0,
   },
   collapseButton: {
-    padding: 12,
+    paddingLeft: 10,
+    paddingVertical: 12,
   },
   content: {
     height: TAB_CONTENT_HEIGHT,
     paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
   },
   collapsedHeader: {
     height: TAB_HEADER_HEIGHT,
     justifyContent: 'center',
-    paddingHorizontal: 0,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#fff',
+    borderBottomColor: DESIGN_TOKENS.colors.borderLight,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
   },
   collapsedSpacer: {
     height: TAB_CONTENT_HEIGHT,
@@ -676,11 +690,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 40,
+    width: '100%',
+    borderRadius: 16,
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
   },
   emptyText: {
     marginTop: 12,
-    fontSize: 16,
-    color: '#999',
+    fontSize: 14,
+    color: DESIGN_TOKENS.colors.textMuted,
+    fontWeight: '600',
   },
   errorContainer: {
     padding: 32,
@@ -697,7 +717,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   horizontalListContent: {
-    paddingHorizontal: 0,
+    paddingHorizontal: 4,
     paddingBottom: 6,
     ...Platform.select({
       web: {

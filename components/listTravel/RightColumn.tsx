@@ -18,7 +18,6 @@ import { TravelListSkeleton } from '@/components/SkeletonLoader'
 import EmptyState from '@/components/EmptyState'
 import type { Travel } from '@/src/types/types'
 import { PER_PAGE } from './utils/listTravelConstants'
-import { TRAVEL_CARD_MAX_WIDTH } from './utils/listTravelConstants'
 
 const RECOMMENDATIONS_TOTAL_HEIGHT = 376;
 const STABLE_PLACEHOLDER_HEIGHT = 1200; // Reserve vertical space on web mobile to avoid CLS
@@ -206,10 +205,9 @@ const RightColumn: React.FC<RightColumnProps> = memo(
         const { item: rowItems, index: rowIndex } = item;
         const cols = Math.max(1, (isMobile ? 1 : gridColumns) || 1);
         const missingSlots = Math.max(0, cols - rowItems.length);
-        const percent = `${100 / cols}%`;
         const calcWidth =
           cols > 1
-            ? `min(${TRAVEL_CARD_MAX_WIDTH}px, calc((100% - ${(cols - 1) * cardSpacing}px) / ${cols}))`
+            ? `calc((100% - ${(cols - 1) * cardSpacing}px) / ${cols})`
             : '100%';
         return (
           <View
@@ -284,9 +282,9 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                       ({
                         flexGrow: 0,
                         flexShrink: 0,
-                        flexBasis: percent,
-                        width: percent,
-                        maxWidth: percent,
+                        flexBasis: calcWidth,
+                        width: calcWidth,
+                        maxWidth: calcWidth,
                         minWidth: 0,
                         opacity: 0,
                         pointerEvents: 'none',

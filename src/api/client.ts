@@ -29,6 +29,14 @@ const LONG_TIMEOUT = 30000;
 const TOKEN_KEY = 'userToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
 
+type AuthInvalidationHandler = () => void;
+
+let authInvalidationHandler: AuthInvalidationHandler | null = null;
+
+export const setAuthInvalidationHandler = (handler: AuthInvalidationHandler | null) => {
+    authInvalidationHandler = handler;
+};
+
 /**
  * Класс ошибки API
  */
@@ -94,7 +102,7 @@ class ApiClient {
                 }
 
                 const response = await fetchWithTimeout(
-                    `${this.baseURL}/api/user/refresh/`,
+                    `${this.baseURL}/user/refresh/`,
                     {
                         method: 'POST',
                         headers: this.defaultHeaders,
@@ -141,6 +149,7 @@ class ApiClient {
      */
     private async clearTokens(): Promise<void> {
         await removeSecureItems([TOKEN_KEY, REFRESH_TOKEN_KEY]);
+        authInvalidationHandler?.();
     }
 
     /**

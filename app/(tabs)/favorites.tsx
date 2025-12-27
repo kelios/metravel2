@@ -176,6 +176,7 @@ export default function FavoritesScreen() {
                                 city: item.city ?? null,
                                 country: item.country ?? item.countryName ?? null,
                             }}
+                            badge={{ icon: 'favorite', backgroundColor: 'rgba(220, 38, 38, 0.92)', iconColor: '#ffffff' }}
                             onPress={() => handleOpen(item.url)}
                             layout="grid"
                             style={styles.card}

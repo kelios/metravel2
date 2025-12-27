@@ -1,5 +1,6 @@
 import React, {createContext, FC, ReactNode, useCallback, useContext, useEffect, useState,} from 'react';
 import {loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi,} from '@/src/api/auth';
+import { setAuthInvalidationHandler } from '@/src/api/client';
 import { setSecureItem, getSecureItem, removeSecureItems } from '@/src/utils/secureStorage';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/src/utils/storageBatch';
 import { fetchUserProfile } from '@/src/api/user';
@@ -39,6 +40,17 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     const [userAvatar, setUserAvatar] = useState<string | null>(null);
     const [authReady, setAuthReady] = useState(false);
     const [profileRefreshToken, setProfileRefreshToken] = useState(0);
+
+    const invalidateAuthState = useCallback(() => {
+        setIsAuthenticated(false);
+        setUserId(null);
+        setUsername('');
+        setIsSuperuser(false);
+        setUserAvatar(null);
+        setAuthReady(true);
+
+        removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar']).catch(() => undefined);
+    }, []);
 
     const normalizeAvatar = (value: unknown): string | null => {
         const raw = String(value ?? '').trim();
@@ -93,6 +105,13 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     useEffect(() => {
         checkAuthentication();
     }, [checkAuthentication]);
+
+    useEffect(() => {
+        setAuthInvalidationHandler(invalidateAuthState);
+        return () => {
+            setAuthInvalidationHandler(null);
+        };
+    }, [invalidateAuthState]);
 
     const login = async (email: string, password: string): Promise<boolean> => {
         try {
@@ -151,12 +170,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     const logout = async () => {
         // IMPORTANT: clear in-memory auth state immediately to prevent any
         // authenticated actions during an in-flight logoutApi request.
-        setIsAuthenticated(false);
-        setUserId(null);
-        setUsername('');
-        setIsSuperuser(false);
-        setUserAvatar(null);
-        setAuthReady(true);
+        invalidateAuthState();
 
         try {
             await logoutApi();

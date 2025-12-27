@@ -4,6 +4,7 @@ import { StyleSheet, Platform, View, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 import { TAB_CARD_TEMPLATE, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
 
@@ -40,19 +41,27 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
     return [item?.city, item?.country].filter(Boolean).join(', ');
   }, [item?.city, item?.country]);
 
-  // Create content slot to show location even with heroTitleOverlay
   const contentSlot = useMemo(() => {
-    if (!location) return null;
-    
     return (
-      <View style={styles.locationRow}>
-        <MaterialIcons name="place" size={12} color="#6b7280" style={{ marginRight: 4 }} />
-        <Text style={styles.locationText} numberOfLines={1}>
-          {location}
+      <View style={styles.content}>
+        <Text style={styles.title} numberOfLines={2}>
+          {title}
         </Text>
+
+        <View style={styles.locationRow}>
+          <MaterialIcons name="place" size={12} color={DESIGN_TOKENS.colors.textMuted} style={{ marginRight: 4 }} />
+          <Text style={styles.locationText} numberOfLines={1}>
+            {location || ' '}
+          </Text>
+        </View>
+
+        <View style={styles.actionsRow}>
+          <Text style={styles.actionText}>Открыть</Text>
+          <MaterialIcons name="north-east" size={14} color={DESIGN_TOKENS.colors.textSubtle} />
+        </View>
       </View>
     );
-  }, [location]);
+  }, [location, title]);
 
   return (
     <UnifiedTravelCard
@@ -61,11 +70,11 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
       onPress={onPress}
       metaText={location || ' '}
       badge={badge}
-      mediaFit="contain"
-      heroTitleOverlay={true}
+      mediaFit={Platform.OS === 'web' ? 'cover' : 'contain'}
+      heroTitleOverlay={false}
       contentSlot={contentSlot}
       width={layout === 'grid' ? undefined : (isMobile ? MOBILE_CARD_WIDTH : (TAB_CARD_TEMPLATE.container as any)?.width)}
-      imageHeight={Platform.OS === 'web' ? 200 : 180}
+      imageHeight={Platform.OS === 'web' ? 168 : 150}
       testID={testID}
       style={[layout === 'grid' ? styles.containerGrid : styles.container, style]}
       mediaProps={{
@@ -99,6 +108,23 @@ const styles = StyleSheet.create({
     }),
   },
 
+  content: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    gap: 8,
+    minHeight: 86,
+  },
+
+  title: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: DESIGN_TOKENS.colors.text,
+    lineHeight: 18,
+    letterSpacing: -0.2,
+    minHeight: 36,
+  },
+
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -108,8 +134,22 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6b7280',
+    color: DESIGN_TOKENS.colors.textMuted,
     flex: 1,
+  },
+
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 18,
+  },
+
+  actionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: DESIGN_TOKENS.colors.textSubtle,
+    letterSpacing: -0.1,
   },
 });
 

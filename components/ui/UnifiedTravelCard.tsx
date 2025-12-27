@@ -110,7 +110,7 @@ function UnifiedTravelCard({
           />
         ) : (
           <View style={styles.imagePlaceholder} testID="image-stub">
-            <MaterialIcons name="image" size={32} color="#d1d5db" />
+            <View style={styles.imagePlaceholderStub} />
           </View>
         )}
 
@@ -187,13 +187,22 @@ const styles = StyleSheet.create({
     width: '100%',
     height: Platform.OS === 'web' ? 200 : 180,
     position: 'relative',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
   },
   imagePlaceholder: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+  },
+  imagePlaceholderStub: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    opacity: 0.6,
   },
   imageTitleOverlay: {
     position: 'absolute',

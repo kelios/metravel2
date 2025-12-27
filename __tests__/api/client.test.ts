@@ -1,6 +1,6 @@
 import { apiClient, ApiError } from '@/src/api/client';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
-import { getSecureItem, setSecureItem } from '@/src/utils/secureStorage';
+import { getSecureItem, setSecureItem, removeSecureItems } from '@/src/utils/secureStorage';
 import { devError } from '@/src/utils/logger';
 
 jest.mock('@/src/utils/fetchWithTimeout', () => ({
@@ -10,6 +10,7 @@ jest.mock('@/src/utils/fetchWithTimeout', () => ({
 jest.mock('@/src/utils/secureStorage', () => ({
   getSecureItem: jest.fn(),
   setSecureItem: jest.fn(),
+  removeSecureItems: jest.fn(),
 }));
 
 jest.mock('@/src/utils/logger', () => ({
@@ -18,6 +19,7 @@ jest.mock('@/src/utils/logger', () => ({
 
 const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>;
 const mockedGetSecureItem = getSecureItem as jest.MockedFunction<typeof getSecureItem>;
+const mockedRemoveSecureItems = removeSecureItems as jest.MockedFunction<typeof removeSecureItems>;
 
 // эмулируем navigator для web-веток
 Object.defineProperty(global, 'navigator', {
@@ -29,6 +31,7 @@ describe('src/api/client.ts apiClient', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (navigator as any).onLine = true;
+    mockedRemoveSecureItems.mockResolvedValue(undefined);
   });
 
   it('успешно делает GET запрос c токеном', async () => {
