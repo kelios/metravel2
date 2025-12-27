@@ -183,6 +183,36 @@ jest.mock('@/context/FavoritesContext', () => {
   }
 })
 
+// Mock react-native-webview to avoid TurboModuleRegistry errors in Jest
+jest.mock('react-native-webview', () => {
+  const React = require('react')
+  const RN = require('react-native')
+
+  const WebView = (props: any) => React.createElement(RN.View, props)
+
+  return {
+    __esModule: true,
+    WebView,
+    default: WebView,
+  }
+})
+
+// Mock expo-image-picker to avoid native permission hook dependencies in Jest
+jest.mock('expo-image-picker', () => {
+  return {
+    __esModule: true,
+    MediaTypeOptions: { Images: 'Images', Videos: 'Videos', All: 'All' },
+    PermissionStatus: { GRANTED: 'granted', DENIED: 'denied', UNDETERMINED: 'undetermined' },
+    requestMediaLibraryPermissionsAsync: jest.fn(async () => ({ status: 'granted', granted: true })),
+    getMediaLibraryPermissionsAsync: jest.fn(async () => ({ status: 'granted', granted: true })),
+    requestCameraPermissionsAsync: jest.fn(async () => ({ status: 'granted', granted: true })),
+    getCameraPermissionsAsync: jest.fn(async () => ({ status: 'granted', granted: true })),
+    launchImageLibraryAsync: jest.fn(async () => ({ canceled: true, assets: [] })),
+    launchCameraAsync: jest.fn(async () => ({ canceled: true, assets: [] })),
+    default: {},
+  }
+})
+
 // Properly typed AsyncStorage mock
 const createAsyncStorageMock = () => {
   const store = new Map<string, string>()

@@ -166,6 +166,27 @@ const RecommendationsTabs = memo(
     const underlineAnim = useRef(new Animated.Value(0)).current;
     const scrollRef = useRef<ScrollView>(null);
 
+    const handleHorizontalWheel = useCallback((e: any) => {
+      if (Platform.OS !== 'web') return;
+
+      const deltaY = Number(e?.deltaY ?? 0);
+      const deltaX = Number(e?.deltaX ?? 0);
+
+      // Only hijack when the user is effectively scrolling vertically.
+      if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return;
+
+      const target = e?.currentTarget as any;
+      // DOM node for RNW ScrollView container.
+      const el = target?._nativeNode || target?._domNode || target;
+      if (!el || typeof (el as any).scrollLeft !== 'number') return;
+
+      const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
+      if (maxScrollLeft <= 0) return;
+
+      e.preventDefault?.();
+      (el as any).scrollLeft += deltaY;
+    }, []);
+
     // Табы с бейджами
     const tabs = useMemo(
       () => [
@@ -224,18 +245,7 @@ const RecommendationsTabs = memo(
 
     const renderTabPane = (children: React.ReactNode) => (
       <View style={styles.tabPane}>
-        {Platform.OS === 'web' ? (
-          <View style={[styles.tabPaneScroll, styles.tabPaneContent]}>{children}</View>
-        ) : (
-          <ScrollView
-            style={styles.tabPaneScroll}
-            contentContainerStyle={styles.tabPaneContent}
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          >
-            {children}
-          </ScrollView>
-        )}
+        <View style={[styles.tabPaneScroll, styles.tabPaneContent]}>{children}</View>
       </View>
     )
 
@@ -298,26 +308,51 @@ const RecommendationsTabs = memo(
                   </View>
                 </View>
 
-                <FlatList
-                  horizontal
-                  data={favorites}
-                  renderItem={({ item }) => (
-                    <TabTravelCard
-                      item={{
-                        id: item.id,
-                        title: item.title,
-                        imageUrl: item.imageUrl,
-                        city: (item as any).city ?? null,
-                        country: item.country ?? (item as any).countryName ?? null,
-                      }}
-                      onPress={() => router.push(item.url as any)}
-                    />
-                  )}
-                  keyExtractor={(item) => `${item.type || 'item'}-${item.id}`}
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.horizontalList}
-                  contentContainerStyle={styles.horizontalListContent}
-                />
+                {Platform.OS === 'web' ? (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={Platform.OS === 'web'}
+                    style={[styles.horizontalList, styles.webHorizontalScroll]}
+                    contentContainerStyle={styles.webHorizontalScrollContent}
+                    bounces={false}
+                    {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
+                  >
+                    {favorites.map((item: any) => (
+                      <TabTravelCard
+                        key={`${item.type || 'item'}-${item.id}`}
+                        item={{
+                          id: item.id,
+                          title: item.title,
+                          imageUrl: item.imageUrl,
+                          city: (item as any).city ?? null,
+                          country: item.country ?? (item as any).countryName ?? null,
+                        }}
+                        onPress={() => router.push(item.url as any)}
+                      />
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <FlatList
+                    horizontal
+                    data={favorites}
+                    renderItem={({ item }) => (
+                      <TabTravelCard
+                        item={{
+                          id: item.id,
+                          title: item.title,
+                          imageUrl: item.imageUrl,
+                          city: (item as any).city ?? null,
+                          country: item.country ?? (item as any).countryName ?? null,
+                        }}
+                        onPress={() => router.push(item.url as any)}
+                      />
+                    )}
+                    keyExtractor={(item) => `${item.type || 'item'}-${item.id}`}
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.horizontalList}
+                    contentContainerStyle={styles.horizontalListContent}
+                  />
+                )}
               </View>
             )
           );
@@ -366,27 +401,53 @@ const RecommendationsTabs = memo(
                   </View>
                 </View>
 
-                <FlatList
-                  horizontal
-                  data={viewHistory}
-                  renderItem={({ item }) => (
-                    <TabTravelCard
-                      item={{
-                        id: item.id,
-                        title: item.title,
-                        imageUrl: item.imageUrl,
-                        city: (item as any).city ?? null,
-                        country: item.country ?? (item as any).countryName ?? null,
-                      }}
-                      badge={{ icon: 'history', backgroundColor: 'rgba(0,0,0,0.7)', iconColor: '#fff' }}
-                      onPress={() => router.push(item.url as any)}
-                    />
-                  )}
-                  keyExtractor={(item) => `history-${item.id}-${item.viewedAt}`}
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.horizontalList}
-                  contentContainerStyle={styles.horizontalListContent}
-                />
+                {Platform.OS === 'web' ? (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={Platform.OS === 'web'}
+                    style={[styles.horizontalList, styles.webHorizontalScroll]}
+                    contentContainerStyle={styles.webHorizontalScrollContent}
+                    bounces={false}
+                    {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
+                  >
+                    {viewHistory.map((item: any) => (
+                      <TabTravelCard
+                        key={`history-${item.id}-${item.viewedAt}`}
+                        item={{
+                          id: item.id,
+                          title: item.title,
+                          imageUrl: item.imageUrl,
+                          city: (item as any).city ?? null,
+                          country: item.country ?? (item as any).countryName ?? null,
+                        }}
+                        badge={{ icon: 'history', backgroundColor: 'rgba(0,0,0,0.7)', iconColor: '#fff' }}
+                        onPress={() => router.push(item.url as any)}
+                      />
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <FlatList
+                    horizontal
+                    data={viewHistory}
+                    renderItem={({ item }) => (
+                      <TabTravelCard
+                        item={{
+                          id: item.id,
+                          title: item.title,
+                          imageUrl: item.imageUrl,
+                          city: (item as any).city ?? null,
+                          country: item.country ?? (item as any).countryName ?? null,
+                        }}
+                        badge={{ icon: 'history', backgroundColor: 'rgba(0,0,0,0.7)', iconColor: '#fff' }}
+                        onPress={() => router.push(item.url as any)}
+                      />
+                    )}
+                    keyExtractor={(item) => `history-${item.id}-${item.viewedAt}`}
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.horizontalList}
+                    contentContainerStyle={styles.horizontalListContent}
+                  />
+                )}
               </View>
             )
           );
@@ -715,6 +776,28 @@ const styles = StyleSheet.create({
   },
   horizontalList: {
     marginBottom: 8,
+  },
+  webHorizontalScroll: {
+    ...(Platform.select({
+      web: {
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        width: '100%',
+      } as any,
+      default: {},
+    }) as any),
+  },
+  webHorizontalScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    paddingHorizontal: 4,
+    paddingBottom: 6,
+    ...(Platform.select({
+      web: {
+        width: 'max-content',
+      } as any,
+      default: {},
+    }) as any),
   },
   horizontalListContent: {
     paddingHorizontal: 4,

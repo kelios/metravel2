@@ -10,6 +10,8 @@ import { TravelFormData, Travel } from '@/src/types/types';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { deleteTravelMainImage } from '@/src/api/misc';
 
 const GallerySectionLazy = Platform.OS === 'web'
     ? React.lazy(() => import('@/components/travel/GallerySection'))
@@ -61,6 +63,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
     const [footerHeight, setFooterHeight] = useState(0);
+    const [isDeleteCoverDialogVisible, setIsDeleteCoverDialogVisible] = useState(false);
 
     const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
         const next = Math.ceil(event.nativeEvent.layout.height);
@@ -113,6 +116,27 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     const handleYoutubeChange = (value: string) => {
         setFormData({ ...formData, youtube_link: value });
     };
+
+    const handleRequestDeleteCover = useCallback(() => {
+        if (!formData.id) return;
+        setIsDeleteCoverDialogVisible(true);
+    }, [formData.id]);
+
+    const handleConfirmDeleteCover = useCallback(async () => {
+        if (!formData.id) return;
+        try {
+            await deleteTravelMainImage(formData.id);
+
+            // Clear cover urls to update preview immediately.
+            setFormData({
+                ...(formData as any),
+                travel_image_thumb_small_url: null,
+                travel_image_thumb_url: null,
+            });
+        } finally {
+            setIsDeleteCoverDialogVisible(false);
+        }
+    }, [formData, setFormData]);
 
     // Валидация шага 3
     const validation = useMemo(() => {
@@ -167,6 +191,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                                             ? (formData as any).travel_image_thumb_small_url
                                             : (travelDataOld as any)?.travel_image_thumb_small_url ?? null
                                     }
+                                    onRequestRemove={handleRequestDeleteCover}
                                     placeholder="Перетащите обложку путешествия"
                                     maxSizeMB={10}
                                 />
@@ -219,6 +244,16 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                     currentStep={currentStep}
                     totalSteps={totalSteps}
                     onStepSelect={onStepSelect}
+                />
+
+                <ConfirmDialog
+                    visible={isDeleteCoverDialogVisible}
+                    onClose={() => setIsDeleteCoverDialogVisible(false)}
+                    onConfirm={handleConfirmDeleteCover}
+                    title="Удалить обложку"
+                    message="Вы уверены, что хотите удалить главное изображение путешествия?"
+                    confirmText="Удалить"
+                    cancelText="Отмена"
                 />
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -285,6 +320,27 @@ const styles = StyleSheet.create({
     coverWrapper: {
         marginTop: 8,
         alignItems: 'center',
+    },
+    deleteCoverButton: {
+        marginTop: 10,
+        alignSelf: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+    },
+    deleteCoverButtonPressed: {
+        opacity: 0.85,
+    },
+    deleteCoverButtonDisabled: {
+        opacity: 0.6,
+    },
+    deleteCoverButtonText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: DESIGN_TOKENS.colors.danger,
+        fontWeight: '600',
     },
     infoText: {
         marginTop: 8,

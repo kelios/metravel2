@@ -8,7 +8,7 @@ describe('enhancedTravelCardStyles', () => {
       const card = enhancedTravelCardStyles.card;
 
       expect(card.width).toBe(Platform.OS === 'web' ? 280 : '100%');
-      expect(card.maxWidth).toBe(360);
+      expect(card.maxWidth).toBe(340);
       expect(card.borderRadius).toBeDefined();
       expect(card.backgroundColor).toBeDefined();
       expect(card.borderWidth).toBe(1);

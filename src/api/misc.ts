@@ -30,6 +30,8 @@ const GET_ALL_COUNTRY = `${URLAPI}/countries/`;
 const SEND_FEEDBACK = `${URLAPI}/feedback/`;
 const SEND_AI_QUESTION = `${URLAPI}/chat`;
 
+const TRAVELS = `${URLAPI}/travels/`;
+
 const slugifySafe = (value?: string): string => {
   if (!value) return '';
   return value
@@ -82,6 +84,35 @@ export const saveFormData = async (data: TravelFormData): Promise<TravelFormData
     }
     throw error;
   }
+};
+
+export const deleteTravelMainImage = async (travelId: string | number) => {
+  const token = await getSecureItem('userToken');
+  if (!token) {
+    throw new Error('Пользователь не авторизован');
+  }
+
+  const normalizedId = String(travelId);
+  if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') {
+    throw new Error('Некорректный id путешествия');
+  }
+
+  const response = await fetchWithTimeout(
+    `${TRAVELS}${encodeURIComponent(normalizedId)}/main-image/`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Token ${token}` },
+    },
+    DEFAULT_TIMEOUT,
+  );
+
+  if (response.status === 204) {
+    return response;
+  }
+
+  const textFn = (response as any).text?.bind(response);
+  const errorText = textFn ? await textFn().catch(() => '') : '';
+  throw new Error(errorText || 'Ошибка удаления главного изображения');
 };
 
 export const uploadImage = async (data: FormData): Promise<any> => {

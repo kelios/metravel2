@@ -99,8 +99,11 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
       const filtered = list.filter((item) => {
         const name = (item?.name || '').trim();
         const country = (item?.countryName || '').trim();
-        const views = Number(item?.countUnicIpView ?? item?.views ?? 0);
-        return name.length > 0 && country.length > 0 && views > 0;
+        const rawViews = item?.countUnicIpView ?? item?.views;
+        const hasViewsField = rawViews !== undefined && rawViews !== null && String(rawViews).trim().length > 0;
+        const views = Number(rawViews);
+
+        return name.length > 0 && country.length > 0 && (!hasViewsField || views > 0);
       });
       // Ограничиваем количество элементов для первоначального рендера
       return filtered.slice(0, Platform.OS === 'web' ? 8 : filtered.length);

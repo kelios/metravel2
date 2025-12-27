@@ -159,6 +159,35 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     return null;
   };
 
+  const MarkerWithPopup: React.FC<{ point: Point; latLng: [number, number] }> = ({ point, latLng }) => {
+    const map = useMap();
+
+    const handleMarkerClick = useCallback(() => {
+      try {
+        if (typeof map.flyTo === 'function') {
+          map.flyTo(latLng, map.getZoom(), { animate: true, duration: 0.35 } as any);
+        } else if (typeof map.setView === 'function') {
+          map.setView(latLng, map.getZoom(), { animate: true } as any);
+        }
+      } catch {
+        // noop
+      }
+    }, [latLng, map]);
+
+    return (
+      <Marker
+        key={`${point.id}`}
+        position={latLng}
+        icon={meTravelIcon}
+        eventHandlers={{
+          click: handleMarkerClick,
+        }}
+      >
+        <PopupWithClose point={point} />
+      </Marker>
+    );
+  };
+
   // Компонент для центрирования карты при открытии попапа
   const MapCenterOnPopup: React.FC = () => {
     const map = useMap();
@@ -282,14 +311,12 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
           crossOrigin="anonymous"
         />
         <FitBoundsOnData data={travelData} />
+        <MapCenterOnPopup />
         {travelData.map((point) => {
           const latLng = getLatLng(point.coord);
           if (!latLng) return null;
           return (
-            <Marker key={`${point.id}`} position={latLng} icon={meTravelIcon}>
-              <MapCenterOnPopup />
-              <PopupWithClose point={point} />
-            </Marker>
+            <MarkerWithPopup key={`${point.id}`} point={point} latLng={latLng} />
           );
         })}
       </MapContainer>

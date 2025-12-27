@@ -17,11 +17,11 @@ import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 
 type Props = { travel: Travel };
 
-const CARD_HEIGHT = 320;
-const CARD_IMAGE_HEIGHT = 200;
+const CARD_HEIGHT = 250;
+const CARD_IMAGE_HEIGHT = 170;
 
 const TravelTmlRound: React.FC<Props> = ({ travel }) => {
-    const { width } = useResponsive();
+    useResponsive();
 
     const {
         name = "Без названия",
@@ -128,6 +128,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
                 containerOverlaySlot={overlay}
                 contentSlot={contentSlot}
                 imageHeight={imageHeight}
+                contentContainerStyle={styles.compactContent}
                 style={[
                     styles.card,
                     globalFocusStyles.focusable,
@@ -282,6 +283,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         minHeight: 18,
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    },
+
+    compactContent: {
+        paddingVertical: 8,
+        gap: 0,
     },
 
     locationText: {

@@ -162,8 +162,7 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
               />
             ) : (
               <div className="popup-image-placeholder" aria-label="Нет фото для этой точки">
-                <span className="popup-placeholder-icon" aria-hidden="true">📷</span>
-                <span>{imageError ? 'Ошибка загрузки фото' : 'Нет фотографии'}</span>
+                <span className="popup-placeholder-stub" aria-hidden="true" />
               </div>
             )}
 

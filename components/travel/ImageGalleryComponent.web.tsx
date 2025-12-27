@@ -428,7 +428,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
-                                        <MaterialIcons name="close" size={14} color={DESIGN_TOKENS.colors.textInverse} />
+                                        <MaterialIcons name="close" size={18} color={DESIGN_TOKENS.colors.textInverse} />
                                     </TouchableOpacity>
                                 </View>
                             ) : image.error ? (
@@ -459,7 +459,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
-                                        <MaterialIcons name="close" size={14} color={DESIGN_TOKENS.colors.textInverse} />
+                                        <MaterialIcons name="close" size={18} color={DESIGN_TOKENS.colors.textInverse} />
                                     </TouchableOpacity>
                                 </View>
                             ) : (
@@ -479,7 +479,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
-                                        <MaterialIcons name="close" size={14} color={DESIGN_TOKENS.colors.textInverse} />
+                                        <MaterialIcons name="close" size={18} color={DESIGN_TOKENS.colors.textInverse} />
                                     </TouchableOpacity>
                                 </>
                             )}
@@ -579,12 +579,14 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 8,
         right: 8,
-        backgroundColor: DESIGN_TOKENS.colors.overlay,
-        width: 24,
-        height: 24,
-        borderRadius: 12,
+        backgroundColor: 'rgba(0,0,0,0.75)',
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
+        zIndex: 50,
+        elevation: 50,
     },
     dropzone: {
         width: '100%',

@@ -100,7 +100,17 @@ export default function ProfileScreen() {
           // Загружаем путешествия пользователя для подсчёта
           try {
             const userTravels = await fetchMyTravels({ user_id: uid });
-            const travelsCount = Array.isArray(userTravels) ? userTravels.length : 0;
+            const payload: any = userTravels;
+            const travelsCount = (() => {
+              if (!payload) return 0;
+              if (Array.isArray(payload)) return payload.length;
+              if (Array.isArray(payload?.data)) return payload.data.length;
+              if (Array.isArray(payload?.results)) return payload.results.length;
+              if (Array.isArray(payload?.items)) return payload.items.length;
+              if (typeof payload?.total === 'number') return payload.total;
+              if (typeof payload?.count === 'number') return payload.count;
+              return 0;
+            })();
             setStats((prev) => ({
               ...prev,
               travelsCount,

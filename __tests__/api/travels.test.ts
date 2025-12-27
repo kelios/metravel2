@@ -258,7 +258,7 @@ describe('src/api/travelsApi.ts', () => {
       await fetchTravelBySlug('sluggy');
 
       const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
-      expect(url).toBe('http://example.test/api/travels/by-slug/sluggy');
+      expect(url).toBe('http://example.test/api/travels/by-slug/sluggy/');
     });
 
     it('fetchTravelsNear пробрасывает AbortError', async () => {

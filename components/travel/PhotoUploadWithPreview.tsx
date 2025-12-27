@@ -13,6 +13,7 @@ interface PhotoUploadWithPreviewProps {
     oldImage?: string | null;
     onUpload?: (imageUrl: string) => void;
     onPreviewChange?: (previewUrl: string | null) => void;
+    onRequestRemove?: () => void;
     disabled?: boolean;
     placeholder?: string;
     maxSizeMB?: number;
@@ -82,6 +83,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     oldImage,
     onUpload,
     onPreviewChange,
+    onRequestRemove,
     disabled = false,
     placeholder = 'Перетащите сюда изображение',
     maxSizeMB = 10,
@@ -110,6 +112,15 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         onPreviewChange?.(null);
         onUpload?.('');
     }, [onPreviewChange, onUpload]);
+
+    const handleRemovePress = useCallback(() => {
+        if (disabled) return;
+        if (onRequestRemove) {
+            onRequestRemove();
+            return;
+        }
+        handleRemoveImage();
+    }, [disabled, handleRemoveImage, onRequestRemove]);
 
     // Синхронизация с oldImage
     useEffect(() => {
@@ -440,7 +451,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                             {!disabled && (
                                 <Pressable
                                     style={styles.removeButton}
-                                    onPress={handleRemoveImage}
+                                    onPress={handleRemovePress}
                                     accessibilityLabel="Удалить изображение"
                                 >
                                     <Feather name="x" size={18} color="#fff" />
@@ -507,7 +518,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                         style={styles.nativePreviewImage as any}
                     />
                     {!disabled && (
-                        <Pressable style={styles.nativeRemoveButton} onPress={handleRemoveImage}>
+                        <Pressable style={styles.nativeRemoveButton} onPress={handleRemovePress}>
                             <Feather name="trash-2" size={14} color="#ef4444" />
                             <Text style={styles.nativeRemoveText}>Удалить</Text>
                         </Pressable>

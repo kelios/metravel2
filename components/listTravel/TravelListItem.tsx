@@ -393,6 +393,9 @@ function TravelListItem({
     // ✅ FIX: На web всегда используем View, чтобы избежать вложенных button ↔ button
     const InlineWebButton = Platform.OS === 'web' ? View : Pressable;
     // ✅ B5.1: Улучшенные accessibility атрибуты
+    const a11yLabelBase = `Путешествие: ${name}${countries.length > 0 ? `. Страны: ${countries.join(', ')}` : ''}`;
+    const a11yLabelWithViews = views > 0 ? `${a11yLabelBase}. Просмотров: ${viewsFormatted}` : a11yLabelBase;
+
     const cardWrapperProps =
       Platform.OS === 'web'
         ? selectable
@@ -412,14 +415,14 @@ function TravelListItem({
               },
               onMouseDown: (e: any) => e.stopPropagation?.(),
               'aria-pressed': isSelected,
-              'aria-label': `Путешествие: ${name}${countries.length > 0 ? `. Страны: ${countries.join(', ')}` : ''}. Просмотров: ${viewsFormatted}`,
+              'aria-label': a11yLabelWithViews,
             } as any)
           : {}
         : {
             onPress: handlePress,
             android_ripple: Platform.OS === "android" ? { color: "rgba(17,24,39,0.06)" } : undefined,
             accessibilityState: selectable ? { selected: isSelected } : undefined,
-            accessibilityLabel: `Путешествие: ${name}${countries.length > 0 ? `. Страны: ${countries.join(', ')}` : ''}. Просмотров: ${viewsFormatted}`,
+            accessibilityLabel: a11yLabelWithViews,
             accessibilityRole: "button" as const,
             accessibilityHint: selectable ? 'Двойное нажатие для выбора' : 'Двойное нажатие для просмотра деталей',
           };
@@ -520,11 +523,11 @@ const hasContentInfo = useMemo(() => {
   return (
     (!hideAuthor && (authorName || authorNameDisplay)) ||
     countries.length > 0 ||
-    (countUnicIpView && countUnicIpView !== '0') ||
+    views > 0 ||
     popularityFlags.isPopular ||
     popularityFlags.isNew
   );
-}, [hideAuthor, authorName, authorNameDisplay, countries.length, countUnicIpView, popularityFlags.isPopular, popularityFlags.isNew]);
+}, [hideAuthor, authorName, authorNameDisplay, countries.length, popularityFlags.isPopular, popularityFlags.isNew, views]);
 
 const contentSlotWithoutTitle = hasContentInfo ? (
   <>
@@ -540,63 +543,67 @@ const contentSlotWithoutTitle = hasContentInfo ? (
         },
       ]}
     >
-      <View style={styles.metaInfoTopRow}>
-        {!hideAuthor && (
-          <View style={styles.metaBox}>
-            <Feather
-              name="user"
-              size={Platform.select({ default: 10, web: 11 })}
-              color={Platform.OS === 'web' ? '#334155' : '#64748b'}
-              style={{ marginRight: 4 }}
-            />
-            {Platform.OS === 'web' ? (
-              <View
-                {...({
-                  ...(authorUserId
-                    ? {
-                        role: 'button',
-                        tabIndex: 0,
-                        'aria-label': `Открыть профиль автора ${authorName || 'Аноним'}`,
-                      }
-                    : {}),
-                } as any)}
-                onClick={handleAuthorPress}
-              >
-                <Text
-                  style={[
-                    styles.metaTxt,
-                  ]}
-                  numberOfLines={1}
+      {(!hideAuthor || views > 0) && (
+        <View style={styles.metaInfoTopRow}>
+          {!hideAuthor && (
+            <View style={styles.metaBox}>
+              <Feather
+                name="user"
+                size={Platform.select({ default: 10, web: 11 })}
+                color={Platform.OS === 'web' ? '#334155' : '#64748b'}
+                style={{ marginRight: 4 }}
+              />
+              {Platform.OS === 'web' ? (
+                <View
+                  {...({
+                    ...(authorUserId
+                      ? {
+                          role: 'button',
+                          tabIndex: 0,
+                          'aria-label': `Открыть профиль автора ${authorName || 'Аноним'}`,
+                        }
+                      : {}),
+                  } as any)}
+                  onClick={handleAuthorPress}
                 >
-                  {authorName || 'Аноним'}
-                </Text>
-              </View>
-            ) : (
-              <Pressable
-                onPress={handleAuthorPress}
-                style={({ pressed }) => [pressed && authorUserId ? { opacity: 0.85 } : null]}
-              >
-                <Text style={styles.metaTxt} numberOfLines={1}>
-                  {authorName || 'Аноним'}
-                </Text>
-              </Pressable>
-            )}
-          </View>
-        )}
+                  <Text
+                    style={[
+                      styles.metaTxt,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {authorName || 'Аноним'}
+                  </Text>
+                </View>
+              ) : (
+                <Pressable
+                  onPress={handleAuthorPress}
+                  style={({ pressed }) => [pressed && authorUserId ? { opacity: 0.85 } : null]}
+                >
+                  <Text style={styles.metaTxt} numberOfLines={1}>
+                    {authorName || 'Аноним'}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          )}
 
-        <View style={styles.metaBoxViews} testID="views-meta">
-          <Feather
-            name="eye"
-            size={Platform.select({ default: 10, web: 11 })}
-            color={Platform.OS === 'web' ? '#334155' : '#64748b'}
-          />
-          <Text style={styles.metaTxtViews} numberOfLines={1}>
-            {viewsFormatted}
-          </Text>
+          {views > 0 && (
+            <View style={styles.metaBoxViews} testID="views-meta">
+              <Feather
+                name="eye"
+                size={Platform.select({ default: 10, web: 11 })}
+                color={Platform.OS === 'web' ? '#334155' : '#64748b'}
+              />
+              <Text style={styles.metaTxtViews} numberOfLines={1}>
+                {viewsFormatted}
+              </Text>
+            </View>
+          )}
         </View>
-      </View>
+      )}
 
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+      <View style={styles.metaBadgesRow}>
         {popularityFlags.isPopular && (
           <View style={[styles.statusBadge, styles.statusBadgePopular]}>
             <Feather name="trending-up" size={Platform.select({ default: 10, web: 12 })} color={TOKENS.colors.accent} />

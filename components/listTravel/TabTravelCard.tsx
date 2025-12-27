@@ -29,9 +29,10 @@ type Props = {
   testID?: string;
   style?: StyleProp<ViewStyle>;
   layout?: 'horizontal' | 'grid';
+  contentMinHeight?: number;
 };
 
-function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizontal' }: Props) {
+function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizontal', contentMinHeight }: Props) {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
 
@@ -43,7 +44,10 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
 
   const contentSlot = useMemo(() => {
     return (
-      <View style={styles.content}>
+      <View
+        testID={testID ? `${testID}-content` : `tab-travel-card-content-${String(item?.id ?? 'unknown')}`}
+        style={[styles.content, typeof contentMinHeight === 'number' ? { minHeight: contentMinHeight } : null]}
+      >
         <Text style={styles.title} numberOfLines={2}>
           {title}
         </Text>
@@ -54,14 +58,9 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
             {location || ' '}
           </Text>
         </View>
-
-        <View style={styles.actionsRow}>
-          <Text style={styles.actionText}>Открыть</Text>
-          <MaterialIcons name="north-east" size={14} color={DESIGN_TOKENS.colors.textSubtle} />
-        </View>
       </View>
     );
-  }, [location, title]);
+  }, [contentMinHeight, item?.id, location, testID, title]);
 
   return (
     <UnifiedTravelCard
@@ -113,7 +112,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: DESIGN_TOKENS.colors.surface,
     gap: 8,
-    minHeight: 86,
+    minHeight: 64,
   },
 
   title: {
@@ -138,19 +137,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  actionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 18,
-  },
-
-  actionText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: DESIGN_TOKENS.colors.textSubtle,
-    letterSpacing: -0.1,
-  },
 });
 
 export default memo(TabTravelCard);

@@ -38,6 +38,7 @@ type Props = {
   };
   width?: number;
   imageHeight?: number;
+  contentContainerStyle?: StyleProp<ViewStyle>;
   style?: StyleProp<ViewStyle>;
   testID?: string;
   webAsView?: boolean;
@@ -61,6 +62,7 @@ function UnifiedTravelCard({
   mediaProps,
   width,
   imageHeight,
+  contentContainerStyle,
   style,
   testID,
   webAsView = false,
@@ -110,7 +112,10 @@ function UnifiedTravelCard({
           />
         ) : (
           <View style={styles.imagePlaceholder} testID="image-stub">
-            <View style={styles.imagePlaceholderStub} />
+            <View style={styles.placeholderContent}>
+              <MaterialIcons name="image" size={26} color={DESIGN_TOKENS.colors.textMuted} style={{ opacity: 0.55 }} />
+              <Text style={styles.placeholderText}>Нет фото</Text>
+            </View>
           </View>
         )}
 
@@ -148,7 +153,7 @@ function UnifiedTravelCard({
       </View>
 
       {contentSlot !== null ? (
-        <View style={styles.content}>{contentSlot}</View>
+        <View style={[styles.content, contentContainerStyle]}>{contentSlot}</View>
       ) : (
         <View style={styles.content}>
           {!heroTitleOverlay && (
@@ -195,14 +200,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
   },
-  imagePlaceholderStub: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    opacity: 0.6,
+  placeholderContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  placeholderText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: DESIGN_TOKENS.colors.textMuted,
+    letterSpacing: -0.1,
+    opacity: 0.8,
   },
   imageTitleOverlay: {
     position: 'absolute',

@@ -507,7 +507,7 @@ export const fetchTravelBySlug = async (slug: string): Promise<Travel> => {
         const authHeaders = await buildAuthHeaders();
         const safeSlug = encodeURIComponent(String(slug).replace(/^\/+/, ''));
         const res = await fetchWithTimeout(
-            `${GET_TRAVELS_BY_SLUG}${safeSlug}`,
+            `${GET_TRAVELS_BY_SLUG}${safeSlug}/`,
             authHeaders ? { headers: authHeaders } : {},
             DEFAULT_TIMEOUT,
         );

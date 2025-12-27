@@ -130,7 +130,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                                 style={styles.previewMedia as any}
                                             />
                                         ) : (
-                                            <div style={styles.placeholderImage}>Нет фото</div>
+                                            <div style={styles.placeholderImage} aria-label="Нет фото" />
                                         )}
                                         </div>
                                     <div style={styles.previewText}>

@@ -15,7 +15,7 @@ const mockFetchTravel = jest.fn().mockResolvedValue({
 });
 
 // Mutable auth state to control authReady flips
-let authState = {
+let mockAuthState = {
   isAuthenticated: true,
   isSuperuser: false,
   userId: '42',
@@ -40,7 +40,7 @@ jest.mock('react-native-toast-message', () => ({
 }));
 
 jest.mock('@/context/AuthContext', () => ({
-  useAuth: () => authState,
+  useAuth: () => mockAuthState,
 }));
 
 jest.mock('@/src/api/misc', () => ({
@@ -56,7 +56,7 @@ jest.mock('@/src/api/travelsApi', () => ({
 describe('UpsertTravel authReady gating', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    authState = {
+    mockAuthState = {
       isAuthenticated: true,
       isSuperuser: false,
       userId: '42',
@@ -72,7 +72,7 @@ describe('UpsertTravel authReady gating', () => {
     expect(mockReplace).not.toHaveBeenCalled();
 
     // Переключаем authReady и делаем повторный рендер
-    authState = { ...authState, authReady: true };
+    mockAuthState = { ...mockAuthState, authReady: true };
     rerender(<UpsertTravel />);
 
     await waitFor(() => {
@@ -83,7 +83,7 @@ describe('UpsertTravel authReady gating', () => {
 
   it('redirects to home after authReady when user is not owner and not superuser', async () => {
     // Пользователь не владелец
-    authState = {
+    mockAuthState = {
       isAuthenticated: true,
       isSuperuser: false,
       userId: '7',
@@ -97,7 +97,7 @@ describe('UpsertTravel authReady gating', () => {
     expect(mockReplace).not.toHaveBeenCalled();
 
     // Включаем authReady
-    authState = { ...authState, authReady: true };
+    mockAuthState = { ...mockAuthState, authReady: true };
     rerender(<UpsertTravel />);
 
     await waitFor(() => {

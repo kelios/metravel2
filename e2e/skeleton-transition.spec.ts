@@ -84,12 +84,12 @@ test.describe('Skeleton transition (no layout shift)', () => {
     // Deterministic skeleton: delay and then mock the very first travels list response.
     // This guarantees we see the skeleton and then transition to a real card.
     let fulfilledOnce = false;
-    await page.route('**/api/travels/**', async (route: any, request: any) => {
+    await page.route(/\/api\/(?:p\/)?travels\//, async (route: any, request: any) => {
       const url = request.url();
       const isListRequest =
         !fulfilledOnce &&
         request.method() === 'GET' &&
-        /\/api\/travels\/?\?/.test(url) &&
+        /\/api\/(?:p\/)?travels\/?\?/.test(url) &&
         url.includes('where=') &&
         url.includes('perPage=');
 

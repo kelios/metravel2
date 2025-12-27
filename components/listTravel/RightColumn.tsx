@@ -14,10 +14,8 @@ import {
 import { useRouter } from 'expo-router'
 
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
-import { TravelListSkeleton } from '@/components/SkeletonLoader'
 import EmptyState from '@/components/EmptyState'
 import type { Travel } from '@/src/types/types'
-import { PER_PAGE } from './utils/listTravelConstants'
 
 const RECOMMENDATIONS_TOTAL_HEIGHT = 376;
 const STABLE_PLACEHOLDER_HEIGHT = 1200; // Reserve vertical space on web mobile to avoid CLS
@@ -178,7 +176,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       }
 
       return resetPadding
-    }, [cardsContainerStyle, isWebMobile, isMobile, contentPadding])
+    }, [cardsContainerStyle, isWebMobile, cardSpacing])
 
     const rows = useMemo(() => {
       const cols = Math.max(1, (isMobile ? 1 : gridColumns) || 1)
@@ -349,11 +347,6 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     const [showDelayedSkeleton, setShowDelayedSkeleton] = useState(false)
 
     const skeletonDelayMs = Platform.OS === 'web' ? 200 : 250
-
-    const skeletonCount = useMemo(() => {
-      if (Platform.OS !== 'web') return PER_PAGE
-      return isMobile ? 6 : 12
-    }, [isMobile])
 
     const shouldShowSkeleton =
       showDelayedSkeleton && showInitialLoading && travels.length === 0

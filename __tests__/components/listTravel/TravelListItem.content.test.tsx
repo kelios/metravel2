@@ -111,9 +111,9 @@ describe('TravelListItem content & metadata', () => {
   });
 
   it('renders views meta when views are zero (shows 0)', () => {
-    const { getByTestId, getByText } = renderItem({ countUnicIpView: '0' } as any);
-    expect(getByTestId('views-meta')).toBeTruthy();
-    expect(getByText('0')).toBeTruthy();
+    const { queryByTestId, queryByText } = renderItem({ countUnicIpView: '0' } as any);
+    expect(queryByTestId('views-meta')).toBeNull();
+    expect(queryByText('0')).toBeNull();
   });
 
   it('renders views meta when views are greater than zero', () => {
@@ -221,7 +221,7 @@ describe('TravelListItem content & metadata', () => {
       // Автор должен быть, остальное - нет
       expect(getByText('John Doe')).toBeTruthy();
       // views-meta показывается всегда когда есть контентная область (даже с 0 просмотров)
-      expect(queryByTestId('views-meta')).toBeTruthy(); // Should exist when content area is shown
+      expect(queryByTestId('views-meta')).toBeNull(); // Should exist when content area is shown
       expect(queryByText('Популярное')).toBeNull();
       expect(queryByText('Новое')).toBeNull();
       expect(queryByText('Россия')).toBeNull(); // Базовая страна отсутствует

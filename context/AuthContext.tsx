@@ -49,7 +49,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
         setUserAvatar(null);
         setAuthReady(true);
 
-        removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar']).catch(() => undefined);
+        Promise.resolve(removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar'])).catch(() => undefined);
     }, []);
 
     const normalizeAvatar = (value: unknown): string | null => {

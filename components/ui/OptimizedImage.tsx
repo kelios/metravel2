@@ -3,6 +3,14 @@ import { View, StyleSheet, ActivityIndicator, Platform, Text } from 'react-nativ
 import { Image as ExpoImage, ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { MaterialIcons } from '@expo/vector-icons';
+
+const hasValidUriSource = (source: { uri: string } | number): boolean => {
+  if (!source) return false;
+  if (typeof source === 'number') return true;
+  const uri = typeof (source as any)?.uri === 'string' ? String((source as any).uri).trim() : '';
+  return uri.length > 0;
+};
 
 interface OptimizedImageProps {
   source: { uri: string } | number;
@@ -67,7 +75,8 @@ function OptimizedImage({
   onError,
   style,
 }: OptimizedImageProps) {
-  const [isLoading, setIsLoading] = useState(true);
+  const validSource = hasValidUriSource(source);
+  const [isLoading, setIsLoading] = useState(() => validSource);
   const [hasError, setHasError] = useState(false);
 
   const handleLoad = () => {
@@ -84,6 +93,8 @@ function OptimizedImage({
   // Определяем приоритет загрузки
   const fetchPriority = priority === 'high' ? 'high' : priority === 'low' ? 'low' : 'auto';
 
+  const showFallback = !blurOnly && (!validSource || hasError);
+
   return (
     <View
       style={[
@@ -97,7 +108,7 @@ function OptimizedImage({
         style,
       ]}
     >
-      {blurBackground && (
+      {blurBackground && validSource && (
         <>
           <ExpoImage
             source={source}
@@ -121,7 +132,7 @@ function OptimizedImage({
         </>
       )}
 
-      {!blurOnly && (
+      {!blurOnly && validSource && (
         <ExpoImage
           {...(imageProps as any)}
           source={source}
@@ -150,7 +161,7 @@ function OptimizedImage({
       )}
 
       {/* Индикатор загрузки */}
-      {!blurOnly && isLoading && !hasError && (
+      {!blurOnly && validSource && isLoading && !hasError && (
         <View style={styles.loadingContainer} testID="optimized-image-loading">
           <ActivityIndicator
             size="small"
@@ -159,10 +170,13 @@ function OptimizedImage({
         </View>
       )}
 
-      {/* Заглушка при ошибке */}
-      {!blurOnly && hasError && (
+      {/* Заглушка при ошибке / отсутствии uri */}
+      {showFallback && (
         <View style={[styles.errorContainer, { borderRadius }]} testID="optimized-image-error">
-          <Text style={styles.errorText}>Нет фото</Text>
+          <View style={styles.placeholderContent}>
+            <MaterialIcons name="image" size={26} color={DESIGN_TOKENS.colors.textMuted} style={{ opacity: 0.55 }} />
+            <Text style={styles.placeholderText}>Нет фото</Text>
+          </View>
         </View>
       )}
     </View>
@@ -191,9 +205,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
   },
-  errorText: {
-    fontSize: 14,
-    color: DESIGN_TOKENS.colors.disabledText,
+  placeholderContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  placeholderText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: DESIGN_TOKENS.colors.textMuted,
+    letterSpacing: -0.1,
+    opacity: 0.8,
     textAlign: 'center',
   },
 });

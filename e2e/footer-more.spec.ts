@@ -52,7 +52,7 @@ test.describe('Footer dock (web mobile) - More modal', () => {
     await expect(page.getByTestId('bottom-gutter')).toBeVisible({ timeout: 30_000 });
 
     // "Ещё" must exist in the dock.
-    const moreInDock = dock.getByText('Ещё').first();
+    const moreInDock = dock.getByTestId('footer-item-more');
     await expect(moreInDock).toBeVisible();
 
     // Layout invariant: "Ещё" should be roughly centered in the dock in minimal state.
