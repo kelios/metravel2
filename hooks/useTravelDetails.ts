@@ -16,6 +16,7 @@ export interface UseTravelDetailsReturn {
   refetch: () => void;
   slug: string;
   isId: boolean;
+  isMissingParam: boolean;
 }
 
 export function useTravelDetails(): UseTravelDetailsReturn {
@@ -23,10 +24,13 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   const slug = Array.isArray(param) ? param[0] : (param ?? '');
   const idNum = Number(slug);
   const isId = !Number.isNaN(idNum);
+  const normalizedSlug = String(slug ?? '').trim();
+  const isMissingParam = normalizedSlug.length === 0;
 
   const { data: travel, isLoading, isError, error, refetch } = useQuery<Travel>({
-    queryKey: ['travel', slug],
-    queryFn: () => (isId ? fetchTravel(idNum) : fetchTravelBySlug(slug)),
+    queryKey: ['travel', normalizedSlug],
+    enabled: !isMissingParam,
+    queryFn: () => (isId ? fetchTravel(idNum) : fetchTravelBySlug(normalizedSlug)),
     staleTime: 600_000, // 10 минут — пока данные "свежие", повторный заход не покажет сплэш-лоадер
     gcTime: 10 * 60 * 1000,
     // Не дергаем лишние перезапросы при маунте/фокусе окна, чтобы страница не мигала
@@ -44,8 +48,9 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     refetch: () => {
       refetch();
     },
-    slug,
+    slug: normalizedSlug,
     isId,
+    isMissingParam,
   };
 }
 

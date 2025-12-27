@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 const MEASUREMENT_ID = process.env.EXPO_PUBLIC_GOOGLE_GA4;
 const API_SECRET = process.env.EXPO_PUBLIC_GOOGLE_API_SECRET;
 let hasWarnedMissingConfig = false;
@@ -8,6 +10,29 @@ export const sendAnalyticsEvent = async (
     eventName: string,
     eventParams: Record<string, unknown> = {}
 ) => {
+    // Web: use gtag.js (already injected in app/+html.tsx) instead of Measurement Protocol.
+    // Measurement Protocol from the browser triggers CORS and exposes api_secret.
+    if (Platform.OS === 'web') {
+        const w = typeof window !== 'undefined' ? (window as any) : undefined;
+        const gtag = w?.gtag;
+        if (typeof gtag === 'function') {
+            try {
+                gtag('event', eventName, eventParams);
+            } catch (error) {
+                console.error('GA4 gtag Error:', error);
+            }
+            return;
+        }
+
+        if (!hasWarnedMissingConfig) {
+            console.warn('GA4: gtag is not available – analytics event skipped.');
+            hasWarnedMissingConfig = true;
+        }
+        return;
+    }
+
+    // Native / non-web fallback: Measurement Protocol.
+    // NOTE: api_secret should ideally live on a server, not in a public env var.
     if (!MEASUREMENT_ID || !API_SECRET) {
         if (!hasWarnedMissingConfig) {
             console.warn('GA4: Missing MEASUREMENT_ID or API_SECRET – analytics event skipped. Provide EXPO_PUBLIC_GOOGLE_GA4 and EXPO_PUBLIC_GOOGLE_API_SECRET to enable.');

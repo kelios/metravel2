@@ -18,6 +18,7 @@ import RenderTravelItem from './RenderTravelItem'
 import SidebarFilters from './SidebarFilters'
 import RightColumn from './RightColumn'
 import UIButton from '@/components/ui/Button'
+import BookSettingsModal from '@/components/export/BookSettingsModal'
 import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
 import { useAuth } from '@/context/AuthContext'
 import { fetchAllFiltersOptimized } from '@/src/api/miscOptimized'
@@ -291,9 +292,9 @@ const ExportBar = memo(function ExportBar({
                        allCount,
                        onToggleSelectAll,
                        onClearSelection,
-                       onPreview: _onPreview,
+                       onPreview,
                        onSave,
-                       onSettings: _onSettings,
+                       onSettings,
                        isGenerating,
                        progress,
                        settingsSummary,
@@ -338,6 +339,11 @@ const ExportBar = memo(function ExportBar({
               {hasSelection && (
                 <Pressable onPress={onClearSelection} accessibilityRole="button">
                   <Text style={styles.linkButton as any}>Очистить выбор</Text>
+                </Pressable>
+              )}
+              {hasSelection && (
+                <Pressable onPress={onSettings} accessibilityRole="button">
+                  <Text style={styles.linkButton as any}>Настройки</Text>
                 </Pressable>
               )}
             </View>
@@ -758,9 +764,12 @@ function ListTravel({
         selectionCount,
         pdfExport,
         lastSettings,
+        baseSettings,
         handleSaveWithSettings,
         handlePreviewWithSettings,
     } = exportState;
+
+    const [isBookSettingsOpen, setIsBookSettingsOpen] = useState(false);
 
     const renderTravelListItem = useCallback(
       (travel: Travel, index: number) => (
@@ -788,6 +797,15 @@ function ListTravel({
     const handleImmediatePreview = useCallback(() => {
       handlePreviewWithSettings(lastSettings);
     }, [handlePreviewWithSettings, lastSettings]);
+
+    const handleOpenSettings = useCallback(() => {
+      if (!hasSelection) return;
+      setIsBookSettingsOpen(true);
+    }, [hasSelection]);
+
+    const handleCloseSettings = useCallback(() => {
+      setIsBookSettingsOpen(false);
+    }, []);
 
 
     /* Loading helpers */
@@ -1063,6 +1081,23 @@ function ListTravel({
     
   return (
     <View style={[styles.root, isMobileDevice ? styles.rootMobile : undefined]}>
+      {isExport && Platform.OS === 'web' ? (
+        <BookSettingsModal
+          visible={isBookSettingsOpen}
+          onClose={handleCloseSettings}
+          onSave={(settings) => {
+            handleSaveWithSettings(settings);
+          }}
+          onPreview={(settings) => {
+            handlePreviewWithSettings(settings);
+          }}
+          defaultSettings={lastSettings || baseSettings}
+          travelCount={selectionCount}
+          userName={String(userId || '')}
+          mode="save"
+        />
+      ) : null}
+
       <SidebarFilters
         isMobile={isMobileDevice}
         filterGroups={filterGroups}
@@ -1098,7 +1133,7 @@ function ListTravel({
               onClearSelection={clearSelection}
               onPreview={handleImmediatePreview}
               onSave={handleImmediateSave}
-              onSettings={handleImmediateSave}
+              onSettings={handleOpenSettings}
               isGenerating={pdfExport.isGenerating}
               progress={pdfExport.progress}
               settingsSummary={exportState.settingsSummary}

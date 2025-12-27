@@ -187,13 +187,12 @@ describe('src/api/travelsApi.ts', () => {
   });
 
   describe('простые API-обёртки', () => {
-    it('fetchTravel возвращает дефолт при ошибке', async () => {
+    it('fetchTravel бросает ошибку при ошибке', async () => {
       mockedFetchWithTimeout.mockRejectedValueOnce(new Error('network'));
 
-      const result = await fetchTravel(123);
+      await expect(fetchTravel(123)).rejects.toThrow('network');
 
       expect(devError).toHaveBeenCalled();
-      expect(result).toBeDefined();
     });
 
     it('fetchTravel использует кэш только для неавторизованных пользователей', async () => {
@@ -229,13 +228,12 @@ describe('src/api/travelsApi.ts', () => {
       expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2);
     });
 
-    it('fetchTravelBySlug возвращает дефолт при ошибке', async () => {
+    it('fetchTravelBySlug бросает ошибку при ошибке', async () => {
       mockedFetchWithTimeout.mockRejectedValueOnce(new Error('network'));
 
-      const result = await fetchTravelBySlug('slug');
+      await expect(fetchTravelBySlug('slug')).rejects.toThrow('network');
 
       expect(devError).toHaveBeenCalled();
-      expect(result).toBeDefined();
     });
 
     it('fetchTravelBySlug передаёт токен, если он есть', async () => {

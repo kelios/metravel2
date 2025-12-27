@@ -491,14 +491,21 @@ export const fetchTravel = async (id: number): Promise<Travel> => {
             authHeaders ? { headers: authHeaders } : {},
             DEFAULT_TIMEOUT,
         );
-        const travel = await safeJsonParse<Travel>(res, travelDef);
+        if (!res.ok) {
+            const details = await res.text().catch(() => '');
+            throw new Error(`Failed to fetch travel ${id}: HTTP ${res.status} ${res.statusText}${details ? ` - ${details}` : ''}`);
+        }
+        const travel = await safeJsonParse<Travel>(res);
         if (!isAuthenticated) {
             travelCache.set(id, travel);
         }
         return travel;
     } catch (e: any) {
+        if (e?.name === 'AbortError') {
+            throw e;
+        }
         devError('Error fetching Travel:', e);
-        return travelDef;
+        throw e;
     }
 };
 
@@ -511,10 +518,17 @@ export const fetchTravelBySlug = async (slug: string): Promise<Travel> => {
             authHeaders ? { headers: authHeaders } : {},
             DEFAULT_TIMEOUT,
         );
-        return await safeJsonParse<Travel>(res, travelDef);
+        if (!res.ok) {
+            const details = await res.text().catch(() => '');
+            throw new Error(`Failed to fetch travel by slug "${slug}": HTTP ${res.status} ${res.statusText}${details ? ` - ${details}` : ''}`);
+        }
+        return await safeJsonParse<Travel>(res);
     } catch (e: any) {
+        if (e?.name === 'AbortError') {
+            throw e;
+        }
         devError('Error fetching Travel by slug:', e);
-        return travelDef;
+        throw e;
     }
 };
 

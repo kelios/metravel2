@@ -1,4 +1,4 @@
-import { sanitizeRichText } from '@/src/utils/sanitizeRichText'
+import { sanitizeRichText, sanitizeRichTextForPdf } from '@/src/utils/sanitizeRichText'
 
 describe('sanitizeRichText', () => {
   it('keeps instagram embeds intact', () => {
@@ -22,6 +22,29 @@ describe('sanitizeRichText', () => {
 
     expect(sanitized).not.toContain('<iframe')
     expect(sanitized).toBe('<div></div>')
+  })
+
+  it('sanitizeRichTextForPdf preserves formatting and images', () => {
+    const html = [
+      '<h2>Маршрут</h2>',
+      '<p>Абзац 1</p>',
+      '<ul><li>Пункт 1</li><li>Пункт 2</li></ul>',
+      '<p>Картинка ниже:</p>',
+      '<figure><img data-src="https://example.com/img.jpg" alt="альт"/><figcaption>Подпись</figcaption></figure>',
+      '<p>Ссылка: <a href="https://example.com">example</a></p>',
+    ].join('')
+
+    const sanitized = sanitizeRichTextForPdf(html)
+
+    expect(sanitized).toContain('<h2>')
+    expect(sanitized).toContain('<p>')
+    expect(sanitized).toContain('<ul>')
+    expect(sanitized).toContain('<figure>')
+    expect(sanitized).toContain('<img')
+    expect(sanitized).toContain('images.weserv.nl')
+    expect(sanitized).toContain('<figcaption>')
+    expect(sanitized).toContain('<a href="https://example.com/"')
+    expect(sanitized).toContain('rel="noopener noreferrer"')
   })
 })
 

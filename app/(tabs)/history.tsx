@@ -155,7 +155,7 @@ export default function HistoryScreen() {
                 contentContainerStyle={styles.gridContent}
                 columnWrapperStyle={numColumns > 1 ? styles.gridRow : undefined}
                 renderItem={({ item }: { item: any }) => (
-                    <View style={styles.gridItem}>
+                    <View style={[styles.gridItem, numColumns > 1 ? styles.gridItemTwoColumns : null]}>
                         <TabTravelCard
                             item={{
                                 id: item.id,
@@ -225,13 +225,18 @@ const styles = StyleSheet.create({
         paddingTop: 6,
     },
     gridRow: {
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
         gap: 14,
         paddingTop: 12,
     },
     gridItem: {
         flex: 1,
         paddingTop: 12,
+    },
+    gridItemTwoColumns: {
+        // Keep a stable 2-column layout even when the last row has only one item.
+        // Without this, the single item stretches to full row width and the card is centered.
+        maxWidth: '50%',
     },
     card: {
         marginRight: 0,

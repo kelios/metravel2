@@ -133,8 +133,12 @@ export class TravelDataTransformer {
     // Заменяем обращения к var(--token) на безопасный цвет
     const withoutVarUsage = withoutVariables.replace(/var\s*\(--[^)]+\)/gi, SAFE_COLOR_FALLBACK);
 
+    // Инлайним самые частые class-based стили (редакторы Quill/WordPress/TinyMCE),
+    // чтобы они не терялись в PDF (где CSS классов обычно нет).
+    const withInlinedClassStyles = this.inlineKnownClassStyles(withoutVarUsage);
+
     // Приводим <img> к безопасным src
-    const withSafeImages = withoutVarUsage.replace(
+    const withSafeImages = withInlinedClassStyles.replace(
       /<img([^>]*?)src=["']([^"']+)["']([^>]*)>/gi,
       (_match, before, src, after) => {
         const safeSrc = this.buildSafeImageUrl(src);
@@ -153,6 +157,60 @@ export class TravelDataTransformer {
     }
 
     return sanitizedStyles;
+  }
+
+  private inlineKnownClassStyles(html: string): string {
+    // 1) Текстовое выравнивание (Quill)
+    const alignMap: Array<{ re: RegExp; style: string }> = [
+      { re: /\bql-align-center\b/i, style: 'text-align: center;' },
+      { re: /\bql-align-right\b/i, style: 'text-align: right;' },
+      { re: /\bql-align-justify\b/i, style: 'text-align: justify;' },
+      { re: /\bql-align-left\b/i, style: 'text-align: left;' },
+      { re: /\btext-center\b/i, style: 'text-align: center;' },
+      { re: /\btext-right\b/i, style: 'text-align: right;' },
+    ];
+
+    // 2) Выравнивание изображений (WordPress/TinyMCE)
+    const imgAlignMap: Array<{ re: RegExp; style: string }> = [
+      { re: /\baligncenter\b/i, style: 'display: block; margin-left: auto; margin-right: auto;' },
+      { re: /\balignleft\b/i, style: 'float: left; margin-right: 12pt; margin-bottom: 8pt;' },
+      { re: /\balignright\b/i, style: 'float: right; margin-left: 12pt; margin-bottom: 8pt;' },
+    ];
+
+    // Общий обработчик: добавляет CSS в style= если class= содержит нужные классы
+    return html.replace(
+      /<(p|div|section|h[1-6]|img|figure)([^>]*?)>/gi,
+      (full, tagNameRaw, attrsRaw) => {
+        const tagName = String(tagNameRaw).toLowerCase();
+        const attrs = String(attrsRaw || '');
+        const classMatch = attrs.match(/\bclass\s*=\s*(['"])(.*?)\1/i);
+        if (!classMatch) return full;
+        const classValue = classMatch[2] || '';
+
+        const stylesToAdd: string[] = [];
+        for (const item of alignMap) {
+          if (item.re.test(classValue)) stylesToAdd.push(item.style);
+        }
+        if (tagName === 'img' || tagName === 'figure') {
+          for (const item of imgAlignMap) {
+            if (item.re.test(classValue)) stylesToAdd.push(item.style);
+          }
+        }
+
+        if (stylesToAdd.length === 0) return full;
+
+        const styleMatch = attrs.match(/\bstyle\s*=\s*(["'])([\s\S]*?)\1/i);
+        if (styleMatch) {
+          const quote = styleMatch[1];
+          const existing = styleMatch[2] || '';
+          const merged = `${existing}${existing.trim().endsWith(';') || existing.trim() === '' ? ' ' : '; '}${stylesToAdd.join(' ')}`;
+          const newAttrs = attrs.replace(styleMatch[0], `style=${quote}${merged}${quote}`);
+          return `<${tagNameRaw}${newAttrs}>`;
+        }
+
+        return `<${tagNameRaw}${attrs} style="${stylesToAdd.join(' ')}">`;
+      }
+    );
   }
 
   /**
@@ -310,16 +368,31 @@ export class TravelDataTransformer {
     const trimmed = String(url).trim();
     if (!trimmed) return PLACEHOLDER_IMAGE;
     if (trimmed.startsWith('data:')) return trimmed;
+    // Протокол-относительные URL
+    if (trimmed.startsWith('//')) {
+      return this.buildSafeImageUrl(`https:${trimmed}`);
+    }
     // Относительные пути ("/storage/...") и ресурсы текущего домена считаем безопасными
     if (trimmed.startsWith('/')) {
       if (typeof window !== 'undefined' && window.location?.origin) {
         return `${window.location.origin}${trimmed}`;
       }
-      return trimmed;
+      // В средах без window используем продовый домен
+      return `https://metravel.by${trimmed}`;
+    }
+
+    // Если это относительный путь без начального '/', пробуем сделать его абсолютным
+    // (например: 'storage/..', 'uploads/..')
+    if (!/^https?:\/\//i.test(trimmed) && !trimmed.includes('://') && !trimmed.includes('.')) {
+      // если вообще нет домена/точки — считаем относительным путем
+      return this.buildSafeImageUrl(`https://metravel.by/${trimmed.replace(/^\/+/, '')}`);
     }
 
     try {
-      const normalized = trimmed.replace(/^https?:\/\//i, '');
+      const absolute = /^https?:\/\//i.test(trimmed)
+        ? trimmed
+        : `https://${trimmed.replace(/^\/+/, '')}`;
+      const normalized = absolute.replace(/^https?:\/\//i, '');
       const delimiter = encodeURIComponent(normalized);
       return `${IMAGE_PROXY_BASE}${delimiter}&${DEFAULT_IMAGE_PARAMS}`;
     } catch {

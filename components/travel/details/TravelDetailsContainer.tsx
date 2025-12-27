@@ -729,7 +729,7 @@ export default function TravelDetails() {
   const [relatedTravels, setRelatedTravels] = useState<Travel[]>([]);
   
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
-  const { travel, isLoading, slug } = useTravelDetails();
+  const { travel, isLoading, isError, error, refetch, slug, isMissingParam } = useTravelDetails();
   const { anchors, scrollTo, scrollRef } = useScrollNavigation() as { anchors: AnchorsMap; scrollTo: any; scrollRef: any };
   const headerOffset = useMemo(
     () => (isMobile ? HEADER_OFFSET_MOBILE : HEADER_OFFSET_DESKTOP),
@@ -1002,6 +1002,48 @@ export default function TravelDetails() {
 
   // Пока данные путешествия не загружены — показываем простой лоадер,
   // но делаем это после инициализации всех хуков, чтобы не нарушать порядок.
+  if (isMissingParam) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.mainContainer, styles.mainContainerMobile]}>
+          <Text style={{ color: DESIGN_TOKENS.colors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>
+            Путешествие не найдено
+          </Text>
+          <Text style={{ color: DESIGN_TOKENS.colors.textMuted, fontSize: 14, textAlign: 'center' }}>
+            В ссылке отсутствует идентификатор путешествия.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.mainContainer, styles.mainContainerMobile]}>
+          <Text style={{ color: DESIGN_TOKENS.colors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>
+            Не удалось загрузить путешествие
+          </Text>
+          <Text style={{ color: DESIGN_TOKENS.colors.textMuted, fontSize: 14, textAlign: 'center', marginBottom: 12 }}>
+            {error?.message || 'Попробуйте обновить страницу.'}
+          </Text>
+          <TouchableOpacity
+            onPress={() => refetch()}
+            style={{
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+              borderRadius: 10,
+              backgroundColor: DESIGN_TOKENS.colors.primary,
+            }}
+            accessibilityRole="button"
+          >
+            <Text style={{ color: '#fff', fontWeight: '700' }}>Повторить</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (!travel) {
     return (
       <SafeAreaView style={styles.safeArea}>

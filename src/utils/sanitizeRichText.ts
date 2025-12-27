@@ -10,6 +10,9 @@ const ALLOWED_IFRAME_HOSTS = [
 const ALLOWED_SCHEMES = ['http', 'https', 'mailto']
 const DIMENSION_RE = /^\d+(\.\d+)?(px|%)?$/i
 
+const PDF_IMAGE_PROXY_BASE = 'https://images.weserv.nl/?url='
+const PDF_IMAGE_DEFAULT_PARAMS = 'w=1600&fit=inside'
+
 const allowedTags = Array.from(
   new Set([
     ...sanitizeHtml.defaults.allowedTags,
@@ -44,6 +47,9 @@ const allowedAttributes: sanitizeHtml.IOptions['allowedAttributes'] = {
     'src',
     'srcset',
     'sizes',
+    'data-src',
+    'data-original',
+    'data-lazy-src',
     'alt',
     'title',
     'width',
@@ -55,6 +61,32 @@ const allowedAttributes: sanitizeHtml.IOptions['allowedAttributes'] = {
   iframe: ['src', 'title', 'allow', 'allowfullscreen', 'frameborder', 'width', 'height'],
   video: ['src', 'poster', 'controls', 'loop', 'autoplay', 'muted', 'playsinline', 'preload'],
   source: ['src', 'srcset', 'type', 'media'],
+}
+
+function normalizePdfImageSrc(value?: string) {
+  if (!value) return undefined
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  if (trimmed.startsWith('data:')) return trimmed
+  if (trimmed.startsWith('/')) {
+    try {
+      if (typeof window !== 'undefined' && window.location?.origin) {
+        return `${window.location.origin}${trimmed}`
+      }
+    } catch {
+      // ignore
+    }
+    return `https://metravel.by${trimmed}`
+  }
+
+  const normalized = normalizeUrl(trimmed)
+  if (!normalized) return undefined
+  try {
+    const withoutScheme = normalized.replace(/^https?:\/\//i, '')
+    return `${PDF_IMAGE_PROXY_BASE}${encodeURIComponent(withoutScheme)}&${PDF_IMAGE_DEFAULT_PARAMS}`
+  } catch {
+    return normalized
+  }
 }
 
 const allowedSchemesByTag: sanitizeHtml.IOptions['allowedSchemesByTag'] = {
@@ -217,6 +249,20 @@ export function sanitizeRichText(html?: string | null): string {
         if (attribs.name) result.name = attribs.name
         return { tagName: 'a', attribs: result }
       },
+      img: (_tag: string, attribs: Attributes) => {
+        const candidate = attribs.src || attribs['data-src'] || attribs['data-original'] || attribs['data-lazy-src']
+        const src = normalizePdfImageSrc(candidate)
+        const result: Record<string, string> = {}
+        if (src) result.src = src
+        if (attribs.alt) result.alt = attribs.alt
+        if (attribs.title) result.title = attribs.title
+        if (attribs.width) result.width = attribs.width
+        if (attribs.height) result.height = attribs.height
+        if (attribs.loading) result.loading = attribs.loading
+        if (attribs.decoding) result.decoding = attribs.decoding
+        if (attribs.fetchpriority) result.fetchpriority = attribs.fetchpriority
+        return { tagName: 'img', attribs: result }
+      },
       iframe: (_tag: string, attribs: Attributes) => {
         const src = normalizeUrl(attribs.src)
         if (!src || !isAllowedIframe(src)) {
@@ -263,6 +309,6 @@ export function sanitizeRichTextForPdf(html?: string | null): string {
   // Сначала санитизируем
   const sanitized = sanitizeRichText(html);
   
-  // Затем объединяем в один блок
-  return flattenHtmlForPdf(sanitized);
+  // Для PDF важно сохранить разметку (абзацы, списки, изображения)
+  return sanitized;
 }

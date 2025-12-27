@@ -100,6 +100,12 @@ export class EnhancedPdfGenerator {
       pages.push(this.renderTravelContentPage(travel, qrCodes[index], currentPage));
       currentPage++;
 
+      // Отдельная страница галереи (все фото), если включено в настройках
+      if (item.hasGallery) {
+        pages.push(this.renderGalleryPage(travel, currentPage));
+        currentPage++;
+      }
+
       // Карта (DOM-скриншот Leaflet, только в браузере)
       if (item.hasMap) {
         const mapPage = await this.renderMapPage(travel, item.locations, currentPage);
