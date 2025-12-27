@@ -18,6 +18,7 @@ import { TravelListSkeleton } from '@/components/SkeletonLoader'
 import EmptyState from '@/components/EmptyState'
 import type { Travel } from '@/src/types/types'
 import { PER_PAGE } from './utils/listTravelConstants'
+import { TRAVEL_CARD_MAX_WIDTH } from './utils/listTravelConstants'
 
 const RECOMMENDATIONS_TOTAL_HEIGHT = 376;
 const STABLE_PLACEHOLDER_HEIGHT = 1200; // Reserve vertical space on web mobile to avoid CLS
@@ -160,7 +161,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
     const cardsWrapperStyle = useMemo<StyleProp<ViewStyle>>(() => {
       const resetPadding = {
-        paddingHorizontal: contentPadding,
+        paddingHorizontal: 0,
         paddingTop: Platform.OS === 'web' ? cardSpacing + 8 : 12,
         ...(isWebMobile
           ? ({
@@ -206,7 +207,10 @@ const RightColumn: React.FC<RightColumnProps> = memo(
         const cols = Math.max(1, (isMobile ? 1 : gridColumns) || 1);
         const missingSlots = Math.max(0, cols - rowItems.length);
         const percent = `${100 / cols}%`;
-        const calcWidth = cols > 1 ? `calc((100% - ${(cols - 1) * cardSpacing}px) / ${cols})` : '100%';
+        const calcWidth =
+          cols > 1
+            ? `min(${TRAVEL_CARD_MAX_WIDTH}px, calc((100% - ${(cols - 1) * cardSpacing}px) / ${cols}))`
+            : '100%';
         return (
           <View
             testID={`travel-row-${rowIndex}`}
@@ -386,6 +390,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             search={search}
             onSearchChange={setSearch}
             availableWidth={availableWidth}
+            flush={Platform.OS === 'web'}
             primaryAction={{
               label: 'Создать',
               onPress: () => router.push('/travel/new' as any),
@@ -409,63 +414,47 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
         {/* Cards + Recommendations */}
         <View testID="cards-scroll-container" style={cardsWrapperStyle}>
-          {shouldShowSkeleton && isRecommendationsVisible ? (
+          {shouldShowSkeleton && isRecommendationsVisible && (
             <View
               style={{
                 height: RECOMMENDATIONS_TOTAL_HEIGHT,
                 marginBottom: 24,
                 overflow: 'hidden',
+                paddingHorizontal: contentPadding,
               }}
             >
               <RecommendationsPlaceholder />
             </View>
-          ) : null}
+          )}
 
           {/* Initial Loading - Only show skeleton when actually loading initial data */}
-          {shouldShowSkeleton && (
-            isWebMobile ? (
-              <View
-                style={{
-                  height: STABLE_PLACEHOLDER_HEIGHT,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <ActivityIndicator size="small" />
-              </View>
-            ) : (
-              <View
-                style={[
-                  cardsGridStyle,
-                  {
-                    paddingHorizontal: contentPadding,
-                    paddingTop: 8,
-                    paddingBottom: 28,
-                  } as any,
-                ]}
-              >
-                <TravelListSkeleton
-                  count={skeletonCount}
-                  columns={gridColumns}
-                  rowStyle={cardsGridStyle}
-                  variant={Platform.OS === 'web' ? 'detailed' : isMobile ? 'reserve' : 'detailed'}
-                />
-              </View>
-            )
+          {shouldShowSkeleton && isWebMobile && (
+            <View
+              style={{
+                height: STABLE_PLACEHOLDER_HEIGHT,
+                justifyContent: 'center',
+                alignItems: 'center',
+                paddingHorizontal: contentPadding,
+              }}
+            >
+              <ActivityIndicator size="small" />
+            </View>
           )}
 
           {/* Error */}
           {isError && !showInitialLoading && (
-            <EmptyState
-              icon="alert-circle"
-              title="Ошибка загрузки"
-              description="Не удалось загрузить путешествия."
-              variant="error"
-              action={{
-                label: 'Повторить',
-                onPress: () => refetch(),
-              }}
-            />
+            <View style={{ paddingHorizontal: contentPadding }}>
+              <EmptyState
+                icon="alert-circle"
+                title="Ошибка загрузки"
+                description="Не удалось загрузить путешествия."
+                variant="error"
+                action={{
+                  label: 'Повторить',
+                  onPress: () => refetch(),
+                }}
+              />
+            </View>
           )}
 
           {/* Empty State */}
@@ -473,12 +462,14 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             !isError &&
             showEmptyState &&
             getEmptyStateMessage && (
-              <EmptyState
-                icon={getEmptyStateMessage.icon}
-                title={getEmptyStateMessage.title}
-                description={getEmptyStateMessage.description}
-                variant={getEmptyStateMessage.variant}
-              />
+              <View style={{ paddingHorizontal: contentPadding }}>
+                <EmptyState
+                  icon={getEmptyStateMessage.icon}
+                  title={getEmptyStateMessage.title}
+                  description={getEmptyStateMessage.description}
+                  variant={getEmptyStateMessage.variant}
+                />
+              </View>
             )}
 
           {/* Travel Cards Grid - Only show when we have data */}

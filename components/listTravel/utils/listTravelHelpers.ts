@@ -88,7 +88,7 @@ export function calculateColumns(width: number, orientation: 'portrait' | 'lands
   let columns = Math.floor((availableWidth + GAP) / (MIN_CARD_WIDTH + GAP));
 
   // Ограничиваем максимум колонок по брейкпоинтам, чтобы сетка не расползалась на широких экранах
-  // и соответствовала дизайн-решению (desktop/large desktop: 3 колонки).
+  // и соответствовала дизайн-решению (desktop/large desktop: до 4 колонок).
   let maxColumns = Number.POSITIVE_INFINITY;
   if (width >= BREAKPOINTS.DESKTOP_LARGE) {
     maxColumns = GRID_COLUMNS.DESKTOP_LARGE;

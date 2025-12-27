@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
     minHeight: TAB_HEADER_HEIGHT,
   },
   tabsContainer: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
     paddingVertical: 8,
   },
   tab: {
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
   collapsedHeader: {
     height: TAB_HEADER_HEIGHT,
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     backgroundColor: '#fff',
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
   },
 
   gateContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     paddingVertical: 12,
   },
   gateCard: {
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
   // Collapsed
   collapsedContainer: {
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     backgroundColor: '#f8f8f8',
     borderRadius: 16,
   },
@@ -645,7 +645,8 @@ const styles = StyleSheet.create({
 
   // Placeholders & Empty
   placeholderContainer: {
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 0,
   },
   skeletonCard: {
     width: TAB_CARD_TEMPLATE.container.width || 208,
@@ -696,7 +697,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   horizontalListContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     paddingBottom: 6,
     ...Platform.select({
       web: {
@@ -707,7 +708,7 @@ const styles = StyleSheet.create({
   },
 
   favoritesHeaderRow: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     paddingTop: 4,
     paddingBottom: 10,
     flexDirection: 'row',

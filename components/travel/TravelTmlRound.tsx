@@ -17,9 +17,11 @@ import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 
 type Props = { travel: Travel };
 
+const CARD_HEIGHT = 320;
+const CARD_IMAGE_HEIGHT = 200;
+
 const TravelTmlRound: React.FC<Props> = ({ travel }) => {
-    const { width, isTablet, isDesktop } = useResponsive();
-    const isLargeDesktop = width >= 1440;
+    const { width } = useResponsive();
 
     const {
         name = "Без названия",
@@ -59,20 +61,8 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
       return undefined;
     }, [travel, travel_image_thumb_small_url, travel_image_thumb_url]);
 
-    // ✅ УЛУЧШЕНИЕ: Адаптивные размеры для пропорциональных карточек
-    const cardDimensions = useMemo(() => {
-      if (isLargeDesktop) {
-        return { imageHeight: 240, cardPadding: 0 };
-      } else if (isDesktop) {
-        return { imageHeight: 220, cardPadding: 0 };
-      } else if (isTablet) {
-        return { imageHeight: 200, cardPadding: 0 };
-      } else {
-        return { imageHeight: 180, cardPadding: 0 };
-      }
-    }, [isTablet, isDesktop, isLargeDesktop]);
-    
-    const imageHeight = cardDimensions.imageHeight;
+    // Фиксированная высота карточки и изображения
+    const imageHeight = CARD_IMAGE_HEIGHT;
 
     // ✅ УЛУЧШЕНИЕ: Оптимизация URL изображения
     const optimizedImageUrl = useMemo(() => {
@@ -141,7 +131,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
                 style={[
                     styles.card,
                     globalFocusStyles.focusable,
-                    { padding: cardDimensions.cardPadding },
+                    { padding: 0 },
                     !canOpen && styles.cardDisabled,
                 ]}
                 webAsView={Platform.OS === 'web'}
@@ -157,15 +147,9 @@ export default memo(TravelTmlRound);
 
 const styles = StyleSheet.create({
     container: { 
-        flex: 1, 
+        width: '100%',
+        height: CARD_HEIGHT,
         padding: 0,
-        ...Platform.select({
-            web: {
-                display: 'flex' as any,
-                flexDirection: 'column' as any,
-                height: '100%',
-            },
-        }),
     },
 
     // ✅ УЛУЧШЕНИЕ: Современная матовая карточка без границ, только тени

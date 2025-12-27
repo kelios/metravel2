@@ -13,7 +13,7 @@ import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDes
 import { getResponsiveCardValues } from './enhancedTravelCardStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { formatViewCount } from "@/components/travel/utils/travelHelpers";
-import { TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_MAX_WIDTH } from './utils/listTravelConstants';
+import { TRAVEL_CARD_IMAGE_HEIGHT } from './utils/listTravelConstants';
 
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
@@ -624,9 +624,8 @@ const unifiedCard = (
     testID={cardTestId}
     style={[
       styles.card,
-      Platform.OS === 'web' &&
-        { height: '100%' as any },
-      Platform.OS === 'web' && { borderRadius: responsiveValues.borderRadius },
+      Platform.OS === 'web' && ({ height: '100%' as any } as any),
+      Platform.OS === 'web' && ({ borderRadius: responsiveValues.borderRadius } as any),
       globalFocusStyles.focusable,
       Platform.OS === 'android' && styles.androidOptimized,
       isSingle && styles.single,
@@ -655,77 +654,67 @@ return (
   <View
     style={[
       styles.wrap,
+      // ✅ Grid mode: the slot already controls the column width.
+      // Do not center the card inside the slot, otherwise it "floats" and shifts the left edge.
       Platform.OS === 'web' && typeof cardWidth === 'number' && {
-        // ✅ На web ограничиваем фактическую ширину карточки и центрируем её в колонке
-        // maxWidth: cardWidth, // УБРАНО: теперь ширина ограничивается в самих стилях карточки
-        alignSelf: 'center',
         width: '100%',
       },
     ]}
   >
-    {Platform.OS === 'web' ? (
-      // На вебе различаем два режима:
-      // 1) selectable === true (страница экспорта) — карточка только выбирает, без перехода по ссылке
-      // 2) selectable === false — поведение как раньше, но без вложенных <button>/<a>
-      selectable ? (
-        card
-      ) : (
-        <View
-          testID="travel-card-link"
-          ref={anchorRef}
-          style={{}}
-          {...(Platform.OS === 'web'
-            ? ({
-                'data-testid': 'travel-card-link',
-                role: 'link',
-                tabIndex: 0,
-                onClick: (e: any) => {
-                  // Не даём событию дойти до внутренних Pressable
-                  e.stopPropagation();
+    {Platform.OS === 'web'
+      ? selectable
+        ? card
+        : (
+            <View
+              testID="travel-card-link"
+              ref={anchorRef}
+              style={{}}
+              {...(Platform.OS === 'web'
+                ? ({
+                    'data-testid': 'travel-card-link',
+                    role: 'link',
+                    tabIndex: 0,
+                    onClick: (e: any) => {
+                      e.stopPropagation();
 
-                  const hasModifier =
-                    e.metaKey ||
-                    e.ctrlKey ||
-                    e.shiftKey ||
-                    e.altKey ||
-                    e.button === 1;
+                      const hasModifier =
+                        e.metaKey ||
+                        e.ctrlKey ||
+                        e.shiftKey ||
+                        e.altKey ||
+                        e.button === 1;
 
-                  if (hasModifier) {
-                    // Открываем ТОЛЬКО в новой вкладке, текущую не трогаем
-                    e.preventDefault();
-                    if (typeof window !== 'undefined') {
-                      window.open(travelUrl, '_blank', 'noopener,noreferrer');
-                    }
-                    return;
-                  }
+                      if (hasModifier) {
+                        e.preventDefault();
+                        if (typeof window !== 'undefined') {
+                          window.open(travelUrl, '_blank', 'noopener,noreferrer');
+                        }
+                        return;
+                      }
 
-                  // Обычный клик: SPA-навигация в текущей вкладке
-                  e.preventDefault();
-                  handlePress();
-                },
-                onKeyDown: (e: any) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handlePress();
-                  }
-                },
-              } as any)
-            : {})}
-        >
-          {card}
-        </View>
-      )
-    ) : (
-      card
-    )}
+                      e.preventDefault();
+                      handlePress();
+                    },
+                    onKeyDown: (e: any) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handlePress();
+                      }
+                    },
+                  } as any)
+                : {})}
+            >
+              {card}
+            </View>
+          )
+      : card}
   </View>
 );
-
 }
 
- const styles = StyleSheet.create({
-  wrap: { 
-    width: "100%",
+const styles = StyleSheet.create({
+  wrap: {
+    width: '100%',
   },
 
   // Современная минималистичная карточка
@@ -738,24 +727,14 @@ return (
     overflow: 'hidden',
     ...(Platform.OS === 'web'
       ? ({
-          maxWidth: TRAVEL_CARD_MAX_WIDTH,
-          alignSelf: 'center',
+          maxWidth: '100%',
+          alignSelf: 'stretch',
         } as any)
       : null),
     // Минимальные тени для глубины - разделены по платформам
-    ...(Platform.OS === 'web' 
+    ...(Platform.OS === 'web'
       ? { boxShadow: TOKENS.shadows.subtle }
-      : TOKENS.shadowsNative.subtle
-    ),
-  },
-
-  imageContainer: {
-    position: 'relative',
-    width: '100%',
-    // Фиксированная высота для предсказуемого layout и отсутствия прыжков при загрузке изображений
-    height: TRAVEL_CARD_IMAGE_HEIGHT,
-    backgroundColor: TOKENS.colors.backgroundSecondary,
-    overflow: 'hidden',
+      : TOKENS.shadowsNative.subtle),
   },
 
   androidOptimized: {
@@ -766,64 +745,20 @@ return (
   },
 
   selected: {
-    ...(Platform.OS === 'web' 
-      ? { boxShadow: TOKENS.shadows.soft, borderColor: TOKENS.colors.primary }
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: TOKENS.shadows.soft, borderColor: TOKENS.colors.primary } as any)
       : {
           shadowColor: TOKENS.colors.primary,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.15,
           shadowRadius: 8,
           elevation: 4,
-        }
-    ),
+        }),
   },
 
   single: {
     maxWidth: 600,
-    alignSelf: "center",
-  },
-
-  imgStub: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: TOKENS.colors.backgroundSecondary,
-  },
-
-  // Убираем градиент для минимализма
-  grad: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: "25%", // Минимальный градиент
-  },
-
-  // Упрощенные бейджи
-  topBadges: {
-    position: "absolute",
-    bottom: TOKENS.spacing.sm,
-    left: TOKENS.spacing.sm,
-    right: TOKENS.spacing.sm,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: TOKENS.spacing.xs,
-    zIndex: 10,
-  },
-
-  infoBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: TOKENS.spacing.xs,
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderRadius: TOKENS.radii.full,
-    paddingHorizontal: TOKENS.spacing.sm,
-    paddingVertical: TOKENS.spacing.xs,
-    ...(Platform.OS === 'web' ? {
-      backdropFilter: "blur(12px)",
-      WebkitBackdropFilter: "blur(12px)",
-    } : {}),
+    alignSelf: 'center',
   },
 
   infoBadgeText: {

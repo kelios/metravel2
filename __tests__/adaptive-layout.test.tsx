@@ -15,7 +15,7 @@ describe('Adaptive Layout Tests', () => {
     expect(calculateColumns(1440)).toBeGreaterThanOrEqual(3);
     // На очень широких экранах мы ограничиваем максимум колонок,
     // чтобы карточки оставались читабельными и сетка не расползалась.
-    expect(calculateColumns(2560)).toBeLessThanOrEqual(3);
+    expect(calculateColumns(2560)).toBeLessThanOrEqual(4);
   });
 
   it('should render without errors', () => {

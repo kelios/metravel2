@@ -20,6 +20,7 @@ interface StickySearchBarProps {
   onFiltersPress?: () => void;
   hasActiveFilters: boolean;
   availableWidth?: number;
+  flush?: boolean;
   primaryAction?: {
     label: string
     onPress: () => void
@@ -46,6 +47,7 @@ function StickySearchBar({
   onFiltersPress,
   hasActiveFilters,
   availableWidth: _availableWidth,
+  flush = false,
   primaryAction: _primaryAction,
   resultsCount,
   sortOptions: _sortOptions = [],
@@ -90,19 +92,20 @@ function StickySearchBar({
     <View
       style={[
         styles.container,
+        flush && Platform.OS === 'web' ? styles.containerFlush : null,
         isMobile && Platform.OS === 'web' ? styles.containerMobileWeb : null,
         isFocused && styles.containerFocused,
       ]}
     >
       <View
-        style={[styles.inner]}
+        style={[styles.inner, flush && Platform.OS === 'web' ? styles.innerFlush : null]}
       >
         <View style={[styles.contentRow, isMobile && styles.contentRowMobile]}>
           <View
             style={[
               styles.searchBox,
               isMobile && styles.searchBoxMobile,
-              !isMobile && Platform.OS === 'web' ? ({ maxWidth: 760, minWidth: 420 } as any) : null,
+              // Убираем жёсткое ограничение ширины на десктопе, чтобы поле могло растягиваться по доступной области
             ]}
           >
           <Feather
@@ -259,6 +262,9 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  containerFlush: {
+    paddingHorizontal: 0,
+  },
   containerMobileWeb: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
@@ -271,6 +277,15 @@ const styles = StyleSheet.create({
         maxWidth: 1120,
         marginLeft: 'auto',
         marginRight: 'auto',
+      } as any,
+    }),
+  },
+  innerFlush: {
+    ...Platform.select({
+      web: {
+        maxWidth: '100%',
+        marginLeft: 0,
+        marginRight: 0,
       } as any,
     }),
   },
@@ -304,7 +319,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
     paddingVertical: Platform.select({ default: spacing.xs, web: spacing.sm }),
     gap: spacing.xs,
-    height: Platform.select({ default: 40, web: 44 }), // Чуть ниже на мобильных
+    height: Platform.select({ default: 46, web: 52 }), // Чуть ниже на мобильных и единая высота на десктопе
     ...Platform.select({
       web: {
         transition: 'all 0.2s ease',
@@ -364,8 +379,8 @@ const styles = StyleSheet.create({
   },
   resultsInline: {
     paddingHorizontal: 10,
-    height: Platform.select({ default: 36, web: 44 }),
-    minWidth: Platform.select({ default: 0, web: 150 }),
+    height: Platform.select({ default: 40, web: 52 }),
+    minWidth: Platform.select({ default: 0, web: 160 }),
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: palette.surfaceMuted,
@@ -403,8 +418,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   actionButton: {
-    width: Platform.select({ default: 36, web: 44 }),
-    height: Platform.select({ default: 36, web: 44 }),
+    width: Platform.select({ default: 46, web: 52 }),
+    height: Platform.select({ default: 46, web: 52 }),
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.md,
@@ -425,8 +440,8 @@ const styles = StyleSheet.create({
     }),
   },
   actionButtonMobileWeb: {
-    width: 36,
-    height: 36,
+    width: 46,
+    height: 46,
     borderRadius: 12,
   },
   actionButtonActive: {
@@ -453,7 +468,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: spacing.sm,
-    height: Platform.select({ default: 40, web: 44 }),
+    height: Platform.select({ default: 46, web: 52 }),
     borderRadius: radii.pill,
     backgroundColor: palette.surfaceMuted,
     ...Platform.select({

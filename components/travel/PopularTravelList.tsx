@@ -96,8 +96,14 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
 
     const popularList = useMemo(() => {
       const list = Object.values(travelsPopular) as any[];
+      const filtered = list.filter((item) => {
+        const name = (item?.name || '').trim();
+        const country = (item?.countryName || '').trim();
+        const views = Number(item?.countUnicIpView ?? item?.views ?? 0);
+        return name.length > 0 && country.length > 0 && views > 0;
+      });
       // Ограничиваем количество элементов для первоначального рендера
-      return list.slice(0, Platform.OS === 'web' ? 8 : list.length);
+      return filtered.slice(0, Platform.OS === 'web' ? 8 : filtered.length);
     }, [travelsPopular]);
 
     const webGridStyle: any = useMemo(() => {
