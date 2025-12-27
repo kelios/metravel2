@@ -116,7 +116,7 @@ export class TravelDataTransformer {
         .replace(/<\/Text>/gi, '')
         // Удаляем другие возможные React Native компоненты
         .replace(/<ScrollView[^>]*>.*?<\/ScrollView>/gis, '')
-        .replace(/<Image[^>]*\/?>/gi, '')
+        .replace(/<Image\b[^>]*\/?>/g, '')
         .replace(/<TouchableOpacity[^>]*>.*?<\/TouchableOpacity>/gis, '')
         .replace(/<TouchableHighlight[^>]*>.*?<\/TouchableHighlight>/gis, '')
         .replace(/<SafeAreaView[^>]*>.*?<\/SafeAreaView>/gis, '')

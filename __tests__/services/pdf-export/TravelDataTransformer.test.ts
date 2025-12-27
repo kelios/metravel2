@@ -402,6 +402,44 @@ describe('TravelDataTransformer', () => {
       expect(result[0].description).not.toContain('--bg');
       expect(result[0].description).not.toContain(':root');
     });
+
+    it('должен сохранять HTML img теги в richText (не удалять как RN <Image/>)', () => {
+      const richHtml = '<p>До картинки</p><img src="https://example.com/cat.jpg" alt="cat"/><p>После картинки</p>';
+      const travels: Travel[] = [
+        {
+          id: 1,
+          name: 'Test',
+          slug: 'test',
+          url: 'test',
+          youtube_link: '',
+          userName: 'user',
+          description: richHtml,
+          recommendation: '',
+          plus: '',
+          minus: '',
+          cityName: '',
+          countryName: '',
+          countUnicIpView: '',
+          gallery: [],
+          travelAddress: [],
+          userIds: '',
+          year: '2024',
+          monthName: '',
+          number_days: 0,
+          companions: [],
+          countryCode: '',
+          travel_image_thumb_url: '',
+          travel_image_thumb_small_url: '',
+        },
+      ];
+
+      const result = transformer.transform(travels);
+
+      expect(result[0].description).toContain('<img');
+      expect(result[0].description).toContain('alt="cat"');
+      // src должен быть переписан через безопасный прокси
+      expect(result[0].description).toContain('https://images.weserv.nl/?url=');
+    });
   });
 });
 

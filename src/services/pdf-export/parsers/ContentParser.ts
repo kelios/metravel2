@@ -715,7 +715,7 @@ export class ContentParser {
         .replace(/<Text[^>]*>/gi, '')
         .replace(/<\/Text>/gi, '')
         .replace(/<ScrollView[^>]*>.*?<\/ScrollView>/gis, '')
-        .replace(/<Image[^>]*\/?>/gi, '')
+        .replace(/<Image\b[^>]*\/?>/g, '')
         .replace(/<TouchableOpacity[^>]*>.*?<\/TouchableOpacity>/gis, '')
         .replace(/<TouchableHighlight[^>]*>.*?<\/TouchableHighlight>/gis, '')
         .replace(/<SafeAreaView[^>]*>.*?<\/SafeAreaView>/gis, '')
