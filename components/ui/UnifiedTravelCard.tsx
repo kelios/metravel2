@@ -65,7 +65,6 @@ function UnifiedTravelCard({
   contentContainerStyle,
   style,
   testID,
-  webAsView = false,
   webPressableProps,
 }: Props) {
   const isWeb = Platform.OS === 'web';
