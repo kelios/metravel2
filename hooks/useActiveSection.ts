@@ -34,11 +34,17 @@ export interface UseActiveSectionReturn {
 
 export function useActiveSection(
   anchors: Record<string, RefObject<View>>,
-  headerOffset: number
+  headerOffset: number,
+  scrollRoot?: HTMLElement | null
 ): UseActiveSectionReturn {
   const [activeSection, setActiveSection] = useState<string>('');
+  const activeSectionRef = useRef<string>('');
   const observerRef = useRef<IntersectionObserver | null>(null);
   const registeredSectionsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    activeSectionRef.current = activeSection;
+  }, [activeSection]);
 
   // ✅ АРХИТЕКТУРА: Intersection Observer для отслеживания активной секции (web)
   useEffect(() => {
@@ -102,14 +108,14 @@ export function useActiveSection(
               }
             }
 
-            if (mostVisible && mostVisible.key !== activeSection) {
+            if (mostVisible && mostVisible.key !== activeSectionRef.current) {
               setActiveSection(mostVisible.key);
             }
           }
         });
       },
       {
-        root: null,
+        root: scrollRoot ?? null,
         rootMargin: `-${safeHeaderOffset}px 0px -60% 0px`,
         threshold: [0, 0.1, 0.25, 0.5, 0.75, 1.0],
       }
@@ -141,7 +147,7 @@ export function useActiveSection(
       }
       registeredSections.clear();
     };
-  }, [anchors, headerOffset, activeSection]);
+  }, [anchors, headerOffset, scrollRoot]);
 
   const registerSection = useCallback((_key: string, _ref: RefObject<View>) => {
     // Для native это будет обрабатываться через scroll events
