@@ -44,9 +44,42 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
       // Веб: пытаемся использовать DOM и data-section-key для более стабильной прокрутки
       if (Platform.OS === 'web' && typeof document !== 'undefined') {
         const el = document.querySelector<HTMLElement>(`[data-section-key="${key}"]`);
-        if (el && typeof el.scrollIntoView === 'function') {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
-          return;
+        if (el) {
+          const scrollViewAny = scrollRef.current as any;
+          const scrollNode: HTMLElement | null =
+            (typeof scrollViewAny?.getScrollableNode === 'function' && scrollViewAny.getScrollableNode()) ||
+            scrollViewAny?._scrollNode ||
+            scrollViewAny?._innerViewNode ||
+            scrollViewAny?._nativeNode ||
+            scrollViewAny?._domNode ||
+            null;
+
+          // Если у нас есть реальный scroll container (а не window) — скроллим его напрямую
+          if (scrollNode && typeof scrollNode.getBoundingClientRect === 'function') {
+            const containerRect = scrollNode.getBoundingClientRect();
+            const elRect = el.getBoundingClientRect();
+            const currentTop = (scrollNode as any).scrollTop ?? 0;
+            const targetTop = currentTop + (elRect.top - containerRect.top);
+
+            if (typeof (scrollNode as any).scrollTo === 'function') {
+              (scrollNode as any).scrollTo({ top: targetTop, behavior: 'smooth' });
+              return;
+            }
+
+            // Fallback: редкий случай без scrollTo
+            try {
+              (scrollNode as any).scrollTop = targetTop;
+              return;
+            } catch {
+              // noop
+            }
+          }
+
+          // Последний fallback: пусть браузер сам решит (может проскроллить window)
+          if (typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+            return;
+          }
         }
       }
 

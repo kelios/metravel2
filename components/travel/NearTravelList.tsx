@@ -99,11 +99,13 @@ const TravelCardSkeleton = () => (
 const MapContainer = memo(({
                              points,
                              height = 400,
-                             showRoute = true
+                             showRoute = true,
+                             isLoading = false,
                            }: {
   points: any[];
   height?: number;
   showRoute?: boolean;
+  isLoading?: boolean;
 }) => {
   const canRenderMap = useMemo(
     () => typeof window !== 'undefined' && points.length > 0,
@@ -113,7 +115,9 @@ const MapContainer = memo(({
   if (!canRenderMap) {
     return (
       <View style={[styles.mapPlaceholder, { height }]}> 
-        <Text style={styles.placeholderText}>Загрузка карты...</Text>
+        <Text style={styles.placeholderText}>
+          {isLoading ? 'Загрузка карты...' : 'Нет точек для карты'}
+        </Text>
       </View>
     );
   }
@@ -276,23 +280,43 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       const points = [];
       for (let i = 0; i < Math.min(travelsNear.length, 20); i++) {
         const item = travelsNear[i];
-        const itemPoints = (item as any)?.points;
-        if (!itemPoints || !Array.isArray(itemPoints)) continue;
+        const itemAny = item as any;
+        const itemPoints =
+          (Array.isArray(itemAny?.points) && itemAny.points) ||
+          (Array.isArray(itemAny?.travelAddress) && itemAny.travelAddress) ||
+          (Array.isArray(itemAny?.travel_address) && itemAny.travel_address) ||
+          (Array.isArray(itemAny?.travel_points) && itemAny.travel_points) ||
+          (Array.isArray(itemAny?.pointsList) && itemAny.pointsList) ||
+          null;
+        if (!itemPoints) continue;
 
         for (let j = 0; j < itemPoints.length; j++) {
           const point = itemPoints[j];
-          if (!point?.coord) continue;
+          const coordRaw =
+            point?.coord ??
+            point?.coordinates ??
+            point?.location ??
+            (point?.lat != null && point?.lng != null ? `${point.lat},${point.lng}` : null) ??
+            (point?.latitude != null && point?.longitude != null ? `${point.latitude},${point.longitude}` : null);
+          if (!coordRaw) continue;
 
-          const [lat, lng] = String(point.coord).split(',').map(n => parseFloat(n.trim()));
+          const [lat, lng] = String(coordRaw)
+            .split(',')
+            .map((n) => parseFloat(String(n).trim()));
           if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
 
           points.push({
             id: `${item.id}-${j}`,
             coord: `${lat},${lng}`,
-            address: point.address || item.name || '',
-            travelImageThumbUrl: point.travelImageThumbUrl || item.travel_image_thumb_url || '',
-            categoryName: point.categoryName || item.countryName || '',
-            articleUrl: point.urlTravel,
+            address: point.address || point.title || item.name || '',
+            travelImageThumbUrl:
+              point.travelImageThumbUrl ||
+              point.travel_image_thumb_url ||
+              point.image ||
+              item.travel_image_thumb_url ||
+              '',
+            categoryName: point.categoryName || point.category_name || item.countryName || '',
+            articleUrl: point.urlTravel || point.articleUrl || point.article_url,
           });
 
           if (points.length >= 50) break;
@@ -392,6 +416,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                 points={mapPoints}
                 height={mapHeight}
                 showRoute={true}
+                isLoading={isLoading}
               />
             </View>
           </View>
@@ -441,6 +466,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                   points={mapPoints}
                   height={mapHeight}
                   showRoute={true}
+                  isLoading={isLoading}
                 />
               </View>
             )}

@@ -62,11 +62,23 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
     );
 
     useEffect(() => {
+        if (typeof document === 'undefined') return;
         if (activeIndex == null) return;
+
         const el = document.getElementById(`marker-${activeIndex}`);
-        if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+        if (!el) return;
+
+        const container = document.getElementById('markers-scroll-container');
+        if (!container) return;
+
+        const containerRect = container.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+
+        const currentScrollTop = container.scrollTop;
+        const elTopInContainer = (elRect.top - containerRect.top) + currentScrollTop;
+        const target = elTopInContainer - (container.clientHeight / 2) + (el.clientHeight / 2);
+
+        container.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
     }, [activeIndex]);
 
     return (

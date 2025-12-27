@@ -74,8 +74,19 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
       {whenLine && (
         <View style={styles.factItem}>
           {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
-          <MaterialIcons name="calendar-today" size={Platform.select({ default: 16, web: 18 })} color="#6b7280" />
-          <Text style={styles.factText}>{whenLine}</Text>
+          {
+            [
+              <MaterialIcons
+                key="icon"
+                name="calendar-today"
+                size={Platform.select({ default: 16, web: 18 })}
+                color="#6b7280"
+              />,
+              <Text key="text" style={styles.factText}>
+                {whenLine}
+              </Text>,
+            ]
+          }
         </View>
       )}
 
@@ -83,8 +94,19 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
       {daysText && (
         <View style={styles.factItem}>
           {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
-          <MaterialIcons name="schedule" size={Platform.select({ default: 16, web: 18 })} color="#6b7280" />
-          <Text style={styles.factText}>{daysText}</Text>
+          {
+            [
+              <MaterialIcons
+                key="icon"
+                name="schedule"
+                size={Platform.select({ default: 16, web: 18 })}
+                color="#6b7280"
+              />,
+              <Text key="text" style={styles.factText}>
+                {daysText}
+              </Text>,
+            ]
+          }
         </View>
       )}
 
@@ -92,8 +114,19 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
       {countryName && (
         <View style={styles.factItem}>
           {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
-          <Feather name="map-pin" size={Platform.select({ default: 16, web: 18 })} color="#6b7280" />
-          <Text style={styles.factText}>{countryName}</Text>
+          {
+            [
+              <Feather
+                key="icon"
+                name="map-pin"
+                size={Platform.select({ default: 16, web: 18 })}
+                color="#6b7280"
+              />,
+              <Text key="text" style={styles.factText}>
+                {countryName}
+              </Text>,
+            ]
+          }
         </View>
       )}
 
@@ -101,21 +134,30 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
       {categories.length > 0 && (
         <View style={[styles.factItem, styles.categoriesContainer]}>
           {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
-          <MaterialIcons name="label" size={Platform.select({ default: 16, web: 18 })} color="#6b7280" />
-          <View style={styles.categoriesWrap}>
-            {categories.map((cat, index) => (
-              <Pressable
-                key={index}
-                onPress={() => onCategoryPress?.(cat)}
-                style={styles.categoryTag}
-                disabled={!onCategoryPress}
-                accessibilityRole={onCategoryPress ? "button" : "text"}
-                accessibilityLabel={`Категория: ${cat}`}
-              >
-                <Text style={styles.categoryText}>{cat}</Text>
-              </Pressable>
-            ))}
-          </View>
+          {
+            [
+              <MaterialIcons
+                key="icon"
+                name="label"
+                size={Platform.select({ default: 16, web: 18 })}
+                color="#6b7280"
+              />,
+              <View key="tags" style={styles.categoriesWrap}>
+                {categories.map((cat, index) => (
+                  <Pressable
+                    key={index}
+                    onPress={() => onCategoryPress?.(cat)}
+                    style={styles.categoryTag}
+                    disabled={!onCategoryPress}
+                    accessibilityRole={onCategoryPress ? "button" : "text"}
+                    accessibilityLabel={`Категория: ${cat}`}
+                  >
+                    <Text style={styles.categoryText}>{cat}</Text>
+                  </Pressable>
+                ))}
+              </View>,
+            ]
+          }
         </View>
       )}
     </View>

@@ -131,29 +131,30 @@ const styles = StyleSheet.create({
     wrapper: {
         width: '100%',
         maxWidth: '100%',
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        padding: 8, // ✅ UX: Ещё более компактный
-        marginBottom: 12,
+        backgroundColor: 'transparent',
+        borderRadius: 0,
+        paddingVertical: 10,
+        paddingHorizontal: 0,
+        marginBottom: 0,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-        elevation: 1,
-        borderWidth: 1,
-        borderColor: '#f0f0f0',
-        marginTop: 8,
-        overflow: 'hidden',
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
+        borderWidth: 0,
+        borderColor: 'transparent',
+        marginTop: 12,
+        overflow: 'visible',
     },
     titleContainer: {
         position: 'relative',
-        marginBottom: 12, // ✅ UX: Уменьшено с 16
+        marginBottom: 8,
     },
     title: {
-        fontSize: 14, // ✅ UX: Уменьшено с 16 для компактности
+        fontSize: 13,
         fontWeight: '600',
         fontFamily: 'Roboto-Medium',
-        color: '#1a1a1a',
+        color: '#374151',
         cursor: 'default',
         width: '100%',
         flexWrap: 'wrap',
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
     forecastContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        gap: 4, // ✅ UX: Ещё более компактный
+        gap: 6,
     },
     forecastItem: {
         flex: 1,
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
         fontSize: 11, // ✅ UX: Уменьшено с 13
         fontWeight: '500',
         fontFamily: 'Roboto-Medium',
-        color: '#666',
+        color: '#9ca3af',
         marginBottom: 4, // ✅ UX: Уменьшено с 6
         textAlign: 'center',
     },
@@ -212,17 +213,17 @@ const styles = StyleSheet.create({
         fontSize: 14, // ✅ UX: Уменьшено с 16
         fontWeight: '600',
         fontFamily: 'Roboto-Medium',
-        color: '#1a1a1a',
+        color: '#374151',
     },
     tempMin: {
         fontSize: 12, // ✅ UX: Уменьшено с 14
         fontWeight: '400',
         fontFamily: 'Roboto-Regular',
-        color: '#666',
+        color: '#9ca3af',
     },
     desc: {
         fontSize: 10, // ✅ UX: Уменьшено с 12 для компактности
-        color: '#888',
+        color: '#9ca3af',
         fontFamily: 'Roboto-Regular',
         textAlign: 'center',
         maxWidth: '100%',
