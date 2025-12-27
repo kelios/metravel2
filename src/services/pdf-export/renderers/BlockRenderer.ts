@@ -329,7 +329,7 @@ export class BlockRenderer {
         ">
           <div style="
             flex-shrink: 0;
-          ">${this.renderPdfIcon(iconName, config.icon, 20)}</div>
+          ">${this.renderPdfIcon(iconName, config.text, 20)}</div>
           <div style="flex: 1;">
             ${title ? `<div style="font-weight: 700; font-size: ${this.theme.typography.h4.size}; color: ${config.text}; margin-bottom: ${this.theme.spacing.elementSpacing}; font-family: ${this.theme.typography.headingFont};">
               ${this.escapeHtml(title)}

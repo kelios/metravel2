@@ -159,10 +159,22 @@ export class ContentParser {
       .trim();
   }
 
+  private normalizeTextPreserveLineBreaks(text: string): string {
+    if (!text) return '';
+
+    const sentinel = '__PDF_NL__';
+    return this.normalizeText(text.replace(/\n+/g, ` ${sentinel} `))
+      .split(sentinel)
+      .map((part) => this.normalizeText(part))
+      .filter((part) => part.length > 0)
+      .join('\n')
+      .trim();
+  }
+
   /**
    * Извлекает весь текст из элемента, объединяя вложенные элементы
    */
-  private extractTextContent(element: HTMLElement): string {
+  private extractTextContent(element: HTMLElement, preserveLineBreaks = false): string {
     // Клонируем элемент, чтобы не изменять оригинал
     const clone = element.cloneNode(true) as HTMLElement;
     
@@ -170,17 +182,19 @@ export class ContentParser {
     const scripts = clone.querySelectorAll('script, style');
     scripts.forEach(el => el.remove());
     
-    // Заменяем <br> на пробелы
+    // Заменяем <br> на переносы строк (или пробелы, если переносы не нужны)
     const brs = clone.querySelectorAll('br');
     brs.forEach(br => {
-      br.replaceWith(document.createTextNode(' '));
+      br.replaceWith(document.createTextNode(preserveLineBreaks ? '\n' : ' '));
     });
     
     // Извлекаем текстовое содержимое
     let text = clone.textContent || '';
     
     // Нормализуем текст
-    text = this.normalizeText(text);
+    text = preserveLineBreaks
+      ? this.normalizeTextPreserveLineBreaks(text)
+      : this.normalizeText(text);
     
     return text;
   }
@@ -206,49 +220,22 @@ export class ContentParser {
       return [];
     }
 
-    // ✅ ИСПРАВЛЕНИЕ: Парсим все элементы, объединяя соседние параграфы
     const blocks: ParsedContentBlock[] = [];
     const nodes = Array.from(body.childNodes);
-    
-    let currentParagraph: string[] = [];
-    
+
     for (const node of nodes) {
       const parsed = this.parseNode(node);
-      
-      if (parsed) {
-        if (Array.isArray(parsed)) {
-          // Если есть накопленный параграф, сохраняем его
-          if (currentParagraph.length > 0) {
-            blocks.push(this.createParagraphFromParts(currentParagraph));
-            currentParagraph = [];
-          }
-          blocks.push(...parsed);
-        } else {
-          // Если это параграф, накапливаем его
-          if (parsed.type === 'paragraph') {
-            const text = this.normalizeText(parsed.text);
-            if (text) {
-              currentParagraph.push(text);
-            }
-          } else {
-            // Если это не параграф, сохраняем накопленный параграф и добавляем блок
-            if (currentParagraph.length > 0) {
-              blocks.push(this.createParagraphFromParts(currentParagraph));
-              currentParagraph = [];
-            }
-            blocks.push(parsed);
-          }
-        }
+
+      if (!parsed) continue;
+
+      if (Array.isArray(parsed)) {
+        blocks.push(...parsed);
+      } else {
+        blocks.push(parsed);
       }
     }
-    
-    // Сохраняем последний накопленный параграф
-    if (currentParagraph.length > 0) {
-      blocks.push(this.createParagraphFromParts(currentParagraph));
-    }
 
-    // ✅ ИСПРАВЛЕНИЕ: Объединяем соседние параграфы в один
-    return this.mergeAdjacentParagraphs(blocks);
+    return blocks;
   }
 
   /**
@@ -394,16 +381,36 @@ export class ContentParser {
    * Парсит параграф
    * ✅ ИСПРАВЛЕНИЕ: Объединяет весь текст из вложенных элементов
    */
-  private parseParagraph(element: HTMLElement): ParagraphBlock | InfoBlock | null {
+  private parseParagraph(
+    element: HTMLElement
+  ): ParsedContentBlock | ParsedContentBlock[] | null {
     // Проверяем, не является ли это специальным блоком
     const specialBlock = this.detectSpecialBlock(element);
     if (specialBlock) {
       return specialBlock;
     }
 
-    const text = this.normalizeText(this.extractTextContent(element));
+    const text = this.extractTextContent(element, true);
     
     if (!text || text.length === 0) return null;
+
+    // Если есть переносы строк — сохраняем структуру: делим на отдельные абзацы
+    if (text.includes('\n')) {
+      const parts = text
+        .split(/\n+/)
+        .map((p) => this.normalizeText(p))
+        .filter((p) => p.length > 0);
+
+      if (parts.length === 0) return null;
+      if (parts.length === 1) {
+        return {
+          type: 'paragraph',
+          text: parts[0]!,
+        };
+      }
+
+      return parts.map((p) => ({ type: 'paragraph', text: p }));
+    }
 
     const html = element.innerHTML.trim();
     const hasComplexHtml = html !== text && html.includes('<');

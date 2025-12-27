@@ -66,51 +66,52 @@ export function useActiveSection(
     const safeHeaderOffset = typeof headerOffset === 'number' && !isNaN(headerOffset) ? headerOffset : 0;
 
     const observer = new IntersectionObserverCtor(
-      (entries) => {
+      (_entries) => {
         // Debounce Intersection Observer callbacks to improve performance
         scheduleObserverCallback(() => {
-          const visibleSections: Array<{ key: string; ratio: number; top: number }> = [];
+          // Robust scrollspy for long sections:
+          // Determine active section by comparing each section's top edge to the header offset.
+          // Pick the last section whose top is above (or near) the header.
+          const viewportTop = safeHeaderOffset;
+          const TOP_BUFFER_PX = 24;
 
-          entries.forEach((entry) => {
-            const sectionKey = (entry.target as HTMLElement).getAttribute('data-section-key');
-            if (!sectionKey || !entry.isIntersecting) return;
+          const keys = Array.from(registeredSectionsRef.current);
+          const measured: Array<{ key: string; top: number }> = [];
 
-            const rect = entry.boundingClientRect;
-            const viewportTop = safeHeaderOffset;
-
-            if (rect.top <= viewportTop + 100 && rect.bottom >= viewportTop) {
-              const ratio = entry.intersectionRatio;
-              const distanceFromTop = Math.abs(rect.top - viewportTop);
-              visibleSections.push({
-                key: sectionKey,
-                ratio,
-                top: distanceFromTop,
-              });
-            }
+          keys.forEach((key) => {
+            const el = doc.querySelector(`[data-section-key="${key}"]`) as HTMLElement | null;
+            if (!el || typeof el.getBoundingClientRect !== 'function') return;
+            const rect = el.getBoundingClientRect();
+            measured.push({ key, top: rect.top });
           });
 
-          if (visibleSections.length > 0) {
-            visibleSections.sort((a, b) => {
-              if (Math.abs(a.top - b.top) < 50) {
-                return b.ratio - a.ratio;
-              }
-              return a.top - b.top;
-            });
+          if (!measured.length) return;
 
-            let mostVisible = visibleSections[0];
+          // Sort by top position (document order in viewport)
+          measured.sort((a, b) => a.top - b.top);
 
-            // Небольшой приоритет: если одновременно видны описание и видео,
-            // и секция видео находится недалеко от верха, считаем активным именно видео.
-            if (mostVisible.key === 'description') {
-              const videoCandidate = visibleSections.find((s) => s.key === 'video');
-              if (videoCandidate && videoCandidate.top - mostVisible.top < 150) {
-                mostVisible = videoCandidate;
-              }
+          // Find last section above the header line
+          const passed = measured.filter((s) => s.top <= viewportTop + TOP_BUFFER_PX);
+          let nextActive: string | null = null;
+
+          if (passed.length) {
+            nextActive = passed[passed.length - 1].key;
+          } else {
+            // If none passed yet, choose the first section below header
+            nextActive = measured[0].key;
+          }
+
+          // Small priority: prefer video over description when both are near the top.
+          if (nextActive === 'description') {
+            const video = measured.find((s) => s.key === 'video');
+            const desc = measured.find((s) => s.key === 'description');
+            if (video && desc && Math.abs(video.top - desc.top) < 150 && video.top <= viewportTop + 150) {
+              nextActive = 'video';
             }
+          }
 
-            if (mostVisible && mostVisible.key !== activeSectionRef.current) {
-              setActiveSection(mostVisible.key);
-            }
+          if (nextActive && nextActive !== activeSectionRef.current) {
+            setActiveSection(nextActive);
           }
         });
       },
@@ -123,24 +124,55 @@ export function useActiveSection(
 
     observerRef.current = observer;
 
-    // Регистрируем все секции для наблюдения
+    // Регистрируем все секции для наблюдения.
+    // Важно: секции могут монтироваться лениво (defer/lazy), поэтому делаем повторные попытки.
     const sectionKeys = Object.keys(anchors);
-    sectionKeys.forEach((key) => {
-      if (registeredSectionsRef.current.has(key)) return;
+    let cancelled = false;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-      setTimeout(() => {
+    const tryRegister = () => {
+      if (cancelled) return;
+
+      let registeredThisTick = 0;
+
+      sectionKeys.forEach((key) => {
+        if (registeredSectionsRef.current.has(key)) return;
         const element = doc.querySelector(`[data-section-key="${key}"]`);
         if (element && element instanceof Element) {
           observer.observe(element);
           registeredSectionsRef.current.add(key);
+          registeredThisTick += 1;
         }
-      }, 200);
-    });
+      });
+
+      // Если мы уже зарегистрировали всё — останавливаемся раньше.
+      if (registeredSectionsRef.current.size >= sectionKeys.length) {
+        if (intervalId) clearInterval(intervalId);
+        intervalId = null;
+      }
+
+      // Опционально: если долго не появляется ничего нового, всё равно оставляем interval до таймаута.
+      void registeredThisTick;
+    };
+
+    // Первая попытка — сразу.
+    tryRegister();
+
+    // Дальше несколько секунд пере-сканируем DOM, чтобы подхватить ленивые секции.
+    intervalId = setInterval(tryRegister, 250);
+    timeoutId = setTimeout(() => {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = null;
+    }, 8000);
 
     const registeredSections = registeredSectionsRef.current;
     const observerInstance = observerRef.current;
 
     return () => {
+      cancelled = true;
+      if (intervalId) clearInterval(intervalId);
+      if (timeoutId) clearTimeout(timeoutId);
       if (observerInstance) {
         observerInstance.disconnect();
         observerRef.current = null;

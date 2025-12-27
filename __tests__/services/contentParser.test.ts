@@ -7,7 +7,7 @@ describe('ContentParser', () => {
     parser = new ContentParser()
   })
 
-  it('merges adjacent paragraphs and normalizes invisible characters', () => {
+  it('preserves paragraph boundaries and normalizes invisible characters', () => {
     const html = `
       <p>Первый&nbsp;параграф<br/>с переносом</p>
       <p> Второй   </p>
@@ -19,7 +19,20 @@ describe('ContentParser', () => {
     expect(blocks).toEqual([
       {
         type: 'paragraph',
-        text: 'Первый параграф с переносом Второй Невидимый текст',
+        text: 'Первый параграф',
+      },
+      {
+        type: 'paragraph',
+        text: 'с переносом',
+      },
+      {
+        type: 'paragraph',
+        text: 'Второй',
+        html: undefined,
+      },
+      {
+        type: 'paragraph',
+        text: 'Невидимый текст',
       },
     ])
   })

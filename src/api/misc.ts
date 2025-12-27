@@ -22,16 +22,11 @@ const URLAPI = (() => {
 const DEFAULT_TIMEOUT = 10000;
 const LONG_TIMEOUT = 30000;
 
-const SAVE_TRAVEL = `${URLAPI}/travels/upsert/`;
-const UPLOAD_IMAGE = `${URLAPI}/upload`;
-const GALLERY = `${URLAPI}/gallery/`;
 const GET_FILTERS = `${URLAPI}/getFiltersTravel/`;
 const GET_FILTERS_COUNTRY = `${URLAPI}/countriesforsearch/`;
 const GET_ALL_COUNTRY = `${URLAPI}/countries/`;
 const SEND_FEEDBACK = `${URLAPI}/feedback/`;
 const SEND_AI_QUESTION = `${URLAPI}/chat`;
-
-const TRAVELS = `${URLAPI}/travels/`;
 
 const slugifySafe = (value?: string): string => {
   if (!value) return '';
@@ -133,7 +128,7 @@ export const deleteImage = async (imageId: string) => {
 
   try {
     return await apiClient.delete<any>(`/gallery/${imageId}/`, DEFAULT_TIMEOUT);
-  } catch (e: any) {
+  } catch {
     // Preserve previous behavior: non-204 is treated as "Ошибка удаления изображения"
     throw new Error('Ошибка удаления изображения');
   }

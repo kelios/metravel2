@@ -444,7 +444,7 @@ export class EnhancedPdfGenerator {
             padding-bottom: 8px;
             border-bottom: 2px solid ${colors.accentSoft};
           ">
-            ${this.renderPdfIcon('camera', colors.accent, 20)}
+            ${this.renderPdfIcon('camera', colors.text, 20)}
             <h2 style="
               font-size: ${typography.h2.size};
               font-weight: ${typography.h2.weight};
@@ -880,7 +880,7 @@ export class EnhancedPdfGenerator {
               padding-bottom: 8px;
               border-bottom: 2px solid ${colors.accentSoft};
             ">
-              ${this.renderPdfIcon('pen', colors.accent, 20)}
+              ${this.renderPdfIcon('pen', colors.text, 20)}
               <h2 style="
                 font-size: ${typography.h2.size};
                 font-weight: ${typography.h2.weight};
@@ -906,10 +906,7 @@ export class EnhancedPdfGenerator {
               padding-bottom: 8px;
               border-bottom: 2px solid ${colors.accentSoft};
             ">
-              <span style="
-                font-size: 20pt;
-                line-height: 1;
-              ">📝</span>
+              ${this.renderPdfIcon('pen', colors.text, 20)}
               <h2 style="
                 font-size: ${typography.h2.size};
                 font-weight: ${typography.h2.weight};
@@ -939,7 +936,7 @@ export class EnhancedPdfGenerator {
               padding-bottom: 8px;
               border-bottom: 2px solid ${colors.accentSoft};
             ">
-              ${this.renderPdfIcon('bulb', colors.accent, 20)}
+              ${this.renderPdfIcon('bulb', colors.text, 20)}
               <h2 style="
                 font-size: ${typography.h2.size};
                 font-weight: ${typography.h2.weight};
@@ -982,7 +979,7 @@ export class EnhancedPdfGenerator {
                   gap: 8px;
                   margin-bottom: ${spacing.elementSpacing};
                 ">
-                  <span style="font-size: 18pt; line-height: 1;">✨</span>
+                  ${this.renderPdfIcon('sparkle', colors.tipBlock.text, 18)}
                   <h3 style="
                     margin: 0;
                     color: ${colors.tipBlock.text};
@@ -1015,7 +1012,7 @@ export class EnhancedPdfGenerator {
                   gap: 8px;
                   margin-bottom: ${spacing.elementSpacing};
                 ">
-                  ${this.renderPdfIcon('warning', colors.dangerBlock.icon, 18)}
+                  ${this.renderPdfIcon('warning', colors.dangerBlock.text, 18)}
                   <h3 style="
                     margin: 0;
                     color: ${colors.dangerBlock.text};
@@ -1964,7 +1961,7 @@ export class EnhancedPdfGenerator {
   }
 
   private renderPdfIcon(
-    name: 'camera' | 'pen' | 'bulb' | 'warning',
+    name: 'camera' | 'pen' | 'bulb' | 'warning' | 'sparkle',
     color: string,
     sizePt: number
   ): string {
@@ -1984,6 +1981,7 @@ export class EnhancedPdfGenerator {
       pen: `<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>`,
       bulb: `<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12c.7.6 1 1.3 1 2v1h6v-1c0-.7.3-1.4 1-2a7 7 0 0 0-4-12z"/>`,
       warning: `<path d="M10.3 3.2 1.7 18a2 2 0 0 0 1.7 3h17.2a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/>`,
+      sparkle: `<path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8z"/>`,
     };
 
     return `

@@ -112,6 +112,86 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
         };
 
         {
+          const safeScrollTo = (node: any, top: number): boolean => {
+            if (!node) return false;
+            const before = Number(node.scrollTop ?? 0);
+            let didCall = false;
+
+            // 1) Standard DOM signature: scrollTo({ top, behavior })
+            try {
+              if (typeof node.scrollTo === 'function') {
+                node.scrollTo({ top, behavior: 'smooth' });
+                didCall = true;
+              }
+            } catch {
+              // noop
+            }
+
+            // If scrollTop didn't change, RNW/webview polyfills may require numeric signature
+            try {
+              const afterObj = Number(node.scrollTop ?? 0);
+              if (typeof node.scrollTo === 'function' && (!didCall || Math.abs(afterObj - before) < 1)) {
+                node.scrollTo(0, top);
+                didCall = true;
+              }
+            } catch {
+              // noop
+            }
+
+            // Final fallback: assign scrollTop
+            try {
+              const afterNum = Number(node.scrollTop ?? 0);
+              if (Math.abs(afterNum - before) < 1) {
+                node.scrollTop = top;
+                didCall = true;
+              }
+            } catch {
+              // noop
+            }
+
+            return didCall;
+          };
+
+          const safeScrollBy = (node: any, deltaTop: number): boolean => {
+            if (!node) return false;
+            const before = Number(node.scrollTop ?? 0);
+            let didCall = false;
+
+            // 1) Standard DOM signature: scrollBy({ top, left })
+            try {
+              if (typeof node.scrollBy === 'function') {
+                node.scrollBy({ top: deltaTop, left: 0, behavior: 'instant' });
+                didCall = true;
+              }
+            } catch {
+              // noop
+            }
+
+            // 2) Numeric signature: scrollBy(x, y)
+            try {
+              const afterObj = Number(node.scrollTop ?? 0);
+              if (typeof node.scrollBy === 'function' && (!didCall || Math.abs(afterObj - before) < 1)) {
+                node.scrollBy(0, deltaTop);
+                didCall = true;
+              }
+            } catch {
+              // noop
+            }
+
+            // 3) Manual fallback
+            try {
+              const afterNum = Number(node.scrollTop ?? 0);
+              if (Math.abs(afterNum - before) < 1) {
+                node.scrollTop = before + deltaTop;
+                didCall = true;
+              }
+            } catch {
+              // noop
+            }
+
+            return didCall;
+          };
+
           const scrollViewAny = scrollRef.current as any;
           const scrollNode: HTMLElement | null =
             (typeof scrollViewAny?.getScrollableNode === 'function' && scrollViewAny.getScrollableNode()) ||
@@ -147,29 +227,19 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
               console.debug('[nav] scrollTo computed', { currentTop, targetTop });
             }
 
-            if (typeof (bestScrollContainer as any).scrollTo === 'function') {
-              (bestScrollContainer as any).scrollTo({ top: targetTop, behavior: 'smooth' });
-
+            if (safeScrollTo(bestScrollContainer as any, targetTop)) {
               const HEADER_OFFSET = getHeaderOffset();
-              if (HEADER_OFFSET > 0 && typeof (bestScrollContainer as any).scrollBy === 'function') {
+              if (HEADER_OFFSET > 0) {
                 setTimeout(() => {
                   try {
                     const safeOffset = Math.min(HEADER_OFFSET, targetTop);
-                    (bestScrollContainer as any).scrollBy({ top: -safeOffset, left: 0, behavior: 'instant' });
+                    safeScrollBy(bestScrollContainer as any, -safeOffset);
                   } catch {
                     // noop
                   }
                 }, 0);
               }
               return true;
-            }
-
-            // Fallback: редкий случай без scrollTo
-            try {
-              (bestScrollContainer as any).scrollTop = targetTop;
-              return true;
-            } catch {
-              // noop
             }
           }
 

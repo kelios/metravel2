@@ -27,8 +27,22 @@ describe('useScrollNavigation (web)', () => {
     container.getBoundingClientRect = () => ({ top: 0, bottom: 200, left: 0, right: 200, width: 200, height: 200 } as any);
     target.getBoundingClientRect = () => ({ top: 120, bottom: 160, left: 0, right: 200, width: 200, height: 40 } as any);
 
-    container.scrollTo = jest.fn();
-    container.scrollBy = jest.fn();
+    // Simulate DOM scroll APIs by mutating scrollTop. This prevents the hook from
+    // assuming scrollTo was a no-op and falling back to numeric signatures.
+    container.scrollTo = jest.fn((arg1: any, arg2?: any) => {
+      if (typeof arg1 === 'object' && arg1) {
+        container.scrollTop = Number(arg1.top ?? 0);
+        return;
+      }
+      container.scrollTop = Number(arg2 ?? 0);
+    });
+    container.scrollBy = jest.fn((arg1: any, arg2?: any) => {
+      if (typeof arg1 === 'object' && arg1) {
+        container.scrollTop = Number(container.scrollTop ?? 0) + Number(arg1.top ?? 0);
+        return;
+      }
+      container.scrollTop = Number(container.scrollTop ?? 0) + Number(arg2 ?? 0);
+    });
 
     // Make getComputedStyle reflect a scrollable container
     jest.spyOn(window, 'getComputedStyle').mockImplementation((el: any) => {
@@ -91,6 +105,42 @@ describe('useScrollNavigation (web)', () => {
     expect(container.scrollBy.mock.calls[0][0]).toMatchObject({ top: expect.any(Number), left: 0 });
     expect(container.scrollBy.mock.calls[0][0].top).toBeLessThanOrEqual(0);
     expect((window as any).scrollBy).not.toHaveBeenCalled();
+  });
+
+  it('falls back to numeric scrollTo signature when options-object scrollTo is unsupported', () => {
+    const { result } = renderHook(() => useScrollNavigation());
+
+    const container: any = document.getElementById('scroll-container');
+
+    // Simulate a polyfill where scrollTo({top}) throws, but scrollTo(x,y) works.
+    const numericScrollTo = jest.fn((_x: number, y: number) => {
+      container.scrollTop = y;
+    });
+
+    container.scrollTo = jest
+      .fn()
+      .mockImplementation((arg1: any, arg2?: any) => {
+        if (typeof arg1 === 'object') {
+          throw new Error('Options object signature not supported');
+        }
+        return numericScrollTo(arg1, arg2);
+      });
+
+    (result.current.scrollRef as any).current = {
+      getScrollableNode: () => container,
+    };
+
+    act(() => {
+      result.current.scrollTo('description');
+    });
+
+    // numeric signature should have been attempted
+    expect(numericScrollTo).toHaveBeenCalledTimes(1);
+    expect(numericScrollTo).toHaveBeenCalledWith(0, 130);
+    expect(container.scrollTop).toBe(130);
+
+    // Regression guard: should not scroll the window
+    expect((window as any).scrollTo).not.toHaveBeenCalled();
   });
 
   it('falls back to scrollIntoView when no scrollable container is detected', () => {

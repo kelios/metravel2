@@ -741,17 +741,67 @@ export default function TravelDetails() {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
 
-    const scrollViewAny = scrollRef.current as any;
-    const node: HTMLElement | null =
-      (typeof scrollViewAny?.getScrollableNode === 'function' && scrollViewAny.getScrollableNode()) ||
-      scrollViewAny?._scrollNode ||
-      scrollViewAny?._innerViewNode ||
-      scrollViewAny?._nativeNode ||
-      scrollViewAny?._domNode ||
-      null;
+    let cancelled = false;
+    let attempts = 0;
+    let rafId: number | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    setScrollRootEl((prev) => (prev === node ? prev : node));
-  }, [scrollRef]);
+    const readNode = (): HTMLElement | null => {
+      const scrollViewAny = scrollRef.current as any;
+      const node: HTMLElement | null =
+        (typeof scrollViewAny?.getScrollableNode === 'function' && scrollViewAny.getScrollableNode()) ||
+        scrollViewAny?._scrollNode ||
+        scrollViewAny?._innerViewNode ||
+        scrollViewAny?._nativeNode ||
+        scrollViewAny?._domNode ||
+        null;
+
+      if (node && typeof node === 'object' && typeof (node as any).getBoundingClientRect === 'function') {
+        return node;
+      }
+
+      return null;
+    };
+
+    const tick = () => {
+      if (cancelled) return;
+      attempts += 1;
+
+      const node = readNode();
+      if (node) {
+        setScrollRootEl((prev) => (prev === node ? prev : node));
+        return;
+      }
+
+      if (attempts >= 60) return;
+
+      const raf =
+        (typeof window !== 'undefined' && window.requestAnimationFrame) ||
+        (typeof globalThis !== 'undefined' && (globalThis as any).requestAnimationFrame);
+
+      if (typeof raf === 'function') {
+        rafId = raf(() => tick()) as any;
+      } else {
+        timeoutId = setTimeout(() => tick(), 16);
+      }
+    };
+
+    tick();
+
+    return () => {
+      cancelled = true;
+      if (rafId != null && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+        try {
+          window.cancelAnimationFrame(rafId);
+        } catch {
+          // noop
+        }
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [scrollRef, slug]);
 
   const { activeSection, setActiveSection } = useActiveSection(anchors, headerOffset, scrollRootEl);
   const { closeMenu, animatedX, menuWidth, menuWidthNum, openMenuOnDesktop } = useMenuState(isMobile);
@@ -1681,7 +1731,9 @@ const TravelContentSections: React.FC<{
   }, [extractSnippets, travel.minus, travel.plus, travel.recommendation]);
 
   const decisionTips = useMemo(() => {
-    const splitToBullets = (text: string) => {
+    type TipItem = { text: string; level: 0 | 1 };
+
+    const splitToBullets = (text: string): TipItem[] => {
       const normalized = text
         .replace(/\r\n/g, "\n")
         .replace(/(&nbsp;|&#160;)/gi, " ")
@@ -1696,34 +1748,100 @@ const TravelContentSections: React.FC<{
         // Turn inline dash lists into separate lines: " - item"
         .replace(/\s+(?=[-–—]\s+)/g, "\n");
 
-      const fromNewlines = withListBreaks
+      const lines = withListBreaks
         .split(/\n+/)
-        .flatMap((line) => line.split(/\s*•\s*/g))
-        .flatMap((line) => line.split(/\s*(?:^|\s)(?:[-–—])\s+/g))
         .map((s) => s.trim())
         .filter(Boolean);
 
-      if (fromNewlines.length > 1) return fromNewlines;
+      const items: TipItem[] = [];
 
-      const fromSemicolons = withListBreaks
-        .split(/\s*;\s+/g)
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const pushOrAppend = (level: 0 | 1, value: string) => {
+        const v = value.trim();
+        if (!v) return;
+        if (level === 0) {
+          items.push({ text: v, level: 0 });
+          return;
+        }
+        items.push({ text: v, level: 1 });
+      };
 
-      if (fromSemicolons.length > 1) return fromSemicolons;
+      const splitInlineSubBullets = (mainText: string): { main: string; subs: string[] } => {
+        const cleaned = mainText.trim();
+        if (!cleaned) return { main: "", subs: [] };
 
-      return withListBreaks
-        .split(/(?<=[.!?])\s+/g)
-        .map((s) => s.trim())
-        .filter(Boolean);
+        // Split on " - " / " — " / " – " sequences used as inline sub-bullets
+        const parts = cleaned
+          .split(/\s+[-–—]\s+/g)
+          .map((p) => p.trim())
+          .filter(Boolean);
+
+        if (parts.length <= 1) return { main: cleaned, subs: [] };
+        return { main: parts[0] ?? "", subs: parts.slice(1) };
+      };
+
+      let inNumbered = false;
+
+      for (const lineRaw of lines) {
+        const line = lineRaw.replace(/^•\s*/, "").trim();
+        const numberedMatch = line.match(/^(\d{1,2})\s*[).]\s+(.*)$/);
+
+        if (numberedMatch) {
+          inNumbered = true;
+          const rest = (numberedMatch[2] ?? "").trim();
+          const { main, subs } = splitInlineSubBullets(rest);
+          pushOrAppend(0, main);
+          subs.forEach((s) => pushOrAppend(1, s));
+          continue;
+        }
+
+        const subMatch = line.match(/^[-–—]\s+(.*)$/);
+        if (subMatch) {
+          pushOrAppend(1, subMatch[1] ?? "");
+          continue;
+        }
+
+        // If we're in a numbered section, treat plain lines as continuation of the last main bullet.
+        if (inNumbered && items.length > 0) {
+          const lastMainIndex = [...items].reverse().findIndex((x) => x.level === 0);
+          const idxFromEnd = lastMainIndex;
+          if (idxFromEnd !== -1) {
+            const absoluteIndex = items.length - 1 - idxFromEnd;
+            items[absoluteIndex] = {
+              ...items[absoluteIndex],
+              text: `${items[absoluteIndex].text} ${line}`.trim(),
+            };
+            continue;
+          }
+        }
+
+        // Fallback: split by semicolons, otherwise by sentences.
+        const fromSemicolons = line
+          .split(/\s*;\s+/g)
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        if (fromSemicolons.length > 1) {
+          fromSemicolons.forEach((s) => pushOrAppend(0, s));
+          continue;
+        }
+
+        const sentences = line
+          .split(/(?<=[.!?])\s+/g)
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        sentences.forEach((s) => pushOrAppend(0, s));
+      }
+
+      return items;
     };
 
     const tips = decisionSummary
       .flatMap((item) => splitToBullets(item.text))
-      .map((t) => t.replace(/^[-–—•]\s*/, "").trim())
-      .filter(Boolean);
+      .map((t) => ({ ...t, text: t.text.replace(/^[-–—•]\s*/, "").trim() }))
+      .filter((t) => Boolean(t.text));
 
-    return tips.slice(0, 6);
+    return tips.slice(0, 8);
   }, [decisionSummary]);
 
   return (
@@ -1756,18 +1874,31 @@ const TravelContentSections: React.FC<{
                   <View style={styles.decisionSummaryBox}>
                     <Text style={styles.decisionSummaryTitle}>Полезные советы перед поездкой</Text>
                     <View style={styles.decisionSummaryList}>
-                      {decisionTips.map((tip, idx) => (
-                        <View key={`tip-${idx}`} style={styles.decisionSummaryBulletRow}>
-                          <MaterialIcons
-                            name="lightbulb-outline"
-                            size={14}
-                            color={DESIGN_TOKENS.colors.textMuted}
-                            style={styles.decisionSummaryBulletIcon}
-                            accessibilityElementsHidden
-                          />
-                          <Text style={styles.decisionSummaryBulletText}>{tip}</Text>
-                        </View>
-                      ))}
+                      {decisionTips.map((tip, idx) =>
+                        tip.level === 0 ? (
+                          <View key={`tip-${idx}`} style={styles.decisionSummaryBulletRow}>
+                            <MaterialIcons
+                              name="lightbulb-outline"
+                              size={14}
+                              color={DESIGN_TOKENS.colors.textMuted}
+                              style={styles.decisionSummaryBulletIcon}
+                              accessibilityElementsHidden
+                            />
+                            <Text style={styles.decisionSummaryBulletText}>{tip.text}</Text>
+                          </View>
+                        ) : (
+                          <View key={`tip-${idx}`} style={styles.decisionSummarySubBulletRow}>
+                            <MaterialIcons
+                              name="circle"
+                              size={6}
+                              color={DESIGN_TOKENS.colors.textMuted}
+                              style={styles.decisionSummarySubBulletIcon}
+                              accessibilityElementsHidden
+                            />
+                            <Text style={styles.decisionSummarySubBulletText}>{tip.text}</Text>
+                          </View>
+                        )
+                      )}
                     </View>
                   </View>
                 )}
@@ -1776,8 +1907,62 @@ const TravelContentSections: React.FC<{
                 {Platform.OS === "web" && (
                   <Pressable
                     onPress={() => {
+                      try {
+                        const scrollViewAny = scrollRef.current as any;
+                        const node: any =
+                          (typeof scrollViewAny?.getScrollableNode === 'function' && scrollViewAny.getScrollableNode()) ||
+                          scrollViewAny?._scrollNode ||
+                          scrollViewAny?._innerViewNode ||
+                          scrollViewAny?._nativeNode ||
+                          scrollViewAny?._domNode ||
+                          null;
+
+                        if (node) {
+                          const before = Number(node.scrollTop ?? 0);
+                          let didCall = false;
+                          try {
+                            if (typeof node.scrollTo === 'function') {
+                              node.scrollTo({ top: 0, behavior: 'smooth' });
+                              didCall = true;
+                            }
+                          } catch {
+                            // noop
+                          }
+
+                          try {
+                            const afterObj = Number(node.scrollTop ?? 0);
+                            if (typeof node.scrollTo === 'function' && (!didCall || Math.abs(afterObj - before) < 1)) {
+                              node.scrollTo(0, 0);
+                              didCall = true;
+                            }
+                          } catch {
+                            // noop
+                          }
+
+                          try {
+                            const afterNum = Number(node.scrollTop ?? 0);
+                            if (!didCall || Math.abs(afterNum - before) < 1) {
+                              node.scrollTop = 0;
+                            }
+                          } catch {
+                            // noop
+                          }
+                          return;
+                        }
+                      } catch {
+                        // noop
+                      }
+
                       if (typeof window !== "undefined") {
-                        window.scrollTo({ top: 0, behavior: "smooth" });
+                        try {
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        } catch {
+                          try {
+                            window.scrollTo(0, 0);
+                          } catch {
+                            // noop
+                          }
+                        }
                       }
                     }}
                     style={styles.backToTopWrapper}
@@ -2428,6 +2613,25 @@ export const styles = StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     lineHeight: Platform.select({ default: 28, web: 26 }),
     color: DESIGN_TOKENS.colors.text,
+    fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
+  },
+  decisionSummarySubBulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: DESIGN_TOKENS.spacing.sm,
+    paddingLeft: 20,
+  },
+  decisionSummarySubBulletIcon: {
+    width: 20,
+    marginTop: 10,
+    opacity: 0.6,
+  },
+  decisionSummarySubBulletText: {
+    flex: 1,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    lineHeight: Platform.select({ default: 24, web: 22 }),
+    color: DESIGN_TOKENS.colors.text,
+    opacity: 0.9,
     fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
   },
   decisionSummaryBadge: {

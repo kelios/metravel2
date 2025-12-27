@@ -242,9 +242,9 @@ export class TravelPageGenerator {
       if (plusItems.length > 0) {
         highlights.push({
           title: 'Понравилось',
-          icon: this.renderPdfIcon('sparkle', colors.accent, 14),
+          icon: this.renderPdfIcon('sparkle', colors.textMuted, 14),
           items: plusItems,
-          color: colors.accent,
+          color: colors.textMuted,
         });
       }
     }
@@ -266,9 +266,9 @@ export class TravelPageGenerator {
       if (recItems.length > 0) {
         highlights.push({
           title: 'Рекомендации',
-          icon: this.renderPdfIcon('bulb', colors.accent, 14),
+          icon: this.renderPdfIcon('bulb', colors.textMuted, 14),
           items: recItems,
-          color: colors.accent,
+          color: colors.textMuted,
         });
       }
     }
