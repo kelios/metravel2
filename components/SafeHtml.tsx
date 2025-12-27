@@ -56,12 +56,3 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     },
 });
-
-/**
- * Хук для использования SafeHtml с дополнительными опциями
- */
-export function useSafeHtml(html: string | null | undefined): string {
-    if (!html) return '';
-    return sanitizeRichText(html);
-}
-

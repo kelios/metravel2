@@ -29,6 +29,7 @@ const SECTION_KEYS = [
 
 export function useScrollNavigation(): UseScrollNavigationReturn {
   const scrollRef = useRef<ScrollView>(null);
+  const pendingRetriesRef = useRef<Record<string, Array<ReturnType<typeof setTimeout>>>>({});
 
   // ✅ АРХИТЕКТУРА: Создаем anchors объект из списка ключей
   const anchors = useMemo(() => {
@@ -41,10 +42,76 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
 
   const scrollTo = useCallback(
     (key: string) => {
-      // Веб: пытаемся использовать DOM и data-section-key для более стабильной прокрутки
-      if (Platform.OS === 'web' && typeof document !== 'undefined') {
-        const el = document.querySelector<HTMLElement>(`[data-section-key="${key}"]`);
-        if (el) {
+      const dbg =
+        Platform.OS === 'web' &&
+        typeof window !== 'undefined' &&
+        (window as any).__NAV_DEBUG__;
+
+      if (dbg) {
+        // eslint-disable-next-line no-console
+        console.debug('[nav] scrollTo called', { key });
+      }
+
+      const clearPending = (k: string) => {
+        const timers = pendingRetriesRef.current[k];
+        if (timers && timers.length) {
+          timers.forEach((t) => clearTimeout(t));
+        }
+        delete pendingRetriesRef.current[k];
+      };
+
+      const tryScrollWeb = (k: string): boolean => {
+        if (Platform.OS !== 'web' || typeof document === 'undefined') return false;
+
+        const el = document.querySelector<HTMLElement>(`[data-section-key="${k}"]`);
+        if (dbg) {
+          // eslint-disable-next-line no-console
+          console.debug('[nav] scrollTo lookup', { key: k, found: !!el });
+        }
+        if (!el) return false;
+
+        const getHeaderOffset = (): number => {
+          try {
+            const header = document.querySelector('header');
+            const h = header?.getBoundingClientRect?.().height;
+            if (typeof h === 'number' && isFinite(h)) {
+              return Math.max(60, Math.min(160, Math.round(h)));
+            }
+          } catch {
+            // noop
+          }
+          return 88;
+        };
+
+        const canScrollNode = (node: any): node is HTMLElement => {
+          if (!node) return false;
+          if (typeof node.getBoundingClientRect !== 'function') return false;
+          const sh = Number((node as any).scrollHeight ?? 0);
+          const ch = Number((node as any).clientHeight ?? 0);
+          const canScrollBySize = sh > ch + 2;
+          return canScrollBySize;
+        };
+
+        const findScrollableAncestor = (start: HTMLElement | null): HTMLElement | null => {
+          if (!start) return null;
+          let node: HTMLElement | null = start;
+          while (node && node !== document.body) {
+            try {
+              const style = window.getComputedStyle(node);
+              const overflowY = style?.overflowY;
+              const isScrollableOverflow = overflowY === 'auto' || overflowY === 'scroll';
+              if (isScrollableOverflow && canScrollNode(node)) {
+                return node;
+              }
+            } catch {
+              // noop
+            }
+            node = node.parentElement;
+          }
+          return null;
+        };
+
+        {
           const scrollViewAny = scrollRef.current as any;
           const scrollNode: HTMLElement | null =
             (typeof scrollViewAny?.getScrollableNode === 'function' && scrollViewAny.getScrollableNode()) ||
@@ -54,83 +121,114 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
             scrollViewAny?._domNode ||
             null;
 
-          const canScrollNode = (node: any): node is HTMLElement => {
-            if (!node) return false;
-            if (typeof node.getBoundingClientRect !== 'function') return false;
-            const sh = Number((node as any).scrollHeight ?? 0);
-            const ch = Number((node as any).clientHeight ?? 0);
-            const canScrollBySize = sh > ch + 2;
-            return canScrollBySize;
-          };
-
-          const findScrollableAncestor = (start: HTMLElement | null): HTMLElement | null => {
-            if (!start) return null;
-            let node: HTMLElement | null = start;
-            while (node && node !== document.body) {
-              try {
-                const style = window.getComputedStyle(node);
-                const overflowY = style?.overflowY;
-                const isScrollableOverflow = overflowY === 'auto' || overflowY === 'scroll';
-                if (isScrollableOverflow && canScrollNode(node)) {
-                  return node;
-                }
-              } catch {
-                // noop
-              }
-              node = node.parentElement;
-            }
-            return null;
-          };
-
           const bestScrollContainer =
             (canScrollNode(scrollNode) ? scrollNode : null) || findScrollableAncestor(el.parentElement);
 
+          if (dbg) {
+            // eslint-disable-next-line no-console
+            console.debug('[nav] scrollTo container', {
+              hasScrollNode: !!scrollNode,
+              best: !!bestScrollContainer,
+              bestTag: (bestScrollContainer as any)?.tagName,
+              bestId: (bestScrollContainer as any)?.id,
+            });
+          }
+
           // Если у нас есть реальный scroll container (а не window) — скроллим его напрямую
-          if (canScrollNode(scrollNode)) {
-            const containerRect = scrollNode.getBoundingClientRect();
+          if (bestScrollContainer && typeof bestScrollContainer.getBoundingClientRect === 'function') {
+            const containerRect = bestScrollContainer.getBoundingClientRect();
             const elRect = el.getBoundingClientRect();
-            const currentTop = (scrollNode as any).scrollTop ?? 0;
-            const targetTop = currentTop + (elRect.top - containerRect.top);
+            const currentTop = (bestScrollContainer as any).scrollTop ?? 0;
+            const targetTopRaw = currentTop + (elRect.top - containerRect.top);
+            const targetTop = Math.max(0, Math.round(targetTopRaw));
+
+            if (dbg) {
+              // eslint-disable-next-line no-console
+              console.debug('[nav] scrollTo computed', { currentTop, targetTop });
+            }
 
             if (typeof (bestScrollContainer as any).scrollTo === 'function') {
               (bestScrollContainer as any).scrollTo({ top: targetTop, behavior: 'smooth' });
-              return;
+
+              const HEADER_OFFSET = getHeaderOffset();
+              if (HEADER_OFFSET > 0 && typeof (bestScrollContainer as any).scrollBy === 'function') {
+                setTimeout(() => {
+                  try {
+                    const safeOffset = Math.min(HEADER_OFFSET, targetTop);
+                    (bestScrollContainer as any).scrollBy({ top: -safeOffset, left: 0, behavior: 'instant' });
+                  } catch {
+                    // noop
+                  }
+                }, 0);
+              }
+              return true;
             }
 
             // Fallback: редкий случай без scrollTo
             try {
-              (scrollNode as any).scrollTop = targetTop;
-              return;
+              (bestScrollContainer as any).scrollTop = targetTop;
+              return true;
             } catch {
               // noop
             }
           }
 
-          // Надёжный fallback: пусть браузер сам найдет ближайший scroll container.
-          // После scrollIntoView корректируем позицию под фиксированный header.
+          // Fallback: scrollIntoView (браузер сам выбирает scroll container)
           if (typeof el.scrollIntoView === 'function') {
             el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
 
-            // 88px — безопасный отступ под фиксированный header
-            const HEADER_OFFSET = 88;
+            const HEADER_OFFSET = getHeaderOffset();
             setTimeout(() => {
               try {
-                if (canScrollNode(scrollNode) && typeof (scrollNode as any).scrollBy === 'function') {
-                  (scrollNode as any).scrollBy({ top: -HEADER_OFFSET, left: 0, behavior: 'instant' });
+                const bestAfter = findScrollableAncestor(el.parentElement);
+                const safeOffset = Math.max(0, HEADER_OFFSET);
+                if (bestAfter && typeof (bestAfter as any).scrollBy === 'function') {
+                  (bestAfter as any).scrollBy({ top: -safeOffset, left: 0, behavior: 'instant' });
                   return;
                 }
+
                 const win = (typeof window !== 'undefined' ? window : undefined) as any;
                 if (win && typeof win.scrollBy === 'function') {
-                  win.scrollBy({ top: -HEADER_OFFSET, left: 0, behavior: 'instant' });
+                  win.scrollBy({ top: -safeOffset, left: 0, behavior: 'instant' });
                 }
               } catch {
                 // noop
               }
             }, 0);
 
-            return;
+            return true;
           }
         }
+
+        return false;
+      }
+
+      // Веб: пытаемся использовать DOM и data-section-key для более стабильной прокрутки.
+      // Если секция рендерится лениво (defer/lazy), делаем ретраи, чтобы дождаться DOM.
+      if (Platform.OS === 'web') {
+        clearPending(key);
+        if (tryScrollWeb(key)) return;
+
+        // Не спамим бесконечными попытками: максимум ~6с ожидания.
+        const MAX_ATTEMPTS = 60;
+        const INTERVAL_MS = 100;
+        pendingRetriesRef.current[key] = [];
+
+        for (let i = 1; i <= MAX_ATTEMPTS; i += 1) {
+          const t = setTimeout(() => {
+            if (tryScrollWeb(key)) {
+              clearPending(key);
+            } else if (i === MAX_ATTEMPTS) {
+              clearPending(key);
+              if (dbg) {
+                // eslint-disable-next-line no-console
+                console.debug('[nav] scrollTo gave up (section not found)', { key });
+              }
+            }
+          }, i * INTERVAL_MS);
+          pendingRetriesRef.current[key]!.push(t);
+        }
+        return;
       }
 
       const anchor = anchors[key];

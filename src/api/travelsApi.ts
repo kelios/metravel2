@@ -6,9 +6,12 @@ import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { retry, isRetryableError } from '@/src/utils/retry';
 import { getSecureItem } from '@/src/utils/secureStorage';
+import { apiClient } from '@/src/api/client';
 
 const rawApiUrl: string =
-    process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'http://example.test/api' : '');
+    process.env.NODE_ENV === 'test'
+        ? 'http://example.test/api'
+        : (process.env.EXPO_PUBLIC_API_URL || '');
 if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }
@@ -25,7 +28,6 @@ const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запро�
 // Base travels endpoint with trailing slash
 const GET_TRAVELS = `${URLAPI}/travels/`;
 const GET_RANDOM_TRAVELS = `${URLAPI}/travels/random/`;
-const GET_TRAVELS_BY_SLUG = `${URLAPI}/travels/by-slug/`;
 
 const travelCache = new Map<number, Travel>();
 const TOKEN_KEY = 'userToken';
@@ -101,16 +103,6 @@ const normalizeTravelItem = (input: any): Travel => {
 const coerceTotal = (value: any, fallback = 0): number => {
     const n = typeof value === 'number' ? value : Number(value);
     return Number.isFinite(n) ? n : fallback;
-};
-
-const buildAuthHeaders = async (): Promise<HeadersInit | undefined> => {
-    const token = await getSecureItem(TOKEN_KEY);
-    if (!token) {
-        return undefined;
-    }
-    return {
-        Authorization: `Token ${token}`,
-    };
 };
 
 const normalizeNumericFilterArray = (value: any): number[] => {
@@ -451,24 +443,15 @@ export const fetchRandomTravels = async (
 };
 
 export const fetchTravel = async (id: number): Promise<Travel> => {
-    const authHeaders = await buildAuthHeaders();
-    const isAuthenticated = Boolean(authHeaders);
+    const token = await getSecureItem(TOKEN_KEY);
+    const isAuthenticated = Boolean(token);
 
     if (!isAuthenticated && travelCache.has(id)) {
         return travelCache.get(id) as Travel;
     }
 
     try {
-        const res = await fetchWithTimeout(
-            `${GET_TRAVELS}${id}/`,
-            authHeaders ? { headers: authHeaders } : {},
-            DEFAULT_TIMEOUT,
-        );
-        if (!res.ok) {
-            const details = await res.text().catch(() => '');
-            throw new Error(`Failed to fetch travel ${id}: HTTP ${res.status} ${res.statusText}${details ? ` - ${details}` : ''}`);
-        }
-        const travel = await safeJsonParse<Travel>(res);
+        const travel = await apiClient.get<Travel>(`/travels/${id}/`, DEFAULT_TIMEOUT);
         if (!isAuthenticated) {
             travelCache.set(id, travel);
         }
@@ -484,18 +467,8 @@ export const fetchTravel = async (id: number): Promise<Travel> => {
 
 export const fetchTravelBySlug = async (slug: string): Promise<Travel> => {
     try {
-        const authHeaders = await buildAuthHeaders();
         const safeSlug = encodeURIComponent(String(slug).replace(/^\/+/, ''));
-        const res = await fetchWithTimeout(
-            `${GET_TRAVELS_BY_SLUG}${safeSlug}/`,
-            authHeaders ? { headers: authHeaders } : {},
-            DEFAULT_TIMEOUT,
-        );
-        if (!res.ok) {
-            const details = await res.text().catch(() => '');
-            throw new Error(`Failed to fetch travel by slug "${slug}": HTTP ${res.status} ${res.statusText}${details ? ` - ${details}` : ''}`);
-        }
-        return await safeJsonParse<Travel>(res);
+        return await apiClient.get<Travel>(`/travels/by-slug/${safeSlug}/`, DEFAULT_TIMEOUT);
     } catch (e: any) {
         if (e?.name === 'AbortError') {
             throw e;

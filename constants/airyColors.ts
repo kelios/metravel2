@@ -75,6 +75,13 @@ export const AIRY_GRADIENTS = {
  * ✅ УЛУЧШЕНИЕ: Упрощенные тени для светлого прозаичного дизайна
  */
 export const AIRY_SHADOWS = {
+  none: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
   light: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -97,34 +104,3 @@ export const AIRY_SHADOWS = {
     elevation: 2,
   },
 } as const;
-
-/**
- * Box shadows для web (легкие, воздушные)
- * ✅ УЛУЧШЕНИЕ: Упрощенные тени для светлого прозаичного дизайна
- */
-export const AIRY_BOX_SHADOWS = {
-  light: '0 1px 4px rgba(0, 0, 0, 0.02)',
-  medium: '0 2px 6px rgba(0, 0, 0, 0.03)',
-  heavy: '0 4px 8px rgba(0, 0, 0, 0.04)',
-  hover: '0 2px 8px rgba(0, 0, 0, 0.06)', // Нейтральная тень при hover
-} as const;
-
-/**
- * Хелперы для работы с цветами
- */
-export const getAiryColor = (colorName: keyof typeof AIRY_COLORS): string => {
-  return AIRY_COLORS[colorName];
-};
-
-export const getAiryGradient = (gradientName: keyof typeof AIRY_GRADIENTS): string => {
-  return AIRY_GRADIENTS[gradientName];
-};
-
-export const getAiryShadow = (shadowName: keyof typeof AIRY_SHADOWS) => {
-  return AIRY_SHADOWS[shadowName];
-};
-
-export const getAiryBoxShadow = (shadowName: keyof typeof AIRY_BOX_SHADOWS): string => {
-  return AIRY_BOX_SHADOWS[shadowName];
-};
-

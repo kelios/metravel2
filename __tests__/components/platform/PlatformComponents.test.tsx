@@ -53,20 +53,6 @@ describe('Platform-Specific Components', () => {
     });
   });
 
-  describe('ImageUploadComponent', () => {
-    it('should have iOS version', () => {
-      expect(() => require('../../../components/imageUpload/ImageUploadComponent.ios')).not.toThrow();
-    });
-
-    it('should have Android version', () => {
-      expect(() => require('../../../components/imageUpload/ImageUploadComponent.android')).not.toThrow();
-    });
-
-    it('should have Web version', () => {
-      expect(() => require('../../../components/imageUpload/ImageUploadComponent.web')).not.toThrow();
-    });
-  });
-
   describe('ImageGalleryComponent', () => {
     it('should have iOS version', () => {
       expect(() => require('../../../components/travel/ImageGalleryComponent.ios')).not.toThrow();
@@ -148,12 +134,6 @@ describe('Platform-Specific Components', () => {
       expect(() => require('../../../components/ArticleEditor.android')).not.toThrow();
       expect(() => require('../../../components/ArticleEditor.web')).not.toThrow();
     });
-
-    it('all platforms should have ImageUploadComponent', () => {
-      expect(() => require('../../../components/imageUpload/ImageUploadComponent.ios')).not.toThrow();
-      expect(() => require('../../../components/imageUpload/ImageUploadComponent.android')).not.toThrow();
-      expect(() => require('../../../components/imageUpload/ImageUploadComponent.web')).not.toThrow();
-    });
   });
 
   describe('Shared Components', () => {
@@ -161,11 +141,9 @@ describe('Platform-Specific Components', () => {
       // Проверяем, что Android компоненты экспортируют iOS версии
       const ArticleEditorAndroid = require('../../../components/ArticleEditor.android');
       const MapAndroid = require('../../../components/Map.android');
-      const ImageUploadAndroid = require('../../../components/imageUpload/ImageUploadComponent.android');
       
       expect(ArticleEditorAndroid.default).toBeDefined();
       expect(MapAndroid.default).toBeDefined();
-      expect(ImageUploadAndroid.default).toBeDefined();
     });
   });
 

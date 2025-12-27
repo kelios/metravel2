@@ -91,11 +91,3 @@ export function useNetworkStatus(): NetworkStatus {
 
   return networkStatus;
 }
-
-/**
- * Упрощенный хук, возвращающий только boolean статус соединения
- */
-export function useIsConnected(): boolean {
-  const { isConnected } = useNetworkStatus();
-  return isConnected;
-}

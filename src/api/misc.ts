@@ -5,6 +5,7 @@ import { sanitizeInput } from '@/src/utils/security';
 import { validateAIMessage, validateImageFile } from '@/src/utils/validation';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { getSecureItem } from '@/src/utils/secureStorage';
+import { apiClient } from '@/src/api/client';
 
 const rawApiUrl: string =
   process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
@@ -63,21 +64,7 @@ export const saveFormData = async (data: TravelFormData): Promise<TravelFormData
       payload.slug = existing || makeUniqueSlug(payload.name || 'travel');
     }
 
-    const response = await fetchWithTimeout(SAVE_TRAVEL, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Token ${token}`,
-      },
-      body: JSON.stringify(payload),
-    }, LONG_TIMEOUT);
-
-    if (!response.ok) {
-      throw new Error('Ошибка при создании записи на сервере');
-    }
-
-    const responseData = await safeJsonParse<TravelFormData>(response);
-    return responseData;
+    return await apiClient.put<TravelFormData>('/travels/upsert/', payload, LONG_TIMEOUT);
   } catch (error) {
     if (__DEV__) {
       console.error('Ошибка при создании формы:', error);
@@ -97,22 +84,13 @@ export const deleteTravelMainImage = async (travelId: string | number) => {
     throw new Error('Некорректный id путешествия');
   }
 
-  const response = await fetchWithTimeout(
-    `${TRAVELS}${encodeURIComponent(normalizedId)}/main-image/`,
-    {
-      method: 'DELETE',
-      headers: { Authorization: `Token ${token}` },
-    },
+  // Preserve previous behavior: return the raw Response so callers can inspect status (e.g. 204).
+  // apiClient already includes Authorization and handles refresh on 401.
+  return await apiClient.request<Response>(
+    `/travels/${encodeURIComponent(normalizedId)}/main-image/`,
+    { method: 'DELETE' },
     DEFAULT_TIMEOUT,
   );
-
-  if (response.status === 204) {
-    return response;
-  }
-
-  const textFn = (response as any).text?.bind(response);
-  const errorText = textFn ? await textFn().catch(() => '') : '';
-  throw new Error(errorText || 'Ошибка удаления главного изображения');
 };
 
 export const uploadImage = async (data: FormData): Promise<any> => {
@@ -131,37 +109,20 @@ export const uploadImage = async (data: FormData): Promise<any> => {
     }
   }
 
-  const response = await fetchWithTimeout(UPLOAD_IMAGE, {
-    method: 'POST',
-    headers: { Authorization: `Token ${token}` },
-    body: data,
-  }, LONG_TIMEOUT);
-
-  // Бэкенд может возвращать 201/200 — считаем любой 2xx успехом
-  const ok =
-    response.ok ||
-    (typeof (response as any).status === 'number' &&
-      (response as any).status >= 200 &&
-      (response as any).status < 300);
-
-  if (ok) {
-    // Ответ может быть JSON или просто URL строкой
-    // В тестах response.text может отсутствовать — подстрахуемся
-    const textFn = (response as any).text?.bind(response);
-    const rawText = textFn ? await textFn().catch(() => '') : '';
+  // Use apiClient upload helper so 401 triggers refresh+retry.
+  // Response may be JSON or plain string. apiClient.parseSuccessResponse handles both.
+  const result = await apiClient.uploadFormData<any>('/upload', data, 'POST', LONG_TIMEOUT);
+  if (typeof result === 'string') {
+    const rawText = result.trim();
     if (!rawText) return { ok: true };
     try {
       const parsed = JSON.parse(rawText);
-      // Тесты ожидают поле ok:true при успешной загрузке
       return parsed && typeof parsed === 'object' ? { ok: true, ...parsed } : { ok: true };
     } catch {
-      return { ok: true, url: rawText.trim() };
+      return { ok: true, url: rawText };
     }
   }
-
-  const textFn = (response as any).text?.bind(response);
-  const errorText = textFn ? await textFn().catch(() => 'Upload failed') : 'Upload failed';
-  throw new Error(errorText || 'Upload failed.');
+  return result && typeof result === 'object' ? { ok: true, ...result } : { ok: true };
 };
 
 export const deleteImage = async (imageId: string) => {
@@ -170,14 +131,10 @@ export const deleteImage = async (imageId: string) => {
     throw new Error('Пользователь не авторизован');
   }
 
-  const response = await fetchWithTimeout(`${GALLERY}${imageId}/`, {
-    method: 'DELETE',
-    headers: { Authorization: `Token ${token}` },
-  }, DEFAULT_TIMEOUT);
-
-  if (response.status === 204) {
-    return response;
-  } else {
+  try {
+    return await apiClient.delete<any>(`/gallery/${imageId}/`, DEFAULT_TIMEOUT);
+  } catch (e: any) {
+    // Preserve previous behavior: non-204 is treated as "Ошибка удаления изображения"
     throw new Error('Ошибка удаления изображения');
   }
 };

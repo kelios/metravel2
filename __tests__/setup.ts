@@ -32,6 +32,21 @@ console.error = (message, ...args) => {
 // Ensure critical Expo env vars exist for API clients referenced in tests
 process.env.EXPO_PUBLIC_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://example.test/api'
 
+// JSDOM has window.scrollBy/scrollTo but they may throw "Not implemented".
+// Override to stable mocks so scroll-related unit tests can assert calls.
+if (typeof window !== 'undefined') {
+  try {
+    ;(window as any).scrollBy = jest.fn()
+  } catch {
+    // noop
+  }
+  try {
+    ;(window as any).scrollTo = jest.fn()
+  } catch {
+    // noop
+  }
+}
+
 // JSDOM doesn't implement canvas APIs by default; mock them to avoid noisy errors.
 if (typeof window !== 'undefined' && (window as any).HTMLCanvasElement?.prototype) {
   const proto = (window as any).HTMLCanvasElement.prototype

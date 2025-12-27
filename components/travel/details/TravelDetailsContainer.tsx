@@ -28,6 +28,7 @@ import {
 } from "react-native";
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { MaterialIcons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
@@ -839,11 +840,30 @@ export default function TravelDetails() {
   /* ---- open-section bridge ---- */
   const [forceOpenKey, setForceOpenKey] = useState<string | null>(null);
   const handleSectionOpen = useCallback((key: string) => {
+    try {
+      const dbg = Platform.OS === 'web' && typeof window !== 'undefined' && (window as any).__NAV_DEBUG__;
+      if (dbg) {
+        // eslint-disable-next-line no-console
+        console.debug('[nav] open-section received', { key });
+      }
+    } catch {
+      // noop
+    }
     startTransition(() => setForceOpenKey(key));
   }, []);
 
   useEffect(() => {
     if (!forceOpenKey) return;
+
+    try {
+      const dbg = Platform.OS === 'web' && typeof window !== 'undefined' && (window as any).__NAV_DEBUG__;
+      if (dbg) {
+        // eslint-disable-next-line no-console
+        console.debug('[nav] forceOpenKey effect', { forceOpenKey });
+      }
+    } catch {
+      // noop
+    }
 
     // Когда секции монтируются лениво, первый scrollTo может промахнуться.
     // Делаем несколько попыток с небольшим интервалом, чтобы дождаться DOM/layout.
@@ -910,6 +930,7 @@ export default function TravelDetails() {
   const [viewportHeight, setViewportHeight] = useState(0);
   const [showMobileSectionTabs, setShowMobileSectionTabs] = useState(false);
   const [heroBlockHeight, setHeroBlockHeight] = useState(0);
+  const forceDeferMount = !!forceOpenKey;
   
   // ✅ АРХИТЕКТУРА: activeSection теперь управляется через useActiveSection
   
@@ -1242,11 +1263,8 @@ export default function TravelDetails() {
                   )}
 
                   {/* -------- deferred heavy content -------- */}
-                  <Defer when={deferAllowed}>
-                    <ProgressiveWrapper 
-                      config={{ priority: 'normal', rootMargin: '100px' }}
-                      fallback={<SectionSkeleton />}
-                    >
+                  <Defer when={deferAllowed || forceDeferMount}>
+                    {forceDeferMount ? (
                       <TravelDeferredSections
                         travel={travel}
                         isMobile={isMobile}
@@ -1257,7 +1275,23 @@ export default function TravelDetails() {
                         scrollY={scrollY}
                         viewportHeight={viewportHeight}
                       />
-                    </ProgressiveWrapper>
+                    ) : (
+                      <ProgressiveWrapper 
+                        config={{ priority: 'normal', rootMargin: '100px' }}
+                        fallback={<SectionSkeleton />}
+                      >
+                        <TravelDeferredSections
+                          travel={travel}
+                          isMobile={isMobile}
+                          forceOpenKey={forceOpenKey}
+                          anchors={anchors}
+                          relatedTravels={relatedTravels}
+                          setRelatedTravels={setRelatedTravels}
+                          scrollY={scrollY}
+                          viewportHeight={viewportHeight}
+                        />
+                      </ProgressiveWrapper>
+                    )}
                   </Defer>
                 </SList>
               </View>
@@ -1646,6 +1680,52 @@ const TravelContentSections: React.FC<{
     return items.slice(0, 3);
   }, [extractSnippets, travel.minus, travel.plus, travel.recommendation]);
 
+  const decisionTips = useMemo(() => {
+    const splitToBullets = (text: string) => {
+      const normalized = text
+        .replace(/\r\n/g, "\n")
+        .replace(/(&nbsp;|&#160;)/gi, " ")
+        .replace(/\u00a0/g, " ")
+        .replace(/\u2022/g, "•")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      const withListBreaks = normalized
+        // Turn inline numbered lists into separate lines: "1) ... 2) ..." / "1. ... 2. ..."
+        .replace(/\s+(?=\d{1,2}\s*[).]\s+)/g, "\n")
+        // Turn inline dash lists into separate lines: " - item"
+        .replace(/\s+(?=[-–—]\s+)/g, "\n");
+
+      const fromNewlines = withListBreaks
+        .split(/\n+/)
+        .flatMap((line) => line.split(/\s*•\s*/g))
+        .flatMap((line) => line.split(/\s*(?:^|\s)(?:[-–—])\s+/g))
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      if (fromNewlines.length > 1) return fromNewlines;
+
+      const fromSemicolons = withListBreaks
+        .split(/\s*;\s+/g)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      if (fromSemicolons.length > 1) return fromSemicolons;
+
+      return withListBreaks
+        .split(/(?<=[.!?])\s+/g)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    };
+
+    const tips = decisionSummary
+      .flatMap((item) => splitToBullets(item.text))
+      .map((t) => t.replace(/^[-–—•]\s*/, "").trim())
+      .filter(Boolean);
+
+    return tips.slice(0, 6);
+  }, [decisionSummary]);
+
   return (
     <>
       {travel.description && (
@@ -1672,32 +1752,20 @@ const TravelContentSections: React.FC<{
                   </Text>
                 </View>
 
-                {decisionSummary.length > 0 && (
+                {decisionTips.length > 0 && (
                   <View style={styles.decisionSummaryBox}>
-                    <Text style={styles.decisionSummaryTitle}>Коротко по делу</Text>
+                    <Text style={styles.decisionSummaryTitle}>Полезные советы перед поездкой</Text>
                     <View style={styles.decisionSummaryList}>
-                      {decisionSummary.map((item, idx) => (
-                        <View key={`${item.label}-${idx}`} style={styles.decisionSummaryRow}>
-                          <View
-                            style={[
-                              styles.decisionSummaryBadge,
-                              item.tone === "positive" && styles.decisionSummaryBadgePositive,
-                              item.tone === "negative" && styles.decisionSummaryBadgeNegative,
-                              item.tone === "info" && styles.decisionSummaryBadgeInfo,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.decisionSummaryBadgeText,
-                                item.tone === "positive" && styles.decisionSummaryBadgeTextPositive,
-                                item.tone === "negative" && styles.decisionSummaryBadgeTextNegative,
-                                item.tone === "info" && styles.decisionSummaryBadgeTextInfo,
-                              ]}
-                            >
-                              {item.label}
-                            </Text>
-                          </View>
-                          <Text style={styles.decisionSummaryText}>{item.text}</Text>
+                      {decisionTips.map((tip, idx) => (
+                        <View key={`tip-${idx}`} style={styles.decisionSummaryBulletRow}>
+                          <MaterialIcons
+                            name="lightbulb-outline"
+                            size={14}
+                            color={DESIGN_TOKENS.colors.textMuted}
+                            style={styles.decisionSummaryBulletIcon}
+                            accessibilityElementsHidden
+                          />
+                          <Text style={styles.decisionSummaryBulletText}>{tip}</Text>
                         </View>
                       ))}
                     </View>
@@ -2324,11 +2392,11 @@ export const styles = StyleSheet.create({
 
   decisionSummaryBox: {
     marginBottom: DESIGN_TOKENS.spacing.xl,
-    padding: DESIGN_TOKENS.spacing.xl,
+    padding: Platform.select({ default: DESIGN_TOKENS.spacing.lg, web: DESIGN_TOKENS.spacing.xl }),
     borderRadius: DESIGN_TOKENS.radii.lg,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderColor: 'rgba(93, 138, 168, 0.22)',
+    backgroundColor: 'rgba(93, 138, 168, 0.06)',
     ...Platform.select({
       web: {
         boxShadow: DESIGN_TOKENS.shadows.card,
@@ -2343,12 +2411,24 @@ export const styles = StyleSheet.create({
     marginBottom: DESIGN_TOKENS.spacing.sm,
   },
   decisionSummaryList: {
+    gap: DESIGN_TOKENS.spacing.md,
+  },
+  decisionSummaryBulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: DESIGN_TOKENS.spacing.sm,
   },
-  decisionSummaryRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: DESIGN_TOKENS.spacing.sm,
+  decisionSummaryBulletIcon: {
+    width: 20,
+    marginTop: 3,
+    opacity: 0.75,
+  },
+  decisionSummaryBulletText: {
+    flex: 1,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    lineHeight: Platform.select({ default: 28, web: 26 }),
+    color: DESIGN_TOKENS.colors.text,
+    fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
   },
   decisionSummaryBadge: {
     paddingHorizontal: 10,

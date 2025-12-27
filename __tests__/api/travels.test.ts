@@ -1,9 +1,10 @@
-import { 
-  fetchTravel, 
-  fetchTravelBySlug, 
-  fetchTravels, 
-  fetchRandomTravels 
-} from '@/src/api/travelsApi';
+const loadTravelsApi = (): typeof import('@/src/api/travelsApi') => {
+  let mod!: typeof import('@/src/api/travelsApi');
+  jest.isolateModules(() => {
+    mod = require('@/src/api/travelsApi') as typeof import('@/src/api/travelsApi');
+  });
+  return mod;
+};
 import { 
   fetchTravelsNear, 
   fetchTravelsPopular, 
@@ -23,6 +24,7 @@ import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { devError } from '@/src/utils/logger';
 import { getSecureItem } from '@/src/utils/secureStorage';
+import { apiClient } from '@/src/api/client';
 
 jest.mock('react-native', () => ({
   Alert: {
@@ -32,6 +34,12 @@ jest.mock('react-native', () => ({
 
 jest.mock('@/src/utils/fetchWithTimeout', () => ({
   fetchWithTimeout: jest.fn(),
+}));
+
+jest.mock('@/src/api/client', () => ({
+  apiClient: {
+    get: jest.fn(),
+  },
 }));
 
 jest.mock('@/src/utils/safeJsonParse', () => ({
@@ -47,6 +55,7 @@ jest.mock('@/src/utils/logger', () => ({
 const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fetchWithTimeout>;
 const mockedSafeJsonParse = safeJsonParse as jest.MockedFunction<typeof safeJsonParse>;
 const mockedGetSecureItem = getSecureItem as jest.MockedFunction<typeof getSecureItem>;
+const mockedApiClientGet = apiClient.get as jest.MockedFunction<typeof apiClient.get>;
 
 jest.mock('@/src/utils/secureStorage', () => ({
   getSecureItem: jest.fn(),
@@ -60,6 +69,7 @@ describe('src/api/travelsApi.ts', () => {
 
   describe('fetchTravels', () => {
     it('должен возвращать массив, если API отдаёт массив', async () => {
+      const { fetchTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce([
         { id: 1, name: 'T1' },
@@ -73,6 +83,7 @@ describe('src/api/travelsApi.ts', () => {
     });
 
     it('должен возвращать {data,total} при объектном ответе', async () => {
+      const { fetchTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ data: [{ id: 1 }], total: 5 } as any);
 
@@ -84,6 +95,7 @@ describe('src/api/travelsApi.ts', () => {
     });
 
     it('должен корректно обрабатывать Invalid page в ошибочном ответе', async () => {
+      const { fetchTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 400 } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ detail: 'Invalid page.' } as any);
 
@@ -93,6 +105,7 @@ describe('src/api/travelsApi.ts', () => {
     });
 
     it('не добавляет publish по умолчанию, если есть user_id (user-scoped)', async () => {
+      const { fetchTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ data: [], total: 0 } as any);
 
@@ -109,6 +122,7 @@ describe('src/api/travelsApi.ts', () => {
     });
 
     it('нормализует year в whereObject как строку', async () => {
+      const { fetchTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ data: [], total: 0 } as any);
 
@@ -122,6 +136,7 @@ describe('src/api/travelsApi.ts', () => {
     });
 
     it('обрабатывает неожиданный объект без data как пустой результат', async () => {
+      const { fetchTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ total: 10 } as any);
 
@@ -131,6 +146,7 @@ describe('src/api/travelsApi.ts', () => {
     });
 
     it('нормализует числовые массивы фильтров и отбрасывает мусорные значения', async () => {
+      const { fetchTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ data: [], total: 0 } as any);
 
@@ -150,6 +166,7 @@ describe('src/api/travelsApi.ts', () => {
 
   describe('fetchRandomTravels', () => {
     it('использует endpoint /api/travels/random и всегда проставляет moderation=1,publish=1 без page/perPage', async () => {
+      const { fetchRandomTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ data: [], total: 0 } as any);
 
@@ -167,6 +184,7 @@ describe('src/api/travelsApi.ts', () => {
     });
 
     it('возвращает массив и total при объектном ответе', async () => {
+      const { fetchRandomTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ data: [{ id: 1 }], total: 3 } as any);
 
@@ -177,6 +195,7 @@ describe('src/api/travelsApi.ts', () => {
     });
 
     it('корректно обрабатывает Invalid page', async () => {
+      const { fetchRandomTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 400 } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ detail: 'Invalid page.' } as any);
 
@@ -188,7 +207,8 @@ describe('src/api/travelsApi.ts', () => {
 
   describe('простые API-обёртки', () => {
     it('fetchTravel бросает ошибку при ошибке', async () => {
-      mockedFetchWithTimeout.mockRejectedValueOnce(new Error('network'));
+      const { fetchTravel } = loadTravelsApi();
+      mockedApiClientGet.mockRejectedValueOnce(new Error('network'));
 
       await expect(fetchTravel(123)).rejects.toThrow('network');
 
@@ -196,9 +216,9 @@ describe('src/api/travelsApi.ts', () => {
     });
 
     it('fetchTravel использует кэш только для неавторизованных пользователей', async () => {
+      const { fetchTravel } = loadTravelsApi();
       const travelPayload = { id: 99 } as any;
-      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce(travelPayload);
+      mockedApiClientGet.mockResolvedValueOnce(travelPayload);
 
       mockedGetSecureItem.mockResolvedValueOnce(null);
       const first = await fetchTravel(99);
@@ -208,28 +228,28 @@ describe('src/api/travelsApi.ts', () => {
       const second = await fetchTravel(99);
 
       expect(second).toBe(travelPayload);
-      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
     });
 
     it('fetchTravel добавляет Authorization и не кэширует авторизованные ответы', async () => {
+      const { fetchTravel } = loadTravelsApi();
       const travelPayload = { id: 42 } as any;
-      mockedFetchWithTimeout.mockResolvedValue({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValue(travelPayload);
+      mockedApiClientGet.mockResolvedValue(travelPayload);
 
       mockedGetSecureItem.mockResolvedValueOnce('secret-token');
       await fetchTravel(42);
 
-      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
-      const [, options] = mockedFetchWithTimeout.mock.calls[0];
-      expect(options).toMatchObject({ headers: { Authorization: 'Token secret-token' } });
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
+      expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/42/');
 
       mockedGetSecureItem.mockResolvedValueOnce('secret-token');
       await fetchTravel(42);
-      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2);
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(2);
     });
 
     it('fetchTravelBySlug бросает ошибку при ошибке', async () => {
-      mockedFetchWithTimeout.mockRejectedValueOnce(new Error('network'));
+      const { fetchTravelBySlug } = loadTravelsApi();
+      mockedApiClientGet.mockRejectedValueOnce(new Error('network'));
 
       await expect(fetchTravelBySlug('slug')).rejects.toThrow('network');
 
@@ -237,26 +257,25 @@ describe('src/api/travelsApi.ts', () => {
     });
 
     it('fetchTravelBySlug передаёт токен, если он есть', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
       const travelPayload = { id: 77 } as any;
-      mockedFetchWithTimeout.mockResolvedValue({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValue(travelPayload);
+      mockedApiClientGet.mockResolvedValue(travelPayload);
 
       mockedGetSecureItem.mockResolvedValueOnce('slug-token');
       await fetchTravelBySlug('my-trip');
-
-      const [, options] = mockedFetchWithTimeout.mock.calls[0];
-      expect(options).toMatchObject({ headers: { Authorization: 'Token slug-token' } });
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
+      expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/by-slug/my-trip/');
     });
 
     it('fetchTravelBySlug использует путь /api/travels/by-slug/{slug}/', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
       mockedGetSecureItem.mockResolvedValueOnce(null);
-      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce({ id: 1, slug: 'sluggy' } as any);
+      mockedApiClientGet.mockResolvedValueOnce({ id: 1, slug: 'sluggy' } as any);
 
       await fetchTravelBySlug('sluggy');
 
-      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
-      expect(url).toBe('http://example.test/api/travels/by-slug/sluggy/');
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
+      expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/by-slug/sluggy/');
     });
 
     it('fetchTravelsNear пробрасывает AbortError', async () => {

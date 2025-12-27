@@ -56,11 +56,11 @@ const createMockTravel = (overrides: Partial<Travel> = {}): Travel => ({
 } as Travel);
 
 const createMockRefs = () => ({
-  gallery: React.createRef(),
-  video: React.createRef(),
-  description: React.createRef(),
-  map: React.createRef(),
-  points: React.createRef(),
+  gallery: { current: {} } as any,
+  video: { current: {} } as any,
+  description: { current: {} } as any,
+  map: { current: {} } as any,
+  points: { current: {} } as any,
 } as any);
 
 describe('CompactSideBarTravel', () => {
@@ -134,6 +134,35 @@ describe('CompactSideBarTravel', () => {
     fireEvent.press(galleryLink);
 
     expect(onNavigate).toHaveBeenCalledWith('gallery');
+  });
+
+  it('dispatches open-section event on web and calls onNavigate', () => {
+    const RN = require('react-native');
+    const prevOS = RN.Platform.OS;
+    RN.Platform.OS = 'web';
+
+    const dispatchSpy = jest.spyOn(window, 'dispatchEvent');
+
+    const travel = createMockTravel({
+      gallery: [{ id: 1, url: 'test.jpg' }],
+    } as any);
+
+    const onNavigate = jest.fn();
+    const { getByText } = render(
+      <CompactSideBarTravel {...defaultProps} travel={travel} onNavigate={onNavigate} />
+    );
+
+    fireEvent.press(getByText('Галерея'));
+
+    expect(onNavigate).toHaveBeenCalledWith('gallery');
+    expect(dispatchSpy).toHaveBeenCalled();
+
+    const eventArg = dispatchSpy.mock.calls[0]?.[0] as any;
+    expect(eventArg?.type).toBe('open-section');
+    expect(eventArg?.detail?.key).toBe('gallery');
+
+    dispatchSpy.mockRestore();
+    RN.Platform.OS = prevOS;
   });
 
   it('should call closeMenu when link is pressed on mobile', () => {

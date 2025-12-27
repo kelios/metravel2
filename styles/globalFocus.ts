@@ -90,16 +90,3 @@ if (Platform.OS === 'web') {
     setTimeout(addFocusStyles, 0);
   }
 }
-
-/**
- * Хелпер для применения focus стилей к компонентам
- */
-export const applyFocusStyles = (baseStyle: any, focusVariant: 'default' | 'strong' | 'subtle' = 'default') => {
-  const focusStyle = 
-    focusVariant === 'strong' ? globalFocusStyles.focusableStrong :
-    focusVariant === 'subtle' ? globalFocusStyles.focusableSubtle :
-    globalFocusStyles.focusable;
-  
-  return [baseStyle, focusStyle];
-};
-

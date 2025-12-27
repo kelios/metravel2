@@ -43,6 +43,15 @@ const openUrl = (url: string) => {
 // универсальный эмиттер "открой секцию"
 const emitOpenSection = (key: string) => {
   if (Platform.OS === "web") {
+    try {
+      const dbg = typeof window !== 'undefined' && (window as any).__NAV_DEBUG__;
+      if (dbg) {
+        // eslint-disable-next-line no-console
+        console.debug('[nav] emitOpenSection(web)', { key });
+      }
+    } catch {
+      // noop
+    }
     // @ts-ignore
     window.dispatchEvent(new CustomEvent("open-section", { detail: { key } }));
   } else {
@@ -63,7 +72,7 @@ type SideBarProps = {
 };
 
 function CompactSideBarTravel({
-                                refs: _refs,
+                                refs,
                                 travel,
                                 isMobile,
                                 onNavigate,
@@ -90,18 +99,66 @@ function CompactSideBarTravel({
     handleOpenPrintBookWithSettings,
   } = useSingleTravelExport(travel);
 
+  // ✅ УЛУЧШЕНИЕ: Группировка пунктов меню по категориям
+  const navLinks = navLinksSource ? navLinksSource : buildTravelSectionLinks(travel);
+
   // ✅ УЛУЧШЕНИЕ: Используем внешнюю активную секцию, если она передана, иначе локальную
   const currentActive = externalActiveSection !== undefined ? externalActiveSection : active;
+
+  const notifyUnavailable = useCallback((label: string) => {
+    if (Platform.OS === 'web') {
+      try {
+        window.alert?.('Раздел недоступен');
+      } catch {
+        // noop
+      }
+      return;
+    }
+    Alert.alert?.('Недоступно', `Раздел «${label}» недоступен`);
+  }, []);
+
+  const isSectionAvailable = useCallback(
+    (key: string) => {
+      // На web секции могут монтироваться лениво (Defer/ProgressiveWrapper).
+      // Не блокируем клик ранней проверкой — scrollTo умеет дождаться DOM.
+      if (Platform.OS === 'web') return true;
+
+      if (key && refs && refs[key]?.current) return true;
+      return false;
+    },
+    [refs]
+  );
 
   const setActiveNavigateAndOpen = useCallback(
     (key: keyof SideBarProps["refs"]) => {
       const k = String(key);
+
+      const linkLabel = navLinks.find((l) => l.key === k)?.label ?? 'Раздел';
+      if (!isSectionAvailable(k)) {
+        notifyUnavailable(linkLabel);
+        return;
+      }
+
       setActive(k);
+      try {
+        const dbg = typeof window !== 'undefined' && (window as any).__NAV_DEBUG__;
+        if (dbg) {
+          // eslint-disable-next-line no-console
+          console.debug('[nav] sidebar click', { key: k, isMobile, os: Platform.OS });
+        }
+      } catch {
+        // noop
+      }
       emitOpenSection(k); // раскрыть секцию
-      onNavigate(key); // скролл
+      try {
+        onNavigate(key); // скролл
+      } catch {
+        notifyUnavailable(linkLabel);
+        return;
+      }
       if (isMobile) closeMenu();
     },
-    [onNavigate, isMobile, closeMenu]
+    [closeMenu, isMobile, isSectionAvailable, navLinks, notifyUnavailable, onNavigate]
   );
 
   // Надёжная проверка права редактирования (типы могут отличаться)
@@ -232,9 +289,6 @@ function CompactSideBarTravel({
     }
     return [];
   }, [travelAddress]);
-
-  // ✅ УЛУЧШЕНИЕ: Группировка пунктов меню по категориям
-  const navLinks = navLinksSource ? navLinksSource : buildTravelSectionLinks(travel);
 
   const handleUserTravels = () => {
     const id = (travel as any).userIds ?? (travel as any).userId;

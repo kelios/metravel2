@@ -171,7 +171,11 @@ class ApiClient {
             if (!text) {
                 return null as T;
             }
-            return JSON.parse(text) as T;
+            try {
+                return JSON.parse(text) as T;
+            } catch {
+                return text as unknown as T;
+            }
         }
 
         const maybeJsonFn = (response as any)?.json;
@@ -291,22 +295,24 @@ class ApiClient {
             
             // Проверяем, является ли это сетевой ошибкой
             const errorMessage = error instanceof Error ? error.message : String(error);
-            const isNetworkErr = 
-                errorMessage.includes('fetch') ||
-                errorMessage.includes('network') ||
-                errorMessage.includes('timeout') ||
+            const isOffline = Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.onLine === false;
+            const isFetchFailure =
                 errorMessage.includes('Failed to fetch') ||
-                (Platform.OS === 'web' && typeof navigator !== 'undefined' && !navigator.onLine);
-            
-            if (isNetworkErr) {
+                errorMessage.includes('Network request failed') ||
+                errorMessage.includes('fetch') ||
+                errorMessage.includes('timeout') ||
+                errorMessage.includes('network failed');
+
+            if (isOffline || isFetchFailure) {
                 throw new ApiError(
                     0,
                     'Нет подключения к интернету. Проверьте ваше соединение и попробуйте снова.',
                     { offline: true }
                 );
             }
-            
-            throw new ApiError(0, errorMessage || 'Неизвестная ошибка');
+
+            // For non-offline errors, preserve original error message for callers/tests.
+            throw error;
         }
     }
 
