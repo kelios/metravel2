@@ -95,9 +95,8 @@ export default function ConsentBanner() {
       style={[
         styles.wrapper,
         { bottom: bottomOffset },
-        Platform.OS === 'web' && ({ pointerEvents: 'box-none' } as any),
+        { pointerEvents: 'box-none' } as any,
       ]}
-      {...(Platform.OS !== 'web' ? ({ pointerEvents: 'box-none' } as any) : {})}
     >
       <View style={styles.container}>
         <View style={styles.textBlock}>

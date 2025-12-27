@@ -54,8 +54,17 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
             scrollViewAny?._domNode ||
             null;
 
+          const canScrollNode = (node: any): node is HTMLElement => {
+            if (!node) return false;
+            if (typeof node.getBoundingClientRect !== 'function') return false;
+            const sh = Number((node as any).scrollHeight ?? 0);
+            const ch = Number((node as any).clientHeight ?? 0);
+            const canScrollBySize = sh > ch + 2;
+            return canScrollBySize;
+          };
+
           // Если у нас есть реальный scroll container (а не window) — скроллим его напрямую
-          if (scrollNode && typeof scrollNode.getBoundingClientRect === 'function') {
+          if (canScrollNode(scrollNode)) {
             const containerRect = scrollNode.getBoundingClientRect();
             const elRect = el.getBoundingClientRect();
             const currentTop = (scrollNode as any).scrollTop ?? 0;
@@ -77,6 +86,21 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
 
           // Последний fallback: пусть браузер сам решит (может проскроллить window)
           if (typeof el.scrollIntoView === 'function') {
+            try {
+              const win = (typeof window !== 'undefined' ? window : undefined) as any;
+              if (win && typeof win.scrollTo === 'function' && typeof el.getBoundingClientRect === 'function') {
+                const rect = el.getBoundingClientRect();
+                const pageTop = (win.pageYOffset ?? 0) + rect.top;
+                // 88px — безопасный отступ под фиксированный header
+                const targetTop = Math.max(0, pageTop - 88);
+                win.scrollTo({ top: targetTop, left: 0, behavior: 'smooth' });
+                return;
+              }
+            } catch {
+              // noop
+            }
+
+            // Ultimate fallback
             el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
             return;
           }

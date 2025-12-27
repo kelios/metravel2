@@ -313,9 +313,8 @@ const StepCard = memo((props: StepCardProps) => {
                         justifyContent: 'center',
                         opacity: flip.interpolate({ inputRange: [0.35, 0.5, 0.65], outputRange: [0, 1, 0] }),
                     },
-                    Platform.OS === 'web' && ({ pointerEvents: 'none' } as any),
+                    { pointerEvents: 'none' } as any,
                 ]}
-                {...(Platform.OS !== 'web' ? ({ pointerEvents: 'none' } as any) : {})}
             >
                 <View style={styles.flipBadge}><Text style={styles.flipText}>✓ Правильно!</Text></View>
             </Animated.View>

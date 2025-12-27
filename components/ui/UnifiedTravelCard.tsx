@@ -133,10 +133,9 @@ function UnifiedTravelCard({
 
         {containerOverlaySlot ? (
           <View
-            {...(Platform.OS === 'web' ? {} : { pointerEvents: 'box-none' })}
             style={[
               StyleSheet.absoluteFillObject,
-              Platform.OS === 'web' ? { pointerEvents: 'none' } : null,
+              Platform.OS === 'web' ? ({ pointerEvents: 'none' } as any) : ({ pointerEvents: 'box-none' } as any),
             ]}
           >
             {containerOverlaySlot}

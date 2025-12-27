@@ -731,11 +731,28 @@ export default function TravelDetails() {
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
   const { travel, isLoading, isError, error, refetch, slug, isMissingParam } = useTravelDetails();
   const { anchors, scrollTo, scrollRef } = useScrollNavigation() as { anchors: AnchorsMap; scrollTo: any; scrollRef: any };
+  const [scrollRootEl, setScrollRootEl] = useState<HTMLElement | null>(null);
   const headerOffset = useMemo(
     () => (isMobile ? HEADER_OFFSET_MOBILE : HEADER_OFFSET_DESKTOP),
     [isMobile]
   );
-  const { activeSection, setActiveSection } = useActiveSection(anchors, headerOffset);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    const scrollViewAny = scrollRef.current as any;
+    const node: HTMLElement | null =
+      (typeof scrollViewAny?.getScrollableNode === 'function' && scrollViewAny.getScrollableNode()) ||
+      scrollViewAny?._scrollNode ||
+      scrollViewAny?._innerViewNode ||
+      scrollViewAny?._nativeNode ||
+      scrollViewAny?._domNode ||
+      null;
+
+    setScrollRootEl((prev) => (prev === node ? prev : node));
+  }, [scrollRef]);
+
+  const { activeSection, setActiveSection } = useActiveSection(anchors, headerOffset, scrollRootEl);
   const { closeMenu, animatedX, menuWidth, menuWidthNum, openMenuOnDesktop } = useMenuState(isMobile);
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
   // Стабильный ключ для <Head>, чтобы избежать ReferenceError при отрисовке
@@ -824,6 +841,29 @@ export default function TravelDetails() {
   const handleSectionOpen = useCallback((key: string) => {
     startTransition(() => setForceOpenKey(key));
   }, []);
+
+  useEffect(() => {
+    if (!forceOpenKey) return;
+
+    // Когда секции монтируются лениво, первый scrollTo может промахнуться.
+    // Делаем несколько попыток с небольшим интервалом, чтобы дождаться DOM/layout.
+    const timeouts: Array<ReturnType<typeof setTimeout>> = [];
+    const MAX_ATTEMPTS = 10;
+    const INTERVAL_MS = 120;
+
+    for (let i = 0; i < MAX_ATTEMPTS; i += 1) {
+      timeouts.push(
+        setTimeout(() => {
+          scrollTo(forceOpenKey);
+        }, i * INTERVAL_MS)
+      );
+    }
+
+    return () => {
+      timeouts.forEach((t) => clearTimeout(t));
+    };
+  }, [forceOpenKey, scrollTo]);
+
   useEffect(() => {
     const handler =
       Platform.OS === "web"
@@ -1100,7 +1140,7 @@ export default function TravelDetails() {
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
           {/* ✅ РЕДИЗАЙН: Адаптивный spacer под меню */}
-          {!isMobile && responsiveWidth >= METRICS.breakpoints.tablet && <View style={{ width: menuWidthNum }} />}
+          {!isMobile && Platform.OS !== 'web' && responsiveWidth >= METRICS.breakpoints.tablet && <View style={{ width: menuWidthNum }} />}
 
           {/* ✅ РЕДИЗАЙН: Адаптивное боковое меню */}
           {!isMobile && responsiveWidth >= METRICS.breakpoints.tablet && (
@@ -2151,7 +2191,7 @@ export const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boole
 );
 
 /* -------------------- styles -------------------- */
-const styles = StyleSheet.create({
+export const styles = StyleSheet.create({
   // ✅ РЕДИЗАЙН: Светлый современный фон
   wrapper: { 
     flex: 1, 
@@ -2387,6 +2427,10 @@ const styles = StyleSheet.create({
     top: HEADER_OFFSET_DESKTOP as any,
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     backdropFilter: "blur(20px)" as any,
+    // Ensure the sidebar can scroll independently on long menus
+    maxHeight: `calc(100vh - ${HEADER_OFFSET_DESKTOP}px)` as any,
+    overflowY: "auto" as any,
+    overscrollBehavior: "contain" as any,
   },
   sideMenuWebMobile: {
     position: "fixed" as any,

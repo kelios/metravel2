@@ -200,9 +200,8 @@ const ModernSearchBar: React.FC<ModernSearchBarProps> = memo(({
             {
               opacity: animatedOpacity,
             },
-            Platform.OS === 'web' && ({ pointerEvents: 'none' } as any),
+            { pointerEvents: 'none' } as any,
           ]}
-          {...(Platform.OS !== 'web' ? ({ pointerEvents: 'none' } as any) : {})}
         />
       </Animated.View>
 

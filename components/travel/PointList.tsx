@@ -170,9 +170,8 @@ const PointCard = React.memo(function PointCard({
             <View
               style={[
                 styles.actionsWrap,
-                Platform.OS === 'web' && ({ pointerEvents: 'box-none' } as any),
+                { pointerEvents: 'box-none' } as any,
               ]}
-              {...(Platform.OS !== 'web' ? ({ pointerEvents: 'box-none' } as any) : {})}
             >
               <View style={styles.actionsRow}>
                 <Pressable

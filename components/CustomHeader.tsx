@@ -221,7 +221,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                                       </Text>
                                   </Pressable>
                               ) : (
-                                  <View style={styles.mobileUserPillPlaceholder} pointerEvents="none">
+                                  <View style={[styles.mobileUserPillPlaceholder, { pointerEvents: 'none' } as any]}>
                                       <View style={styles.mobileUserAvatarContainer}>
                                           <Icon name="account-circle" size={24} color="#333" />
                                       </View>
@@ -473,11 +473,6 @@ export const headerStyles = StyleSheet.create({
             web: {
                 borderBottomWidth: StyleSheet.hairlineWidth,
                 borderBottomColor: 'rgba(17, 24, 39, 0.08)',
-                shadowColor: '#1f1f1f',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 2,
                 // @ts-ignore: web-only style
                 boxShadow: '0 2px 10px rgba(31, 31, 31, 0.1), 0 1px 3px rgba(31, 31, 31, 0.06)' as any,
             }

@@ -26,6 +26,18 @@ describe('QuickFacts', () => {
     expect(queryByLabelText('Ключевая информация о путешествии')).toBeNull()
   })
 
+  it('does not log RN Web Unexpected text node error', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
+
+    render(<QuickFacts travel={baseTravel} />)
+
+    const calls = spy.mock.calls.map((args) => String(args[0] ?? ''))
+    const hasUnexpectedTextNode = calls.some((msg) => msg.includes('Unexpected text node'))
+
+    spy.mockRestore()
+    expect(hasUnexpectedTextNode).toBe(false)
+  })
+
   it('renders basic facts (date, days, country)', () => {
     const { getByText, getByLabelText } = render(<QuickFacts travel={baseTravel} />)
 

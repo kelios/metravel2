@@ -100,7 +100,7 @@ describe('CompactSideBarTravel', () => {
 
     expect(getByText(/Test User.*Test Country/)).toBeTruthy();
     expect(getByText(/January.*2024/)).toBeTruthy();
-    expect(getByText(/• 5 дн\./)).toBeTruthy();
+    expect(getByText(/5 дн\./)).toBeTruthy();
   });
 
   it('should render navigation links', () => {
@@ -249,15 +249,15 @@ describe('CompactSideBarTravel', () => {
   });
 
   it('should render view count when available', () => {
-    const travel = createMockTravel({
-      countUnicIpView: 1234,
-    } as any);
+    const travel: any = createMockTravel();
+    travel.countUnicIpView = 1234;
 
     const { getByText } = render(
       <CompactSideBarTravel {...defaultProps} travel={travel} />
     );
 
-    expect(getByText('1 234')).toBeTruthy();
+    // ru-RU may format with normal space, NBSP (\u00A0) or narrow NBSP (\u202F)
+    expect(getByText(/1[\s\u00A0\u202F]234/)).toBeTruthy();
   });
 
   it('opens author travels search with user_id param', () => {

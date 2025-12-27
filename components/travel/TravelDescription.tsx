@@ -244,9 +244,8 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
       <View
         style={[
           styles.inner,
-          Platform.OS === "web" && ({ pointerEvents: "box-none" } as any),
+          { pointerEvents: 'box-none' } as any,
         ]}
-        {...(Platform.OS !== "web" ? ({ pointerEvents: "box-none" } as any) : {})}
       >
           {/* Декоративный штамп — не участвует в доступности и не перехватывает клики */}
           <ImageCardMedia
@@ -258,7 +257,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
             priority="low"
             style={[
               styles.stamp,
-              Platform.OS === "web" && ({ pointerEvents: "none" } as any),
+              { pointerEvents: 'none' } as any,
             ]}
           />
 
@@ -360,11 +359,28 @@ const styles = StyleSheet.create({
         borderRadius: Platform.select({ web: 16, default: 12 }),  // ✅ ОПТИМИЗАЦИЯ: Меньше радиус на мобильных
         backgroundColor: "#FFF",
         overflow: "hidden",
-        shadowColor: "#000",
-        shadowOpacity: 0.08,
-        shadowRadius: Platform.select({ web: 12, default: 8 }),  // ✅ ОПТИМИЗАЦИЯ: Меньше тень на мобильных
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 2,
+        ...Platform.select({
+            web: {
+                // @ts-ignore: web-only style
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
+            },
+            ios: {
+                shadowColor: "#000",
+                shadowOpacity: 0.08,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 2 },
+            },
+            android: {
+                elevation: 2,
+            },
+            default: {
+                shadowColor: "#000",
+                shadowOpacity: 0.08,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 2,
+            },
+        }),
     },
 
     scrollArea: {},

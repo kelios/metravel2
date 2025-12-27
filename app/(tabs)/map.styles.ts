@@ -54,11 +54,28 @@ export const getStyles = (isMobile: boolean, insetTop: number, headerOffset: num
         backgroundColor: '#4a8c8c',
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 4,
+        ...Platform.select({
+          web: {
+            // @ts-ignore: web-only style
+            boxShadow: '0 6px 16px rgba(0, 0, 0, 0.18)',
+          },
+          ios: {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+          },
+          android: {
+            elevation: 4,
+          },
+          default: {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+            elevation: 4,
+          },
+        }),
         zIndex: 1001,
       },
       rightPanel: {
@@ -69,11 +86,28 @@ export const getStyles = (isMobile: boolean, insetTop: number, headerOffset: num
         width: isMobile ? '100%' : PANEL_WIDTH_DESKTOP,
         maxWidth: isMobile ? '100%' : PANEL_WIDTH_DESKTOP + 40,
         backgroundColor: '#fff',
-        shadowColor: '#000',
-        shadowOffset: { width: -2, height: 0 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 8,
+        ...Platform.select({
+          web: {
+            // @ts-ignore: web-only style
+            boxShadow: '-8px 0 24px rgba(15, 23, 42, 0.12)',
+          },
+          ios: {
+            shadowColor: '#000',
+            shadowOffset: { width: -2, height: 0 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+          },
+          android: {
+            elevation: 8,
+          },
+          default: {
+            shadowColor: '#000',
+            shadowOffset: { width: -2, height: 0 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 8,
+          },
+        }),
         zIndex: 1000,
         ...(Platform.OS === 'web' && !isMobile
           ? ({
@@ -129,11 +163,30 @@ export const getStyles = (isMobile: boolean, insetTop: number, headerOffset: num
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: '#e2e8f0',
         columnGap: 8,
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: isMobile ? 0.08 : 0.05,
-        shadowRadius: 8,
-        elevation: isMobile ? 5 : 2,
+        ...Platform.select({
+          web: {
+            // @ts-ignore: web-only style
+            boxShadow: isMobile
+              ? '0 8px 20px rgba(15, 23, 42, 0.10)'
+              : '0 4px 12px rgba(15, 23, 42, 0.08)',
+          },
+          ios: {
+            shadowColor: '#0f172a',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: isMobile ? 0.08 : 0.05,
+            shadowRadius: 8,
+          },
+          android: {
+            elevation: isMobile ? 5 : 2,
+          },
+          default: {
+            shadowColor: '#0f172a',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: isMobile ? 0.08 : 0.05,
+            shadowRadius: 8,
+            elevation: isMobile ? 5 : 2,
+          },
+        }),
         zIndex: 1001,
       },
       tabsSegment: {

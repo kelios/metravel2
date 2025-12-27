@@ -139,9 +139,8 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
             style={[
               StyleSheet.absoluteFillObject,
               styles.skeleton,
-              Platform.OS === 'web' && ({ pointerEvents: 'none' } as any),
+              { pointerEvents: 'none' } as any,
             ]}
-            {...(Platform.OS !== 'web' ? ({ pointerEvents: 'none' } as any) : {})}
           >
             <View style={[styles.placeholder, { width: boxWidth, height: boxHeight }]} />
           </View>

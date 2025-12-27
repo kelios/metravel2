@@ -224,9 +224,8 @@ function SearchAndFilterBar({
                             style={[
                                 styles.searchDivider,
                                 isMobile && styles.searchDividerMobile,
-                                Platform.OS === 'web' && ({ pointerEvents: 'none' } as any),
+                                { pointerEvents: 'none' } as any,
                             ]}
-                            {...(Platform.OS !== 'web' ? ({ pointerEvents: 'none' } as any) : {})}
                         />
 
                         <TextInput

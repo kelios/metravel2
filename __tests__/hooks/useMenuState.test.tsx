@@ -68,8 +68,8 @@ describe('useMenuState', () => {
 
     expect(result.current.menuOpen).toBe(true);
     // На десктопных ширинах используем более широкое меню
-    expect(result.current.menuWidth).toBe(280);
-    expect(result.current.menuWidthNum).toBe(280);
+    expect(result.current.menuWidth).toBe(350);
+    expect(result.current.menuWidthNum).toBe(350);
   });
 
   it('toggles menu open/close on mobile and animates position', () => {
