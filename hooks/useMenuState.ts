@@ -18,8 +18,7 @@ export interface UseMenuStateReturn {
   openMenuOnDesktop: () => void;
 }
 
-const MENU_WIDTH_DESKTOP = 350;
-const MENU_WIDTH_TABLET = 350;
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 export function useMenuState(isMobile: boolean): UseMenuStateReturn {
   const { width } = useResponsive();
@@ -33,7 +32,11 @@ export function useMenuState(isMobile: boolean): UseMenuStateReturn {
 
   const menuWidth = useMemo(() => {
     if (isMobile) return '100%';
-    return stableWidth >= 1200 ? MENU_WIDTH_DESKTOP : MENU_WIDTH_TABLET;
+    // Web/desktop: allow the sidebar to grow beyond 350px on wide screens.
+    // Keep a reasonable range so it doesn't dominate the layout.
+    // Examples: 1200px -> 336px, 1440px -> 403px, 1600px -> 448px.
+    const desired = Math.round(stableWidth * 0.28);
+    return clamp(desired, 320, 480);
   }, [isMobile, stableWidth]);
 
   const menuWidthNum = typeof menuWidth === 'number' ? menuWidth : 0;

@@ -67,9 +67,9 @@ describe('useMenuState', () => {
     const { result } = renderHook(() => useMenuState(false));
 
     expect(result.current.menuOpen).toBe(true);
-    // На десктопных ширинах используем более широкое меню
-    expect(result.current.menuWidth).toBe(350);
-    expect(result.current.menuWidthNum).toBe(350);
+    // На десктопных ширинах используем адаптивную ширину (clamp)
+    expect(result.current.menuWidth).toBe(392);
+    expect(result.current.menuWidthNum).toBe(392);
   });
 
   it('toggles menu open/close on mobile and animates position', () => {

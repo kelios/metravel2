@@ -1639,7 +1639,7 @@ const TravelContentSections: React.FC<{
     const plus = extractSnippets(travel.plus, 1);
     const minus = extractSnippets(travel.minus, 1);
 
-    if (rec) items.push({ label: "Совет", text: rec, tone: "info" });
+    if (rec) items.push({ label: "Полезно", text: rec, tone: "info" });
     if (plus) items.push({ label: "Плюс", text: plus, tone: "positive" });
     if (minus) items.push({ label: "Минус", text: minus, tone: "negative" });
 
@@ -2357,8 +2357,8 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
   },
   decisionSummaryBadgeInfo: {
-    backgroundColor: 'rgba(59, 130, 246, 0.10)',
-    borderColor: 'rgba(59, 130, 246, 0.18)',
+    backgroundColor: 'rgba(60, 60, 60, 0.06)',
+    borderColor: 'rgba(60, 60, 60, 0.14)',
   },
   decisionSummaryBadgePositive: {
     backgroundColor: 'rgba(34, 197, 94, 0.10)',
@@ -2374,7 +2374,7 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   decisionSummaryBadgeTextInfo: {
-    color: '#1d4ed8',
+    color: DESIGN_TOKENS.colors.text,
   },
   decisionSummaryBadgeTextPositive: {
     color: '#15803d',

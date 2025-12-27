@@ -63,6 +63,28 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
             return canScrollBySize;
           };
 
+          const findScrollableAncestor = (start: HTMLElement | null): HTMLElement | null => {
+            if (!start) return null;
+            let node: HTMLElement | null = start;
+            while (node && node !== document.body) {
+              try {
+                const style = window.getComputedStyle(node);
+                const overflowY = style?.overflowY;
+                const isScrollableOverflow = overflowY === 'auto' || overflowY === 'scroll';
+                if (isScrollableOverflow && canScrollNode(node)) {
+                  return node;
+                }
+              } catch {
+                // noop
+              }
+              node = node.parentElement;
+            }
+            return null;
+          };
+
+          const bestScrollContainer =
+            (canScrollNode(scrollNode) ? scrollNode : null) || findScrollableAncestor(el.parentElement);
+
           // Если у нас есть реальный scroll container (а не window) — скроллим его напрямую
           if (canScrollNode(scrollNode)) {
             const containerRect = scrollNode.getBoundingClientRect();
@@ -70,8 +92,8 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
             const currentTop = (scrollNode as any).scrollTop ?? 0;
             const targetTop = currentTop + (elRect.top - containerRect.top);
 
-            if (typeof (scrollNode as any).scrollTo === 'function') {
-              (scrollNode as any).scrollTo({ top: targetTop, behavior: 'smooth' });
+            if (typeof (bestScrollContainer as any).scrollTo === 'function') {
+              (bestScrollContainer as any).scrollTo({ top: targetTop, behavior: 'smooth' });
               return;
             }
 
@@ -84,24 +106,28 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
             }
           }
 
-          // Последний fallback: пусть браузер сам решит (может проскроллить window)
+          // Надёжный fallback: пусть браузер сам найдет ближайший scroll container.
+          // После scrollIntoView корректируем позицию под фиксированный header.
           if (typeof el.scrollIntoView === 'function') {
-            try {
-              const win = (typeof window !== 'undefined' ? window : undefined) as any;
-              if (win && typeof win.scrollTo === 'function' && typeof el.getBoundingClientRect === 'function') {
-                const rect = el.getBoundingClientRect();
-                const pageTop = (win.pageYOffset ?? 0) + rect.top;
-                // 88px — безопасный отступ под фиксированный header
-                const targetTop = Math.max(0, pageTop - 88);
-                win.scrollTo({ top: targetTop, left: 0, behavior: 'smooth' });
-                return;
-              }
-            } catch {
-              // noop
-            }
-
-            // Ultimate fallback
             el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+
+            // 88px — безопасный отступ под фиксированный header
+            const HEADER_OFFSET = 88;
+            setTimeout(() => {
+              try {
+                if (canScrollNode(scrollNode) && typeof (scrollNode as any).scrollBy === 'function') {
+                  (scrollNode as any).scrollBy({ top: -HEADER_OFFSET, left: 0, behavior: 'instant' });
+                  return;
+                }
+                const win = (typeof window !== 'undefined' ? window : undefined) as any;
+                if (win && typeof win.scrollBy === 'function') {
+                  win.scrollBy({ top: -HEADER_OFFSET, left: 0, behavior: 'instant' });
+                }
+              } catch {
+                // noop
+              }
+            }, 0);
+
             return;
           }
         }

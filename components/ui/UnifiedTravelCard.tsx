@@ -68,9 +68,13 @@ function UnifiedTravelCard({
   webAsView = false,
   webPressableProps,
 }: Props) {
-  const ContainerComponent: any = Platform.OS === 'web' && webAsView ? View : Pressable;
+  const isWeb = Platform.OS === 'web';
+
+  // On web we avoid rendering <button> because cards often contain interactive children
+  // (e.g. favorite button). Nested <button> triggers validateDOMNesting warnings.
+  const ContainerComponent: any = isWeb ? View : Pressable;
   const containerProps =
-    Platform.OS === 'web' && webAsView
+    isWeb
       ? (webPressableProps ?? {
           role: 'button',
           tabIndex: 0,
@@ -91,7 +95,7 @@ function UnifiedTravelCard({
     <ContainerComponent
       {...containerProps}
       style={[styles.container, typeof width === 'number' ? { width } : null, style]}
-      accessibilityRole={Platform.OS === 'web' && webAsView ? undefined : 'button'}
+      accessibilityRole={isWeb ? undefined : 'button'}
       accessibilityLabel={title}
       testID={testID}
       {...Platform.select({ web: { cursor: 'pointer' } as any })}

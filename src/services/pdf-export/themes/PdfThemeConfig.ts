@@ -931,20 +931,3 @@ export function getThemeConfig(themeName: PdfThemeName | string): PdfThemeConfig
   return PDF_THEMES[themeName as PdfThemeName] || minimalTheme;
 }
 
-/**
- * Получить список всех доступных тем
- */
-export function getAllThemes(): PdfThemeConfig[] {
-  return [
-    minimalTheme,
-    lightTheme,
-    darkTheme,
-    travelMagazineTheme,
-    classicTheme,
-    modernTheme,
-    romanticTheme,
-    adventureTheme,
-    illustratedTheme,
-  ];
-}
-
