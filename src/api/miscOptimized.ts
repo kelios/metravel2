@@ -105,12 +105,3 @@ export const clearFiltersCache = () => {
 
 // Экспортируем оригинальную функцию для совместимости
 export { fetchAllCountries };
-
-// Функция для предварительного прогрева кэша
-export const warmupFiltersCache = async () => {
-  try {
-    await fetchAllFiltersOptimized();
-  } catch (error) {
-    devWarn('Failed to warmup filters cache:', error);
-  }
-};
