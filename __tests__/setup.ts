@@ -15,8 +15,10 @@ const originalInfo = console.info;
 console.info = (message, ...args) => {
   const joined = [message, ...args].map((v) => String(v)).join(' ')
   // Suppress noisy debug logs from WebMapComponent helpers used in unit tests
-  if (/\bbuildAddressFromGeocode called with:\b/.test(joined)) return
-  if (/\bAddress parts:\b/.test(joined)) return
+  if (joined.includes('buildAddressFromGeocode called with:')) return
+  if (joined.includes('Address parts:')) return
+  if (joined.includes('[PopupContent] Image URLs:')) return
+  if (joined.includes('[PopupContent] No travelImageThumbUrl provided')) return
   originalInfo(message, ...args)
 }
 
