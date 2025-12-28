@@ -213,7 +213,53 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         Toast.show({
             type: 'success',
             text1: 'Маршрут отправлен на модерацию',
-            text2: 'После одобрения он появится в разделе “Мои путешествия”.',
+            text2: 'После одобрения он появится в разделе "Мои путешествия".',
+        });
+
+        await onFinish();
+        router.push('/metravel');
+    };
+
+    const handleApproveModeration = async () => {
+        setFormData({
+            ...formData,
+            moderation: true,
+            publish: true,
+        });
+
+        await onManualSave();
+
+        await trackWizardEvent('admin_moderation_approved', {
+            travel_id: formData.id ?? null,
+        });
+
+        Toast.show({
+            type: 'success',
+            text1: 'Модерация одобрена',
+            text2: 'Маршрут опубликован и доступен всем пользователям.',
+        });
+
+        await onFinish();
+        router.push('/metravel');
+    };
+
+    const handleRejectModeration = async () => {
+        setFormData({
+            ...formData,
+            moderation: false,
+            publish: false,
+        });
+
+        await onManualSave();
+
+        await trackWizardEvent('admin_moderation_rejected', {
+            travel_id: formData.id ?? null,
+        });
+
+        Toast.show({
+            type: 'info',
+            text1: 'Модерация отклонена',
+            text2: 'Маршрут возвращен в черновики.',
         });
 
         await onFinish();
@@ -386,6 +432,33 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         );
                     })}
                     </View>
+
+                    {isSuperAdmin && formData.moderation && (
+                        <View style={[styles.card, styles.adminCard]}>
+                            <Text style={styles.cardTitle}>Панель модератора</Text>
+                            <Text style={styles.adminHint}>
+                                Маршрут находится на модерации. Вы можете одобрить или отклонить его.
+                            </Text>
+                            <View style={styles.adminButtons}>
+                                <TouchableOpacity
+                                    style={[styles.adminButton, styles.adminButtonApprove]}
+                                    onPress={handleApproveModeration}
+                                    activeOpacity={0.85}
+                                >
+                                    <Icon source="check-circle" size={20} color="#fff" />
+                                    <Text style={styles.adminButtonText}>Одобрить модерацию</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.adminButton, styles.adminButtonReject]}
+                                    onPress={handleRejectModeration}
+                                    activeOpacity={0.85}
+                                >
+                                    <Icon source="close-circle" size={20} color="#fff" />
+                                    <Text style={styles.adminButtonText}>Отклонить</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
 
                     {status === 'moderation' && missingForModeration.length > 0 && (
                         <View style={[styles.card, styles.bannerError]}>
@@ -634,6 +707,43 @@ const styles = StyleSheet.create({
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: DESIGN_TOKENS.colors.dangerDark,
         marginBottom: DESIGN_TOKENS.spacing.xs,
+    },
+    adminCard: {
+        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        borderColor: DESIGN_TOKENS.colors.primary,
+    },
+    adminHint: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: DESIGN_TOKENS.colors.text,
+        marginBottom: DESIGN_TOKENS.spacing.md,
+        lineHeight: 20,
+    },
+    adminButtons: {
+        flexDirection: 'row',
+        gap: DESIGN_TOKENS.spacing.sm,
+        flexWrap: 'wrap',
+    },
+    adminButton: {
+        flex: 1,
+        minWidth: 150,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: DESIGN_TOKENS.spacing.xs,
+        paddingVertical: DESIGN_TOKENS.spacing.md,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+        borderRadius: DESIGN_TOKENS.radii.md,
+    },
+    adminButtonApprove: {
+        backgroundColor: DESIGN_TOKENS.colors.success,
+    },
+    adminButtonReject: {
+        backgroundColor: DESIGN_TOKENS.colors.danger,
+    },
+    adminButtonText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        fontWeight: '600',
+        color: '#fff',
     },
 });
 

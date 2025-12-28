@@ -16,32 +16,40 @@ type LeafletNS = any;
 type ReactLeafletNS = typeof import('react-leaflet');
 
 const reverseGeocode = async (latlng: any) => {
-    // Use a CORS-friendly provider first, then fall back to Nominatim
+    // Пробуем несколько сервисов для получения наиболее точного адреса
+    
+    // 1. Nominatim с zoom=18 для максимальной детализации
     try {
-        const primary = await fetch(
+        const nominatim = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1&accept-language=ru&extratags=1&namedetails=1&zoom=18`
+        );
+        if (nominatim.ok) {
+            const data = await nominatim.json();
+            console.info('Nominatim geocode response (zoom=18):', data);
+            // Если есть конкретное название места, используем Nominatim
+            if (data?.name || data?.address?.name || data?.display_name) {
+                return data;
+            }
+        }
+    } catch (error) {
+        console.warn('Nominatim geocoding failed:', error);
+    }
+
+    // 2. BigDataCloud как fallback
+    try {
+        const bigdata = await fetch(
             `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latlng.lat}&longitude=${latlng.lng}&localityLanguage=ru`
         );
-        if (primary.ok) {
-            const data = await primary.json();
+        if (bigdata.ok) {
+            const data = await bigdata.json();
             console.info('BigDataCloud geocode response:', data);
             return data;
         }
-    } catch {
-        // ignore and fall back
+    } catch (error) {
+        console.warn('BigDataCloud geocoding failed:', error);
     }
 
-    try {
-        const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}&addressdetails=1&accept-language=ru&extratags=1&namedetails=1`
-        );
-        if (!response.ok) return null;
-        const data = await response.json();
-        console.info('Nominatim geocode response:', data);
-        return data;
-    } catch {
-        // Network/parse errors: let caller fallback to empty address
-        return null;
-    }
+    return null;
 };
 
 const normalizeCountryString = (value?: string | null) =>
@@ -111,9 +119,18 @@ export const buildAddressFromGeocode = (
 ) => {
     console.info('buildAddressFromGeocode called with:', { geocodeData, latlng, matchedCountry });
     
-    // Если display_name есть, попробуем построить адрес из частей, чтобы добавить регион и страну
-    // display_name используем как финальный fallback
     const parts: string[] = [];
+
+    // Извлекаем POI (точка интереса) - важное название места
+    const poi = 
+        geocodeData?.name ||
+        geocodeData?.address?.name ||
+        geocodeData?.address?.tourism ||
+        geocodeData?.address?.amenity ||
+        geocodeData?.address?.historic ||
+        geocodeData?.address?.leisure ||
+        geocodeData?.address?.place_of_worship ||
+        geocodeData?.address?.building;
 
     // BigDataCloud использует другую структуру данных
     const road = geocodeData?.address?.road || geocodeData?.locality;
@@ -126,6 +143,7 @@ export const buildAddressFromGeocode = (
         geocodeData?.address?.town ||
         geocodeData?.address?.village ||
         geocodeData?.address?.municipality ||
+        geocodeData?.address?.suburb ||
         geocodeData?.localityInfo?.locality?.[0]?.name;
 
     const adminRegion =
@@ -145,11 +163,13 @@ export const buildAddressFromGeocode = (
         geocodeData?.address?.country ||
         '';
 
-    // Добавляем компоненты, избегая дублирования
-    if (streetLine && streetLine !== city) parts.push(streetLine);
+    // Добавляем компоненты в порядке: POI → улица → город → регион → область → страна
+    // Избегаем дублирования
+    if (poi && poi !== city && poi !== road) parts.push(poi);
+    if (streetLine && streetLine !== city && streetLine !== poi) parts.push(streetLine);
     if (city) parts.push(city);
-    if (adminRegion && adminRegion !== countryLabel) parts.push(adminRegion);
-    if (adminArea && adminArea !== adminRegion && adminArea !== countryLabel) parts.push(adminArea);
+    if (adminRegion && adminRegion !== countryLabel && adminRegion !== city) parts.push(adminRegion);
+    if (adminArea && adminArea !== adminRegion && adminArea !== countryLabel && adminArea !== city) parts.push(adminArea);
     if (countryLabel) parts.push(countryLabel);
 
     console.info('Address parts:', parts);
@@ -227,13 +247,23 @@ const WebMapComponent = ({
     // Локальное состояние маркеров для немедленного отображения изменений
     const [localMarkers, setLocalMarkers] = useState(markers);
     const lastMarkersRef = useRef(markers);
+    const isInternalUpdateRef = useRef(false);
     
-    // Синхронизируем локальное состояние с пропсами только при реальных изменениях
+    // Синхронизируем локальное состояние с пропсами только при внешних изменениях
     useEffect(() => {
-        // Обновляем локальные маркеры, если изменился любой элемент (длина или ссылка на элемент)
+        // Пропускаем обновление, если изменение было инициировано внутри компонента
+        if (isInternalUpdateRef.current) {
+            isInternalUpdateRef.current = false;
+            return;
+        }
+
+        // Обновляем локальные маркеры только при реальных изменениях извне
         const markersChanged =
             markers.length !== lastMarkersRef.current.length ||
-            markers.some((m, idx) => m !== lastMarkersRef.current[idx]);
+            markers.some((m, idx) => {
+                const prev = lastMarkersRef.current[idx];
+                return !prev || m.lat !== prev.lat || m.lng !== prev.lng || m.address !== prev.address;
+            });
 
         if (markersChanged) {
             setLocalMarkers(markers);
@@ -243,6 +273,7 @@ const WebMapComponent = ({
     
     // Немедленное обновление родительского компонента (без дебаунса)
     const debouncedMarkersChange = useCallback((updatedMarkers: any[]) => {
+        isInternalUpdateRef.current = true;
         setLocalMarkers(updatedMarkers);
         onMarkersChange(updatedMarkers);
         lastMarkersRef.current = updatedMarkers;
@@ -395,7 +426,7 @@ const WebMapComponent = ({
         useMapEvents({
             click(e: any) {
                 addMarker(e.latlng);
-            }
+            },
         });
         return null;
     };

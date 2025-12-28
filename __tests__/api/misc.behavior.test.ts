@@ -164,7 +164,17 @@ describe('api/misc', () => {
     const filters = await fetchFilters()
     const countries = await fetchFiltersCountry()
     const all = await fetchAllCountries()
-    expect(filters).toEqual([])
+    expect(filters).toEqual({
+      countries: [],
+      categories: [],
+      categoryTravelAddress: [],
+      companions: [],
+      complexity: [],
+      month: [],
+      over_nights_stay: [],
+      transports: [],
+      year: '',
+    })
     expect(countries).toEqual([])
     expect(all).toEqual([])
     expect(mockDevError).toHaveBeenCalled()

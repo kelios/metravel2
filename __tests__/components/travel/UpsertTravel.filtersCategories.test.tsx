@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
 import UpsertTravel from '@/components/travel/UpsertTravel';
@@ -75,7 +74,6 @@ jest.mock('@/hooks/useImprovedAutoSave', () => ({
 }));
 
 jest.mock('@/components/travel/TravelWizardStepBasic', () => {
-  const React = require('react');
   const { View, Text, TouchableOpacity } = require('react-native');
   return function MockStepBasic(props: any) {
     return (
@@ -90,7 +88,6 @@ jest.mock('@/components/travel/TravelWizardStepBasic', () => {
 });
 
 jest.mock('@/components/travel/TravelWizardStepRoute', () => {
-  const React = require('react');
   const { View, Text, TouchableOpacity } = require('react-native');
   return function MockStepRoute(props: any) {
     return (
@@ -105,7 +102,6 @@ jest.mock('@/components/travel/TravelWizardStepRoute', () => {
 });
 
 jest.mock('@/components/travel/TravelWizardStepMedia', () => {
-  const React = require('react');
   const { View, Text, TouchableOpacity } = require('react-native');
   return function MockStepMedia(props: any) {
     return (
@@ -120,7 +116,6 @@ jest.mock('@/components/travel/TravelWizardStepMedia', () => {
 });
 
 jest.mock('@/components/travel/TravelWizardStepDetails', () => {
-  const React = require('react');
   const { View, Text, TouchableOpacity } = require('react-native');
   return function MockStepDetails(props: any) {
     return (
@@ -135,7 +130,6 @@ jest.mock('@/components/travel/TravelWizardStepDetails', () => {
 });
 
 jest.mock('@/components/travel/TravelWizardStepExtras', () => {
-  const React = require('react');
   const { View, Text } = require('react-native');
   return function MockStepExtras(props: any) {
     capturedExtrasFilters = props.filters;
@@ -148,7 +142,6 @@ jest.mock('@/components/travel/TravelWizardStepExtras', () => {
 });
 
 jest.mock('@/components/travel/TravelWizardStepPublish', () => {
-  const React = require('react');
   const { View, Text } = require('react-native');
   return function MockStepPublish() {
     return (

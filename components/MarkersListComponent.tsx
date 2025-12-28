@@ -24,11 +24,15 @@ interface MarkersListComponentProps {
 const normalizeImageUrl = (url?: string | null) => {
     if (!url) return '';
     const trimmed = url.trim();
-    // Поддерживаем превью blob:/data:, а также абсолютные ссылки
+    // Поддерживаем превью blob:/data:, а также абсолютные ссылки (включая IP-адреса)
     if (/^(https?:\/\/|data:|blob:)/i.test(trimmed)) return trimmed;
     const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
     if (!base) return trimmed;
-    return `${base}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+    // Если URL начинается с /, добавляем базу напрямую (путь уже содержит /)
+    // Иначе добавляем / между базой и URL
+    const result = trimmed.startsWith('/') ? `${base}${trimmed}` : `${base}/${trimmed}`;
+    console.info('normalizeImageUrl:', { url, base, trimmed, result });
+    return result;
 };
 
 const MarkersListComponent: React.FC<MarkersListComponentProps> = ({

@@ -4,7 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
-import { useTravelFilters } from '@/hooks/useTravelFilters';
+import {
+  initFilters,
+  normalizeCategoryTravelAddress,
+  normalizeTravelCategories,
+  useTravelFilters,
+} from '@/hooks/useTravelFilters';
 import { useTravelFormData } from '@/hooks/useTravelFormData';
 import { useTravelWizard } from '@/hooks/useTravelWizard';
 
@@ -15,6 +20,8 @@ import TravelWizardStepDetails from '@/components/travel/TravelWizardStepDetails
 import TravelWizardStepExtras from '@/components/travel/TravelWizardStepExtras';
 import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+
+export { initFilters, normalizeCategoryTravelAddress, normalizeTravelCategories };
 
 export default function UpsertTravel() {
   const { id } = useLocalSearchParams();

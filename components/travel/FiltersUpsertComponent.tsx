@@ -79,26 +79,6 @@ function normalizeCountriesLocal(raw: any): Array<{ country_id: string; title_ru
         .filter(Boolean);
 }
 
-function normalizeCategoryTravelAddressLocal(raw: any): Array<{ id: string; name: string }> {
-    if (!Array.isArray(raw)) return [];
-    return raw
-        .map((item, idx) => {
-            if (item && typeof item === 'object') {
-                const id = (item as any).id ?? (item as any).value ?? (item as any).category_id ?? (item as any).pk ?? idx;
-                const name =
-                    (item as any).name ??
-                    (item as any).name_ru ??
-                    (item as any).title_ru ??
-                    (item as any).title ??
-                    (item as any).text ??
-                    String(id);
-                return { id: String(id), name: String(name) };
-            }
-            return { id: String(idx), name: String(item) };
-        })
-        .filter(Boolean);
-}
-
 interface FiltersComponentProps {
     filters: TravelFilters | null;
     formData: TravelFormData | null;
@@ -155,14 +135,21 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     const form: any = formData!;
     const resolvedFilters = filters!;
 
-    const rawCategories = resolvedFilters.categories || [];
-    const rawTransports = resolvedFilters.transports || [];
-    const rawComplexity = resolvedFilters.complexity || [];
-    const rawCompanions = resolvedFilters.companions || [];
-    const rawOvernights = resolvedFilters.over_nights_stay || [];
-    const rawMonth = resolvedFilters.month || [];
-    const rawCategoryTravelAddress = (resolvedFilters as any).categoryTravelAddress || [];
-    const rawCountries = resolvedFilters.countries || [];
+    const normalizedInput: any =
+        (resolvedFilters as any)?.data?.filters ?? (resolvedFilters as any)?.data ?? resolvedFilters;
+
+    const rawCategories =
+        normalizedInput.categories ??
+        (normalizedInput as any).categoriesTravel ??
+        (normalizedInput as any).categories_travel ??
+        [];
+    const rawTransports = normalizedInput.transports ?? (normalizedInput as any).transportsTravel ?? [];
+    const rawComplexity = normalizedInput.complexity ?? (normalizedInput as any).complexityTravel ?? [];
+    const rawCompanions = normalizedInput.companions ?? (normalizedInput as any).companionsTravel ?? [];
+    const rawOvernights =
+        normalizedInput.over_nights_stay ?? (normalizedInput as any).overNightsStay ?? (normalizedInput as any).overnights ?? [];
+    const rawMonth = normalizedInput.month ?? (normalizedInput as any).months ?? [];
+    const rawCountries = normalizedInput.countries || [];
 
     let resolvedCategories = normalizeTravelCategoriesLocal(rawCategories);
 
@@ -171,7 +158,6 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     const resolvedCompanions = normalizeIdNameList(rawCompanions);
     const resolvedOvernights = normalizeIdNameList(rawOvernights);
     const resolvedMonth = normalizeIdNameList(rawMonth);
-    const resolvedCategoryTravelAddress = normalizeCategoryTravelAddressLocal(rawCategoryTravelAddress);
     const resolvedCountries = normalizeCountriesLocal(rawCountries);
 
     const openPreview = () => {

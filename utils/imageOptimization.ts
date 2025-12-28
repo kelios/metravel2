@@ -36,20 +36,23 @@ export function optimizeImageUrl(
   } = options;
 
   try {
+    // Force HTTPS for security and performance
+    const secureUrl = originalUrl.replace(/^http:\/\//i, 'https://');
+    
     // Handle both absolute and relative URLs
     let url: URL;
-    if (originalUrl.startsWith('http://') || originalUrl.startsWith('https://')) {
-      url = new URL(originalUrl);
-    } else if (originalUrl.startsWith('/')) {
+    if (secureUrl.startsWith('https://')) {
+      url = new URL(secureUrl);
+    } else if (secureUrl.startsWith('/')) {
       // Relative URL starting with /
       const base = Platform.OS === 'web' && typeof window !== 'undefined' 
         ? window.location.origin 
         : 'https://metravel.by';
-      url = new URL(originalUrl, base);
+      url = new URL(secureUrl, base);
     } else {
       // Invalid URL format
       console.warn('Invalid image URL format:', originalUrl);
-      return originalUrl;
+      return secureUrl;
     }
 
     // Если URL уже содержит параметры оптимизации, обновляем их

@@ -75,7 +75,7 @@ import CTASection from "@/components/travel/CTASection";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 /* -------------------- helpers -------------------- */
-const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 900): Promise<T> => {
+const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 400): Promise<T> => {
   try {
     return await fn();
   } catch {
@@ -88,7 +88,7 @@ const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 900): Promise<
 const withLazy = <T extends React.ComponentType<any>>(f: () => Promise<{ default: T }>) =>
   lazy(async () => {
     try {
-      return await retry(f, 2, 900);
+      return await retry(f, 2, 400);
     } catch {
       return {
         default: (() => (
@@ -293,7 +293,7 @@ const buildVersioned = (url?: string, updated_at?: string | null, id?: any) => {
 };
 
 /* -------------------- idle helper -------------------- */
-const rIC = (cb: () => void, timeout = 900) => {
+const rIC = (cb: () => void, timeout = 300) => {
   if (typeof (window as any)?.requestIdleCallback === "function") {
     (window as any).requestIdleCallback(cb, { timeout });
   } else {
@@ -703,8 +703,8 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
         setReady(true);
       }
     };
-    rIC(kick, 1500);
-    const t = setTimeout(kick, 2600);
+    rIC(kick, 500);
+    const t = setTimeout(kick, 1000);
     return () => clearTimeout(t);
   }, [when]);
   return ready ? <>{children}</> : null;
@@ -962,7 +962,7 @@ export default function TravelDetailsContainer() {
         import("@/components/Map"),
         import("@expo/vector-icons/MaterialIcons"),
       ]);
-    }, 2600);
+    }, 800);
   }, []);
 
   // ✅ АРХИТЕКТУРА: anchors и scrollRef теперь создаются в useScrollNavigation
@@ -1080,7 +1080,7 @@ export default function TravelDetailsContainer() {
   useEffect(() => {
     if (Platform.OS !== "web") return;
     if (!lcpLoaded) return;
-    rIC(() => setSliderReady(true), 1500);
+    rIC(() => setSliderReady(true), 600);
   }, [lcpLoaded]);
 
   useEffect(() => {
@@ -1091,12 +1091,12 @@ export default function TravelDetailsContainer() {
 
   useEffect(() => {
     if (lcpLoaded) setDeferAllowed(true);
-    else rIC(() => setDeferAllowed(true), 2000);
+    else rIC(() => setDeferAllowed(true), 800);
   }, [lcpLoaded]);
 
   useEffect(() => {
     if (Platform.OS !== "web" || lcpLoaded) return;
-    const timeout = setTimeout(() => setLcpLoaded(true), 4500);
+    const timeout = setTimeout(() => setLcpLoaded(true), 2500);
     return () => clearTimeout(timeout);
   }, [lcpLoaded]);
 
@@ -1402,7 +1402,7 @@ const TravelDeferredSections: React.FC<{
     if (Platform.OS === "web") {
       rIC(() => {
         setCanRenderHeavy(true);
-      }, 3500);
+      }, 1200);
     }
   }, []);
 

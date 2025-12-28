@@ -28,6 +28,18 @@ const GET_ALL_COUNTRY = `${URLAPI}/countries/`;
 const SEND_FEEDBACK = `${URLAPI}/feedback/`;
 const SEND_AI_QUESTION = `${URLAPI}/chat`;
 
+const EMPTY_FILTERS: Filters = {
+  countries: [],
+  categories: [],
+  categoryTravelAddress: [],
+  companions: [],
+  complexity: [],
+  month: [],
+  over_nights_stay: [],
+  transports: [],
+  year: '',
+};
+
 const slugifySafe = (value?: string): string => {
   if (!value) return '';
   return value
@@ -137,11 +149,11 @@ export const deleteImage = async (imageId: string) => {
 export const fetchFilters = async (): Promise<Filters> => {
   try {
     const res = await fetchWithTimeout(GET_FILTERS, {}, DEFAULT_TIMEOUT);
-    const parsed = await safeJsonParse<Filters>(res, {} as unknown as Filters);
+    const parsed = await safeJsonParse<Filters>(res, EMPTY_FILTERS);
     return parsed;
   } catch (e: any) {
     devError('Error fetching filters:', e);
-    return {} as unknown as Filters;
+    return EMPTY_FILTERS;
   }
 };
 

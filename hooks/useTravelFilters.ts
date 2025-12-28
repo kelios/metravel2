@@ -25,16 +25,62 @@ export interface TravelFilters {
   }>;
 }
 
-function initFilters(): TravelFilters {
+export function initFilters(): TravelFilters {
   return {
     countries: [],
-    categories: [],
-    transports: [],
-    companions: [],
-    complexity: [],
-    month: [],
-    over_nights_stay: [],
-    categoryTravelAddress: [],
+    categories: [
+      { id: '1', name: 'Горы' },
+      { id: '2', name: 'Море' },
+      { id: '3', name: 'Города' },
+      { id: '4', name: 'Природа' },
+    ],
+    companions: [
+      { id: '1', name: 'Один' },
+      { id: '2', name: 'Пара' },
+      { id: '3', name: 'Друзья' },
+      { id: '4', name: 'Семья' },
+    ],
+    complexity: [
+      { id: '1', name: 'Легко' },
+      { id: '2', name: 'Средне' },
+      { id: '3', name: 'Сложно' },
+    ],
+    month: [
+      { id: '1', name: 'Январь' },
+      { id: '2', name: 'Февраль' },
+      { id: '3', name: 'Март' },
+      { id: '4', name: 'Апрель' },
+      { id: '5', name: 'Май' },
+      { id: '6', name: 'Июнь' },
+      { id: '7', name: 'Июль' },
+      { id: '8', name: 'Август' },
+      { id: '9', name: 'Сентябрь' },
+      { id: '10', name: 'Октябрь' },
+      { id: '11', name: 'Ноябрь' },
+      { id: '12', name: 'Декабрь' },
+    ],
+    over_nights_stay: [
+      { id: '1', name: 'Палатка' },
+      { id: '2', name: 'Отель' },
+      { id: '3', name: 'Кемпинг' },
+      { id: '4', name: 'Без ночёвки' },
+    ],
+    transports: [
+      { id: '1', name: 'Авто' },
+      { id: '2', name: 'Поезд' },
+      { id: '3', name: 'Самолёт' },
+      { id: '4', name: 'Пешком' },
+    ],
+    categoryTravelAddress: [
+      { id: '1', name: 'Парковка' },
+      { id: '2', name: 'Отель' },
+      { id: '3', name: 'Ресторан' },
+      { id: '4', name: 'Достопримечательность' },
+      { id: '5', name: 'Смотровая площадка' },
+      { id: '6', name: 'Заправка' },
+      { id: '7', name: 'Магазин' },
+      { id: '8', name: 'Кафе' },
+    ],
   };
 }
 
@@ -48,7 +94,7 @@ function unwrapArrayCandidate(v: any): any[] {
   return [];
 }
 
-function normalizeTravelCategories(raw: any): Array<{ id: string; name: string }> {
+export function normalizeTravelCategories(raw: any): Array<{ id: string; name: string }> {
   if (!Array.isArray(raw)) return [];
   return raw
     .map((item, idx) => {
@@ -158,13 +204,24 @@ function normalizeCountries(raw: any): Array<{
     .filter(Boolean);
 }
 
-function normalizeCategoryTravelAddress(raw: any): Array<{ id: string; name: string }> {
+export function normalizeCategoryTravelAddress(raw: any): Array<{ id: string; name: string }> {
   const arr = unwrapArrayCandidate(raw);
   return arr
     .map((item, idx) => {
       if (item && typeof item === 'object') {
-        const id = (item as any).id ?? (item as any).value ?? (item as any).pk ?? idx;
-        const name = (item as any).name ?? (item as any).title ?? (item as any).text ?? String(id);
+        const id =
+          (item as any).id ??
+          (item as any).value ??
+          (item as any).category_id ??
+          (item as any).pk ??
+          idx;
+        const name =
+          (item as any).name ??
+          (item as any).name_ru ??
+          (item as any).title_ru ??
+          (item as any).title ??
+          (item as any).text ??
+          String(id);
         return { id: String(id), name: String(name) };
       }
       return { id: String(idx), name: String(item) };
