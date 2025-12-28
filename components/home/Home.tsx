@@ -64,6 +64,15 @@ export default function Home() {
       showsVerticalScrollIndicator={false}
       scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
       removeClippedSubviews={Platform.OS !== 'web'}
+      nestedScrollEnabled={Platform.OS === 'android'}
+      {...Platform.select({
+        web: {
+          style: [
+            styles.container,
+            { touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' } as any,
+          ],
+        },
+      })}
     >
       <HomeHero travelsCount={travelsCount} />
       <HomeTrustBlock />

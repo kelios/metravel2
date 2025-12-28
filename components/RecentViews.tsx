@@ -23,6 +23,24 @@ const spacing = DESIGN_TOKENS.spacing;
 
 const STORAGE_KEY = 'metravel_recent_views';
 
+function handleHorizontalWheel(e: any) {
+  if (Platform.OS !== 'web') return;
+
+  const deltaY = Number(e?.deltaY ?? 0);
+  const deltaX = Number(e?.deltaX ?? 0);
+  if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return;
+
+  const target = e?.currentTarget as any;
+  const el = target?._nativeNode || target?._domNode || target;
+  if (!el || typeof (el as any).scrollLeft !== 'number') return;
+
+  const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
+  if (maxScrollLeft <= 0) return;
+
+  e.preventDefault?.();
+  (el as any).scrollLeft += deltaY;
+}
+
 export default function RecentViews({
   maxItems = 6,
   compact = false,
@@ -128,6 +146,7 @@ export default function RecentViews({
           </View>
         )}
         contentContainerStyle={styles.listContent}
+        {...Platform.select({ web: { onWheel: handleHorizontalWheel as any } })}
       />
     </View>
   );
@@ -177,6 +196,13 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.sm,
     gap: spacing.sm,
+    ...Platform.select({
+      web: {
+        minWidth: 'max-content',
+        overscrollBehaviorX: 'contain',
+      } as any,
+      default: {},
+    }),
   },
   cardWrapper: {
     width: 200,

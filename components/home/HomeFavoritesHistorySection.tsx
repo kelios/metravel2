@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, FlatList, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, FlatList, Platform, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -18,6 +18,24 @@ type TravelLikeItem = {
   country?: string | null;
   city?: string | null;
 };
+
+function handleHorizontalWheel(e: any) {
+  if (Platform.OS !== 'web') return;
+
+  const deltaY = Number(e?.deltaY ?? 0);
+  const deltaX = Number(e?.deltaX ?? 0);
+  if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return;
+
+  const target = e?.currentTarget as any;
+  const el = target?._nativeNode || target?._domNode || target;
+  if (!el || typeof (el as any).scrollLeft !== 'number') return;
+
+  const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
+  if (maxScrollLeft <= 0) return;
+
+  e.preventDefault?.();
+  (el as any).scrollLeft += deltaY;
+}
 
 function SectionHeader({
   title,
@@ -66,6 +84,38 @@ function HorizontalCards({
   onPressItem: (url: string) => void;
   testID: string;
 }) {
+  if (Platform.OS === 'web') {
+    return (
+      <ScrollView
+        testID={testID}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.horizontalList}
+        contentContainerStyle={styles.horizontalListContent}
+        onWheel={handleHorizontalWheel as any}
+      >
+        {data.map((item) => (
+          <TabTravelCard
+            key={`${String(item.id)}-${item.url}`}
+            item={{
+              id: item.id,
+              title: item.title,
+              imageUrl: item.imageUrl,
+              city: item.city ?? null,
+              country: item.country ?? (item as any).countryName ?? null,
+            }}
+            badge={
+              badge?.icon === 'history'
+                ? { icon: 'history', backgroundColor: 'rgba(0,0,0,0.7)', iconColor: '#fff' }
+                : undefined
+            }
+            onPress={() => onPressItem(item.url)}
+          />
+        ))}
+      </ScrollView>
+    );
+  }
+
   return (
     <FlatList
       testID={testID}
@@ -92,6 +142,14 @@ function HorizontalCards({
       showsHorizontalScrollIndicator={false}
       style={styles.horizontalList}
       contentContainerStyle={styles.horizontalListContent}
+      scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
+      nestedScrollEnabled={Platform.OS === 'android'}
+      directionalLockEnabled={Platform.OS === 'ios'}
+      keyboardShouldPersistTaps="handled"
+      removeClippedSubviews={false}
+      bounces={Platform.OS === 'ios'}
+      decelerationRate={Platform.OS === 'ios' ? 'fast' : 0.98}
+      {...Platform.select({ web: { style: [styles.horizontalList, { touchAction: 'pan-x' } as any] } })}
     />
   );
 }
@@ -256,9 +314,25 @@ const styles = StyleSheet.create({
   },
   horizontalList: {
     width: '100%',
+    ...Platform.select({
+      web: {
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        overscrollBehaviorX: 'contain',
+        WebkitOverflowScrolling: 'touch',
+      } as any,
+      default: {},
+    }),
   },
   horizontalListContent: {
     paddingTop: 8,
     paddingBottom: 4,
+    flexDirection: 'row',
+    ...Platform.select({
+      web: {
+        minWidth: 'max-content',
+      } as any,
+      default: {},
+    }),
   },
 });
