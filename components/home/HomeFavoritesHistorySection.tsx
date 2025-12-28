@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, FlatList, Platform, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -34,6 +34,21 @@ function handleHorizontalWheel(e: any) {
   if (maxScrollLeft <= 0) return;
 
   e.preventDefault?.();
+  (el as any).scrollLeft += deltaY;
+}
+
+function handleHorizontalWheelForElement(e: any, el: any) {
+  if (Platform.OS !== 'web') return;
+  if (!el || typeof (el as any).scrollLeft !== 'number') return;
+
+  const deltaY = Number(e?.deltaY ?? 0);
+  const deltaX = Number(e?.deltaX ?? 0);
+  if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return;
+
+  const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
+  if (maxScrollLeft <= 0) return;
+
+  if (e?.cancelable) e.preventDefault?.();
   (el as any).scrollLeft += deltaY;
 }
 
@@ -84,15 +99,39 @@ function HorizontalCards({
   onPressItem: (url: string) => void;
   testID: string;
 }) {
+  const scrollRef = useRef<any>(null);
+
+  const resolveScrollElement = useCallback(() => {
+    const target = scrollRef.current as any;
+    return target?._nativeNode || target?._domNode || target;
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    const el = resolveScrollElement();
+    if (!el || typeof el.addEventListener !== 'function') return;
+
+    const onWheel = (e: any) => {
+      handleHorizontalWheelForElement(e, el);
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', onWheel as any);
+    };
+  }, [resolveScrollElement]);
+
   if (Platform.OS === 'web') {
     return (
       <ScrollView
+        ref={scrollRef}
         testID={testID}
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.horizontalList}
         contentContainerStyle={styles.horizontalListContent}
-        onWheel={handleHorizontalWheel as any}
+        {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
       >
         {data.map((item) => (
           <TabTravelCard
@@ -142,7 +181,7 @@ function HorizontalCards({
       showsHorizontalScrollIndicator={false}
       style={styles.horizontalList}
       contentContainerStyle={styles.horizontalListContent}
-      scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
+      scrollEventThrottle={Platform.select({ web: 32, default: 16 })}
       nestedScrollEnabled={Platform.OS === 'android'}
       directionalLockEnabled={Platform.OS === 'ios'}
       keyboardShouldPersistTaps="handled"

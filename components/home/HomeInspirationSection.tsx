@@ -38,7 +38,7 @@ function HomeInspirationSection({
 
   const numColumns = useResponsiveColumns({
     tablet: 2,
-    largeTablet: 2,
+    largeTablet: 3,
     desktop: 3,
     default: 1,
   });

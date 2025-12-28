@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import RecentViews from '@/components/RecentViews';
-import { Platform, FlatList } from 'react-native';
+import { Platform } from 'react-native';
 
 // Mock Feather icons
 jest.mock('@expo/vector-icons', () => ({

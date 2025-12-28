@@ -491,26 +491,6 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
             backgroundColor: "#e9e7df",
           }}
         >
-          {!isMobile ? (
-            <img
-              src={srcWithRetry}
-              alt=""
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                filter: "blur(18px)",
-                transform: "scale(1.08)",
-              }}
-              loading="lazy"
-              decoding="async"
-              // @ts-ignore
-              fetchpriority="low"
-            />
-          ) : null}
           <div
             style={{
               position: "absolute",
@@ -544,6 +524,11 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
       )}
     </div>
   );
+};
+
+export const __testables = {
+  OptimizedLCPHero,
+  useLCPPreload,
 };
 
 /* -------------------- Collapsible section -------------------- */
@@ -1568,7 +1553,7 @@ const TravelHeroSection: React.FC<{
                 hideArrowsOnMobile
                 showDots={isMobile}
                 preloadCount={isMobile ? 1 : 2}
-                blurBackground
+                blurBackground={Platform.OS !== "web"}
                 neutralFirstSlideErrorPlaceholder
                 aspectRatio={aspectRatio as number}
                 mobileHeightPercent={0.7}

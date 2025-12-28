@@ -57,6 +57,31 @@ function normalizeCategoryTravelAddress(raw: any): Array<{ id: string; name: str
         .filter(Boolean);
 }
 
+function normalizeTravelCategories(raw: any): Array<{ id: string; name: string }> {
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .map((item, idx) => {
+            if (item && typeof item === 'object') {
+                const id =
+                    (item as any).id ??
+                    (item as any).value ??
+                    (item as any).category_id ??
+                    (item as any).pk ??
+                    idx;
+                const name =
+                    (item as any).name ??
+                    (item as any).name_ru ??
+                    (item as any).title_ru ??
+                    (item as any).title ??
+                    (item as any).text ??
+                    String(id);
+                return { id: String(id), name: String(name) };
+            }
+            return { id: String(idx), name: String(item) };
+        })
+        .filter(Boolean);
+}
+
 function normalizeCountries(raw: any): Array<{
     country_id: string;
     title_ru: string;
@@ -179,7 +204,7 @@ const STEP_CONFIG: StepMeta[] = [
     },
 ];
 
-export { normalizeCategoryTravelAddress, normalizeCountries, initFilters };
+export { normalizeCategoryTravelAddress, normalizeTravelCategories, normalizeCountries, initFilters };
 
 export default function UpsertTravel() {
     const router = useRouter();
@@ -541,6 +566,12 @@ export default function UpsertTravel() {
 
                     let normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(filtersData?.categoryTravelAddress);
 
+                    let normalizedCategories = normalizeTravelCategories(
+                        (filtersData as any)?.categories ??
+                        (filtersData as any)?.categoriesTravel ??
+                        (filtersData as any)?.travelCategories,
+                    );
+
                     // Если бэкенд вернул категории точек в поле categories (а categoryTravelAddress пуст),
                     // используем их как источник категорий точек.
                     if (
@@ -566,6 +597,17 @@ export default function UpsertTravel() {
                         ];
                     }
 
+                    if (!normalizedCategories || normalizedCategories.length === 0) {
+                        normalizedCategories = Array.isArray(base.categories) && base.categories.length > 0
+                            ? base.categories
+                            : [
+                                { id: '1', name: 'Горы' },
+                                { id: '2', name: 'Море' },
+                                { id: '3', name: 'Города' },
+                                { id: '4', name: 'Природа' },
+                            ];
+                    }
+
                     console.info('Normalized categoryTravelAddress:', normalizedCategoryTravelAddress);
 
                     const normalizedCountries = (base.countries && base.countries.length > 0)
@@ -575,6 +617,7 @@ export default function UpsertTravel() {
                     return {
                         ...base,
                         ...filtersData,
+                        categories: normalizedCategories,
                         categoryTravelAddress: normalizedCategoryTravelAddress,
                         countries: normalizedCountries,
                     } as any;
@@ -605,16 +648,11 @@ export default function UpsertTravel() {
         const needsPointCategories =
             (currentStep === 2 || currentStep === 3) &&
             (!filters?.categoryTravelAddress || filters.categoryTravelAddress.length === 0);
-        const needsTravelCategories =
-            (currentStep === 5 || currentStep === 6) &&
-            (!filters?.categories || filters.categories.length === 0);
 
-        const needRefetch = needsPointCategories || needsTravelCategories;
-        if (!needRefetch) return;
+        if (!needsPointCategories) return;
 
         const refetchState = filtersRefetchStateRef.current;
         if (refetchState.inFlight) return;
-        if (refetchState.step === currentStep) return;
 
         refetchState.inFlight = true;
         refetchState.step = currentStep;
@@ -632,6 +670,23 @@ export default function UpsertTravel() {
                     let normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(
                         (filtersData as any)?.categoryTravelAddress,
                     );
+
+                    let normalizedCategories = normalizeTravelCategories(
+                        (filtersData as any)?.categories ??
+                        (filtersData as any)?.categoriesTravel ??
+                        (filtersData as any)?.travelCategories,
+                    );
+
+                    if (!normalizedCategories || normalizedCategories.length === 0) {
+                        normalizedCategories = Array.isArray(base.categories) && base.categories.length > 0
+                            ? base.categories
+                            : [
+                                { id: '1', name: 'Горы' },
+                                { id: '2', name: 'Море' },
+                                { id: '3', name: 'Города' },
+                                { id: '4', name: 'Природа' },
+                            ];
+                    }
                     if (
                         (!normalizedCategoryTravelAddress || normalizedCategoryTravelAddress.length === 0) &&
                         Array.isArray((filtersData as any)?.categories) &&
@@ -647,28 +702,26 @@ export default function UpsertTravel() {
                             normalizedCategoryTravelAddress && normalizedCategoryTravelAddress.length > 0
                                 ? normalizedCategoryTravelAddress
                                 : base.categoryTravelAddress,
-                        categories:
-                            Array.isArray((filtersData as any)?.categories) && (filtersData as any).categories.length > 0
-                                ? (filtersData as any).categories
-                                : base.categories,
+                        categories: normalizedCategories,
                     } as any;
                 });
             } catch (error) {
                 console.error('Ошибка повторной загрузки фильтров:', error);
             } finally {
                 if (!cancelled) setIsFiltersLoading(false);
-                filtersRefetchStateRef.current.inFlight = false;
+                refetchState.inFlight = false;
             }
         })();
 
         return () => {
             cancelled = true;
-            filtersRefetchStateRef.current.inFlight = false;
+            refetchState.inFlight = false;
         };
     }, [currentStep, filters?.categories, filters?.categoryTravelAddress]);
 
     // Повторная загрузка стран, если список пуст при переходе на шаг 2
     useEffect(() => {
+// ...
         const needCountries = currentStep === 2 && (!filters?.countries || filters.countries.length === 0);
         if (!needCountries) return;
         let cancelled = false;
@@ -1076,13 +1129,27 @@ const styles = StyleSheet.create({
 function initFilters() {
     return {
         countries: [],
-        categories: [],
+        categories: [
+            { id: '1', name: 'Горы' },
+            { id: '2', name: 'Море' },
+            { id: '3', name: 'Города' },
+            { id: '4', name: 'Природа' },
+        ],
         companions: [],
         complexity: [],
         month: [],
         over_nights_stay: [],
         transports: [],
-        categoryTravelAddress: [],
+        categoryTravelAddress: [
+            { id: '1', name: 'Парковка' },
+            { id: '2', name: 'Отель' },
+            { id: '3', name: 'Ресторан' },
+            { id: '4', name: 'Достопримечательность' },
+            { id: '5', name: 'Смотровая площадка' },
+            { id: '6', name: 'Заправка' },
+            { id: '7', name: 'Магазин' },
+            { id: '8', name: 'Кафе' },
+        ],
     };
 }
 

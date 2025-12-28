@@ -27,8 +27,10 @@ export default function HistoryScreen() {
 
     const horizontalPadding = 16;
     const columnGap = 14;
-    const canShowTwoColumns = width >= horizontalPadding * 2 + columnGap + 320 * 2;
-    const numColumns = canShowTwoColumns ? 2 : 1;
+    const minCardWidth = 320;
+    const availableWidth = Math.max(0, (width || 0) - horizontalPadding * 2);
+    const computedColumns = Math.max(1, Math.floor((availableWidth + columnGap) / (minCardWidth + columnGap)));
+    const numColumns = Math.min(computedColumns, 3);
 
     const handleOpen = useCallback(
         (url: string) => {
@@ -101,7 +103,7 @@ export default function HistoryScreen() {
                     </View>
                 </View>
                 <View style={styles.gridContent}>
-                    {Array.from({ length: numColumns > 1 ? 4 : 3 }).map((_, index) => (
+                    {Array.from({ length: numColumns > 1 ? numColumns * 2 : 3 }).map((_, index) => (
                         <View key={index} style={styles.gridItem}>
                             <SkeletonLoader width="100%" height={280} borderRadius={12} style={styles.card} />
                         </View>
@@ -155,7 +157,7 @@ export default function HistoryScreen() {
                 contentContainerStyle={styles.gridContent}
                 columnWrapperStyle={numColumns > 1 ? styles.gridRow : undefined}
                 renderItem={({ item }: { item: any }) => (
-                    <View style={[styles.gridItem, numColumns > 1 ? styles.gridItemTwoColumns : null]}>
+                    <View style={[styles.gridItem, numColumns > 1 ? { maxWidth: `${100 / numColumns}%` } : null]}>
                         <TabTravelCard
                             item={{
                                 id: item.id,
@@ -166,6 +168,7 @@ export default function HistoryScreen() {
                             }}
                             badge={{ icon: 'history', backgroundColor: 'rgba(0,0,0,0.75)', iconColor: '#ffffff' }}
                             onPress={() => handleOpen(item.url)}
+                            layout="grid"
                             style={styles.card}
                         />
                     </View>
@@ -232,11 +235,6 @@ const styles = StyleSheet.create({
     gridItem: {
         flex: 1,
         paddingTop: 12,
-    },
-    gridItemTwoColumns: {
-        // Keep a stable 2-column layout even when the last row has only one item.
-        // Without this, the single item stretches to full row width and the card is centered.
-        maxWidth: '50%',
     },
     card: {
         marginRight: 0,

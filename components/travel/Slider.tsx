@@ -852,8 +852,7 @@ const styles = StyleSheet.create<Record<string, any>>({
     borderColor: "transparent",
     ...Platform.select({
       web: {
-        boxShadow: "0 25px 60px rgba(15,23,42,0.12)",
-        backdropFilter: "blur(26px)",
+        boxShadow: "0 14px 34px rgba(15,23,42,0.10)",
       },
       android: {
         elevation: 8,
@@ -891,7 +890,7 @@ const styles = StyleSheet.create<Record<string, any>>({
   imageCardWrapperElevated: {
     ...Platform.select({
       web: {
-        filter: "drop-shadow(0 25px 45px rgba(15,23,42,0.18))",
+        boxShadow: "0 18px 42px rgba(15,23,42,0.12)",
       },
       android: {
         elevation: 10,
