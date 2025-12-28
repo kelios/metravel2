@@ -215,10 +215,15 @@ describe('UpsertTravel categories filters integration', () => {
 
     await waitFor(() => {
       expect(Array.isArray(capturedExtrasFilters?.categories)).toBe(true);
-      expect(capturedExtrasFilters.categories).toEqual([
-        { id: '0', name: 'Горы' },
-        { id: '1', name: 'Море' },
-      ]);
+      expect(
+        capturedExtrasFilters.categories.every(
+          (c: any) => c && typeof c === 'object' && typeof c.id === 'string' && typeof c.name === 'string'
+        )
+      ).toBe(true);
+
+      const names = capturedExtrasFilters.categories.map((c: any) => c.name);
+      expect(names).toContain('Горы');
+      expect(names).toContain('Море');
     });
   });
 

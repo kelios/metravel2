@@ -371,57 +371,54 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           </View>
         )}
 
-        {/* Десктоп и планшет: параллельное отображение */}
         {!isMobile ? (
-          <View style={styles.desktopContainer}>
-            <View style={[styles.listColumn, { height: listHeight }]}>
-              <ScrollView
-                ref={scrollViewRef}
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={true}
-                nestedScrollEnabled={true}
-              >
-                <View style={styles.travelsGrid}>
-                  {displayedTravels.map((item, index) => (
-                    <View
-                      key={keyExtractor(item)}
-                      style={[
-                        styles.travelItem,
-                        index % 2 !== 0 && styles.travelItemOdd
-                      ]}
-                    >
-                      {renderTravelItem({ item, index })}
-                    </View>
-                  ))}
-                </View>
+          <>
+            <SegmentSwitch value={viewMode} onChange={setViewMode} />
 
-                {visibleCount < travelsNear.length && (
-                  <View style={styles.loadMoreContainer}>
-                    <TouchableOpacity
-                      onPress={handleLoadMore}
-                      style={styles.loadMoreButton}
-                    >
-                      <Text style={styles.loadMoreButtonText}>
-                        Показать ещё {Math.min(loadMoreCount, travelsNear.length - visibleCount)} из {travelsNear.length - visibleCount}
-                      </Text>
-                    </TouchableOpacity>
+            {viewMode === 'map' ? (
+              <View style={styles.mobileMapColumn}>
+                <MapContainer
+                  points={mapPoints}
+                  height={mapHeight}
+                  showRoute={true}
+                  isLoading={isLoading}
+                />
+              </View>
+            ) : (
+              <View style={[styles.listColumn, { height: listHeight }]}>
+                <ScrollView
+                  ref={scrollViewRef}
+                  style={styles.scrollView}
+                  contentContainerStyle={styles.scrollContent}
+                  showsVerticalScrollIndicator={true}
+                  nestedScrollEnabled={true}
+                >
+                  <View style={styles.travelsGrid}>
+                    {displayedTravels.map((item, index) => (
+                      <View
+                        key={keyExtractor(item)}
+                        style={[styles.travelItem, index % 2 !== 0 && styles.travelItemOdd]}
+                      >
+                        {renderTravelItem({ item, index })}
+                      </View>
+                    ))}
                   </View>
-                )}
-              </ScrollView>
-            </View>
 
-            <View style={styles.mapColumn}>
-              <MapContainer
-                points={mapPoints}
-                height={mapHeight}
-                showRoute={true}
-                isLoading={isLoading}
-              />
-            </View>
-          </View>
+                  {visibleCount < travelsNear.length && (
+                    <View style={styles.loadMoreContainer}>
+                      <TouchableOpacity onPress={handleLoadMore} style={styles.loadMoreButton}>
+                        <Text style={styles.loadMoreButtonText}>
+                          Показать ещё {Math.min(loadMoreCount, travelsNear.length - visibleCount)} из{' '}
+                          {travelsNear.length - visibleCount}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </ScrollView>
+              </View>
+            )}
+          </>
         ) : (
-          /* Мобильный: переключатель между видами */
           <>
             <SegmentSwitch value={viewMode} onChange={setViewMode} />
 
@@ -448,14 +445,14 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                         accessibilityRole="button"
                         accessibilityLabel="Загрузить ещё путешествий"
                       >
-                        <Text style={styles.loadMoreButtonText}>
-                          Загрузить ещё
-                        </Text>
+                        <Text style={styles.loadMoreButtonText}>Загрузить ещё</Text>
                       </Pressable>
                     </View>
                   ) : isLoading ? (
                     <View style={styles.skeletonContainer}>
-                      {[1, 2].map(i => <TravelCardSkeleton key={i} />)}
+                      {[1, 2].map((i) => (
+                        <TravelCardSkeleton key={i} />
+                      ))}
                     </View>
                   ) : null
                 }

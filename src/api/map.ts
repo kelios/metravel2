@@ -31,7 +31,14 @@ export const fetchTravelsNear = async (travel_id: number, signal?: AbortSignal) 
     const urlTravel = `${GET_TRAVELS}${travel_id}/near/`;
     const res = await fetchWithTimeout(urlTravel, { signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
-      devError('Error fetching travels near: HTTP', res.status, res.statusText);
+      // 404 is a common/expected case for travels that don't have a near-list on backend.
+      // We treat it as an empty result to avoid noisy error logs.
+      if (res.status === 404) {
+        devWarn('Travels near not found (404):', urlTravel);
+        return [];
+      }
+
+      devError('Error fetching travels near: HTTP', res.status, res.statusText, urlTravel);
       return [];
     }
     return await safeJsonParse<any[]>(res, []);

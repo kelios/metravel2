@@ -83,7 +83,7 @@ const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 900): Promise<
     await new Promise((r) => setTimeout(r, delay));
     return retry(fn, tries - 1, delay);
   }
-};
+}
 
 const withLazy = <T extends React.ComponentType<any>>(f: () => Promise<{ default: T }>) =>
   lazy(async () => {
@@ -524,11 +524,6 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
       )}
     </div>
   );
-};
-
-export const __testables = {
-  OptimizedLCPHero,
-  useLCPPreload,
 };
 
 /* -------------------- Collapsible section -------------------- */
@@ -1443,15 +1438,7 @@ const TravelDeferredSections: React.FC<{
 
 const HERO_QUICK_JUMP_KEYS = ["map", "description", "points"] as const;
 
-const TravelHeroSection: React.FC<{
-  travel: Travel;
-  anchors: AnchorsMap;
-  isMobile: boolean;
-  renderSlider?: boolean;
-  onFirstImageLoad: () => void;
-  sectionLinks: TravelSectionLink[];
-  onQuickJump: (key: string) => void;
-}> = ({
+function TravelHeroSection({
   travel,
   anchors,
   isMobile,
@@ -1459,7 +1446,15 @@ const TravelHeroSection: React.FC<{
   onFirstImageLoad,
   sectionLinks,
   onQuickJump,
-}) => {
+}: {
+  travel: Travel;
+  anchors: AnchorsMap;
+  isMobile: boolean;
+  renderSlider?: boolean;
+  onFirstImageLoad: () => void;
+  sectionLinks: TravelSectionLink[];
+  onQuickJump: (key: string) => void;
+}) {
   const { width: winW, height: winH } = useWindowDimensions();
   const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(null);
   const firstImg = (travel?.gallery?.[0] ?? null) as unknown as ImgLike | null;
@@ -1553,7 +1548,7 @@ const TravelHeroSection: React.FC<{
                 hideArrowsOnMobile
                 showDots={isMobile}
                 preloadCount={isMobile ? 1 : 2}
-                blurBackground={Platform.OS !== "web"}
+                blurBackground
                 neutralFirstSlideErrorPlaceholder
                 aspectRatio={aspectRatio as number}
                 mobileHeightPercent={0.7}
@@ -1641,6 +1636,12 @@ const TravelHeroSection: React.FC<{
       )}
     </>
   );
+}
+
+export const __testables = {
+  OptimizedLCPHero,
+  useLCPPreload,
+  TravelHeroSection,
 };
 
 const TravelContentSections: React.FC<{
@@ -2826,28 +2827,12 @@ export const styles = StyleSheet.create({
     marginTop: DESIGN_TOKENS.spacing.sm,
     lineHeight: Platform.select({ default: 22, web: 24 }),
   },
-
-  sliderContainer: { 
-    width: "100%",
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    overflow: "hidden",
-    marginBottom: Platform.select({
-      default: DESIGN_TOKENS.spacing.lg,
-      web: DESIGN_TOKENS.spacing.xl,
-    }),
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.heavy,
-      } as any,
-      default: DESIGN_TOKENS.shadowsNative.heavy,
-    }),
-  },
-
-  videoContainer: {
+  sliderContainer: {
     width: "100%",
     aspectRatio: 16 / 9,
     borderRadius: DESIGN_TOKENS.radii.md,
     overflow: "hidden",
+    marginBottom: 0,
     backgroundColor: DESIGN_TOKENS.colors.text,
     // Объединенные стили теней
     ...Platform.select({
@@ -2864,8 +2849,20 @@ export const styles = StyleSheet.create({
     }),
   },
 
+  videoContainer: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    overflow: "hidden",
+    backgroundColor: DESIGN_TOKENS.colors.text,
+  },
+
   playOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,

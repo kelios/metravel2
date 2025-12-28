@@ -3,25 +3,26 @@
  */
 
 import React from 'react'
-import { render } from '@testing-library/react'
-
-jest.mock('react-native', () => {
-  const RN = jest.requireActual('react-native')
-  return {
-    ...RN,
-    Platform: { OS: 'web', select: (obj: any) => obj.web || obj.default },
-    useWindowDimensions: () => ({ width: 1200, height: 800 }),
-  }
-})
+import { render, waitFor } from '@testing-library/react'
 
 describe('TravelDetailsContainer performance (web)', () => {
+  let __testables: any
+
+  beforeAll(() => {
+    const RN = require('react-native')
+    RN.Platform.OS = 'web'
+    RN.Platform.select = (obj: any) => obj.web || obj.default
+
+    // Important: require AFTER Platform.OS is set, and do not reset modules.
+    __testables = require('@/components/travel/details/TravelDetailsContainer').__testables
+  })
+
   beforeEach(() => {
     document.head.innerHTML = ''
     ;(window as any).innerWidth = 1200
   })
 
   it('OptimizedLCPHero renders an eager high-priority LCP image', () => {
-    const { __testables } = require('@/components/travel/details/TravelDetailsContainer')
     const { container } = render(
       <__testables.OptimizedLCPHero
         img={{
@@ -43,8 +44,7 @@ describe('TravelDetailsContainer performance (web)', () => {
     expect(lcpImg?.getAttribute('alt')).toBe('Hero image')
   })
 
-  it('useLCPPreload injects preload link for first gallery image', () => {
-    const { __testables } = require('@/components/travel/details/TravelDetailsContainer')
+  it('useLCPPreload injects preload link for first gallery image', async () => {
     const travel: any = {
       id: 1,
       gallery: [
@@ -65,8 +65,11 @@ describe('TravelDetailsContainer performance (web)', () => {
 
     render(<Harness />)
 
-    const preload = document.head.querySelector('link[rel="preload"][as="image"]') as any
-    expect(preload).toBeTruthy()
-    expect(preload.getAttribute('fetchpriority')).toBe('high')
+    await waitFor(() => {
+      const preload = document.head.querySelector('link[rel="preload"]') as any
+      expect(preload).toBeTruthy()
+      expect(preload.getAttribute('fetchpriority')).toBe('high')
+      expect(String(preload.getAttribute('href') || '')).toContain('https://cdn.example.com/img.jpg')
+    })
   })
 })

@@ -10,6 +10,14 @@ import type { Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 
+const SafeView = ({ children, ...props }: React.ComponentProps<typeof View>) => {
+  return (
+    <View {...props}>
+      {React.Children.map(children, (child) => (typeof child === 'string' ? <Text>{child}</Text> : child))}
+    </View>
+  );
+};
+
 interface QuickFactsProps {
   travel: Travel;
   onCategoryPress?: (category: string) => void;
@@ -66,13 +74,13 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
   }
 
   return (
-    <View 
+    <SafeView 
       style={[styles.container, isMobile && styles.containerMobile]}
       accessibilityLabel="Ключевая информация о путешествии"
     >
       {/* Дата */}
       {whenLine && (
-        <View style={styles.factItem}>
+        <SafeView style={styles.factItem}>
           {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
           <MaterialIcons
             name="calendar-today"
@@ -80,12 +88,12 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
             color="#6b7280"
           />
           <Text style={styles.factText}>{whenLine}</Text>
-        </View>
+        </SafeView>
       )}
 
       {/* Длительность */}
       {daysText && (
-        <View style={styles.factItem}>
+        <SafeView style={styles.factItem}>
           {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
           <MaterialIcons
             name="schedule"
@@ -93,12 +101,12 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
             color="#6b7280"
           />
           <Text style={styles.factText}>{daysText}</Text>
-        </View>
+        </SafeView>
       )}
 
       {/* Страна */}
       {countryName && (
-        <View style={styles.factItem}>
+        <SafeView style={styles.factItem}>
           {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
           <Feather
             name="map-pin"
@@ -106,19 +114,19 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
             color="#6b7280"
           />
           <Text style={styles.factText}>{countryName}</Text>
-        </View>
+        </SafeView>
       )}
 
       {/* Категории */}
       {categories.length > 0 && (
-        <View style={[styles.factItem, styles.categoriesContainer]}>
+        <SafeView style={[styles.factItem, styles.categoriesContainer]}>
           {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
           <MaterialIcons
             name="label"
             size={Platform.select({ default: 16, web: 18 })}
             color="#6b7280"
           />
-          <View style={styles.categoriesWrap}>
+          <SafeView style={styles.categoriesWrap}>
             {categories.map((cat, index) => (
               <Pressable
                 key={index}
@@ -131,10 +139,10 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
                 <Text style={styles.categoryText}>{cat}</Text>
               </Pressable>
             ))}
-          </View>
-        </View>
+          </SafeView>
+        </SafeView>
       )}
-    </View>
+    </SafeView>
   );
 }
 

@@ -24,6 +24,100 @@ const { width } = Dimensions.get('window');
 const isMobile = width <= METRICS.breakpoints.tablet;
 const MultiSelectFieldAny: any = MultiSelectField;
 
+function resolveFirstArray(source: any, keys: string[]) {
+    const candidates = [
+        source,
+        source?.data,
+        source?.result,
+        source?.filters,
+        source?.payload,
+    ];
+
+    for (const obj of candidates) {
+        if (!obj || typeof obj !== 'object') continue;
+        for (const k of keys) {
+            const v = (obj as any)[k];
+            if (Array.isArray(v)) return v;
+        }
+    }
+
+    return [];
+}
+
+function normalizeTravelCategoriesLocal(raw: any): Array<{ id: string; name: string }> {
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .map((item, idx) => {
+            if (item && typeof item === 'object') {
+                const id = (item as any).id ?? (item as any).value ?? (item as any).category_id ?? (item as any).pk ?? idx;
+                const name =
+                    (item as any).name ??
+                    (item as any).name_ru ??
+                    (item as any).title_ru ??
+                    (item as any).title ??
+                    (item as any).text ??
+                    String(id);
+                return { id: String(id), name: String(name) };
+            }
+            return { id: String(idx), name: String(item) };
+        })
+        .filter(Boolean);
+}
+
+function normalizeIdNameList(raw: any): Array<{ id: string; name: string }> {
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .map((item, idx) => {
+            if (item && typeof item === 'object') {
+                const id = (item as any).id ?? (item as any).value ?? (item as any).pk ?? idx;
+                const name = (item as any).name ?? (item as any).title ?? (item as any).text ?? String(id);
+                return { id: String(id), name: String(name) };
+            }
+            return { id: String(idx), name: String(item) };
+        })
+        .filter(Boolean);
+}
+
+function normalizeCountriesLocal(raw: any): Array<{ country_id: string; title_ru: string; title_en?: string }> {
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .map((item, idx) => {
+            if (item && typeof item === 'object') {
+                const id = (item as any).country_id ?? (item as any).id ?? (item as any).pk ?? idx;
+                const titleRu = (item as any).title_ru ?? (item as any).name_ru ?? (item as any).name ?? String(id);
+                const titleEn = (item as any).title_en ?? (item as any).name_en;
+                const normalized: any = {
+                    country_id: String(id),
+                    title_ru: String(titleRu),
+                };
+                if (titleEn != null) normalized.title_en = String(titleEn);
+                return normalized;
+            }
+            return { country_id: String(idx), title_ru: String(item) };
+        })
+        .filter(Boolean);
+}
+
+function normalizeCategoryTravelAddressLocal(raw: any): Array<{ id: string; name: string }> {
+    if (!Array.isArray(raw)) return [];
+    return raw
+        .map((item, idx) => {
+            if (item && typeof item === 'object') {
+                const id = (item as any).id ?? (item as any).value ?? (item as any).category_id ?? (item as any).pk ?? idx;
+                const name =
+                    (item as any).name ??
+                    (item as any).name_ru ??
+                    (item as any).title_ru ??
+                    (item as any).title ??
+                    (item as any).text ??
+                    String(id);
+                return { id: String(id), name: String(name) };
+            }
+            return { id: String(idx), name: String(item) };
+        })
+        .filter(Boolean);
+}
+
 interface FiltersComponentProps {
     filters: TravelFilters | null;
     formData: TravelFormData | null;
@@ -79,6 +173,33 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
 
     const form: any = formData!;
     const resolvedFilters = filters!;
+
+    const rawCategories = resolveFirstArray(resolvedFilters, ['categories', 'categoriesTravel', 'travelCategories']);
+    const rawTransports = resolveFirstArray(resolvedFilters, ['transports', 'transportsTravel']);
+    const rawComplexity = resolveFirstArray(resolvedFilters, ['complexity', 'complexityTravel']);
+    const rawCompanions = resolveFirstArray(resolvedFilters, ['companions', 'companionsTravel']);
+    const rawOvernights = resolveFirstArray(resolvedFilters, ['over_nights_stay', 'overNightsStay']);
+    const rawMonth = resolveFirstArray(resolvedFilters, ['month', 'months']);
+    const rawCategoryTravelAddress = resolveFirstArray(resolvedFilters, ['categoryTravelAddress', 'category_travel_address', 'categoryPoints', 'pointCategories']);
+    const rawCountries = resolveFirstArray(resolvedFilters, ['countries']);
+
+    let resolvedCategories = normalizeTravelCategoriesLocal(rawCategories);
+    if (!resolvedCategories || resolvedCategories.length === 0) {
+        resolvedCategories = [
+            { id: '1', name: 'Горы' },
+            { id: '2', name: 'Море' },
+            { id: '3', name: 'Города' },
+            { id: '4', name: 'Природа' },
+        ];
+    }
+
+    const resolvedTransports = normalizeIdNameList(rawTransports);
+    const resolvedComplexity = normalizeIdNameList(rawComplexity);
+    const resolvedCompanions = normalizeIdNameList(rawCompanions);
+    const resolvedOvernights = normalizeIdNameList(rawOvernights);
+    const resolvedMonth = normalizeIdNameList(rawMonth);
+    const resolvedCategoryTravelAddress = normalizeCategoryTravelAddressLocal(rawCategoryTravelAddress);
+    const resolvedCountries = normalizeCountriesLocal(rawCountries);
 
     const openPreview = () => {
         if (!form.slug) return;
@@ -169,7 +290,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             {showCountries && (
                 <MultiSelectFieldAny
                     label="Страны для путешествия *"
-                    items={resolvedFilters.countries}
+                    items={resolvedCountries}
                     value={form.countries ?? []}
                     onChange={(countries: any) => setFormData({ ...form, countries })}
                     labelField="title_ru"
@@ -181,7 +302,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                 <View nativeID="travelwizard-publish-categories">
                     <MultiSelectFieldAny
                         label="Категории путешествий *"
-                        items={resolvedFilters.categories}
+                        items={resolvedCategories}
                         value={form.categories ?? []}
                         onChange={(categories: any) => setFormData({ ...form, categories })}
                         labelField="name"
@@ -194,7 +315,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                 <>
                     <MultiSelectFieldAny
                         label="Средства передвижения"
-                    items={resolvedFilters.transports}
+                    items={resolvedTransports}
                         value={form.transports ?? []}
                         onChange={(transports: any) => setFormData({ ...form, transports })}
                         labelField="name"
@@ -203,7 +324,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
 
                     <MultiSelectFieldAny
                         label="Физическая подготовка"
-                    items={resolvedFilters.complexity}
+                    items={resolvedComplexity}
                         value={form.complexity ?? []}
                         onChange={(complexity: any) => setFormData({ ...form, complexity })}
                         labelField="name"
@@ -212,7 +333,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
 
                     <MultiSelectFieldAny
                         label="Путешествуете с..."
-                    items={resolvedFilters.companions}
+                    items={resolvedCompanions}
                         value={form.companions ?? []}
                         onChange={(companions: any) => setFormData({ ...form, companions })}
                         labelField="name"
@@ -221,7 +342,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
 
                     <MultiSelectFieldAny
                         label="Ночлег..."
-                    items={resolvedFilters.over_nights_stay}
+                    items={resolvedOvernights}
                         value={form.over_nights_stay ?? []}
                         onChange={(over_nights_stay: any) => setFormData({ ...form, over_nights_stay })}
                         labelField="name"
@@ -230,7 +351,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
 
                     <MultiSelectFieldAny
                         label="Месяц путешествия"
-                    items={resolvedFilters.month}
+                    items={resolvedMonth}
                         value={form.month ?? []}
                         onChange={(month: any) => setFormData({ ...form, month })}
                         labelField="name"
