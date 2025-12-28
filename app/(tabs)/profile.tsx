@@ -189,8 +189,7 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
-          <View style={styles.dashboardSections}>
-            {Array.from({ length: 4 }).map((_, index) => (
+          <View style={styles.dashboardSections}>{Array.from({ length: 4 }).map((_, index) => (
               <View key={index} style={{ marginBottom: 12 }}>
                 <SkeletonLoader width="100%" height={120} borderRadius={12} />
               </View>
@@ -241,8 +240,7 @@ export default function ProfileScreen() {
           }}
         >
           <View style={styles.headerRow}>
-            <View style={styles.avatar}>
-              {profile?.avatar ? (
+            <View style={styles.avatar}>{profile?.avatar ? (
                 <Image
                   source={{ uri: profile.avatar }}
                   style={styles.avatarImage}
@@ -308,8 +306,7 @@ export default function ProfileScreen() {
           </ScrollView>
 
           {!!profile && (
-            <View style={styles.socialsRow}>
-              {!!profile.youtube && (
+            <View style={styles.socialsRow}>{!!profile.youtube && (
                 <Pressable
                   style={[styles.socialChip, globalFocusStyles.focusable]}
                   onPress={() => {
@@ -381,8 +378,7 @@ export default function ProfileScreen() {
         </View>
 
         {(favoritesPreview.length > 0 || historyPreview.length > 0) && (
-          <View style={styles.dashboardSections}>
-            {favoritesPreview.length > 0 && (
+          <View style={styles.dashboardSections}>{favoritesPreview.length > 0 && (
               <View
                 style={styles.dashboardSectionCard}
                 onLayout={(e) => {
@@ -497,8 +493,7 @@ export default function ProfileScreen() {
           }}
         >
           <Text style={styles.menuSectionTitle}>Разделы</Text>
-          <View style={styles.menuContainer}>
-            {menuItems.map((item, index) => (
+          <View style={styles.menuContainer}>{menuItems.map((item, index) => (
               <Pressable
                 key={index}
                 style={[styles.menuItem, globalFocusStyles.focusable]}

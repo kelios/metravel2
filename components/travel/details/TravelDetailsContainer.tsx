@@ -1467,8 +1467,8 @@ function TravelHeroSection({
     if (Platform.OS === "web" && !isMobile) return 420;
     if (!resolvedWidth) return isMobile ? 280 : 420;
     if (isMobile) {
-      const mobileHeight = winH * 0.7;
-      return Math.max(200, Math.min(mobileHeight, winH * 0.8));
+      const mobileHeight = winH * 0.8;
+      return Math.max(200, Math.min(mobileHeight, winH * 0.85));
     }
     const h = resolvedWidth / (aspectRatio || 16 / 9);
     return Math.max(320, Math.min(h, 640));
@@ -1523,39 +1523,37 @@ function TravelHeroSection({
                 }
           }
         >
-          <View style={heroHeight ? { height: heroHeight } : undefined}>
-            {!firstImg ? (
-              <NeutralHeroPlaceholder height={heroHeight} />
-            ) : shouldShowOptimizedHero && !renderSlider ? (
-              <OptimizedLCPHero
-                img={{
-                  url: typeof firstImg === "string" ? firstImg : firstImg.url,
-                  width: firstImg.width,
-                  height: firstImg.height,
-                  updated_at: firstImg.updated_at,
-                  id: firstImg.id,
-                }}
-                alt={heroAlt}
-                height={heroHeight}
-                isMobile={isMobile}
-                onLoad={onFirstImageLoad}
-              />
-            ) : (
-              <Slider
-                key={`${isMobile ? "mobile" : "desktop"}`}
-                images={galleryImages}
-                showArrows={!isMobile}
-                hideArrowsOnMobile
-                showDots={isMobile}
-                preloadCount={isMobile ? 1 : 2}
-                blurBackground
-                neutralFirstSlideErrorPlaceholder
-                aspectRatio={aspectRatio as number}
-                mobileHeightPercent={0.7}
-                onFirstImageLoad={onFirstImageLoad}
-              />
-            )}
-          </View>
+          {!firstImg ? (
+            <NeutralHeroPlaceholder height={heroHeight} />
+          ) : shouldShowOptimizedHero && !renderSlider ? (
+            <OptimizedLCPHero
+              img={{
+                url: typeof firstImg === "string" ? firstImg : firstImg.url,
+                width: firstImg.width,
+                height: firstImg.height,
+                updated_at: firstImg.updated_at,
+                id: firstImg.id,
+              }}
+              alt={heroAlt}
+              height={heroHeight}
+              isMobile={isMobile}
+              onLoad={onFirstImageLoad}
+            />
+          ) : (
+            <Slider
+              key={`${isMobile ? "mobile" : "desktop"}`}
+              images={galleryImages}
+              showArrows={!isMobile}
+              hideArrowsOnMobile
+              showDots={isMobile}
+              preloadCount={isMobile ? 1 : 2}
+              blurBackground
+              neutralFirstSlideErrorPlaceholder
+              aspectRatio={aspectRatio as number}
+              mobileHeightPercent={0.7}
+              onFirstImageLoad={onFirstImageLoad}
+            />
+          )}
         </View>
       </View>
 

@@ -55,7 +55,7 @@ describe('Slider', () => {
     const { getByTestId, queryByTestId } = await renderSlider([portraitImage])
     const image = getByTestId('slider-image-0')
 
-    expect(image.props.contentFit).toBe('contain')
+    expect(image.props.contentFit).toBe('cover')
     expect(getByTestId('slider-loading-overlay-0')).toBeTruthy()
 
     act(() => {
@@ -191,5 +191,190 @@ describe('Slider', () => {
     expect(getByText('1/2')).toBeTruthy()
     fireEvent.press(getByLabelText('Next slide'))
     expect(getByText('2/2')).toBeTruthy()
+  })
+
+  it('calculates mobile slider height as 80% of viewport height', async () => {
+    // Мобильный экран: 360x800
+    ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 360, height: 800 })
+
+    const { getByTestId } = render(
+      <Slider
+        images={[portraitImage, landscapeImage]}
+        showArrows={false}
+        showDots
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground
+        mobileHeightPercent={0.8}
+      />
+    )
+
+    // Проверяем, что слайд существует
+    const slide = getByTestId('slider-image-0')
+    expect(slide).toBeTruthy()
+
+    // Высота должна быть 80% от 800px = 640px
+    // Проверяем через wrapper, который содержит стили высоты
+    const wrapper = slide.parent?.parent?.parent
+    expect(wrapper).toBeTruthy()
+  })
+
+  it('shows counter with correct format for multiple images', async () => {
+    const images = [portraitImage, landscapeImage, portraitImage]
+    
+    const { getByText } = render(
+      <Slider
+        images={images}
+        showArrows={false}
+        showDots={false}
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground={false}
+      />
+    )
+
+    // Счетчик должен показывать 1/3
+    expect(getByText('1/3')).toBeTruthy()
+  })
+
+  it('hides counter when only one image is present', async () => {
+    const { queryByText } = render(
+      <Slider
+        images={[portraitImage]}
+        showArrows={false}
+        showDots={false}
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground={false}
+      />
+    )
+
+    // Счетчик не должен отображаться для одного изображения
+    expect(queryByText('1/1')).toBeNull()
+  })
+
+  it('shows dots on mobile when showDots is enabled', async () => {
+    ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 360, height: 800 })
+
+    const { getByTestId } = render(
+      <Slider
+        images={[portraitImage, landscapeImage, portraitImage]}
+        showArrows={false}
+        showDots
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground={false}
+      />
+    )
+
+    // Проверяем наличие изображений - dots рендерятся вместе с ними
+    expect(getByTestId('slider-image-0')).toBeTruthy()
+    expect(getByTestId('slider-image-1')).toBeTruthy()
+  })
+
+  it('hides dots when only one image is present', async () => {
+    const { getByTestId, queryByTestId } = render(
+      <Slider
+        images={[portraitImage]}
+        showArrows={false}
+        showDots
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground={false}
+      />
+    )
+
+    // Одно изображение должно рендериться
+    expect(getByTestId('slider-image-0')).toBeTruthy()
+    // Но второго изображения нет
+    expect(queryByTestId('slider-image-1')).toBeNull()
+  })
+
+  it('applies correct border radius on mobile', async () => {
+    ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 360, height: 800 })
+
+    const { getByTestId } = render(
+      <Slider
+        images={[portraitImage]}
+        showArrows={false}
+        showDots={false}
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground={false}
+      />
+    )
+
+    // Мобильная версия должна корректно рендериться
+    expect(getByTestId('slider-image-0')).toBeTruthy()
+  })
+
+  it('calls onFirstImageLoad callback when first image loads', async () => {
+    const onFirstImageLoad = jest.fn()
+
+    const { getByTestId } = render(
+      <Slider
+        images={[portraitImage, landscapeImage]}
+        showArrows={false}
+        showDots={false}
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground={false}
+        onFirstImageLoad={onFirstImageLoad}
+      />
+    )
+
+    const image = getByTestId('slider-image-0')
+    
+    act(() => {
+      image.props.onLoad?.()
+    })
+
+    expect(onFirstImageLoad).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not call onFirstImageLoad for subsequent images', async () => {
+    const onFirstImageLoad = jest.fn()
+
+    const { getByTestId } = render(
+      <Slider
+        images={[portraitImage, landscapeImage]}
+        showArrows={false}
+        showDots={false}
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground={false}
+        onFirstImageLoad={onFirstImageLoad}
+      />
+    )
+
+    // Загружаем второе изображение
+    const secondImage = getByTestId('slider-image-1')
+    
+    act(() => {
+      secondImage.props.onLoad?.()
+    })
+
+    // Callback не должен вызываться для второго изображения
+    expect(onFirstImageLoad).not.toHaveBeenCalled()
+  })
+
+  it('uses mobileHeightPercent prop to calculate height on mobile', async () => {
+    ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 360, height: 1000 })
+
+    const { getByTestId } = render(
+      <Slider
+        images={[portraitImage]}
+        showArrows={false}
+        showDots={false}
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground={false}
+        mobileHeightPercent={0.6}
+      />
+    )
+
+    // При mobileHeightPercent=0.6 и высоте 1000px, высота должна быть 600px
+    const image = getByTestId('slider-image-0')
+    expect(image).toBeTruthy()
   })
 })

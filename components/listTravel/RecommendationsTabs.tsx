@@ -463,7 +463,9 @@ const RecommendationsTabs = memo(
             ref={scrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
+            style={[styles.tabsScroll, Platform.OS === 'web' && { overflowX: 'auto', overflowY: 'hidden' }]}
             contentContainerStyle={styles.tabsContainer}
+            {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
           >
             {tabs.map((tab) => (
               <Pressable
@@ -562,6 +564,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: DESIGN_TOKENS.colors.surface,
   },
+  tabsScroll: {
+    flex: 1,
+    ...(Platform.select({
+      web: {
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        width: '100%',
+        WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-x',
+      } as any,
+      default: {},
+    }) as any),
+  },
   tabsContainer: {
     paddingHorizontal: 0,
     paddingVertical: 10,
@@ -654,7 +669,7 @@ const styles = StyleSheet.create({
   tabPaneContent: {
     flexGrow: 1,
     paddingVertical: 4,
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
     ...(Platform.select({
       web: {
         width: '100%',
@@ -799,6 +814,8 @@ const styles = StyleSheet.create({
         overflowX: 'auto',
         overflowY: 'hidden',
         width: '100%',
+        WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-x',
       } as any,
       default: {},
     }) as any),

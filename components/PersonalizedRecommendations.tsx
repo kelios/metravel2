@@ -261,7 +261,8 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <Text style={styles.sectionTitle}>Избранное</Text>
                     <ScrollView
                         horizontal
-                        showsHorizontalScrollIndicator={false}
+                        showsHorizontalScrollIndicator={Platform.OS === 'web'}
+                        nestedScrollEnabled
                         style={styles.webHorizontalScroll}
                         contentContainerStyle={styles.scrollContent}
                         removeClippedSubviews={Platform.OS !== "web"}
@@ -278,7 +279,8 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <Text style={styles.sectionTitle}>Недавно просмотрено</Text>
                     <ScrollView
                         horizontal
-                        showsHorizontalScrollIndicator={false}
+                        showsHorizontalScrollIndicator={Platform.OS === 'web'}
+                        nestedScrollEnabled
                         style={styles.webHorizontalScroll}
                         contentContainerStyle={styles.scrollContent}
                         removeClippedSubviews={Platform.OS !== "web"}
@@ -295,7 +297,8 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <Text style={styles.sectionTitle}>Рекомендации</Text>
                     <ScrollView
                         horizontal
-                        showsHorizontalScrollIndicator={false}
+                        showsHorizontalScrollIndicator={Platform.OS === 'web'}
+                        nestedScrollEnabled
                         style={styles.webHorizontalScroll}
                         contentContainerStyle={styles.scrollContent}
                         removeClippedSubviews={Platform.OS !== "web"}
@@ -415,6 +418,7 @@ const styles = StyleSheet.create({
                 overflowY: 'hidden',
                 width: '100%',
                 WebkitOverflowScrolling: 'touch',
+                touchAction: 'pan-x',
             } as any,
             default: {},
         }),

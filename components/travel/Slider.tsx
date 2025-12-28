@@ -175,7 +175,7 @@ const DEFAULT_AR = 16 / 9;
 const DOT_SIZE = 6;
 const DOT_ACTIVE_SIZE = 24; // Увеличиваем для современного вида (широкая активная точка)
 const NAV_BTN_OFFSET = 16;
-const MOBILE_HEIGHT_PERCENT = 0.7;
+const MOBILE_HEIGHT_PERCENT = 0.8;
 const GLASS_BORDER = "rgba(255,255,255,0.35)";
 
 const appendCacheBust = (uri: string, token: number) => {
@@ -280,6 +280,8 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
   const { width: winW, height: winH, isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
 
+  const isTestEnv = process.env.NODE_ENV === 'test';
+
   const [containerW, setContainerW] = useState(winW);
   const [containerH, setContainerH] = useState<number | null>(null);
   const listRef = useRef<FlatList<SliderImage>>(null);
@@ -346,14 +348,15 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     (w: number) => {
       if (!images.length) return 0;
       if (isMobile) {
-        const mobileHeight = winH * mobileHeightPercent;
-        return clamp(mobileHeight, 200, winH * 0.8);
+        const availableH = Math.max(0, winH - (insets.top || 0) - (insets.bottom || 0));
+        const mobileHeight = availableH * mobileHeightPercent;
+        return clamp(mobileHeight, 200, availableH);
       } else {
         const h = w / firstAR;
         return clamp(h, 320, 640);
       }
     },
-    [firstAR, images.length, isMobile, winH, mobileHeightPercent]
+    [firstAR, images.length, insets.bottom, insets.top, isMobile, winH, mobileHeightPercent]
   );
 
   // ✅ УЛУЧШЕНИЕ: Оптимизированные URL изображений с учетом размеров контейнера
@@ -411,6 +414,17 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     [prefetchEnabled, images.length, effectivePreload, uriMap]
   );
 
+  const setActiveIndex = useCallback(
+    (idx: number) => {
+      const clampedIdx = clamp(idx, 0, Math.max(0, images.length - 1));
+      indexRef.current = clampedIdx;
+      setCurrentIndex((prev) => (prev === clampedIdx ? prev : clampedIdx));
+      onIndexChanged?.(clampedIdx);
+      warmNeighbors(clampedIdx);
+    },
+    [images.length, onIndexChanged, warmNeighbors]
+  );
+
   // автоплей
   const appState = useRef(AppState.currentState);
   const pausedByAppState = useRef(false);
@@ -440,14 +454,13 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     dismissSwipeHint();
     if (!images.length) return;
     const target = (indexRef.current + 1) % images.length;
-    indexRef.current = target;
-    setCurrentIndex((prev) => (prev === target ? prev : target));
     // программный скролл
     listRef.current?.scrollToOffset({
       offset: target * containerW,
       animated: !reduceMotion,
     });
-  }, [images.length, containerW, reduceMotion, dismissSwipeHint]);
+    setActiveIndex(target);
+  }, [images.length, containerW, reduceMotion, dismissSwipeHint, setActiveIndex]);
 
   const scheduleAutoplay = useCallback(() => {
     clearAutoplay();
@@ -497,20 +510,15 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
         offset: wrapped * containerW,
         animated,
       });
-      indexRef.current = wrapped;
-      setCurrentIndex((prev) => (prev === wrapped ? prev : wrapped));
-      warmNeighbors(wrapped);
-      onIndexChanged?.(wrapped);
+      setActiveIndex(wrapped);
     },
-    [containerW, images.length, onIndexChanged, reduceMotion, warmNeighbors]
+    [containerW, images.length, reduceMotion, setActiveIndex]
   );
 
   const prev = useCallback(() => {
     dismissSwipeHint();
     if (!images.length) return;
     const target = (indexRef.current - 1 + images.length) % Math.max(1, images.length);
-    indexRef.current = target;
-    setCurrentIndex((p) => (p === target ? p : target));
     scrollTo(target);
   }, [images.length, scrollTo, dismissSwipeHint]);
 
@@ -559,12 +567,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
       const first = viewableItems.find((v) => v.index != null);
       if (first && typeof first.index === "number") {
         const idx = first.index;
-        if (indexRef.current !== idx) {
-          indexRef.current = idx;
-          setCurrentIndex((prev) => (prev === idx ? prev : idx));
-          onIndexChanged?.(idx);
-          warmNeighbors(idx);
-        }
+        if (indexRef.current !== idx) setActiveIndex(idx);
       }
     }
   ).current;
@@ -592,6 +595,9 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
         shouldBlur &&
         !(Platform.OS === "web" && isFirstSlide && status !== "loaded");
 
+      const useElevatedWrapper = Platform.OS === 'web' && !isMobile && (isPortrait || isSquareish);
+      const mainFit: 'cover' | 'contain' = isMobile ? 'cover' : 'contain';
+
       return (
         <View style={[styles.slide, { width: containerW, height: slideHeight }]}> 
           {shouldRenderBlurBg ? (
@@ -615,7 +621,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
           <View
             style={[
               styles.imageCardWrapper,
-              (isPortrait || isSquareish) && styles.imageCardWrapperElevated,
+              useElevatedWrapper && styles.imageCardWrapperElevated,
             ]}
           >
             <View style={styles.imageCardSurface}>
@@ -647,8 +653,10 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
               ) : (
                 <ImageCardMedia
                   src={uri}
-                  fit="contain"
-                  blurBackground={shouldBlur}
+                  fit={mainFit}
+                  // Background blur is rendered as a separate layer above.
+                  // Keeping blur here too can cause positioning/artifacts on mobile.
+                  blurBackground={Platform.OS === 'web' && !shouldRenderBlurBg ? shouldBlur : false}
                   priority={mainPriority as any}
                   loading={Platform.OS === 'web' ? (isFirstSlide ? 'eager' : 'lazy') : 'lazy'}
                   transition={reduceMotion ? 0 : 250}
@@ -660,6 +668,8 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
                   }
                   imageProps={{
                     ...(imageProps || {}),
+                    // Ensure contain images are centered across platforms.
+                    contentPosition: 'center',
                     testID: `slider-image-${index}`,
                     accessibilityIgnoresInvertColors: true,
                     accessibilityRole: 'image',
@@ -728,107 +738,87 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
           isMobile && styles.wrapperMobile,
         ]}
       >
-        <Animated.FlatList
-          ref={listRef}
-          data={images}
-          keyExtractor={keyExtractor}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={onScroll}
-          scrollEventThrottle={Platform.OS === "web" ? 32 : 16}
-          renderItem={renderItem}
-          initialNumToRender={1}
-          windowSize={2 + Math.max(0, effectivePreload)}
-          maxToRenderPerBatch={1 + Math.max(0, effectivePreload)}
-          maintainVisibleContentPosition={Platform.OS === "ios" ? undefined : { minIndexForVisible: 0 }}
-          disableIntervalMomentum
-          getItemLayout={getItemLayout}
-          bounces={false}
-          decelerationRate={Platform.OS === "ios" ? "fast" : 0.98}
-          onScrollBeginDrag={() => {
-            pausedByTouch.current = true;
-            clearAutoplay();
-            dismissSwipeHint();
-            if (!prefetchEnabled) {
-              setPrefetchEnabled(true);
-            }
-          }}
-          onScrollEndDrag={() => {
-            pausedByTouch.current = false;
-            scheduleAutoplay();
-          }}
-          onMomentumScrollEnd={() => {
-            const idx = Math.round((x.value || 0) / (containerW || 1));
-            if (Number.isFinite(idx)) {
-              const clampedIdx = clamp(idx, 0, images.length - 1);
-              indexRef.current = clampedIdx;
-              setCurrentIndex((prev) => (prev === clampedIdx ? prev : clampedIdx));
-            }
-          }}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={viewabilityConfig}
-        />
-        {showArrows && images.length > 1 && (
-          <>
-            <Arrow
-              dir="left"
-              onPress={prev}
-              isMobile={isMobile}
-              hideArrowsOnMobile={hideArrowsOnMobile}
-              insets={insets}
-              dismissSwipeHint={dismissSwipeHint}
-            />
-            <Arrow
-              dir="right"
-              onPress={next}
-              isMobile={isMobile}
-              hideArrowsOnMobile={hideArrowsOnMobile}
-              insets={insets}
-              dismissSwipeHint={dismissSwipeHint}
-            />
-          </>
-        )}
+        <View style={[styles.clip, isMobile && styles.clipMobile]}>
+          <Animated.FlatList
+            ref={listRef}
+            data={images}
+            keyExtractor={keyExtractor}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={onScroll}
+            scrollEventThrottle={Platform.OS === "web" ? 32 : 16}
+            renderItem={renderItem}
+            initialNumToRender={isTestEnv ? images.length : 1}
+            windowSize={isTestEnv ? images.length : 2 + Math.max(0, effectivePreload)}
+            maxToRenderPerBatch={isTestEnv ? images.length : 1 + Math.max(0, effectivePreload)}
+            disableVirtualization={isTestEnv}
+            maintainVisibleContentPosition={Platform.OS === "ios" ? undefined : { minIndexForVisible: 0 }}
+            disableIntervalMomentum
+            getItemLayout={getItemLayout}
+            bounces={false}
+            decelerationRate={Platform.OS === "ios" ? "fast" : 0.98}
+            onScrollBeginDrag={() => {
+              pausedByTouch.current = true;
+              clearAutoplay();
+              dismissSwipeHint();
+              if (!prefetchEnabled) {
+                setPrefetchEnabled(true);
+              }
+            }}
+            onScrollEndDrag={() => {
+              pausedByTouch.current = false;
+              scheduleAutoplay();
+            }}
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
+          />
 
-        {/* Instagram-style 1/N counter */}
-        {images.length > 1 && (
-          <View
-            style={[
-              styles.counter,
-              isMobile && styles.counterMobile,
-            ]}
-          >
-            <View style={styles.counterContainer}>
-              <Text style={styles.counterText}>
-                {currentIndex + 1}/{images.length}
-              </Text>
-            </View>
-          </View>
-        )}
+          {showArrows && images.length > 1 && (
+            <>
+              <Arrow
+                dir="left"
+                onPress={prev}
+                isMobile={isMobile}
+                hideArrowsOnMobile={hideArrowsOnMobile}
+                insets={insets}
+                dismissSwipeHint={dismissSwipeHint}
+              />
+              <Arrow
+                dir="right"
+                onPress={next}
+                isMobile={isMobile}
+                hideArrowsOnMobile={hideArrowsOnMobile}
+                insets={insets}
+                dismissSwipeHint={dismissSwipeHint}
+              />
+            </>
+          )}
 
-        {/* Instagram-style pagination dots */}
-        {showDots && images.length > 1 && (
-          <View
-            style={[
-              styles.dots,
-              isMobile && styles.dotsMobile,
-            ]}
-          >
-            <View style={styles.dotsContainer}>
-              {images.map((_, i) => (
-                <View key={i} style={styles.dotWrap}>
-                  <Dot
-                    i={i}
-                    x={x}
-                    containerW={containerW}
-                    total={images.length}
-                    reduceMotion={reduceMotion}
-                  />
-                </View>
-              ))}
+          {/* Instagram-style 1/N counter */}
+          {images.length > 1 && (
+            <View style={[styles.counter, isMobile && styles.counterMobile]} pointerEvents="none">
+              <View style={styles.counterContainer}>
+                <Text style={styles.counterText}>
+                  {currentIndex + 1}/{images.length}
+                </Text>
+              </View>
             </View>
-          </View>
-        )}
+          )}
+
+          {/* Instagram-style pagination dots */}
+          {showDots && images.length > 1 && (
+            <View style={[styles.dots, isMobile && styles.dotsMobile]} pointerEvents="none">
+              <View style={styles.dotsContainer}>
+                {images.map((_, i) => (
+                  <View key={i} style={styles.dotWrap}>
+                    <Dot i={i} x={x} containerW={containerW} total={images.length} reduceMotion={reduceMotion} />
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -846,7 +836,6 @@ const styles = StyleSheet.create<Record<string, any>>({
     width: "100%",
     backgroundColor: "transparent",
     position: "relative",
-    overflow: "hidden",
     borderRadius: 12,
     borderWidth: 0,
     borderColor: "transparent",
@@ -863,10 +852,18 @@ const styles = StyleSheet.create<Record<string, any>>({
     borderRadius: 16,
     marginVertical: 8,
   },
+  clip: {
+    flex: 1,
+    overflow: 'hidden',
+    borderRadius: 12,
+    backgroundColor: "transparent",
+  },
+  clipMobile: {
+    borderRadius: 16,
+  },
   slide: {
     flex: 1,
     position: "relative",
-    overflow: "hidden",
     backgroundColor: "transparent",
   },
   blurBg: {

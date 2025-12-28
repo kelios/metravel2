@@ -18,18 +18,26 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 const API_BASE_URL: string =
   process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
 
+const safeEncodeUrl = (value: string): string => {
+  try {
+    return encodeURI(decodeURI(value));
+  } catch {
+    return encodeURI(value);
+  }
+};
+
 const ensureAbsoluteUrl = (value: string): string => {
   if (!value) return value;
 
   try {
-    return new URL(value).toString();
+    return safeEncodeUrl(new URL(value).toString());
   } catch {
     const base = API_BASE_URL ? API_BASE_URL.replace(/\/api\/?$/, '') : undefined;
     if (!base) return value;
     try {
-      return new URL(value, base).toString();
+      return safeEncodeUrl(new URL(value, base).toString());
     } catch {
-      return value;
+      return safeEncodeUrl(value);
     }
   }
 };
@@ -90,7 +98,9 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
           const uri = asset.uri;
           const filename = uri.split('/').pop() || 'image.jpg';
           const match = /\.(\w+)$/.exec(filename);
-          const type = match ? `image/${match[1]}` : 'image/jpeg';
+          const extRaw = match ? match[1].toLowerCase() : '';
+          const ext = extRaw === 'jpg' ? 'jpeg' : extRaw;
+          const type = ext ? `image/${ext}` : 'image/jpeg';
 
           formData.append('file', {
             uri,
@@ -101,10 +111,20 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
           formData.append('id', idTravel);
 
           const response = await uploadImage(formData);
-          if (response?.url) {
+          const uploadedUrlRaw =
+            (response as any)?.url ||
+            (response as any)?.data?.url ||
+            (response as any)?.path ||
+            (response as any)?.file_url;
+          const uploadedId =
+            (response as any)?.id ||
+            (response as any)?.data?.id ||
+            filename;
+
+          if (uploadedUrlRaw) {
             setImages((prev) => [
               ...prev,
-              { id: response.id, url: ensureAbsoluteUrl(String(response.url)) },
+              { id: String(uploadedId), url: ensureAbsoluteUrl(String(uploadedUrlRaw)) },
             ]);
           }
         } catch (error) {
