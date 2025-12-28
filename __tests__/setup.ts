@@ -11,6 +11,15 @@ console.warn = (message, ...args) => {
   originalWarn(message, ...args);
 };
 
+const originalInfo = console.info;
+console.info = (message, ...args) => {
+  const joined = [message, ...args].map((v) => String(v)).join(' ')
+  // Suppress noisy debug logs from WebMapComponent helpers used in unit tests
+  if (/\bbuildAddressFromGeocode called with:\b/.test(joined)) return
+  if (/\bAddress parts:\b/.test(joined)) return
+  originalInfo(message, ...args)
+}
+
 require('@testing-library/jest-native/extend-expect')
 
 // Mock console.error to avoid error logs in test output
@@ -39,6 +48,10 @@ console.error = (message, ...args) => {
     /not wrapped in act\(\.\.\.\)/i.test(joined) ||
     /When testing, code that causes React state updates should be wrapped into act\(\.\.\.\)/i.test(joined)
   ) {
+    return;
+  }
+  // Suppress known React warning in Map.ios.test.tsx about refs on function components
+  if (/Function components cannot be given refs\./i.test(joined)) {
     return;
   }
   // Suppress expected map snapshot errors in tests
