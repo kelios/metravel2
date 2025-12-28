@@ -88,6 +88,25 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
         router.push('/login' as any);
     }, [router]);
 
+    const handleHorizontalWheel = useCallback((e: any) => {
+        if (Platform.OS !== 'web') return;
+
+        const deltaY = Number(e?.deltaY ?? 0);
+        const deltaX = Number(e?.deltaX ?? 0);
+
+        if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return;
+
+        const target = e?.currentTarget as any;
+        const el = target?._nativeNode || target?._domNode || target;
+        if (!el || typeof (el as any).scrollLeft !== 'number') return;
+
+        const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
+        if (maxScrollLeft <= 0) return;
+
+        e.preventDefault?.();
+        (el as any).scrollLeft += deltaY;
+    }, []);
+
     const renderItem = useCallback((item: typeof recommendations[0]) => {
         return (
             <TabTravelCard
@@ -243,9 +262,11 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
+                        style={styles.webHorizontalScroll}
                         contentContainerStyle={styles.scrollContent}
                         removeClippedSubviews={Platform.OS !== "web"}
                         decelerationRate="fast"
+                        {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
                     >
                         {favorites.map(item => renderItem(item as any))}
                     </ScrollView>
@@ -258,9 +279,11 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
+                        style={styles.webHorizontalScroll}
                         contentContainerStyle={styles.scrollContent}
                         removeClippedSubviews={Platform.OS !== "web"}
                         decelerationRate="fast"
+                        {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
                     >
                         {viewHistory.map(item => renderItem(item as any))}
                     </ScrollView>
@@ -273,9 +296,11 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
+                        style={styles.webHorizontalScroll}
                         contentContainerStyle={styles.scrollContent}
                         removeClippedSubviews={Platform.OS !== "web"}
                         decelerationRate="fast"
+                        {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
                     >
                         {recommendations.map(item => renderItem(item))}
                     </ScrollView>
@@ -374,6 +399,25 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingHorizontal: 4,
         paddingVertical: 4,
+        flexDirection: 'row',
+        flexWrap: 'nowrap',
+        ...(Platform.select({
+            web: {
+                width: 'max-content',
+            } as any,
+            default: {},
+        }) as any),
+    },
+    webHorizontalScroll: {
+        ...Platform.select({
+            web: {
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                width: '100%',
+                WebkitOverflowScrolling: 'touch',
+            } as any,
+            default: {},
+        }),
     },
     item: {
         width: 168,

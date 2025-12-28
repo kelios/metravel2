@@ -1,7 +1,7 @@
 // components/export/PresetSelector.tsx
 // Компонент для выбора пресетов настроек PDF
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import type { BookPreset, PresetCategory } from '@/src/types/pdf-presets';
 import { BOOK_PRESETS, PRESET_CATEGORIES } from '@/src/types/pdf-presets';
@@ -82,6 +82,42 @@ export default function PresetSelector({
 }: PresetSelectorProps) {
   const [selectedCategory, setSelectedCategory] = useState<PresetCategory | 'all'>('all');
 
+  const categoriesScrollRef = useRef<HTMLDivElement | null>(null);
+  const presetsScrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof window === 'undefined') return;
+
+    const attach = (el: HTMLDivElement | null) => {
+      if (!el) return () => {};
+
+      const onWheel = (e: WheelEvent) => {
+        const deltaY = Number((e as any).deltaY ?? 0);
+        const deltaX = Number((e as any).deltaX ?? 0);
+        if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return;
+
+        const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
+        if (maxScrollLeft <= 0) return;
+
+        e.stopPropagation();
+        e.preventDefault();
+        el.scrollLeft += deltaY;
+      };
+
+      el.addEventListener('wheel', onWheel, { passive: false });
+      return () => el.removeEventListener('wheel', onWheel as any);
+    };
+
+    const detachCategories = attach(categoriesScrollRef.current);
+    const detachPresets = attach(presetsScrollRef.current);
+
+    return () => {
+      detachCategories();
+      detachPresets();
+    };
+  }, []);
+
   const filteredPresets =
     selectedCategory === 'all'
       ? BOOK_PRESETS
@@ -94,69 +130,92 @@ export default function PresetSelector({
 
       {/* Фильтр по категориям */}
       {showCategories && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoriesContainer}
-          contentContainerStyle={styles.categoriesContent}
-          {...(Platform.OS === 'web' && {
-            // @ts-ignore - web-specific props
-            className: 'categories-scroll-container',
-          })}
-        >
-          <View
-            style={{ flexDirection: 'row', gap: 8 }}
-            {...(Platform.OS === 'web' && {
-              // @ts-ignore - web-specific props
-              className: 'categories-content',
-            })}
+        Platform.OS === 'web' ? (
+          <div
+            style={styles.categoriesWebScroll as any}
+            className="categories-scroll-container"
+            ref={categoriesScrollRef}
           >
-            <CategoryChip
-              label="Все"
-              isSelected={selectedCategory === 'all'}
-              onPress={() => setSelectedCategory('all')}
-            />
-            {Object.entries(PRESET_CATEGORIES).map(([key, category]) => (
+            <div style={styles.categoriesWebContent as any}>
               <CategoryChip
-                key={key}
-                label={category.name}
-                isSelected={selectedCategory === key}
-                onPress={() => setSelectedCategory(key as PresetCategory)}
+                label="Все"
+                isSelected={selectedCategory === 'all'}
+                onPress={() => setSelectedCategory('all')}
               />
-            ))}
-          </View>
-        </ScrollView>
+              {Object.entries(PRESET_CATEGORIES).map(([key, category]) => (
+                <CategoryChip
+                  key={key}
+                  label={category.name}
+                  isSelected={selectedCategory === key}
+                  onPress={() => setSelectedCategory(key as PresetCategory)}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoriesContainer}
+            contentContainerStyle={styles.categoriesContent}
+          >
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <CategoryChip
+                label="Все"
+                isSelected={selectedCategory === 'all'}
+                onPress={() => setSelectedCategory('all')}
+              />
+              {Object.entries(PRESET_CATEGORIES).map(([key, category]) => (
+                <CategoryChip
+                  key={key}
+                  label={category.name}
+                  isSelected={selectedCategory === key}
+                  onPress={() => setSelectedCategory(key as PresetCategory)}
+                />
+              ))}
+            </View>
+          </ScrollView>
+        )
       )}
 
       {/* Список пресетов */}
       <View style={styles.presetsWrapper}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={Platform.OS !== 'web'}
-          style={styles.presetsContainer}
-          contentContainerStyle={styles.presetsContent}
-          {...(Platform.OS === 'web' && {
-            // @ts-ignore - web-specific props
-            className: 'presets-scroll-container',
-          })}
-        >
-          <View
-            style={{ flexDirection: 'row', gap: 12 }}
-            {...(Platform.OS === 'web' && {
-              // @ts-ignore - web-specific props
-              className: 'presets-content',
-            })}
+        {Platform.OS === 'web' ? (
+          <div
+            style={styles.presetsWebScroll as any}
+            className="presets-scroll-container"
+            ref={presetsScrollRef}
           >
-            {filteredPresets.map((preset) => (
-              <PresetCard
-                key={preset.id}
-                preset={preset}
-                isSelected={selectedPresetId === preset.id}
-                onSelect={() => onPresetSelect(preset)}
-              />
-            ))}
-          </View>
-        </ScrollView>
+            <div style={styles.presetsWebContent as any}>
+              {filteredPresets.map((preset) => (
+                <PresetCard
+                  key={preset.id}
+                  preset={preset}
+                  isSelected={selectedPresetId === preset.id}
+                  onSelect={() => onPresetSelect(preset)}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.presetsContainer}
+            contentContainerStyle={styles.presetsContent}
+          >
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              {filteredPresets.map((preset) => (
+                <PresetCard
+                  key={preset.id}
+                  preset={preset}
+                  isSelected={selectedPresetId === preset.id}
+                  onSelect={() => onPresetSelect(preset)}
+                />
+              ))}
+            </View>
+          </ScrollView>
+        )}
       </View>
     </View>
   );
@@ -261,7 +320,8 @@ function FeatureBadge({ icon, label }: FeatureBadgeProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   title: {
     fontSize: 18,
@@ -279,9 +339,34 @@ const styles = StyleSheet.create({
   categoriesContainer: {
     marginBottom: 16,
   },
+  categoriesWebScroll: {
+    overflowX: 'scroll',
+    overflowY: 'hidden',
+    width: '100%',
+    WebkitOverflowScrolling: 'touch',
+    scrollBehavior: 'smooth',
+    scrollbarWidth: 'thin',
+    scrollbarColor: '#cbd5e1 #f1f5f9',
+    paddingBottom: 8,
+    marginBottom: 16,
+  } as any,
+
+  categoriesWebContent: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 8,
+    paddingTop: 0,
+    paddingRight: 16,
+    paddingBottom: 0,
+    paddingLeft: 16,
+    width: 'max-content',
+  } as any,
+
   categoriesContent: {
     paddingHorizontal: 16,
     gap: 8,
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
   },
   categoryChip: {
     paddingHorizontal: 16,
@@ -298,26 +383,51 @@ const styles = StyleSheet.create({
   categoryChipText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#4b5563',
+    color: '#374151',
   },
   categoryChipTextSelected: {
     color: '#ffffff',
   },
+
   presetsWrapper: {
     position: 'relative',
-    overflow: 'hidden',
+    overflow: Platform.OS === 'web' ? 'visible' : 'hidden',
   },
   presetsContainer: {
     marginTop: 8,
   },
+  presetsWebScroll: {
+    overflowX: 'scroll',
+    overflowY: 'hidden',
+    width: '100%',
+    WebkitOverflowScrolling: 'touch',
+    scrollBehavior: 'smooth',
+    scrollbarWidth: 'thin',
+    scrollbarColor: '#cbd5e1 #f1f5f9',
+    paddingVertical: 8,
+    paddingHorizontal: 0,
+  } as any,
+
+  presetsWebContent: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 12,
+    paddingTop: 0,
+    paddingRight: 16,
+    paddingBottom: 0,
+    paddingLeft: 16,
+    width: 'max-content',
+  } as any,
   presetsContent: {
     paddingHorizontal: 16,
     gap: 12,
     flexDirection: 'row',
+    flexWrap: 'nowrap',
   },
   presetCard: {
     width: 260,
     minHeight: 200,
+    flexShrink: 0,
     backgroundColor: '#ffffff',
     borderRadius: 12,
     borderWidth: 2,

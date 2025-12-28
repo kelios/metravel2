@@ -65,4 +65,23 @@ describe('BlockRenderer', () => {
     const separator = renderer.renderBlock({ type: 'separator' } as any)
     expect(separator).toContain('<hr')
   })
+
+  it('normalizes relative image URLs so they can be fetched in print/PDF context', () => {
+    const renderer = new BlockRenderer(theme)
+
+    const rootRelative = renderer.renderBlock({
+      type: 'image',
+      src: '/storage/photo.png',
+    } as any)
+    expect(rootRelative).toContain('images.weserv.nl')
+    const expectedRoot = `${window.location.origin}/storage/photo.png`
+    expect(rootRelative).toContain(encodeURIComponent(expectedRoot))
+
+    const protocolRelative = renderer.renderBlock({
+      type: 'image',
+      src: '//cdn.example.com/photo.png',
+    } as any)
+    expect(protocolRelative).toContain('images.weserv.nl')
+    expect(protocolRelative).toContain(encodeURIComponent('https://cdn.example.com/photo.png'))
+  })
 })

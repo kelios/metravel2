@@ -390,6 +390,66 @@ export class ContentParser {
       return specialBlock;
     }
 
+    // ✅ ВАЖНО: картинки часто приходят как <p><img ... /></p>.
+    // Раньше мы брали только textContent и теряли изображения.
+    // Здесь сохраняем порядок: текстовые фрагменты + image blocks.
+    const inlineImages = Array.from(element.querySelectorAll('img'));
+    if (inlineImages.length > 0) {
+      const blocks: ParsedContentBlock[] = [];
+      let textParts: string[] = [];
+
+      const flushText = () => {
+        const merged = this.normalizeTextPreserveLineBreaks(textParts.join(' '));
+        const normalized = this.normalizeText(merged);
+        if (normalized) {
+          blocks.push({ type: 'paragraph', text: normalized });
+        }
+        textParts = [];
+      };
+
+      const childNodes = Array.from(element.childNodes);
+      for (const child of childNodes) {
+        if (child.nodeType === Node.TEXT_NODE) {
+          const t = this.normalizeTextPreserveLineBreaks(child.textContent || '');
+          if (t) textParts.push(t);
+          continue;
+        }
+
+        if (child.nodeType === Node.ELEMENT_NODE) {
+          const el = child as HTMLElement;
+          const tag = el.tagName.toLowerCase();
+
+          if (tag === 'img') {
+            flushText();
+            const imgBlock = this.parseImage(el);
+            if (imgBlock) blocks.push(imgBlock);
+            continue;
+          }
+
+          // Если внутри вложенных контейнеров есть <img>, тоже обработаем.
+          const nestedImgs = Array.from(el.querySelectorAll('img'));
+          if (nestedImgs.length > 0) {
+            // Сначала добавим текст до картинок (если есть)
+            const txt = this.extractTextContent(el, true);
+            if (txt) textParts.push(txt);
+            flushText();
+            nestedImgs.forEach((img) => {
+              const imgBlock = this.parseImage(img as any);
+              if (imgBlock) blocks.push(imgBlock);
+            });
+            continue;
+          }
+
+          const txt = this.extractTextContent(el, true);
+          if (txt) textParts.push(txt);
+          continue;
+        }
+      }
+
+      flushText();
+      return blocks.length > 0 ? blocks : null;
+    }
+
     const text = this.extractTextContent(element, true);
     
     if (!text || text.length === 0) return null;

@@ -86,6 +86,7 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
 const styles = StyleSheet.create({
   container: {
     ...TAB_CARD_TEMPLATE.container,
+    flexShrink: 0,
     marginRight: 16,
     ...Platform.select({
       web: {

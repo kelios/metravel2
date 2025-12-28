@@ -83,6 +83,34 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
           return 88;
         };
 
+        const isDocumentScrollContainer = (node: any): boolean => {
+          if (!node) return false;
+          const docAny = document as any;
+          const scrollingEl = (document.scrollingElement || docAny.documentElement || docAny.body) as any;
+          return node === window || node === document || node === docAny.body || node === docAny.documentElement || node === scrollingEl;
+        };
+
+        const shouldApplyHeaderOffset = (container: any): boolean => {
+          try {
+            const headerH = getHeaderOffset();
+            if (!headerH) return false;
+
+            // If we are scrolling the document/window, the header always overlaps the viewport.
+            if (isDocumentScrollContainer(container)) return true;
+
+            // For nested scroll containers, apply offset only when the container is under the header.
+            if (container && typeof container.getBoundingClientRect === 'function') {
+              const rect = container.getBoundingClientRect();
+              const top = Number(rect?.top ?? 0);
+              // If container starts below the header, don't offset.
+              return top < headerH - 4;
+            }
+          } catch {
+            // noop
+          }
+          return false;
+        };
+
         const canScrollNode = (node: any): node is HTMLElement => {
           if (!node) return false;
           if (typeof node.getBoundingClientRect !== 'function') return false;
@@ -229,7 +257,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
 
             if (safeScrollTo(bestScrollContainer as any, targetTop)) {
               const HEADER_OFFSET = getHeaderOffset();
-              if (HEADER_OFFSET > 0) {
+              if (HEADER_OFFSET > 0 && typeof (bestScrollContainer as any).scrollBy === 'function') {
                 setTimeout(() => {
                   try {
                     const safeOffset = Math.min(HEADER_OFFSET, targetTop);
@@ -253,7 +281,10 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
                 const bestAfter = findScrollableAncestor(el.parentElement);
                 const safeOffset = Math.max(0, HEADER_OFFSET);
                 if (bestAfter && typeof (bestAfter as any).scrollBy === 'function') {
-                  (bestAfter as any).scrollBy({ top: -safeOffset, left: 0, behavior: 'instant' });
+                  const shouldOffset = shouldApplyHeaderOffset(bestAfter as any);
+                  if (shouldOffset) {
+                    (bestAfter as any).scrollBy({ top: -safeOffset, left: 0, behavior: 'instant' });
+                  }
                   return;
                 }
 

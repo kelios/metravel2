@@ -31,6 +31,22 @@ const extractFirstImgSrc = (html: string): string | null => {
   return m?.[1] ?? null;
 };
 
+const buildWeservProxyUrl = (src: string) => {
+  try {
+    const trimmed = String(src || '').trim();
+    if (!trimmed) return null;
+    if (trimmed.startsWith('data:')) return trimmed;
+    // Normalize HTML entities often present in rich text src attributes.
+    const normalized = trimmed.replace(/&amp;/g, '&');
+    // Avoid double-wrapping an already-proxied URL.
+    if (/^https?:\/\/images\.weserv\.nl\//i.test(normalized)) return normalized;
+    const withoutScheme = trimmed.replace(/^https?:\/\//i, '');
+    return `https://images.weserv.nl/?url=${encodeURIComponent(withoutScheme)}&w=1600&fit=inside`;
+  } catch {
+    return null;
+  }
+};
+
 const stripDangerousTags = (html: string) =>
   html.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<style[\s\S]*?<\/style>/gi, "");
 
@@ -345,16 +361,19 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
     if (Platform.OS !== "web") return;
     const first = extractFirstImgSrc(prepared);
     if (!first) return;
+    const safeHref = buildWeservProxyUrl(first) || first;
+    const linkId = `prefetch-stable-content-first-img-${encodeURIComponent(safeHref)}`;
+    if (document.getElementById(linkId)) return;
     const link = document.createElement("link");
-    link.rel = "preload";
+    // Use prefetch to avoid "preloaded but not used" warnings when the HTML/image
+    // is mounted after window load.
+    link.rel = "prefetch";
     link.as = "image";
-    link.href = first;
-    link.crossOrigin = "anonymous";
+    link.href = safeHref;
+    link.id = linkId;
     document.head.appendChild(link);
     return () => {
-      if (link.parentNode) {
-        document.head.removeChild(link);
-      }
+      if (link.parentNode) link.parentNode.removeChild(link);
     };
   }, [prepared]);
 

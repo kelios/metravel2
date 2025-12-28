@@ -1360,6 +1360,9 @@ export class EnhancedPdfGenerator {
               color: ${colors.textMuted};
               font-weight: 600;
               font-family: ${typography.bodyFont};
+              white-space: nowrap;
+              flex-shrink: 0;
+              line-height: 1.2;
             ">${section.items.length} пунктов</span>
           </div>
           <ul style="
@@ -1999,7 +2002,7 @@ export class EnhancedPdfGenerator {
       if (typeof window !== 'undefined' && (window as any).location?.origin) {
         return `${(window as any).location.origin}${trimmed}`;
       }
-      return trimmed;
+      return `https://metravel.by${trimmed}`;
     }
 
     try {

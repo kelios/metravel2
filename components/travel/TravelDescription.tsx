@@ -12,6 +12,24 @@ import StableContent from "@/components/travel/StableContent";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 
+const buildWeservProxyUrl = (src: string) => {
+    try {
+        const trimmed = String(src || '').trim();
+        if (!trimmed) return null;
+        if (trimmed.startsWith('data:')) return trimmed;
+        // Normalize HTML entities that might appear in src attributes.
+        const normalized = trimmed.replace(/&amp;/g, '&');
+        // Avoid double-wrapping an already-proxied weserv URL.
+        if (/^https?:\/\/images\.weserv\.nl\//i.test(normalized)) return normalized;
+        // Weserv expects url either encoded full, or encoded without scheme.
+        const withoutScheme = normalized.replace(/^https?:\/\//i, '');
+        const encoded = encodeURIComponent(withoutScheme);
+        return `https://images.weserv.nl/?url=${encoded}&w=1600&fit=inside`;
+    } catch {
+        return null;
+    }
+};
+
 interface TravelDescriptionProps {
     htmlContent: string;
     title?: string;
@@ -195,15 +213,21 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
     // Предзагрузка LCP-картинки на web (ускоряет LCP)
     useEffect(() => {
         if (Platform.OS !== "web" || !lcpSrc) return;
+        const safeHref = buildWeservProxyUrl(lcpSrc) || lcpSrc;
+        const linkId = `prefetch-travel-desc-lcp-${encodeURIComponent(safeHref)}`;
+        if (document.getElementById(linkId)) return;
         const link = document.createElement("link");
-        link.rel = "preload";
+        // Use prefetch (instead of preload) to avoid "preloaded but not used" warnings
+        // when the image is not actually requested immediately after window load.
+        link.rel = "prefetch";
         link.as = "image";
-        link.href = lcpSrc;
-        // Подстрахуемся, если это cross-origin
-        link.crossOrigin = "anonymous";
+        link.href = safeHref;
+        link.id = linkId;
         document.head.appendChild(link);
         return () => {
-            document.head.removeChild(link);
+            if (link.parentNode) {
+                link.parentNode.removeChild(link);
+            }
         };
     }, [lcpSrc]);
 

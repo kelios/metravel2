@@ -303,7 +303,7 @@ const rIC = (cb: () => void, timeout = 900) => {
 
 /* -------------------- hooks -------------------- */
 
-const useLCPPreload = (travel?: Travel) => {
+const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
   useEffect(() => {
     if (Platform.OS !== "web") return;
     const first = travel?.gallery?.[0];
@@ -317,12 +317,17 @@ const useLCPPreload = (travel?: Travel) => {
     if (!imageUrl) return;
 
     const versionedHref = buildVersioned(imageUrl, updatedAt, id);
-    const targetWidth = typeof window !== "undefined" ? Math.min(window.innerWidth || 1200, 1440) : 1200;
+    // On high-DPR mobile screens optimizeImageUrl multiplies width by DPR.
+    // Cap the CSS pixel width so we don't request excessively large images.
+    const targetWidth =
+      typeof window !== "undefined"
+        ? Math.min(window.innerWidth || 1200, isMobile ? 480 : 1440)
+        : 1200;
     const optimizedHref =
       optimizeImageUrl(versionedHref, {
         width: targetWidth,
         format: "webp",
-        quality: 85,
+        quality: isMobile ? 75 : 85,
         fit: "contain",
       }) || versionedHref;
 
@@ -352,7 +357,7 @@ const useLCPPreload = (travel?: Travel) => {
         document.head.appendChild(l);
       }
     });
-  }, [travel?.gallery]);
+  }, [isMobile, travel?.gallery]);
 };
 
 /* -------------------- LCP Hero -------------------- */
@@ -395,11 +400,12 @@ const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }) => {
   );
 };
 
-const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => void; height?: number }> = ({
+const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => void; height?: number; isMobile?: boolean }> = ({
                                                                                            img,
                                                                                            alt,
                                                                                            onLoad,
                                                                                            height,
+                                                                                           isMobile,
                                                                                          }) => {
   const [loadError, setLoadError] = useState(false);
   const baseSrc = buildVersionedImageUrlLCP(
@@ -408,13 +414,16 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
     img.id
   );
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9;
-  const targetWidth = typeof window !== "undefined" ? Math.min(window.innerWidth || 1200, 1440) : 1200;
+  const targetWidth =
+    typeof window !== "undefined"
+      ? Math.min(window.innerWidth || 1200, isMobile ? 480 : 1440)
+      : 1200;
 
   const optimizedSrc =
     optimizeImageUrl(baseSrc, {
       width: targetWidth,
       format: "webp",
-      quality: 85,
+      quality: isMobile ? 75 : 85,
       fit: "contain",
     }) || baseSrc;
 
@@ -482,22 +491,26 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
             backgroundColor: "#e9e7df",
           }}
         >
-          <img
-            src={srcWithRetry}
-            alt=""
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              filter: "blur(18px)",
-              transform: "scale(1.08)",
-            }}
-            loading="eager"
-            decoding="async"
-          />
+          {!isMobile ? (
+            <img
+              src={srcWithRetry}
+              alt=""
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                filter: "blur(18px)",
+                transform: "scale(1.08)",
+              }}
+              loading="lazy"
+              decoding="async"
+              // @ts-ignore
+              fetchpriority="low"
+            />
+          ) : null}
           <div
             style={{
               position: "absolute",
@@ -719,7 +732,7 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
 
 /* =================================================================== */
 
-export default function TravelDetails() {
+export default function TravelDetailsContainer() {
   const { isMobile, width: responsiveWidth } = useResponsive();
   const { width: screenWidth } = useWindowDimensions();
   // Fallback to true if hook is unavailable (e.g., static render) while preserving hook order
@@ -884,8 +897,6 @@ export default function TravelDetails() {
         ? styles.sideMenuWebMobile
         : styles.sideMenuWebDesktop
       : styles.sideMenuNative;
-
-  useLCPPreload(travel);
 
   /* ---- open-section bridge ---- */
   const [forceOpenKey, setForceOpenKey] = useState<string | null>(null);
@@ -1080,8 +1091,18 @@ export default function TravelDetails() {
   //   }
   // }, [travel?.id, queryClient]);
   /* ---- LCP gate ---- */
-  const [lcpLoaded, setLcpLoaded] = useState(Platform.OS !== "web");
+  const [lcpLoaded, setLcpLoaded] = useState(false);
+  const [sliderReady, setSliderReady] = useState(Platform.OS !== "web");
   const [deferAllowed, setDeferAllowed] = useState(false);
+
+  useLCPPreload(travel, isMobile);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    if (!lcpLoaded) return;
+    rIC(() => setSliderReady(true), 1500);
+  }, [lcpLoaded]);
+
   useEffect(() => {
     if (!isLoading) {
       setDeferAllowed(true);
@@ -1294,7 +1315,7 @@ export default function TravelDetails() {
                     travel={travel}
                     anchors={anchors}
                     isMobile={isMobile}
-                    renderSlider={Platform.OS !== "web" ? true : lcpLoaded}
+                    renderSlider={Platform.OS !== "web" ? true : sliderReady}
                     onFirstImageLoad={() => setLcpLoaded(true)}
                     sectionLinks={sectionLinks}
                     onQuickJump={scrollToWithMenuClose}
@@ -1324,6 +1345,7 @@ export default function TravelDetails() {
                         setRelatedTravels={setRelatedTravels}
                         scrollY={scrollY}
                         viewportHeight={viewportHeight}
+                        scrollRef={scrollRef}
                       />
                     ) : (
                       <ProgressiveWrapper 
@@ -1339,6 +1361,7 @@ export default function TravelDetails() {
                           setRelatedTravels={setRelatedTravels}
                           scrollY={scrollY}
                           viewportHeight={viewportHeight}
+                          scrollRef={scrollRef}
                         />
                       </ProgressiveWrapper>
                     )}
@@ -1384,9 +1407,9 @@ const TravelDeferredSections: React.FC<{
   setRelatedTravels: React.Dispatch<React.SetStateAction<Travel[]>>;
   scrollY: Animated.Value;
   viewportHeight: number;
-}> = ({ travel, isMobile, forceOpenKey, anchors, relatedTravels, setRelatedTravels, scrollY, viewportHeight }) => {
+  scrollRef: any;
+}> = ({ travel, isMobile, forceOpenKey, anchors, relatedTravels, setRelatedTravels, scrollY, viewportHeight, scrollRef }) => {
   const [canRenderHeavy, setCanRenderHeavy] = useState(false);
-  const [showExcursions, setShowExcursions] = useState(Platform.OS !== "web");
 
   useEffect(() => {
     if (Platform.OS !== "web") {
@@ -1410,14 +1433,13 @@ const TravelDeferredSections: React.FC<{
         isMobile={isMobile}
         anchors={anchors}
         forceOpenKey={forceOpenKey}
+        scrollRef={scrollRef}
       />
 
       <TravelVisualSections
         travel={travel}
         anchors={anchors}
         canRenderHeavy={canRenderHeavy}
-        showExcursions={showExcursions}
-        onRequestExcursions={() => setShowExcursions(true)}
       />
 
       <TravelRelatedContent
@@ -1460,6 +1482,9 @@ const TravelHeroSection: React.FC<{
     (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9;
   const resolvedWidth = heroContainerWidth ?? winW;
   const heroHeight = useMemo(() => {
+    // IMPORTANT (web): avoid layout shift caused by measuring container width post-render.
+    // Use a stable height on desktop web; mobile still uses viewport-based calc.
+    if (Platform.OS === "web" && !isMobile) return 420;
     if (!resolvedWidth) return isMobile ? 280 : 420;
     if (isMobile) {
       const mobileHeight = winH * 0.7;
@@ -1507,12 +1532,16 @@ const TravelHeroSection: React.FC<{
         <View
           style={styles.sliderContainer}
           collapsable={false}
-          onLayout={(e: LayoutChangeEvent) => {
-            const w = e.nativeEvent.layout.width;
-            if (w && Math.abs((heroContainerWidth ?? 0) - w) > 2) {
-              setHeroContainerWidth(w);
-            }
-          }}
+          onLayout={
+            Platform.OS === "web"
+              ? undefined
+              : (e: LayoutChangeEvent) => {
+                  const w = e.nativeEvent.layout.width;
+                  if (w && Math.abs((heroContainerWidth ?? 0) - w) > 2) {
+                    setHeroContainerWidth(w);
+                  }
+                }
+          }
         >
           <View style={heroHeight ? { height: heroHeight } : undefined}>
             {!firstImg ? (
@@ -1528,6 +1557,7 @@ const TravelHeroSection: React.FC<{
                 }}
                 alt={heroAlt}
                 height={heroHeight}
+                isMobile={isMobile}
                 onLoad={onFirstImageLoad}
               />
             ) : (
@@ -1633,7 +1663,8 @@ const TravelContentSections: React.FC<{
   isMobile: boolean;
   anchors: AnchorsMap;
   forceOpenKey: string | null;
-}> = ({ travel, isMobile, anchors, forceOpenKey }) => {
+  scrollRef: any;
+}> = ({ travel, isMobile, anchors, forceOpenKey, scrollRef }) => {
   type InsightKey = "recommendation" | "plus" | "minus";
 
   const stripHtml = useCallback((value?: string | null) => {
@@ -2101,9 +2132,7 @@ const TravelVisualSections: React.FC<{
   travel: Travel;
   anchors: AnchorsMap;
   canRenderHeavy: boolean;
-  showExcursions: boolean;
-  onRequestExcursions: () => void;
-}> = ({ travel, anchors, canRenderHeavy, showExcursions, onRequestExcursions }) => {
+}> = ({ travel, anchors, canRenderHeavy }) => {
   const { width } = useWindowDimensions();
   const hasMapData = (travel.coordsMeTravel?.length ?? 0) > 0;
   const { shouldLoad: shouldLoadMap, setElementRef } = useLazyMap({ enabled: Platform.OS === 'web' });
@@ -2135,27 +2164,13 @@ const TravelVisualSections: React.FC<{
                 <Text style={styles.sectionHeaderText}>Экскурсии</Text>
                 <Text style={styles.sectionSubtitle}>Покажем экскурсии рядом с точками маршрута</Text>
 
-                {!showExcursions ? (
-                  <View style={{ marginTop: 12, minHeight: 600 }}>
-                    <Pressable
-                      onPress={onRequestExcursions}
-                      accessibilityRole="button"
-                      accessibilityLabel="Показать экскурсии"
-                      style={({ pressed }) => [styles.neutralActionButton, pressed && styles.neutralActionButtonPressed]}
-                    >
-                      <Text style={styles.neutralActionButtonText}>Показать экскурсии</Text>
-                    </Pressable>
-                  </View>
-                ) : (
-                  <View style={{ marginTop: 12, minHeight: 600 }}>
-                    <BelkrajWidgetComponent
-                      countryCode={travel.countryCode}
-                      points={travel.travelAddress as any}
-                      collapsedHeight={600}
-                      expandedHeight={1000}
-                    />
-                  </View>
-                )}
+                <View style={{ marginTop: 12, minHeight: 600 }}>
+                  <BelkrajWidgetComponent
+                    countryCode={travel.countryCode}
+                    points={travel.travelAddress as any}
+                    collapsedHeight={600}
+                  />
+                </View>
               </View>
             </ExcursionsLazySection>
           </Suspense>

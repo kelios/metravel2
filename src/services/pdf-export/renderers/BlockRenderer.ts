@@ -504,17 +504,38 @@ export class BlockRenderer {
    */
   private buildSafeImageUrl(url: string): string {
     if (!url) return '';
-    if (url.startsWith('data:')) return url;
-    if (url.startsWith('http://') || url.startsWith('https://')) {
+
+    const trimmed = String(url).trim();
+    if (!trimmed) return '';
+
+    if (trimmed.startsWith('data:')) return trimmed;
+
+    // Protocol-relative URLs
+    if (trimmed.startsWith('//')) {
+      return this.buildSafeImageUrl(`https:${trimmed}`);
+    }
+
+    // Root-relative URLs (common in CMS: /storage/..., /uploads/...)
+    if (trimmed.startsWith('/')) {
+      if (typeof window !== 'undefined' && window.location?.origin) {
+        return this.buildSafeImageUrl(`${window.location.origin}${trimmed}`);
+      }
+      return this.buildSafeImageUrl(`https://metravel.by${trimmed}`);
+    }
+
+    // Absolute URLs
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       // Используем прокси для внешних изображений
       try {
-        const encoded = encodeURIComponent(url);
+        const encoded = encodeURIComponent(trimmed);
         return `https://images.weserv.nl/?url=${encoded}&w=1600&fit=inside`;
       } catch {
-        return url;
+        return trimmed;
       }
     }
-    return url;
+
+    // Other relative paths: try to make absolute using prod domain
+    return this.buildSafeImageUrl(`https://metravel.by/${trimmed.replace(/^\/+/, '')}`);
   }
 }
 

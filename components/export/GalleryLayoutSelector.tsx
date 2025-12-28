@@ -1,8 +1,8 @@
 // components/export/GalleryLayoutSelector.tsx
 // Компонент для выбора раскладки галереи
 
-import React from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
 
 interface GalleryLayoutInfo {
@@ -82,26 +82,70 @@ export default function GalleryLayoutSelector({
   spacing = 'normal',
   onSpacingChange,
 }: GalleryLayoutSelectorProps) {
+  const webScrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof window === 'undefined') return;
+
+    const el = webScrollRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      const deltaY = Number((e as any).deltaY ?? 0);
+      const deltaX = Number((e as any).deltaX ?? 0);
+      if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return;
+
+      const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
+      if (maxScrollLeft <= 0) return;
+
+      e.stopPropagation();
+      e.preventDefault();
+      el.scrollLeft += deltaY;
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel as any);
+  }, []);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Раскладка галереи</Text>
       
       {/* Выбор раскладки */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.layoutsContainer}
-        contentContainerStyle={styles.layoutsContent}
-      >
-        {GALLERY_LAYOUTS.map((layout) => (
-          <LayoutCard
-            key={layout.id}
-            layout={layout}
-            isSelected={selectedLayout === layout.id}
-            onSelect={() => onLayoutSelect(layout.id)}
-          />
-        ))}
-      </ScrollView>
+      {Platform.OS === 'web' ? (
+        <div
+          ref={webScrollRef}
+          style={styles.layoutsWebScroll as any}
+        >
+          <div style={styles.layoutsWebContent as any}>
+            {GALLERY_LAYOUTS.map((layout) => (
+              <LayoutCard
+                key={layout.id}
+                layout={layout}
+                isSelected={selectedLayout === layout.id}
+                onSelect={() => onLayoutSelect(layout.id)}
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.layoutsContainer}
+          contentContainerStyle={styles.layoutsContent}
+        >
+          {GALLERY_LAYOUTS.map((layout) => (
+            <LayoutCard
+              key={layout.id}
+              layout={layout}
+              isSelected={selectedLayout === layout.id}
+              onSelect={() => onLayoutSelect(layout.id)}
+            />
+          ))}
+        </ScrollView>
+      )}
 
       {/* Дополнительные настройки */}
       <View style={styles.settingsContainer}>
@@ -272,6 +316,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 12,
   },
+  layoutsWebScroll: {
+    overflowX: 'scroll',
+    overflowY: 'hidden',
+    width: '100%',
+    WebkitOverflowScrolling: 'touch',
+    scrollBehavior: 'smooth',
+    scrollbarWidth: 'thin',
+    scrollbarColor: '#cbd5e1 #f1f5f9',
+    paddingTop: 0,
+    paddingRight: 0,
+    paddingBottom: 8,
+    paddingLeft: 0,
+    marginBottom: 16,
+  } as any,
+  layoutsWebContent: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 0,
+    paddingHorizontal: 16,
+    width: 'max-content',
+  } as any,
   layoutCard: {
     width: 180,
     backgroundColor: '#ffffff',
@@ -284,6 +350,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    flexShrink: 0,
   },
   layoutCardSelected: {
     borderColor: '#2563eb',

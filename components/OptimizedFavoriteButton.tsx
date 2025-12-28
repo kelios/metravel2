@@ -69,7 +69,6 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
     if (Platform.OS === 'web') {
         return (
             <WebView
-                role="button"
                 tabIndex={0}
                 onClick={handlePress as any}
                 onKeyDown={(e: any) => {
@@ -78,6 +77,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                         handlePress(e);
                     }
                 }}
+                aria-label={serverIsFav ? 'Удалить из избранного' : 'Добавить в избранное'}
                 style={[styles.favoriteButton, style, { cursor: 'pointer' } as any]}
                 data-testid="favorite-button"
             >

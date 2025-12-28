@@ -352,10 +352,11 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     });
 
     if (Platform.OS === 'web') {
+        const { onBeforeInput: _onBeforeInput, ...rootProps } = getRootProps();
         return (
             <View style={styles.container}>
                 <div
-                    {...getRootProps()}
+                    {...rootProps}
                     style={{
                         ...(styles.dropzone as any),
                         ...(isDragActive ? (styles.dropzoneActive as any) : {}),

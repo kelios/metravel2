@@ -110,6 +110,25 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
         }
     }, [router]);
 
+    const handleHorizontalWheel = useCallback((e: any) => {
+        if (Platform.OS !== 'web') return;
+
+        const deltaY = Number(e?.deltaY ?? 0);
+        const deltaX = Number(e?.deltaX ?? 0);
+
+        if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return;
+
+        const target = e?.currentTarget as any;
+        const el = target?._nativeNode || target?._domNode || target;
+        if (!el || typeof (el as any).scrollLeft !== 'number') return;
+
+        const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
+        if (maxScrollLeft <= 0) return;
+
+        e.preventDefault?.();
+        (el as any).scrollLeft += deltaY;
+    }, []);
+
     // Условный возврат после всех хуков
     if (highlights.length === 0) return null;
     
@@ -170,6 +189,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                     } as any,
                     default: {},
                 })}
+                {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
             >
                 {highlights.map((item) => (
                     <TabTravelCard
@@ -299,6 +319,14 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingHorizontal: 12,
         paddingVertical: 6,
+        flexDirection: 'row',
+        flexWrap: 'nowrap',
+        ...(Platform.select({
+            web: {
+                width: 'max-content',
+            } as any,
+            default: {},
+        }) as any),
     },
 });
 

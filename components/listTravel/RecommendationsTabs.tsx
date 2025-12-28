@@ -642,11 +642,27 @@ const styles = StyleSheet.create({
   },
   tabPaneScroll: {
     flex: 1,
+    ...(Platform.select({
+      web: {
+        width: '100%',
+        overflowX: 'visible',
+        overflowY: 'visible',
+      } as any,
+      default: {},
+    }) as any),
   },
   tabPaneContent: {
     flexGrow: 1,
     paddingVertical: 4,
     alignItems: 'flex-start',
+    ...(Platform.select({
+      web: {
+        width: '100%',
+        overflowX: 'visible',
+        overflowY: 'visible',
+      } as any,
+      default: {},
+    }) as any),
   },
 
   gateContainer: {

@@ -63,7 +63,15 @@ export function useActiveSection(
       return;
     }
 
-    const safeHeaderOffset = typeof headerOffset === 'number' && !isNaN(headerOffset) ? headerOffset : 0;
+    const isDocumentRoot = (node: any): boolean => {
+      if (!node) return true;
+      const docAny = doc as any;
+      const scrollingEl = (doc.scrollingElement || docAny.documentElement || docAny.body) as any;
+      return node === window || node === doc || node === docAny.body || node === docAny.documentElement || node === scrollingEl;
+    };
+
+    const safeHeaderOffsetRaw = typeof headerOffset === 'number' && !isNaN(headerOffset) ? headerOffset : 0;
+    const safeHeaderOffset = isDocumentRoot(scrollRoot) ? safeHeaderOffsetRaw : 0;
 
     const observer = new IntersectionObserverCtor(
       (_entries) => {
