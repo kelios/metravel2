@@ -12,6 +12,10 @@ function HomeScreen() {
     const pathname = usePathname();
     const isFocused = useIsFocused();
 
+    if (Platform.OS === 'web' && pathname && pathname !== '/' && pathname !== '') {
+        return <View style={styles.container} />;
+    }
+
     const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
 
     const canonical = useMemo(() => `${SITE}${pathname || ''}`, [SITE, pathname]);

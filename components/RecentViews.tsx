@@ -136,6 +136,7 @@ export default function RecentViews({
       </View>
 
       <FlatList
+        testID="recent-views-list"
         data={recentTravels}
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -146,7 +147,7 @@ export default function RecentViews({
           </View>
         )}
         contentContainerStyle={styles.listContent}
-        {...Platform.select({ web: { onWheel: handleHorizontalWheel as any } })}
+        onWheel={handleHorizontalWheel as any}
       />
     </View>
   );

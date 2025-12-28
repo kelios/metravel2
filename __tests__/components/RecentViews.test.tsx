@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import RecentViews from '@/components/RecentViews';
+import { Platform, FlatList } from 'react-native';
 
 // Mock Feather icons
 jest.mock('@expo/vector-icons', () => ({
@@ -88,9 +89,15 @@ const createTravel = (overrides: Partial<any> = {}) =>
   } as any);
 
 describe('RecentViews', () => {
+  const originalPlatform = Platform.OS;
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockAsyncStorage.getItem.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    (Platform.OS as any) = originalPlatform;
   });
 
   it('should not render when loading', async () => {
@@ -204,5 +211,16 @@ describe('RecentViews', () => {
       // Должен вернуть null при ошибке
       expect(tree).toBeNull();
     });
+  });
+
+  it('should attach onWheel handler on web for horizontal list', async () => {
+    (Platform.OS as any) = 'web';
+
+    const mockTravels = [createTravel({ id: 1 }), createTravel({ id: 2, title: 'Travel 2' })];
+    const { getByTestId } = render(<RecentViews initialTravels={mockTravels} />);
+
+    const list = getByTestId('recent-views-list');
+    expect(list.props.horizontal).toBe(true);
+    expect(typeof list.props.onWheel).toBe('function');
   });
 });
