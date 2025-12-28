@@ -227,7 +227,7 @@ describe('UpsertTravel categories filters integration', () => {
     });
   });
 
-  it('applies fallback categories when API returns empty categories', async () => {
+  it('shows empty categories when API returns empty categories', async () => {
     mockFetchFilters.mockResolvedValue({
       categories: [],
       categoryTravelAddress: [],
@@ -243,16 +243,12 @@ describe('UpsertTravel categories filters integration', () => {
     await advanceToStep5(utils);
 
     expect(Array.isArray(capturedExtrasFilters?.categories)).toBe(true);
-    expect(capturedExtrasFilters.categories.length).toBeGreaterThan(0);
-    expect(capturedExtrasFilters.categories[0]).toEqual({ id: '1', name: 'Горы' });
+    expect(capturedExtrasFilters.categories.length).toBe(0);
   });
 
   it('uses API categories (even when nested) instead of fallback defaults', async () => {
     mockFetchFilters.mockResolvedValue({
-      categories: [
-        { id: 11, name: 'Дайвинг' },
-        { id: 12, name: 'Сафари' },
-      ],
+      categories: ['Дайвинг', 'Сафари'],
       categoryTravelAddress: [],
       transports: [],
       companions: [],
@@ -260,7 +256,7 @@ describe('UpsertTravel categories filters integration', () => {
       month: [],
       over_nights_stay: [],
       countries: [],
-    } as any);
+    });
 
     const utils = render(<UpsertTravel />);
 

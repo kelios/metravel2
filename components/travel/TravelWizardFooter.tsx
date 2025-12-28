@@ -95,7 +95,7 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                                         step === currentStep ? styles.stepBadgeActive : styles.stepBadgeInactive,
                                     ]}
                                     onPress={() => onStepSelect?.(step)}
-                                    disabled={!onStepSelect || step === currentStep}
+                                    disabled={!onStepSelect}
                                     {...Platform.select({ web: { cursor: onStepSelect ? 'pointer' : 'default' } })}
                                 >
                                     <Text
@@ -137,7 +137,7 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                                             step === currentStep ? styles.stepBadgeActive : styles.stepBadgeInactive,
                                         ]}
                                         onPress={() => onStepSelect?.(step)}
-                                        disabled={!onStepSelect || step === currentStep}
+                                        disabled={!onStepSelect}
                                         {...Platform.select({ web: { cursor: onStepSelect ? 'pointer' : 'default' } })}
                                     >
                                         <Text

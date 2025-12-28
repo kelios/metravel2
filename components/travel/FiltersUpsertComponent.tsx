@@ -24,40 +24,6 @@ const { width } = Dimensions.get('window');
 const isMobile = width <= METRICS.breakpoints.tablet;
 const MultiSelectFieldAny: any = MultiSelectField;
 
-function resolveFirstArray(source: any, keys: string[]) {
-    const rootCandidates = [source, source?.data, source?.result, source?.filters, source?.payload].filter(Boolean);
-
-    const visited = new Set<any>();
-    const queue: Array<{ node: any; depth: number }> = rootCandidates.map((n) => ({ node: n, depth: 0 }));
-    const MAX_DEPTH = 4;
-
-    while (queue.length) {
-        const { node, depth } = queue.shift()!;
-        if (!node || typeof node !== 'object') continue;
-        if (visited.has(node)) continue;
-        visited.add(node);
-
-        for (const k of keys) {
-            const v = (node as any)[k];
-            if (Array.isArray(v)) return v;
-        }
-
-        if (depth >= MAX_DEPTH) continue;
-
-        if (Array.isArray(node)) {
-            // Do not traverse arrays deeply; we only care about arrays at expected keys.
-            continue;
-        }
-
-        for (const child of Object.values(node)) {
-            if (child && typeof child === 'object' && !visited.has(child)) {
-                queue.push({ node: child, depth: depth + 1 });
-            }
-        }
-    }
-
-    return [];
-}
 
 function normalizeTravelCategoriesLocal(raw: any): Array<{ id: string; name: string }> {
     if (!Array.isArray(raw)) return [];
@@ -189,24 +155,16 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     const form: any = formData!;
     const resolvedFilters = filters!;
 
-    const rawCategories = resolveFirstArray(resolvedFilters, ['categories', 'categoriesTravel', 'travelCategories']);
-    const rawTransports = resolveFirstArray(resolvedFilters, ['transports', 'transportsTravel']);
-    const rawComplexity = resolveFirstArray(resolvedFilters, ['complexity', 'complexityTravel']);
-    const rawCompanions = resolveFirstArray(resolvedFilters, ['companions', 'companionsTravel']);
-    const rawOvernights = resolveFirstArray(resolvedFilters, ['over_nights_stay', 'overNightsStay']);
-    const rawMonth = resolveFirstArray(resolvedFilters, ['month', 'months']);
-    const rawCategoryTravelAddress = resolveFirstArray(resolvedFilters, ['categoryTravelAddress', 'category_travel_address', 'categoryPoints', 'pointCategories']);
-    const rawCountries = resolveFirstArray(resolvedFilters, ['countries']);
+    const rawCategories = resolvedFilters.categories || [];
+    const rawTransports = resolvedFilters.transports || [];
+    const rawComplexity = resolvedFilters.complexity || [];
+    const rawCompanions = resolvedFilters.companions || [];
+    const rawOvernights = resolvedFilters.over_nights_stay || [];
+    const rawMonth = resolvedFilters.month || [];
+    const rawCategoryTravelAddress = (resolvedFilters as any).categoryTravelAddress || [];
+    const rawCountries = resolvedFilters.countries || [];
 
     let resolvedCategories = normalizeTravelCategoriesLocal(rawCategories);
-    if (!resolvedCategories || resolvedCategories.length === 0) {
-        resolvedCategories = [
-            { id: '1', name: 'Горы' },
-            { id: '2', name: 'Море' },
-            { id: '3', name: 'Города' },
-            { id: '4', name: 'Природа' },
-        ];
-    }
 
     const resolvedTransports = normalizeIdNameList(rawTransports);
     const resolvedComplexity = normalizeIdNameList(rawComplexity);

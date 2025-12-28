@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, Platform, View, StyleSheet, ScrollView, findNodeHandle, UIManager, LayoutChangeEvent } from 'react-native';
+import { Button } from 'react-native-paper';
 
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
@@ -167,6 +168,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                     primaryLabel={stepMeta?.nextLabel ?? 'К публикации'}
                     onSave={onManualSave}
                     saveLabel="Сохранить"
+                    primaryDisabled={false}
                     onLayout={handleFooterLayout}
                     currentStep={currentStep}
                     totalSteps={totalSteps}

@@ -27,6 +27,7 @@ interface TravelWizardStepPublishProps {
     onGoBack: () => void;
     onFinish: () => void;
     onNavigateToIssue?: (issue: ModerationIssue) => void;
+    onStepSelect?: (step: number) => void;
     stepMeta?: {
         title?: string;
         subtitle?: string;
@@ -50,6 +51,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     onGoBack,
     onFinish,
     onNavigateToIssue,
+    onStepSelect,
     stepMeta,
     progress = currentStep / totalSteps,
     autosaveBadge,
@@ -426,6 +428,9 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     onSave={status === 'moderation' ? handleSaveDraft : undefined}
                     saveLabel="Сохранить как черновик"
                     onLayout={handleFooterLayout}
+                    currentStep={currentStep}
+                    totalSteps={totalSteps}
+                    onStepSelect={onStepSelect}
                 />
             </KeyboardAvoidingView>
         </SafeAreaView>
