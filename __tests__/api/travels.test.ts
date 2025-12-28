@@ -339,7 +339,17 @@ describe('src/api/travelsApi.ts', () => {
       const result = await fetchFilters();
 
       expect(devError).toHaveBeenCalled();
-      expect(result).toEqual([] as any);
+      expect(result).toEqual({
+        countries: [],
+        categories: [],
+        categoryTravelAddress: [],
+        companions: [],
+        complexity: [],
+        month: [],
+        over_nights_stay: [],
+        transports: [],
+        year: '',
+      } as any);
     });
 
     it('fetchFiltersCountry возвращает дефолт при ошибке', async () => {

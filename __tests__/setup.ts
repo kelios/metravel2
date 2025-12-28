@@ -22,6 +22,25 @@ console.error = (message, ...args) => {
   if (/(Ошибка при создании формы|Ошибка при отправке обратной связи|Error: AI request failed)/.test(text)) {
     return;
   }
+  // Suppress expected API fallback logs (devError) during unit tests
+  // These are intentionally triggered by tests that validate error fallbacks.
+  if (/\bError fetching filters\b/i.test(joined)) {
+    return;
+  }
+  if (/\bError fetching filters country\b/i.test(joined)) {
+    return;
+  }
+  if (/\bError fetching all countries\b/i.test(joined)) {
+    return;
+  }
+  // Suppress noisy React testing warnings about missing act(...)
+  // We only filter the well-known warning text to avoid hiding real errors.
+  if (
+    /not wrapped in act\(\.\.\.\)/i.test(joined) ||
+    /When testing, code that causes React state updates should be wrapped into act\(\.\.\.\)/i.test(joined)
+  ) {
+    return;
+  }
   // Suppress expected map snapshot errors in tests
   if (/\bMAP_SNAPSHOT_DOM\b/.test(joined)) {
     return;

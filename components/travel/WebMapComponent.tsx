@@ -262,7 +262,15 @@ const WebMapComponent = ({
             markers.length !== lastMarkersRef.current.length ||
             markers.some((m, idx) => {
                 const prev = lastMarkersRef.current[idx];
-                return !prev || m.lat !== prev.lat || m.lng !== prev.lng || m.address !== prev.address;
+                return (
+                    !prev ||
+                    m.lat !== prev.lat ||
+                    m.lng !== prev.lng ||
+                    m.address !== prev.address ||
+                    m.image !== prev.image ||
+                    String(m.country ?? '') !== String(prev.country ?? '') ||
+                    JSON.stringify(m.categories ?? []) !== JSON.stringify(prev.categories ?? [])
+                );
             });
 
         if (markersChanged) {

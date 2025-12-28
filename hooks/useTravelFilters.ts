@@ -224,7 +224,7 @@ export function normalizeCategoryTravelAddress(raw: any): Array<{ id: string; na
           String(id);
         return { id: String(id), name: String(name) };
       }
-      return { id: String(idx), name: String(item) };
+      return { id: String(item), name: String(item) };
     })
     .filter(Boolean);
 }
