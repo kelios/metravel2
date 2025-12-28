@@ -246,4 +246,35 @@ describe('UpsertTravel categories filters integration', () => {
     expect(capturedExtrasFilters.categories.length).toBeGreaterThan(0);
     expect(capturedExtrasFilters.categories[0]).toEqual({ id: '1', name: 'Горы' });
   });
+
+  it('uses API categories (even when nested) instead of fallback defaults', async () => {
+    mockFetchFilters.mockResolvedValue({
+      categories: [
+        { id: 11, name: 'Дайвинг' },
+        { id: 12, name: 'Сафари' },
+      ],
+      categoryTravelAddress: [],
+      transports: [],
+      companions: [],
+      complexity: [],
+      month: [],
+      over_nights_stay: [],
+      countries: [],
+    } as any);
+
+    const utils = render(<UpsertTravel />);
+
+    await waitFor(() => {
+      expect(mockFetchFilters).toHaveBeenCalled();
+    });
+
+    await advanceToStep5(utils);
+
+    await waitFor(() => {
+      const names = (capturedExtrasFilters?.categories ?? []).map((c: any) => c?.name);
+      expect(names).toContain('Дайвинг');
+      expect(names).toContain('Сафари');
+      expect(names).not.toContain('Горы');
+    }, { timeout: 3000 });
+  });
 });

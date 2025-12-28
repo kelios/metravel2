@@ -57,6 +57,57 @@ function normalizeCategoryTravelAddress(raw: any): Array<{ id: string; name: str
         .filter(Boolean);
 }
 
+function resolveFirstArrayDeep(source: any, keys: string[]) {
+    const rootCandidates = [
+        source,
+        source?.data,
+        source?.data?.filters,
+        source?.data?.filters?.filters,
+        source?.result,
+        source?.result?.filters,
+        source?.filters,
+        source?.payload,
+        source?.payload?.filters,
+    ].filter(Boolean);
+
+    const visited = new Set<any>();
+    const queue: Array<{ node: any; depth: number }> = rootCandidates.map((n) => ({ node: n, depth: 0 }));
+    const MAX_DEPTH = 10;
+
+    while (queue.length) {
+        const { node, depth } = queue.shift()!;
+        if (!node || typeof node !== 'object') continue;
+        if (visited.has(node)) continue;
+        visited.add(node);
+
+        for (const k of keys) {
+            const v = (node as any)[k];
+            if (Array.isArray(v)) return v;
+        }
+
+        if (depth >= MAX_DEPTH) continue;
+        if (Array.isArray(node)) continue;
+
+        for (const child of Object.values(node)) {
+            if (child && typeof child === 'object' && !visited.has(child)) {
+                queue.push({ node: child, depth: depth + 1 });
+            }
+        }
+    }
+
+    return [];
+}
+
+function unwrapArrayCandidate(v: any): any[] {
+    if (Array.isArray(v)) return v;
+    if (v && typeof v === 'object') {
+        if (Array.isArray((v as any).results)) return (v as any).results;
+        if (Array.isArray((v as any).data)) return (v as any).data;
+        if (Array.isArray((v as any).items)) return (v as any).items;
+    }
+    return [];
+}
+
 function normalizeTravelCategories(raw: any): Array<{ id: string; name: string }> {
     if (!Array.isArray(raw)) return [];
     return raw
@@ -555,36 +606,82 @@ export default function UpsertTravel() {
                     fetchAllCountries(),
                 ]);
                 if (!isMounted) return;
+
+                const filtersObj: any =
+                    filtersData && typeof filtersData === 'object' && !Array.isArray(filtersData)
+                        ? filtersData
+                        : {};
+
+                const filtersResolved: any =
+                    (filtersObj as any)?.data?.filters?.filters ??
+                    (filtersObj as any)?.data?.filters ??
+                    (filtersObj as any)?.result?.filters ??
+                    (filtersObj as any)?.payload?.filters ??
+                    (filtersObj as any)?.data ??
+                    filtersObj;
+
                 setFilters((prev) => {
-                    // Всегда обновляем категории точек, даже если страны уже были загружены ранее
-                    const base = prev && Array.isArray(prev.countries) && prev.countries.length > 0
-                        ? { ...prev }
-                        : {} as any;
+                    const base: any = {
+                        ...initFilters(),
+                        ...(prev && typeof prev === 'object' && !Array.isArray(prev) ? prev : {}),
+                    };
 
-                    console.info('Raw filtersData:', filtersData);
-                    console.info('Raw categoryTravelAddress:', filtersData?.categoryTravelAddress);
+                    let normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(filtersResolved?.categoryTravelAddress);
 
-                    let normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(filtersData?.categoryTravelAddress);
+                    const rawCategories = resolveFirstArrayDeep(filtersObj, [
+                        'categories',
+                        'categoriesTravel',
+                        'categories_travel',
+                        'travelCategories',
+                        'travel_categories',
+                        'categoryTravel',
+                        'category_travel',
+                    ]);
 
-                    let normalizedCategories = normalizeTravelCategories(
-                        (filtersData as any)?.categories ??
-                        (filtersData as any)?.categoriesTravel ??
-                        (filtersData as any)?.travelCategories,
-                    );
+                    const rawCategoriesDirect =
+                        (filtersObj as any)?.data?.filters?.filters?.categories ??
+                        (filtersObj as any)?.data?.filters?.categories ??
+                        (filtersObj as any)?.data?.categories ??
+                        (filtersObj as any)?.categories;
+                    const rawCategoriesDirectArr = unwrapArrayCandidate(rawCategoriesDirect);
+
+                    const rawCategoriesFallback =
+                        rawCategories.length > 0
+                            ? rawCategories
+                            : (rawCategoriesDirectArr.length > 0
+                                ? rawCategoriesDirectArr
+                                : ((filtersResolved as any)?.categories ?? []));
+                    let normalizedCategories = normalizeTravelCategories(rawCategoriesFallback);
+
+                    const rawPointCategories = resolveFirstArrayDeep(filtersObj, [
+                        'categoryTravelAddress',
+                        'category_travel_address',
+                        'categoryPoints',
+                        'pointCategories',
+                        'pointsCategories',
+                    ]);
+
+                    const rawPointCategoriesFallback =
+                        rawPointCategories.length > 0
+                            ? rawPointCategories
+                            : ((filtersResolved as any)?.categoryTravelAddress ?? (filtersResolved as any)?.category_travel_address ?? []);
+
+                    if ((!normalizedCategoryTravelAddress || normalizedCategoryTravelAddress.length === 0) && rawPointCategoriesFallback.length > 0) {
+                        normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(rawPointCategoriesFallback);
+                    }
 
                     // Если бэкенд вернул категории точек в поле categories (а categoryTravelAddress пуст),
                     // используем их как источник категорий точек.
                     if (
                         (!normalizedCategoryTravelAddress || normalizedCategoryTravelAddress.length === 0) &&
-                        Array.isArray((filtersData as any)?.categories) &&
-                        (filtersData as any).categories.length > 0
+                        Array.isArray(rawCategoriesFallback) &&
+                        rawCategoriesFallback.length > 0
                     ) {
-                        normalizedCategoryTravelAddress = normalizeCategoryTravelAddress((filtersData as any).categories);
+                        normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(rawCategoriesFallback);
                     }
 
                     // Fallback: если API не вернул категории точек, используем дефолтные
                     if (!normalizedCategoryTravelAddress || normalizedCategoryTravelAddress.length === 0) {
-                        console.warn('API returned empty categoryTravelAddress, using fallback values');
                         normalizedCategoryTravelAddress = [
                             { id: '1', name: 'Парковка' },
                             { id: '2', name: 'Отель' },
@@ -608,15 +705,13 @@ export default function UpsertTravel() {
                             ];
                     }
 
-                    console.info('Normalized categoryTravelAddress:', normalizedCategoryTravelAddress);
-
                     const normalizedCountries = (base.countries && base.countries.length > 0)
                         ? base.countries
                         : normalizeCountries(countryData);
 
                     return {
                         ...base,
-                        ...filtersData,
+                        ...filtersResolved,
                         categories: normalizedCategories,
                         categoryTravelAddress: normalizedCategoryTravelAddress,
                         countries: normalizedCountries,
@@ -664,18 +759,69 @@ export default function UpsertTravel() {
                 const filtersData = await fetchFilters();
                 if (cancelled) return;
 
+                const filtersObj: any =
+                    filtersData && typeof filtersData === 'object' && !Array.isArray(filtersData)
+                        ? filtersData
+                        : {};
+
+                const filtersResolved: any =
+                    (filtersObj as any)?.data?.filters?.filters ??
+                    (filtersObj as any)?.data?.filters ??
+                    (filtersObj as any)?.result?.filters ??
+                    (filtersObj as any)?.payload?.filters ??
+                    (filtersObj as any)?.data ??
+                    filtersObj;
+
                 setFilters((prev) => {
-                    const base = prev || initFilters();
+                    const base: any = {
+                        ...initFilters(),
+                        ...(prev && typeof prev === 'object' && !Array.isArray(prev) ? prev : {}),
+                    };
 
                     let normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(
-                        (filtersData as any)?.categoryTravelAddress,
+                        (filtersResolved as any)?.categoryTravelAddress,
                     );
 
-                    let normalizedCategories = normalizeTravelCategories(
-                        (filtersData as any)?.categories ??
-                        (filtersData as any)?.categoriesTravel ??
-                        (filtersData as any)?.travelCategories,
-                    );
+                    const rawCategories = resolveFirstArrayDeep(filtersObj, [
+                        'categories',
+                        'categoriesTravel',
+                        'categories_travel',
+                        'travelCategories',
+                        'travel_categories',
+                        'categoryTravel',
+                        'category_travel',
+                    ]);
+
+                    const rawCategoriesDirect =
+                        (filtersObj as any)?.data?.filters?.filters?.categories ??
+                        (filtersObj as any)?.data?.filters?.categories ??
+                        (filtersObj as any)?.data?.categories ??
+                        (filtersObj as any)?.categories;
+                    const rawCategoriesDirectArr = unwrapArrayCandidate(rawCategoriesDirect);
+                    const rawCategoriesFallback =
+                        rawCategories.length > 0
+                            ? rawCategories
+                            : (rawCategoriesDirectArr.length > 0
+                                ? rawCategoriesDirectArr
+                                : ((filtersResolved as any)?.categories ?? []));
+                    let normalizedCategories = normalizeTravelCategories(rawCategoriesFallback);
+
+                    const rawPointCategories = resolveFirstArrayDeep(filtersObj, [
+                        'categoryTravelAddress',
+                        'category_travel_address',
+                        'categoryPoints',
+                        'pointCategories',
+                        'pointsCategories',
+                    ]);
+
+                    const rawPointCategoriesFallback =
+                        rawPointCategories.length > 0
+                            ? rawPointCategories
+                            : ((filtersResolved as any)?.categoryTravelAddress ?? (filtersResolved as any)?.category_travel_address ?? []);
+
+                    if ((!normalizedCategoryTravelAddress || normalizedCategoryTravelAddress.length === 0) && rawPointCategoriesFallback.length > 0) {
+                        normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(rawPointCategoriesFallback);
+                    }
 
                     if (!normalizedCategories || normalizedCategories.length === 0) {
                         normalizedCategories = Array.isArray(base.categories) && base.categories.length > 0
@@ -689,15 +835,15 @@ export default function UpsertTravel() {
                     }
                     if (
                         (!normalizedCategoryTravelAddress || normalizedCategoryTravelAddress.length === 0) &&
-                        Array.isArray((filtersData as any)?.categories) &&
-                        (filtersData as any).categories.length > 0
+                        Array.isArray(rawCategoriesFallback) &&
+                        rawCategoriesFallback.length > 0
                     ) {
-                        normalizedCategoryTravelAddress = normalizeCategoryTravelAddress((filtersData as any).categories);
+                        normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(rawCategoriesFallback);
                     }
 
                     return {
                         ...base,
-                        ...filtersData,
+                        ...filtersResolved,
                         categoryTravelAddress:
                             normalizedCategoryTravelAddress && normalizedCategoryTravelAddress.length > 0
                                 ? normalizedCategoryTravelAddress
@@ -859,6 +1005,10 @@ export default function UpsertTravel() {
     const progressValue = currentStep / totalSteps;
     const countries = (filters?.countries ?? []) as any[];
     const selectedCountryIds = (formState.data.countries ?? []) as any[];
+    const safeFiltersForUI: any =
+        filters && typeof filters === 'object' && !Array.isArray(filters)
+            ? filters
+            : initFilters();
     const autosaveBadge = (() => {
         if (autosave.status === 'saving' || autosave.status === 'debouncing') {
             return 'Сохраняем черновик…';
@@ -1026,7 +1176,7 @@ export default function UpsertTravel() {
                 totalSteps={totalSteps}
                 formData={formState.data}
                 setFormData={setFormData}
-                filters={filters}
+                filters={safeFiltersForUI}
                 travelDataOld={travelDataOld}
                 isSuperAdmin={isSuperAdmin}
                 onManualSave={handleManualSave}
@@ -1062,7 +1212,7 @@ export default function UpsertTravel() {
             totalSteps={totalSteps}
             formData={formState.data}
             setFormData={setFormData}
-            filters={filters}
+            filters={safeFiltersForUI}
             travelDataOld={travelDataOld}
             isSuperAdmin={isSuperAdmin}
             onManualSave={handleManualSave}
@@ -1135,11 +1285,43 @@ function initFilters() {
             { id: '3', name: 'Города' },
             { id: '4', name: 'Природа' },
         ],
-        companions: [],
-        complexity: [],
-        month: [],
-        over_nights_stay: [],
-        transports: [],
+        companions: [
+            { id: '1', name: 'Один' },
+            { id: '2', name: 'Пара' },
+            { id: '3', name: 'Друзья' },
+            { id: '4', name: 'Семья' },
+        ],
+        complexity: [
+            { id: '1', name: 'Легко' },
+            { id: '2', name: 'Средне' },
+            { id: '3', name: 'Сложно' },
+        ],
+        month: [
+            { id: '1', name: 'Январь' },
+            { id: '2', name: 'Февраль' },
+            { id: '3', name: 'Март' },
+            { id: '4', name: 'Апрель' },
+            { id: '5', name: 'Май' },
+            { id: '6', name: 'Июнь' },
+            { id: '7', name: 'Июль' },
+            { id: '8', name: 'Август' },
+            { id: '9', name: 'Сентябрь' },
+            { id: '10', name: 'Октябрь' },
+            { id: '11', name: 'Ноябрь' },
+            { id: '12', name: 'Декабрь' },
+        ],
+        over_nights_stay: [
+            { id: '1', name: 'Палатка' },
+            { id: '2', name: 'Отель' },
+            { id: '3', name: 'Кемпинг' },
+            { id: '4', name: 'Без ночёвки' },
+        ],
+        transports: [
+            { id: '1', name: 'Авто' },
+            { id: '2', name: 'Поезд' },
+            { id: '3', name: 'Самолёт' },
+            { id: '4', name: 'Пешком' },
+        ],
         categoryTravelAddress: [
             { id: '1', name: 'Парковка' },
             { id: '2', name: 'Отель' },

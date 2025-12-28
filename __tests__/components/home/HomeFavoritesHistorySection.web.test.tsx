@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { Platform, ScrollView } from 'react-native';
+import { Platform } from 'react-native';
 
 import HomeFavoritesHistorySection from '@/components/home/HomeFavoritesHistorySection';
 import { useAuth } from '@/context/AuthContext';
@@ -90,19 +90,22 @@ describe('HomeFavoritesHistorySection (web)', () => {
     jest.clearAllMocks();
   });
 
-  it('renders horizontal ScrollView lists with onWheel enabled', () => {
-    const { getByTestId, UNSAFE_getAllByType } = render(<HomeFavoritesHistorySection />);
+  it('does not pass onWheel handler to horizontal shelves (prevents passive preventDefault warning)', () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { getByTestId } = render(<HomeFavoritesHistorySection />);
 
     const favoritesList = getByTestId('home-favorites-list');
     expect(favoritesList.props.horizontal).toBe(true);
-    expect(typeof favoritesList.props.onWheel).toBe('function');
+    expect(favoritesList.props.onWheel).toBeUndefined();
 
     const historyList = getByTestId('home-history-list');
     expect(historyList.props.horizontal).toBe(true);
-    expect(typeof historyList.props.onWheel).toBe('function');
+    expect(historyList.props.onWheel).toBeUndefined();
 
-    const scrollViews = UNSAFE_getAllByType(ScrollView);
-    // At least the 2 horizontal scroll shelves should be ScrollViews on web.
-    expect(scrollViews.length).toBeGreaterThanOrEqual(2);
+    const errorText = consoleError.mock.calls.map((c) => String(c?.[0] ?? '')).join('\n');
+    expect(errorText).not.toContain('Unable to preventDefault inside passive event listener');
+
+    consoleError.mockRestore();
   });
 });

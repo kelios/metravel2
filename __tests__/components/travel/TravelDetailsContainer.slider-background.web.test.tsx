@@ -3,8 +3,7 @@
  */
 
 import React, { Suspense } from 'react'
-import { act } from 'react-test-renderer'
-import { render } from '@testing-library/react-native'
+import renderer, { act } from 'react-test-renderer'
 
 import { Platform } from 'react-native'
 
@@ -13,6 +12,11 @@ const mockSliderSpy: jest.Mock<any, any> = jest.fn((_props: any) => null)
 jest.mock('@/components/travel/Slider', () => ({
   __esModule: true,
   default: (props: any) => mockSliderSpy(props),
+}))
+
+jest.mock('@/components/travel/AuthorCard', () => ({
+  __esModule: true,
+  default: () => null,
 }))
 
 describe('TravelHeroSection slider background regression (web)', () => {
@@ -54,21 +58,21 @@ describe('TravelHeroSection slider background regression (web)', () => {
       excursions: { current: null },
     }
 
-    render(
-      <Suspense fallback={null}>
-        <__testables.TravelHeroSection
-          travel={travel}
-          anchors={anchors}
-          isMobile={false}
-          renderSlider
-          onFirstImageLoad={() => {}}
-          sectionLinks={[]}
-          onQuickJump={() => {}}
-        />
-      </Suspense>,
-    )
-
     await act(async () => {
+      renderer.create(
+        <Suspense fallback={null}>
+          <__testables.TravelHeroSection
+            travel={travel}
+            anchors={anchors}
+            isMobile={false}
+            renderSlider
+            onFirstImageLoad={() => {}}
+            sectionLinks={[]}
+            onQuickJump={() => {}}
+          />
+        </Suspense>,
+      )
+
       await Promise.resolve()
     })
 

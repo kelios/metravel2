@@ -137,11 +137,11 @@ export const deleteImage = async (imageId: string) => {
 export const fetchFilters = async (): Promise<Filters> => {
   try {
     const res = await fetchWithTimeout(GET_FILTERS, {}, DEFAULT_TIMEOUT);
-    const parsed = await safeJsonParse<Filters>(res, [] as unknown as Filters);
+    const parsed = await safeJsonParse<Filters>(res, {} as unknown as Filters);
     return parsed;
   } catch (e: any) {
     devError('Error fetching filters:', e);
-    return [] as unknown as Filters;
+    return {} as unknown as Filters;
   }
 };
 

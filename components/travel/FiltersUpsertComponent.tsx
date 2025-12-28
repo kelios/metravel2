@@ -25,19 +25,34 @@ const isMobile = width <= METRICS.breakpoints.tablet;
 const MultiSelectFieldAny: any = MultiSelectField;
 
 function resolveFirstArray(source: any, keys: string[]) {
-    const candidates = [
-        source,
-        source?.data,
-        source?.result,
-        source?.filters,
-        source?.payload,
-    ];
+    const rootCandidates = [source, source?.data, source?.result, source?.filters, source?.payload].filter(Boolean);
 
-    for (const obj of candidates) {
-        if (!obj || typeof obj !== 'object') continue;
+    const visited = new Set<any>();
+    const queue: Array<{ node: any; depth: number }> = rootCandidates.map((n) => ({ node: n, depth: 0 }));
+    const MAX_DEPTH = 4;
+
+    while (queue.length) {
+        const { node, depth } = queue.shift()!;
+        if (!node || typeof node !== 'object') continue;
+        if (visited.has(node)) continue;
+        visited.add(node);
+
         for (const k of keys) {
-            const v = (obj as any)[k];
+            const v = (node as any)[k];
             if (Array.isArray(v)) return v;
+        }
+
+        if (depth >= MAX_DEPTH) continue;
+
+        if (Array.isArray(node)) {
+            // Do not traverse arrays deeply; we only care about arrays at expected keys.
+            continue;
+        }
+
+        for (const child of Object.values(node)) {
+            if (child && typeof child === 'object' && !visited.has(child)) {
+                queue.push({ node: child, depth: depth + 1 });
+            }
         }
     }
 

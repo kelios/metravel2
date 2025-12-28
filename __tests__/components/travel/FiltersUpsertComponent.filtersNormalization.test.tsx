@@ -226,4 +226,45 @@ describe('FiltersUpsertComponent - filters normalization', () => {
     expect(getCallByLabel('Месяц путешествия').items.length).toBeGreaterThan(0);
     expect(getCallByLabel('Страны для путешествия *').items.length).toBeGreaterThan(0);
   });
+
+  it('supports deeply nested filters shape (data.filters.*) and still provides non-empty items', () => {
+    const filters: any = {
+      data: {
+        filters: {
+          categories: [{ id: 1, name: 'Дайвинг' }],
+          transports: [{ id: 1, name: 'Машина' }],
+          complexity: [{ id: 1, name: 'Зеленый' }],
+          companions: [{ id: 3, name: 'Собака' }],
+          over_nights_stay: [{ id: 1, name: 'Палатка' }],
+          month: [{ id: 1, name: 'Январь' }],
+          categoryTravelAddress: [{ id: 1, name: 'Парковка' }],
+          countries: [{ country_id: 3, title_ru: 'Беларусь' }],
+        },
+      },
+    };
+
+    render(
+      <FiltersUpsertComponent
+        filters={filters}
+        formData={baseFormData}
+        setFormData={setFormData}
+        onSave={onSave}
+        showSaveButton={false}
+        showPreviewButton={false}
+        showPublishControls={false}
+        showCoverImage={false}
+        showCountries={true}
+        showCategories={true}
+        showAdditionalFields={true}
+      />
+    );
+
+    expect(getCallByLabel('Категории путешествий *').items.length).toBeGreaterThan(0);
+    expect(getCallByLabel('Средства передвижения').items.length).toBeGreaterThan(0);
+    expect(getCallByLabel('Физическая подготовка').items.length).toBeGreaterThan(0);
+    expect(getCallByLabel('Путешествуете с...').items.length).toBeGreaterThan(0);
+    expect(getCallByLabel('Ночлег...').items.length).toBeGreaterThan(0);
+    expect(getCallByLabel('Месяц путешествия').items.length).toBeGreaterThan(0);
+    expect(getCallByLabel('Страны для путешествия *').items.length).toBeGreaterThan(0);
+  });
 });

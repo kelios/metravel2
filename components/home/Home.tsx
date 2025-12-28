@@ -1,5 +1,5 @@
 import React, { useEffect, Suspense, lazy, useState } from 'react';
-import { View, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, FlatList, Platform } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -57,13 +57,69 @@ export default function Home() {
     });
   }, [isFocused, isAuthenticated, travelsCount]);
 
+  const sections = [
+    'hero',
+    'trust',
+    'howItWorks',
+    ...(isAuthenticated ? (['favoritesHistory'] as const) : []),
+    'inspiration',
+    'faq',
+    'finalCta',
+  ] as const;
+
+  const sectionCount = sections.length;
+
   return (
-    <ScrollView
+    <FlatList
+      data={sections}
+      keyExtractor={(item) => item}
+      renderItem={({ item }) => {
+        switch (item) {
+          case 'hero':
+            return <HomeHero travelsCount={travelsCount} />;
+          case 'trust':
+            return <HomeTrustBlock />;
+          case 'howItWorks':
+            return <HomeHowItWorks />;
+          case 'favoritesHistory':
+            return showHeavyContent ? (
+              <Suspense fallback={<View style={{ height: 240 }} />}>
+                <HomeFavoritesHistorySection />
+              </Suspense>
+            ) : (
+              <View style={{ height: 240 }} />
+            );
+          case 'inspiration':
+            return showHeavyContent ? (
+              <Suspense fallback={<SectionSkeleton />}>
+                <HomeInspirationSections />
+              </Suspense>
+            ) : (
+              <SectionSkeleton />
+            );
+          case 'faq':
+            return <HomeFAQSection />;
+          case 'finalCta':
+            return showHeavyContent ? (
+              <Suspense fallback={<View style={{ height: 300 }} />}>
+                <HomeFinalCTA travelsCount={travelsCount} />
+              </Suspense>
+            ) : (
+              <View style={{ height: 300 }} />
+            );
+          default:
+            return null;
+        }
+      }}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
-      removeClippedSubviews={Platform.OS !== 'web'}
+      removeClippedSubviews={Platform.OS === 'android'}
+      initialNumToRender={sectionCount}
+      maxToRenderPerBatch={sectionCount}
+      windowSize={Platform.OS === 'web' ? 5 : 7}
+      updateCellsBatchingPeriod={Platform.OS === 'web' ? 50 : 16}
       nestedScrollEnabled={Platform.OS === 'android'}
       {...Platform.select({
         web: {
@@ -73,38 +129,7 @@ export default function Home() {
           ],
         },
       })}
-    >
-      <HomeHero travelsCount={travelsCount} />
-      <HomeTrustBlock />
-      <HomeHowItWorks />
-
-      {isAuthenticated &&
-        (showHeavyContent ? (
-          <Suspense fallback={<View style={{ height: 240 }} />}>
-            <HomeFavoritesHistorySection />
-          </Suspense>
-        ) : (
-          <View style={{ height: 240 }} />
-        ))}
-      
-      {showHeavyContent ? (
-        <Suspense fallback={<SectionSkeleton />}>
-          <HomeInspirationSections />
-        </Suspense>
-      ) : (
-        <SectionSkeleton />
-      )}
-
-      <HomeFAQSection />
-      
-      {showHeavyContent ? (
-        <Suspense fallback={<View style={{ height: 300 }} />}>
-          <HomeFinalCTA travelsCount={travelsCount} />
-        </Suspense>
-      ) : (
-        <View style={{ height: 300 }} />
-      )}
-    </ScrollView>
+    />
   );
 }
 

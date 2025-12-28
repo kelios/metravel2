@@ -19,24 +19,6 @@ type TravelLikeItem = {
   city?: string | null;
 };
 
-function handleHorizontalWheel(e: any) {
-  if (Platform.OS !== 'web') return;
-
-  const deltaY = Number(e?.deltaY ?? 0);
-  const deltaX = Number(e?.deltaX ?? 0);
-  if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return;
-
-  const target = e?.currentTarget as any;
-  const el = target?._nativeNode || target?._domNode || target;
-  if (!el || typeof (el as any).scrollLeft !== 'number') return;
-
-  const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
-  if (maxScrollLeft <= 0) return;
-
-  e.preventDefault?.();
-  (el as any).scrollLeft += deltaY;
-}
-
 function handleHorizontalWheelForElement(e: any, el: any) {
   if (Platform.OS !== 'web') return;
   if (!el || typeof (el as any).scrollLeft !== 'number') return;
@@ -125,17 +107,16 @@ function HorizontalCards({
   if (Platform.OS === 'web') {
     return (
       <ScrollView
-        ref={scrollRef}
         testID={testID}
+        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.horizontalList}
         contentContainerStyle={styles.horizontalListContent}
-        {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
       >
         {data.map((item) => (
           <TabTravelCard
-            key={`${String(item.id)}-${item.url}`}
+            key={String(item.id)}
             item={{
               id: item.id,
               title: item.title,
