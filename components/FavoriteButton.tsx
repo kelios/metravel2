@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
-import { TouchableOpacity, StyleSheet, Platform, Pressable } from 'react-native';
+import { TouchableOpacity, StyleSheet, Platform, Pressable, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { useRouter } from 'expo-router';
@@ -142,32 +142,43 @@ export default function FavoriteButton({
         }
     }, [isAuthenticated, router, isFav, id, type, title, imageUrl, url, country, city, addFavorite, removeFavorite]);
 
-    // ✅ FIX: Use Pressable on web to avoid button nesting when inside another Pressable
-    const ButtonComponent = Platform.OS === 'web' ? Pressable : TouchableOpacity;
+    // On web, avoid rendering a DOM <button> to prevent nested button warnings inside clickable cards.
+    // (react-native-web renders Pressable as <button> by default)
+    const WebButton: any = View;
+    const ButtonComponent = Platform.OS === 'web' ? WebButton : TouchableOpacity;
 
     return (
         <ButtonComponent
             style={[styles.button, globalFocusStyles.focusable, style]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-            onPress={handlePress as any}
             {...(Platform.OS === 'web'
                 ? {
-                      onPressIn: (e: any) => {
-                          if (e?.stopPropagation) e.stopPropagation();
+                      role: 'button',
+                      tabIndex: 0,
+                      onClick: handlePress as any,
+                      onKeyDown: (e: any) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault?.();
+                              handlePress(e);
+                          }
                       },
                       onMouseDown: (e: any) => {
                           if (e?.stopPropagation) e.stopPropagation();
                       },
+                      'aria-label': isFav ? 'Удалить из избранного' : 'Добавить в избранное',
+                      'aria-pressed': isFav,
                   }
-                : null)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityRole="button"
-            accessibilityLabel={isFav ? `Удалить "${title}" из избранного` : `Добавить "${title}" в избранное`}
-            accessibilityHint={isFav ? 'Удаляет элемент из списка избранного' : 'Добавляет элемент в список избранного'}
-            accessibilityState={{ selected: isFav }}
-            // @ts-ignore - для веб доступности
-            aria-label={Platform.OS === 'web' ? (isFav ? 'Удалить из избранного' : 'Добавить в избранное') : undefined}
-            // @ts-ignore
-            aria-pressed={Platform.OS === 'web' ? isFav : undefined}
+                : {
+                      onPress: handlePress as any,
+                      hitSlop: { top: 10, bottom: 10, left: 10, right: 10 },
+                      accessibilityRole: 'button',
+                      accessibilityLabel: isFav
+                          ? `Удалить "${title}" из избранного`
+                          : `Добавить "${title}" в избранное`,
+                      accessibilityHint: isFav
+                          ? 'Удаляет элемент из списка избранного'
+                          : 'Добавляет элемент в список избранного',
+                      accessibilityState: { selected: isFav },
+                  })}
         >
             <MaterialIcons
                 name={isFav ? 'favorite' : 'favorite-border'}
