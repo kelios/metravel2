@@ -440,6 +440,87 @@ describe('TravelDataTransformer', () => {
       // src должен быть переписан через безопасный прокси
       expect(result[0].description).toContain('https://images.weserv.nl/?url=');
     });
+
+    it('должен переписывать локальные IP в richText <img src> на prod домен', () => {
+      const richHtml = '<p>Фото</p><img src="https://192.168.50.36/gallery/5076/conversions/a.jpg?v=1" alt="a"/>';
+      const travels: Travel[] = [
+        {
+          id: 1,
+          name: 'Test',
+          slug: 'test',
+          url: 'test',
+          youtube_link: '',
+          userName: 'user',
+          description: richHtml,
+          recommendation: '',
+          plus: '',
+          minus: '',
+          cityName: '',
+          countryName: '',
+          countUnicIpView: '',
+          gallery: [],
+          travelAddress: [],
+          userIds: '',
+          year: '2024',
+          monthName: '',
+          number_days: 0,
+          companions: [],
+          countryCode: '',
+          travel_image_thumb_url: '',
+          travel_image_thumb_small_url: '',
+        },
+      ];
+
+      const result = transformer.transform(travels);
+      expect(result[0].description).toContain('https://images.weserv.nl/?url=');
+      // Внутри параметра url должен быть уже продовый домен, а не локальный IP
+      expect(result[0].description).toContain(encodeURIComponent('metravel.by/gallery/5076/conversions/a.jpg?v=1'));
+      expect(result[0].description).not.toContain('192.168.50.36');
+    });
+
+    it('должен нормализовать travelAddress.travelImageThumbUrl и переписать локальные IP на prod домен', () => {
+      const travels: Travel[] = [
+        {
+          id: 1,
+          name: 'Test',
+          slug: 'test',
+          url: 'test',
+          youtube_link: '',
+          userName: 'user',
+          description: '',
+          recommendation: '',
+          plus: '',
+          minus: '',
+          cityName: '',
+          countryName: '',
+          countUnicIpView: '',
+          gallery: [],
+          travelAddress: [
+            {
+              id: 1,
+              address: 'Point',
+              coord: '1,1',
+              travelImageThumbUrl: 'https://192.168.50.36/gallery/5076/conversions/a-thumb.jpg',
+            },
+          ] as any,
+          userIds: '',
+          year: '2024',
+          monthName: '',
+          number_days: 0,
+          companions: [],
+          countryCode: '',
+          travel_image_thumb_url: '',
+          travel_image_thumb_small_url: '',
+        },
+      ];
+
+      const result = transformer.transform(travels);
+      const thumb = result[0].travelAddress?.[0]?.travelImageThumbUrl;
+      expect(thumb).toBeTruthy();
+      expect(String(thumb)).toContain('https://images.weserv.nl/?url=');
+      expect(String(thumb)).toContain(encodeURIComponent('metravel.by/gallery/5076/conversions/a-thumb.jpg'));
+      expect(String(thumb)).not.toContain('192.168.50.36');
+    });
   });
 });
 

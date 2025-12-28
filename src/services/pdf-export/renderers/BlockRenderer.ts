@@ -194,28 +194,9 @@ export class BlockRenderer {
         ${width ? `width="${width}"` : ''}
         ${height ? `height="${height}"` : ''}
         style="${imageStyle}"
-        onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+        onerror="this.style.display='none';"
         crossorigin="anonymous"
       />
-    `;
-
-    const placeholder = `
-      <div style="
-        display: none;
-        width: 100%;
-        min-height: 200px;
-        background: ${this.theme.colors.surfaceAlt};
-        border: 2px dashed ${this.theme.colors.border};
-        border-radius: ${this.theme.blocks.borderRadius};
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: ${this.theme.colors.textMuted};
-        font-family: ${this.theme.typography.bodyFont};
-        margin: ${this.theme.spacing.blockSpacing} auto;
-      ">
-        Изображение недоступно
-      </div>
     `;
 
     if (caption) {
@@ -225,7 +206,6 @@ export class BlockRenderer {
           page-break-inside: avoid;
         ">
           ${imageTag}
-          ${placeholder}
           <figcaption style="
             font-size: ${this.theme.typography.caption.size};
             line-height: ${this.theme.typography.caption.lineHeight};
@@ -241,7 +221,6 @@ export class BlockRenderer {
     return `
       <div style="margin: ${this.theme.spacing.blockSpacing} 0;">
         ${imageTag}
-        ${placeholder}
       </div>
     `;
   }
@@ -509,6 +488,12 @@ export class BlockRenderer {
     if (!trimmed) return '';
 
     if (trimmed.startsWith('data:')) return trimmed;
+
+    // Если URL уже проксирован (например, TravelDataTransformer уже переписал <img src>),
+    // не проксируем второй раз — это ломает загрузку изображений в печати/PDF.
+    if (/^https?:\/\/images\.weserv\.nl\//i.test(trimmed)) {
+      return trimmed;
+    }
 
     // Protocol-relative URLs
     if (trimmed.startsWith('//')) {

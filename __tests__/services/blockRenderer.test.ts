@@ -53,6 +53,8 @@ describe('BlockRenderer', () => {
     expect(image).toContain('images.weserv.nl')
     expect(image).toContain('&lt;danger&gt;')
     expect(image).toContain('Описание')
+    expect(image).not.toContain('Изображение недоступно')
+    expect(image).toContain("onerror=\"this.style.display='none';\"")
 
     const gallery = renderer.renderBlock({
       type: 'image-gallery',

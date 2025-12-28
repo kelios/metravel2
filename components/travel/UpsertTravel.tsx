@@ -202,6 +202,11 @@ export default function UpsertTravel() {
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
 
+    const filtersRefetchStateRef = useRef<{ step: number | null; inFlight: boolean }>({
+        step: null,
+        inFlight: false,
+    });
+
     const [step1SubmitErrors, setStep1SubmitErrors] = useState<ValidationError[]>([]);
 
     const pendingIssueNavRef = useRef<{ step: number; anchorId?: string } | null>(null);
@@ -595,6 +600,72 @@ export default function UpsertTravel() {
             isMounted = false;
         };
     }, [authReady, id, isNew, loadTravelData]);
+
+    useEffect(() => {
+        const needsPointCategories =
+            (currentStep === 2 || currentStep === 3) &&
+            (!filters?.categoryTravelAddress || filters.categoryTravelAddress.length === 0);
+        const needsTravelCategories =
+            (currentStep === 5 || currentStep === 6) &&
+            (!filters?.categories || filters.categories.length === 0);
+
+        const needRefetch = needsPointCategories || needsTravelCategories;
+        if (!needRefetch) return;
+
+        const refetchState = filtersRefetchStateRef.current;
+        if (refetchState.inFlight) return;
+        if (refetchState.step === currentStep) return;
+
+        refetchState.inFlight = true;
+        refetchState.step = currentStep;
+
+        let cancelled = false;
+        (async () => {
+            try {
+                setIsFiltersLoading(true);
+                const filtersData = await fetchFilters();
+                if (cancelled) return;
+
+                setFilters((prev) => {
+                    const base = prev || initFilters();
+
+                    let normalizedCategoryTravelAddress = normalizeCategoryTravelAddress(
+                        (filtersData as any)?.categoryTravelAddress,
+                    );
+                    if (
+                        (!normalizedCategoryTravelAddress || normalizedCategoryTravelAddress.length === 0) &&
+                        Array.isArray((filtersData as any)?.categories) &&
+                        (filtersData as any).categories.length > 0
+                    ) {
+                        normalizedCategoryTravelAddress = normalizeCategoryTravelAddress((filtersData as any).categories);
+                    }
+
+                    return {
+                        ...base,
+                        ...filtersData,
+                        categoryTravelAddress:
+                            normalizedCategoryTravelAddress && normalizedCategoryTravelAddress.length > 0
+                                ? normalizedCategoryTravelAddress
+                                : base.categoryTravelAddress,
+                        categories:
+                            Array.isArray((filtersData as any)?.categories) && (filtersData as any).categories.length > 0
+                                ? (filtersData as any).categories
+                                : base.categories,
+                    } as any;
+                });
+            } catch (error) {
+                console.error('Ошибка повторной загрузки фильтров:', error);
+            } finally {
+                if (!cancelled) setIsFiltersLoading(false);
+                filtersRefetchStateRef.current.inFlight = false;
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+            filtersRefetchStateRef.current.inFlight = false;
+        };
+    }, [currentStep, filters?.categories, filters?.categoryTravelAddress]);
 
     // Повторная загрузка стран, если список пуст при переходе на шаг 2
     useEffect(() => {

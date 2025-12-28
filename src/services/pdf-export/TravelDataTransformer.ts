@@ -254,7 +254,10 @@ export class TravelDataTransformer {
       id: String(addr.id || addr),
       address: typeof addr === 'string' ? addr : (addr.address || addr.name || ''),
       coord: typeof addr === 'string' ? '' : (addr.coord || ''),
-      travelImageThumbUrl: typeof addr === 'string' ? undefined : addr.travelImageThumbUrl,
+      travelImageThumbUrl:
+        typeof addr === 'string'
+          ? undefined
+          : this.buildSafeImageUrl(addr.travelImageThumbUrl),
       categoryName: typeof addr === 'string' ? undefined : addr.categoryName,
     }));
   }
@@ -381,11 +384,32 @@ export class TravelDataTransformer {
       return `https://metravel.by${trimmed}`;
     }
 
-    // Если это относительный путь без начального '/', пробуем сделать его абсолютным
-    // (например: 'storage/..', 'uploads/..')
-    if (!/^https?:\/\//i.test(trimmed) && !trimmed.includes('://') && !trimmed.includes('.')) {
-      // если вообще нет домена/точки — считаем относительным путем
+    // Если это относительный путь без протокола и без ведущего '/',
+    // считаем его путём на нашем домене (часто приходит из CMS как `uploads/...` или `storage/...`).
+    // Пример: `uploads/photo.jpg` -> `https://metravel.by/uploads/photo.jpg`
+    if (!/^https?:\/\//i.test(trimmed) && !trimmed.includes('://')) {
       return this.buildSafeImageUrl(`https://metravel.by/${trimmed.replace(/^\/+/, '')}`);
+    }
+
+    // Если URL указывает на локальную сеть (dev backend), он будет недоступен в печати/PDF.
+    // Переписываем origin на продовый домен, сохраняя path + query.
+    try {
+      const parsed = new URL(trimmed);
+      const host = parsed.hostname.toLowerCase();
+      const isLocalhost = host === 'localhost' || host === '127.0.0.1';
+      const isPrivateV4 =
+        /^192\.168\./.test(host) ||
+        /^10\./.test(host) ||
+        /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+
+      if (isLocalhost || isPrivateV4) {
+        const rewritten = new URL(trimmed);
+        rewritten.protocol = 'https:';
+        rewritten.host = 'metravel.by';
+        return this.buildSafeImageUrl(rewritten.toString());
+      }
+    } catch {
+      // ignore URL parse errors
     }
 
     try {

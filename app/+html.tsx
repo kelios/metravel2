@@ -151,9 +151,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
         href="/images/hero.avif"
         as="image"
       />
-      
-      {/* Preload критичных ресурсов */}
-      <link rel="modulepreload" href="/_expo/static/js/web/index.js" />
+
 
       {/* Preload Feather icon font to prevent CLS */}
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

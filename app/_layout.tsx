@@ -2,7 +2,7 @@ import "@expo/metro-runtime";
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, StyleSheet, View, LogBox } from "react-native";
 import { MD3LightTheme as DefaultTheme, PaperProvider } from "react-native-paper";
-import { SplashScreen, Stack, usePathname } from "expo-router";
+import { SplashScreen, Stack, usePathname, useRootNavigationState } from "expo-router";
 import Head from "expo-router/head";
 import Toast from "react-native-toast-message";
 import { FiltersProvider } from "@/providers/FiltersProvider";
@@ -136,6 +136,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
     const pathname = usePathname();
+    const rootNavState = useRootNavigationState();
     const { width } = useResponsive();
     const [clientWidth, setClientWidth] = useState<number | null>(null);
 
@@ -301,6 +302,8 @@ function RootLayoutNav() {
       !isMobile &&
       (pathname?.includes('roulette') || pathname?.includes('random'));
 
+    const isNavReady = !isWeb || Boolean(rootNavState?.key);
+
     return (
       <ErrorBoundary>
         <PaperProvider theme={theme}>
@@ -340,9 +343,15 @@ function RootLayoutNav() {
                             <NetworkStatus position="top" />
 
                             <View style={[styles.content]}>
-                                <Stack screenOptions={{ headerShown: false }}>
-                                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                                </Stack>
+                                {isNavReady ? (
+                                  <Stack screenOptions={{ headerShown: false }}>
+                                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                                  </Stack>
+                                ) : (
+                                  <View testID="root-nav-loading" style={styles.fontLoader}>
+                                    <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.primary} />
+                                  </View>
+                                )}
 
                                 {/* Прокладка: только высота док-строки футера */}
                                 <BottomGutter />

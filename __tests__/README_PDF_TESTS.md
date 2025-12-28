@@ -70,23 +70,25 @@ __tests__/
 
 ## 🚀 Запуск тестов
 
+Все команды ниже запускайте из папки `metravel2/metravel2` (там лежит `package.json`).
+
 ### Все тесты PDF экспорта
 ```bash
-npm test -- pdf
+npm run test:run -- pdf
 ```
 
 ### Конкретный файл
 ```bash
-npm test -- TravelDataTransformer
-npm test -- EnhancedPdfGenerator
-npm test -- pdfContentValidation
-npm test -- PdfExportService
-npm test -- usePdfExport
+npm run test:run -- TravelDataTransformer
+npm run test:run -- EnhancedPdfGenerator
+npm run test:run -- pdfContentValidation
+npm run test:run -- PdfExportService
+npm run test:run -- usePdfExport
 ```
 
 ### С покрытием
 ```bash
-npm test -- --coverage pdf
+npm run test:coverage -- pdf
 ```
 
 ## ✅ Проверяемые элементы
@@ -235,7 +237,7 @@ Article-PDF экспорт и связанные с ним сервисы/тес
    - После существенных изменений в экспорте всегда запускать полный набор pdf-тестов:
 
      ```bash
-     npm test -- pdf
+     npm run test:run -- pdf
      ```
 
    - Следить, чтобы не ломались ключевые сценарии: обложка, оглавление, страницы путешествий, галерея, финальная страница.

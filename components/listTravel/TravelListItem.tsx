@@ -644,7 +644,13 @@ const unifiedCard = (
     containerOverlaySlot={selectableOverlay}
     contentSlot={contentSlotWithoutTitle}
     webAsView={Platform.OS === 'web'}
-    webPressableProps={selectable ? cardWrapperProps : undefined}
+    webPressableProps={
+      Platform.OS === 'web'
+        ? selectable
+          ? cardWrapperProps
+          : {}
+        : undefined
+    }
     mediaProps={{
       placeholderBlurhash: PLACEHOLDER_BLURHASH,
       blurBackground: true,

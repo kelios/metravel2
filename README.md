@@ -20,6 +20,9 @@ Cross-platform travel application built with React Native and Expo.
 ### Installation
 
 ```bash
+# IMPORTANT: run all npm commands from this folder (it contains package.json)
+# metravel2/metravel2
+
 # Install dependencies
 npm install
 
@@ -110,11 +113,17 @@ npm run build:all:prod     # Production builds
 ## 🧪 Testing
 
 ```bash
-# Run tests
-npm test
+# Run tests (interactive watchAll)
+npm run test
 
 # Run tests with coverage
 npm run test:coverage
+
+# Single run (recommended for CI/automation)
+npm run test:run
+
+# Run only tests matching a pattern
+npm run test:run -- pdf
 
 # Enforce image/card architecture rules
 npm run check:image-architecture
@@ -122,6 +131,8 @@ npm run check:image-architecture
 # CI-style run (guard + tests)
 npm run test:ci
 ```
+
+More details: see `docs/testing-guide.md`.
 
 ## 🖼 Images & Cards (важно)
 
