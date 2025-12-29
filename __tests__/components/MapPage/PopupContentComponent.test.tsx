@@ -123,6 +123,23 @@ describe('PopupContentComponent (web popup template)', () => {
     );
   });
 
+  it('does not open unsafe primary URLs', () => {
+    const { getByLabelText } = render(
+      <PopupContentComponent
+        travel={{
+          ...baseTravel,
+          urlTravel: 'javascript:alert(1)',
+          articleUrl: '',
+        }}
+      />
+    );
+
+    const card = getByLabelText(`Открыть: ${baseTravel.address}`);
+    (fireEvent as any)(card, 'click');
+
+    expect(window.open).not.toHaveBeenCalled();
+  });
+
   it('renders long description and many categories without crashing and keeps scrollable panel', () => {
     const longDescription = 'Очень длинное описание '.repeat(100);
     const manyCats = Array.from({ length: 20 }, (_, i) => `Категория ${i + 1}`).join(', ');

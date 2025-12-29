@@ -16,6 +16,8 @@ import { TravelCoords } from '@/src/types/types';
 import { METRICS } from '@/constants/layout';
 import PopupContentComponent from './PopupContentComponent';
 import { useResponsive } from '@/hooks/useResponsive';
+import { CoordinateConverter } from '@/utils/coordinateConverter';
+import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 
 type Props = {
     travel: TravelCoords;
@@ -31,10 +33,8 @@ const addVersion = (url?: string, updated?: string) =>
 /* helpers */
 const parseCoord = (coord?: string) => {
     if (!coord) return null;
-    const cleaned = coord.replace(/;/g, ',').replace(/\s+/g, '');
-    const [latStr, lonStr] = cleaned.split(',').map(s => s.trim());
-    const lat = Number(latStr), lon = Number(lonStr);
-    return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
+    const parsed = CoordinateConverter.fromLooseString(coord);
+    return parsed ? { lat: parsed.lat, lon: parsed.lng } : null;
 };
 
 const buildMapUrl = (coord?: string) => {
@@ -42,11 +42,14 @@ const buildMapUrl = (coord?: string) => {
     return p ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}` : '';
 };
 
+const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
+
 const openExternal = async (url?: string) => {
-    if (!url) return;
+    const safeUrl = getSafeExternalUrl(url, { allowRelative: true, baseUrl: SITE_URL });
+    if (!safeUrl) return;
     try {
-        const can = await Linking.canOpenURL(url);
-        if (can) await Linking.openURL(url);
+        const can = await Linking.canOpenURL(safeUrl);
+        if (can) await Linking.openURL(safeUrl);
         else Toast.show({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });
     } catch {
         Toast.show({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });

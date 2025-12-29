@@ -38,6 +38,20 @@ export class CoordinateConverter {
   }
 
   /**
+   * Parse coordinates from a loose string format "lat,lng" or "lat;lng"
+   * Returns null instead of throwing for invalid inputs.
+   */
+  static fromLooseString(str: string): LatLng | null {
+    if (!str || typeof str !== 'string') return null;
+    const cleaned = str.replace(/;/g, ',').replace(/\s+/g, '');
+    try {
+      return this.fromString(cleaned);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Convert LatLng to Leaflet tuple format [lat, lng]
    */
   static toLeaflet(coords: LatLng): LatLngTuple {

@@ -46,7 +46,9 @@ import { useTravelDetails } from "@/hooks/useTravelDetails";
 import { useActiveSection } from "@/hooks/useActiveSection";
 import { useScrollNavigation } from "@/hooks/useScrollNavigation";
 import { useMenuState } from "@/hooks/useMenuState";
+import { useScrollListener } from "@/hooks/useTravelDetailsUtils";
 import InstantSEO from "@/components/seo/InstantSEO";
+import { safeGetYoutubeId, createSafeJsonLd, stripHtml, createSafeImageUrl, getSafeOrigin, isSafePreconnectDomain } from "@/utils/travelDetailsSecure";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
 import ReadingProgressBar from "@/components/ReadingProgressBar";
 import TravelSectionsSheet from "@/components/travel/TravelSectionsSheet";
@@ -258,39 +260,21 @@ const Icon: React.FC<{ name: string; size?: number; color?: string }> = ({
 const HEADER_OFFSET_DESKTOP = 72;
 const HEADER_OFFSET_MOBILE = 56;
 
-/* -------------------- utils -------------------- */
-const getYoutubeId = (url?: string | null) => {
-  if (!url) return null;
-  const m =
-    url.match(/(?:youtu\.be\/|shorts\/|embed\/|watch\?v=|watch\?.*?v%3D)([^?&/#]+)/) ||
-    url.match(/youtube\.com\/.*?[?&]v=([^?&#]+)/);
-  return m?.[1] ?? null;
-};
 
-const stripToDescription = (html?: string) => {
-  const plain = (html || "")
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<[^>]+>/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  return (plain || "Найди место для путешествия и поделись своим опытом.").slice(0, 160);
-};
+/* -------------------- utils (используются из импортов) -------------------- */
+// ✅ SECURITY: Функции перемещены в utils/travelDetailsSecure.ts:
+// - safeGetYoutubeId: валидирует YouTube ID (11 символов)
+// - stripHtml: защита от XSS
+// - createSafeImageUrl: безопасное преобразование URL
+// - getSafeOrigin: валидация origin
+// - isSafePreconnectDomain: whitelisting для preconnect
 
-const getOrigin = (url?: string) => {
-  try {
-    return url ? new URL(url.replace(/^http:\/\//i, "https://")).origin : null;
-  } catch {
-    return null;
-  }
-};
-
-const buildVersioned = (url?: string, updated_at?: string | null, id?: any) => {
-  if (!url) return "";
-  const base = url.replace(/^http:\/\//i, "https://");
-  const ver = updated_at ? Date.parse(updated_at) : id ? Number(id) : 0;
-  return ver && Number.isFinite(ver) ? `${base}?v=${ver}` : base;
-};
+// Переадресация для обратной совместимости внутри компонента
+const getYoutubeId = safeGetYoutubeId;
+const stripToDescription = (html?: string) => stripHtml(html).slice(0, 160);
+const getOrigin = getSafeOrigin;
+const buildVersioned = (url?: string, updated_at?: string | null, id?: any) =>
+  createSafeImageUrl(url, updated_at, id);
 
 /* -------------------- idle helper -------------------- */
 const rIC = (cb: () => void, timeout = 300) => {
@@ -346,7 +330,8 @@ const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
       "https://maps.googleapis.com",
       "https://img.youtube.com",
       "https://api.metravel.by",
-    ].filter(Boolean) as string[];
+    ]
+      .filter((d): d is string => isSafePreconnectDomain(d)) // ✅ SECURITY: Использование whitelist
 
     domains.forEach((d) => {
       if (!document.querySelector(`link[rel="preconnect"][href="${d}"]`)) {
@@ -419,7 +404,7 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
       ? Math.min(window.innerWidth || 1200, isMobile ? 480 : 1440)
       : 1200;
 
-  const optimizedSrc =
+  const srcWithRetry =
     optimizeImageUrl(baseSrc, {
       width: targetWidth,
       format: "webp",
@@ -427,7 +412,6 @@ const OptimizedLCPHero: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => vo
       fit: "contain",
     }) || baseSrc;
 
-  const srcWithRetry = optimizedSrc;
 
   if (Platform.OS !== "web") {
     return (
@@ -840,16 +824,7 @@ export default function TravelDetailsContainer() {
       });
     const origin = firstUrl ? getOrigin(firstUrl) : null;
 
-    const structuredData = travel
-      ? {
-          "@context": "https://schema.org",
-          "@type": "Article",
-          headline: travel.name,
-          description: desc,
-          image: firstUrl ? [firstUrl] : undefined,
-          url: canonical,
-        }
-      : null;
+    const structuredData = createSafeJsonLd(travel);
 
     return {
       readyTitle: title,
@@ -991,23 +966,25 @@ export default function TravelDetailsContainer() {
     setViewportHeight(e.nativeEvent.layout.height);
   }, []);
 
+  // ✅ SECURITY: Используем useScrollListener хук вместо ручного управления памятью
+  useScrollListener(
+    scrollY,
+    (value) => {
+      if (isMobile) {
+        const threshold = Math.max(140, (heroBlockHeight || 0) - 24);
+        const next = value > threshold;
+        setShowMobileSectionTabs((prev) => (prev === next ? prev : next));
+      }
+    },
+    [isMobile, heroBlockHeight]
+  );
+
   useEffect(() => {
     if (!isMobile) {
       if (showMobileSectionTabs) setShowMobileSectionTabs(false);
       return;
     }
-
-    // Порог появления навигации/действий — сразу после hero-блока (измеряется по факту)
-    // Фоллбек 140px — если измерение ещё не произошло.
-    const threshold = Math.max(140, (heroBlockHeight || 0) - 24);
-    const id = scrollY.addListener(({ value }) => {
-      const next = value > threshold;
-      setShowMobileSectionTabs((prev) => (prev === next ? prev : next));
-    });
-    return () => {
-      scrollY.removeListener(id);
-    };
-  }, [heroBlockHeight, isMobile, scrollY, showMobileSectionTabs]);
+  }, [isMobile, showMobileSectionTabs]);
 
   // ✅ АРХИТЕКТУРА: Intersection Observer логика теперь в useActiveSection
   // Остается только логика установки data-section-key атрибутов
@@ -1528,7 +1505,7 @@ function TravelHeroSection({
           ) : shouldShowOptimizedHero && !renderSlider ? (
             <OptimizedLCPHero
               img={{
-                url: typeof firstImg === "string" ? firstImg : firstImg.url,
+                url: firstImg.url,
                 width: firstImg.width,
                 height: firstImg.height,
                 updated_at: firstImg.updated_at,
@@ -1639,7 +1616,6 @@ function TravelHeroSection({
 export const __testables = {
   OptimizedLCPHero,
   useLCPPreload,
-  TravelHeroSection,
 };
 
 const TravelContentSections: React.FC<{
@@ -1817,8 +1793,7 @@ const TravelContentSections: React.FC<{
 
         // If we're in a numbered section, treat plain lines as continuation of the last main bullet.
         if (inNumbered && items.length > 0) {
-          const lastMainIndex = [...items].reverse().findIndex((x) => x.level === 0);
-          const idxFromEnd = lastMainIndex;
+          const idxFromEnd = [...items].reverse().findIndex((x) => x.level === 0);
           if (idxFromEnd !== -1) {
             const absoluteIndex = items.length - 1 - idxFromEnd;
             items[absoluteIndex] = {
@@ -2182,7 +2157,7 @@ const TravelVisualSections: React.FC<{
         <View style={{ marginTop: 12 }}>
           {hasMapData ? (
             <ToggleableMap
-              initiallyOpen={isMobileWeb ? false : true}
+              initiallyOpen={!isMobileWeb}
               keepMounted
               isLoading={!shouldRenderMap}
               loadingLabel="Подгружаем карту маршрута..."

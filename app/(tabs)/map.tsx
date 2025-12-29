@@ -34,6 +34,7 @@ import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { getStyles } from './map.styles';
+import { CoordinateConverter } from '@/utils/coordinateConverter';
 
 // Ensure RouteHint is bundled (used inside FiltersPanel)
 import '@/components/MapPage/RouteHint';
@@ -53,7 +54,7 @@ const LazyMapPanel = lazy(() => import('@/components/MapPage/MapPanel'));
 export default function MapScreen() {
     const pathname = usePathname();
     const isFocused = useIsFocused();
-    const { isPhone, isLargePhone } = useResponsive();
+    const { isPhone, isLargePhone, width } = useResponsive();
     const insets = useSafeAreaInsets();
     const isMobile = isPhone || isLargePhone;
     const queryClient = useQueryClient();
@@ -383,10 +384,10 @@ export default function MapScreen() {
     // handleClearRoute now comes from routeStore adapter
 
     const buildRouteTo = useCallback((item: any) => {
-        if (item.coord) {
-            const [lat, lng] = item.coord.split(',').map(Number);
-            setCoordinates({ latitude: lat, longitude: lng });
-        }
+        if (!item?.coord) return;
+        const parsed = CoordinateConverter.fromLooseString(String(item.coord));
+        if (!parsed) return;
+        setCoordinates({ latitude: parsed.lat, longitude: parsed.lng });
     }, []);
 
     // handleAddressSelect now comes from routeStore adapter
@@ -425,8 +426,8 @@ export default function MapScreen() {
     const headerOffset = Platform.OS === 'web' ? HEADER_HEIGHT_WEB : 0;
 
     const styles = useMemo(
-        () => getStyles(isMobile, insets.top, headerOffset),
-        [isMobile, insets.top, headerOffset],
+        () => getStyles(isMobile, insets.top, headerOffset, width),
+        [isMobile, insets.top, headerOffset, width],
     );
     const mapPanelPlaceholder = (
         <View style={styles.mapPlaceholder}>
@@ -506,6 +507,7 @@ export default function MapScreen() {
                                     ? styles.rightPanelMobileOpen
                                     : styles.rightPanelMobileClosed
                                 : null,
+                            !isMobile && !rightPanelVisible ? styles.rightPanelDesktopClosed : null,
                         ]}
                         accessibilityLabel="Панель карты"
                         id="map-panel"

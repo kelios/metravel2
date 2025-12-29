@@ -2,6 +2,8 @@
 import React, { useCallback, memo, useEffect, useRef, useState, useMemo } from 'react';
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { CoordinateConverter } from '@/utils/coordinateConverter';
+import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 
 interface Travel {
   address: string;
@@ -20,12 +22,8 @@ interface PopupContentWebProps {
 }
 
 const parseLatLng = (coord: string): { lat: number; lng: number } | null => {
-  if (!coord) return null;
-  const cleaned = coord.replace(/;/g, ',').replace(/\s+/g, '');
-  const [latS, lngS] = cleaned.split(',').map((s) => s.trim());
-  const lat = Number(latS), lng = Number(lngS);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  return { lat, lng };
+  const parsed = CoordinateConverter.fromLooseString(coord);
+  return parsed ? { lat: parsed.lat, lng: parsed.lng } : null;
 };
 
 const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose }) => {
@@ -70,7 +68,10 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
 
   const safeOpen = useCallback((url?: string) => {
     if (!url) return;
-    if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
+    const baseUrl = typeof window !== 'undefined' ? window.location?.origin ?? '' : '';
+    const safeUrl = getSafeExternalUrl(url, { allowRelative: true, baseUrl });
+    if (!safeUrl) return;
+    if (typeof window !== 'undefined') window.open(safeUrl, '_blank', 'noopener,noreferrer');
   }, []);
 
   const openPrimary = useCallback(() => { safeOpen(urlTravel || articleUrl); }, [urlTravel, articleUrl, safeOpen]);

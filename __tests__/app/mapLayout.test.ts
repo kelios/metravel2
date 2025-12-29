@@ -23,7 +23,7 @@ describe('map layout header offset', () => {
     Object.defineProperty(Platform, 'OS', { value: 'web' });
 
     const headerOffset = 88;
-    const styles = getStyles(false, 0, headerOffset);
+    const styles = getStyles(false, 0, headerOffset, 1280);
 
     expect(styles.container.paddingTop).toBe(0);
     expect(styles.rightPanel.top).toBe(0);
@@ -43,14 +43,14 @@ describe('map layout header offset', () => {
 
     const headerOffset = 88;
     const insetTop = 12;
-    const styles = getStyles(true, insetTop, headerOffset);
+    const styles = getStyles(true, insetTop, headerOffset, 360);
 
     // For mobile web: header offset handled by DOM, only inset applies
     expect(styles.tabsContainer.paddingTop).toBe(insetTop + 6);
     expect(styles.container.paddingTop).toBe(0);
 
     // Mobile overlay / panel transitions
-    expect(styles.rightPanelMobileClosed.transform?.[0].translateX).toBe(400);
+    expect(styles.rightPanelMobileClosed.transform?.[0].translateX).toBe(360);
     expect(styles.rightPanelMobileClosed.opacity).toBe(0);
     expect(styles.rightPanelMobileOpen.opacity).toBe(1);
   });

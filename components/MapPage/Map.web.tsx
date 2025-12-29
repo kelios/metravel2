@@ -6,6 +6,7 @@ import * as Location from 'expo-location';
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 import RoutingMachine from './RoutingMachine';
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
+import { CoordinateConverter } from '@/utils/coordinateConverter';
 // MapLegend is currently unused in the web map
 
 type ReactLeafletNS = typeof import('react-leaflet');
@@ -58,9 +59,13 @@ const getClusterGridForZoom = (zoom: number) => {
 };
 
 const strToLatLng = (s: string): [number, number] | null => {
-  const [lat, lng] = s.split(',').map(Number);
-  return Number.isFinite(lat) && Number.isFinite(lng) ? [lng, lat] : null;
+  const parsed = CoordinateConverter.fromLooseString(s);
+  if (!parsed) return null;
+  return [parsed.lng, parsed.lat];
 };
+
+const buildClusterKey = (center: [number, number], count: number) =>
+  `${center[0].toFixed(5)}|${center[1].toFixed(5)}|${count}`;
 
 // ✅ ОПТИМИЗАЦИЯ: Мемоизированный компонент маркеров для предотвращения лишних перерисовок
 interface TravelMarkersProps {
@@ -131,7 +136,12 @@ const ClusterLayer: React.FC<{
   Marker: React.ComponentType<any>;
   Popup: React.ComponentType<any>;
   PopupContent: React.ComponentType<{ point: Point }>;
-  onClusterZoom: (center: [number, number], bounds: [[number, number], [number, number]]) => void;
+  onClusterZoom: (payload: {
+    center: [number, number];
+    bounds: [[number, number], [number, number]];
+    key: string;
+    items: Point[];
+  }) => void;
   expandedClusterKey?: string | null;
   expandedClusterItems?: Point[] | null;
   markerIcon?: any;
@@ -173,7 +183,7 @@ const ClusterLayer: React.FC<{
       const count = cell.items.length;
       const centerLat = (cell.minLat + cell.maxLat) / 2;
       const centerLng = (cell.minLng + cell.maxLng) / 2;
-      const key = `${centerLat.toFixed(5)}|${centerLng.toFixed(5)}|${count}`;
+      const key = buildClusterKey([centerLat, centerLng], count);
       return {
         key,
         count,
@@ -296,13 +306,15 @@ const ClusterLayer: React.FC<{
               click: (e: any) => {
                 e?.originalEvent?.preventDefault?.();
                 e?.originalEvent?.stopPropagation?.();
-                onClusterZoom(
-                  [cluster.center[0], cluster.center[1]],
-                  [
+                onClusterZoom({
+                  center: [cluster.center[0], cluster.center[1]],
+                  bounds: [
                     [cluster.bounds[0][0], cluster.bounds[0][1]],
                     [cluster.bounds[1][0], cluster.bounds[1][1]],
-                  ]
-                );
+                  ],
+                  key: cluster.key,
+                  items: cluster.items,
+                });
               },
             }}
           >
@@ -353,6 +365,9 @@ const MapPageComponent: React.FC<Props> = ({
   const [disableFitBounds, setDisableFitBounds] = useState(false);
   const [expandedCluster, setExpandedCluster] = useState<{ key: string; items: Point[] } | null>(null);
   const [mapZoom, setMapZoom] = useState<number>(11);
+  const [isNarrow, setIsNarrow] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false
+  );
   const travelData = useMemo(
     () => (Array.isArray(travel?.data) ? travel.data : []),
     [travel?.data]
@@ -364,21 +379,31 @@ const MapPageComponent: React.FC<Props> = ({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
-    const handler = () => {};
-    if (media.addEventListener) {
-      media.addEventListener('change', handler);
-    } else {
-      // @ts-ignore
-      media.addListener(handler);
-    }
-    return () => {
-      if (media.removeEventListener) {
-        media.removeEventListener('change', handler);
+    const update = () => setIsNarrow(window.innerWidth < MOBILE_BREAKPOINT);
+    update();
+
+    if (typeof window.matchMedia === 'function') {
+      const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+      const handler = () => setIsNarrow(media.matches);
+      if (media.addEventListener) {
+        media.addEventListener('change', handler);
       } else {
         // @ts-ignore
-        media.removeListener(handler);
+        media.addListener(handler);
       }
+      return () => {
+        if (media.removeEventListener) {
+          media.removeEventListener('change', handler);
+        } else {
+          // @ts-ignore
+          media.removeListener(handler);
+        }
+      };
+    }
+
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('resize', update);
     };
   }, []);
 
@@ -840,9 +865,9 @@ const MapPageComponent: React.FC<Props> = ({
         <div
           style={{
             position: 'absolute',
-            top: window.innerWidth < MOBILE_BREAKPOINT ? undefined : 10,
-            right: window.innerWidth < MOBILE_BREAKPOINT ? 16 : 10,
-            bottom: window.innerWidth < MOBILE_BREAKPOINT ? 80 : undefined,
+            top: isNarrow ? undefined : 10,
+            right: isNarrow ? 16 : 10,
+            bottom: isNarrow ? 80 : undefined,
             zIndex: 1000,
           }}
         >
@@ -984,24 +1009,12 @@ const MapPageComponent: React.FC<Props> = ({
             expandClusters={expandClusters}
             expandedClusterKey={expandedCluster?.key}
             expandedClusterItems={expandedCluster?.items}
-            onClusterZoom={(center, bounds) => {
+            onClusterZoom={({ center, bounds, key, items }) => {
               if (!mapRef.current) return;
               try {
                 const map = mapRef.current;
                 map.closePopup();
-                setExpandedCluster({
-                  key: `${center[0].toFixed(5)}|${center[1].toFixed(5)}|${Math.max(2, travelData.length)}`,
-                  items: travelData.filter((p) => {
-                    const ll = strToLatLng(p.coord);
-                    if (!ll) return false;
-                    const [lng, lat] = ll;
-                    const minLat = Math.min(bounds[0][0], bounds[1][0]);
-                    const maxLat = Math.max(bounds[0][0], bounds[1][0]);
-                    const minLng = Math.min(bounds[0][1], bounds[1][1]);
-                    const maxLng = Math.max(bounds[0][1], bounds[1][1]);
-                    return lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng;
-                  }),
-                });
+                setExpandedCluster({ key, items });
                 map.fitBounds(
                   [
                     [bounds[0][0], bounds[0][1]],

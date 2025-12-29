@@ -8,8 +8,14 @@ const PANEL_GAP = METRICS.spacing.m; // 16px
 const OVERLAY_COLOR = 'rgba(0, 0, 0, 0.5)';
 const TRANSITION_MS = 180;
 
-export const getStyles = (isMobile: boolean, insetTop: number, headerOffset: number) => {
+export const getStyles = (
+  isMobile: boolean,
+  insetTop: number,
+  headerOffset: number,
+  windowWidth: number = METRICS.breakpoints.tablet,
+) => {
   const effectiveHeaderOffset = Platform.OS === 'web' ? 0 : headerOffset;
+  const panelSlideDistance = Math.max(windowWidth, PANEL_WIDTH_TABLET);
   return StyleSheet.create({
     // На web шапка уже занимает поток, поэтому смещение не требуется
     // На native (если появится) оставляем headerOffset
@@ -127,9 +133,17 @@ export const getStyles = (isMobile: boolean, insetTop: number, headerOffset: num
         pointerEvents: 'auto',
       },
       rightPanelMobileClosed: {
-        transform: [{ translateX: 400 }],
+        transform: [{ translateX: panelSlideDistance }],
         opacity: 0,
         pointerEvents: 'none',
+      },
+      rightPanelDesktopClosed: {
+        width: 0,
+        minWidth: 0,
+        maxWidth: 0,
+        opacity: 0,
+        pointerEvents: 'none',
+        transform: [{ translateX: 16 }],
       },
       overlay: {
         position: 'absolute',
