@@ -1009,7 +1009,7 @@ const MapPageComponent: React.FC<Props> = ({
             expandClusters={expandClusters}
             expandedClusterKey={expandedCluster?.key}
             expandedClusterItems={expandedCluster?.items}
-            onClusterZoom={({ center, bounds, key, items }) => {
+            onClusterZoom={({ bounds, key, items }) => {
               if (!mapRef.current) return;
               try {
                 const map = mapRef.current;

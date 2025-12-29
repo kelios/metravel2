@@ -3,7 +3,7 @@
  * Handles light/dark mode switching with persistence
  */
 
-import { useEffect, useState, useCallback, createContext, useContext } from 'react';
+import { useEffect, useState, useCallback, createContext, useContext, createElement } from 'react';
 import { Platform, useColorScheme } from 'react-native';
 
 export type Theme = 'light' | 'dark' | 'auto';
@@ -100,11 +100,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     toggleTheme,
   };
 
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return createElement(ThemeContext.Provider, { value }, children);
 }
 
 /**

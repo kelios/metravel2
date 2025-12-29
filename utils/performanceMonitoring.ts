@@ -3,6 +3,8 @@
  * Measures Core Web Vitals and provides optimization suggestions
  */
 
+import { initializeWebVitalsMonitoring } from '@/utils/webVitalsMonitoring';
+
 export interface PerformanceMetrics {
   lcp: number; // Largest Contentful Paint
   fid: number; // First Input Delay
@@ -12,11 +14,26 @@ export interface PerformanceMetrics {
   loadTime: number; // Page load time
 }
 
+export type PerformanceMetricName = keyof PerformanceMetrics;
+export type PerformanceMetricReporter = (metric: {
+  name: PerformanceMetricName;
+  value: number;
+}) => void;
+
+interface PerformanceMonitorOptions {
+  report?: PerformanceMetricReporter;
+  debug?: boolean;
+}
+
 export class PerformanceMonitor {
   private metrics: Partial<PerformanceMetrics> = {};
   private observers: PerformanceObserver[] = [];
+  private report?: PerformanceMetricReporter;
+  private debug: boolean;
 
-  constructor() {
+  constructor(options: PerformanceMonitorOptions = {}) {
+    this.report = options.report;
+    this.debug = Boolean(options.debug);
     if (typeof window === 'undefined') return;
     this.init();
   }
@@ -119,7 +136,22 @@ export class PerformanceMonitor {
     });
   }
 
-  private sendMetric(name: string, value: number) {
+  private sendMetric(name: PerformanceMetricName, value: number) {
+    if (typeof window !== 'undefined') {
+      (window as any).__perfMetrics = {
+        ...((window as any).__perfMetrics || {}),
+        [name]: value,
+      };
+    }
+
+    if (this.report) {
+      this.report({ name, value });
+    }
+
+    if (this.debug) {
+      console.info('[Performance]', name, value);
+    }
+
     // Send to analytics service (Google Analytics, etc.)
     if (typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', 'web_vitals', {
@@ -182,9 +214,10 @@ export class PerformanceMonitor {
 }
 
 // Initialize performance monitoring
-export function initPerformanceMonitoring() {
+export function initPerformanceMonitoring(options: PerformanceMonitorOptions = {}) {
   if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
-    const monitor = new PerformanceMonitor();
+    initializeWebVitalsMonitoring();
+    const monitor = new PerformanceMonitor(options);
     
     // Log suggestions after page load
     window.addEventListener('load', () => {

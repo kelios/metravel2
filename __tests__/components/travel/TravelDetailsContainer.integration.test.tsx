@@ -4,13 +4,13 @@
  */
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+// import { render, screen, waitFor } from '@testing-library/react';
+// import userEvent from '@testing-library/user-event';
 import { queryClient } from '@/src/queryClient';
 import { QueryClientProvider } from '@tanstack/react-query';
 
 // Mock travel data
-const mockTravel = {
+const _mockTravel = {
   id: 1,
   name: 'Минск - столица Беларуси',
   slug: 'minsk-capital',
@@ -54,7 +54,7 @@ const mockTravel = {
 };
 
 // Wrapper component for tests
-const TestWrapper = ({ children }: { children: React.ReactNode }) => (
+const _TestWrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider client={queryClient}>
     {children}
   </QueryClientProvider>

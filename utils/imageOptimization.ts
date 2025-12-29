@@ -9,10 +9,14 @@ export interface ImageOptimizationOptions {
   width?: number;
   height?: number;
   quality?: number; // 1-100
-  format?: 'webp' | 'jpg' | 'png' | 'auto';
+  format?: 'avif' | 'webp' | 'jpg' | 'png' | 'auto';
   dpr?: number; // Device Pixel Ratio
   fit?: 'cover' | 'contain' | 'fill';
+  blur?: number; // 1-100 (if supported by CDN)
 }
+
+const optimizedUrlCache = new Map<string, string>();
+const MAX_CACHE_SIZE = 400;
 
 /**
  * Оптимизирует URL изображения с учетом размеров и формата
@@ -33,9 +37,15 @@ export function optimizeImageUrl(
     format = 'auto',
     dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
     fit = 'cover',
+    blur,
   } = options;
 
   try {
+    const cacheKey = `${originalUrl}:${JSON.stringify({ ...options, dpr })}`;
+    if (optimizedUrlCache.has(cacheKey)) {
+      return optimizedUrlCache.get(cacheKey);
+    }
+
     // Force HTTPS for security and performance
     const secureUrl = originalUrl.replace(/^http:\/\//i, 'https://');
     
@@ -67,28 +77,66 @@ export function optimizeImageUrl(
     if (quality && quality !== 100) {
       url.searchParams.set('q', String(quality));
     }
-    if (format && format !== 'auto') {
-      url.searchParams.set('f', format);
+    const resolvedFormat = resolveImageFormat(format);
+    if (resolvedFormat) {
+      url.searchParams.set('f', resolvedFormat);
     }
     if (fit) {
       url.searchParams.set('fit', fit);
     }
+    if (typeof blur === 'number' && blur > 0) {
+      url.searchParams.set('blur', String(Math.min(100, Math.round(blur))));
+    }
 
     // Добавляем параметр для поддержки WebP (если поддерживается браузером)
     if (Platform.OS === 'web' && format === 'auto') {
-      // Проверяем поддержку WebP через canvas (если доступен)
-      const supportsWebP = checkWebPSupport();
-      if (supportsWebP && !url.searchParams.has('f')) {
-        url.searchParams.set('f', 'webp');
+      // Проверяем поддержку AVIF/WebP через canvas (если доступен)
+      const preferred = getPreferredImageFormat();
+      if (preferred && !url.searchParams.has('f')) {
+        url.searchParams.set('f', preferred);
       }
     }
 
-    return url.toString();
+    const optimizedUrl = url.toString();
+    if (optimizedUrlCache.size >= MAX_CACHE_SIZE) {
+      const keysToDelete = Array.from(optimizedUrlCache.keys()).slice(0, 100);
+      keysToDelete.forEach((key) => optimizedUrlCache.delete(key));
+    }
+    optimizedUrlCache.set(cacheKey, optimizedUrl);
+
+    return optimizedUrl;
   } catch (error) {
     // Если URL некорректен, возвращаем оригинал
     console.warn('Error optimizing image URL:', error);
     return originalUrl;
   }
+}
+
+export function getPreferredImageFormat(): 'avif' | 'webp' | 'jpg' {
+  if (Platform.OS !== 'web') return 'webp';
+  if (checkAvifSupport()) return 'avif';
+  if (checkWebPSupport()) return 'webp';
+  return 'jpg';
+}
+
+function resolveImageFormat(
+  format: ImageOptimizationOptions['format']
+): 'avif' | 'webp' | 'jpg' | 'png' | undefined {
+  if (!format) return undefined;
+  if (format === 'auto') {
+    return Platform.OS === 'web' ? getPreferredImageFormat() : undefined;
+  }
+
+  if (Platform.OS === 'web') {
+    if (format === 'avif' && !checkAvifSupport()) {
+      return getPreferredImageFormat();
+    }
+    if (format === 'webp' && !checkWebPSupport()) {
+      return 'jpg';
+    }
+  }
+
+  return format;
 }
 
 /**
@@ -116,6 +164,34 @@ function checkWebPSupport(): boolean {
   } catch {
     (window as any).__webpSupportChecked = true;
     (window as any).__webpSupport = false;
+    return false;
+  }
+}
+
+/**
+ * Проверяет поддержку AVIF в браузере
+ */
+function checkAvifSupport(): boolean {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') {
+    return false;
+  }
+
+  if ((window as any).__avifSupportChecked !== undefined) {
+    return (window as any).__avifSupport;
+  }
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const supportsAvif =
+      canvas.toDataURL('image/avif').indexOf('data:image/avif') === 0;
+    (window as any).__avifSupportChecked = true;
+    (window as any).__avifSupport = supportsAvif;
+    return supportsAvif;
+  } catch {
+    (window as any).__avifSupportChecked = true;
+    (window as any).__avifSupport = false;
     return false;
   }
 }
@@ -164,16 +240,20 @@ export function getOptimalImageSize(
  */
 export function generateSrcSet(
   baseUrl: string,
-  sizes: number[]
+  sizes: number[],
+  options: Omit<ImageOptimizationOptions, 'width' | 'height'> = {}
 ): string {
   if (Platform.OS !== 'web') return baseUrl;
 
+  const resolvedFormat = options.format ?? getPreferredImageFormat();
   const srcset = sizes
     .map((size) => {
       const optimizedUrl = optimizeImageUrl(baseUrl, {
         width: size,
-        format: 'webp',
-        quality: 85,
+        format: resolvedFormat,
+        quality: options.quality ?? 85,
+        fit: options.fit,
+        dpr: options.dpr,
       });
       return `${optimizedUrl} ${size}w`;
     })
@@ -203,6 +283,76 @@ export function getResponsiveSizes(maxWidth: number = 1920): number[] {
   }
   
   return sizes.sort((a, b) => a - b);
+}
+
+/**
+ * Builds src/srcset/sizes for responsive images (web-only srcset).
+ */
+export function buildResponsiveImageProps(
+  baseUrl: string,
+  options: {
+    maxWidth?: number;
+    widths?: number[];
+    sizes?: string;
+    quality?: number;
+    format?: ImageOptimizationOptions['format'];
+    fit?: ImageOptimizationOptions['fit'];
+    dpr?: number;
+  } = {}
+): { src: string; srcSet?: string; sizes?: string } {
+  if (!baseUrl) {
+    return { src: '' };
+  }
+
+  const widths = options.widths ?? getResponsiveSizes(options.maxWidth ?? 1920);
+  const widest = widths.length > 0 ? widths[widths.length - 1] : options.maxWidth ?? 1920;
+  const format = options.format ?? 'auto';
+
+  const src =
+    optimizeImageUrl(baseUrl, {
+      width: widest,
+      quality: options.quality ?? 85,
+      format,
+      fit: options.fit,
+      dpr: options.dpr,
+    }) || baseUrl;
+
+  if (Platform.OS !== 'web') {
+    return { src };
+  }
+
+  const srcSet = generateSrcSet(baseUrl, widths, {
+    format,
+    quality: options.quality ?? 85,
+    fit: options.fit,
+    dpr: options.dpr,
+  });
+
+  return {
+    src,
+    srcSet,
+    sizes: options.sizes ?? '100vw',
+  };
+}
+
+/**
+ * Creates a low-quality placeholder URL for fast preview.
+ */
+export function buildLqipUrl(
+  baseUrl: string,
+  options: { width?: number; quality?: number; blur?: number } = {}
+): string {
+  if (!baseUrl) return baseUrl;
+
+  return (
+    optimizeImageUrl(baseUrl, {
+      width: options.width ?? 24,
+      quality: options.quality ?? 35,
+      format: 'jpg',
+      fit: 'cover',
+      blur: options.blur ?? 30,
+    }) || baseUrl
+  );
 }
 
 /**
@@ -257,8 +407,9 @@ export function createLazyImageProps(
   decoding: 'async' | 'sync' | 'auto';
   fetchpriority?: 'high' | 'low' | 'auto';
 } {
+  const requestedFormat = options.format ?? 'auto';
   const optimizedSrc = optimizeImageUrl(src, {
-    format: 'webp',
+    format: requestedFormat,
     quality: 85,
     ...options,
   });

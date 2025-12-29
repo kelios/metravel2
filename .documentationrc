@@ -1,0 +1,235 @@
+# Documentation Organization Rules
+# This file defines the structure and guidelines for project documentation
+
+## Folder Structure
+
+```
+docs/
+├── phases/          # Phase completion reports and status documents
+│   ├── PHASE2_ACCESSIBILITY_COMPLETE.md
+│   ├── PHASE2_SESSION_COMPLETE.md
+│   ├── PHASE3_PERFORMANCE_PLAN.md
+│   ├── PHASE4_*.md
+│   └── STATUS_PHASES_*.md
+│
+├── guides/          # User guides and tutorials
+│   ├── ACCESSIBILITY_GUIDE.md
+│   ├── PERFORMANCE_GUIDE.md
+│   ├── TESTING_GUIDE.md
+│   └── DEPLOYMENT_GUIDE.md
+│
+├── api/             # API reference documentation
+│   ├── UTILITIES_API.md
+│   ├── HOOKS_API.md
+│   ├── COMPONENTS_API.md
+│   └── TYPES_API.md
+│
+└── examples/        # Code examples and samples
+    ├── accessibility-examples.md
+    ├── performance-examples.md
+    └── component-examples.md
+```
+
+## File Naming Conventions
+
+### Phase Documentation
+- Format: `PHASE{N}_{TITLE}.md`
+- Examples:
+  - `PHASE2_ACCESSIBILITY_COMPLETE.md` - Phase completion report
+  - `PHASE2_SESSION_COMPLETE.md` - Session summary
+  - `PHASE3_PERFORMANCE_PLAN.md` - Phase plan
+  - `STATUS_PHASES_1-3_COMPLETE.md` - Status overview
+
+### Guide Documentation
+- Format: `{TOPIC}_GUIDE.md`
+- Examples:
+  - `ACCESSIBILITY_GUIDE.md`
+  - `PERFORMANCE_GUIDE.md`
+  - `TESTING_GUIDE.md`
+
+### API Documentation
+- Format: `{COMPONENT_TYPE}_API.md`
+- Examples:
+  - `UTILITIES_API.md`
+  - `HOOKS_API.md`
+  - `COMPONENTS_API.md`
+
+## Documentation Rules
+
+### 1. Every Phase Must Have:
+```
+- Phase plan document
+- Implementation summary
+- Completion report
+- Session notes
+- Quick start guide
+```
+
+### 2. Document Structure Template:
+
+```markdown
+# {TITLE}
+
+**Date:** {DATE}
+**Phase:** {N}/{TOTAL}
+**Status:** {STATUS}
+
+## Overview
+- Brief description
+- Key achievements
+- Metrics
+
+## Deliverables
+- List of created files
+- Lines of code
+- Tests/coverage
+
+## Documentation
+- Links to related docs
+- Quick start
+- Next steps
+
+## Files
+- Created files list
+- Modified files list
+```
+
+### 3. Update Checklist per Phase:
+```
+Phase Start:
+- [ ] Create PHASE{N}_*.md files in docs/phases/
+- [ ] Update TRAVEL_DETAILS_TODO.md for phase status
+- [ ] Create guide in docs/guides/
+
+Phase Completion:
+- [ ] Write completion report
+- [ ] Move to docs/phases/
+- [ ] Update status document
+- [ ] Create session summary
+- [ ] Link to guides
+
+Quality Check:
+- [ ] All links working
+- [ ] Code examples correct
+- [ ] Spelling/grammar
+- [ ] Consistent formatting
+```
+
+## Documentation Links Structure
+
+### From Project Root
+```markdown
+[Accessibility Guide](/docs/guides/ACCESSIBILITY_GUIDE.md)
+[Phase 2 Status](/docs/phases/PHASE2_SESSION_COMPLETE.md)
+[Performance Plan](/docs/phases/PHASE4_PERFORMANCE_PLAN.md)
+```
+
+### From README
+```markdown
+## Documentation
+- [Accessibility Guide](./docs/guides/ACCESSIBILITY_GUIDE.md)
+- [Phase Status](./docs/phases/STATUS_PHASES_1-3_COMPLETE.md)
+- [Guides](./docs/guides/)
+```
+
+## Phase 3 Preparation
+
+**Phase 3: Performance Optimization**
+
+### Structure:
+```
+docs/phases/
+├── PHASE3_PERFORMANCE_PLAN.md          # Strategy
+├── PHASE3_PERFORMANCE_IMPLEMENTATION.md # Details
+└── PHASE3_PERFORMANCE_COMPLETE.md      # Results
+
+docs/guides/
+├── PERFORMANCE_GUIDE.md                # User guide
+└── PERFORMANCE_OPTIMIZATION_TIPS.md    # Best practices
+```
+
+### Content:
+- Performance metrics and targets
+- Bundle size optimization
+- Image optimization
+- Code splitting strategy
+- Testing methodology
+- Implementation checklist
+
+## How to Create New Phase Documentation
+
+1. **Phase Start:**
+   ```bash
+   # Create plan
+   echo "# Phase {N}: {TITLE}" > docs/phases/PHASE{N}_{TITLE}_PLAN.md
+
+   # Update TODO
+   echo "### Phase {N}: {TITLE}" >> TRAVEL_DETAILS_TODO.md
+   ```
+
+2. **During Phase:**
+   - Keep phase status updated in TRAVEL_DETAILS_TODO.md
+   - Update metrics as you progress
+   - Document blockers
+
+3. **Phase End:**
+   - Create PHASE{N}_*.md files
+   - Generate completion report
+   - Move docs to docs/phases/
+   - Update guides in docs/guides/
+
+## Key Metrics to Document
+
+For each phase document include:
+
+```markdown
+| Metric | Value | Target | Status |
+|--------|-------|--------|--------|
+| Lines of Code | {n} | {target} | ✅/❌ |
+| Tests | {n}/{total} | 100% | ✅/❌ |
+| Errors | {n} | 0 | ✅/❌ |
+| Coverage | {%} | {target}% | ✅/❌ |
+| Documentation | Complete | Complete | ✅/❌ |
+```
+
+## Current Status (Dec 29, 2025)
+
+```
+Phase 1: Security & Types
+✅ 100% COMPLETE
+
+Phase 2: Accessibility
+✅ 35% COMPLETE (Code & Tests Done)
+📁 docs/phases/PHASE2_*.md
+
+Phase 3: Performance (NEXT)
+⏳ 0% (Planning)
+📁 Preparing Phase 3 documents
+
+Phase 4: Refactoring
+⏳ Planned
+
+Phase 5: Testing & Polish
+⏳ Planned
+```
+
+## Directory Update Log
+
+### Dec 29, 2025 23:47
+- Created docs/phases/ structure
+- Created docs/guides/ structure
+- Created docs/api/ structure
+- Moved Phase 1-2 documentation
+- Created this documentation rules file
+
+### Files Organized:
+- ✅ 14 phase/status documents → docs/phases/
+- ✅ 1 guide → docs/guides/
+- ✅ Structure ready for Phase 3
+
+---
+
+**Last Updated:** December 29, 2025
+**Responsible:** GitHub Copilot
+**Next Action:** Phase 3 Performance Optimization
+

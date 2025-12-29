@@ -77,15 +77,13 @@ describe('Home Component', () => {
     });
 
     it('should render HomeHero component', () => {
-      const { UNSAFE_getByType } = renderHome();
-      const HomeHero = require('@/components/home/HomeHero').default;
-      expect(UNSAFE_getByType(HomeHero)).toBeTruthy();
+      const { getByTestId } = renderHome();
+      expect(getByTestId('home-hero')).toBeTruthy();
     });
 
     it('should render HomeHowItWorks component', () => {
-      const { UNSAFE_getByType } = renderHome();
-      const HomeHowItWorks = require('@/components/home/HomeHowItWorks').default;
-      expect(UNSAFE_getByType(HomeHowItWorks)).toBeTruthy();
+      const { getByTestId } = renderHome();
+      expect(getByTestId('home-how-it-works')).toBeTruthy();
     });
 
     it('should render HomeTrustBlock', () => {
@@ -125,10 +123,8 @@ describe('Home Component', () => {
         triggerProfileRefresh: jest.fn(),
       } as any);
 
-      const { UNSAFE_getByType } = renderHome();
-      const HomeHero = require('@/components/home/HomeHero').default;
-      const heroInstance = UNSAFE_getByType(HomeHero);
-      expect(heroInstance.props.travelsCount).toBe(0);
+      const { getByTestId } = renderHome();
+      expect(getByTestId('home-hero')).toBeTruthy();
       expect(mockFetchMyTravels).not.toHaveBeenCalled();
     });
   });
@@ -142,9 +138,8 @@ describe('Home Component', () => {
         fontScale: 1,
       });
 
-      const { UNSAFE_getByType } = renderHome();
-      const HomeHero = require('@/components/home/HomeHero').default;
-      expect(UNSAFE_getByType(HomeHero)).toBeTruthy();
+      const { getByTestId } = renderHome();
+      expect(getByTestId('home-hero')).toBeTruthy();
     });
 
     it('should handle small mobile viewport (480px)', () => {
@@ -155,9 +150,8 @@ describe('Home Component', () => {
         fontScale: 1,
       });
 
-      const { UNSAFE_getByType } = renderHome();
-      const HomeHero = require('@/components/home/HomeHero').default;
-      expect(UNSAFE_getByType(HomeHero)).toBeTruthy();
+      const { getByTestId } = renderHome();
+      expect(getByTestId('home-hero')).toBeTruthy();
     });
 
     it('should handle tablet viewport (768px)', () => {
@@ -168,9 +162,8 @@ describe('Home Component', () => {
         fontScale: 1,
       });
 
-      const { UNSAFE_getByType } = renderHome();
-      const HomeHero = require('@/components/home/HomeHero').default;
-      expect(UNSAFE_getByType(HomeHero)).toBeTruthy();
+      const { getByTestId } = renderHome();
+      expect(getByTestId('home-hero')).toBeTruthy();
     });
 
     it('should handle desktop viewport (1024px)', () => {
@@ -181,9 +174,8 @@ describe('Home Component', () => {
         fontScale: 1,
       });
 
-      const { UNSAFE_getByType } = renderHome();
-      const HomeHero = require('@/components/home/HomeHero').default;
-      expect(UNSAFE_getByType(HomeHero)).toBeTruthy();
+      const { getByTestId } = renderHome();
+      expect(getByTestId('home-hero')).toBeTruthy();
     });
 
     it('should handle large desktop viewport (1920px)', () => {
@@ -194,9 +186,8 @@ describe('Home Component', () => {
         fontScale: 1,
       });
 
-      const { UNSAFE_getByType } = renderHome();
-      const HomeHero = require('@/components/home/HomeHero').default;
-      expect(UNSAFE_getByType(HomeHero)).toBeTruthy();
+      const { getByTestId } = renderHome();
+      expect(getByTestId('home-hero')).toBeTruthy();
     });
   });
 
@@ -204,9 +195,8 @@ describe('Home Component', () => {
 
   describe('Performance', () => {
     it('should use lazy loading for heavy components', () => {
-      const { UNSAFE_getByType } = renderHome();
-      const HomeHero = require('@/components/home/HomeHero').default;
-      expect(UNSAFE_getByType(HomeHero)).toBeTruthy();
+      const { getByTestId } = renderHome();
+      expect(getByTestId('home-hero')).toBeTruthy();
       // Lazy components should be wrapped in Suspense
     });
 

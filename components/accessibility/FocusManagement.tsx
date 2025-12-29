@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface FocusableProps {
@@ -40,6 +40,7 @@ export const FocusableButton: React.FC<FocusableProps> = ({
       onFocus={onFocus}
       onBlur={onBlur}
       data-testid={testID}
+      aria-label={accessibilityLabel}
     >
       {children}
 
@@ -170,10 +171,13 @@ export function useFocusTrap(isOpen: boolean, returnFocusRef?: React.RefObject<H
     // Сохранить текущий focused element
     previousActiveElement.current = document.activeElement as HTMLElement;
 
+    // Сохраняем текущее значение ref для cleanup функции
+    const returnElement = returnFocusRef?.current;
+
     // Вернуть focus при закрытии
     return () => {
-      if (returnFocusRef?.current) {
-        returnFocusRef.current.focus();
+      if (returnElement) {
+        returnElement.focus();
       } else if (previousActiveElement.current) {
         previousActiveElement.current.focus();
       }

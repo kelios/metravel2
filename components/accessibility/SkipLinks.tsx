@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Platform, Pressable, StyleSheet, Text } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface SkipLinksProps {

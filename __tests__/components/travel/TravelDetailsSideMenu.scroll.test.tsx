@@ -1,4 +1,4 @@
-import { styles } from '@/components/travel/details/TravelDetailsContainer';
+import { styles } from '@/components/travel/details/TravelDetailsStyles';
 
 describe('TravelDetails side menu (web desktop)', () => {
   it('has overflowY auto and a constrained maxHeight so the menu can scroll', () => {

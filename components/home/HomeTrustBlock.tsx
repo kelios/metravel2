@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -29,7 +29,7 @@ const ITEMS: TrustItem[] = [
   },
 ];
 
-export default function HomeTrustBlock() {
+function HomeTrustBlock() {
   const { isSmallPhone, isPhone, isLargePhone } = useResponsive();
   const isMobile = isSmallPhone || isPhone || isLargePhone;
 
@@ -132,3 +132,6 @@ const styles = StyleSheet.create({
     color: DESIGN_TOKENS.colors.textMuted,
   },
 });
+
+export default memo(HomeTrustBlock);
+

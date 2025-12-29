@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, memo } from 'react';
 import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -31,7 +31,7 @@ const STEPS = [
   },
 ];
 
-export default function HomeHowItWorks() {
+function HomeHowItWorks() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const { isSmallPhone, isPhone, isTablet, isDesktop } = useResponsive();
@@ -61,7 +61,7 @@ export default function HomeHowItWorks() {
   );
 
   return (
-    <View style={styles.container}>
+    <View testID="home-how-it-works" style={styles.container}>
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.header}>
           <ResponsiveText variant="h2" style={styles.title}>
@@ -217,3 +217,6 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
 });
+
+export default memo(HomeHowItWorks);
+

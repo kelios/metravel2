@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -12,7 +12,6 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 interface ThemeToggleProps {
   size?: 'small' | 'medium' | 'large';
   showLabel?: boolean;
-  placement?: 'header' | 'menu' | 'settings';
 }
 
 /**
@@ -21,7 +20,6 @@ interface ThemeToggleProps {
 export const ThemeToggle: React.FC<ThemeToggleProps> = ({
   size = 'medium',
   showLabel = false,
-  placement = 'header',
 }) => {
   const { theme, isDark, setTheme, toggleTheme } = useTheme();
 
@@ -68,20 +66,20 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
 
   // Web version with dropdown
   return (
-    <div style={styles.webContainer as React.CSSProperties}>
+    <div style={webStyles.container}>
       <button
         onClick={handlePress}
         className="theme-toggle-button"
         title={`Переключить на ${isDark ? 'светлый' : 'тёмный'} режим`}
         aria-label={`Переключить тему (текущая: ${isDark ? 'тёмная' : 'светлая'})`}
-        style={styles.webToggleButton as React.CSSProperties}
+        style={webStyles.toggleButton}
       >
         <MaterialIcons
           name={isDark ? 'light-mode' : 'dark-mode'}
           size={iconSize}
           color={DESIGN_TOKENS.colors.text}
         />
-        {showLabel && <span style={styles.webLabel as React.CSSProperties}>
+        {showLabel && <span style={webStyles.label}>
           {theme === 'auto' ? 'Auto' : isDark ? 'Dark' : 'Light'}
         </span>}
       </button>
@@ -91,13 +89,13 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         className="theme-menu"
         role="menu"
         aria-label="Theme options"
-        style={styles.webMenu as React.CSSProperties}
+        style={webStyles.menu}
       >
         <button
           role="menuitem"
           aria-current={theme === 'light' ? 'true' : 'false'}
           onClick={() => setTheme('light')}
-          style={styles.webMenuItem as React.CSSProperties}
+          style={webStyles.menuItem}
         >
           <MaterialIcons name="light-mode" size={16} color={DESIGN_TOKENS.colors.text} />
           <span>Light</span>
@@ -107,7 +105,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           role="menuitem"
           aria-current={theme === 'dark' ? 'true' : 'false'}
           onClick={() => setTheme('dark')}
-          style={styles.webMenuItem as React.CSSProperties}
+          style={webStyles.menuItem}
         >
           <MaterialIcons name="dark-mode" size={16} color={DESIGN_TOKENS.colors.text} />
           <span>Dark</span>
@@ -117,7 +115,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           role="menuitem"
           aria-current={theme === 'auto' ? 'true' : 'false'}
           onClick={handlePressAuto}
-          style={styles.webMenuItem as React.CSSProperties}
+          style={webStyles.menuItem}
         >
           <MaterialIcons name="brightness-auto" size={16} color={DESIGN_TOKENS.colors.text} />
           <span>Auto</span>
@@ -141,7 +139,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         }
 
         .theme-toggle-button:hover {
-          background-color: ${DESIGN_TOKENS.colors.surfaceLight};
+          background-color: ${DESIGN_TOKENS.colors.surfaceMuted};
         }
 
         .theme-toggle-button:focus-visible {
@@ -188,7 +186,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         }
 
         .theme-menu button:hover {
-          background-color: ${DESIGN_TOKENS.colors.surfaceLight};
+          background-color: ${DESIGN_TOKENS.colors.surfaceMuted};
         }
 
         .theme-menu button[aria-current="true"] {
@@ -227,55 +225,63 @@ const styles = StyleSheet.create({
   },
   mobileTogglePressed: {
     opacity: 0.7,
-    backgroundColor: DESIGN_TOKENS.colors.surfaceLight,
+    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
   },
   label: {
     fontSize: 14,
     fontWeight: '500',
     color: DESIGN_TOKENS.colors.text,
   },
-  webContainer: {
+});
+
+const webStyles: Record<string, React.CSSProperties> = {
+  container: {
     position: 'relative',
   },
-  webToggleButton: {
+  toggleButton: {
     background: 'transparent',
     border: 'none',
     cursor: 'pointer',
-    padding: '8px',
-    borderRadius: '6px',
+    padding: 8,
+    borderRadius: 6,
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: 8,
     color: DESIGN_TOKENS.colors.text,
   },
-  webLabel: {
-    fontSize: '14px',
-    fontWeight: '500',
+  label: {
+    fontSize: 14,
+    fontWeight: 500,
   },
-  webMenu: {
+  menu: {
     position: 'absolute',
     top: '100%',
     right: 0,
-    marginTop: '8px',
+    marginTop: 8,
     backgroundColor: DESIGN_TOKENS.colors.surface,
     border: `1px solid ${DESIGN_TOKENS.colors.border}`,
-    borderRadius: '8px',
+    borderRadius: 8,
     zIndex: 1000,
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    opacity: 0,
+    visibility: 'hidden',
+    transform: 'translateY(-8px)',
+    transition: 'opacity 0.2s, visibility 0.2s, transform 0.2s',
   },
-  webMenuItem: {
+  menuItem: {
     width: '100%',
     padding: '10px 16px',
     background: 'transparent',
     border: 'none',
     cursor: 'pointer',
     color: DESIGN_TOKENS.colors.text,
-    fontSize: '14px',
+    fontSize: 14,
     textAlign: 'left',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: 8,
   },
-});
+};
 
 export default ThemeToggle;
 

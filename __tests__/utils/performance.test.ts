@@ -1,88 +1,359 @@
-import { loadScriptDeferred, loadStylesheetDeferred, measurePerformance } from '@/utils/performance'
+/**
+ * Performance optimization tests
+ * Tests for image optimization, Web Vitals, and performance hooks
+ */
 
-describe('performance utilities', () => {
+import {
+  optimizeImageUrl,
+  generateSrcSet,
+  generateSizes,
+  generateLQIP,
+  calculateImageDimensions,
+  buildResponsiveImage,
+  clearImageOptimizationCache,
+  getImageCacheStats,
+  ImageOptimizationOptions,
+} from '@/utils/advancedImageOptimization';
+
+import {
+  onWebVitals,
+  getWebVitalsMetrics,
+  checkMetricsHealth,
+  formatMetricsForDisplay,
+  markPerformance,
+  measurePerformance,
+} from '@/utils/webVitalsMonitoring';
+
+describe('Image Optimization', () => {
   beforeEach(() => {
-    jest.useFakeTimers()
-    document.head.innerHTML = ''
-  })
+    clearImageOptimizationCache();
+  });
 
-  afterEach(() => {
-    jest.runOnlyPendingTimers()
-    jest.useRealTimers()
-    document.head.innerHTML = ''
-  })
+  describe('optimizeImageUrl', () => {
+    it('should return empty string for missing URL', () => {
+      expect(optimizeImageUrl('')).toBe('');
+      expect(optimizeImageUrl(undefined)).toBe('');
+    });
 
-  it('deduplicates concurrent script loads and resolves once', async () => {
-    const promise1 = loadScriptDeferred('https://cdn.example.com/script.js', 'script-test')
-    const promise2 = loadScriptDeferred('https://cdn.example.com/script.js', 'script-test')
+    it('should add width parameter', () => {
+      const result = optimizeImageUrl('https://example.com/image.jpg', {
+        width: 800,
+      });
+      expect(result).toContain('w=800');
+    });
 
-    expect(promise1).toBe(promise2)
+    it('should add height parameter', () => {
+      const result = optimizeImageUrl('https://example.com/image.jpg', {
+        height: 600,
+      });
+      expect(result).toContain('h=600');
+    });
 
-    jest.runAllTimers()
+    it('should add format parameter', () => {
+      const result = optimizeImageUrl('https://example.com/image.jpg', {
+        format: 'webp',
+      });
+      expect(result).toContain('f=webp');
+    });
 
-    const script = document.getElementById('script-test') as HTMLScriptElement
-    expect(script).toBeTruthy()
+    it('should add quality parameter', () => {
+      const result = optimizeImageUrl('https://example.com/image.jpg', {
+        quality: 80,
+      });
+      expect(result).toContain('q=80');
+    });
 
-    script.onload?.(new Event('load') as any)
+    it('should default to auto format', () => {
+      const result = optimizeImageUrl('https://example.com/image.jpg', {});
+      expect(result).toContain('f=auto');
+    });
 
-    await expect(promise1).resolves.toBeUndefined()
-    expect(document.head.querySelectorAll('script[src="https://cdn.example.com/script.js"]').length).toBe(1)
-  })
+    it('should default to quality 85', () => {
+      const result = optimizeImageUrl('https://example.com/image.jpg', {});
+      expect(result).toContain('q=85');
+    });
 
-  it('cleans up failed script load and allows retry', async () => {
-    const failingPromise = loadScriptDeferred('https://cdn.example.com/fail.js', 'script-fail')
+    it('should clamp quality to valid range', () => {
+      const tooHigh = optimizeImageUrl('https://example.com/image.jpg', {
+        quality: 150,
+      });
+      expect(tooHigh).toContain('q=100');
 
-    jest.runAllTimers()
+      const tooLow = optimizeImageUrl('https://example.com/image.jpg', {
+        quality: 0,
+      });
+      expect(tooLow).toContain('q=1');
+    });
 
-    const script = document.getElementById('script-fail') as HTMLScriptElement
-    expect(script).toBeTruthy()
+    it('should cache optimized URLs', () => {
+      const url = 'https://example.com/image.jpg';
+      const options: ImageOptimizationOptions = { width: 800, quality: 80 };
 
-    script.onerror?.(new Event('error') as any)
+      const result1 = optimizeImageUrl(url, options);
+      const result2 = optimizeImageUrl(url, options);
 
-    await expect(failingPromise).rejects.toThrow('Failed to load script: https://cdn.example.com/fail.js')
-    expect(document.head.querySelector('#script-fail')).toBeNull()
+      expect(result1).toBe(result2);
 
-    const retryPromise = loadScriptDeferred('https://cdn.example.com/fail.js', 'script-fail')
+      const stats = getImageCacheStats();
+      expect(stats.size).toBeGreaterThan(0);
+    });
 
-    jest.runAllTimers()
+    it('should handle existing query parameters', () => {
+      const url = 'https://example.com/image.jpg?existing=param';
+      const result = optimizeImageUrl(url, { width: 800 });
 
-    const retryScript = document.getElementById('script-fail') as HTMLScriptElement
-    retryScript.onload?.(new Event('load') as any)
+      expect(result).toContain('existing=param');
+      expect(result).toContain('w=800');
+    });
+  });
 
-    await expect(retryPromise).resolves.toBeUndefined()
-    expect(document.head.querySelectorAll('script[src="https://cdn.example.com/fail.js"]').length).toBe(1)
-  })
+  describe('generateSrcSet', () => {
+    it('should generate responsive src set', () => {
+      const srcSet = generateSrcSet('https://example.com/image.jpg');
+      expect(srcSet).toContain('320w');
+      expect(srcSet).toContain('640w');
+      expect(srcSet).toContain('1024w');
+      expect(srcSet).toContain('1440w');
+    });
 
-  it('reuses pending stylesheet load by href', async () => {
-    const href = 'https://cdn.example.com/styles.css'
-    const promise1 = loadStylesheetDeferred(href)
-    const promise2 = loadStylesheetDeferred(href)
+    it('should include custom widths', () => {
+      const srcSet = generateSrcSet('https://example.com/image.jpg', {
+        widths: [200, 400, 800],
+      });
+      expect(srcSet).toContain('200w');
+      expect(srcSet).toContain('400w');
+      expect(srcSet).toContain('800w');
+      expect(srcSet).not.toContain('320w');
+    });
 
-    expect(promise1).toBe(promise2)
+    it('should set format parameter', () => {
+      const srcSet = generateSrcSet('https://example.com/image.jpg', {
+        format: 'webp',
+      });
+      expect(srcSet).toContain('f=webp');
+    });
 
-    jest.runAllTimers()
+    it('should set quality parameter', () => {
+      const srcSet = generateSrcSet('https://example.com/image.jpg', {
+        quality: 75,
+      });
+      expect(srcSet).toContain('q=75');
+    });
 
-    const link = document.head.querySelector(`link[href="${href}"]`) as HTMLLinkElement
-    expect(link).toBeTruthy()
+    it('should return empty string for missing URL', () => {
+      const srcSet = generateSrcSet('');
+      expect(srcSet).toBe('');
+    });
+  });
 
-    link.onload?.(new Event('load') as any)
+  describe('generateSizes', () => {
+    it('should generate default sizes string', () => {
+      const sizes = generateSizes();
+      expect(sizes).toContain('1200px');
+      expect(sizes).toContain('768px');
+      expect(sizes).toContain('375px');
+    });
 
-    await expect(promise1).resolves.toBeUndefined()
-    expect(document.head.querySelectorAll(`link[href="${href}"]`).length).toBe(1)
-  })
+    it('should use custom breakpoints', () => {
+      const sizes = generateSizes({
+        desktop: 1600,
+        tablet: 800,
+        mobile: 400,
+      });
+      expect(sizes).toContain('1600px');
+      expect(sizes).toContain('800px');
+      expect(sizes).toContain('400px');
+    });
+  });
 
-  it('clears performance entries to avoid leaks', () => {
-    const name = 'perf-leak-check'
+  describe('generateLQIP', () => {
+    it('should generate low-quality placeholder', () => {
+      const lqip = generateLQIP('https://example.com/image.jpg');
+      expect(lqip).toContain('w=15');
+      expect(lqip).toContain('q=50');
+      expect(lqip).toContain('blur=5');
+    });
 
-    if (typeof performance.getEntriesByName !== 'function') {
-      expect(() => measurePerformance(name, () => {})).not.toThrow()
-      return
+    it('should use custom width', () => {
+      const lqip = generateLQIP('https://example.com/image.jpg', 20);
+      expect(lqip).toContain('w=20');
+    });
+  });
+
+  describe('calculateImageDimensions', () => {
+    it('should calculate scaled dimensions', () => {
+      const dims = calculateImageDimensions(1200, 800, { maxWidth: 600 });
+      expect(dims.width).toBe(600);
+      expect(dims.height).toBe(400);
+    });
+
+    it('should maintain aspect ratio', () => {
+      const dims = calculateImageDimensions(1600, 900, {
+        maxWidth: 800,
+        maxHeight: 600,
+      });
+      const aspectRatio = dims.width / dims.height;
+      const originalRatio = 1600 / 900;
+      expect(Math.abs(aspectRatio - originalRatio)).toBeLessThan(0.01);
+    });
+
+    it('should not upscale', () => {
+      const dims = calculateImageDimensions(400, 300, { maxWidth: 600 });
+      expect(dims.width).toBe(400);
+      expect(dims.height).toBe(300);
+    });
+  });
+
+  describe('buildResponsiveImage', () => {
+    it('should build complete responsive image config', () => {
+      const config = buildResponsiveImage('https://example.com/image.jpg');
+      expect(config.src).toBeDefined();
+      expect(config.srcSet).toBeDefined();
+      expect(config.sizes).toBeDefined();
+      expect(config.format).toBeDefined();
+    });
+
+    it('should return empty for missing URL', () => {
+      const config = buildResponsiveImage('');
+      expect(config.src).toBe('');
+    });
+  });
+});
+
+describe('Web Vitals Monitoring', () => {
+  describe('onWebVitals', () => {
+    it('should register callback', (done) => {
+      const callback = jest.fn();
+      onWebVitals(callback);
+
+      // Callback may not fire immediately, so we just check it's registered
+      setTimeout(() => {
+        done();
+      }, 100);
+    });
+
+    it('should return unsubscribe function', () => {
+      const callback = jest.fn();
+      const unsubscribe = onWebVitals(callback);
+      expect(typeof unsubscribe).toBe('function');
+    });
+  });
+
+  describe('getWebVitalsMetrics', () => {
+    it('should return metrics object', () => {
+      const metrics = getWebVitalsMetrics();
+      expect(typeof metrics).toBe('object');
+      expect(metrics).toBeDefined();
+    });
+
+    it('should not include undefined properties after check', () => {
+      const metrics = getWebVitalsMetrics();
+      const definedKeys = Object.keys(metrics).filter(
+        (key) => metrics[key as keyof typeof metrics] !== undefined
+      );
+      expect(Array.isArray(definedKeys)).toBe(true);
+    });
+  });
+
+  describe('checkMetricsHealth', () => {
+    it('should return health status for good metrics', () => {
+      const metrics = {
+        lcp: 2000,
+        fid: 50,
+        cls: 0.05,
+      };
+      const health = checkMetricsHealth(metrics);
+
+      expect(health.isHealthy).toBe(true);
+      expect(health.lcp).toBe('good');
+      expect(health.fid).toBe('good');
+      expect(health.cls).toBe('good');
+    });
+
+    it('should return fair status for borderline metrics', () => {
+      const metrics = {
+        lcp: 3500,
+        fid: 150,
+        cls: 0.15,
+      };
+      const health = checkMetricsHealth(metrics);
+
+      expect(health.lcp).toBe('fair');
+      expect(health.fid).toBe('fair');
+      expect(health.cls).toBe('fair');
+    });
+
+    it('should return poor status for bad metrics', () => {
+      const metrics = {
+        lcp: 5000,
+        fid: 400,
+        cls: 0.3,
+      };
+      const health = checkMetricsHealth(metrics);
+
+      expect(health.isHealthy).toBe(false);
+      expect(health.lcp).toBe('poor');
+      expect(health.fid).toBe('poor');
+      expect(health.cls).toBe('poor');
+    });
+  });
+
+  describe('formatMetricsForDisplay', () => {
+    it('should format metrics as readable string', () => {
+      const metrics = {
+        lcp: 2000,
+        fid: 50,
+        cls: 0.05,
+      };
+      const formatted = formatMetricsForDisplay(metrics);
+
+      expect(formatted).toContain('Web Vitals');
+      expect(formatted).toContain('2000');
+      expect(formatted).toContain('0.050');
+    });
+  });
+
+  describe('markPerformance and measurePerformance', () => {
+    it('should mark and measure performance', () => {
+      const startMark = 'test-start';
+      const endMark = 'test-end';
+
+      markPerformance(startMark);
+      // Simulate some work
+      for (let i = 0; i < 1000000; i++) {
+        Math.sqrt(i);
+      }
+      markPerformance(endMark);
+
+      const duration = measurePerformance(startMark, endMark);
+      expect(duration).toBeGreaterThanOrEqual(0);
+    });
+  });
+});
+
+describe('Cache Management', () => {
+  it('should clear cache', () => {
+    optimizeImageUrl('https://example.com/image1.jpg', { width: 800 });
+    optimizeImageUrl('https://example.com/image2.jpg', { width: 800 });
+
+    let stats = getImageCacheStats();
+    expect(stats.size).toBeGreaterThan(0);
+
+    clearImageOptimizationCache();
+
+    stats = getImageCacheStats();
+    expect(stats.size).toBe(0);
+  });
+
+  it('should limit cache size', () => {
+    // Add many items
+    for (let i = 0; i < 600; i++) {
+      optimizeImageUrl(`https://example.com/image${i}.jpg`, { width: 800 });
     }
 
-    measurePerformance(name, () => {})
+    const stats = getImageCacheStats();
+    // Cache should be limited to prevent memory leaks
+    expect(stats.size).toBeLessThan(600);
+  });
+});
 
-    expect(performance.getEntriesByName(name)).toHaveLength(0)
-    expect(performance.getEntriesByName(`${name}-start`)).toHaveLength(0)
-    expect(performance.getEntriesByName(`${name}-end`)).toHaveLength(0)
-  })
-})

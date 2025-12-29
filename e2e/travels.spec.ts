@@ -119,7 +119,7 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
 
     test('should update active section on scroll', async () => {
       // Get section positions
-      const gallery = await page.locator('[testID="travel-details-section-gallery"]');
+      await page.locator('[testID="travel-details-section-gallery"]');
       const description = await page.locator('[testID="travel-details-description"]');
 
       // Scroll to description

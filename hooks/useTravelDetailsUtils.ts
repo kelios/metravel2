@@ -12,7 +12,7 @@ import { Platform, Animated } from "react-native";
 export function useScrollListener(
   scrollY: Animated.Value,
   handler: (value: number) => void,
-  additionalDeps?: React.DependencyList
+  additionalDeps: React.DependencyList = []
 ) {
   useEffect(() => {
     const id = scrollY.addListener(({ value }) => {
@@ -22,7 +22,7 @@ export function useScrollListener(
     return () => {
       scrollY.removeListener(id);
     };
-  }, [scrollY, handler, ...(additionalDeps || [])]);
+  }, [scrollY, handler, additionalDeps]);
 }
 
 /**
@@ -31,14 +31,14 @@ export function useScrollListener(
 export function useTimeout(
   callback: () => void,
   delay: number | null,
-  additionalDeps?: React.DependencyList
+  additionalDeps: React.DependencyList = []
 ) {
   useEffect(() => {
     if (delay === null) return;
 
     const id = setTimeout(callback, delay);
     return () => clearTimeout(id);
-  }, [delay, callback, ...(additionalDeps || [])]);
+  }, [delay, callback, additionalDeps]);
 }
 
 /**
@@ -47,14 +47,14 @@ export function useTimeout(
 export function useInterval(
   callback: () => void,
   delay: number | null,
-  additionalDeps?: React.DependencyList
+  additionalDeps: React.DependencyList = []
 ) {
   useEffect(() => {
     if (delay === null) return;
 
     const id = setInterval(callback, delay);
     return () => clearInterval(id);
-  }, [delay, callback, ...(additionalDeps || [])]);
+  }, [delay, callback, additionalDeps]);
 }
 
 /**
@@ -302,11 +302,9 @@ export function useComponentLifecycle(componentName: string) {
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
 
-    // eslint-disable-next-line no-console
     console.info(`[${componentName}] mounted`);
 
     return () => {
-      // eslint-disable-next-line no-console
       console.info(`[${componentName}] unmounted`);
     };
   }, [componentName]);

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback, memo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -9,7 +9,7 @@ type FaqItem = {
   a: string;
 };
 
-export default function HomeFAQSection() {
+function HomeFAQSection() {
   const items = useMemo<FaqItem[]>(
     () => [
       {
@@ -43,6 +43,10 @@ export default function HomeFAQSection() {
 
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
+  const toggleItem = useCallback((idx: number) => {
+    setOpenIndex((prev) => (prev === idx ? null : idx));
+  }, []);
+
   return (
     <View style={styles.band} testID="home-faq">
       <ResponsiveContainer maxWidth="xl" padding>
@@ -57,7 +61,7 @@ export default function HomeFAQSection() {
             return (
               <View key={item.q} style={[styles.item, isOpen && styles.itemOpen]}>
                 <Pressable
-                  onPress={() => setOpenIndex((prev) => (prev === idx ? null : idx))}
+                  onPress={() => toggleItem(idx)}
                   accessibilityRole="button"
                   accessibilityLabel={item.q}
                   style={({ pressed, hovered }) => [
@@ -164,3 +168,6 @@ const styles = StyleSheet.create({
     color: DESIGN_TOKENS.colors.textMuted,
   },
 });
+
+export default memo(HomeFAQSection);
+

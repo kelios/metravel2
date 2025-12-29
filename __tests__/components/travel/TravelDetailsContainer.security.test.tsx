@@ -3,9 +3,6 @@
  * Tests security, performance, accessibility, and cross-platform compatibility
  */
 
-import React from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { Platform } from 'react-native';
 import {
   validateYoutubeId,
@@ -16,6 +13,33 @@ import {
   getSafeOrigin,
   isSafePreconnectDomain,
 } from '@/utils/travelDetailsSecure';
+import type { Travel } from '@/src/types/types';
+
+const baseTravel: Travel = {
+  id: 1,
+  slug: 'test-travel',
+  name: 'Test Travel',
+  travel_image_thumb_url: 'https://cdn.example.com/thumb.jpg',
+  travel_image_thumb_small_url: 'https://cdn.example.com/thumb-small.jpg',
+  url: 'https://cdn.example.com/full.jpg',
+  youtube_link: 'https://youtube.com/watch?v=dQw4w9WgXcQ',
+  userName: 'Tester',
+  description: '<p>A test travel description</p>',
+  recommendation: '',
+  plus: '',
+  minus: '',
+  cityName: 'City',
+  countryName: 'Country',
+  countUnicIpView: '0',
+  gallery: ['https://example.com/image.jpg'],
+  travelAddress: [],
+  userIds: '',
+  year: '2025',
+  monthName: 'January',
+  number_days: 1,
+  companions: [],
+  countryCode: 'BY',
+};
 
 describe('TravelDetailsContainer - Security & Sanitization', () => {
   describe('YouTube ID Validation', () => {
@@ -77,16 +101,15 @@ describe('TravelDetailsContainer - Security & Sanitization', () => {
   });
 
   describe('JSON-LD Structure Data', () => {
-    const mockTravel = {
-      id: 1,
-      name: 'Test Travel',
-      slug: 'test-travel',
+    const mockTravel: Travel = {
+      ...baseTravel,
       description: '<p>A test travel description</p>',
       gallery: ['https://example.com/image.jpg'],
     };
 
     it('should create safe JSON-LD from travel data', () => {
       const jsonLd = createSafeJsonLd(mockTravel);
+      expect(jsonLd).not.toBeNull();
       expect(jsonLd).toEqual({
         '@context': 'https://schema.org',
         '@type': 'Article',
@@ -98,20 +121,28 @@ describe('TravelDetailsContainer - Security & Sanitization', () => {
     });
 
     it('should handle missing data gracefully', () => {
-      const minimal = { id: 1 };
-      const jsonLd = createSafeJsonLd(minimal as any);
-      expect(jsonLd['@context']).toBe('https://schema.org');
-      expect(jsonLd['@type']).toBe('Article');
-      expect(jsonLd.headline).toBeUndefined();
+      const minimal: Travel = {
+        ...baseTravel,
+        name: '',
+        description: '',
+        gallery: [],
+        slug: '',
+      };
+      const jsonLd = createSafeJsonLd(minimal);
+      expect(jsonLd).not.toBeNull();
+      expect(jsonLd!['@context']).toBe('https://schema.org');
+      expect(jsonLd!['@type']).toBe('Article');
+      expect(jsonLd!.headline).toBeUndefined();
     });
 
     it('should truncate long values', () => {
-      const longTravel = {
+      const longTravel: Travel = {
         ...mockTravel,
         name: 'A'.repeat(250),
       };
       const jsonLd = createSafeJsonLd(longTravel);
-      expect(jsonLd.headline?.length).toBeLessThanOrEqual(200);
+      expect(jsonLd).not.toBeNull();
+      expect(jsonLd!.headline?.length).toBeLessThanOrEqual(200);
     });
 
     it('should never include null data', () => {
@@ -130,7 +161,7 @@ describe('TravelDetailsContainer - Security & Sanitization', () => {
     it('should handle missing parameters', () => {
       expect(createSafeImageUrl('')).toBe('');
       expect(createSafeImageUrl(undefined)).toBe('');
-      expect(createSafeImageUrl(null)).toBe('');
+      expect(createSafeImageUrl(undefined as unknown as string)).toBe('');
     });
 
     it('should extract safe origins', () => {
@@ -141,7 +172,7 @@ describe('TravelDetailsContainer - Security & Sanitization', () => {
     it('should return null for invalid URLs', () => {
       expect(getSafeOrigin('not a url')).toBeNull();
       expect(getSafeOrigin('')).toBeNull();
-      expect(getSafeOrigin(null)).toBeNull();
+      expect(getSafeOrigin(undefined)).toBeNull();
     });
   });
 

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, memo, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, FlatList, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -67,10 +67,10 @@ function HomeInspirationSection({
     return arr.slice(0, isMobile ? 4 : 6);
   }, [travelData, isMobile]);
 
-  const handleViewMore = () => {
+  const handleViewMore = useCallback(() => {
     sendAnalyticsEvent('HomeClick_ViewMore', { section: title });
     router.push('/search' as any);
-  };
+  }, [title, router]);
 
   if (isLoading) {
     return (
@@ -154,7 +154,7 @@ function Separator() {
   return <View style={styles.separator} />;
 }
 
-export default function HomeInspirationSections() {
+function HomeInspirationSections() {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
 
@@ -181,6 +181,8 @@ export default function HomeInspirationSections() {
     </View>
   );
 }
+
+export default memo(HomeInspirationSections);
 
 const styles = StyleSheet.create({
   band: {

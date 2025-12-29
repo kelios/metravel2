@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, Image, Linking } from 'react-native';
+import React, { useMemo, memo } from 'react';
+import { View, Text, StyleSheet, Pressable, Platform, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
@@ -8,12 +8,13 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { useResponsive } from '@/hooks/useResponsive';
 import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/components/layout';
+import OptimizedImage from './OptimizedImage';
 
 interface HomeHeroProps {
   travelsCount?: number;
 }
 
-export default function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
+const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const { isSmallPhone, isPhone, isTablet, isDesktop } = useResponsive();
@@ -51,7 +52,7 @@ export default function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const showImage = isTablet || isDesktop;
 
   return (
-    <View style={[styles.band, isMobile && styles.bandMobile]}>
+    <View testID="home-hero" style={[styles.band, isMobile && styles.bandMobile]}>
       <ResponsiveContainer maxWidth="xl" padding>
         <ResponsiveStack direction="responsive" gap={60} align="center">
           <View style={styles.content}>
@@ -109,11 +110,13 @@ export default function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
               accessibilityLabel="Открыть статью о маршруте Харцер Хексенштиг"
               style={styles.imageContainer}
             >
-              <Image
+              <OptimizedImage
                 source={require('../../assets/images/pdf.webp')}
+                width={320}
+                height={400}
+                borderRadius={DESIGN_TOKENS.radii.lg}
+                alt="Пример книги путешествий"
                 style={styles.bookImage}
-                resizeMode="contain"
-                {...(Platform.OS === 'web' ? { loading: 'lazy' as any } : {})}
               />
             </Pressable>
           )}
@@ -121,7 +124,7 @@ export default function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       </ResponsiveContainer>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   band: {
@@ -156,6 +159,7 @@ const styles = StyleSheet.create({
   },
   buttonsContainer: {
     marginTop: 32,
+    width: '100%',
   },
   primaryButton: {
     backgroundColor: DESIGN_TOKENS.colors.primary,
@@ -164,7 +168,7 @@ const styles = StyleSheet.create({
     borderRadius: DESIGN_TOKENS.radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 52,
+    minHeight: 56,
     ...Platform.select({
       web: {
         flex: 1,
@@ -199,7 +203,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    minHeight: 52,
+    minHeight: 56,
     ...Platform.select({
       web: {
         flex: 1,
@@ -253,7 +257,11 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         boxShadow: '0 20px 60px rgba(31, 31, 31, 0.15), 0 8px 24px rgba(31, 31, 31, 0.1)',
+        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
       },
     }),
   },
 });
+
+export default HomeHero;
+
