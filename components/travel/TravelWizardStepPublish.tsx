@@ -5,7 +5,6 @@ import { Icon } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
 import { useRouter } from 'expo-router';
 
-import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { QualityIndicator } from '@/components/travel/ValidationFeedback';
@@ -20,8 +19,6 @@ interface TravelWizardStepPublishProps {
     totalSteps: number;
     formData: TravelFormData;
     setFormData: (data: TravelFormData) => void;
-    filters: any;
-    travelDataOld: Travel | null;
     isSuperAdmin: boolean;
     onManualSave: (data?: TravelFormData) => Promise<TravelFormData | void>;
     onGoBack: () => void;
@@ -44,8 +41,6 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     totalSteps,
     formData,
     setFormData,
-    filters,
-    travelDataOld,
     isSuperAdmin,
     onManualSave,
     onGoBack,
@@ -60,19 +55,16 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
     const [footerHeight, setFooterHeight] = useState(0);
-    const [actionPending, setActionPending] = useState(false);
     const actionPendingRef = useRef(false);
 
     const startAction = useCallback(() => {
         if (actionPendingRef.current) return false;
         actionPendingRef.current = true;
-        setActionPending(true);
         return true;
     }, []);
 
     const finishAction = useCallback(() => {
         actionPendingRef.current = false;
-        setActionPending(false);
     }, []);
     const [status, setStatus] = useState<'draft' | 'moderation'>(
         formData.moderation || formData.publish ? 'moderation' : 'draft',
@@ -156,13 +148,14 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     }, [currentStep]);
 
     const handleSaveDraft = async () => {
-        setFormData({
+        const nextForm = {
             ...formData,
             publish: false,
             moderation: false,
-        });
+        };
+        setFormData(nextForm);
         setMissingForModeration([]);
-        await onManualSave();
+        await onManualSave(nextForm);
 
         const hasName = !!formData.name && formData.name.trim().length > 0;
         const hasDescription = !!formData.description && formData.description.trim().length > 0;
@@ -196,8 +189,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     };
 
     const handleSendToModeration = async () => {
-        if (actionPendingRef.current) return;
-        startAction();
+        if (!startAction()) return;
         const criticalMissing = getModerationIssues({
             name: formData.name ?? '',
             description: formData.description ?? '',
@@ -218,6 +210,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
         if (criticalMissing.length > 0) {
             setMissingForModeration(criticalMissing);
+            finishAction();
             return;
         }
 
@@ -274,7 +267,6 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 text2: 'Маршрут опубликован и доступен всем пользователям.',
             });
 
-            await onFinish();
             router.push('/metravel');
         } finally {
             finishAction();
@@ -303,7 +295,6 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 text2: 'Маршрут возвращен в черновики.',
             });
 
-            await onFinish();
             router.push('/metravel');
         } finally {
             finishAction();

@@ -32,6 +32,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const [travelDataOld, setTravelDataOld] = useState<Travel | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const [isManualSaveInFlight, setIsManualSaveInFlight] = useState(false);
 
   const initialFormData = getEmptyFormData(isNew ? null : String(travelId));
   const formDataRef = useRef<TravelFormData>(initialFormData);
@@ -113,10 +114,11 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     onSave: cleanAndSave,
     onSuccess: handleSaveSuccess,
     onError: handleSaveError,
-    enabled: isAuthenticated && hasAccess,
+    enabled: isAuthenticated && hasAccess && !isManualSaveInFlight,
   });
 
   const handleManualSave = useCallback(async (dataOverride?: TravelFormData) => {
+    setIsManualSaveInFlight(true);
     try {
       // Отменяем отложенный автосейв, чтобы не отправить старые данные (publish=false) после ручного сохранения.
       autosave?.cancelPending?.();
@@ -125,12 +127,15 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       const savedData = await cleanAndSave(toSave);
       applySavedData(savedData);
       autosave?.updateBaseline?.(savedData);
+      autosave?.cancelPending?.();
       showToast('Сохранено');
       return savedData;
     } catch (error) {
       showToast('Ошибка сохранения', 'error');
       console.error('Manual save error:', error);
       return;
+    } finally {
+      setIsManualSaveInFlight(false);
     }
   }, [applySavedData, cleanAndSave, formState.data, showToast]);
 
@@ -138,6 +143,17 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     async (id: string) => {
       try {
         const travelData = await fetchTravel(Number(id));
+
+        if (!travelData) {
+          Toast.show({
+            type: 'error',
+            text1: 'Путешествие не найдено',
+            text2: 'Возможно, оно было удалено или недоступно',
+          });
+          router.replace('/');
+          setHasAccess(false);
+          return;
+        }
 
         if (!isNew && travelData) {
           const canEdit = checkTravelEditAccess(travelData, userId, isSuperAdmin);

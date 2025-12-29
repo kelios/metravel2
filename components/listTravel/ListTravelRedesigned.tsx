@@ -44,8 +44,8 @@ export default function ListTravelRedesigned(_: ListTravelRedesignedProps) {
         icon="sun"
         defaultExpanded={getBlockState('welcomeBanner').expanded}
         defaultHidden={getBlockState('welcomeBanner').hidden}
-        onToggle={(_expanded) => toggleExpanded('welcomeBanner')}
-        onHide={(_hidden) => toggleHidden('welcomeBanner')}
+        onToggle={() => toggleExpanded('welcomeBanner')}
+        onHide={() => toggleHidden('welcomeBanner')}
         compactMode={mode === 'compact'}
       >
         <WelcomeBanner compact={mode === 'compact'} />
@@ -59,8 +59,8 @@ export default function ListTravelRedesigned(_: ListTravelRedesignedProps) {
         icon="search"
         defaultExpanded={getBlockState('search').expanded}
         defaultHidden={getBlockState('search').hidden}
-        onToggle={(_expanded) => toggleExpanded('search')}
-        onHide={(_hidden) => toggleHidden('search')}
+        onToggle={() => toggleExpanded('search')}
+        onHide={() => toggleHidden('search')}
         compactMode={mode === 'compact'}
       >
         <View style={styles.searchWrapper}>
@@ -77,8 +77,8 @@ export default function ListTravelRedesigned(_: ListTravelRedesignedProps) {
           icon="filter"
           defaultExpanded={getBlockState('filters').expanded}
           defaultHidden={getBlockState('filters').hidden}
-          onToggle={(_expanded) => toggleExpanded('filters')}
-          onHide={(_hidden) => toggleHidden('filters')}
+          onToggle={() => toggleExpanded('filters')}
+          onHide={() => toggleHidden('filters')}
           compactMode={mode === 'compact'}
         >
           <FiltersPanelCollapsible
@@ -103,8 +103,8 @@ export default function ListTravelRedesigned(_: ListTravelRedesignedProps) {
         icon="clock"
         defaultExpanded={getBlockState('recentViews').expanded}
         defaultHidden={getBlockState('recentViews').hidden}
-        onToggle={(_expanded) => toggleExpanded('recentViews')}
-        onHide={(_hidden) => toggleHidden('recentViews')}
+        onToggle={() => toggleExpanded('recentViews')}
+        onHide={() => toggleHidden('recentViews')}
         compactMode={mode === 'compact'}
       >
         <RecentViews compact={mode === 'compact'} />

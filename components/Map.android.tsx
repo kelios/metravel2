@@ -1,3 +1,3 @@
 // components/Map.android.tsx
-// Идентичен iOS версии, так как используется react-native-maps
+// Используем WebView с Leaflet (OpenStreetMap) - бесплатные карты
 export { default } from './Map.ios';

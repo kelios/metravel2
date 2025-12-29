@@ -145,6 +145,8 @@ describe('TravelWizardStepPublish - moderation submit', () => {
         moderation: true,
       })
     );
+
+    expect(onFinish).not.toHaveBeenCalled();
   });
 
   it('shows admin panel when publish=true and moderation=false', () => {
@@ -207,6 +209,58 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(queryByText('Статус публикации')).toBeNull();
   });
 
+  it('saves draft with publish=false and moderation=false when user switches from published', async () => {
+    const onManualSave = jest.fn().mockResolvedValue(undefined);
+    const onFinish = jest.fn();
+    const setFormData = jest.fn();
+
+    const publishedData: TravelFormData = {
+      ...baseFormData,
+      publish: true,
+      moderation: true,
+    };
+
+    const { getByText, getAllByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={publishedData}
+        setFormData={setFormData}
+        filters={{}}
+        travelDataOld={null}
+        isSuperAdmin={false}
+        onManualSave={onManualSave}
+        onGoBack={jest.fn()}
+        onFinish={onFinish}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(getByText('Сохранить как черновик'));
+    });
+
+    const primaryButtons = getAllByText('Сохранить');
+    const primarySubmit = primaryButtons[primaryButtons.length - 1];
+
+    await act(async () => {
+      fireEvent.press(primarySubmit);
+    });
+
+    expect(setFormData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        publish: false,
+        moderation: false,
+      })
+    );
+
+    expect(onManualSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        publish: false,
+        moderation: false,
+      })
+    );
+  });
+
   it('reject click is guarded to one call when already pending', async () => {
     const onManualSave = jest.fn().mockResolvedValue(undefined);
     const onFinish = jest.fn();
@@ -247,5 +301,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
         moderation: false,
       })
     );
+
+    expect(onFinish).not.toHaveBeenCalled();
   });
 });
