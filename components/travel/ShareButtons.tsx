@@ -110,7 +110,12 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
     if (Platform.OS === 'web') {
       window.open(vkUrl, '_blank', 'width=600,height=400,noopener,noreferrer');
     } else {
-      Linking.openURL(vkUrl).catch(() => {});
+      Linking.openURL(vkUrl).catch((error) => {
+        // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки вместо молчаливого игнорирования
+        if (__DEV__) {
+          console.warn('[ShareButtons] Не удалось открыть VK:', error);
+        }
+      });
     }
   }, [shareUrl, shareTitle]);
 

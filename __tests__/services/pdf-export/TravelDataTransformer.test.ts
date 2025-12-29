@@ -398,9 +398,52 @@ describe('TravelDataTransformer', () => {
 
       // var(--bg/--fg) заменяются на SAFE_COLOR_FALLBACK (#1f2937),
       // inline-стили санитизируются до явных color/background значений
-      expect(result[0].description).toContain('style="color:#1f2937; background:#1f2937;"');
+      expect(result[0].description).toContain('color:#1f2937');
+      expect(result[0].description).toMatch(/background(-color)?:#1f2937/);
       expect(result[0].description).not.toContain('--bg');
       expect(result[0].description).not.toContain(':root');
+    });
+
+    it('должен удалять скрипты и обработчики событий из richText', () => {
+      const richHtml = `
+        <p>Текст</p>
+        <script>alert('xss')</script>
+        <img src="javascript:alert(1)" onerror="alert(2)" />
+        <a href="javascript:alert(3)">link</a>
+      `;
+      const travels: Travel[] = [
+        {
+          id: 1,
+          name: 'Test',
+          slug: 'test',
+          url: 'test',
+          youtube_link: '',
+          userName: 'user',
+          description: richHtml,
+          recommendation: '',
+          plus: '',
+          minus: '',
+          cityName: '',
+          countryName: '',
+          countUnicIpView: '',
+          gallery: [],
+          travelAddress: [],
+          userIds: '',
+          year: '2024',
+          monthName: '',
+          number_days: 0,
+          companions: [],
+          countryCode: '',
+          travel_image_thumb_url: '',
+          travel_image_thumb_small_url: '',
+        },
+      ];
+
+      const result = transformer.transform(travels);
+
+      expect(result[0].description).not.toContain('<script');
+      expect(result[0].description).not.toContain('onerror');
+      expect(result[0].description).not.toContain('javascript:');
     });
 
     it('должен сохранять HTML img теги в richText (не удалять как RN <Image/>)', () => {
@@ -521,6 +564,40 @@ describe('TravelDataTransformer', () => {
       expect(String(thumb)).toContain(encodeURIComponent('metravel.by/gallery/5076/conversions/a-thumb.jpg'));
       expect(String(thumb)).not.toContain('192.168.50.36');
     });
+
+    it('должен сохранять blob URL для travelAddress.travelImageThumbUrl', () => {
+      const travels: Travel[] = [
+        {
+          id: 1,
+          name: 'Test',
+          slug: 'test',
+          url: 'test',
+          youtube_link: '',
+          userName: 'user',
+          description: '',
+          recommendation: '',
+          plus: '',
+          minus: '',
+          cityName: '',
+          countryName: '',
+          countUnicIpView: '',
+          gallery: [],
+          travelAddress: [
+            { id: 1, address: 'Point', coord: '1,1', travelImageThumbUrl: 'blob:local-image' },
+          ] as any,
+          userIds: '',
+          year: '2024',
+          monthName: '',
+          number_days: 0,
+          companions: [],
+          countryCode: '',
+          travel_image_thumb_url: '',
+          travel_image_thumb_small_url: '',
+        },
+      ];
+
+      const result = transformer.transform(travels);
+      expect(result[0].travelAddress?.[0]?.travelImageThumbUrl).toBe('blob:local-image');
+    });
   });
 });
-

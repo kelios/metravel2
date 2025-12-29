@@ -166,7 +166,12 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
         if (Platform.OS === 'web') {
             window.open(url, '_blank', 'noopener,noreferrer');
         } else {
-            Linking.openURL(`https://metravel.by${url}`).catch(() => {});
+            Linking.openURL(`https://metravel.by${url}`).catch((error) => {
+                // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки вместо молчаливого игнорирования
+                if (__DEV__) {
+                    console.warn('[FiltersUpsertComponent] Не удалось открыть URL:', error);
+                }
+            });
         }
     };
 

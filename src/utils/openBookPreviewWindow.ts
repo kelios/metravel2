@@ -6,6 +6,11 @@ export function openBookPreviewWindow(html: string): void {
   if (!win) {
     return;
   }
+  try {
+    win.opener = null;
+  } catch {
+    // ignore
+  }
 
   // Небольшая задержка, чтобы браузер успел инициализировать документ вкладки
   try {

@@ -219,7 +219,14 @@ export default function Root({ children }: { children: React.ReactNode }) {
     const lcpImg = document.querySelector('[data-lcp]');
     if (!lcpImg) return;
     lcpImg.fetchpriority = 'high';
-    if (lcpImg.decode && lcpImg.complete) lcpImg.decode().catch(()=>{});
+    if (lcpImg.decode && lcpImg.complete) {
+      lcpImg.decode().catch((error) => {
+        // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки декодирования изображения
+        if (typeof console !== 'undefined') {
+          console.warn('[LCP Optimization] Ошибка декодирования изображения:', error);
+        }
+      });
+    }
   }
   if (document.readyState !== 'loading') optimizeLCP();
   else document.addEventListener('DOMContentLoaded', optimizeLCP);

@@ -332,7 +332,7 @@ export class TravelPageGenerator {
         text-align: center;
       ">
         <img
-          src="${qrCodeDataUrl}"
+          src="${this.escapeHtml(qrCodeDataUrl)}"
           alt="QR Code"
           style="
             width: 25mm;

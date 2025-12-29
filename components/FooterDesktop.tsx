@@ -21,7 +21,12 @@ type LinkItem = {
 
 const palette = DESIGN_TOKENS.colors;
 
-const openURL = (url: string) => Linking.openURL(url).catch(() => {});
+const openURL = (url: string) => Linking.openURL(url).catch((error) => {
+  // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки вместо молчаливого игнорирования
+  if (__DEV__) {
+    console.warn('[FooterDesktop] Не удалось открыть URL:', error);
+  }
+});
 
 const Item = memo(function Item({
   children,

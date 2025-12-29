@@ -412,7 +412,8 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         height: "100%",
         border: "0",
       });
-      root.innerHTML = "";
+      // ✅ ИСПРАВЛЕНИЕ: Используем replaceChildren() вместо innerHTML = "" - более безопасно
+      root.replaceChildren();
       root.appendChild(iframe);
     };
     document.addEventListener("click", onClick, { passive: true });
@@ -580,7 +581,12 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
   const handleLinkPress = (_: any, href?: string) => {
     if (!href) return;
     if (/^https?:\/\//i.test(href)) {
-      Linking.openURL(href).catch(() => {});
+      Linking.openURL(href).catch((error) => {
+        // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки вместо молчаливого игнорирования
+        if (__DEV__) {
+          console.warn('[StableContent] Не удалось открыть URL:', error);
+        }
+      });
     } else if (href.startsWith("/") && Platform.OS === "web") {
       window.location.assign(href);
     }

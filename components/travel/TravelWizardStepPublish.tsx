@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { QualityIndicator } from '@/components/travel/ValidationFeedback';
-import { TravelFormData, Travel } from '@/src/types/types';
+import { TravelFormData } from '@/src/types/types';
 import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
 import { getQualityScore } from '@/utils/travelWizardValidation';
 import { trackWizardEvent } from '@/src/utils/analytics';
@@ -44,7 +44,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     isSuperAdmin,
     onManualSave,
     onGoBack,
-    onFinish,
+    onFinish: _onFinish,
     onNavigateToIssue,
     onStepSelect,
     stepMeta,

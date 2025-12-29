@@ -56,7 +56,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     snackbarMessage,
     onDismissSnackbar,
     onGoNext,
-    stepErrors,
+    stepErrors: _stepErrors,
     firstErrorField,
     autosaveStatus,
     autosaveBadge,

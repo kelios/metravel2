@@ -104,15 +104,30 @@ function AboutAndContactScreen() {
     const url = `mailto:${EMAIL}?subject=${encodeURIComponent(MAIL_SUBJECT)}&body=${encodeURIComponent(MAIL_BODY)}`;
     Linking.canOpenURL(url)
       .then((supported: boolean) => supported && Linking.openURL(url))
-      .catch(() => {});
+      .catch((error) => {
+        // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки отправки почты
+        if (__DEV__) {
+          console.warn('[about] Ошибка отправки почты:', error);
+        }
+      });
   }, []);
 
   const openYoutube = useCallback(() => {
-    Linking.openURL(YT_URL).catch(() => {});
+    Linking.openURL(YT_URL).catch((error) => {
+      // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки открытия YouTube
+      if (__DEV__) {
+        console.warn('[about] Ошибка открытия YouTube:', error);
+      }
+    });
   }, []);
 
   const openUrl = useCallback((url: string) => {
-    Linking.openURL(url).catch(() => {});
+    Linking.openURL(url).catch((error) => {
+      // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки открытия URL
+      if (__DEV__) {
+        console.warn('[about] Ошибка открытия URL:', error);
+      }
+    });
   }, []);
 
   const invalidName = useMemo(() => touched.name && !name.trim(), [touched.name, name]);

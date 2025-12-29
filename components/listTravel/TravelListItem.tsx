@@ -73,7 +73,7 @@ function TravelListItem({
                             travel,
                             currentUserId,
                             isSuperuser,
-                            isMetravel = false,
+                            isMetravel: _isMetravel = false,
                             onDeletePress,
                             isFirst = false,
                             isSingle = false,

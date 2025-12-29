@@ -73,7 +73,26 @@ module.exports = [
       "no-undef": "off",
       "no-console": ["warn", { allow: ["warn", "error", "info"] }],
       "no-unused-vars": "off",
-      "@typescript-eslint/no-unused-vars": "error"
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_"
+        }
+      ]
+    }
+  },
+  {
+    files: ["__mocks__/**/*.js"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.browser
+      }
+    },
+    rules: {
+      "no-redeclare": "off"
     }
   },
   {

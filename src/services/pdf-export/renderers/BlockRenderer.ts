@@ -488,6 +488,7 @@ export class BlockRenderer {
     if (!trimmed) return '';
 
     if (trimmed.startsWith('data:')) return trimmed;
+    if (trimmed.startsWith('blob:')) return trimmed;
 
     // Если URL уже проксирован (например, TravelDataTransformer уже переписал <img src>),
     // не проксируем второй раз — это ломает загрузку изображений в печати/PDF.
@@ -523,4 +524,3 @@ export class BlockRenderer {
     return this.buildSafeImageUrl(`https://metravel.by/${trimmed.replace(/^\/+/, '')}`);
   }
 }
-

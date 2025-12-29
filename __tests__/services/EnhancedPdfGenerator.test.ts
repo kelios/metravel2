@@ -110,6 +110,10 @@ describe('EnhancedPdfGenerator helpers', () => {
     const safe = generator.buildSafeImageUrl('http://cdn.test/image.jpg')
     expect(safe).toContain('images.weserv.nl')
     expect(generator.buildSafeImageUrl('data:image/png;base64,abc')).toContain('data:image/png')
+    expect(generator.buildSafeImageUrl('blob:local-image')).toBe('blob:local-image')
+
+    const proxied = 'https://images.weserv.nl/?url=example.com/image.jpg&w=1600&fit=inside'
+    expect(generator.buildSafeImageUrl(proxied)).toBe(proxied)
   })
 
   it('normalizes locations, builds SVG, formats labels and escapes', () => {

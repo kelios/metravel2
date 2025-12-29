@@ -353,7 +353,8 @@ export class ContentParser {
           return {
             type: 'paragraph',
             text,
-            html: element.innerHTML,
+            // ✅ ИСПРАВЛЕНИЕ: Экранируем HTML для безопасности перед сохранением
+            html: this.escapeHtml(element.innerHTML),
           };
         }
         return null;
@@ -753,6 +754,25 @@ export class ContentParser {
       headers,
       rows: tableRows,
     };
+  }
+
+  /**
+   * Экранирует HTML для безопасного отображения (защита от XSS)
+   * ✅ ИСПРАВЛЕНИЕ: Использует встроенный DOM для экранирования
+   */
+  private escapeHtml(text: string): string {
+    if (typeof document === 'undefined') {
+      // Fallback для серверного рендеринга
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   /**

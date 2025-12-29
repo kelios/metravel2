@@ -174,7 +174,11 @@ class ApiClient {
             try {
                 return JSON.parse(text) as T;
             } catch {
-                return text as unknown as T;
+                // Если это простой текст, не JSON, логируем и возвращаем null
+                if (__DEV__) {
+                    devError('Ошибка парсинга JSON в parseSuccessResponse:', text.substring(0, 100));
+                }
+                return null as T;
             }
         }
 

@@ -4,6 +4,7 @@
 import type { Travel } from '@/src/types/types';
 import { TravelForBook } from '@/src/types/pdf-export';
 import { ExportError, ExportErrorType } from '@/src/types/pdf-export';
+import { sanitizeRichTextForPdf } from '@/src/utils/sanitizeRichText';
 
 const IMAGE_PROXY_BASE = 'https://images.weserv.nl/?url=';
 const DEFAULT_IMAGE_PARAMS = 'w=1600&fit=inside';
@@ -137,16 +138,8 @@ export class TravelDataTransformer {
     // чтобы они не терялись в PDF (где CSS классов обычно нет).
     const withInlinedClassStyles = this.inlineKnownClassStyles(withoutVarUsage);
 
-    // Приводим <img> к безопасным src
-    const withSafeImages = withInlinedClassStyles.replace(
-      /<img([^>]*?)src=["']([^"']+)["']([^>]*)>/gi,
-      (_match, before, src, after) => {
-        const safeSrc = this.buildSafeImageUrl(src);
-        return `<img${before}src="${safeSrc}"${after}>`;
-      }
-    );
-
-    const sanitizedStyles = this.sanitizeInlineStyles(withSafeImages);
+    const sanitizedHtml = sanitizeRichTextForPdf(withInlinedClassStyles);
+    const sanitizedStyles = this.sanitizeInlineStyles(sanitizedHtml);
 
     // ✅ КРИТИЧНО: Убеждаемся что HTML валиден - если остался голый текст без тегов,
     // оборачиваем его в <p> для корректного отображения
@@ -371,6 +364,10 @@ export class TravelDataTransformer {
     const trimmed = String(url).trim();
     if (!trimmed) return PLACEHOLDER_IMAGE;
     if (trimmed.startsWith('data:')) return trimmed;
+    if (this.isLocalUrl(trimmed)) return trimmed;
+    if (/^https?:\/\/images\.weserv\.nl\//i.test(trimmed)) {
+      return trimmed;
+    }
     // Протокол-относительные URL
     if (trimmed.startsWith('//')) {
       return this.buildSafeImageUrl(`https:${trimmed}`);

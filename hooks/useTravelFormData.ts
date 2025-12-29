@@ -137,7 +137,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     } finally {
       setIsManualSaveInFlight(false);
     }
-  }, [applySavedData, cleanAndSave, formState.data, showToast]);
+  }, [applySavedData, autosave, cleanAndSave, formState.data, showToast]);
 
   const loadTravelData = useCallback(
     async (id: string) => {

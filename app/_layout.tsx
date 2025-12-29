@@ -129,7 +129,12 @@ function useIdleFlag(timeout = 2000) {
 
 export default function RootLayout() {
     useEffect(() => {
-        if (!isWeb) SplashScreen.hideAsync().catch(() => {});
+        if (!isWeb) SplashScreen.hideAsync().catch((error) => {
+            // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки скрытия splash screen
+            if (__DEV__) {
+                console.warn('[RootLayout] Ошибка hideAsync:', error);
+            }
+        });
     }, []);
     return <RootLayoutNav />;
 }

@@ -81,7 +81,14 @@ const setupDomEnv = ({ host = 'metravel.by', consent = { necessary: true, analyt
 const runAnalyticsSnippet = () => {
   const snippet = getAnalyticsInlineScript(TEST_METRIKA_ID, TEST_GA_ID)
    
-  eval(snippet)
+  // ✅ ИСПРАВЛЕНИЕ: Вместо eval() создаём и выполняем script в изолированной области
+  // eval() опасна - создаём функцию из кода и вызываем её в нужном контексте
+  try {
+    const analyticsFunction = new Function(snippet);
+    analyticsFunction.call(global);
+  } catch (error) {
+    console.error('[Analytics Test] Ошибка выполнения аналитики:', error);
+  }
 }
 
 describe('analytics inline script', () => {

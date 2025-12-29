@@ -9,6 +9,15 @@ const ALLOWED_IFRAME_HOSTS = [
 ]
 const ALLOWED_SCHEMES = ['http', 'https', 'mailto']
 const DIMENSION_RE = /^\d+(\.\d+)?(px|%)?$/i
+const COLOR_RE =
+  /^(#[0-9a-f]{3,4}|#[0-9a-f]{6}|#[0-9a-f]{8}|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*(0|1|0?\.\d+)\s*)?\)|transparent)$/i
+const LENGTH_TOKEN = '-?\\d+(?:\\.\\d+)?(?:px|em|rem|%|pt)?'
+const MARGIN_TOKEN = `(?:${LENGTH_TOKEN}|auto)`
+const MARGIN_RE = new RegExp(`^${MARGIN_TOKEN}( +${MARGIN_TOKEN}){0,3}$`, 'i')
+const PADDING_RE = new RegExp(`^${LENGTH_TOKEN}( +${LENGTH_TOKEN}){0,3}$`, 'i')
+const LENGTH_OR_AUTO_RE = new RegExp(`^(?:${LENGTH_TOKEN}|auto)$`, 'i')
+const LENGTH_ONLY_RE = new RegExp(`^${LENGTH_TOKEN}$`, 'i')
+const SAFE_DATA_IMAGE_RE = /^data:image\/(png|jpe?g|gif|webp|avif);base64,/i
 
 const PDF_IMAGE_PROXY_BASE = 'https://images.weserv.nl/?url='
 const PDF_IMAGE_DEFAULT_PARAMS = 'w=1600&fit=inside'
@@ -63,11 +72,39 @@ const allowedAttributes: sanitizeHtml.IOptions['allowedAttributes'] = {
   source: ['src', 'srcset', 'type', 'media'],
 }
 
+function isSafeDataImage(value: string) {
+  return SAFE_DATA_IMAGE_RE.test(value)
+}
+
+function rewriteLocalImageUrl(value: string) {
+  try {
+    const parsed = new URL(value)
+    const host = parsed.hostname.toLowerCase()
+    const isLocalhost = host === 'localhost' || host === '127.0.0.1'
+    const isPrivateV4 =
+      /^192\.168\./.test(host) ||
+      /^10\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+
+    if (isLocalhost || isPrivateV4) {
+      parsed.protocol = 'https:'
+      parsed.host = 'metravel.by'
+      return parsed.toString()
+    }
+  } catch {
+    // ignore
+  }
+
+  return value
+}
+
 function normalizePdfImageSrc(value?: string) {
   if (!value) return undefined
   const trimmed = value.trim()
   if (!trimmed) return undefined
-  if (trimmed.startsWith('data:')) return trimmed
+  if (trimmed.startsWith('data:')) return isSafeDataImage(trimmed) ? trimmed : undefined
+  if (trimmed.startsWith('blob:')) return trimmed
+  if (trimmed.startsWith('//')) return normalizePdfImageSrc(`https:${trimmed}`)
   if (trimmed.startsWith('/')) {
     try {
       if (typeof window !== 'undefined' && window.location?.origin) {
@@ -82,7 +119,8 @@ function normalizePdfImageSrc(value?: string) {
   const normalized = normalizeUrl(trimmed)
   if (!normalized) return undefined
   try {
-    const withoutScheme = normalized.replace(/^https?:\/\//i, '')
+    const rewritten = rewriteLocalImageUrl(normalized)
+    const withoutScheme = rewritten.replace(/^https?:\/\//i, '')
     return `${PDF_IMAGE_PROXY_BASE}${encodeURIComponent(withoutScheme)}&${PDF_IMAGE_DEFAULT_PARAMS}`
   } catch {
     return normalized
@@ -91,7 +129,7 @@ function normalizePdfImageSrc(value?: string) {
 
 const allowedSchemesByTag: sanitizeHtml.IOptions['allowedSchemesByTag'] = {
   iframe: ['http', 'https'],
-  img: ['http', 'https', 'data'],
+  img: ['http', 'https', 'data', 'blob'],
 }
 
 function isAllowedIframe(src?: string) {
@@ -172,8 +210,16 @@ export function sanitizeRichText(html?: string | null): string {
       '*': {
         'text-align': [/^(left|right|center|justify)$/],
         float: [/^(left|right|none)$/],
-        margin: [/^-?\d+(px|em|rem|%)?( +-?\d+(px|em|rem|%)?){0,3}$/],
-        padding: [/^\d+(px|em|rem|%)?( +\d+(px|em|rem|%)?){0,3}$/],
+        margin: [MARGIN_RE],
+        'margin-left': [LENGTH_OR_AUTO_RE],
+        'margin-right': [LENGTH_OR_AUTO_RE],
+        'margin-top': [LENGTH_ONLY_RE],
+        'margin-bottom': [LENGTH_ONLY_RE],
+        padding: [PADDING_RE],
+        color: [COLOR_RE],
+        'background-color': [COLOR_RE],
+        background: [COLOR_RE],
+        display: [/^(block|inline-block|inline)$/],
       },
       img: {
         width: [/^\d+(px|%)$/],

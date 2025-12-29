@@ -1042,7 +1042,7 @@ export class EnhancedPdfGenerator {
             padding-top: ${spacing.blockSpacing};
           ">
             ${qrCode ? `
-              <img src="${qrCode}" alt="QR" style="
+              <img src="${this.escapeHtml(qrCode)}" alt="QR" style="
                 width: 50mm;
                 height: 50mm;
                 border-radius: ${this.theme.blocks.borderRadius};
@@ -1997,12 +1997,37 @@ export class EnhancedPdfGenerator {
     const trimmed = String(url).trim();
     if (!trimmed) return undefined;
     if (trimmed.startsWith('data:')) return trimmed;
+    if (this.isLocalResource(trimmed)) return trimmed;
+    if (/^https?:\/\/images\.weserv\.nl\//i.test(trimmed)) return trimmed;
+    if (trimmed.startsWith('//')) return this.buildSafeImageUrl(`https:${trimmed}`);
     // Разрешаем относительные пути: дополняем текущим origin
     if (trimmed.startsWith('/')) {
       if (typeof window !== 'undefined' && (window as any).location?.origin) {
         return `${(window as any).location.origin}${trimmed}`;
       }
       return `https://metravel.by${trimmed}`;
+    }
+
+    if (!/^https?:\/\//i.test(trimmed) && !trimmed.includes('://')) {
+      return this.buildSafeImageUrl(`https://metravel.by/${trimmed.replace(/^\/+/, '')}`);
+    }
+
+    try {
+      const parsed = new URL(trimmed);
+      const host = parsed.hostname.toLowerCase();
+      const isLocalhost = host === 'localhost' || host === '127.0.0.1';
+      const isPrivateV4 =
+        /^192\.168\./.test(host) ||
+        /^10\./.test(host) ||
+        /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+
+      if (isLocalhost || isPrivateV4) {
+        parsed.protocol = 'https:';
+        parsed.host = 'metravel.by';
+        return this.buildSafeImageUrl(parsed.toString());
+      }
+    } catch {
+      // ignore URL parse errors
     }
 
     try {

@@ -37,11 +37,6 @@ interface TravelProps {
   coordinates: Coordinates | null;
 }
 
-const getLatLng = (coord: string) => {
-  const [latitude, longitude] = coord.split(',').map(Number);
-  return { latitude, longitude };
-};
-
 const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) => {
   const travelAddress = useMemo(() => travel?.travelAddress?.data || [], [travel?.travelAddress?.data]);
   const [localCoordinates, setLocalCoordinates] = useState<Coordinates | null>(propCoordinates);

@@ -161,9 +161,32 @@ export const fetchTravelsNearRoute = async (
 export const fetchFiltersMap = async (): Promise<Filters> => {
   try {
     const res = await fetchWithTimeout(GET_FILTER_FOR_MAP, {}, DEFAULT_TIMEOUT);
-    return await safeJsonParse<Filters>(res, [] as unknown as Filters);
+    // Возвращаем пустой объект фильтров вместо неправильного типа assertion
+    const emptyFilters: Filters = {
+      countries: [],
+      categories: [],
+      categoryTravelAddress: [],
+      companions: [],
+      complexity: [],
+      month: [],
+      over_nights_stay: [],
+      transports: [],
+      year: ''
+    };
+    return await safeJsonParse<Filters>(res, emptyFilters);
   } catch (e) {
     devWarn('Error fetching filters:', e);
-    return [] as unknown as Filters;
+    const emptyFilters: Filters = {
+      countries: [],
+      categories: [],
+      categoryTravelAddress: [],
+      companions: [],
+      complexity: [],
+      month: [],
+      over_nights_stay: [],
+      transports: [],
+      year: ''
+    };
+    return emptyFilters;
   }
 };

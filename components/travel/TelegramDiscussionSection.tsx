@@ -23,7 +23,12 @@ export default function TelegramDiscussionSection({ travel }: TelegramDiscussion
         window.open(url, '_blank', 'noopener,noreferrer');
       }
     } else {
-      Linking.openURL(url).catch(() => {});
+      Linking.openURL(url).catch((error) => {
+        // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки открытия Telegram
+        if (__DEV__) {
+          console.warn('[TelegramDiscussionSection] Не удалось открыть Telegram:', error);
+        }
+      });
     }
   }, [baseUrl]);
 

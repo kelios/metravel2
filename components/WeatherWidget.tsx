@@ -62,7 +62,12 @@ export default function WeatherWidget({ points, countryName }: Props) {
               }));
               setForecast(forecastData);
           })
-          .catch(() => {});
+          .catch((error) => {
+              // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки вместо молчаливого игнорирования
+              if (__DEV__) {
+                  console.warn('[WeatherWidget] Ошибка загрузки прогноза погоды:', error);
+              }
+          });
     }, [points, countryName]);
 
     if (Platform.OS !== 'web' || !forecast.length || !locationLabel) return null;

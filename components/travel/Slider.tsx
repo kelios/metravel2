@@ -413,7 +413,12 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         const t = idx + d;
         if (t < 0 || t >= images.length) continue;
         const u = uriMap[t];
-        prefetchImage(u).catch(() => {});
+        prefetchImage(u).catch((error) => {
+          // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки прелоадинга изображений
+          if (__DEV__) {
+            console.warn('[Slider] Ошибка прелоадинга изображения:', error);
+          }
+        });
       }
     },
     [prefetchEnabled, images.length, effectivePreload, uriMap]
