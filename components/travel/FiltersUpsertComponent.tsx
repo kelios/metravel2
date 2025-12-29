@@ -191,7 +191,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     accessibilityRole="button"
                     accessibilityLabel="Сохранить изменения"
                 >
-                    Сохранить сейчас
+                    Сохранить
                 </Button>
             )}
 

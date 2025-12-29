@@ -46,8 +46,7 @@ export function createResponsiveStyleSheet<T extends NamedStyles<T> | NamedStyle
  * Hook to get responsive styles based on screen size
  */
 export function useResponsiveStyles<T extends NamedStyles<T> | NamedStyles<any>>(
-  styles: T | NamedStyles<T>,
-  _deps: any[] = []
+  styles: T | NamedStyles<T>
 ): T {
   const responsive = useResponsive();
   

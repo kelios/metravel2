@@ -49,7 +49,6 @@ const LCP_INDEX = 0; // первая картинка из контента — 
 
 const TravelDescription: React.FC<TravelDescriptionProps> = ({
                                                                  htmlContent,
-                                                                 title: _title,
                                                                  noBox = false,
                                                              }) => {
     const { width, height } = useResponsive();
@@ -113,7 +112,6 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
         // Небольшой парсер по регуляркам (достаточно для наших задач).
         // 1) Соберём все <img ...>
         const imgRegex = /<img\b[^>]*?>/gi;
-        const _imgs = Array.from(htmlContent.matchAll(imgRegex)).map(m => m[0]);
 
         let lcpCandidate: string | null = null;
         let idx = 0;
@@ -168,10 +166,6 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
               }
 
               // базовые атрибуты
-              const _hasLoading = /\bloading=/i.test(tag);
-              const _hasDecoding = /\bdecoding=/i.test(tag);
-              const _hasFetchPriority = /\bfetchpriority=/i.test(tag);
-
               // стили
               const styleMatch = tag.match(/\bstyle="([^"]*)"/i);
               const style = styleMatch?.[1] ?? "";

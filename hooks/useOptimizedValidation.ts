@@ -21,7 +21,6 @@ export function useOptimizedValidation<T extends Record<string, any>>(
   const {
     debounce = 300,
     validateOnChange = true,
-    validateOnBlur: _validateOnBlur = true,
   } = options;
 
   const [state, setState] = useState<ValidationState>({

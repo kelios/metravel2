@@ -332,5 +332,6 @@ export function useImprovedAutoSave<T>(
     timeSinceLastSave: state.lastSaved 
       ? Date.now() - state.lastSaved.getTime() 
       : null,
+    cancelPending: cleanup,
   };
 }

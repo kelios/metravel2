@@ -21,9 +21,14 @@ jest.mock('@/components/travel/AuthorCard', () => ({
 
 describe('TravelHeroSection slider background regression (web)', () => {
   beforeEach(() => {
+    jest.useFakeTimers()
     Platform.OS = 'web'
     Platform.select = (obj: any) => obj.web || obj.default
     mockSliderSpy.mockClear()
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
   })
 
   it('passes blurBackground=true to Slider when renderSlider=true', async () => {
@@ -73,6 +78,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
         </Suspense>,
       )
 
+      jest.runAllTimers()
       await Promise.resolve()
     })
 

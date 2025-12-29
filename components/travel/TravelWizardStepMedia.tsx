@@ -138,6 +138,30 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
         }
     }, [formData, setFormData]);
 
+    const handleCoverUpload = useCallback(
+        (url: string | null) => {
+            // При успешной загрузке или локальном превью обновляем форму,
+            // чтобы шаг 6 сразу видел обложку без перезагрузки.
+            setFormData({
+                ...formData,
+                travel_image_thumb_small_url: url || null,
+                travel_image_thumb_url: url || null,
+            });
+        },
+        [formData, setFormData],
+    );
+
+    const handleGalleryChange = useCallback(
+        (urls: string[]) => {
+            // Синхронизируем галерею с формой, чтобы шаг 6 сразу видел фото.
+            setFormData({
+                ...formData,
+                gallery: urls,
+            });
+        },
+        [formData, setFormData],
+    );
+
     // Валидация шага 3
     const validation = useMemo(() => {
         return validateStep(3, formData);
@@ -191,6 +215,8 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                                             ? (formData as any).travel_image_thumb_small_url
                                             : (travelDataOld as any)?.travel_image_thumb_small_url ?? null
                                     }
+                                    onUpload={handleCoverUpload}
+                                    onPreviewChange={handleCoverUpload}
                                     onRequestRemove={handleRequestDeleteCover}
                                     placeholder="Перетащите обложку путешествия"
                                     maxSizeMB={10}
@@ -216,10 +242,18 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                                         </View>
                                     }
                                 >
-                                    <GallerySectionLazy formData={formData} travelDataOld={travelDataOld} />
+                                    <GallerySectionLazy
+                                        formData={formData}
+                                        travelDataOld={travelDataOld}
+                                        onChange={handleGalleryChange}
+                                    />
                                 </Suspense>
                             ) : GallerySectionNative ? (
-                                <GallerySectionNative formData={formData} travelDataOld={travelDataOld} />
+                                <GallerySectionNative
+                                    formData={formData}
+                                    travelDataOld={travelDataOld}
+                                    onChange={handleGalleryChange}
+                                />
                             ) : null}
                         </View>
 

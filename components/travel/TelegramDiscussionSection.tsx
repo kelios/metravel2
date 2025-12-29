@@ -9,8 +9,9 @@ interface TelegramDiscussionSectionProps {
   travel: Travel;
 }
 
-export default function TelegramDiscussionSection({ travel: _travel }: TelegramDiscussionSectionProps) {
+export default function TelegramDiscussionSection({ travel }: TelegramDiscussionSectionProps) {
   const baseUrl = process.env.EXPO_PUBLIC_TELEGRAM_DISCUSSION_URL || '';
+  const travelName = travel?.name;
 
   const handleOpen = useCallback(() => {
     if (!baseUrl) return;
@@ -32,7 +33,8 @@ export default function TelegramDiscussionSection({ travel: _travel }: TelegramD
     <View style={styles.container}>
       <Text style={styles.title}>Обсуждение маршрута в Telegram</Text>
       <Text style={styles.subtitle}>
-        Задайте вопрос или поделитесь впечатлениями о маршруте в нашем Telegram‑канале.
+        Задайте вопрос или поделитесь впечатлениями о маршруте
+        {travelName ? ` «${travelName}»` : ''} в нашем Telegram‑канале.
       </Text>
       <Pressable
         onPress={handleOpen}

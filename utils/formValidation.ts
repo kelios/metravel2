@@ -85,7 +85,7 @@ export function validateName(name: string | undefined | null): ValidationError |
 export function validateStep(
   step: number,
   formData: TravelFormLike,
-  _markers?: any[] | null,
+  markers?: any[] | null,
 ): ValidationResult {
   const errors: ValidationError[] = [];
 

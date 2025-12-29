@@ -95,7 +95,6 @@ interface FieldValidationMessageProps {
  */
 export const FieldValidationMessage: React.FC<FieldValidationMessageProps> = ({
   validation,
-  fieldName: _fieldName,
 }) => {
   if (validation.isValid && !validation.warning) {
     return null;
@@ -188,7 +187,6 @@ interface ValidationSummaryProps {
 export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
   errorCount,
   warningCount,
-  onErrorClick: _onErrorClick,
 }) => {
   if (errorCount === 0 && warningCount === 0) {
     return (

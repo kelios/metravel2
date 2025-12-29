@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View, Text, TouchableOpacity, StyleSheet, LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from 'react-native-paper';
@@ -23,7 +23,7 @@ interface TravelWizardStepPublishProps {
     filters: any;
     travelDataOld: Travel | null;
     isSuperAdmin: boolean;
-    onManualSave: () => Promise<TravelFormData | void>;
+    onManualSave: (data?: TravelFormData) => Promise<TravelFormData | void>;
     onGoBack: () => void;
     onFinish: () => void;
     onNavigateToIssue?: (issue: ModerationIssue) => void;
@@ -60,9 +60,33 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
     const [footerHeight, setFooterHeight] = useState(0);
+    const [actionPending, setActionPending] = useState(false);
+    const actionPendingRef = useRef(false);
+
+    const startAction = useCallback(() => {
+        if (actionPendingRef.current) return false;
+        actionPendingRef.current = true;
+        setActionPending(true);
+        return true;
+    }, []);
+
+    const finishAction = useCallback(() => {
+        actionPendingRef.current = false;
+        setActionPending(false);
+    }, []);
     const [status, setStatus] = useState<'draft' | 'moderation'>(
-        formData.moderation ? 'moderation' : 'draft',
+        formData.moderation || formData.publish ? 'moderation' : 'draft',
     );
+
+    const currentBackendStatus = useMemo(() => {
+        if (formData.moderation) return { label: 'Опубликовано', tone: 'success' } as const;
+        if (formData.publish) return { label: 'Отправлено на модерацию', tone: 'warning' } as const;
+        return { label: 'Черновик', tone: 'muted' } as const;
+    }, [formData.moderation, formData.publish]);
+
+    const isUser = !isSuperAdmin;
+    const pendingModeration = formData.publish && !formData.moderation;
+    const userPendingModeration = isUser && pendingModeration;
 
     const checklist = useMemo(() => {
         const hasName = !!formData.name && formData.name.trim().length > 0;
@@ -172,6 +196,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     };
 
     const handleSendToModeration = async () => {
+        if (actionPendingRef.current) return;
+        startAction();
         const criticalMissing = getModerationIssues({
             name: formData.name ?? '',
             description: formData.description ?? '',
@@ -196,77 +222,96 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         }
 
         setMissingForModeration([]);
-        setFormData({
+        const nextForm = {
             ...formData,
-            moderation: true,
-        });
+            moderation: false,
+            publish: true, // пользователь отправляет на модерацию: publish=true, moderation остаётся false до решения админа
+        };
+        setFormData(nextForm);
 
-        // Сохраняем статус модерации на бэкенд перед редиректом/уведомлением
-        await onManualSave();
+        // Сохраняем статус на бэкенд (отсюда триггерятся уведомления)
+        try {
+            await onManualSave(nextForm);
 
-        await trackWizardEvent('wizard_moderation_success', {
-            travel_id: formData.id ?? null,
-            filled_checklist_count: checklist.filter(item => item.ok).length,
-            total_checklist_count: checklist.length,
-        });
+            await trackWizardEvent('wizard_moderation_success', {
+                travel_id: formData.id ?? null,
+                filled_checklist_count: checklist.filter(item => item.ok).length,
+                total_checklist_count: checklist.length,
+            });
 
-        Toast.show({
-            type: 'success',
-            text1: 'Маршрут отправлен на модерацию',
-            text2: 'После одобрения он появится в разделе "Мои путешествия".',
-        });
+            Toast.show({
+                type: 'success',
+                text1: 'Маршрут отправлен на модерацию',
+                text2: 'После одобрения он появится в разделе "Мои путешествия".',
+            });
 
-        await onFinish();
-        router.push('/metravel');
+            // Навигация без повторного сохранения (чтобы не перезаписать publish=false старым стейтом)
+            router.push('/metravel');
+        } finally {
+            finishAction();
+        }
     };
 
     const handleApproveModeration = async () => {
-        setFormData({
+        if (!startAction()) return;
+        const nextForm = {
             ...formData,
             moderation: true,
             publish: true,
-        });
+        };
+        setFormData(nextForm);
 
-        await onManualSave();
+        try {
+            await onManualSave(nextForm);
 
-        await trackWizardEvent('admin_moderation_approved', {
-            travel_id: formData.id ?? null,
-        });
+            await trackWizardEvent('admin_moderation_approved', {
+                travel_id: formData.id ?? null,
+            });
 
-        Toast.show({
-            type: 'success',
-            text1: 'Модерация одобрена',
-            text2: 'Маршрут опубликован и доступен всем пользователям.',
-        });
+            Toast.show({
+                type: 'success',
+                text1: 'Модерация одобрена',
+                text2: 'Маршрут опубликован и доступен всем пользователям.',
+            });
 
-        await onFinish();
-        router.push('/metravel');
+            await onFinish();
+            router.push('/metravel');
+        } finally {
+            finishAction();
+        }
     };
 
     const handleRejectModeration = async () => {
-        setFormData({
+        if (!startAction()) return;
+        const nextForm = {
             ...formData,
             moderation: false,
             publish: false,
-        });
+        };
+        setFormData(nextForm);
 
-        await onManualSave();
+        try {
+            await onManualSave(nextForm);
 
-        await trackWizardEvent('admin_moderation_rejected', {
-            travel_id: formData.id ?? null,
-        });
+            await trackWizardEvent('admin_moderation_rejected', {
+                travel_id: formData.id ?? null,
+            });
 
-        Toast.show({
-            type: 'info',
-            text1: 'Модерация отклонена',
-            text2: 'Маршрут возвращен в черновики.',
-        });
+            Toast.show({
+                type: 'info',
+                text1: 'Модерация отклонена',
+                text2: 'Маршрут возвращен в черновики.',
+            });
 
-        await onFinish();
-        router.push('/metravel');
+            await onFinish();
+            router.push('/metravel');
+        } finally {
+            finishAction();
+        }
     };
 
     const handlePrimaryAction = () => {
+        if (userPendingModeration) return;
         if (status === 'draft') {
             handleSaveDraft();
         } else {
@@ -297,60 +342,69 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.contentInner}>
-                    <FiltersUpsertComponent
-                        filters={filters}
-                        formData={formData}
-                        setFormData={setFormData}
-                        travelDataOld={travelDataOld}
-                        isSuperAdmin={isSuperAdmin}
-                        onSave={onManualSave}
-                        showSaveButton={true}
-                        showPreviewButton={true}
-                        showPublishControls={false}
-                        showCountries={false}
-                        showCoverImage={false}
-                        showCategories={false}
-                        showAdditionalFields={false}
-                    />
-
-                    <View style={[styles.card, styles.statusCard]}>
-                        <Text style={styles.cardTitle}>Статус публикации</Text>
-                        <View style={styles.statusOptions}>
-                            <TouchableOpacity
-                                style={[styles.statusOption, status === 'draft' && styles.statusOptionActive]}
-                                onPress={() => setStatus('draft')}
-                                activeOpacity={0.85}
+                    <View style={[styles.card, styles.statusChipCard]}>
+                        <Text style={styles.cardTitle}>Текущий статус</Text>
+                        <View style={styles.statusChipRow}>
+                            <View
+                                style={[
+                                    styles.statusChip,
+                                    currentBackendStatus.tone === 'success' && styles.statusChipSuccess,
+                                    currentBackendStatus.tone === 'warning' && styles.statusChipWarning,
+                                    currentBackendStatus.tone === 'muted' && styles.statusChipMuted,
+                                ]}
                             >
-                                <View style={styles.radioOuter}>
-                                    {status === 'draft' && <View style={styles.radioInner} />}
-                                </View>
-                                <View style={styles.statusTextCol}>
-                                    <Text style={styles.statusLabel}>Сохранить как черновик</Text>
-                                    <Text style={styles.statusHint}>
-                                        Черновик виден только вам. Его можно дополнять и отправить на модерацию позже.
-                                    </Text>
-                                </View>
-                            </TouchableOpacity>
-
-                            <View style={styles.divider} />
-
-                            <TouchableOpacity
-                                style={[styles.statusOption, status === 'moderation' && styles.statusOptionActive]}
-                                onPress={() => setStatus('moderation')}
-                                activeOpacity={0.85}
-                            >
-                                <View style={styles.radioOuter}>
-                                    {status === 'moderation' && <View style={styles.radioInner} />}
-                                </View>
-                                <View style={styles.statusTextCol}>
-                                    <Text style={styles.statusLabel}>Отправить на модерацию</Text>
-                                    <Text style={styles.statusHint}>
-                                        После одобрения маршрут станет публичным и появится в списке путешествий.
-                                    </Text>
-                                </View>
-                            </TouchableOpacity>
+                                <Text style={styles.statusChipText}>{currentBackendStatus.label}</Text>
+                            </View>
+                            <Text style={styles.statusChipHint}>
+                                {pendingModeration
+                                    ? 'Маршрут отправлен на модерацию, ожидает решения администратора.'
+                                    : 'Это статус, который уже сохранён. Ниже вы можете выбрать новый (черновик или модерация).'}
+                            </Text>
                         </View>
                     </View>
+
+                    {!pendingModeration && (
+                        <View style={[styles.card, styles.statusCard]}>
+                            <Text style={styles.cardTitle}>Статус публикации</Text>
+                            <View style={styles.statusOptions}>
+                                <TouchableOpacity
+                                    style={[styles.statusOption, status === 'draft' && styles.statusOptionActive]}
+                                    onPress={() => setStatus('draft')}
+                                    disabled={userPendingModeration}
+                                    activeOpacity={0.85}
+                                >
+                                    <View style={styles.radioOuter}>
+                                        {status === 'draft' && <View style={styles.radioInner} />}
+                                    </View>
+                                    <View style={styles.statusTextCol}>
+                                        <Text style={styles.statusLabel}>Сохранить как черновик</Text>
+                                        <Text style={styles.statusHint}>
+                                            Черновик виден только вам. Его можно дополнять и отправить на модерацию позже.
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+
+                                <View style={styles.divider} />
+
+                                <TouchableOpacity
+                                    style={[styles.statusOption, status === 'moderation' && styles.statusOptionActive]}
+                                    onPress={() => setStatus('moderation')}
+                                    disabled={userPendingModeration}
+                                    activeOpacity={0.85}
+                                >
+                                    <View style={styles.radioOuter}>
+                                        {status === 'moderation' && <View style={styles.radioInner} />}
+                                    </View>
+                                    <View style={styles.statusTextCol}>
+                                        <Text style={styles.statusLabel}>Отправить на модерацию</Text>
+                                        <Text style={styles.statusHint}>
+                                            После одобрения маршрут станет публичным и появится в списке путешествий.
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
 
                     <View style={[styles.card, styles.qualityCard]}>
                         <Text style={styles.cardTitle}>Качество заполнения</Text>
@@ -433,7 +487,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     })}
                     </View>
 
-                    {isSuperAdmin && formData.moderation && (
+                    {isSuperAdmin && (pendingModeration || formData.moderation || status === 'moderation') && (
                         <View style={[styles.card, styles.adminCard]}>
                             <Text style={styles.cardTitle}>Панель модератора</Text>
                             <Text style={styles.adminHint}>
@@ -497,9 +551,15 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 <TravelWizardFooter
                     canGoBack={false}
                     onPrimary={handlePrimaryAction}
-                    primaryLabel={status === 'draft' ? 'Сохранить черновик' : 'Отправить на модерацию'}
-                    onSave={status === 'moderation' ? handleSaveDraft : undefined}
-                    saveLabel="Сохранить как черновик"
+                    primaryLabel={
+                        pendingModeration
+                            ? 'Отправлено на модерацию'
+                            : status === 'draft'
+                            ? 'Сохранить'
+                            : 'Отправить на модерацию'
+                    }
+                    primaryDisabled={pendingModeration}
+                    onSave={undefined}
                     onLayout={handleFooterLayout}
                     currentStep={currentStep}
                     totalSteps={totalSteps}
@@ -612,9 +672,29 @@ const styles = StyleSheet.create({
     statusHint: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         color: DESIGN_TOKENS.colors.textMuted,
-        marginTop: DESIGN_TOKENS.spacing.xxs,
-        lineHeight: 16,
     },
+    statusChipCard: {
+        marginTop: DESIGN_TOKENS.spacing.lg,
+        padding: DESIGN_TOKENS.spacing.lg,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
+    },
+    statusChipRow: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.md },
+    statusChip: {
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
+    },
+    statusChipSuccess: { backgroundColor: '#e9f8ef', borderColor: '#b6e4c6' },
+    statusChipWarning: { backgroundColor: '#fff5e6', borderColor: '#ffd9a8' },
+    statusChipMuted: { backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary, borderColor: DESIGN_TOKENS.colors.border },
+    statusChipText: { fontWeight: '700', color: DESIGN_TOKENS.colors.text },
+    statusChipHint: { flex: 1, color: DESIGN_TOKENS.colors.textMuted, fontSize: DESIGN_TOKENS.typography.sizes.sm },
     checklistCard: {},
     checklistHeader: {
         flexDirection: 'row',
@@ -623,9 +703,9 @@ const styles = StyleSheet.create({
         marginBottom: DESIGN_TOKENS.spacing.sm,
     },
     progressRing: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 42,
+        height: 42,
+        borderRadius: 21,
         backgroundColor: DESIGN_TOKENS.colors.primarySoft,
         borderWidth: 3,
         borderColor: DESIGN_TOKENS.colors.primary,
@@ -694,8 +774,12 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     bannerError: {
-        backgroundColor: DESIGN_TOKENS.colors.errorSoft,
-        borderColor: DESIGN_TOKENS.colors.dangerLight,
+        backgroundColor: '#fef2f2',
+        borderColor: '#fecaca',
+    },
+    bannerInfo: {
+        backgroundColor: '#f0f9ff',
+        borderColor: '#bae6fd',
     },
     bannerTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -709,19 +793,19 @@ const styles = StyleSheet.create({
         marginBottom: DESIGN_TOKENS.spacing.xs,
     },
     adminCard: {
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-        borderColor: DESIGN_TOKENS.colors.primary,
+        backgroundColor: '#f8fafc',
+        borderColor: DESIGN_TOKENS.colors.border,
     },
     adminHint: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.text,
-        marginBottom: DESIGN_TOKENS.spacing.md,
+        color: DESIGN_TOKENS.colors.textMuted,
+        marginTop: DESIGN_TOKENS.spacing.xs,
         lineHeight: 20,
     },
     adminButtons: {
+        marginTop: DESIGN_TOKENS.spacing.md,
         flexDirection: 'row',
         gap: DESIGN_TOKENS.spacing.sm,
-        flexWrap: 'wrap',
     },
     adminButton: {
         flex: 1,
@@ -733,6 +817,8 @@ const styles = StyleSheet.create({
         paddingVertical: DESIGN_TOKENS.spacing.md,
         paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         borderRadius: DESIGN_TOKENS.radii.md,
+        borderColor: DESIGN_TOKENS.colors.border,
+        backgroundColor: DESIGN_TOKENS.colors.success,
     },
     adminButtonApprove: {
         backgroundColor: DESIGN_TOKENS.colors.success,

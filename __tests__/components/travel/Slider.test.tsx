@@ -28,13 +28,6 @@ const portraitImage2: SliderImage = {
   height: 1200,
 }
 
-const landscapeImage2: SliderImage = {
-  id: 'landscape-2',
-  url: 'https://example.com/landscape2.jpg',
-  width: 1600,
-  height: 900,
-}
-
 const renderSlider = async (images: SliderImage[]): Promise<RenderAPI> => {
   const api = render(
     <Slider

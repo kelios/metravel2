@@ -124,7 +124,7 @@ const Arrow = memo(function Arrow({
         }
       }
     },
-    [isMobile, arrowOpacity, arrowScale]
+    [arrowOpacity, arrowScale, isMobile]
   );
 
   const iconSize = isMobile ? 20 : 24;
@@ -733,6 +733,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       retryImage,
       prefetchEnabled,
       neutralFirstSlideErrorPlaceholder,
+      isMobile,
     ]
   );
 

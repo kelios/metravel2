@@ -42,6 +42,8 @@ const getLatLng = (latlng: string): [number, number] | null => {
 type LeafletNS = any;
 type RL = typeof import('react-leaflet');
 
+const hasMapPane = (map: any) => !!map && !!(map as any)._mapPane;
+
 const MapClientSideComponent: React.FC<MapClientSideProps> = ({
                                                                 travel = { data: [] },
                                                                 coordinates = { latitude: 53.8828449, longitude: 27.7273595 },
@@ -117,10 +119,14 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
 
   const FitBoundsOnData: React.FC<{ data: Point[] }> = ({ data }) => {
     const map = useMap();
+
     useEffect(() => {
       if (typeof window !== 'undefined') {
         (window as any).__metravelLeafletMap = map;
       }
+
+      if (!hasMapPane(map)) return;
+
       const coords = data
         .map((p) => getLatLng(p.coord))
         .filter(
@@ -134,8 +140,13 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       if (!coords.length) return;
 
       const run = () => {
+        if (!hasMapPane(map)) return;
         if (coords.length === 1) {
-          map.setView(coords[0], map.getZoom(), { animate: false });
+          try {
+            map.setView(coords[0], map.getZoom(), { animate: false });
+          } catch {
+            // noop
+          }
           return;
         }
 
@@ -163,6 +174,8 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     const map = useMap();
 
     const handleMarkerClick = useCallback(() => {
+      if (!hasMapPane(map)) return;
+
       try {
         if (typeof map.flyTo === 'function') {
           map.flyTo(latLng, map.getZoom(), { animate: true, duration: 0.35 } as any);
@@ -196,6 +209,8 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       (e: any) => {
         // Leaflet сам умеет autoPan, но на мобильных хочется, чтобы карточка была ближе к центру.
         // Делаем мягкий panBy по фактическому DOM-положению попапа относительно контейнера карты.
+        if (!hasMapPane(map)) return;
+
         const run = () => {
           try {
             const popup = e?.popup;

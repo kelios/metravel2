@@ -300,7 +300,7 @@ jest.mock('@react-native-async-storage/async-storage', () => createAsyncStorageM
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
   const React = require('react')
   const { View } = require('react-native')
-  return ({ name, size: _size, color: _color, ...props }: any) =>
+  return ({ name, ...props }: any) =>
     React.createElement(View, { testID: `icon-${name}`, ...props })
 })
 
@@ -316,13 +316,13 @@ jest.mock('@expo/vector-icons', () => {
   const React = require('react')
   const { View } = require('react-native')
   return {
-    Feather: ({ name, size: _size, color: _color, ...props }: any) =>
+    Feather: ({ name, ...props }: any) =>
       React.createElement(View, { testID: `feather-${name}`, ...props }),
-    FontAwesome5: ({ name, size: _size, color: _color, ...props }: any) =>
+    FontAwesome5: ({ name, ...props }: any) =>
       React.createElement(View, { testID: `fa5-${name}`, ...props }),
-    MaterialIcons: ({ name, size: _size, color: _color, ...props }: any) =>
+    MaterialIcons: ({ name, ...props }: any) =>
       React.createElement(View, { testID: `material-${name}`, ...props }),
-    MaterialCommunityIcons: ({ name, size: _size, color: _color, ...props }: any) =>
+    MaterialCommunityIcons: ({ name, ...props }: any) =>
       React.createElement(View, { testID: `mci-${name}`, ...props }),
   }
 })

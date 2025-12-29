@@ -391,13 +391,7 @@ function ListTravel({
     isWeeklyHighlightsVisible: externalWeeklyHighlightsVisible,
 }: ListTravelProps = {}) {
     // ✅ АРХИТЕКТУРА: Использование кастомного хука для видимости
-    const {
-        isPersonalizationVisible: _isPersonalizationVisible,
-        isWeeklyHighlightsVisible: _isWeeklyHighlightsVisible,
-        isInitialized: _isInitialized,
-        handleTogglePersonalization: _handleTogglePersonalization,
-        handleToggleWeeklyHighlights: _handleToggleWeeklyHighlights,
-    } = useListTravelVisibility({
+    useListTravelVisibility({
         externalPersonalizationVisible,
         externalWeeklyHighlightsVisible,
         onTogglePersonalization,

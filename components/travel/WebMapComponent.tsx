@@ -243,6 +243,9 @@ const WebMapComponent = ({
         if (typeof window === 'undefined') return false;
         return window.innerWidth >= 1024;
     });
+    // Только для старта: если маркеры пришли извне (редактирование маршрута), разрешаем авто-fit.
+    // При создании нового маршрута (маркер ставит пользователь) авто-fit отключён.
+    const hasInitialMarkersRef = useRef(markers.length > 0);
     
     // Локальное состояние маркеров для немедленного отображения изменений
     const [localMarkers, setLocalMarkers] = useState(markers);
@@ -415,17 +418,18 @@ const WebMapComponent = ({
     const useMap: any = (rl as any).useMap;
     const useMapEvents: any = (rl as any).useMapEvents;
 
-    const FitBounds = ({ markers }: { markers: any[] }) => {
+    const FitBounds = ({ markers, initialFitAllowed }: { markers: any[]; initialFitAllowed: boolean }) => {
         const map = useMap();
         const hasFit = useRef(false);
 
         useEffect(() => {
+            if (!initialFitAllowed) return;
             if (!hasFit.current && markers.length > 0) {
                 const bounds = (L as any).latLngBounds(markers.map((m: any) => [m.lat, m.lng]));
                 map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6 });
                 hasFit.current = true;
             }
-        }, [markers, map]);
+        }, [markers, map, initialFitAllowed]);
 
         return null;
     };
@@ -500,7 +504,7 @@ const WebMapComponent = ({
                             >
                                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                                 <MapClickHandler addMarker={addMarker} />
-                                <FitBounds markers={localMarkers} />
+                                <FitBounds markers={localMarkers} initialFitAllowed={hasInitialMarkersRef.current} />
                                 {localMarkers.map((marker: any, idx: number) => (
                                     <Marker
                                         key={idx}
@@ -534,8 +538,9 @@ const WebMapComponent = ({
                                                     {marker.categories.length > 0
                                                         ? marker.categories
                                                             .map((catId: any) => {
-                                                                const found = categoryTravelAddress.find((c: any) => c.id === catId);
-                                                                return found ? found.name : `ID: ${catId}`;
+                                                                const targetId = String(catId);
+                                                                const found = categoryTravelAddress.find((c: any) => String(c.id) === targetId);
+                                                                return found?.name ?? `ID: ${catId}`;
                                                             })
                                                             .join(', ')
                                                         : 'Не выбрано'}

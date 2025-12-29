@@ -19,17 +19,8 @@ interface StickySearchBarProps {
   onSearchChange: (value: string) => void;
   onFiltersPress?: () => void;
   hasActiveFilters: boolean;
-  availableWidth?: number;
   flush?: boolean;
-  primaryAction?: {
-    label: string
-    onPress: () => void
-    accessibilityLabel?: string
-  }
   resultsCount?: number;
-  sortOptions?: Array<{ value: string; label: string }>;
-  onSortChange?: (sort: string) => void;
-  currentSort?: string;
   placeholder?: string;
   onToggleRecommendations?: () => void;
   isRecommendationsVisible?: boolean;
@@ -46,13 +37,8 @@ function StickySearchBar({
   onSearchChange,
   onFiltersPress,
   hasActiveFilters,
-  availableWidth: _availableWidth,
   flush = false,
-  primaryAction: _primaryAction,
   resultsCount,
-  sortOptions: _sortOptions = [],
-  onSortChange: _onSortChange,
-  currentSort: _currentSort,
   placeholder = 'Найти путешествия...',
   onToggleRecommendations,
   isRecommendationsVisible,

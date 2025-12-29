@@ -17,11 +17,12 @@ jest.mock('expo-image', () => ({
 jest.mock('@/components/WeatherWidget', () => {
   const React = require('react');
   const { View, Text } = require('react-native');
-  return ({ points: _points }: any) => (
-    React.createElement(View, { testID: 'weather-widget' },
+  return () =>
+    React.createElement(
+      View,
+      { testID: 'weather-widget' },
       React.createElement(Text, null, 'Weather Widget')
-    )
-  );
+    );
 });
 
 // Mock image optimization utils

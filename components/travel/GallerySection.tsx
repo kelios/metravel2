@@ -7,9 +7,10 @@ import ImageGalleryComponent from '@/components/travel/ImageGalleryComponent';
 interface GallerySectionProps {
     formData: TravelFormData | null;
     travelDataOld?: Travel | null;
+    onChange?: (urls: string[]) => void;
 }
 
-const GallerySection: React.FC<GallerySectionProps> = ({ formData }) => {
+const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) => {
     const theme = useColorScheme();
     const isDarkMode = theme === 'dark';
     const gallerySource = formData?.gallery;
@@ -60,6 +61,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData }) => {
                 idTravel={String(formData.id)}
                 initialImages={normalizedImages}
                 maxImages={10}
+                onChange={onChange}
             />
             {Platform.OS !== 'web' && normalizedImages.length === 0 && (
                 <Text style={[styles.infoText, isDarkMode && styles.darkText]}>

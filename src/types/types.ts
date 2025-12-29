@@ -213,6 +213,8 @@ export interface TravelFormData {
     visa: boolean;
     publish: boolean;
     moderation?: boolean;
+    travel_image_thumb_url?: string | null;
+    travel_image_thumb_small_url?: string | null;
 
 }
 

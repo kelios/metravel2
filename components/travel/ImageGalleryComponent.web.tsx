@@ -97,14 +97,16 @@ interface ImageGalleryComponentProps {
     idTravel: string;
     initialImages: GalleryItem[];
     maxImages?: number;
+    onChange?: (urls: string[]) => void;
 }
 
 const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
-                                                                         collection,
-                                                                         idTravel,
-                                                                         initialImages,
-                                                                         maxImages = 10,
-                                                                     }) => {
+    collection,
+    idTravel,
+    initialImages: initialImagesProp,
+    maxImages = 10,
+    onChange,
+}) => {
     const [images, setImages] = useState<GalleryItem[]>([]);
     const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
     const [dialogVisible, setDialogVisible] = useState(false);
@@ -116,12 +118,11 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     const theme = useColorScheme();
     const isDarkMode = theme === 'dark';
     
-    const _uploadingCount = useMemo(() => images.filter(img => img.isUploading).length, [images]);
     const hasErrors = useMemo(() => images.some(img => img.error), [images]);
 
     useEffect(() => {
-        if (initialImages?.length) {
-            setImages(initialImages.map((img) => ({ 
+        if (initialImagesProp?.length) {
+            setImages(initialImagesProp.map((img) => ({ 
                 ...img, 
                 url: normalizeDisplayUrl(img.url),
                 isUploading: false,
@@ -131,7 +132,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
             })));
         }
         setIsInitialLoading(false);
-    }, [initialImages]);
+    }, [initialImagesProp]);
     
     // Cleanup blob URLs on unmount
     useEffect(() => {
@@ -148,6 +149,16 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
             urlsRefSnapshot.current.clear();
         };
     }, []);
+
+    // Report image URLs to parent (without uploading placeholders)
+    useEffect(() => {
+        if (!onChange) return;
+        const urls = images
+            .filter(img => !img.isUploading)
+            .map(img => img.url)
+            .filter(Boolean);
+        onChange(urls);
+    }, [images, onChange]);
 
     const handleUploadImages = useCallback(
         async (files: File[]) => {

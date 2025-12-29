@@ -53,13 +53,51 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     });
   }, []);
 
+  const cleanAndSave = useCallback(async (data: TravelFormData) => {
+    const normalizedMarkers = Array.isArray((data as any).coordsMeTravel)
+      ? (data as any).coordsMeTravel.map((m: any) => ({
+          ...m,
+          categories: Array.isArray(m?.categories)
+            ? m.categories
+                .map((c: any) => Number(c))
+                .filter((n: number) => Number.isFinite(n))
+            : [],
+        }))
+      : [];
+
+    const cleanedData = cleanEmptyFields({
+      ...data,
+      id: normalizeTravelId(data.id),
+      coordsMeTravel: normalizedMarkers,
+    });
+
+    return await saveFormData(cleanedData);
+  }, []);
+
+  const applySavedData = useCallback(
+    (savedData: TravelFormData) => {
+      const markersFromResponse = Array.isArray(savedData.coordsMeTravel) ? (savedData.coordsMeTravel as any) : [];
+      const currentMarkers = Array.isArray(formState.data.coordsMeTravel) ? (formState.data.coordsMeTravel as any) : [];
+      // Если бэкенд не вернул точки (например, черновик без coords в ответе), сохраняем локальные маркеры.
+      const effectiveMarkers = markersFromResponse.length > 0 ? markersFromResponse : currentMarkers;
+      const syncedCountries = syncCountriesFromMarkers(effectiveMarkers, savedData.countries || []);
+
+      formState.updateFields({
+        ...savedData,
+        countries: syncedCountries,
+        coordsMeTravel: effectiveMarkers,
+      });
+      setMarkers(effectiveMarkers);
+    },
+    [formState]
+  );
+
   const handleSaveSuccess = useCallback(
     (savedData: TravelFormData) => {
-      if (isNew && savedData.id) {
-        router.replace(`/travel/${savedData.id}`);
-      }
+      // После первого автосейва создаётся id — остаёмся в мастере и просто подставляем новые данные.
+      applySavedData(savedData);
     },
-    [isNew, router]
+    [applySavedData]
   );
 
   const handleSaveError = useCallback(
@@ -70,38 +108,23 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     [showToast]
   );
 
-  const applySavedData = useCallback(
-    (savedData: TravelFormData) => {
-      const markersFromData = (savedData.coordsMeTravel as any) || [];
-      const syncedCountries = syncCountriesFromMarkers(markersFromData, savedData.countries || []);
-
-      formState.updateFields({
-        ...savedData,
-        countries: syncedCountries,
-      });
-      setMarkers(markersFromData);
-    },
-    [formState]
-  );
-
   const autosave = useImprovedAutoSave(formState.data, initialFormData, {
     debounce: 5000,
-    onSave: async (data) => {
-      const cleanedData = cleanEmptyFields({
-        ...data,
-        id: normalizeTravelId(data.id),
-      });
-      return await saveFormData(cleanedData);
-    },
+    onSave: cleanAndSave,
     onSuccess: handleSaveSuccess,
     onError: handleSaveError,
     enabled: isAuthenticated && hasAccess,
   });
 
-  const handleManualSave = useCallback(async () => {
+  const handleManualSave = useCallback(async (dataOverride?: TravelFormData) => {
     try {
-      const savedData = await autosave.saveNow();
+      // Отменяем отложенный автосейв, чтобы не отправить старые данные (publish=false) после ручного сохранения.
+      autosave?.cancelPending?.();
+      const toSave = (dataOverride ?? (formState.data as TravelFormData)) as TravelFormData;
+      // Если пришли извне готовые данные — сохраняем напрямую, минуя отложенный стейт.
+      const savedData = await cleanAndSave(toSave);
       applySavedData(savedData);
+      autosave?.updateBaseline?.(savedData);
       showToast('Сохранено');
       return savedData;
     } catch (error) {
@@ -109,7 +132,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       console.error('Manual save error:', error);
       return;
     }
-  }, [applySavedData, autosave, showToast]);
+  }, [applySavedData, cleanAndSave, formState.data, showToast]);
 
   const loadTravelData = useCallback(
     async (id: string) => {

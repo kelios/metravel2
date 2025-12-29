@@ -352,7 +352,8 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     });
 
     if (Platform.OS === 'web') {
-        const { onBeforeInput: _onBeforeInput, ...rootProps } = getRootProps();
+        const { onBeforeInput, ...rootProps } = getRootProps();
+        void onBeforeInput;
         return (
             <View style={styles.container}>
                 <div
@@ -419,7 +420,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                     setPreviewUrl(null);
                                     setError('Изображение не найдено');
                                 }}
-                                onError={(_e) => {
+                                onError={() => {
                                     const candidateFallback = chooseFallbackUrl(
                                         currentDisplayUrl,
                                         fallbackImageUrl,

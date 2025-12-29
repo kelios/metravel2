@@ -3,8 +3,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView, LayoutChangeEvent } from 'react-native';
 
 import ArticleEditor from '@/components/ArticleEditor';
-import TextInputComponent from '@/components/TextInputComponent';
-import CheckboxComponent from '@/components/CheckboxComponent';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
@@ -68,14 +66,10 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
     };
 
     const recommendationFieldsFilled = useMemo(() => {
-        const keys: (keyof TravelFormData)[] = ['plus', 'minus', 'recommendation', 'budget', 'visa'];
+        const keys: (keyof TravelFormData)[] = ['plus', 'minus', 'recommendation'];
         let filled = 0;
         keys.forEach(key => {
             const value = (formData as any)[key];
-            if (key === 'visa') {
-                if (value === true || value === false) filled += 1;
-                return;
-            }
             if (Array.isArray(value)) {
                 if (value.length > 0) filled += 1;
                 return;
@@ -173,22 +167,6 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                             />
                         </View>
 
-                        <View style={styles.card}>
-                            <TextInputComponent
-                                label="Бюджет (сумма или диапазон)"
-                                value={(formData.budget as any)?.toString?.() ?? ''}
-                                onChange={value => handleChange('budget', value as any)}
-                                hint="Например: 700–900 € на человека без перелёта"
-                            />
-                        </View>
-
-                        <View style={styles.card}>
-                            <CheckboxComponent
-                                label="Требуется виза"
-                                value={formData.visa ?? false}
-                                onChange={value => handleChange('visa', value as any)}
-                            />
-                        </View>
                     </View>
                 </ScrollView>
 

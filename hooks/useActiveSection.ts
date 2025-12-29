@@ -74,7 +74,7 @@ export function useActiveSection(
     const safeHeaderOffset = isDocumentRoot(scrollRoot) ? safeHeaderOffsetRaw : 0;
 
     const observer = new IntersectionObserverCtor(
-      (_entries) => {
+      () => {
         // Debounce Intersection Observer callbacks to improve performance
         scheduleObserverCallback(() => {
           // Robust scrollspy for long sections:
@@ -189,9 +189,10 @@ export function useActiveSection(
     };
   }, [anchors, headerOffset, scrollRoot]);
 
-  const registerSection = useCallback((_key: string, _ref: RefObject<View>) => {
+  const registerSection = useCallback((key: string, _ref: RefObject<View>) => {
     // Для native это будет обрабатываться через scroll events
     // Для web уже обрабатывается через Intersection Observer
+    registeredSectionsRef.current.add(key);
   }, []);
 
   return {

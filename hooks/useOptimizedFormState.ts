@@ -60,7 +60,7 @@ export function useOptimizedFormState<T extends Record<string, any>>(
   }, []);
 
   // Validation functions are declared before usage to avoid TDZ issues
-  const validateField = useCallback((field: string, _value: any) => {
+  const validateField = useCallback((field: string) => {
     // This would be injected with validation rules
     // For now, just clear errors for the field
     setState(prevState => ({
@@ -103,7 +103,7 @@ export function useOptimizedFormState<T extends Record<string, any>>(
       
       validationTimeoutRef.current = setTimeout(() => {
         if (mountedRef.current) {
-          validateField(field as string, value);
+          validateField(field as string);
         }
       }, validationDebounce);
     }
