@@ -81,7 +81,7 @@ npm run ios:build:prod     # Production build
 npm run ios:submit:latest
 ```
 
-**📖 Documentation**: See [docs/INDEX.md](./docs/INDEX.md)
+**📖 Documentation**: See [doc/INDEX.md](./doc/INDEX.md)
 
 ### Android
 
@@ -99,7 +99,7 @@ npm run android:build:prod     # Production build (AAB)
 npm run android:submit:latest
 ```
 
-**📖 Documentation**: See [docs/INDEX.md](./docs/INDEX.md)
+**📖 Documentation**: See [doc/INDEX.md](./doc/INDEX.md)
 
 ### Multi-Platform
 
@@ -132,7 +132,7 @@ npm run check:image-architecture
 npm run test:ci
 ```
 
-More details: see `docs/testing-guide.md`.
+More details: see `doc/testing-guide.md`.
 
 ## 🖼 Images & Cards (важно)
 
@@ -190,17 +190,16 @@ metravel2/
 ├── src/             # Source code
 ├── utils/           # Utility functions
 ├── scripts/         # Build scripts
-└── docs/            # Documentation
+└├── doc/             # Documentation (single source of truth)
 ```
 
 ## 📚 Documentation
 
-Start here:
-
-- [docs/INDEX.md](./docs/INDEX.md)
-- [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)
-- [docs/RELEASE.md](./docs/RELEASE.md)
-- [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)
+Start here (all documentation lives **only** in `doc/`):
+- [doc/INDEX.md](./doc/INDEX.md)
+- [doc/DEVELOPMENT.md](./doc/DEVELOPMENT.md)
+- [doc/RELEASE.md](./doc/RELEASE.md)
+- [doc/TROUBLESHOOTING.md](./doc/TROUBLESHOOTING.md)
 
 ## 🔌 Backend API
 
@@ -238,9 +237,9 @@ Create environment-specific files:
 ## 📞 Support
 
 - **Issues**: Create an issue in the repository
-- **Build/Release docs**: See [docs/RELEASE.md](./docs/RELEASE.md)
+- **Build/Release docs**: See [doc/RELEASE.md](./doc/RELEASE.md)
 - **Expo Forums**: https://forums.expo.dev/
-- **Troubleshooting**: See [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)
+- **Troubleshooting**: See [doc/TROUBLESHOOTING.md](./doc/TROUBLESHOOTING.md)
 
 ## 📄 License
 
