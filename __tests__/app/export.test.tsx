@@ -1,0 +1,147 @@
+import React from 'react';
+import { render, waitFor } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import ExportScreen from '@/app/(tabs)/export';
+import { useAuth } from '@/context/AuthContext';
+import { useIsFocused } from '@react-navigation/native';
+import { fetchMyTravels } from '@/src/api/travelsApi';
+
+jest.mock('@/context/AuthContext');
+
+jest.mock('@react-navigation/native', () => ({
+  useIsFocused: jest.fn(),
+}));
+
+jest.mock('expo-router', () => ({
+  usePathname: () => '/export',
+  useRouter: () => ({
+    push: jest.fn(),
+  }),
+}));
+
+jest.mock('@/src/utils/analytics', () => ({
+  sendAnalyticsEvent: jest.fn(),
+}));
+
+jest.mock('@/components/seo/InstantSEO', () => {
+  return () => null;
+});
+
+jest.mock('@/components/listTravel/ListTravel', () => {
+  const React = require('react');
+  const { View, Text } = require('react-native');
+  return function MockListTravel() {
+    return (
+      <View testID="list-travel">
+        <Text>ListTravel</Text>
+      </View>
+    );
+  };
+});
+
+jest.mock('@expo/vector-icons', () => ({
+  Feather: ({ name, ...props }: any) => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return React.createElement(View, { testID: `feather-${name}`, ...props });
+  },
+}));
+
+jest.mock('@/src/api/travelsApi', () => ({
+  fetchMyTravels: jest.fn(),
+}));
+
+const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
+const mockUseIsFocused = useIsFocused as jest.MockedFunction<typeof useIsFocused>;
+const mockFetchMyTravels = fetchMyTravels as jest.MockedFunction<typeof fetchMyTravels>;
+
+const renderExport = (queryClient: QueryClient) =>
+  render(
+    <QueryClientProvider client={queryClient}>
+      <ExportScreen />
+    </QueryClientProvider>
+  );
+
+describe('ExportScreen', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseIsFocused.mockReturnValue(true);
+  });
+
+  const createQueryClient = () =>
+    new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
+
+  it('shows login empty state for unauthenticated users', () => {
+    const queryClient = createQueryClient();
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      userId: null,
+    } as any);
+
+    const { getByText } = renderExport(queryClient);
+
+    expect(getByText('Войдите, чтобы собрать PDF‑книгу')).toBeTruthy();
+    expect(mockFetchMyTravels).not.toHaveBeenCalled();
+  });
+
+  it('does not show empty state until userId is available', () => {
+    const queryClient = createQueryClient();
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      userId: null,
+    } as any);
+
+    const { queryByText, getByTestId } = renderExport(queryClient);
+
+    expect(getByTestId('list-travel')).toBeTruthy();
+    expect(
+      queryByText('Чтобы собрать PDF‑книгу, добавьте хотя бы одно путешествие')
+    ).toBeNull();
+    expect(mockFetchMyTravels).not.toHaveBeenCalled();
+  });
+
+  it('shows empty state when there are no travels', async () => {
+    const queryClient = createQueryClient();
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      userId: '123',
+    } as any);
+    mockFetchMyTravels.mockResolvedValueOnce([] as any);
+
+    const { findByText } = renderExport(queryClient);
+
+    expect(
+      await findByText('Чтобы собрать PDF‑книгу, добавьте хотя бы одно путешествие')
+    ).toBeTruthy();
+    expect(mockFetchMyTravels).toHaveBeenCalledWith({
+      user_id: '123',
+      includeDrafts: true,
+      throwOnError: true,
+    });
+  });
+
+  it('falls back to the list when count query fails', async () => {
+    const queryClient = createQueryClient();
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      userId: '123',
+    } as any);
+    mockFetchMyTravels.mockRejectedValueOnce(new Error('boom'));
+
+    const { getByTestId, queryByText } = renderExport(queryClient);
+
+    await waitFor(() => {
+      expect(getByTestId('list-travel')).toBeTruthy();
+    });
+
+    expect(
+      queryByText('Чтобы собрать PDF‑книгу, добавьте хотя бы одно путешествие')
+    ).toBeNull();
+  });
+});

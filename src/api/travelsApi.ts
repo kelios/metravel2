@@ -484,13 +484,30 @@ export const fetchMyTravels = async (params: {
     yearTo?: string;
     country?: string;
     onlyWithGallery?: boolean;
+    includeDrafts?: boolean;
+    publish?: number;
+    moderation?: number;
+    throwOnError?: boolean;
 }) => {
     try {
         const whereObject: Record<string, any> = {
             user_id: params.user_id,
-            publish: 1,
-            moderation: 1,
         };
+
+        const hasExplicitStatus =
+            typeof params.publish !== 'undefined' || typeof params.moderation !== 'undefined';
+
+        if (typeof params.publish !== 'undefined') {
+            whereObject.publish = params.publish;
+        }
+        if (typeof params.moderation !== 'undefined') {
+            whereObject.moderation = params.moderation;
+        }
+
+        if (!params.includeDrafts && !hasExplicitStatus) {
+            whereObject.publish = 1;
+            whereObject.moderation = 1;
+        }
 
         if (params.country) {
             whereObject.countries = [params.country];
@@ -521,6 +538,9 @@ export const fetchMyTravels = async (params: {
     } catch (e) {
         if (__DEV__) {
             devError('Error fetching MyTravels:', e);
+        }
+        if (params.throwOnError) {
+            throw e;
         }
         return [];
     }

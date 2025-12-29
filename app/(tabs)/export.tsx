@@ -1,5 +1,6 @@
 // app/export.tsx (или соответствующий путь)
 import React, { Suspense, useEffect, useMemo } from 'react';
+import { Text, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { usePathname, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -28,10 +29,20 @@ export default function ExportScreen() {
         sendAnalyticsEvent('ExportViewed');
     }, [isFocused]);
 
-    const { data: myTravelsPayload, isFetching: isFetchingMyTravels } = useQuery({
+    const isCountQueryEnabled = Boolean(isAuthenticated && userId);
+    const {
+        data: myTravelsPayload,
+        isFetched: isMyTravelsFetched,
+        isError: isMyTravelsError,
+    } = useQuery({
         queryKey: ['export-my-travels-count', userId],
-        queryFn: () => fetchMyTravels({ user_id: userId as any }),
-        enabled: Boolean(isAuthenticated && userId),
+        queryFn: () =>
+            fetchMyTravels({
+                user_id: userId as any,
+                includeDrafts: true,
+                throwOnError: true,
+            }),
+        enabled: isCountQueryEnabled,
         staleTime: 60_000,
     });
 
@@ -47,7 +58,9 @@ export default function ExportScreen() {
         return 0;
     }, [myTravelsPayload]);
 
-    const shouldShowEmptyState = isAuthenticated && !isFetchingMyTravels && travelsCount <= 0;
+    const shouldShowEmptyState =
+        isCountQueryEnabled &&
+        isMyTravelsFetched && !isMyTravelsError && travelsCount <= 0;
 
     useEffect(() => {
         if (!isFocused) return;
@@ -99,7 +112,13 @@ export default function ExportScreen() {
                     variant="empty"
                 />
             ) : (
-                <Suspense fallback={<div>Загрузка...</div>}>
+                <Suspense
+                    fallback={
+                        <View style={{ padding: 16 }}>
+                            <Text>Загрузка...</Text>
+                        </View>
+                    }
+                >
                     <ListTravel />
                 </Suspense>
             )}
