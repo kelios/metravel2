@@ -150,8 +150,8 @@ const Arrow = memo(function Arrow({
         styles.navBtn,
         isMobile ? styles.navBtnMobile : styles.navBtnDesktop,
         dir === "left"
-          ? { left: NAV_BTN_OFFSET + (isMobile ? 8 : insets.left) }
-          : { right: NAV_BTN_OFFSET + (isMobile ? 8 : insets.right) },
+          ? { left: NAV_BTN_OFFSET + 4 + (isMobile ? 8 : insets.left) }
+          : { right: NAV_BTN_OFFSET + 4 + (isMobile ? 8 : insets.right) },
         Platform.OS === "web" && isHovered && styles.navBtnHover,
       ]}
     >
@@ -175,7 +175,8 @@ const DEFAULT_AR = 16 / 9;
 const DOT_SIZE = 6;
 const DOT_ACTIVE_SIZE = 24; // Увеличиваем для современного вида (широкая активная точка)
 const NAV_BTN_OFFSET = 16;
-const MOBILE_HEIGHT_PERCENT = 0.8;
+// Мобильная высота: 60% высоты экрана (фиксировано)
+const MOBILE_HEIGHT_PERCENT = 0.6;
 const GLASS_BORDER = "rgba(255,255,255,0.35)";
 
 const appendCacheBust = (uri: string, token: number) => {
@@ -258,7 +259,8 @@ const Dot = memo(function Dot({
 
 /* --------------------------------- Slider ---------------------------------- */
 
-const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
+// NOTE: avoid TS generics in forwardRef to prevent runtime parsing issues if the file is consumed untranspiled
+const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const {
     images,
     showArrows = true,
@@ -348,9 +350,12 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
     (w: number) => {
       if (!images.length) return 0;
       if (isMobile) {
-        const availableH = Math.max(0, winH - (insets.top || 0) - (insets.bottom || 0));
-        const mobileHeight = availableH * mobileHeightPercent;
-        return clamp(mobileHeight, 200, availableH);
+        // На мобильных целимся в фиксированные 80% высоты viewport.
+        // Верхняя граница — не меньше самого target (чтобы не съедать высоту), даже если safe-area большая.
+        const viewportH = Math.max(0, winH);
+        const targetH = viewportH * mobileHeightPercent;
+        const safeMax = Math.max(targetH, viewportH - (insets.top || 0) - (insets.bottom || 0));
+        return clamp(targetH, 280, safeMax || targetH);
       } else {
         const h = w / firstAR;
         return clamp(h, 320, 640);
@@ -591,12 +596,16 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
       const status = loadStatuses[index] ?? "loading";
       const isFirstSlide = index === 0;
       const mainPriority = isFirstSlide ? "high" : "low";
+      // Показываем размытый фон на всех платформах, но сохраняем legacy-поведение для web первого слайда:
+      // пока он не загрузился — используем плоский фон, чтобы избежать расхождений с тестами/LCP.
       const shouldRenderBlurBg =
         shouldBlur &&
+        status !== "error" &&
         !(Platform.OS === "web" && isFirstSlide && status !== "loaded");
 
       const useElevatedWrapper = Platform.OS === 'web' && !isMobile && (isPortrait || isSquareish);
-      const mainFit: 'cover' | 'contain' = isMobile ? 'cover' : 'contain';
+      // Показываем всю картинку: используем contain на всех платформах
+      const mainFit: 'cover' | 'contain' = 'contain';
 
       return (
         <View style={[styles.slide, { width: containerW, height: slideHeight }]}> 
@@ -605,6 +614,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
               <ImageCardMedia
                 testID={`slider-blur-bg-${index}`}
                 src={uri}
+                // Фон должен полностью заполнять область — используем cover
                 fit="cover"
                 blurBackground
                 blurRadius={12}
@@ -656,7 +666,7 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
                   fit={mainFit}
                   // Background blur is rendered as a separate layer above.
                   // Keeping blur here too can cause positioning/artifacts on mobile.
-                  blurBackground={Platform.OS === 'web' && !shouldRenderBlurBg ? shouldBlur : false}
+                  blurBackground={Platform.OS === 'web' ? shouldRenderBlurBg : shouldBlur}
                   priority={mainPriority as any}
                   loading={Platform.OS === 'web' ? (isFirstSlide ? 'eager' : 'lazy') : 'lazy'}
                   transition={reduceMotion ? 0 : 250}
@@ -773,56 +783,58 @@ const Slider = forwardRef<SliderRef, SliderProps>((props, ref) => {
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={viewabilityConfig}
           />
-
-          {showArrows && images.length > 1 && (
-            <>
-              <Arrow
-                dir="left"
-                onPress={prev}
-                isMobile={isMobile}
-                hideArrowsOnMobile={hideArrowsOnMobile}
-                insets={insets}
-                dismissSwipeHint={dismissSwipeHint}
-              />
-              <Arrow
-                dir="right"
-                onPress={next}
-                isMobile={isMobile}
-                hideArrowsOnMobile={hideArrowsOnMobile}
-                insets={insets}
-                dismissSwipeHint={dismissSwipeHint}
-              />
-            </>
-          )}
-
-          {/* Instagram-style 1/N counter */}
-          {images.length > 1 && (
-            <View style={[styles.counter, isMobile && styles.counterMobile]} pointerEvents="none">
-              <View style={styles.counterContainer}>
-                <Text style={styles.counterText}>
-                  {currentIndex + 1}/{images.length}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {/* Instagram-style pagination dots */}
-          {showDots && images.length > 1 && (
-            <View style={[styles.dots, isMobile && styles.dotsMobile]} pointerEvents="none">
-              <View style={styles.dotsContainer}>
-                {images.map((_, i) => (
-                  <View key={i} style={styles.dotWrap}>
-                    <Dot i={i} x={x} containerW={containerW} total={images.length} reduceMotion={reduceMotion} />
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
         </View>
+
+        {showArrows && images.length > 1 && (
+          <>
+            <Arrow
+              dir="left"
+              onPress={prev}
+              isMobile={isMobile}
+              hideArrowsOnMobile={hideArrowsOnMobile}
+              insets={insets}
+              dismissSwipeHint={dismissSwipeHint}
+            />
+            <Arrow
+              dir="right"
+              onPress={next}
+              isMobile={isMobile}
+              hideArrowsOnMobile={hideArrowsOnMobile}
+              insets={insets}
+              dismissSwipeHint={dismissSwipeHint}
+            />
+          </>
+        )}
+
+        {/* Instagram-style 1/N counter */}
+        {images.length > 1 && (
+          <View style={[styles.counter, isMobile && styles.counterMobile]} pointerEvents="none">
+            <View style={styles.counterContainer}>
+              <Text style={styles.counterText}>
+                {currentIndex + 1}/{images.length}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Instagram-style pagination dots */}
+        {showDots && images.length > 1 && (
+          <View style={[styles.dots, isMobile && styles.dotsMobile]} pointerEvents="none">
+            <View style={styles.dotsContainer}>
+              {images.map((_, i) => (
+                <View key={i} style={styles.dotWrap}>
+                  <Dot i={i} x={x} containerW={containerW} total={images.length} reduceMotion={reduceMotion} />
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );
-});
+};
+
+const Slider = forwardRef(SliderComponent);
 
 export default memo(Slider);
 
@@ -986,7 +998,7 @@ const styles = StyleSheet.create<Record<string, any>>({
     width: 48,
     height: 48,
     borderRadius: 24,
-    zIndex: 10,
+    zIndex: 50,
     justifyContent: "center",
     alignItems: "center",
     ...Platform.select({

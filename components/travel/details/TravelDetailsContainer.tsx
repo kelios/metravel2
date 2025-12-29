@@ -1550,7 +1550,7 @@ function TravelHeroSection({
               blurBackground
               neutralFirstSlideErrorPlaceholder
               aspectRatio={aspectRatio as number}
-              mobileHeightPercent={0.7}
+              mobileHeightPercent={0.6}
               onFirstImageLoad={onFirstImageLoad}
             />
           )}
@@ -2827,18 +2827,17 @@ export const styles = StyleSheet.create({
   },
   sliderContainer: {
     width: "100%",
-    aspectRatio: 16 / 9,
     borderRadius: DESIGN_TOKENS.radii.md,
     overflow: "hidden",
     marginBottom: 0,
-    backgroundColor: DESIGN_TOKENS.colors.text,
+    backgroundColor: "transparent",
     // Объединенные стили теней
     ...Platform.select({
       web: {
         boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
       },
       default: {
-        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowColor: "rgba(0,0,0,0.12)",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 8,

@@ -21,6 +21,20 @@ const landscapeImage: SliderImage = {
   height: 900,
 }
 
+const portraitImage2: SliderImage = {
+  id: 'portrait-2',
+  url: 'https://example.com/portrait2.jpg',
+  width: 800,
+  height: 1200,
+}
+
+const landscapeImage2: SliderImage = {
+  id: 'landscape-2',
+  url: 'https://example.com/landscape2.jpg',
+  width: 1600,
+  height: 900,
+}
+
 const renderSlider = async (images: SliderImage[]): Promise<RenderAPI> => {
   const api = render(
     <Slider
@@ -55,7 +69,7 @@ describe('Slider', () => {
     const { getByTestId, queryByTestId } = await renderSlider([portraitImage])
     const image = getByTestId('slider-image-0')
 
-    expect(image.props.contentFit).toBe('cover')
+    expect(image.props.contentFit).toBe('contain')
     expect(getByTestId('slider-loading-overlay-0')).toBeTruthy()
 
     act(() => {
@@ -220,7 +234,7 @@ describe('Slider', () => {
   })
 
   it('shows counter with correct format for multiple images', async () => {
-    const images = [portraitImage, landscapeImage, portraitImage]
+    const images = [portraitImage, landscapeImage, portraitImage2]
     
     const { getByText } = render(
       <Slider
@@ -258,7 +272,7 @@ describe('Slider', () => {
 
     const { getByTestId } = render(
       <Slider
-        images={[portraitImage, landscapeImage, portraitImage]}
+        images={[portraitImage, landscapeImage, portraitImage2]}
         showArrows={false}
         showDots
         autoPlay={false}
