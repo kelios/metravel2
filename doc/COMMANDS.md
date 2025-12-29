@@ -361,14 +361,14 @@ npm install
 cat README.md
 cat ANDROID-README.md
 
-# View guides
-cat docs/ANDROID-BUILD-GUIDE.md
-cat docs/ANDROID-QUICK-START.md
-cat docs/ANDROID-CHECKLIST.md
+# View guides (all docs live in ./doc)
+cat doc/ANDROID-BUILD-GUIDE.md
+cat doc/ANDROID-QUICK-START.md
+cat doc/ANDROID-CHECKLIST.md
 
 # View iOS docs
-cat docs/IOS-BUILD-GUIDE.md
-cat docs/IOS-QUICK-START.md
+cat doc/IOS-BUILD-GUIDE.md
+cat doc/IOS-QUICK-START.md
 ```
 
 ---

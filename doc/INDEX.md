@@ -1,5 +1,7 @@
 # Documentation Index
 
+> Single source of truth: **all project documentation lives only in `doc/`**. Add any new docs here.
+
 ## Start here
 
 - [Development](./DEVELOPMENT.md)
