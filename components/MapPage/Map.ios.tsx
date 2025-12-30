@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type Point = {
   id: number;
@@ -37,10 +38,26 @@ interface TravelProps {
   coordinates: Coordinates | null;
 }
 
+const withAlpha = (color: string, alpha: number) => {
+  if (!color || color.startsWith('rgba') || color.startsWith('rgb')) {
+    return color;
+  }
+
+  if (color.startsWith('#')) {
+    const raw = color.replace('#', '');
+    const hex = raw.length === 3 ? raw.split('').map((ch) => ch + ch).join('') : raw;
+    const alphaHex = Math.round(alpha * 255).toString(16).padStart(2, '0');
+    return `#${hex}${alphaHex}`;
+  }
+
+  return color;
+};
+
 const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) => {
   const travelAddress = useMemo(() => travel?.travelAddress?.data || [], [travel?.travelAddress?.data]);
   const [localCoordinates, setLocalCoordinates] = useState<Coordinates | null>(propCoordinates);
   const [isLoading, setIsLoading] = useState(true);
+  const themeColors = useThemedColors();
 
   useEffect(() => {
     if (!localCoordinates) {
@@ -50,6 +67,20 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
 
   const centerLat = localCoordinates?.latitude ?? 53.8828449;
   const centerLng = localCoordinates?.longitude ?? 27.7273595;
+  const loaderOverlay = useMemo(
+    () => withAlpha(themeColors.surface, 0.8),
+    [themeColors.surface]
+  );
+  const markerColor = themeColors.primary;
+  const markerInnerColor = themeColors.textOnDark;
+  const markerSvg = `
+    <svg width="32" height="48" viewBox="0 0 32 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="16" fill="${markerColor}"/>
+      <circle cx="16" cy="16" r="10" fill="${markerInnerColor}"/>
+      <path d="M24 32C20 40 16 48 16 48C16 48 12 40 8 32H24Z" fill="${markerColor}"/>
+    </svg>
+  `;
+  const markerSvgUrl = `data:image/svg+xml;utf8,${encodeURIComponent(markerSvg)}`;
 
   // HTML с улучшенными маркерами (поддержка фото в попапе)
   const htmlContent = `
@@ -64,7 +95,7 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; }
         #map { width: 100%; height: 100%; }
-        .leaflet-popup-content-wrapper { background-color: #fff; border-radius: 8px; padding: 0; }
+        .leaflet-popup-content-wrapper { background-color: ${themeColors.surface}; border-radius: 8px; padding: 0; }
         .leaflet-popup-content { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; }
         .popup-image { 
           width: 200px; 
@@ -74,9 +105,9 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
           display: block;
         }
         .popup-text { padding: 12px; font-size: 13px; line-height: 1.5; }
-        .popup-label { font-weight: 600; color: #333; margin-top: 8px; margin-bottom: 4px; }
+        .popup-label { font-weight: 600; color: ${themeColors.text}; margin-top: 8px; margin-bottom: 4px; }
         .popup-label:first-of-type { margin-top: 0; }
-        .popup-value { color: #666; font-size: 12px; margin-bottom: 4px; }
+        .popup-value { color: ${themeColors.textMuted}; font-size: 12px; margin-bottom: 4px; }
       </style>
     </head>
     <body>
@@ -95,7 +126,7 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
 
         // Создаем иконку маркера
         const markerIcon = L.icon({
-          iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCAzMiA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0iI2ZmN2Y1MCIvPjxjaXJjbGUgY3g9IjE2IiBjeT0iMTYiIHI9IjEwIiBmaWxsPSIjZmZmZmZmIi8+PHBhdGggZD0iTTI0IDMyQzIwIDQwIDE2IDQ4IDE2IDQ4QzE2IDQ4IDEyIDQwIDggMzJIMjRaIiBmaWxsPSIjZmY3ZjUwIi8+PC9zdmc+',
+          iconUrl: '${markerSvgUrl}',
           iconSize: [32, 48],
           iconAnchor: [16, 48],
           popupAnchor: [0, -48]
@@ -135,10 +166,10 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
   `;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeColors.surface }]}>
       {isLoading && (
-        <View style={styles.loader}>
-          <ActivityIndicator size="large" color="#ff7f50" />
+        <View style={[styles.loader, { backgroundColor: loaderOverlay }]}>
+          <ActivityIndicator size="large" color={themeColors.primary} />
         </View>
       )}
       <WebView
@@ -158,7 +189,6 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   map: {
     flex: 1,
@@ -168,7 +198,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     zIndex: 10,
   },
 });

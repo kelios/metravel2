@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import type { LatLng } from '@/types/coordinates';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface MapControlsProps {
   userLocation: LatLng | null;
@@ -28,23 +29,23 @@ const MapControls: React.FC<MapControlsProps> = ({
           width: '44px',
           height: '44px',
           borderRadius: '50%',
-          backgroundColor: '#fff',
-          border: '2px solid rgba(0,0,0,0.2)',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          backgroundColor: DESIGN_TOKENS.colors.surface,
+          border: `2px solid ${DESIGN_TOKENS.colors.borderStrong}`,
+          boxShadow: DESIGN_TOKENS.shadows.card,
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           padding: 0,
           transition: 'all 0.2s ease',
-          color: '#2b6cb0',
+          color: DESIGN_TOKENS.colors.info,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#f0f7ff';
+          e.currentTarget.style.backgroundColor = DESIGN_TOKENS.colors.infoLight;
           e.currentTarget.style.transform = 'scale(1.05)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = '#fff';
+          e.currentTarget.style.backgroundColor = DESIGN_TOKENS.colors.surface;
           e.currentTarget.style.transform = 'scale(1)';
         }}
         title="Мое местоположение"

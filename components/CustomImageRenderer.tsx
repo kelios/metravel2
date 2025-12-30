@@ -9,6 +9,7 @@ import {
 import { CustomRendererProps } from "react-native-render-html";
 import { useResponsive } from '@/hooks/useResponsive';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface CustomImageRendererProps extends CustomRendererProps<any> {
   contentWidth: number;
@@ -193,11 +194,11 @@ const styles = StyleSheet.create({
   skeleton: {
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
     borderRadius: 8,
   },
   placeholder: {
-    backgroundColor: '#e5e5e5',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     borderRadius: 8,
   },
   errorContainer: {
@@ -206,5 +207,5 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   errorText: { fontSize: 32, marginBottom: 8 },
-  errorMessage: { fontSize: 14, color: "#6c757d", textAlign: "center" },
+  errorMessage: { fontSize: 14, color: DESIGN_TOKENS.colors.textMuted, textAlign: "center" },
 });

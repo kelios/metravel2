@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         // @ts-ignore
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+        boxShadow: DESIGN_TOKENS.shadows.light,
       },
       default: {
         shadowColor: DESIGN_TOKENS.colors.text,
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     }),
   },
   tooltipText: {
-    color: DESIGN_TOKENS.colors.surface,
+    color: DESIGN_TOKENS.colors.textOnDark,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     lineHeight: 20,
   },

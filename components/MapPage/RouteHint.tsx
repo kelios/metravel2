@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface RouteHintProps {
   onDismiss: () => void;
@@ -17,7 +18,7 @@ export default function RouteHint({ onDismiss, routePointsCount }: RouteHintProp
   return (
     <View style={[styles.container, isMobile && styles.containerMobile]}>
       <View style={styles.content}>
-        <Feather name="info" size={18} color="#2b6cb0" />
+        <Feather name="info" size={18} color={DESIGN_TOKENS.colors.info} />
         <View style={styles.textContainer}>
           <Text style={styles.title}>Как построить маршрут</Text>
           <Text style={styles.description}>
@@ -31,7 +32,7 @@ export default function RouteHint({ onDismiss, routePointsCount }: RouteHintProp
         accessibilityRole="button"
         accessibilityLabel="Закрыть подсказку"
       >
-        <Feather name="x" size={16} color="#667085" />
+        <Feather name="x" size={16} color={DESIGN_TOKENS.colors.textMuted} />
       </Pressable>
     </View>
   );
@@ -39,13 +40,13 @@ export default function RouteHint({ onDismiss, routePointsCount }: RouteHintProp
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: DESIGN_TOKENS.colors.border,
     borderLeftWidth: 4,
-    borderLeftColor: '#2b6cb0',
+    borderLeftColor: DESIGN_TOKENS.colors.info,
     marginBottom: 12,
   },
   containerMobile: {
@@ -63,12 +64,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1b1f23',
+    color: DESIGN_TOKENS.colors.text,
     marginBottom: 4,
   },
   description: {
     fontSize: 12,
-    color: '#667085',
+    color: DESIGN_TOKENS.colors.textMuted,
     lineHeight: 18,
   },
   closeButton: {
@@ -76,4 +77,3 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 });
-

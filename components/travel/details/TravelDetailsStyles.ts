@@ -145,8 +145,8 @@ export const styles = StyleSheet.create({
     padding: Platform.select({ default: DESIGN_TOKENS.spacing.lg, web: DESIGN_TOKENS.spacing.xl }),
     borderRadius: DESIGN_TOKENS.radii.lg,
     borderWidth: 1,
-    borderColor: 'rgba(93, 138, 168, 0.22)',
-    backgroundColor: 'rgba(93, 138, 168, 0.06)',
+    borderColor: DESIGN_TOKENS.colors.borderAccent,
+    backgroundColor: DESIGN_TOKENS.colors.accentSoft,
     ...Platform.select({
       web: {
         boxShadow: DESIGN_TOKENS.shadows.card,
@@ -206,16 +206,16 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
   },
   decisionSummaryBadgeInfo: {
-    backgroundColor: 'rgba(60, 60, 60, 0.06)',
-    borderColor: 'rgba(60, 60, 60, 0.14)',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    borderColor: DESIGN_TOKENS.colors.border,
   },
   decisionSummaryBadgePositive: {
-    backgroundColor: 'rgba(34, 197, 94, 0.10)',
-    borderColor: 'rgba(34, 197, 94, 0.18)',
+    backgroundColor: DESIGN_TOKENS.colors.successSoft,
+    borderColor: DESIGN_TOKENS.colors.successLight,
   },
   decisionSummaryBadgeNegative: {
-    backgroundColor: 'rgba(239, 68, 68, 0.10)',
-    borderColor: 'rgba(239, 68, 68, 0.18)',
+    backgroundColor: DESIGN_TOKENS.colors.dangerSoft,
+    borderColor: DESIGN_TOKENS.colors.dangerLight,
   },
   decisionSummaryBadgeText: {
     fontSize: 14,
@@ -226,10 +226,10 @@ export const styles = StyleSheet.create({
     color: DESIGN_TOKENS.colors.text,
   },
   decisionSummaryBadgeTextPositive: {
-    color: '#15803d',
+    color: DESIGN_TOKENS.colors.successDark,
   },
   decisionSummaryBadgeTextNegative: {
-    color: '#b91c1c',
+    color: DESIGN_TOKENS.colors.dangerDark,
   },
   decisionSummaryText: {
     flex: 1,
@@ -274,7 +274,7 @@ export const styles = StyleSheet.create({
   sideMenuWebDesktop: {
     position: "sticky" as any,
     top: HEADER_OFFSET_DESKTOP as any,
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
     backdropFilter: "blur(20px)" as any,
     // Ensure the sidebar can scroll independently on long menus
     maxHeight: `calc(100vh - ${HEADER_OFFSET_DESKTOP}px)` as any,
@@ -321,16 +321,16 @@ export const styles = StyleSheet.create({
     }),
   },
   sectionHeaderPositive: {
-    backgroundColor: "rgba(16, 185, 129, 0.12)",
-    borderColor: "rgba(16, 185, 129, 0.4)",
+    backgroundColor: DESIGN_TOKENS.colors.successSoft,
+    borderColor: DESIGN_TOKENS.colors.successLight,
   },
   sectionHeaderNegative: {
-    backgroundColor: "rgba(248, 113, 113, 0.12)",
-    borderColor: "rgba(248, 113, 113, 0.4)",
+    backgroundColor: DESIGN_TOKENS.colors.dangerSoft,
+    borderColor: DESIGN_TOKENS.colors.dangerLight,
   },
   sectionHeaderInfo: {
-    backgroundColor: "rgba(96, 165, 250, 0.12)",
-    borderColor: "rgba(96, 165, 250, 0.4)",
+    backgroundColor: DESIGN_TOKENS.colors.infoSoft,
+    borderColor: DESIGN_TOKENS.colors.infoLight,
   },
   sectionHeaderActive: {
     shadowOpacity: 0.10,
@@ -400,14 +400,10 @@ export const styles = StyleSheet.create({
     // Объединенные стили теней
     ...Platform.select({
       web: {
-        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+        boxShadow: DESIGN_TOKENS.shadows.light,
       },
       default: {
-        shadowColor: "rgba(0,0,0,0.12)",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 3,
+        ...DESIGN_TOKENS.shadowsNative.light,
       },
     }),
   },
@@ -429,7 +425,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: DESIGN_TOKENS.colors.overlay,
   },
   neutralActionButton: {
     alignSelf: "flex-start",
@@ -437,12 +433,12 @@ export const styles = StyleSheet.create({
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.10)",
-    backgroundColor: "rgba(0,0,0,0.03)",
+    borderColor: DESIGN_TOKENS.colors.border,
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
   },
   neutralActionButtonPressed: {
     opacity: 0.92,
-    backgroundColor: "rgba(0,0,0,0.05)",
+    backgroundColor: DESIGN_TOKENS.colors.backgroundTertiary,
   },
   neutralActionButtonText: {
     color: DESIGN_TOKENS.colors.text,
@@ -450,7 +446,7 @@ export const styles = StyleSheet.create({
     fontWeight: "600" as any,
   },
   videoHintText: {
-    color: DESIGN_TOKENS.colors.surface,
+    color: DESIGN_TOKENS.colors.textOnDark,
     fontSize: 14,
     marginTop: DESIGN_TOKENS.spacing.sm,
     textAlign: "center",
@@ -476,16 +472,16 @@ export const styles = StyleSheet.create({
   },
 
   mobileInsightTabsWrapper: {
-    backgroundColor: "rgba(15, 23, 42, 0.03)",
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     padding: DESIGN_TOKENS.spacing.lg,
     borderRadius: DESIGN_TOKENS.radii.md,
     borderWidth: 1,
-    borderColor: "rgba(148, 163, 184, 0.3)",
+    borderColor: DESIGN_TOKENS.colors.border,
   },
   mobileInsightLabel: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
-    color: "#1f2937",
+    color: DESIGN_TOKENS.colors.text,
     marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   mobileInsightTabs: {
@@ -497,18 +493,18 @@ export const styles = StyleSheet.create({
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     borderRadius: 999,
-    backgroundColor: "rgba(148, 163, 184, 0.2)",
+    backgroundColor: DESIGN_TOKENS.colors.backgroundTertiary,
   },
   mobileInsightChipActive: {
-    backgroundColor: "#1f2937",
+    backgroundColor: DESIGN_TOKENS.colors.primary,
   },
   mobileInsightChipText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "500",
-    color: "#475569",
+    color: DESIGN_TOKENS.colors.textMuted,
   },
   mobileInsightChipTextActive: {
-    color: "#f8fafc",
+    color: DESIGN_TOKENS.colors.textOnPrimary,
   },
 
   mapEmptyState: {
@@ -518,20 +514,20 @@ export const styles = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "rgba(148, 163, 184, 0.7)",
+    borderColor: DESIGN_TOKENS.colors.borderStrong,
     alignItems: "center",
     justifyContent: "center",
   },
   mapEmptyText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: "600",
-    color: "#475569",
+    color: DESIGN_TOKENS.colors.textMuted,
   },
   nearSubtitle: {
-    color: "#047857",
+    color: DESIGN_TOKENS.colors.successDark,
   },
   popularSubtitle: {
-    color: "#b45309",
+    color: DESIGN_TOKENS.colors.warningDark,
   },
   sectionBadgeRow: {
     flexDirection: "row",
@@ -545,21 +541,21 @@ export const styles = StyleSheet.create({
     borderRadius: 999,
   },
   sectionBadgeNear: {
-    backgroundColor: "rgba(16, 185, 129, 0.18)",
+    backgroundColor: DESIGN_TOKENS.colors.successSoft,
   },
   sectionBadgePopular: {
-    backgroundColor: "rgba(249, 115, 22, 0.18)",
+    backgroundColor: DESIGN_TOKENS.colors.warningSoft,
   },
   sectionBadgeText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
-    color: "#1f2937",
+    color: DESIGN_TOKENS.colors.text,
   },
   sectionBadgeTextNear: {
-    color: "#065f46",
+    color: DESIGN_TOKENS.colors.successDark,
   },
   sectionBadgeTextPopular: {
-    color: "#9a3412",
+    color: DESIGN_TOKENS.colors.warningDark,
   },
 
   fallback: { paddingVertical: DESIGN_TOKENS.spacing.xl, alignItems: "center" },
@@ -577,14 +573,14 @@ export const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f9f8f2",
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     paddingVertical: DESIGN_TOKENS.spacing.xl + DESIGN_TOKENS.spacing.xs,
   },
   errorTitle: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: "600",
-    color: "#1f2937",
+    color: DESIGN_TOKENS.colors.text,
     marginTop: DESIGN_TOKENS.spacing.lg,
     marginBottom: DESIGN_TOKENS.spacing.xs,
     textAlign: "center",
@@ -592,7 +588,7 @@ export const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: "#6b7280",
+    color: DESIGN_TOKENS.colors.textMuted,
     textAlign: "center",
     marginBottom: DESIGN_TOKENS.spacing.xl,
     lineHeight: 24,
@@ -607,13 +603,13 @@ export const styles = StyleSheet.create({
         cursor: "pointer",
         transition: "all 0.2s ease",
         ":hover": {
-          backgroundColor: "#ff8c42",
+          backgroundColor: DESIGN_TOKENS.colors.primaryDark,
         } as any,
       },
     }),
   },
   errorButtonText: {
-    color: DESIGN_TOKENS.colors.surface,
+    color: DESIGN_TOKENS.colors.textOnPrimary,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: "600",
   },

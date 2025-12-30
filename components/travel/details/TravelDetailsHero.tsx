@@ -113,8 +113,8 @@ const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }) => {
           width: '100%',
           height: height ? `${height}px` : '100%',
           borderRadius: 12,
-          background: 'linear-gradient(180deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.02) 100%)',
-          border: '1px solid rgba(0,0,0,0.06)',
+          background: `linear-gradient(180deg, ${DESIGN_TOKENS.colors.backgroundSecondary} 0%, ${DESIGN_TOKENS.colors.backgroundTertiary} 100%)`,
+          border: `1px solid ${DESIGN_TOKENS.colors.borderLight}`,
           boxSizing: 'border-box',
         }}
         aria-hidden="true"
@@ -128,9 +128,9 @@ const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }) => {
         width: '100%',
         height: height,
         borderRadius: 12,
-        backgroundColor: 'rgba(0,0,0,0.04)',
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
         borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.06)',
+        borderColor: DESIGN_TOKENS.colors.borderLight,
       }}
     />
   )
@@ -185,7 +185,7 @@ export const OptimizedLCPHero: React.FC<{
             <View
               style={{
                 ...StyleSheet.absoluteFillObject,
-                backgroundColor: 'rgba(255,255,255,0.18)',
+                backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
               }}
             />
             <ImageCardMedia
@@ -223,14 +223,14 @@ export const OptimizedLCPHero: React.FC<{
             borderRadius: 12,
             overflow: 'hidden',
             position: 'relative',
-            backgroundColor: '#e9e7df',
+            backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
           }}
         >
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              backgroundColor: 'rgba(255,255,255,0.18)',
+              backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
             }}
           />
           <img

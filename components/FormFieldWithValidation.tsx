@@ -124,10 +124,10 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     ...Platform.select({
       web: {
-        boxShadow: '0 4px 12px rgba(31, 31, 31, 0.1), 0 2px 4px rgba(31, 31, 31, 0.06)',
+        boxShadow: DESIGN_TOKENS.shadows.medium,
       },
       ios: {
-        shadowColor: '#1f1f1f',
+        shadowColor: palette.text,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
         shadowRadius: 6,
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
         elevation: 3,
       },
       default: {
-        shadowColor: '#1f1f1f',
+        shadowColor: palette.text,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
         shadowRadius: 6,
@@ -177,4 +177,3 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
-

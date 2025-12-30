@@ -35,10 +35,10 @@ export const AboutIntroCard: React.FC<Props> = ({
     <View style={aboutStyles.sectionDivider} />
 
     <Text style={aboutStyles.sectionTitle}>Как поделиться путешествием:</Text>
-    <View style={aboutStyles.stepsList}>
+    <View style={aboutStyles.stepsList} accessibilityRole="list">
       {['Регистрируемся', 'Добавляем своё путешествие', 'Ставим статус «Опубликовать»', 'Ждём модерации (до 24 часов)', 'Хотите в Instagram? Напишите в директ @metravelby'].map(
         (text, idx) => (
-          <View key={text} style={aboutStyles.stepItem}>
+          <View key={text} style={aboutStyles.stepItem} accessibilityRole="text">
             <View style={aboutStyles.stepNumber}>
               <Text style={aboutStyles.stepNumberText}>{idx + 1}</Text>
             </View>

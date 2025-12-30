@@ -3,6 +3,7 @@ import { View, StyleSheet, Pressable, Text, ActivityIndicator, Platform } from '
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type ToggleableMapSectionProps = {
     children: React.ReactNode;
@@ -22,6 +23,7 @@ const ToggleableMapSection = ({
     const [showMap, setShowMap] = useState(initiallyOpen);
     const [hasOpened, setHasOpened] = useState(initiallyOpen);
     const { isPhone } = useResponsive();
+    const themedColors = useThemedColors();
     const isMobile = isPhone;
     const hintText = useMemo(
         () => (showMap && isLoading ? loadingLabel : showMap ? 'Скрыть карту' : 'Показать карту'),
@@ -46,14 +48,15 @@ const ToggleableMapSection = ({
                 onPress={handleToggle}
                 style={({ pressed }) => [
                     styles.toggleButton,
-                    pressed && styles.toggleButtonPressed,
+                    { backgroundColor: themedColors.surface },
+                    pressed && { backgroundColor: themedColors.surfaceLight },
                 ]}
             >
-                <Feather name="map-pin" size={18} color="#3B2C24" style={{ marginRight: DESIGN_TOKENS.spacing.xs }} />
-                <Text style={[styles.toggleText, isMobile && styles.toggleTextMobile]}>
+                <Feather name="map-pin" size={18} color={themedColors.text} style={{ marginRight: DESIGN_TOKENS.spacing.xs }} />
+                <Text style={[styles.toggleText, { color: themedColors.text }, isMobile && styles.toggleTextMobile]}>
                     {hintText}
                 </Text>
-                <Feather name={showMap ? 'chevron-up' : 'chevron-down'} size={18} color="#3B2C24" />
+                <Feather name={showMap ? 'chevron-up' : 'chevron-down'} size={18} color={themedColors.text} />
             </Pressable>
 
             {shouldRenderContainer && (
@@ -61,14 +64,24 @@ const ToggleableMapSection = ({
                     style={[
                         styles.mapContainer,
                         isMobile && styles.mapContainerMobile,
+                        { backgroundColor: themedColors.surface },
                         !showMap && keepMounted ? { height: 0, minHeight: 0, marginTop: 0 } : null,
                     ]}
                 >
                     {showMap ? (
                         isLoading ? (
                             <View style={styles.loadingState}>
-                                {Platform.OS === 'web' ? <View style={styles.loadingSkeleton} /> : <ActivityIndicator color="#ff9f5a" />}
-                                <Text style={styles.loadingText}>{loadingLabel}</Text>
+                                {Platform.OS === 'web' ? (
+                                    <View
+                                        style={[
+                                            styles.loadingSkeleton,
+                                            { backgroundColor: themedColors.surfaceLight, borderColor: themedColors.border },
+                                        ]}
+                                    />
+                                ) : (
+                                    <ActivityIndicator color={themedColors.primary} />
+                                )}
+                                <Text style={[styles.loadingText, { color: themedColors.textMuted }]}>{loadingLabel}</Text>
                             </View>
                         ) : (
                             children
@@ -94,31 +107,23 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingVertical: 12,
         paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-        backgroundColor: '#fff',
         borderRadius: 16,
         gap: DESIGN_TOKENS.spacing.sm,
         ...Platform.select({
           web: {
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            boxShadow: DESIGN_TOKENS.shadows.light,
           },
           ios: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 4,
+            ...DESIGN_TOKENS.shadowsNative.light,
           },
           android: {
             elevation: 2,
           },
         }),
     },
-    toggleButtonPressed: {
-        backgroundColor: '#f0f0f0',
-    },
     toggleText: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '600',
-        color: '#3B2C24',
     },
     toggleTextMobile: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -128,17 +133,13 @@ const styles = StyleSheet.create({
         width: '100%',
         minHeight: 400,
         borderRadius: 16,
-        backgroundColor: '#fff',
         overflow: 'hidden',
         ...Platform.select({
           web: {
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            boxShadow: DESIGN_TOKENS.shadows.light,
           },
           ios: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 4,
+            ...DESIGN_TOKENS.shadowsNative.light,
           },
           android: {
             elevation: 2,
@@ -157,14 +158,11 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: '#475569',
     },
     loadingSkeleton: {
         width: 52,
         height: 52,
         borderRadius: 14,
-        backgroundColor: '#f1f5f9',
         borderWidth: 1,
-        borderColor: '#e2e8f0',
     },
 });

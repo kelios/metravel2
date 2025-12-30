@@ -4,6 +4,7 @@ import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LAYOUT } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 const CONSENT_KEY = 'metravel_consent_v1';
 
@@ -150,7 +151,7 @@ const styles = StyleSheet.create({
   },
   manageLinkText: {
     fontSize: 12,
-    color: '#1f2937',
+    color: DESIGN_TOKENS.colors.textMuted,
     textDecorationLine: 'underline',
   },
   container: {
@@ -159,13 +160,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: 'rgba(31, 41, 55, 0.94)',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     ...Platform.select({
       web: {
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.20)',
+        boxShadow: DESIGN_TOKENS.shadows.modal,
       },
       ios: {
-        shadowColor: '#000',
+        shadowColor: DESIGN_TOKENS.colors.text,
         shadowOpacity: 0.2,
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 4 },
@@ -179,19 +180,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: {
-    color: '#f9fafb',
+    color: DESIGN_TOKENS.colors.text,
     fontSize: 15,
     fontWeight: '600',
     marginBottom: 4,
   },
   text: {
-    color: '#e5e7eb',
+    color: DESIGN_TOKENS.colors.textMuted,
     fontSize: 13,
     lineHeight: 18,
   },
   linkHint: {
     marginTop: 4,
-    color: '#9ca3af',
+    color: DESIGN_TOKENS.colors.textSubtle,
     fontSize: 12,
   },
   buttonsRow: {
@@ -210,20 +211,20 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   primary: {
-    backgroundColor: '#4a8c8c',
+    backgroundColor: DESIGN_TOKENS.colors.primary,
   },
   primaryText: {
-    color: '#111827',
+    color: DESIGN_TOKENS.colors.textOnPrimary,
     fontSize: 13,
     fontWeight: '600',
   },
   secondary: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#6b7280',
+    borderColor: DESIGN_TOKENS.colors.border,
   },
   secondaryText: {
-    color: '#e5e7eb',
+    color: DESIGN_TOKENS.colors.text,
     fontSize: 13,
     fontWeight: '500',
   },

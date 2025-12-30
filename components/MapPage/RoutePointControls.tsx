@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
 import type { RoutePoint } from '@/types/route';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface RoutePointControlsProps {
   routePoints: RoutePoint[];
@@ -32,7 +33,7 @@ export default function RoutePointControls({
             accessibilityRole="button"
             accessibilityLabel="Очистить маршрут"
           >
-            <Feather name="x" size={14} color="#d94b4b" />
+            <Feather name="x" size={14} color={DESIGN_TOKENS.colors.danger} />
             <Text style={styles.clearText}>Очистить</Text>
           </Pressable>
         )}
@@ -77,7 +78,7 @@ export default function RoutePointControls({
                 accessibilityRole="button"
                 accessibilityLabel={`Удалить ${getPointLabel()}`}
               >
-                <Feather name="x-circle" size={18} color="#d94b4b" />
+                <Feather name="x-circle" size={18} color={DESIGN_TOKENS.colors.danger} />
               </Pressable>
             </View>
           );
@@ -89,17 +90,13 @@ export default function RoutePointControls({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    ...DESIGN_TOKENS.shadowsNative.medium,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: DESIGN_TOKENS.colors.border,
   },
   containerMobile: {
     marginHorizontal: 12,
@@ -113,7 +110,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1b1f23',
+    color: DESIGN_TOKENS.colors.text,
   },
   clearButton: {
     flexDirection: 'row',
@@ -122,11 +119,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: '#fff5f5',
+    backgroundColor: DESIGN_TOKENS.colors.dangerLight,
   },
   clearText: {
     fontSize: 12,
-    color: '#d94b4b',
+    color: DESIGN_TOKENS.colors.danger,
     fontWeight: '600',
   },
   pointsList: {
@@ -138,7 +135,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 8,
     paddingHorizontal: 8,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: DESIGN_TOKENS.colors.cardMuted,
     borderRadius: 8,
   },
   pointMarker: {
@@ -149,16 +146,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pointMarkerStart: {
-    backgroundColor: '#25a562',
+    backgroundColor: DESIGN_TOKENS.colors.success,
   },
   pointMarkerEnd: {
-    backgroundColor: '#d94b4b',
+    backgroundColor: DESIGN_TOKENS.colors.danger,
   },
   pointMarkerWaypoint: {
-    backgroundColor: '#2b6cb0',
+    backgroundColor: DESIGN_TOKENS.colors.info,
   },
   pointNumber: {
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.textOnPrimary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -168,15 +165,14 @@ const styles = StyleSheet.create({
   pointLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1b1f23',
+    color: DESIGN_TOKENS.colors.text,
     marginBottom: 2,
   },
   pointCoords: {
     fontSize: 11,
-    color: '#667085',
+    color: DESIGN_TOKENS.colors.textMuted,
   },
   removeButton: {
     padding: 4,
   },
 });
-

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, Platform, Text, View } from 'react-native'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 type AnyComponent = React.ComponentType<any>
 
@@ -37,15 +38,15 @@ export default function Map(props: any) {
               width: 52,
               height: 52,
               borderRadius: 14,
-              backgroundColor: '#f1f5f9',
+              backgroundColor: DESIGN_TOKENS.colors.cardMuted,
               borderWidth: 1,
-              borderColor: '#e2e8f0',
+              borderColor: DESIGN_TOKENS.colors.border,
             }}
           />
         ) : (
           <ActivityIndicator size="large" />
         )}
-        <Text style={{ marginTop: 12 }}>Загружаем карту…</Text>
+        <Text style={{ marginTop: 12, color: DESIGN_TOKENS.colors.textMuted }}>Загружаем карту…</Text>
       </View>
     )
   }

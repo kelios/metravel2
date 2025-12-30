@@ -4,6 +4,7 @@ import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface Travel {
   address: string;
@@ -133,7 +134,7 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
           aria-label="Закрыть карточку"
           title="Закрыть карточку (Esc)"
         >
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="#fff">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
           </svg>
         </button>
@@ -149,7 +150,7 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
                 fit="contain"
                 blurBackground
                 blurRadius={18}
-                overlayColor="rgba(15,23,42,0.18)"
+                overlayColor={DESIGN_TOKENS.colors.overlayLight}
                 loading="lazy"
                 priority="low"
                 style={{ position: 'absolute', inset: 0 } as any}
@@ -315,8 +316,8 @@ const popupStyles = `
   overflow: hidden;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
   cursor: pointer;
-  background: #fff;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.18);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-modal);
   outline: none;
   display: flex;
   flex-direction: column;
@@ -326,11 +327,11 @@ const popupStyles = `
 
 .popup-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 18px 55px rgba(0,0,0,0.22);
+  box-shadow: var(--shadow-heavy);
 }
 
 .popup-card:focus {
-  box-shadow: 0 0 0 3px #0ea5e9, 0 10px 40px rgba(0,0,0,0.2);
+  box-shadow: 0 0 0 3px var(--color-focusStrong), var(--shadow-modal);
 }
 
 .popup-content {
@@ -343,7 +344,7 @@ const popupStyles = `
   width: 100%;
   /* Фиксированная высота, чтобы карточки с фото и без фото были одинаковыми */
   height: clamp(180px, 30vh, 280px);
-  background-color: #020617;
+  background-color: var(--color-backgroundTertiary);
 }
 
 .popup-photo-badge {
@@ -353,8 +354,8 @@ const popupStyles = `
   z-index: 2;
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(15,23,42,0.85);
-  color: #f8fafc;
+  background: var(--color-overlay);
+  color: var(--color-textOnDark);
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
@@ -370,7 +371,7 @@ const popupStyles = `
   justify-content: center;
   flex-direction: column;
   gap: 8px;
-  color: #475467;
+  color: var(--color-textMuted);
   font-weight: 600;
   font-size: 14px;
   letter-spacing: 0.04em;
@@ -391,11 +392,11 @@ const popupStyles = `
 .popup-icons-group {
   display: flex;
   gap: 4px;
-  background: rgba(15,23,42,0.92);
+  background: var(--color-overlay);
   border-radius: 12px;
   padding: 8px 10px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 6px 18px rgba(15,23,42,0.45);
+  box-shadow: var(--shadow-heavy);
 }
 
 .popup-icon-btn {
@@ -412,7 +413,7 @@ const popupStyles = `
 }
 
 .popup-icon-btn:hover {
-  background: rgba(255,255,255,0.2);
+  background: var(--color-overlayLight);
   transform: scale(1.05);
 }
 
@@ -426,8 +427,8 @@ const popupStyles = `
 .popup-icon-label {
   font-size: 9px;
   font-weight: 600;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  color: var(--color-textOnDark);
+  text-shadow: 0 1px 2px var(--color-overlay);
   white-space: nowrap;
   line-height: 1;
   margin-top: 2px;
@@ -435,7 +436,7 @@ const popupStyles = `
 
 .popup-info {
   padding: 20px 22px;
-  background: #fff;
+  background: var(--color-surface);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -455,7 +456,7 @@ const popupStyles = `
   margin: 0;
   font-size: 11px;
   line-height: 1.25;
-  color: #0f172a;
+  color: var(--color-text);
   flex: 1;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -467,8 +468,8 @@ const popupStyles = `
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #ecfdf5;
-  color: #047857;
+  background: var(--color-successLight);
+  color: var(--color-successDark);
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 11px;
@@ -489,15 +490,15 @@ const popupStyles = `
 .popup-coord-label {
   font-size: 10px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--color-textSubtle);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
 .popup-coord-text {
-  border: 1px dashed #94a3b8;
-  background: #f8fafc;
-  color: #0f172a;
+  border: 1px dashed var(--color-borderStrong);
+  background: var(--color-backgroundSecondary);
+  color: var(--color-text);
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 11px;
   font-weight: 600;
@@ -522,7 +523,7 @@ const popupStyles = `
 
 .popup-coord-copy-btn {
   border: none;
-  background: rgba(15,23,42,0.85);
+  background: var(--color-overlayLight);
   padding: 4px;
   border-radius: 999px;
   cursor: pointer;
@@ -533,23 +534,23 @@ const popupStyles = `
 }
 
 .popup-coord-copy-btn:hover {
-  background: rgba(15,23,42,1);
+  background: var(--color-overlay);
   transform: translateY(-1px) scale(1.03);
 }
 
 .popup-coord-text:hover {
-  background: #fff;
-  border-color: #475569;
-  box-shadow: 0 2px 6px rgba(15,23,42,0.08);
+  background: var(--color-surface);
+  border-color: var(--color-borderStrong);
+  box-shadow: var(--shadow-light);
 }
 
 .popup-coord-text:focus-visible {
-  outline: 2px solid #0ea5e9;
+  outline: 2px solid var(--color-focusStrong);
   outline-offset: 2px;
 }
 
 .popup-copied {
-  color: #16a34a;
+  color: var(--color-success);
   font-style: normal;
   font-size: 12px;
   font-weight: 600;
@@ -560,7 +561,7 @@ const popupStyles = `
 }
 
 .popup-description {
-  color: #475467;
+  color: var(--color-textMuted);
   font-size: 14px;
   line-height: 1.6;
   margin: 0;
@@ -575,7 +576,7 @@ const popupStyles = `
   margin-top: 8px;
   background: transparent;
   border: none;
-  color: #0ea5e9;
+  color: var(--color-info);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -586,7 +587,7 @@ const popupStyles = `
 }
 
 .popup-read-more:hover {
-  color: #0284c7;
+  color: var(--color-infoDark);
 }
 
 .popup-photo-img {
@@ -620,8 +621,8 @@ const popupStyles = `
   gap: 12px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(15,23,42,0.9);
-  color: #f9fafb;
+  background: var(--color-overlay);
+  color: var(--color-textOnDark);
   backdrop-filter: blur(10px);
 }
 
@@ -640,7 +641,7 @@ const popupStyles = `
   height: 24px;
   border-radius: 999px;
   border: none;
-  background: #f9fafb;
+  background: var(--color-surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -657,7 +658,7 @@ const popupStyles = `
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #0f172a;
+  background: var(--color-text);
 }
 
 .popup-expanded-card {
@@ -668,8 +669,8 @@ const popupStyles = `
   top: 40%;
   z-index: 4;
   border-radius: 18px;
-  background: rgba(255,255,255,0.9);
-  box-shadow: 0 18px 55px rgba(0,0,0,0.35);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-modal);
   padding: 8px 10px 6px;
   display: flex;
   flex-direction: column;
@@ -689,7 +690,7 @@ const popupStyles = `
 
 .popup-expanded-close {
   border: none;
-  background: rgba(15,23,42,0.9);
+  background: var(--color-overlay);
   padding: 4px;
   border-radius: 999px;
   cursor: pointer;
@@ -700,7 +701,7 @@ const popupStyles = `
 }
 
 .popup-expanded-close:hover {
-  background: rgba(15,23,42,1);
+  background: var(--color-overlay);
   transform: scale(1.05);
 }
 
@@ -709,8 +710,8 @@ const popupStyles = `
   align-self: flex-start;
   border-radius: 999px;
   border: none;
-  background: #0ea5e9;
-  color: #f9fafb;
+  background: var(--color-info);
+  color: var(--color-textOnDark);
   font-size: 13px;
   font-weight: 600;
   padding: 8px 16px;
@@ -719,8 +720,8 @@ const popupStyles = `
 }
 
 .popup-primary-btn:hover {
-  background: #0284c7;
-  box-shadow: 0 4px 12px rgba(14,165,233,0.4);
+  background: var(--color-infoDark);
+  box-shadow: var(--shadow-medium);
 }
 
 .popup-expanded-actions {
@@ -735,8 +736,8 @@ const popupStyles = `
 }
 
 .popup-category {
-  background: #eef2ff;
-  color: #312e81;
+  background: var(--color-accentLight);
+  color: var(--color-accentDark);
   border-radius: 999px;
   padding: 6px 12px;
   font-size: 12px;
@@ -750,7 +751,8 @@ const popupStyles = `
   top: 12px;
   right: 12px;
   z-index: 10;
-  background: rgba(15,23,42,0.9);
+  background: var(--color-overlay);
+  color: var(--color-textOnDark);
   border: none;
   border-radius: 50%;
   width: 34px;
@@ -764,20 +766,20 @@ const popupStyles = `
 }
 
 .popup-close-btn:hover {
-  background: rgba(15,23,42,1);
+  background: var(--color-overlay);
   transform: scale(1.08);
 }
 
 .popup-close-btn .popup-svg {
   width: 18px;
   height: 18px;
-  fill: #fff;
+  fill: currentColor;
 }
 
 .popup-svg {
   width: 20px;
   height: 20px;
-  fill: #fff;
+  fill: currentColor;
   display: block;
 }
 
@@ -802,8 +804,8 @@ const popupStyles = `
 }
 
 .leaflet-popup-tip {
-  background: #fff !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+  background: var(--color-surface) !important;
+  box-shadow: var(--shadow-light) !important;
 }
 
 @media (max-width: 700px) {
@@ -882,8 +884,8 @@ const popupStyles = `
 }
 
 .popup-category {
-  background: #eef2ff;
-  color: #312e81;
+  background: var(--color-accentLight);
+  color: var(--color-accentDark);
   border-radius: 999px;
   padding: 6px 12px;
   font-size: 12px;

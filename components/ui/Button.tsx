@@ -73,7 +73,11 @@ const ButtonComponent = ({
         {loading && (
           <ActivityIndicator
             size="small"
-            color={variant === 'secondary' || variant === 'ghost' || variant === 'outline' ? palette.primary : palette.surface}
+            color={
+              variant === 'secondary' || variant === 'ghost' || variant === 'outline'
+                ? palette.primary
+                : palette.textOnPrimary
+            }
             style={styles.icon}
           />
         )}
@@ -126,13 +130,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   labelPrimary: {
-    color: palette.surface,
+    color: palette.textOnPrimary,
   },
   labelSecondary: {
     color: palette.text,
   },
   labelDanger: {
-    color: palette.surface,
+    color: palette.textOnPrimary,
   },
   disabled: {
     opacity: 0.5,
@@ -161,7 +165,7 @@ const variantStyles: Record<ButtonVariant, ViewStyle> = {
     backgroundColor: palette.primary,
     ...Platform.select({
       web: {
-        boxShadow: '0 6px 16px rgba(0,0,0,0.16)',
+        boxShadow: DESIGN_TOKENS.shadows.medium,
       },
       default: {
         shadowColor: palette.text,
@@ -176,7 +180,7 @@ const variantStyles: Record<ButtonVariant, ViewStyle> = {
     backgroundColor: palette.surface,
     ...Platform.select({
       web: {
-        boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+        boxShadow: DESIGN_TOKENS.shadows.light,
       },
       default: {
         shadowColor: palette.text,
@@ -195,7 +199,7 @@ const variantStyles: Record<ButtonVariant, ViewStyle> = {
     backgroundColor: palette.danger,
     ...Platform.select({
       web: {
-        boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
+        boxShadow: DESIGN_TOKENS.shadows.medium,
       },
       default: {
         shadowColor: palette.text,
@@ -218,7 +222,7 @@ const variantHoverStyles: Record<ButtonVariant, ViewStyle> = {
     backgroundColor: palette.primaryDark,
     ...Platform.select({
       web: {
-        boxShadow: '0 4px 12px rgba(31, 31, 31, 0.15), 0 2px 4px rgba(31, 31, 31, 0.1)',
+        boxShadow: DESIGN_TOKENS.shadows.heavy,
       },
     }),
   },
@@ -226,7 +230,7 @@ const variantHoverStyles: Record<ButtonVariant, ViewStyle> = {
     backgroundColor: palette.primaryLight,
     ...Platform.select({
       web: {
-        boxShadow: '0 3px 10px rgba(31, 31, 31, 0.12), 0 1px 4px rgba(31, 31, 31, 0.08)',
+        boxShadow: DESIGN_TOKENS.shadows.hover,
       },
     }),
   },
@@ -241,7 +245,7 @@ const variantHoverStyles: Record<ButtonVariant, ViewStyle> = {
     backgroundColor: palette.dangerDark,
     ...Platform.select({
       web: {
-        boxShadow: '0 4px 12px rgba(31, 31, 31, 0.15), 0 2px 4px rgba(31, 31, 31, 0.1)',
+        boxShadow: DESIGN_TOKENS.shadows.heavy,
       },
     }),
   },
@@ -261,7 +265,7 @@ const variantPressedStyles: Record<ButtonVariant, ViewStyle> = {
       web: {
         // @ts-ignore
         transform: 'translateY(0)',
-        boxShadow: '0 2px 6px rgba(31, 31, 31, 0.12)',
+        boxShadow: DESIGN_TOKENS.shadows.light,
       },
     }),
   },
@@ -289,7 +293,7 @@ const variantPressedStyles: Record<ButtonVariant, ViewStyle> = {
       web: {
         // @ts-ignore
         transform: 'translateY(0)',
-        boxShadow: '0 2px 6px rgba(31, 31, 31, 0.12)',
+        boxShadow: DESIGN_TOKENS.shadows.light,
       },
     }),
   },

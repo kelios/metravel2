@@ -146,11 +146,7 @@ const styles: any = StyleSheet.create({
         alignSelf: 'center',
         backgroundColor: DESIGN_TOKENS.colors.surface,
         borderRadius: DESIGN_TOKENS.radii.lg,
-        elevation: 3,
-        shadowColor: '#1f1f1f',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.14,
-        shadowRadius: 16,
+        ...DESIGN_TOKENS.shadowsNative.medium,
         // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
         ...Platform.select({
             web: {
@@ -216,21 +212,17 @@ const styles: any = StyleSheet.create({
         minHeight: 44,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#1f1f1f',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        elevation: 2,
+        ...DESIGN_TOKENS.shadowsNative.light,
         ...Platform.select({
             web: {
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 cursor: 'pointer',
-                boxShadow: '0 2px 6px rgba(31, 31, 31, 0.06)',
+                boxShadow: DESIGN_TOKENS.shadows.light,
                 // @ts-ignore
                 ':hover': {
                     backgroundColor: DESIGN_TOKENS.colors.dangerDark,
                     transform: 'translateY(-1px)',
-                    boxShadow: '0 3px 8px rgba(31, 31, 31, 0.12)',
+                    boxShadow: DESIGN_TOKENS.shadows.medium,
                 },
             },
         }),
@@ -238,7 +230,7 @@ const styles: any = StyleSheet.create({
     deleteButton: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#fff',
+        color: DESIGN_TOKENS.colors.textOnPrimary,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },

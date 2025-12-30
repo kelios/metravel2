@@ -10,6 +10,8 @@ import {
     ActivityIndicator,
     FlatList,
 } from 'react-native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface Option {
     id: number | string;
@@ -27,6 +29,23 @@ interface RadiusSelectProps {
     compact?: boolean;
 }
 
+const withAlpha = (color: string, alpha: number) => {
+    if (!color || color.startsWith('rgba') || color.startsWith('rgb') || color.startsWith('var(')) {
+        return color;
+    }
+
+    if (color.startsWith('#')) {
+        const raw = color.replace('#', '');
+        const hex = raw.length === 3
+            ? raw.split('').map((ch) => ch + ch).join('')
+            : raw;
+        const alphaHex = Math.round(alpha * 255).toString(16).padStart(2, '0');
+        return `#${hex}${alphaHex}`;
+    }
+
+    return color;
+};
+
 const RadiusSelect: React.FC<RadiusSelectProps> = ({
                                                        value,
                                                        options = [],
@@ -37,6 +56,7 @@ const RadiusSelect: React.FC<RadiusSelectProps> = ({
                                                        placeholder = 'Выберите радиус',
                                                    }) => {
     const [visible, setVisible] = useState(false);
+    const themeColors = useThemedColors();
 
     const selectedOption = useMemo(
         () => options.find((opt) => String(opt.id) === String(value)),
@@ -71,8 +91,13 @@ const RadiusSelect: React.FC<RadiusSelectProps> = ({
                     ))}
                 </select>
                 {(loading || disabled) && (
-                    <div style={styles.webOverlay as any}>
-                        {loading && <ActivityIndicator size="small" color="#666" />}
+                    <div
+                        style={[
+                            styles.webOverlay,
+                            { backgroundColor: withAlpha(themeColors.surface, 0.7) },
+                        ] as any}
+                    >
+                        {loading && <ActivityIndicator size="small" color={themeColors.textMuted} />}
                     </div>
                 )}
             </div>
@@ -93,7 +118,7 @@ const RadiusSelect: React.FC<RadiusSelectProps> = ({
                 </View>
 
                 {loading ? (
-                    <ActivityIndicator size="small" color="#666" style={styles.loader} />
+                    <ActivityIndicator size="small" color={themeColors.textMuted} style={styles.loader} />
                 ) : (
                     <View style={styles.selectorLabel}>
                         <Text
@@ -149,7 +174,7 @@ const RadiusSelect: React.FC<RadiusSelectProps> = ({
                                             pressed && styles.optionPressed,
                                             isSelected && styles.optionSelected,
                                         ]}
-                                        android_ripple={{ color: '#f0f0f0' }}
+                                        android_ripple={{ color: themeColors.primaryLight }}
                                     >
                                         <View style={styles.optionLabel}>
                                             <Text style={styles.optionNumber}>{item.name}</Text>
@@ -180,29 +205,26 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         marginBottom: 6,
-        color: '#333',
+        color: DESIGN_TOKENS.colors.text,
     },
     selector: {
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#ccc',
+        borderColor: DESIGN_TOKENS.colors.border,
         borderRadius: 8,
         paddingHorizontal: 12,
         height: 44,
-        backgroundColor: '#fff',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         width: '100%',
-        shadowColor: '#000',
-        shadowOpacity: 0.02,
-        shadowRadius: 2,
-        elevation: 2,
+        ...DESIGN_TOKENS.shadowsNative.light,
     },
     selectorDisabled: {
-        backgroundColor: '#f5f5f5',
+        backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
     },
     selectorText: {
         fontSize: 15,
-        color: '#333',
+        color: DESIGN_TOKENS.colors.text,
         flexShrink: 1,
         paddingVertical: 2,
     },
@@ -214,14 +236,14 @@ const styles = StyleSheet.create({
     selectorSuffix: {
         fontSize: 13,
         marginLeft: 4,
-        color: '#666',
+        color: DESIGN_TOKENS.colors.textMuted,
     },
     placeholderText: {
-        color: '#999',
+        color: DESIGN_TOKENS.colors.textSubtle,
         fontStyle: 'italic',
     },
     textDisabled: {
-        color: '#bbb',
+        color: DESIGN_TOKENS.colors.disabledText,
     },
     leftIcon: {
         justifyContent: 'center',
@@ -233,7 +255,7 @@ const styles = StyleSheet.create({
     },
     clearIcon: {
         fontSize: 18,
-        color: '#999',
+        color: DESIGN_TOKENS.colors.textSubtle,
     },
     chevronContainer: {
         marginLeft: 8,
@@ -242,7 +264,7 @@ const styles = StyleSheet.create({
     },
     chevron: {
         fontSize: 16,
-        color: '#666',
+        color: DESIGN_TOKENS.colors.textMuted,
         textAlign: 'right',
     },
     loader: {
@@ -250,13 +272,13 @@ const styles = StyleSheet.create({
     },
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.4)',
+        backgroundColor: DESIGN_TOKENS.colors.overlay,
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 24,
     },
     modalContent: {
-        backgroundColor: '#fff',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         borderRadius: 12,
         maxHeight: '70%',
         width: '100%',
@@ -274,12 +296,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     optionPressed: {
-        backgroundColor: '#f9f9f9',
+        backgroundColor: DESIGN_TOKENS.colors.cardMuted,
     },
     optionSelected: {
-        backgroundColor: '#e5f6ff',
+        backgroundColor: DESIGN_TOKENS.colors.infoLight,
         borderLeftWidth: 4,
-        borderLeftColor: '#007aff',
+        borderLeftColor: DESIGN_TOKENS.colors.info,
     },
     optionLabel: {
         flexDirection: 'row',
@@ -288,20 +310,20 @@ const styles = StyleSheet.create({
     },
     optionNumber: {
         fontSize: 15,
-        color: '#333',
+        color: DESIGN_TOKENS.colors.text,
     },
     optionSuffix: {
         fontSize: 13,
-        color: '#666',
+        color: DESIGN_TOKENS.colors.textMuted,
     },
     checkmark: {
-        color: '#007aff',
+        color: DESIGN_TOKENS.colors.info,
         fontSize: 16,
         fontWeight: 'bold',
     },
     separator: {
         height: 1,
-        backgroundColor: '#eee',
+        backgroundColor: DESIGN_TOKENS.colors.borderLight,
         marginHorizontal: 16,
     },
     webSelect: {
@@ -310,8 +332,8 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         paddingLeft: 10,
         fontSize: 15,
-        backgroundColor: '#fff',
-        color: '#333',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        color: DESIGN_TOKENS.colors.text,
     } as any,
     webOverlay: {
         position: 'absolute',
@@ -319,7 +341,6 @@ const styles = StyleSheet.create({
         right: 0,
         bottom: 0,
         left: 0,
-        backgroundColor: 'rgba(255,255,255,0.7)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

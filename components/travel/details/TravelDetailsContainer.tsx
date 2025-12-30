@@ -286,7 +286,7 @@ export default function TravelDetailsContainer() {
             }}
             accessibilityRole="button"
           >
-            <Text style={{ color: '#fff', fontWeight: '700' }}>Повторить</Text>
+            <Text style={{ color: DESIGN_TOKENS.colors.textInverse, fontWeight: '700' }}>Повторить</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -325,7 +325,7 @@ export default function TravelDetailsContainer() {
                   {firstImgOrigin && <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />}
                 </>
               )}
-              <meta name="theme-color" content={isDark ? "#0f172a" : "#f9f8f2"} />
+              <meta name="theme-color" content={themedColors.background} />
               {jsonLd && (
                 <script
                   type="application/ld+json"
@@ -350,9 +350,7 @@ export default function TravelDetailsContainer() {
         Platform.OS === "web" &&
           ({
             // @ts-ignore - web-specific CSS property
-            backgroundImage: isDark
-              ? "linear-gradient(180deg, #0f172a 0%, #1e293b 100%)"
-              : "linear-gradient(180deg, #ffffff 0%, #f9f8f2 100%)",
+            backgroundImage: `linear-gradient(180deg, ${DESIGN_TOKENS.colors.background} 0%, ${DESIGN_TOKENS.colors.backgroundSecondary} 100%)`,
           } as any),
       ]}
     >

@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
     gap: spacing.xs,
     minHeight: 40, // ✅ УЛУЧШЕНИЕ: Увеличена минимальная высота
-    shadowColor: '#1f1f1f',
+    shadowColor: palette.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 3,
@@ -60,6 +60,7 @@ const styles = StyleSheet.create({
       web: {
         cursor: 'pointer',
         transition: 'all 0.2s ease',
+        boxShadow: DESIGN_TOKENS.shadows.light,
         ':hover': {
           transform: 'scale(1.05)',
         },
@@ -99,4 +100,3 @@ const styles = StyleSheet.create({
 });
 
 export default memo(Chip);
-

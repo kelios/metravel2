@@ -166,7 +166,11 @@ export default function HistoryScreen() {
                                 city: item.city ?? null,
                                 country: item.country ?? item.countryName ?? null,
                             }}
-                            badge={{ icon: 'history', backgroundColor: 'rgba(0,0,0,0.75)', iconColor: '#ffffff' }}
+                            badge={{
+                                icon: 'history',
+                                backgroundColor: DESIGN_TOKENS.colors.overlay,
+                                iconColor: DESIGN_TOKENS.colors.textOnDark,
+                            }}
                             onPress={() => handleOpen(item.url)}
                             layout="grid"
                             style={styles.card}

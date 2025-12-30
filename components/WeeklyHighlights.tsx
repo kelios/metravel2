@@ -6,8 +6,8 @@ import { useFavorites } from '@/context/FavoritesContext';
 import { fetchTravelsOfMonth } from '@/src/api/map';
 import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AIRY_COLORS } from '@/constants/airyColors'; 
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
 
@@ -148,7 +148,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                         style={styles.expandButton}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                        <MaterialIcons name="expand-more" size={20} color="#6b8e7f" />
+                        <MaterialIcons name="expand-more" size={20} color={DESIGN_TOKENS.colors.primary} />
                         <Text style={styles.expandButtonText}>Подборка месяца</Text>
                     </Pressable>
                 </View>
@@ -161,8 +161,8 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
             {showHeader && (
                 <>
                     <View style={styles.header}>
-                        <View style={[styles.iconContainer, { backgroundColor: AIRY_COLORS.primaryLight }]}>
-                            <MaterialIcons name="auto-awesome" size={20} color={AIRY_COLORS.primary} />
+                        <View style={[styles.iconContainer, { backgroundColor: DESIGN_TOKENS.colors.primaryLight }]}>
+                            <MaterialIcons name="auto-awesome" size={20} color={DESIGN_TOKENS.colors.primary} />
                         </View>
                         <View style={styles.titleContainer}>
                             <Text style={styles.title}>Подборка месяца</Text>
@@ -202,7 +202,11 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                             city: null,
                             country: item.country ?? null,
                         }}
-                        badge={{ icon: 'trending-up', backgroundColor: '#ffffff', iconColor: '#6b8e7f' }}
+                        badge={{
+                            icon: 'trending-up',
+                            backgroundColor: DESIGN_TOKENS.colors.surface,
+                            iconColor: DESIGN_TOKENS.colors.primary,
+                        }}
                         onPress={() => handleItemPress(item.url)}
                     />
                 ))}
@@ -236,10 +240,10 @@ const styles = StyleSheet.create({
         width: 28,
         height: 28,
         borderRadius: 8,
-        backgroundColor: '#ffffff',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#6b8e7f',
+        shadowColor: DESIGN_TOKENS.colors.text,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.06,
         shadowRadius: 2,
@@ -255,11 +259,11 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 15, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше размер
         fontWeight: '600', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше жирность
-        color: '#1a202c',
+        color: DESIGN_TOKENS.colors.text,
         letterSpacing: -0.1,
     },
     badgeContainer: {
-        backgroundColor: 'rgba(74, 140, 140, 0.1)', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Прозрачный фон
+        backgroundColor: DESIGN_TOKENS.colors.primarySoft, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Прозрачный фон
         borderRadius: 8,
         paddingHorizontal: 8,
         paddingVertical: 3,
@@ -267,12 +271,12 @@ const styles = StyleSheet.create({
     badgeText: {
         fontSize: 11,
         fontWeight: '600',
-        color: '#4a8c8c', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Цвет текста вместо белого
+        color: DESIGN_TOKENS.colors.primary, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Цвет текста вместо белого
         letterSpacing: 0.1,
     },
     subtitle: {
         fontSize: 13,
-        color: '#4a5568',
+        color: DESIGN_TOKENS.colors.textMuted,
         paddingHorizontal: 12,
         marginLeft: 0,
         marginBottom: 12,
@@ -295,10 +299,10 @@ const styles = StyleSheet.create({
         marginHorizontal: 4,
         paddingVertical: 8,
         paddingHorizontal: 12,
-        backgroundColor: '#f0f9f9',
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: '#d1e7e7',
+        borderColor: DESIGN_TOKENS.colors.borderLight,
     },
     expandButton: {
         flexDirection: 'row',
@@ -314,7 +318,7 @@ const styles = StyleSheet.create({
     expandButtonText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#6b8e7f',
+        color: DESIGN_TOKENS.colors.primary,
         marginLeft: 6,
     },
     scrollContent: {
@@ -332,4 +336,3 @@ const styles = StyleSheet.create({
 });
 
 export default memo(WeeklyHighlights);
-

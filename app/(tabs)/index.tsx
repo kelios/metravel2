@@ -7,6 +7,7 @@ import InstantSEO from '@/components/seo/InstantSEO';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import Home from '@/components/home/Home';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 function HomeScreen() {
     const pathname = usePathname();
@@ -61,7 +62,7 @@ function HomeScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#ffffff',
+        backgroundColor: DESIGN_TOKENS.colors.background,
     },
     errorContainer: {
         flex: 1,

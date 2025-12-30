@@ -213,7 +213,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                                                   onError={() => setAvatarLoadError(true)}
                                               />
                                           ) : (
-                                              <Icon name="account-circle" size={24} color="#333" />
+                                              <Icon name="account-circle" size={24} color={palette.text} />
                                           )}
                                       </View>
                                       <Text style={styles.mobileUserName} numberOfLines={1}>
@@ -223,7 +223,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                               ) : (
                                   <View style={[styles.mobileUserPillPlaceholder, { pointerEvents: 'none' } as any]}>
                                       <View style={styles.mobileUserAvatarContainer}>
-                                          <Icon name="account-circle" size={24} color="#333" />
+                                          <Icon name="account-circle" size={24} color={palette.text} />
                                       </View>
                                       <Text style={styles.mobileUserName} numberOfLines={1}>
                                           {' '}
@@ -242,7 +242,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                                   testID="mobile-menu-open"
                               >
                                   <View style={styles.iconSlot24}>
-                                      <Feather name="menu" size={24} color="#1b1f23" />
+                                      <Feather name="menu" size={24} color={palette.text} />
                                   </View>
                               </Pressable>
                           </>
@@ -441,11 +441,11 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
 
 export const headerStyles = StyleSheet.create({
     container: {
-        backgroundColor: Platform.OS === 'web' ? '#FBFAF8' : palette.surface,
+        backgroundColor: Platform.OS === 'web' ? palette.background : palette.surface,
         paddingTop: Platform.OS === 'ios' ? (StatusBar.currentHeight || 0) : 0,
         paddingBottom: Platform.OS === 'web' ? 12 : 0,
         borderBottomWidth: Platform.OS === 'web' ? StyleSheet.hairlineWidth : 0,
-        borderBottomColor: 'rgba(0,0,0,0.05)',
+        borderBottomColor: palette.border,
         ...(Platform.OS === 'web'
             ? ({
                   position: 'sticky',
@@ -457,24 +457,21 @@ export const headerStyles = StyleSheet.create({
     },
     wrapper: {
         width: '100%',
-        backgroundColor: Platform.OS === 'web' ? '#FBFAF8' : palette.surface,
+        backgroundColor: Platform.OS === 'web' ? palette.background : palette.surface,
         // Убрана граница, используется только тень для разделения
         ...Platform.select({
             ios: {
-                shadowColor: '#1f1f1f',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.08,
-                shadowRadius: 6,
+                ...DESIGN_TOKENS.shadowsNative.light,
             },
             android: {
                 elevation: 3,
-                shadowColor: '#1f1f1f',
+                shadowColor: DESIGN_TOKENS.shadowsNative.light.shadowColor,
             },
             web: {
                 borderBottomWidth: StyleSheet.hairlineWidth,
-                borderBottomColor: 'rgba(17, 24, 39, 0.08)',
+                borderBottomColor: palette.border,
                 // @ts-ignore: web-only style
-                boxShadow: '0 2px 10px rgba(31, 31, 31, 0.1), 0 1px 3px rgba(31, 31, 31, 0.06)' as any,
+                boxShadow: DESIGN_TOKENS.shadows.card as any,
             }
         })
     },
@@ -553,7 +550,7 @@ export const headerStyles = StyleSheet.create({
     mobileUserPill: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f5f5f5',
+        backgroundColor: palette.surfaceMuted,
         paddingVertical: 6,
         paddingHorizontal: 10,
         borderRadius: 20,
@@ -564,7 +561,7 @@ export const headerStyles = StyleSheet.create({
     mobileUserPillPlaceholder: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f5f5f5',
+        backgroundColor: palette.surfaceMuted,
         paddingVertical: 6,
         paddingHorizontal: 10,
         borderRadius: 20,
@@ -587,7 +584,7 @@ export const headerStyles = StyleSheet.create({
     },
     mobileUserName: {
         fontSize: 16,
-        color: '#333',
+        color: palette.text,
         flexShrink: 1,
     },
     navItem: {
@@ -613,7 +610,7 @@ export const headerStyles = StyleSheet.create({
         }),
     },
     navItemHover: {
-        backgroundColor: 'rgba(93, 140, 124, 0.10)',
+        backgroundColor: palette.primarySoft,
         ...Platform.select({
             web: {
                 // @ts-ignore: web-only style
@@ -627,7 +624,7 @@ export const headerStyles = StyleSheet.create({
         ...Platform.select({
             web: {
                 // @ts-ignore: web-only style
-                boxShadow: `0 2px 4px rgba(93, 140, 124, 0.15)` as any,
+                boxShadow: DESIGN_TOKENS.shadows.light as any,
             },
         }),
     },
@@ -667,7 +664,7 @@ export const headerStyles = StyleSheet.create({
                 // @ts-ignore: web-only styles
                 cursor: 'pointer' as any,
                 // @ts-ignore: web-only style
-                boxShadow: '0 4px 12px rgba(47, 94, 80, 0.14)' as any,
+                boxShadow: DESIGN_TOKENS.shadows.medium as any,
             },
         }),
     },
@@ -678,14 +675,14 @@ export const headerStyles = StyleSheet.create({
                 // @ts-ignore: web-only style
                 transform: 'translateY(-1px)' as any,
                 // @ts-ignore: web-only style
-                boxShadow: '0 8px 16px rgba(47, 94, 80, 0.18)' as any,
+                boxShadow: DESIGN_TOKENS.shadows.heavy as any,
                 // @ts-ignore: web-only style
                 filter: 'brightness(0.98)' as any,
             },
         }),
     },
     createLabel: {
-        color: palette.surface,
+        color: palette.textOnPrimary,
         fontSize: 14,
         fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
         letterSpacing: -0.1,
@@ -709,7 +706,7 @@ export const headerStyles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: palette.overlay,
         justifyContent: 'flex-end',
     },
     modalContent: {

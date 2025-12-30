@@ -115,9 +115,9 @@ const styles = StyleSheet.create({
     minHeight: 32,
     paddingHorizontal: 16,
     justifyContent: 'center',
-    backgroundColor: Platform.OS === 'web' ? '#FBFAF8' : palette.surface,
+    backgroundColor: Platform.OS === 'web' ? palette.background : palette.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(17, 24, 39, 0.08)',
+    borderBottomColor: palette.border,
   },
   containerMobile: {
     minHeight: 36,

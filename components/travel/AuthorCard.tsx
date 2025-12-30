@@ -203,7 +203,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
             />
           ) : (
             <SafeView style={[styles.avatarPlaceholder, isMobile && styles.avatarMobile]}>
-              <MaterialIcons name="person" size={isMobile ? 32 : 40} color="#94a3b8" />
+              <MaterialIcons name="person" size={isMobile ? 32 : 40} color={DESIGN_TOKENS.colors.textSubtle} />
             </SafeView>
           )}
         </Pressable>
@@ -223,7 +223,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
           </Pressable>
           {authorCountryName && (
             <SafeView style={styles.locationRow}>
-              <Feather name="map-pin" size={14} color="#718096" />
+              <Feather name="map-pin" size={14} color={DESIGN_TOKENS.colors.textMuted} />
               <Text style={styles.locationText}>{authorCountryName}</Text>
             </SafeView>
           )}
@@ -247,7 +247,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
           {travelsCount !== null && (
             <SafeView style={styles.statsRow}>
               {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
-              <MaterialIcons name="explore" size={16} color="#6b7280" />
+              <MaterialIcons name="explore" size={16} color={DESIGN_TOKENS.colors.textMuted} />
               <Text style={styles.statsText}>
                 {travelsCount} {travelsCount === 1 ? 'путешествие' : travelsCount < 5 ? 'путешествия' : 'путешествий'}
               </Text>
@@ -271,7 +271,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
               Все путешествия
             </Text>
             {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
-            <Feather name="arrow-right" size={16} color="#6b7280" />
+            <Feather name="arrow-right" size={16} color={DESIGN_TOKENS.colors.textMuted} />
           </Pressable>
         )}
       </SafeView>
@@ -355,9 +355,9 @@ const styles = StyleSheet.create({
       default: 32, // Мобильные
       web: 40, // Десктоп
     }),
-    backgroundColor: '#f3f4f6',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 3
-    borderColor: 'rgba(0, 0, 0, 0.06)',
+    borderColor: DESIGN_TOKENS.colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -374,9 +374,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     borderWidth: 0.5,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
+    borderColor: DESIGN_TOKENS.colors.borderLight,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
@@ -384,18 +384,18 @@ const styles = StyleSheet.create({
     }),
   },
   socialChipPressed: {
-    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundTertiary,
     transform: [{ scale: 0.98 }],
   },
   socialChipText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#6b7280',
+    color: DESIGN_TOKENS.colors.textMuted,
   },
   authorName: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: '700',
-    color: '#1a202c',
+    color: DESIGN_TOKENS.colors.text,
     fontFamily: 'Georgia',
     letterSpacing: -0.3,
   },
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: '#4a5568',
+    color: DESIGN_TOKENS.colors.textMuted,
     fontWeight: '500',
   },
   statsRow: {
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
   },
   statsText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: '#718096',
+    color: DESIGN_TOKENS.colors.textSubtle,
     fontWeight: '600',
   },
   viewButton: {
@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
     marginTop: DESIGN_TOKENS.spacing.sm,
   },
   viewButtonPressed: {
-    backgroundColor: 'rgba(0, 0, 0, 0.04)', // ✅ УЛУЧШЕНИЕ: Нейтральный фон
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary, // ✅ УЛУЧШЕНИЕ: Нейтральный фон
     transform: [{ scale: 0.98 }],
   },
   viewButtonText: {

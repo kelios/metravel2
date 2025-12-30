@@ -27,7 +27,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 const Fallback = () => (
   <View style={styles.fallback}>
-    <ActivityIndicator size="small" color="#6B4F4F" />
+    <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.primary} />
   </View>
 );
 
@@ -560,7 +560,7 @@ function CompactSideBarTravel({
               pressed && styles.linkPressed,
             ]}
             onPress={() => setActiveNavigateAndOpen(key as keyof SideBarProps['refs'])}
-            android_ripple={{ color: "#E7DAC6" }}
+            android_ripple={{ color: DESIGN_TOKENS.colors.primarySoft }}
             accessibilityRole="button"
             accessibilityLabel={label}
             accessibilityState={{ selected: currentActive === key }}
@@ -670,8 +670,8 @@ function CompactSideBarTravel({
             accessibilityRole="button"
             accessibilityLabel="Закрыть меню"
           >
-            <MaterialIcons name="close" size={20} color="#fff" />
-            <Text style={styles.closeTxt}>Закрыть</Text>
+            <MaterialIcons name="close" size={20} color={themedColors.textInverse} />
+            <Text style={[styles.closeTxt, { color: themedColors.textInverse }]}>Закрыть</Text>
           </Pressable>
         </View>
       )}
@@ -684,7 +684,7 @@ export default memo(CompactSideBarTravel);
 const styles = StyleSheet.create({
   root: { 
     flex: 1, 
-    backgroundColor: "#fff",
+    backgroundColor: DESIGN_TOKENS.colors.background,
     ...(Platform.OS === "web" ? { 
       // На web прокрутка должна быть общей для страницы,
       // поэтому убираем собственный scroll/100vh/position: fixed
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
   },
   // ✅ РЕДИЗАЙН: Компактная карточка автора
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 12,
     padding: Platform.select({
       default: 10, // Мобильные
@@ -718,7 +718,7 @@ const styles = StyleSheet.create({
       default: 8, // Мобильные
       web: 10, // Десктоп - уменьшено
     }),
-    shadowColor: "#000",
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0,
     shadowRadius: 0,
@@ -752,8 +752,8 @@ const styles = StyleSheet.create({
       web: 24, // Десктоп - уменьшено
     }),
     borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 2
-    borderColor: "rgba(0, 0, 0, 0.06)",
-    shadowColor: "#000",
+    borderColor: DESIGN_TOKENS.colors.borderLight,
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.02, // ✅ УЛУЧШЕНИЕ: Упрощенная тень
     shadowRadius: 2,
@@ -765,7 +765,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 0.5,
-    borderTopColor: "rgba(0, 0, 0, 0.06)",
+    borderTopColor: DESIGN_TOKENS.colors.borderLight,
   },
   // ✅ РЕДИЗАЙН: Компактные информационные строки
   infoRow: {
@@ -784,7 +784,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm, // Уменьшено с 14
-    color: "#6b7280",
+    color: DESIGN_TOKENS.colors.textMuted,
     fontFamily: "Georgia",
     fontWeight: "500",
   },
@@ -801,7 +801,7 @@ const styles = StyleSheet.create({
   },
   categoryTag: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: "#9ca3af",
+    color: DESIGN_TOKENS.colors.textSubtle,
     backgroundColor: "transparent",
     paddingHorizontal: 0,
     paddingVertical: 0,
@@ -814,7 +814,7 @@ const styles = StyleSheet.create({
   },
   categoryMore: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: "#9ca3af",
+    color: DESIGN_TOKENS.colors.textSubtle,
     fontFamily: "Georgia",
     fontWeight: "500",
     marginLeft: 3, // Уменьшено с 4
@@ -883,18 +883,18 @@ const styles = StyleSheet.create({
       web: 16,
     }),
     fontWeight: "700",
-    color: "#1f2937",
+    color: DESIGN_TOKENS.colors.text,
     fontFamily: "Georgia", 
     flexShrink: 1,
     lineHeight: 20,
   },
   userNamePrimary: {
     fontWeight: "800",
-    color: "#111827",
+    color: DESIGN_TOKENS.colors.text,
   },
   userCountry: {
     fontWeight: "600",
-    color: "#6b7280",
+    color: DESIGN_TOKENS.colors.textMuted,
   },
   // ✅ РЕДИЗАЙН: Компактная ключевая информация
   keyInfoRow: {
@@ -907,7 +907,7 @@ const styles = StyleSheet.create({
   userYear: { 
     fontSize: DESIGN_TOKENS.typography.sizes.sm, // Уменьшено с 15
     fontWeight: "600", 
-    color: "#1f2937", 
+    color: DESIGN_TOKENS.colors.text, 
     fontFamily: "Georgia",
     lineHeight: 16,
   },
@@ -927,7 +927,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 14,
-    color: '#6b7280',
+    color: DESIGN_TOKENS.colors.textMuted,
     fontFamily: 'Georgia',
     fontWeight: '600',
     lineHeight: 20,
@@ -936,13 +936,13 @@ const styles = StyleSheet.create({
   userDays: { 
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
-    color: "#374151", 
+    color: DESIGN_TOKENS.colors.text, 
     fontFamily: "Georgia",
     lineHeight: 20,
   },
   exportSummary: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: "#6b7280",
+    color: DESIGN_TOKENS.colors.textMuted,
     marginTop: 4,
   },
 
@@ -991,14 +991,14 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   activeIndicatorActive: {
-    backgroundColor: "#1f2937",
+    backgroundColor: DESIGN_TOKENS.colors.text,
   },
-  linkPressed: { backgroundColor: "rgba(0, 0, 0, 0.02)" },
+  linkPressed: { backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary },
   linkActive: { 
     backgroundColor: "transparent",
     borderLeftWidth: 0,
     borderLeftColor: "transparent",
-    shadowColor: "#000",
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0,
     shadowRadius: 0,
@@ -1011,12 +1011,12 @@ const styles = StyleSheet.create({
     }),
     fontSize: 14,
     fontFamily: "Georgia", 
-    color: "#2F332E",
+    color: DESIGN_TOKENS.colors.text,
     fontWeight: "600",
     lineHeight: 20,
   },
   linkTxtActive: {
-    color: "#1f2937", // ✅ УЛУЧШЕНИЕ: Нейтральный темно-серый
+    color: DESIGN_TOKENS.colors.text, // ✅ УЛУЧШЕНИЕ: Нейтральный темно-серый
     fontWeight: "700",
   },
   linkMetaPill: {
@@ -1024,21 +1024,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
-    backgroundColor: "rgba(0, 0, 0, 0.02)",
+    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
     borderWidth: 0,
     borderColor: "transparent",
     flexShrink: 0,
   },
   linkMetaText: {
     fontSize: 14,
-    color: "#9ca3af",
+    color: DESIGN_TOKENS.colors.textMuted,
     fontFamily: "Georgia",
     fontWeight: "600",
     lineHeight: 18,
   },
   linkDivider: {
     height: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.06)",
+    backgroundColor: DESIGN_TOKENS.colors.borderLight,
     marginVertical: 10,
     marginHorizontal: 0,
   },
@@ -1048,7 +1048,7 @@ const styles = StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     textAlign: "center",
     fontWeight: "500",
-    color: "#B87034",
+    color: DESIGN_TOKENS.colors.accentDark,
     fontFamily: "Georgia",
     width: '100%',
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
@@ -1059,13 +1059,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#2F332E",
+    backgroundColor: DESIGN_TOKENS.colors.primaryDark,
     paddingVertical: DESIGN_TOKENS.spacing.lg,
     alignItems: "center",
   },
   closeBtn: { flexDirection: "row", alignItems: "center" },
   closeBtnPressed: { opacity: 0.7 },
-  closeTxt: { color: "#fff", fontSize: DESIGN_TOKENS.typography.sizes.md, fontFamily: "Georgia", marginLeft: 8 },
+  closeTxt: { color: DESIGN_TOKENS.colors.textOnDark, fontSize: DESIGN_TOKENS.typography.sizes.md, fontFamily: "Georgia", marginLeft: 8 },
 
   closeTopBar: {
     alignItems: "flex-end",
@@ -1078,7 +1078,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 999,
-    backgroundColor: "rgba(15, 23, 42, 0.04)",
+    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
   },
   closeTopBtnPressed: {
     opacity: 0.7,
@@ -1086,7 +1086,7 @@ const styles = StyleSheet.create({
   closeTopTxt: {
     marginLeft: 6,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: "#111827",
+    color: DESIGN_TOKENS.colors.text,
     fontFamily: "Georgia",
   },
 

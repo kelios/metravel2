@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import type { BookPreset, PresetCategory } from '@/src/types/pdf-presets';
 import { BOOK_PRESETS, PRESET_CATEGORIES } from '@/src/types/pdf-presets';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 // Добавляем стили для web через style tag
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -21,20 +22,20 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
         scroll-behavior: smooth;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
-        scrollbar-color: #cbd5e1 #f1f5f9;
+        scrollbar-color: var(--color-borderStrong) var(--color-backgroundSecondary);
         padding: 8px 0;
       }
       .presets-scroll-container::-webkit-scrollbar { height: 8px; }
       .presets-scroll-container::-webkit-scrollbar-track {
-        background: #f1f5f9;
+        background: var(--color-backgroundSecondary);
         border-radius: 4px;
         margin: 0 16px;
       }
       .presets-scroll-container::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
+        background: var(--color-borderStrong);
         border-radius: 4px;
       }
-      .presets-scroll-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+      .presets-scroll-container::-webkit-scrollbar-thumb:hover { background: var(--color-borderAccent); }
       .presets-content {
         display: flex;
         flex-direction: row;
@@ -326,13 +327,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: DESIGN_TOKENS.colors.text,
     marginBottom: 4,
     paddingHorizontal: 16,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6b7280',
+    color: DESIGN_TOKENS.colors.textMuted,
     marginBottom: 16,
     paddingHorizontal: 16,
   },
@@ -346,7 +347,7 @@ const styles = StyleSheet.create({
     WebkitOverflowScrolling: 'touch',
     scrollBehavior: 'smooth',
     scrollbarWidth: 'thin',
-    scrollbarColor: '#cbd5e1 #f1f5f9',
+    scrollbarColor: 'var(--color-borderStrong) var(--color-backgroundSecondary)',
     paddingBottom: 8,
     marginBottom: 16,
   } as any,
@@ -372,21 +373,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: DESIGN_TOKENS.colors.border,
   },
   categoryChipSelected: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
+    backgroundColor: DESIGN_TOKENS.colors.primary,
+    borderColor: DESIGN_TOKENS.colors.primary,
   },
   categoryChipText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151',
+    color: DESIGN_TOKENS.colors.text,
   },
   categoryChipTextSelected: {
-    color: '#ffffff',
+    color: DESIGN_TOKENS.colors.textOnPrimary,
   },
 
   presetsWrapper: {
@@ -403,7 +404,7 @@ const styles = StyleSheet.create({
     WebkitOverflowScrolling: 'touch',
     scrollBehavior: 'smooth',
     scrollbarWidth: 'thin',
-    scrollbarColor: '#cbd5e1 #f1f5f9',
+    scrollbarColor: 'var(--color-borderStrong) var(--color-backgroundSecondary)',
     paddingVertical: 8,
     paddingHorizontal: 0,
   } as any,
@@ -428,21 +429,21 @@ const styles = StyleSheet.create({
     width: 260,
     minHeight: 200,
     flexShrink: 0,
-    backgroundColor: '#ffffff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#e5e7eb',
+    borderColor: DESIGN_TOKENS.colors.border,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   presetCardSelected: {
-    borderColor: '#2563eb',
+    borderColor: DESIGN_TOKENS.colors.primary,
     borderWidth: 3,
-    shadowColor: '#2563eb',
+    shadowColor: DESIGN_TOKENS.colors.primary,
     shadowOpacity: 0.3,
     shadowRadius: 8,
   },
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -464,12 +465,12 @@ const styles = StyleSheet.create({
   presetName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: DESIGN_TOKENS.colors.text,
     marginBottom: 6,
   },
   presetDescription: {
     fontSize: 12,
-    color: '#6b7280',
+    color: DESIGN_TOKENS.colors.textMuted,
     lineHeight: 16,
     marginBottom: 12,
     minHeight: 32,
@@ -485,7 +486,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     gap: 4,
   },
   featureBadgeIcon: {
@@ -493,7 +494,7 @@ const styles = StyleSheet.create({
   },
   featureBadgeText: {
     fontSize: 11,
-    color: '#4b5563',
+    color: DESIGN_TOKENS.colors.textMuted,
     fontWeight: '500',
   },
   selectedIndicator: {
@@ -503,17 +504,17 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#2563eb',
+    backgroundColor: DESIGN_TOKENS.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
   },
   selectedIndicatorText: {
-    color: '#ffffff',
+    color: DESIGN_TOKENS.colors.textOnPrimary,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -524,12 +525,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: '#10b981',
+    backgroundColor: DESIGN_TOKENS.colors.success,
   },
   defaultBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#ffffff',
+    color: DESIGN_TOKENS.colors.textOnPrimary,
   },
   customBadge: {
     position: 'absolute',
@@ -538,11 +539,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: '#f59e0b',
+    backgroundColor: DESIGN_TOKENS.colors.warning,
   },
   customBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#ffffff',
+    color: DESIGN_TOKENS.colors.textOnPrimary,
   },
 });

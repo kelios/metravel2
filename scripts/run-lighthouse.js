@@ -22,6 +22,9 @@ const reportPath = path.resolve(
 )
 const targetUrl = process.env.LIGHTHOUSE_URL || `http://${host}:${port}/`
 const lighthousePackage = process.env.LIGHTHOUSE_PACKAGE || 'lighthouse'
+const extraFlags = process.env.LIGHTHOUSE_FLAGS
+  ? process.env.LIGHTHOUSE_FLAGS.split(' ').filter(Boolean)
+  : []
 
 const contentTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -94,6 +97,7 @@ server.listen(port, host, () => {
     targetUrl,
     '--output=json',
     `--output-path=${reportPath}`,
+    ...extraFlags,
     '--chrome-flags=--headless --no-sandbox',
   ]
 

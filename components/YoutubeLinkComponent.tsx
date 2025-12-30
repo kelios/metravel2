@@ -84,7 +84,7 @@ const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({
                         outlineWidth: 0,
                         // @ts-ignore
                         ':focus': {
-                            borderColor: displayError ? '#ef4444' : palette.primary,
+                            borderColor: displayError ? palette.error : palette.primary,
                         },
                     },
                 })}
@@ -130,14 +130,14 @@ const styles = StyleSheet.create({
         }),
     },
     invalidInput: {
-        borderColor: '#ef4444',
+        borderColor: palette.error,
     },
     errorContainer: {
         marginTop: 4,
     },
     errorText: {
         fontSize: 12,
-        color: '#ef4444',
+        color: palette.error,
     },
 });
 

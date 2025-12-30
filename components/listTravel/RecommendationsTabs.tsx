@@ -420,7 +420,11 @@ const RecommendationsTabs = memo(
                           city: (item as any).city ?? null,
                           country: item.country ?? (item as any).countryName ?? null,
                         }}
-                        badge={{ icon: 'history', backgroundColor: 'rgba(0,0,0,0.7)', iconColor: '#fff' }}
+                        badge={{
+                          icon: 'history',
+                          backgroundColor: DESIGN_TOKENS.colors.overlay,
+                          iconColor: DESIGN_TOKENS.colors.textOnDark,
+                        }}
                         onPress={() => router.push(item.url as any)}
                       />
                     ))}
@@ -438,7 +442,11 @@ const RecommendationsTabs = memo(
                           city: (item as any).city ?? null,
                           country: item.country ?? (item as any).countryName ?? null,
                         }}
-                        badge={{ icon: 'history', backgroundColor: 'rgba(0,0,0,0.7)', iconColor: '#fff' }}
+                        badge={{
+                          icon: 'history',
+                          backgroundColor: DESIGN_TOKENS.colors.overlay,
+                          iconColor: DESIGN_TOKENS.colors.textOnDark,
+                        }}
                         onPress={() => router.push(item.url as any)}
                       />
                     )}
@@ -515,7 +523,7 @@ const RecommendationsTabs = memo(
           </ScrollView>
 
           <Pressable testID="recommendations-tabs-collapse" onPress={toggleCollapse} hitSlop={10} style={styles.collapseButton}>
-            <Feather name="chevron-up" size={20} color="#666" />
+            <Feather name="chevron-up" size={20} color={DESIGN_TOKENS.colors.textMuted} />
           </Pressable>
         </View>
 
@@ -531,7 +539,7 @@ RecommendationsTabs.displayName = 'RecommendationsTabs';
 
 const EmptyState = ({ message, icon }: { message: string; icon: any }) => (
   <View style={styles.emptyState}>
-    <MaterialIcons name={icon} size={48} color="#ccc" />
+    <MaterialIcons name={icon} size={48} color={DESIGN_TOKENS.colors.textSubtle} />
     <Text style={styles.emptyText}>{message}</Text>
   </View>
 );
@@ -595,7 +603,7 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-    borderColor: 'rgba(15, 23, 42, 0.08)',
+    borderColor: DESIGN_TOKENS.colors.border,
   },
   tabLabel: {
     marginLeft: 6,
@@ -608,7 +616,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   badge: {
-    backgroundColor: 'rgba(15, 23, 42, 0.08)',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     borderRadius: 999,
     minWidth: 20,
     height: 20,
@@ -689,19 +697,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     borderRadius: 16,
-    backgroundColor: '#fdf8f3',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: 'rgba(255, 159, 90, 0.25)',
+    borderColor: DESIGN_TOKENS.colors.borderAccent,
   },
   gateIcon: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.08)',
+    borderColor: DESIGN_TOKENS.colors.border,
   },
   gateCopy: {
     flex: 1,
@@ -710,7 +718,7 @@ const styles = StyleSheet.create({
   },
   gateText: {
     fontSize: 14,
-    color: '#6b7280',
+    color: DESIGN_TOKENS.colors.textMuted,
     lineHeight: 20,
     fontWeight: '500',
   },
@@ -722,7 +730,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: DESIGN_TOKENS.colors.primary,
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
   },
   gateButtonText: {
     color: DESIGN_TOKENS.colors.primary,
@@ -734,7 +742,7 @@ const styles = StyleSheet.create({
   collapsedContainer: {
     paddingVertical: 12,
     paddingHorizontal: 0,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     borderRadius: 16,
   },
   expandButton: {
@@ -757,20 +765,20 @@ const styles = StyleSheet.create({
   skeletonCard: {
     width: TAB_CARD_TEMPLATE.container.width || 208,
     marginRight: 16,
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: TAB_CARD_TEMPLATE.container.borderRadius || 12,
     overflow: 'hidden',
   },
   skeletonImage: {
     height: (TAB_CARD_TEMPLATE.imageContainer as any).height || 136,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
   },
   skeletonContent: {
     padding: (TAB_CARD_TEMPLATE.content as any).padding || 12,
   },
   skeletonLine: {
     height: 14,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: DESIGN_TOKENS.colors.borderLight,
     borderRadius: 7,
   },
   skeletonMetaRow: {
@@ -802,7 +810,7 @@ const styles = StyleSheet.create({
   errorText: {
     marginTop: 12,
     fontSize: 15,
-    color: '#666',
+    color: DESIGN_TOKENS.colors.textMuted,
     textAlign: 'center',
   },
   horizontalList: {

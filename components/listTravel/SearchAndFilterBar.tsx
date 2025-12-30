@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
         backgroundColor: DESIGN_TOKENS.colors.surface,
         ...Platform.select({
             ios: {
-                shadowColor: "#000",
+                shadowColor: palette.text,
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.04,
                 shadowRadius: 6,
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
                 elevation: 1,
             },
             web: {
-                boxShadow: '0 2px 10px rgba(15, 23, 42, 0.06)',
+                boxShadow: DESIGN_TOKENS.shadows.light,
                 position: 'relative' as any,
                 zIndex: 3000,
             },
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
         minWidth: 0,
         ...Platform.select({
             ios: {
-                shadowColor: "#000",
+                shadowColor: palette.text,
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.04,
                 shadowRadius: 4,
@@ -453,14 +453,14 @@ const styles = StyleSheet.create({
                 elevation: 1,
             },
             web: {
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                boxShadow: DESIGN_TOKENS.shadows.light,
                 transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
             },
         }),
     },
     searchBoxActive: {
         borderColor: DESIGN_TOKENS.colors.primary,
-        backgroundColor: '#ffffff',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         ...Platform.select({
             ios: {
                 shadowOpacity: 0.1,
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
                 elevation: 3,
             },
             web: {
-                boxShadow: `0 0 0 4px ${DESIGN_TOKENS.colors.primarySoft}, 0 4px 12px rgba(0, 0, 0, 0.08)`,
+                boxShadow: `0 0 0 4px ${DESIGN_TOKENS.colors.primarySoft}, ${DESIGN_TOKENS.shadows.medium}`,
             },
         }),
     },
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     input: {
         flex: 1,
         fontSize: Platform.select({ default: 16, web: 18 }),
-        color: '#0f172a',
+        color: palette.text,
         fontWeight: '500',
         paddingVertical: 2,
         lineHeight: Platform.select({ default: 22, web: 26 }),
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
                 transition: 'all 0.2s ease',
                 // @ts-ignore
                 ':hover': {
-                    backgroundColor: '#cbd5e1',
+                    backgroundColor: DESIGN_TOKENS.colors.backgroundTertiary,
                     transform: 'scale(1.05)',
                 },
             }
@@ -652,9 +652,9 @@ const styles = StyleSheet.create({
         minWidth: 48,
         minHeight: 48,
         flexShrink: 0,
-        backgroundColor: '#f8fafc',
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
         borderWidth: 2,
-        borderColor: '#e2e8f0',
+        borderColor: DESIGN_TOKENS.colors.border,
         ...Platform.select({
             web: {
                 cursor: 'pointer',

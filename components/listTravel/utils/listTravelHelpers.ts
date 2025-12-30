@@ -6,6 +6,7 @@
 import type { Travel } from "@/src/types/types";
 import type { FilterOptions, CategoryWithCount } from "./listTravelTypes";
 import { BREAKPOINTS, BADGE_THRESHOLDS, GRID_COLUMNS } from "./listTravelConstants";
+import { DESIGN_TOKENS } from "@/constants/designSystem";
 
 // ✅ АРХИТЕКТУРА: Нормализация ответа API
 export function normalizeApiResponse(data: any): { items: Travel[]; total: number } {
@@ -124,8 +125,8 @@ export function calculateBadges(travel: Travel): Array<{ label: string; color: s
   if (views > BADGE_THRESHOLDS.POPULAR_VIEWS) {
     result.push({
       label: 'Популярное',
-      color: '#fff',
-      bgColor: '#ff9f5a',
+      color: DESIGN_TOKENS.colors.textOnPrimary,
+      bgColor: DESIGN_TOKENS.colors.warning,
     });
   }
   
@@ -136,8 +137,8 @@ export function calculateBadges(travel: Travel): Array<{ label: string; color: s
     if (daysSinceCreated <= BADGE_THRESHOLDS.NEW_DAYS) {
       result.push({
         label: 'Новое',
-        color: '#fff',
-        bgColor: '#10b981',
+        color: DESIGN_TOKENS.colors.textOnPrimary,
+        bgColor: DESIGN_TOKENS.colors.success,
       });
     }
   }
@@ -149,8 +150,8 @@ export function calculateBadges(travel: Travel): Array<{ label: string; color: s
     if (daysSinceUpdated <= BADGE_THRESHOLDS.TREND_DAYS && !result.find(b => b.label === 'Новое')) {
       result.push({
         label: 'Тренд',
-        color: '#fff',
-        bgColor: '#3b82f6',
+        color: DESIGN_TOKENS.colors.textOnPrimary,
+        bgColor: DESIGN_TOKENS.colors.info,
       });
     }
   }
@@ -227,4 +228,3 @@ export function isMobile(width: number): boolean {
 export function isTablet(width: number): boolean {
   return width >= BREAKPOINTS.MOBILE && width < BREAKPOINTS.TABLET;
 }
-

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface ValidationMessageProps {
   type: 'error' | 'warning';
@@ -12,7 +13,7 @@ const ValidationMessage: React.FC<ValidationMessageProps> = ({ type, messages })
 
   const isError = type === 'error';
   const iconName = isError ? 'error' : 'warning';
-  const iconColor = isError ? '#d94b4b' : '#ff9800';
+  const iconColor = isError ? DESIGN_TOKENS.colors.danger : DESIGN_TOKENS.colors.warning;
 
   return (
     <View style={[styles.container, isError ? styles.errorContainer : styles.warningContainer]}>
@@ -37,12 +38,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   errorContainer: {
-    backgroundColor: '#fff5f5',
-    borderColor: '#ffcdd2',
+    backgroundColor: DESIGN_TOKENS.colors.dangerLight,
+    borderColor: DESIGN_TOKENS.colors.danger,
   },
   warningContainer: {
-    backgroundColor: '#fff8e1',
-    borderColor: '#ffe082',
+    backgroundColor: DESIGN_TOKENS.colors.warningLight,
+    borderColor: DESIGN_TOKENS.colors.warning,
   },
   icon: {
     marginRight: 8,
@@ -57,10 +58,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   errorText: {
-    color: '#c62828',
+    color: DESIGN_TOKENS.colors.dangerDark,
   },
   warningText: {
-    color: '#f57c00',
+    color: DESIGN_TOKENS.colors.warningDark,
   },
 });
 

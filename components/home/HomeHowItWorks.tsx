@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     borderColor: DESIGN_TOKENS.colors.borderLight,
     ...Platform.select({
       web: {
-        boxShadow: '0 4px 20px rgba(31, 31, 31, 0.06)',
+        boxShadow: DESIGN_TOKENS.shadows.card,
         transition: 'all 0.3s ease',
       },
     }),
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         transform: 'translateY(-2px)',
-        boxShadow: '0 10px 26px rgba(31, 31, 31, 0.08)',
+        boxShadow: DESIGN_TOKENS.shadows.hover,
       },
       default: {},
     }),
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Platform.select({
       web: {
-        backgroundImage: 'linear-gradient(135deg, rgba(93, 140, 124, 0.15) 0%, rgba(93, 140, 124, 0.08) 100%)',
+        backgroundImage: `linear-gradient(135deg, ${DESIGN_TOKENS.colors.primarySoft} 0%, ${DESIGN_TOKENS.colors.primaryLight} 100%)`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: '100% 100%',
       },
@@ -194,12 +194,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Platform.select({
       web: {
-        boxShadow: '0 2px 8px rgba(93, 140, 124, 0.3)',
+        boxShadow: DESIGN_TOKENS.shadows.light,
       },
     }),
   },
   numberText: {
-    color: DESIGN_TOKENS.colors.surface,
+    color: DESIGN_TOKENS.colors.textOnPrimary,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -219,4 +219,3 @@ const styles = StyleSheet.create({
 });
 
 export default memo(HomeHowItWorks);
-

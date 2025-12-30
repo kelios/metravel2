@@ -228,20 +228,13 @@ const styles = StyleSheet.create({
         boxShadow: DESIGN_TOKENS.shadows.medium,
       },
       ios: {
-        shadowColor: '#1f1f1f',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.12,
-        shadowRadius: 8,
+        ...DESIGN_TOKENS.shadowsNative.medium,
       },
       android: {
         elevation: 8,
       },
       default: {
-        shadowColor: '#1f1f1f',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 8,
+        ...DESIGN_TOKENS.shadowsNative.medium,
       },
     }),
   },
@@ -277,4 +270,3 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 });
-

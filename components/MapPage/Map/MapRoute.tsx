@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import type { LatLng } from '@/types/coordinates';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface MapRouteProps {
   map: any;
@@ -13,6 +14,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
   isOptimal,
 }) => {
   const polylineRef = useRef<any>(null);
+  const { info, warning } = useThemedColors();
 
   useEffect(() => {
     if (!map || typeof window === 'undefined') return;
@@ -37,7 +39,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
       );
 
       // Determine line style based on route status
-      const color = isOptimal ? '#3388ff' : '#ff9800';
+      const color = isOptimal ? info : warning;
       const weight = isOptimal ? 5 : 4;
       const opacity = isOptimal ? 0.85 : 0.65;
       const dashArray = isOptimal ? null : '10, 10';
@@ -80,7 +82,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
         polylineRef.current = null;
       }
     };
-  }, [map, routeCoordinates, isOptimal]);
+  }, [map, routeCoordinates, isOptimal, info, warning]);
 
   return null;
 };

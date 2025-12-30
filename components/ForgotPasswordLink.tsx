@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity } from 'react-native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface ForgotPasswordLinkProps {
   onPress: () => void;
@@ -8,7 +9,7 @@ interface ForgotPasswordLinkProps {
 const ForgotPasswordLink: React.FC<ForgotPasswordLinkProps> = ({ onPress }) => {
   return (
     <TouchableOpacity onPress={onPress}>
-      <Text style={{ color: '#0066ff', textDecorationLine: 'underline' }}>
+      <Text style={{ color: DESIGN_TOKENS.colors.info, textDecorationLine: 'underline' }}>
         Забыли пароль?
       </Text>
     </TouchableOpacity>

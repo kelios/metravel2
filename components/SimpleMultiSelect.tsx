@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: DESIGN_TOKENS.colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: DESIGN_TOKENS.spacing.lg,
@@ -277,11 +277,7 @@ const styles = StyleSheet.create({
         boxShadow: DESIGN_TOKENS.shadows.heavy,
       },
       default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
+        ...DESIGN_TOKENS.shadowsNative.heavy,
       },
     }),
   },

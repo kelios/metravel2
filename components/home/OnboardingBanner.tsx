@@ -137,7 +137,7 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
               accessibilityRole="button"
               accessibilityLabel="Начать создание статьи"
             >
-              <Feather name="edit-3" size={18} color="#fff" />
+              <Feather name="edit-3" size={18} color={DESIGN_TOKENS.colors.textOnPrimary} />
               <Text style={styles.buttonTextPrimary}>Начать</Text>
             </Pressable>
 
@@ -167,10 +167,10 @@ const styles = StyleSheet.create({
         maxWidth: 800,
         marginLeft: 'auto',
         marginRight: 'auto',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+        boxShadow: DESIGN_TOKENS.shadows.card,
       },
       default: {
-        shadowColor: '#000',
+        shadowColor: DESIGN_TOKENS.colors.text,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
     borderRadius: DESIGN_TOKENS.radii.pill,
     overflow: 'hidden',
   },
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.primary,
     ...Platform.select({
       web: {
-        boxShadow: '0 2px 8px rgba(255, 159, 90, 0.3)',
+        boxShadow: DESIGN_TOKENS.shadows.light,
       },
       default: {
         shadowColor: DESIGN_TOKENS.colors.primary,
@@ -279,14 +279,14 @@ const styles = StyleSheet.create({
     }),
   },
   buttonSecondary: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
     borderWidth: 1,
     borderColor: DESIGN_TOKENS.colors.border,
   },
   buttonTextPrimary: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.textOnPrimary,
   },
   buttonTextSecondary: {
     fontSize: 15,

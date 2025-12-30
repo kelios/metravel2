@@ -102,6 +102,11 @@ describe('AboutScreen', () => {
     });
   });
 
+  it('shows web keyboard hint in contact form', () => {
+    const { getByText } = render(<AboutScreen />);
+    expect(getByText('Shift+Enter — новая строка, Enter — отправить (web)')).toBeTruthy();
+  });
+
   it('opens instagram from social section', async () => {
     const { getByText } = render(<AboutScreen />);
     const instaButton = getByText('@metravelby');

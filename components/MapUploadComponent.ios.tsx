@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } fr
 import DocumentPicker from 'react-native-document-picker';
 import { uploadImage } from '@/src/api/misc';
 import { Feather } from '@expo/vector-icons';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface MapUploadComponentProps {
   collection: string;
@@ -112,7 +113,7 @@ const MapUploadComponentIOS: React.FC<MapUploadComponentProps> = ({ collection, 
       <View style={styles.card}>
         {/* Заголовок */}
         <View style={styles.header}>
-          <Feather name="map" size={24} color="#4b7c6f" />
+          <Feather name="map" size={24} color={DESIGN_TOKENS.colors.primary} />
           <Text style={styles.title}>Загрузка файла карты</Text>
         </View>
 
@@ -128,10 +129,10 @@ const MapUploadComponentIOS: React.FC<MapUploadComponentProps> = ({ collection, 
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={DESIGN_TOKENS.colors.textOnPrimary} />
           ) : (
             <>
-              <Feather name="upload-cloud" size={20} color="#fff" />
+              <Feather name="upload-cloud" size={20} color={DESIGN_TOKENS.colors.textOnPrimary} />
               <Text style={styles.uploadButtonText}>
                 {fileName ? 'Выбрать другой файл' : 'Выбрать файл карты'}
               </Text>
@@ -142,7 +143,7 @@ const MapUploadComponentIOS: React.FC<MapUploadComponentProps> = ({ collection, 
         {/* Отображение выбранного файла */}
         {fileName && !loading && (
           <View style={styles.fileInfo}>
-            <Feather name="file" size={16} color="#4b7c6f" />
+            <Feather name="file" size={16} color={DESIGN_TOKENS.colors.primary} />
             <Text style={styles.fileName} numberOfLines={1}>
               {fileName}
             </Text>
@@ -152,7 +153,7 @@ const MapUploadComponentIOS: React.FC<MapUploadComponentProps> = ({ collection, 
         {/* Сообщение об успехе */}
         {uploadMessage && !error && (
           <View style={styles.successContainer}>
-            <Feather name="check-circle" size={16} color="#10b981" />
+            <Feather name="check-circle" size={16} color={DESIGN_TOKENS.colors.success} />
             <Text style={styles.successText}>{uploadMessage}</Text>
           </View>
         )}
@@ -160,7 +161,7 @@ const MapUploadComponentIOS: React.FC<MapUploadComponentProps> = ({ collection, 
         {/* Сообщение об ошибке */}
         {error && (
           <View style={styles.errorContainer}>
-            <Feather name="alert-circle" size={16} color="#ef4444" />
+            <Feather name="alert-circle" size={16} color={DESIGN_TOKENS.colors.danger} />
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
@@ -184,14 +185,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    ...DESIGN_TOKENS.shadowsNative.medium,
   },
   header: {
     flexDirection: 'row',
@@ -202,16 +199,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1f2937',
+    color: DESIGN_TOKENS.colors.text,
   },
   description: {
     fontSize: 14,
-    color: '#6b7280',
+    color: DESIGN_TOKENS.colors.textMuted,
     marginBottom: 20,
     lineHeight: 20,
   },
   uploadButton: {
-    backgroundColor: '#4b7c6f',
+    backgroundColor: DESIGN_TOKENS.colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -219,18 +216,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    shadowColor: '#4b7c6f',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    ...DESIGN_TOKENS.shadowsNative.medium,
   },
   uploadButtonDisabled: {
-    backgroundColor: '#9ca3af',
+    backgroundColor: DESIGN_TOKENS.colors.disabled,
     shadowOpacity: 0.1,
   },
   uploadButtonText: {
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.textOnPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -240,14 +233,14 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 16,
     padding: 12,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: DESIGN_TOKENS.colors.infoLight,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#bae6fd',
+    borderColor: DESIGN_TOKENS.colors.info,
   },
   fileName: {
     fontSize: 14,
-    color: '#0369a1',
+    color: DESIGN_TOKENS.colors.infoDark,
     flex: 1,
     fontWeight: '500',
   },
@@ -257,14 +250,14 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 16,
     padding: 12,
-    backgroundColor: '#d1fae5',
+    backgroundColor: DESIGN_TOKENS.colors.successLight,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#a7f3d0',
+    borderColor: DESIGN_TOKENS.colors.success,
   },
   successText: {
     fontSize: 13,
-    color: '#059669',
+    color: DESIGN_TOKENS.colors.successDark,
     flex: 1,
     lineHeight: 18,
   },
@@ -274,28 +267,28 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 16,
     padding: 12,
-    backgroundColor: '#fee2e2',
+    backgroundColor: DESIGN_TOKENS.colors.dangerLight,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: DESIGN_TOKENS.colors.danger,
   },
   errorText: {
     fontSize: 13,
-    color: '#dc2626',
+    color: DESIGN_TOKENS.colors.dangerDark,
     flex: 1,
     lineHeight: 18,
   },
   instructionContainer: {
     marginTop: 16,
     padding: 12,
-    backgroundColor: '#f9fafb',
+    backgroundColor: DESIGN_TOKENS.colors.cardMuted,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: DESIGN_TOKENS.colors.border,
   },
   instructionText: {
     fontSize: 13,
-    color: '#6b7280',
+    color: DESIGN_TOKENS.colors.textMuted,
     lineHeight: 18,
     textAlign: 'center',
   },

@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     padding: 16,
     ...Platform.select({
       web: {
-        boxShadow: '0 6px 22px rgba(31, 31, 31, 0.06)',
+        boxShadow: DESIGN_TOKENS.shadows.card,
       },
     }),
   },
@@ -134,4 +134,3 @@ const styles = StyleSheet.create({
 });
 
 export default memo(HomeTrustBlock);
-

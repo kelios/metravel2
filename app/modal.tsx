@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import EditScreenInfo from '@/components/EditScreenInfo';
 import { Text, View } from '@/components/Themed';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 export default function ModalScreen() {
     // Хук useNavigation вызывается на верхнем уровне компонента
@@ -16,7 +17,11 @@ export default function ModalScreen() {
             </TouchableOpacity>
 
             <Text style={styles.title}>О сайте</Text>
-            <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
+            <View
+              style={styles.separator}
+              lightColor={DESIGN_TOKENS.colors.borderLight}
+              darkColor={DESIGN_TOKENS.colors.borderStrong}
+            />
 
             <EditScreenInfo path="app/modal.tsx" />
 
@@ -46,12 +51,12 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 40,
         right: 20,
-        backgroundColor: '#f4511e',
+        backgroundColor: DESIGN_TOKENS.colors.primary,
         padding: 10,
         borderRadius: 5,
     },
     closeButtonText: {
-        color: '#fff',
+        color: DESIGN_TOKENS.colors.textOnPrimary,
         fontSize: 16,
     },
 });

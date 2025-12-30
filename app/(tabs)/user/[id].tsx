@@ -114,7 +114,7 @@ export default function PublicUserProfileScreen() {
               accessibilityLabel="Смотреть путешествия автора"
               {...Platform.select({ web: { cursor: 'pointer' } })}
             >
-              <Feather name="map" size={16} color="#fff" />
+              <Feather name="map" size={16} color={DESIGN_TOKENS.colors.textOnPrimary} />
               <Text style={styles.primaryButtonText}>Путешествия автора</Text>
             </Pressable>
             <Pressable
@@ -160,13 +160,10 @@ const styles = StyleSheet.create({
     borderColor: DESIGN_TOKENS.colors.border,
     ...Platform.select({
       web: {
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        boxShadow: DESIGN_TOKENS.shadows.card,
       },
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        ...DESIGN_TOKENS.shadowsNative.light,
       },
       android: {
         elevation: 2,
@@ -183,7 +180,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#f0f9f9',
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
@@ -240,7 +237,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   primaryButtonText: {
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.textOnPrimary,
     fontSize: 14,
     fontWeight: '700',
   },

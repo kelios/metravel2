@@ -1,6 +1,7 @@
 // app/Map.tsx (бывш. MapClientSideComponent) — ультралёгкая web-карта
 import React, { lazy, Suspense, useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 
@@ -347,13 +348,13 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: 400,
   },
   placeholderText: {
-    color: '#666',
+    color: DESIGN_TOKENS.colors.textMuted,
     fontSize: 16,
     textAlign: 'center',
     padding: 20,

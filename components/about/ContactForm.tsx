@@ -159,6 +159,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         onBlur={onBlurMessage}
         onSubmitEditing={Platform.OS !== 'web' ? () => onSubmit() : undefined}
       />
+      <Text style={aboutStyles.helperText}>Shift+Enter — новая строка, Enter — отправить (web)</Text>
       {invalidMessage && (
         <View style={aboutStyles.errorContainer}>
           <Text style={aboutStyles.fieldErr}>Напишите сообщение</Text>

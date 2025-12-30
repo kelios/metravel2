@@ -5,6 +5,7 @@ import { usePathname } from 'expo-router';
 import ListTravel from '@/components/listTravel/ListTravel';
 import InstantSEO from '@/components/seo/InstantSEO';
 import {useIsFocused} from "@react-navigation/native";
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 export default function TravelsByScreen() {
     const pathname = usePathname();
@@ -42,6 +43,6 @@ export default function TravelsByScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#ffffff',
+        backgroundColor: DESIGN_TOKENS.colors.background,
     },
 });

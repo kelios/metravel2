@@ -99,7 +99,7 @@ export const SectionSkeleton: React.FC<{ lines?: number }> = ({ lines = 4 }) => 
 const styles = StyleSheet.create({
   descriptionContainer: {
     padding: DESIGN_TOKENS.spacing.lg,
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 12,
     width: '100%',
   },
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   pointCard: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 12,
     padding: DESIGN_TOKENS.spacing.md,
     marginBottom: 12,
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   travelCard: {
     width: '100%',
     maxWidth: 300,
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 12,
     padding: DESIGN_TOKENS.spacing.md,
     marginBottom: 12,
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   },
   sectionContainer: {
     padding: DESIGN_TOKENS.spacing.lg,
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 12,
     width: '100%',
   },
@@ -152,4 +152,3 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 });
-

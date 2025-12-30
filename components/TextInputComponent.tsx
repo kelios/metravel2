@@ -61,9 +61,9 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
                         outlineWidth: 0,
                         // @ts-ignore
                         ':focus': {
-                            borderColor: error ? '#ef4444' : palette.primary,
+                            borderColor: error ? palette.error : palette.primary,
                             outlineWidth: 2,
-                            outlineColor: error ? '#ef4444' : palette.primary,
+                            outlineColor: error ? palette.error : palette.primary,
                             outlineStyle: 'solid',
                             outlineOffset: 2,
                         },
@@ -105,11 +105,7 @@ const styles = StyleSheet.create({
         backgroundColor: palette.surface,
         color: palette.text,
         minHeight: 44, // Минимальный размер для touch-целей
-        shadowColor: '#1f1f1f',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 3,
-        elevation: 1,
+        ...DESIGN_TOKENS.shadowsNative.light,
         ...Platform.select({
             web: {
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',

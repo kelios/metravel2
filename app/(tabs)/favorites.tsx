@@ -176,7 +176,11 @@ export default function FavoritesScreen() {
                                 city: item.city ?? null,
                                 country: item.country ?? item.countryName ?? null,
                             }}
-                            badge={{ icon: 'favorite', backgroundColor: 'rgba(220, 38, 38, 0.92)', iconColor: '#ffffff' }}
+                            badge={{
+                                icon: 'favorite',
+                                backgroundColor: DESIGN_TOKENS.colors.danger,
+                                iconColor: DESIGN_TOKENS.colors.textOnDark,
+                            }}
                             onPress={() => handleOpen(item.url)}
                             layout="grid"
                             style={styles.card}
@@ -189,7 +193,7 @@ export default function FavoritesScreen() {
                             accessibilityLabel="Удалить из избранного"
                             {...Platform.select({ web: { cursor: 'pointer' } })}
                         >
-                            <Feather name="trash-2" size={16} color="#ffffff" />
+                            <Feather name="trash-2" size={16} color={DESIGN_TOKENS.colors.textOnDark} />
                         </Pressable>
                     </View>
                 )}

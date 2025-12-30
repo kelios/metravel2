@@ -30,13 +30,13 @@ export default function ErrorDisplay({
   const iconName = variant === 'warning' ? 'alert-triangle' : 
                    variant === 'info' ? 'info' : 'alert-circle';
   
-  const iconColor = variant === 'warning' ? '#f59e0b' :
-                    variant === 'info' ? '#3b82f6' :
-                    '#ef4444';
+  const iconColor = variant === 'warning' ? palette.warning :
+                    variant === 'info' ? palette.info :
+                    palette.danger;
 
-  const backgroundColor = variant === 'warning' ? '#fef3c7' :
-                          variant === 'info' ? '#dbeafe' :
-                          '#fee2e2';
+  const backgroundColor = variant === 'warning' ? palette.warningLight :
+                          variant === 'info' ? palette.infoLight :
+                          palette.dangerLight;
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
@@ -76,7 +76,7 @@ export default function ErrorDisplay({
                 },
               })}
             >
-              <Feather name="refresh-cw" size={16} color="#fff" />
+              <Feather name="refresh-cw" size={16} color={palette.textOnPrimary} />
               <Text style={styles.buttonText}>Попробовать снова</Text>
             </Pressable>
           )}
@@ -139,14 +139,10 @@ const styles = StyleSheet.create({
     margin: 16,
     ...Platform.select({
       web: {
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        boxShadow: DESIGN_TOKENS.shadows.card,
       },
       default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        ...DESIGN_TOKENS.shadowsNative.medium,
       },
     }),
   },
@@ -163,31 +159,31 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1f2937',
+    color: palette.text,
     marginBottom: 8,
     textAlign: 'center',
   },
   message: {
     fontSize: 14,
-    color: '#4b5563',
+    color: palette.textMuted,
     lineHeight: 20,
     textAlign: 'center',
   },
   detailsContainer: {
     marginTop: 12,
     padding: 12,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: palette.mutedBackground,
     borderRadius: 8,
   },
   detailsLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6b7280',
+    color: palette.textMuted,
     marginBottom: 4,
   },
   details: {
     fontSize: 11,
-    color: '#6b7280',
+    color: palette.textMuted,
     fontFamily: Platform.select({ web: 'monospace', default: undefined }),
   },
   actions: {
@@ -217,7 +213,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: palette.textOnPrimary,
   },
   secondaryButtonText: {
     color: palette.primary,

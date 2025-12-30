@@ -18,6 +18,7 @@ import PopupContentComponent from './PopupContentComponent';
 import { useResponsive } from '@/hooks/useResponsive';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type Props = {
     travel: TravelCoords;
@@ -201,7 +202,7 @@ const AddressListItem: React.FC<Props> = ({
               fit="contain"
               blurBackground
               blurRadius={12}
-              overlayColor="rgba(255,255,255,0.12)"
+              overlayColor={DESIGN_TOKENS.colors.overlayLight}
               cachePolicy="memory-disk"
               transition={200}
               loading="lazy"
@@ -226,7 +227,7 @@ const AddressListItem: React.FC<Props> = ({
 
           {!imgLoaded && (
             <View style={styles.loader}>
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.textOnDark} />
             </View>
           )}
 
@@ -236,7 +237,7 @@ const AddressListItem: React.FC<Props> = ({
                 onPress={handleMainPress}
                 accessibilityRole="button"
                 accessibilityLabel={`Открыть: ${address || 'Место'}`}
-                android_ripple={{ color: '#00000020' }}
+                android_ripple={{ color: DESIGN_TOKENS.colors.overlayLight }}
                 onLongPress={copyCoords}
               >
                   <View style={styles.mainPressArea} />
@@ -249,7 +250,7 @@ const AddressListItem: React.FC<Props> = ({
                       icon="eye-off"
                       size={iconSize}
                       onPress={onHidePress ? handleIconPress(onHidePress) : undefined}
-                      iconColor="#fff"
+                      iconColor={DESIGN_TOKENS.colors.textOnDark}
                       style={[styles.iconBtnDanger, { width: iconButtonSize, height: iconButtonSize }]}
                       accessibilityLabel="Скрыть объект"
                     />
@@ -257,7 +258,7 @@ const AddressListItem: React.FC<Props> = ({
                       icon="link"
                       size={iconSize}
                       onPress={handleIconPress(openArticle)}
-                      iconColor="#fff"
+                      iconColor={DESIGN_TOKENS.colors.textOnDark}
                       style={[styles.iconBtn, { width: iconButtonSize, height: iconButtonSize }]}
                       accessibilityLabel="Открыть статью"
                     />
@@ -265,7 +266,7 @@ const AddressListItem: React.FC<Props> = ({
                       icon="content-copy"
                       size={iconSize}
                       onPress={handleIconPress(copyCoords)}
-                      iconColor="#fff"
+                      iconColor={DESIGN_TOKENS.colors.textOnDark}
                       style={[styles.iconBtn, { width: iconButtonSize, height: iconButtonSize }]}
                       accessibilityLabel="Скопировать координаты"
                     />
@@ -273,7 +274,7 @@ const AddressListItem: React.FC<Props> = ({
                       icon="send"
                       size={iconSize}
                       onPress={handleIconPress(openTelegram)}
-                      iconColor="#fff"
+                      iconColor={DESIGN_TOKENS.colors.textOnDark}
                       style={[styles.iconBtn, { width: iconButtonSize, height: iconButtonSize }]}
                       accessibilityLabel="Поделиться в Telegram"
                     />
@@ -321,12 +322,8 @@ const styles = StyleSheet.create<Record<string, any>>({
         marginVertical: 12,
         marginHorizontal: 8,
         borderRadius: 24,
-        backgroundColor: '#ffffff',
-        elevation: 4,
-        shadowColor: '#1f1f1f',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.14,
-        shadowRadius: 16,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+        ...DESIGN_TOKENS.shadowsNative.medium,
         overflow: 'hidden',
         position: 'relative',
         // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
@@ -336,17 +333,17 @@ const styles = StyleSheet.create<Record<string, any>>({
         justifyContent: 'flex-end',
         borderRadius: 24,
         overflow: 'hidden',
-        backgroundColor: '#0b1220',
+        backgroundColor: DESIGN_TOKENS.colors.backgroundTertiary,
     },
     imageOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(255,255,255,0.12)',
+        backgroundColor: DESIGN_TOKENS.colors.overlayLight,
     },
     noDataWrap: {
         ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#0b1220',
+        backgroundColor: DESIGN_TOKENS.colors.backgroundTertiary,
     },
     noDataImage: {
         width: 120,
@@ -355,7 +352,7 @@ const styles = StyleSheet.create<Record<string, any>>({
     },
     loader: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        backgroundColor: DESIGN_TOKENS.colors.overlay,
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 24,
@@ -378,45 +375,37 @@ const styles = StyleSheet.create<Record<string, any>>({
         flexDirection: 'column',
     },
     iconBtn: {
-        backgroundColor: 'rgba(0,0,0,0.8)',
+        backgroundColor: DESIGN_TOKENS.colors.overlay,
         margin: 0,
         borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 8,
-        elevation: 6,
+        ...DESIGN_TOKENS.shadowsNative.medium,
     },
     iconBtnDanger: {
-        backgroundColor: 'rgba(239,68,68,0.9)',
+        backgroundColor: DESIGN_TOKENS.colors.danger,
         margin: 0,
         borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#ef4444',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.5,
-        shadowRadius: 8,
-        elevation: 6,
+        ...DESIGN_TOKENS.shadowsNative.medium,
     },
 
     overlay: {
         padding: 20,
-        backgroundColor: 'rgba(0,0,0,0.85)',
+        backgroundColor: DESIGN_TOKENS.colors.overlay,
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
         zIndex: 2,
         position: 'relative',
     },
     title: {
-        color: '#fff',
+        color: DESIGN_TOKENS.colors.textOnDark,
         fontWeight: '800',
         marginBottom: 10,
         lineHeight: 24,
         letterSpacing: -0.4,
-        textShadow: '0 2px 8px rgba(0,0,0,0.5)',
+        textShadow: `0 2px 8px ${DESIGN_TOKENS.colors.overlay}`,
     },
     coordPressable: {
         alignSelf: 'flex-start',
@@ -426,12 +415,12 @@ const styles = StyleSheet.create<Record<string, any>>({
         borderRadius: 8,
     },
     coord: {
-        color: '#fff',
+        color: DESIGN_TOKENS.colors.textOnDark,
         textDecorationLine: 'underline',
         fontWeight: '700',
         letterSpacing: 0.3,
         fontFamily: Platform.OS === 'web' ? 'Monaco, Menlo, "Ubuntu Mono", monospace' : 'monospace',
-        textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+        textShadow: `0 1px 4px ${DESIGN_TOKENS.colors.overlay}`,
     },
     catWrap: {
         flexDirection: 'row',
@@ -440,24 +429,20 @@ const styles = StyleSheet.create<Record<string, any>>({
         marginTop: 4,
     },
     catChip: {
-        backgroundColor: 'rgba(255,255,255,0.28)',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         borderRadius: 16,
         paddingHorizontal: 14,
         paddingVertical: 8,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.4)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 2,
+        borderColor: DESIGN_TOKENS.colors.border,
+        ...DESIGN_TOKENS.shadowsNative.light,
     },
     catText: {
-        color: '#fff',
+        color: DESIGN_TOKENS.colors.text,
         fontSize: 12,
         fontWeight: '700',
         letterSpacing: 0.3,
-        textShadow: '0 1px 3px rgba(0,0,0,0.3)',
+        textShadow: `0 1px 3px ${DESIGN_TOKENS.colors.overlay}`,
     },
 });
 

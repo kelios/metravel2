@@ -275,8 +275,8 @@ body{
   line-height:1.6;
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeSpeed;
-  color:#1f2937;
-  background:linear-gradient(180deg,rgba(246,244,239,0.9) 0%,rgba(249,248,244,0.8) 40%,rgba(255,255,255,0.9) 100%);
+  color:var(--color-text);
+  background:linear-gradient(180deg,var(--color-background) 0%,var(--color-backgroundSecondary) 40%,var(--color-surface) 100%);
   padding-bottom:env(safe-area-inset-bottom);
   overflow-y:scroll;
 }
@@ -301,15 +301,14 @@ img[fetchpriority="high"]{content-visibility:auto;will-change:auto}
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important}
 }
-html[data-theme="dark"] body{background:#0f172a;color:#f5f7fa}
 html[data-theme="dark"]{color-scheme:dark}
 html[data-theme="light"]{color-scheme:light}
-:focus-visible{outline:2px solid #007bff;outline-offset:2px}
+:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
 /* ✅ ИСПРАВЛЕНИЕ: Оптимизация для мобильных устройств (320-430px) */
 @media (max-width:768px){
   html{height:100%;height:-webkit-fill-available}
   body{min-height:100vh;min-height:-webkit-fill-available;padding-bottom:calc(env(safe-area-inset-bottom) + 80px)}
-  img[data-lcp]{min-height:200px;background:#e9e7df}
+  img[data-lcp]{min-height:200px;background:var(--color-backgroundTertiary)}
   /* Предотвращаем обрезку карточек */
   [data-card]{margin-bottom:16px;width:100%;max-width:100%}
   [data-card] img{height:200px;object-fit:cover;width:100%}

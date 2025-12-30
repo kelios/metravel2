@@ -5,6 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type OptimizedFavoriteButtonProps = {
     id: string | number;
@@ -84,7 +85,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                 <MaterialIcons
                     name={serverIsFav ? 'favorite' : 'favorite-border'}
                     size={size}
-                    color={serverIsFav ? '#ef4444' : '#6b7280'}
+                    color={serverIsFav ? DESIGN_TOKENS.colors.danger : DESIGN_TOKENS.colors.textMuted}
                 />
             </WebView>
         );
@@ -100,7 +101,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
             <MaterialIcons
                 name={serverIsFav ? 'favorite' : 'favorite-border'}
                 size={size}
-                color={serverIsFav ? '#ef4444' : '#6b7280'}
+                color={serverIsFav ? DESIGN_TOKENS.colors.danger : DESIGN_TOKENS.colors.textMuted}
             />
         </Pressable>
     );
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
     favoriteButton: {
         padding: 4,
         borderRadius: 4,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
     },
 });
 

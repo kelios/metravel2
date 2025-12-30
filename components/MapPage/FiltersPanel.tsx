@@ -34,13 +34,22 @@ import { RouteValidator } from '@/utils/routeValidator';
 const COLORS = {
   bg: DESIGN_TOKENS.colors.surface,
   card: DESIGN_TOKENS.colors.mutedBackground,
+  cardMuted: DESIGN_TOKENS.colors.cardMuted,
+  surfaceMuted: DESIGN_TOKENS.colors.surfaceMuted,
   text: DESIGN_TOKENS.colors.text,
   textMuted: DESIGN_TOKENS.colors.textMuted,
+  textSubtle: DESIGN_TOKENS.colors.textSubtle,
+  textOnPrimary: DESIGN_TOKENS.colors.textOnPrimary,
+  textOnDark: DESIGN_TOKENS.colors.textOnDark,
   primary: DESIGN_TOKENS.colors.primary,
   primarySoft: DESIGN_TOKENS.colors.primarySoft,
   border: DESIGN_TOKENS.colors.border,
   danger: DESIGN_TOKENS.colors.danger,
-  shadow: '#000',
+  dangerLight: DESIGN_TOKENS.colors.dangerLight,
+  success: DESIGN_TOKENS.colors.success,
+  warning: DESIGN_TOKENS.colors.warning,
+  info: DESIGN_TOKENS.colors.info,
+  shadow: DESIGN_TOKENS.shadowsNative.light.shadowColor,
 };
 
 const SEARCH_MODES = [
@@ -172,7 +181,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         ]}
         hitSlop={8}
       >
-        <Icon name={icon} size={compact ? 16 : 18} color="#fff" />
+        <Icon name={icon} size={compact ? 16 : 18} color={COLORS.textOnPrimary} />
         {title ? <Text style={styles.compactButtonText}>{title}</Text> : null}
       </Pressable>
     ));
@@ -348,7 +357,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   accessibilityRole="tab"
                   accessibilityState={{ selected: active }}
                 >
-                  <Icon name={icon} size={18} color={active ? '#fff' : COLORS.textMuted} />
+                  <Icon name={icon} size={18} color={active ? COLORS.textOnPrimary : COLORS.textMuted} />
                   <View style={styles.modeTabTextCol}>
                     <Text style={[styles.modeTabText, active && styles.modeTabTextActive]}>
                       {label}
@@ -559,7 +568,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                           <Icon
                             name={icon}
                             size={18}
-                            color={active ? '#fff' : COLORS.textMuted}
+                            color={active ? COLORS.textOnPrimary : COLORS.textMuted}
                             style={styles.transportIcon}
                           />
                           <Text
@@ -845,7 +854,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     },
     modeTabs: {
       flexDirection: 'row',
-      backgroundColor: '#f2f4f7',
+      backgroundColor: COLORS.surfaceMuted,
       borderRadius: 10,
       padding: 4,
       marginBottom: 12,
@@ -885,7 +894,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       color: COLORS.textMuted,
     },
     modeTabTextActive: {
-      color: '#fff',
+      color: COLORS.textOnPrimary,
     },
     modeTabHint: {
       fontSize: 11,
@@ -893,7 +902,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       marginTop: 2,
     },
     modeTabHintActive: {
-      color: '#e8f2ff',
+      color: COLORS.textOnPrimary,
     },
     counterRow: {
       flexDirection: 'row',
@@ -954,11 +963,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       padding: 12,
       marginBottom: 12,
       gap: 10,
-      shadowColor: '#1f1f1f',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.04,
-      shadowRadius: 3,
-      elevation: 1,
+      ...DESIGN_TOKENS.shadowsNative.light,
     },
     dualInputRow: {
       flexDirection: 'row',
@@ -992,12 +997,8 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       borderRadius: 10,
       paddingHorizontal: 12,
       fontSize: 14,
-      backgroundColor: '#fbfcfe',
-      shadowColor: '#1f1f1f',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.04,
-      shadowRadius: 3,
-      elevation: 1,
+      backgroundColor: COLORS.card,
+      ...DESIGN_TOKENS.shadowsNative.light,
     },
     chipsContainer: {
       marginTop: 8,
@@ -1071,7 +1072,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     },
     transportTabs: {
       flexDirection: 'row',
-      backgroundColor: '#f2f4f7',
+      backgroundColor: COLORS.surfaceMuted,
       borderRadius: 10,
       padding: 2,
       // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
@@ -1110,18 +1111,14 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       color: COLORS.textMuted,
     },
     transportTabTextActive: {
-      color: '#fff',
+      color: COLORS.textOnPrimary,
     },
     routeInfo: {
       backgroundColor: COLORS.card,
       borderRadius: 10,
       padding: 12,
       // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-      shadowColor: '#1f1f1f',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.04,
-      shadowRadius: 3,
-      elevation: 1,
+      ...DESIGN_TOKENS.shadowsNative.light,
     },
     routeInfoRow: {
       flexDirection: 'row',
@@ -1214,7 +1211,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     compactButtonText: {
       fontSize: 13,
       fontWeight: '700',
-      color: '#fff',
+      color: COLORS.textOnPrimary,
       marginLeft: 6,
     },
     footer: {
@@ -1290,16 +1287,16 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       justifyContent: 'center',
     },
     stepBadgeStart: {
-      backgroundColor: '#25a562',
+      backgroundColor: COLORS.success,
     },
     stepBadgeEnd: {
-      backgroundColor: '#d94b4b',
+      backgroundColor: COLORS.danger,
     },
     stepBadgeTransport: {
       backgroundColor: COLORS.primary,
     },
     stepBadgeText: {
-      color: '#fff',
+      color: COLORS.textOnPrimary,
       fontWeight: '800',
       fontSize: 12,
     },
@@ -1339,7 +1336,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       marginTop: 12,
       padding: 12,
       borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: '#fff',
+      backgroundColor: COLORS.card,
       borderWidth: 1,
       borderColor: COLORS.border,
       gap: 8,
@@ -1441,11 +1438,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       backgroundColor: COLORS.card,
       borderRadius: 10,
       padding: 10,
-      shadowColor: '#1f1f1f',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.04,
-      shadowRadius: 3,
-      elevation: 1,
+      ...DESIGN_TOKENS.shadowsNative.light,
     },
     swapButton: {
       marginTop: 10,
@@ -1519,7 +1512,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       backgroundColor: COLORS.primary,
     },
     ctaPrimaryText: {
-      color: '#fff',
+      color: COLORS.textOnPrimary,
       fontWeight: '700',
       fontSize: 14,
     },

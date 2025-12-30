@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, useColorScheme, Platform } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator, Platform } from 'react-native';
 import { TravelFormData, Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ImageGalleryComponent from '@/components/travel/ImageGalleryComponent';
+import { useTheme, useThemedColors } from '@/hooks/useTheme';
 
 interface GallerySectionProps {
     formData: TravelFormData | null;
@@ -11,8 +12,8 @@ interface GallerySectionProps {
 }
 
 const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) => {
-    const theme = useColorScheme();
-    const isDarkMode = theme === 'dark';
+    const { isDark } = useTheme();
+    const themedColors = useThemedColors();
     const gallerySource = formData?.gallery;
 
     const normalizedImages = useMemo(() => {
@@ -32,9 +33,9 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) =
 
     if (!formData) {
         return (
-            <View style={[styles.galleryContainer, isDarkMode && styles.darkBackground]}>
-                <ActivityIndicator size="large" color="#6aaaaa" />
-                <Text style={[styles.loadingText, isDarkMode && styles.darkText]}>
+            <View style={[styles.galleryContainer, { backgroundColor: themedColors.surface }]}>
+                <ActivityIndicator size="large" color={themedColors.primary} />
+                <Text style={[styles.loadingText, { color: themedColors.textMuted }]}>
                     Загрузка данных...
                 </Text>
             </View>
@@ -44,8 +45,8 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) =
     // Без ID нельзя загрузить файлы (нужен travelId на бэке)
     if (!formData.id) {
         return (
-            <View style={[styles.galleryContainer, isDarkMode && styles.darkBackground]}>
-                <Text style={[styles.infoText, isDarkMode && styles.darkText]}>
+            <View style={[styles.galleryContainer, { backgroundColor: themedColors.surface }]}>
+                <Text style={[styles.infoText, { color: themedColors.textMuted }]}>
                     Галерея станет доступна после сохранения путешествия.
                 </Text>
             </View>
@@ -54,7 +55,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) =
 
     // Для web используем галерею с дропзоной, для native — платформенный файл
     return (
-        <View style={[styles.galleryContainer, isDarkMode && styles.darkBackground]}>
+        <View style={[styles.galleryContainer, { backgroundColor: themedColors.surface }]}>
             <ImageGalleryComponent
                 // Бэкенд коллекция галереи
                 collection="gallery"
@@ -64,7 +65,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) =
                 onChange={onChange}
             />
             {Platform.OS !== 'web' && normalizedImages.length === 0 && (
-                <Text style={[styles.infoText, isDarkMode && styles.darkText]}>
+                <Text style={[styles.infoText, { color: themedColors.textMuted }]}>
                     Нет загруженных изображений
                 </Text>
             )}
@@ -76,7 +77,7 @@ const styles = StyleSheet.create({
     galleryContainer: {
         marginTop: DESIGN_TOKENS.spacing.xxs,
         padding: 15,
-        backgroundColor: '#fff',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         borderRadius: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -85,11 +86,9 @@ const styles = StyleSheet.create({
         elevation: 3,
         alignItems: 'center',
     },
-    darkBackground: { backgroundColor: '#222' },
-    loadingText: { marginTop: DESIGN_TOKENS.spacing.sm, fontSize: DESIGN_TOKENS.typography.sizes.md, color: '#555', textAlign: 'center' },
-    infoText: { fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '500', color: '#666', textAlign: 'center' },
-    emptyText: { fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '500', color: '#888', textAlign: 'center', marginBottom: 8 },
-    darkText: { color: '#ddd' },
+    loadingText: { marginTop: DESIGN_TOKENS.spacing.sm, fontSize: DESIGN_TOKENS.typography.sizes.md, textAlign: 'center' },
+    infoText: { fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '500', textAlign: 'center' },
+    emptyText: { fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '500', textAlign: 'center', marginBottom: 8 },
 });
 
 export default React.memo(GallerySection);

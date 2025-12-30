@@ -1,7 +1,7 @@
 import "@expo/metro-runtime";
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, StyleSheet, View, LogBox } from "react-native";
-import { MD3LightTheme as DefaultTheme, PaperProvider } from "react-native-paper";
+import { MD3DarkTheme, MD3LightTheme as DefaultTheme, PaperProvider } from "react-native-paper";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
 import Toast from "react-native-toast-message";
@@ -19,7 +19,7 @@ import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { useResponsive } from "@/hooks/useResponsive"; 
 import { createOptimizedQueryClient } from "@/src/utils/reactQueryConfig";
-import { ThemeProvider } from "@/hooks/useTheme";
+import { ThemeProvider, useTheme, useThemedColors } from "@/hooks/useTheme";
 
 // ✅ ИСПРАВЛЕНИЕ: Глобальный CSS для web (box-sizing fix)
 if (Platform.OS === 'web') {
@@ -51,21 +51,6 @@ const isWeb = Platform.OS === "web";
 
 /** Тема */
 // ✅ ИСПРАВЛЕНИЕ: Унифицирована цветовая палитра - используется DESIGN_TOKENS
-const theme = {
-    ...DefaultTheme,
-    colors: {
-        ...DefaultTheme.colors,
-        primary: DESIGN_TOKENS.colors.primary, // ✅ Бирюзовый (#4a8c8c) вместо оранжевого
-        secondary: DESIGN_TOKENS.colors.accent,
-        background: DESIGN_TOKENS.colors.background,
-        surface: DESIGN_TOKENS.colors.surface,
-        error: DESIGN_TOKENS.colors.danger,
-        outline: DESIGN_TOKENS.colors.border,
-        onPrimary: DESIGN_TOKENS.colors.surface, // Белый текст на primary фоне
-        onSecondary: DESIGN_TOKENS.colors.text,
-    },
-    fonts: { ...DefaultTheme.fonts },
-} as const;
 
 const queryClient = createOptimizedQueryClient({
     mutations: {
@@ -310,7 +295,7 @@ function RootLayoutNav() {
     return (
       <ErrorBoundary>
         <ThemeProvider>
-          <PaperProvider theme={theme}>
+          <ThemedPaperProvider>
               <AuthProvider>
                   <FavoritesProvider>
                       <QueryClientProvider client={queryClient}>
@@ -373,10 +358,37 @@ function RootLayoutNav() {
             </AuthProvider>
             {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
             {isMounted && <Toast />}
-        </PaperProvider>
+        </ThemedPaperProvider>
         </ThemeProvider>
       </ErrorBoundary>
     );
+}
+
+function ThemedPaperProvider({ children }: { children: React.ReactNode }) {
+    const { isDark } = useTheme();
+    const colors = useThemedColors();
+
+    const paperTheme = useMemo(() => {
+        const baseTheme = isDark ? MD3DarkTheme : DefaultTheme;
+        return {
+            ...baseTheme,
+            dark: isDark,
+            colors: {
+                ...baseTheme.colors,
+                primary: colors.primary,
+                secondary: colors.primaryDark,
+                background: colors.background,
+                surface: colors.surface,
+                error: colors.error,
+                outline: colors.border,
+                onPrimary: colors.textOnPrimary,
+                onSecondary: colors.text,
+            },
+            fonts: { ...baseTheme.fonts },
+        };
+    }, [colors, isDark]);
+
+    return <PaperProvider theme={paperTheme}>{children}</PaperProvider>;
 }
 
 const styles = StyleSheet.create({
@@ -424,7 +436,7 @@ const styles = StyleSheet.create({
         padding: 12,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#1f1f1f",
+        backgroundColor: DESIGN_TOKENS.colors.backgroundTertiary,
     },
     fontLoader: {
         flex: 1,

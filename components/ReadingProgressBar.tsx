@@ -1,6 +1,7 @@
 // Прогресс-бар чтения для детальной страницы
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, Platform } from 'react-native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface ReadingProgressBarProps {
   scrollY: Animated.Value;
@@ -78,7 +79,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 4, // ✅ УВЕЛИЧЕНО: с 3 до 4 для лучшей видимости
-    backgroundColor: 'rgba(0,0,0,0.08)', // ✅ Более прозрачный фон
+    backgroundColor: DESIGN_TOKENS.colors.overlayLight, // ✅ Более прозрачный фон
     zIndex: 1000,
     ...Platform.select({
       web: {
@@ -88,13 +89,12 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#ff9f5a', // ✅ ИЗМЕНЕН ЦВЕТ: оранжевый из навигации для лучшей видимости
+    backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИЗМЕНЕН ЦВЕТ: акцентный цвет темы
     ...Platform.select({
       web: {
         transition: 'width 0.15s ease-out', // ✅ Более плавная анимация
-        boxShadow: '0 2px 4px rgba(255, 159, 90, 0.3)', // ✅ Добавлена тень для глубины
+        boxShadow: DESIGN_TOKENS.shadows.light, // ✅ Добавлена тень для глубины
       },
     }),
   },
 });
-

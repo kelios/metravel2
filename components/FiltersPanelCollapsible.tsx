@@ -105,14 +105,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       web: {
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        boxShadow: DESIGN_TOKENS.shadows.light,
       },
       default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
+        ...DESIGN_TOKENS.shadowsNative.light,
       },
     }),
   },
@@ -164,4 +160,3 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
 });
-

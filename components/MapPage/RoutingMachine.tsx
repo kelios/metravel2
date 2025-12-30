@@ -1,6 +1,7 @@
 // components/MapPage/RoutingMachine.tsx
 import { useEffect, useRef, useMemo } from 'react'
 import { useRouting } from './useRouting'
+import { useThemedColors } from '@/hooks/useTheme'
 
 interface RoutingMachineProps {
     map: any
@@ -61,6 +62,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         [routePoints, transportMode]
     )
     const lastRouteKeyLoadingRef = useRef<string | null>(null)
+    const { info, warning } = useThemedColors()
 
     // Sync routing state to parent callbacks (only when changed)
     // Use coordsKey to prevent infinite loops from array reference changes
@@ -194,7 +196,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             
             // Определяем цвет линии в зависимости от статуса
             const isOptimal = routingState.error === false || routingState.error === ''
-            const color = isOptimal ? '#3388ff' : '#ff9800'
+            const color = isOptimal ? info : warning
             const weight = isOptimal ? 5 : 4
             const opacity = isOptimal ? 0.85 : 0.65
             const dashArray = isOptimal ? null : '10, 10' // Пунктирная линия для неоптимального маршрута
@@ -232,7 +234,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                 }
             }
         }
-    }, [map, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints, routePoints, routingState.coords])
+    }, [map, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints, routePoints, routingState.coords, info, warning])
 
     // Cleanup on unmount
     useEffect(() => {

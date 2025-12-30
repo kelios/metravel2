@@ -44,7 +44,7 @@ export default function SortSelector({ value, onChange, showDistance = false }: 
               <Feather
                 name={option.icon as any}
                 size={14}
-                color={isActive ? DESIGN_TOKENS.colors.primary : '#667085'}
+                color={isActive ? DESIGN_TOKENS.colors.primary : DESIGN_TOKENS.colors.textMuted}
               />
               <Text style={[styles.optionText, isActive && styles.optionTextActive]}>
                 {option.label}
@@ -64,9 +64,9 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: DESIGN_TOKENS.colors.border,
   },
   containerMobile: {
     flexDirection: 'column',
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    color: '#667085',
+    color: DESIGN_TOKENS.colors.textMuted,
     fontWeight: '500',
   },
   optionsContainer: {
@@ -93,15 +93,15 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: DESIGN_TOKENS.colors.border,
   },
   optionActive: {
-    backgroundColor: '#fff5eb',
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
     borderColor: DESIGN_TOKENS.colors.primary,
   },
   optionText: {
     fontSize: 12,
-    color: '#667085',
+    color: DESIGN_TOKENS.colors.textMuted,
     fontWeight: '500',
   },
   optionTextActive: {
@@ -109,4 +109,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

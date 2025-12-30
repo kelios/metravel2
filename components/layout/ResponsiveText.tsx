@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Text, TextStyle, StyleSheet } from 'react-native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsiveValue } from '@/hooks/useResponsive';
 
 interface ResponsiveTextProps {
@@ -82,6 +83,6 @@ function getVariantStyle(variant: string): TextStyle {
 
 const styles = StyleSheet.create({
   base: {
-    color: '#3C3C3C',
+    color: DESIGN_TOKENS.colors.text,
   },
 });

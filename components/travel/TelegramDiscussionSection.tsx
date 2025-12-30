@@ -52,7 +52,7 @@ export default function TelegramDiscussionSection({ travel }: TelegramDiscussion
         accessibilityRole="button"
         accessibilityLabel={hasUrl ? 'Открыть обсуждение в Telegram' : 'Скоро здесь будет обсуждение в Telegram'}
       >
-        <MaterialIcons name="telegram" size={20} color="#fff" />
+        <MaterialIcons name="telegram" size={20} color={DESIGN_TOKENS.colors.textOnPrimary} />
         <Text style={styles.buttonText}>
           {hasUrl ? 'Открыть обсуждение в Telegram' : 'Скоро здесь будет обсуждение в Telegram'}
         </Text>
@@ -70,10 +70,10 @@ export default function TelegramDiscussionSection({ travel }: TelegramDiscussion
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 16,
     padding: DESIGN_TOKENS.spacing.xl,
-    shadowColor: '#000',
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 10,
@@ -82,12 +82,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: '700',
-    color: '#1a202c',
+    color: DESIGN_TOKENS.colors.text,
     marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   subtitle: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: '#4b5563',
+    color: DESIGN_TOKENS.colors.textMuted,
     lineHeight: 20,
     marginBottom: 14,
   },
@@ -107,16 +107,16 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   buttonDisabled: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: DESIGN_TOKENS.colors.disabled,
   },
   buttonText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.textOnPrimary,
   },
   helperText: {
     marginTop: DESIGN_TOKENS.spacing.sm,
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    color: '#9ca3af',
+    color: DESIGN_TOKENS.colors.textSubtle,
   },
 });

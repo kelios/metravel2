@@ -7,6 +7,7 @@ import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 import RoutingMachine from './RoutingMachine';
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 // MapLegend is currently unused in the web map
 
 type ReactLeafletNS = typeof import('react-leaflet');
@@ -203,16 +204,16 @@ const ClusterLayer: React.FC<{
         ? (window as any).L.divIcon({
             className: 'custom-cluster-icon',
             html: `<div style="
-              background: rgba(74,140,140,0.9);
-              color:#fff;
+              background: var(--color-primary);
+              color: var(--color-textOnDark);
               width:42px;height:42px;
               border-radius:21px;
               display:flex;
               align-items:center;
               justify-content:center;
               font-weight:800;
-              box-shadow:0 6px 18px rgba(0,0,0,0.18);
-              border:2px solid #f8f5f2;
+              box-shadow: var(--shadow-medium);
+              border:2px solid var(--color-border);
             ">${count}</div>`,
             iconSize: [42, 42],
             iconAnchor: [21, 21],
@@ -321,7 +322,7 @@ const ClusterLayer: React.FC<{
             <Popup>
               <View style={{ gap: 6, maxWidth: 260 }}>
                 <Text style={{ fontWeight: '800' }}>{cluster.count} мест поблизости</Text>
-                <Text style={{ color: '#666', fontSize: 12 }}>
+                <Text style={{ color: DESIGN_TOKENS.colors.textMuted, fontSize: 12 }}>
                   Нажмите, чтобы приблизить и раскрыть маркеры
                 </Text>
                 {cluster.items.slice(0, 6).map((p, i) => (
@@ -330,7 +331,9 @@ const ClusterLayer: React.FC<{
                   </Text>
                 ))}
                 {cluster.items.length > 6 && (
-                  <Text style={{ fontSize: 12, color: '#666' }}>…и ещё {cluster.items.length - 6}</Text>
+                  <Text style={{ fontSize: 12, color: DESIGN_TOKENS.colors.textMuted }}>
+                    …и ещё {cluster.items.length - 6}
+                  </Text>
                 )}
               </View>
             </Popup>
@@ -879,16 +882,16 @@ const MapPageComponent: React.FC<Props> = ({
               width: '44px',
               height: '44px',
               borderRadius: '50%',
-              backgroundColor: '#fff',
-              border: '2px solid rgba(0,0,0,0.2)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              backgroundColor: DESIGN_TOKENS.colors.surface,
+              border: `2px solid ${DESIGN_TOKENS.colors.borderStrong}`,
+              boxShadow: DESIGN_TOKENS.shadows.card,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               padding: 0,
               transition: 'all 0.2s ease',
-              color: '#2b6cb0',
+              color: DESIGN_TOKENS.colors.info,
             }}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -930,8 +933,8 @@ const MapPageComponent: React.FC<Props> = ({
             center={[coordinates.latitude, coordinates.longitude]}
             radius={radiusInMeters}
             pathOptions={{
-              color: '#4a8c8c',
-              fillColor: '#4a8c8c',
+              color: DESIGN_TOKENS.colors.primary,
+              fillColor: DESIGN_TOKENS.colors.primary,
               fillOpacity: 0.08,
               weight: 2,
               dashArray: '6 6',
@@ -1035,7 +1038,7 @@ const MapPageComponent: React.FC<Props> = ({
 
 const Loader: React.FC<{ message: string }> = ({ message }) => (
   <View style={styles.loader}>
-    <ActivityIndicator size="large" />
+    <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} />
     <Text>{message}</Text>
   </View>
 );
@@ -1047,12 +1050,12 @@ width: '100%',
 height: '100%',
 borderRadius: 16,
 overflow: 'hidden',
-backgroundColor: '#f5f5f5',
+backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
 position: 'relative',
 },
 map: { flex: 1, width: '100%', height: '100%', minHeight: 300 },
 loader: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-errorText: { color: '#d32f2f', textAlign: 'center' },
+errorText: { color: DESIGN_TOKENS.colors.danger, textAlign: 'center' },
 myLocationButton: {
 position: 'absolute',
 top: 10,
@@ -1067,16 +1070,16 @@ myLocationButtonInner: {
 width: '44px',
 height: '44px',
 borderRadius: '50%',
-backgroundColor: '#0c2b43',
-border: '2px solid rgba(0,0,0,0.2)',
-boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+backgroundColor: DESIGN_TOKENS.colors.info,
+border: `2px solid ${DESIGN_TOKENS.colors.borderStrong}`,
+boxShadow: DESIGN_TOKENS.shadows.card,
 cursor: 'pointer',
 display: 'flex',
 alignItems: 'center',
 justifyContent: 'center',
 padding: 0,
 transition: 'all 0.2s ease',
-color: '#fff',
+color: DESIGN_TOKENS.colors.textOnPrimary,
 }),
 } as any,
 routingProgress: {
@@ -1084,7 +1087,7 @@ position: 'absolute',
 top: 60,
 left: '10%',
 right: '10%',
-backgroundColor: 'rgba(100,100,255,0.9)',
+backgroundColor: DESIGN_TOKENS.colors.info,
 padding: 10,
 borderRadius: 8,
 zIndex: 1000,
@@ -1092,24 +1095,24 @@ flexDirection: 'row',
 alignItems: 'center',
 justifyContent: 'center',
 },
-routingProgressText: { color: '#fff', marginLeft: 8 },
+routingProgressText: { color: DESIGN_TOKENS.colors.textOnPrimary, marginLeft: 8 },
 routingError: {
 position: 'absolute',
 top: 20,
 left: '10%',
 right: '10%',
-backgroundColor: 'rgba(255,80,80,0.9)',
+backgroundColor: DESIGN_TOKENS.colors.danger,
 padding: 10,
 borderRadius: 8,
 zIndex: 1000,
 alignItems: 'center',
 },
-routingErrorText: { color: '#fff', fontWeight: '600' },
+routingErrorText: { color: DESIGN_TOKENS.colors.textOnPrimary, fontWeight: '600' },
 mobileRouteHint: {
 display: 'flex',
 gap: 10,
-backgroundColor: '#0c2b43',
-color: '#fff',
+backgroundColor: DESIGN_TOKENS.colors.infoDark,
+color: DESIGN_TOKENS.colors.textOnDark,
 position: 'absolute',
 left: 12,
 right: 12,
@@ -1122,8 +1125,8 @@ mobileRouteHintIcon: {
 width: 40,
 height: 40,
 borderRadius: 12,
-backgroundColor: 'rgba(255,255,255,0.12)',
-color: '#fff',
+backgroundColor: DESIGN_TOKENS.colors.overlayLight,
+color: DESIGN_TOKENS.colors.textOnDark,
 display: 'flex',
 alignItems: 'center',
 justifyContent: 'center',
@@ -1133,13 +1136,14 @@ fontWeight: '700',
 mobileRouteHintTitle: {
 fontSize: 14,
 fontWeight: '700',
-color: '#fff',
+color: DESIGN_TOKENS.colors.textOnDark,
 marginBottom: 2,
 },
 mobileRouteHintText: {
 fontSize: 14,
 fontWeight: '600',
 marginBottom: 4,
+color: DESIGN_TOKENS.colors.textOnDark,
 },
 });
 

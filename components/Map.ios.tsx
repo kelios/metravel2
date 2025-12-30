@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, Text, Image } from 'react-native';
 import MapView, { Callout, Marker, Region } from 'react-native-maps';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type Point = {
   id: number;
@@ -44,6 +45,7 @@ const getLatLng = (coord: string) => {
 
 const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) => {
   const travelAddress = useMemo(() => travel?.travelAddress?.data || [], [travel?.travelAddress]);
+  const themeColors = useThemedColors();
 
   const centerLat = propCoordinates?.latitude ?? 53.8828449;
   const centerLng = propCoordinates?.longitude ?? 27.7273595;
@@ -56,7 +58,7 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <MapView style={styles.map} initialRegion={initialRegion}>
         {travelAddress.map((point, index) => {
           if (!point?.coord) return null;
@@ -78,12 +80,12 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
                       resizeMode="cover"
                     />
                   ) : null}
-                  <Text style={styles.label}>Адрес места:</Text>
-                  <Text style={styles.value}>{point.address || 'Нет адреса'}</Text>
-                  <Text style={styles.label}>Координаты:</Text>
-                  <Text style={styles.value}>{point.coord}</Text>
-                  <Text style={styles.label}>Категория объекта:</Text>
-                  <Text style={styles.value}>{point.categoryName || 'Не указана'}</Text>
+                  <Text style={[styles.label, { color: themeColors.text }]}>Адрес места:</Text>
+                  <Text style={[styles.value, { color: themeColors.textMuted }]}>{point.address || 'Нет адреса'}</Text>
+                  <Text style={[styles.label, { color: themeColors.text }]}>Координаты:</Text>
+                  <Text style={[styles.value, { color: themeColors.textMuted }]}>{point.coord}</Text>
+                  <Text style={[styles.label, { color: themeColors.text }]}>Категория объекта:</Text>
+                  <Text style={[styles.value, { color: themeColors.textMuted }]}>{point.categoryName || 'Не указана'}</Text>
                 </View>
               </Callout>
             </Marker>
@@ -97,7 +99,6 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   map: {
     flex: 1,

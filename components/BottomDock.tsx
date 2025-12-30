@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     overflow: "hidden",
-    shadowColor: "#1f1f1f",
+    shadowColor: palette.text,
     shadowOpacity: 0.12,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: -6 },
@@ -233,6 +233,7 @@ const styles = StyleSheet.create({
       web: {
         maxHeight: 72,
         backdropFilter: "blur(14px)",
+        boxShadow: DESIGN_TOKENS.shadows.medium,
       } as any,
     }),
   },
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
   moreBackdrop: {
     position: "fixed",
     inset: 0,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: palette.overlay,
     zIndex: 999,
   },
   moreSheet: {
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     padding: 16,
     zIndex: 1000,
-    boxShadow: "0 -8px 24px rgba(0,0,0,0.12)",
+    boxShadow: DESIGN_TOKENS.shadows.modal,
   } as any,
   moreList: {
     gap: 12,

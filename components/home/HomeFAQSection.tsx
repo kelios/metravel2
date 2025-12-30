@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       web: {
-        boxShadow: '0 4px 18px rgba(31, 31, 31, 0.05)',
+        boxShadow: DESIGN_TOKENS.shadows.card,
       },
     }),
   },
@@ -170,4 +170,3 @@ const styles = StyleSheet.create({
 });
 
 export default memo(HomeFAQSection);
-

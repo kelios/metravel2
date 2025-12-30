@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, StyleSheet, Platform } from 'react-native';
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface NetworkStatusProps {
   showWhenOnline?: boolean; // Показывать ли индикатор когда сеть есть
@@ -50,7 +51,7 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
     ? 'Соединение восстановлено'
     : 'Нет подключения к интернету';
 
-  const backgroundColor = isConnected ? '#10b981' : '#ef4444';
+  const backgroundColor = isConnected ? DESIGN_TOKENS.colors.success : DESIGN_TOKENS.colors.danger;
 
   return (
     <Animated.View
@@ -87,10 +88,9 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   text: {
-    color: '#ffffff',
+    color: DESIGN_TOKENS.colors.textInverse,
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
   },
 });
-

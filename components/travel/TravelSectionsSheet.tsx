@@ -102,10 +102,10 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           ref={triggerRef}
           style={({ pressed }) => [styles.trigger, pressed && styles.triggerPressed]}
         >
-          <MaterialIcons name={"list" as any} size={18} color="#2f332e" />
+          <MaterialIcons name={"list" as any} size={18} color={DESIGN_TOKENS.colors.text} />
           <Text style={styles.triggerText}>Секции</Text>
           <View style={{ flex: 1 }} />
-          <MaterialIcons name={"expand-more" as any} size={20} color="#6b7280" />
+          <MaterialIcons name={"expand-more" as any} size={20} color={DESIGN_TOKENS.colors.textMuted} />
         </Pressable>
       </View>
 
@@ -138,7 +138,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
                 ref={closeRef}
                 style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
               >
-                <MaterialIcons name={"close" as any} size={20} color="#1f2937" />
+                <MaterialIcons name={"close" as any} size={20} color={DESIGN_TOKENS.colors.text} />
               </Pressable>
             </View>
 
@@ -167,7 +167,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
                         <MaterialIcons
                           name={icon as any}
                           size={18}
-                          color={isActive ? "#1f2937" : "#2f332e"}
+                          color={isActive ? DESIGN_TOKENS.colors.text : DESIGN_TOKENS.colors.textMuted}
                         />
                         <Text style={[styles.itemText, isActive && styles.itemTextActive]} numberOfLines={1}>
                           {label}
@@ -204,10 +204,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 14,
-    backgroundColor: "#fff",
-    borderWidth: 0.5,
-    borderColor: "rgba(0, 0, 0, 0.08)",
-    shadowColor: "#000",
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.border,
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.02,
     shadowRadius: 4,
@@ -220,16 +220,16 @@ const styles = StyleSheet.create({
   triggerText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#2f332e",
+    color: DESIGN_TOKENS.colors.text,
   },
 
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.28)",
+    backgroundColor: DESIGN_TOKENS.colors.overlay,
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: "#fff",
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 12,
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#1f2937",
+    color: DESIGN_TOKENS.colors.text,
   },
   closeBtn: {
     padding: 8,
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.06)",
+    backgroundColor: DESIGN_TOKENS.colors.borderLight,
     marginVertical: 8,
   },
   item: {
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   itemActive: {
-    backgroundColor: "rgba(0, 0, 0, 0.06)",
+    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
   },
   itemPressed: {
     opacity: 0.92,
@@ -287,22 +287,22 @@ const styles = StyleSheet.create({
   itemText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#2f332e",
+    color: DESIGN_TOKENS.colors.text,
     flex: 1,
   },
   itemTextActive: {
-    color: "#1f2937",
+    color: DESIGN_TOKENS.colors.text,
     fontWeight: "700",
   },
   metaPill: {
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
   },
   metaText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#4b5563",
+    color: DESIGN_TOKENS.colors.textMuted,
   },
 })

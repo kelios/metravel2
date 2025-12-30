@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Platform.select({
       web: {
-        backgroundImage: 'linear-gradient(135deg, rgba(93, 140, 124, 0.10) 0%, rgba(93, 140, 124, 0.06) 100%)',
+        backgroundImage: `linear-gradient(135deg, ${DESIGN_TOKENS.colors.primarySoft} 0%, ${DESIGN_TOKENS.colors.primaryLight} 100%)`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: '100% 100%',
       },
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     minWidth: 300,
     ...Platform.select({
       web: {
-        boxShadow: '0 10px 26px rgba(93, 140, 124, 0.28)',
+        boxShadow: DESIGN_TOKENS.shadows.medium,
         transition: 'all 0.2s ease',
       },
     }),
@@ -133,13 +133,13 @@ const styles = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.primaryDark,
     ...Platform.select({
       web: {
-        boxShadow: '0 14px 34px rgba(93, 140, 124, 0.35)',
+        boxShadow: DESIGN_TOKENS.shadows.heavy,
         transform: 'translateY(-2px)',
       },
     }),
   },
   buttonText: {
-    color: '#111827',
+    color: DESIGN_TOKENS.colors.textOnPrimary,
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 0.2,

@@ -183,7 +183,7 @@ export default function FavoriteButton({
             <MaterialIcons
                 name={isFav ? 'favorite' : 'favorite-border'}
                 size={size}
-                color={color || (isFav ? '#ef4444' : '#6b7280')}
+                color={color || (isFav ? DESIGN_TOKENS.colors.danger : DESIGN_TOKENS.colors.textMuted)}
             />
         </ButtonComponent>
     );
@@ -209,4 +209,3 @@ const styles = StyleSheet.create({
         }),
     },
 });
-

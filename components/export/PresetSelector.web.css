@@ -8,7 +8,7 @@
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 #f1f5f9;
+  scrollbar-color: var(--color-borderStrong) var(--color-backgroundSecondary);
   padding: 8px 0;
 }
 
@@ -17,18 +17,18 @@
 }
 
 .presets-scroll-container::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--color-backgroundSecondary);
   border-radius: 4px;
   margin: 0 16px;
 }
 
 .presets-scroll-container::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--color-borderStrong);
   border-radius: 4px;
 }
 
 .presets-scroll-container::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--color-borderAccent);
 }
 
 /* Контейнер для карточек */
@@ -69,20 +69,20 @@
   transform: translateY(-50%);
   width: 32px;
   height: 32px;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--color-surfaceMuted);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-light);
   cursor: pointer;
   z-index: 10;
   transition: all 0.2s;
 }
 
 .scroll-indicator:hover {
-  background: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-medium);
 }
 
 .scroll-indicator-left {

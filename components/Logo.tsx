@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { router } from 'expo-router';
 import { useResponsive } from '@/hooks/useResponsive';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 export default React.memo(function Logo({ variant: _variant = 'default' }: any) {
     const { isPhone, isLargePhone } = useResponsive();
@@ -43,12 +44,12 @@ const styles = StyleSheet.create({
         height: 26,
     },
     logoTextMe: { 
-        color: '#ff9f5a',
+        color: DESIGN_TOKENS.colors.primary,
         fontSize: 18,
         fontWeight: '600',
     },
     logoTextTravel: { 
-        color: '#25a562',
+        color: DESIGN_TOKENS.colors.success,
         fontSize: 18,
         fontWeight: '600',
     },
@@ -58,4 +59,3 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
 });
-

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface MapLegendProps {
   showRouteMode?: boolean;
@@ -14,25 +15,29 @@ export default function MapLegend({ showRouteMode = false }: MapLegendProps) {
   const legendItems = [
     {
       icon: 'map-pin',
-      color: '#ff9f5a',
+      color: DESIGN_TOKENS.colors.warning,
+      background: DESIGN_TOKENS.colors.warningLight,
       label: 'Путешествия',
       description: 'Места для посещения',
     },
     {
       icon: 'map-pin',
-      color: '#25a562',
+      color: DESIGN_TOKENS.colors.success,
+      background: DESIGN_TOKENS.colors.successLight,
       label: 'Старт',
       description: 'Начало маршрута',
     },
     {
       icon: 'map-pin',
-      color: '#d94b4b',
+      color: DESIGN_TOKENS.colors.danger,
+      background: DESIGN_TOKENS.colors.dangerLight,
       label: 'Финиш',
       description: 'Конец маршрута',
     },
     {
       icon: 'navigation',
-      color: '#2b6cb0',
+      color: DESIGN_TOKENS.colors.info,
+      background: DESIGN_TOKENS.colors.infoLight,
       label: 'Ваше местоположение',
       description: 'Текущая позиция',
     },
@@ -42,7 +47,8 @@ export default function MapLegend({ showRouteMode = false }: MapLegendProps) {
     legendItems.push({
       // Feather не имеет иконки "route" — используем "trending-up" как аналог направления
       icon: 'trending-up',
-      color: '#ff9800',
+      color: DESIGN_TOKENS.colors.accent,
+      background: DESIGN_TOKENS.colors.accentLight,
       label: 'Маршрут',
       description: 'Построенный путь',
     });
@@ -51,13 +57,13 @@ export default function MapLegend({ showRouteMode = false }: MapLegendProps) {
   return (
     <View style={[styles.container, isMobile && styles.containerMobile]}>
       <View style={styles.header}>
-        <Feather name="info" size={16} color="#667085" />
+        <Feather name="info" size={16} color={DESIGN_TOKENS.colors.textMuted} />
         <Text style={styles.title}>Легенда карты</Text>
       </View>
       <View style={styles.items}>
         {legendItems.map((item, index) => (
           <View key={index} style={styles.item}>
-            <View style={[styles.iconContainer, { backgroundColor: `${item.color}20` }]}>
+            <View style={[styles.iconContainer, { backgroundColor: item.background }]}>
               <Feather name={item.icon as any} size={14} color={item.color} />
             </View>
             <View style={styles.textContainer}>
@@ -75,12 +81,12 @@ export default function MapLegend({ showRouteMode = false }: MapLegendProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: DESIGN_TOKENS.colors.border,
   },
   containerMobile: {
     padding: 10,
@@ -92,12 +98,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingBottom: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: DESIGN_TOKENS.colors.border,
   },
   title: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1b1f23',
+    color: DESIGN_TOKENS.colors.text,
   },
   items: {
     gap: 8,
@@ -120,11 +126,11 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#1b1f23',
+    color: DESIGN_TOKENS.colors.text,
   },
   description: {
     fontSize: 11,
-    color: '#667085',
+    color: DESIGN_TOKENS.colors.textMuted,
     marginTop: 2,
   },
 });

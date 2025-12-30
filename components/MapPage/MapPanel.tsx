@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, Platform, Text, ActivityIndicator } from 'react-native';
 import { useLazyMap } from '@/hooks/useLazyMap';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type LatLng = { latitude: number; longitude: number };
 
@@ -20,10 +21,11 @@ interface MapPanelProps {
 
 /** Плейсхолдер для нативных платформ или во время загрузки карты */
 function Placeholder({ text = 'Карта доступна только в браузере' }: { text?: string }) {
+    const themeColors = useThemedColors();
     return (
-        <View style={styles.placeholder}>
-            <ActivityIndicator size="large" />
-            <Text style={styles.placeholderText}>{text}</Text>
+        <View style={[styles.placeholder, { backgroundColor: themeColors.surface }]}>
+            <ActivityIndicator size="large" color={themeColors.primary} />
+            <Text style={[styles.placeholderText, { color: themeColors.textMuted }]}>{text}</Text>
         </View>
     );
 }
@@ -42,6 +44,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                radius,
                                            }) => {
     const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
+    const themeColors = useThemedColors();
 
     // ✅ УЛУЧШЕНИЕ: Ленивая загрузка карты с Intersection Observer
     const { shouldLoad, setElementRef } = useLazyMap({
@@ -81,7 +84,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
     if (!shouldLoad) {
         return (
             <View 
-                style={styles.mapContainer}
+                style={[styles.mapContainer, { backgroundColor: themeColors.surface }]}
                 ref={setElementRef as any}
             >
                 <Placeholder text="Карта загрузится при прокрутке…" />
@@ -95,7 +98,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
 
     return (
         <View 
-            style={styles.mapContainer}
+            style={[styles.mapContainer, { backgroundColor: themeColors.surface }]}
             ref={setElementRef as any}
         >
             <WebMap
@@ -130,7 +133,6 @@ const styles = StyleSheet.create({
             : null),
         borderRadius: 16,
         overflow: 'hidden',
-        backgroundColor: '#fff',
     },
     placeholder: {
         flex: 1,
@@ -139,11 +141,9 @@ const styles = StyleSheet.create({
         gap: 12,
         padding: 24,
         borderRadius: 16,
-        backgroundColor: '#fff',
     },
     placeholderText: {
         fontSize: 16,
-        color: '#666',
         textAlign: 'center',
     },
 });

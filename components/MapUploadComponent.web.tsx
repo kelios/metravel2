@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { useDropzone } from 'react-dropzone';
 import { uploadImage } from "@/src/api/misc";
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 // Условный импорт для DocumentPicker, только если платформа не является вебом
 let DocumentPicker: any;
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
         width: 300,
         height: 200,
         borderWidth: 2,
-        backgroundColor: '#4b7c6f',
+        backgroundColor: DESIGN_TOKENS.colors.primary,
         borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
@@ -142,42 +143,38 @@ const styles = StyleSheet.create({
         ...(Platform.select({
             web: {
                 display: 'flex',
-                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                boxShadow: DESIGN_TOKENS.shadows.medium,
                 transition: 'background-color 0.3s ease',
             },
             default: {},
         }) as any),
     },
     fileName: {
-        color: '#fff',
+        color: DESIGN_TOKENS.colors.textOnPrimary,
         fontSize: 16,
         textAlign: 'center',
         marginVertical: 20,
     },
     placeholderText: {
-        color: '#fff',
+        color: DESIGN_TOKENS.colors.textOnPrimary,
         fontSize: 16,
         textAlign: 'center',
         marginTop: 20,
     },
     buttonText: {
-        color: '#fff',
+        color: DESIGN_TOKENS.colors.textOnPrimary,
         fontSize: 16,
         textAlign: 'center',
     },
     uploadButton: {
-        backgroundColor: '#4b7c6f',
+        backgroundColor: DESIGN_TOKENS.colors.primary,
         paddingVertical: 15,
         paddingHorizontal: 30,
         borderRadius: 25,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 5,
+        ...DESIGN_TOKENS.shadowsNative.medium,
     },
     uploadMessage: {
-        color: '#4b7c6f',
+        color: DESIGN_TOKENS.colors.primary,
         fontSize: 14,
         textAlign: 'center',
         marginTop: 10,

@@ -2,6 +2,8 @@ import React, { useCallback, useMemo } from 'react';
 import { View, FlatList, StyleSheet, ActivityIndicator, Platform, RefreshControl } from 'react-native';
 import { Text } from 'react-native-paper';
 import AddressListItem from './AddressListItem';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type Props = {
   travelsData: any[];
@@ -26,12 +28,13 @@ const TravelListPanel: React.FC<Props> = ({
                                             onHideTravel,
 
                                             isMobile = false,
-                                            isLoading = false,
-                                            hasMore = false,
-                                            onLoadMore,
-                                            onRefresh,
-                                            isRefreshing = false,
+                                          isLoading = false,
+                                          hasMore = false,
+                                          onLoadMore,
+                                          onRefresh,
+                                          isRefreshing = false,
                                           }) => {
+  const themeColors = useThemedColors();
   const renderItem = useCallback(({ item }: any) => {
     return (
       <AddressListItem
@@ -52,7 +55,7 @@ const TravelListPanel: React.FC<Props> = ({
     if (isLoading) {
       return (
         <View style={styles.loader}>
-          <ActivityIndicator size="small" />
+          <ActivityIndicator size="small" color={themeColors.primary} />
         </View>
       );
     }
@@ -82,8 +85,8 @@ const TravelListPanel: React.FC<Props> = ({
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            tintColor="#6b8e7f"
-            colors={['#6b8e7f']}
+            tintColor={themeColors.primary}
+            colors={[themeColors.primary]}
           />
         ) : undefined
       }
@@ -96,5 +99,5 @@ export default React.memo(TravelListPanel);
 const styles = StyleSheet.create({
   list: { paddingBottom: 8 },
   loader: { paddingVertical: 16, alignItems: 'center' },
-  endText: { textAlign: 'center', color: '#777', paddingVertical: 16, fontSize: 12 },
+  endText: { textAlign: 'center', color: DESIGN_TOKENS.colors.textMuted, paddingVertical: 16, fontSize: 12 },
 });

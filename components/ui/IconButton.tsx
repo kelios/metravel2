@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: spacing.xs / 2,
-    shadowColor: '#1f1f1f',
+    shadowColor: palette.text,
     shadowOpacity: 0.08,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
@@ -72,6 +72,7 @@ const styles = StyleSheet.create({
       web: {
         transition: 'all 0.2s ease',
         cursor: 'pointer',
+        boxShadow: DESIGN_TOKENS.shadows.light,
         // @ts-ignore
         ':hover': {
           backgroundColor: palette.primarySoft,
@@ -93,4 +94,3 @@ const styles = StyleSheet.create({
 });
 
 export default memo(IconButton);
-

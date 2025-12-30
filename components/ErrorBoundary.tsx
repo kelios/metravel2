@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     minWidth: 200,
     minHeight: 44,
-    shadowColor: '#1f1f1f',
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
@@ -117,18 +117,18 @@ const styles = StyleSheet.create({
       web: {
         cursor: 'pointer',
         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: '0 2px 6px rgba(31, 31, 31, 0.06)',
+        boxShadow: DESIGN_TOKENS.shadows.light,
         // @ts-ignore
         ':hover': {
           backgroundColor: DESIGN_TOKENS.colors.primaryDark,
           transform: 'translateY(-1px)',
-          boxShadow: '0 3px 8px rgba(31, 31, 31, 0.12)',
+          boxShadow: DESIGN_TOKENS.shadows.medium,
         },
       },
     }),
   },
   buttonText: {
-    color: DESIGN_TOKENS.colors.textInverse,
+    color: DESIGN_TOKENS.colors.textOnPrimary,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
@@ -151,4 +151,3 @@ const styles = StyleSheet.create({
     color: DESIGN_TOKENS.colors.primary,
   },
 });
-

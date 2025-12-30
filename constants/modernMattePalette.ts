@@ -33,6 +33,8 @@ export const MODERN_MATTE_PALETTE = {
   textTertiary: '#8a8a8a', // Светлый серый для подписей
   textMuted: '#ababab', // Очень светлый серый для деталей
   textInverse: '#ffffff', // Белый текст на темных фонах
+  textOnPrimary: '#111827', // Темный текст для акцентных фонов
+  textOnDark: '#ffffff', // Светлый текст для медиа/оверлеев
   
   // ==========================================
   // АКЦЕНТНЫЕ ЦВЕТА (мягкие, матовые, более живые)
@@ -167,4 +169,3 @@ export const MODERN_MATTE_GRADIENTS = {
   surface: 'linear-gradient(180deg, #ffffff 0%, #faf9f7 100%)',
   overlay: 'linear-gradient(180deg, rgba(250, 249, 247, 0.95) 0%, rgba(250, 249, 247, 0.85) 100%)',
 } as const;
-

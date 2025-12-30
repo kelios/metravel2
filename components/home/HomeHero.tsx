@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         flex: 1,
-        boxShadow: '0 4px 14px rgba(93, 140, 124, 0.25)',
+        boxShadow: DESIGN_TOKENS.shadows.medium,
         transition: 'all 0.2s ease',
       },
     }),
@@ -181,13 +181,13 @@ const styles = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.primaryDark,
     ...Platform.select({
       web: {
-        boxShadow: '0 6px 20px rgba(93, 140, 124, 0.35)',
+        boxShadow: DESIGN_TOKENS.shadows.heavy,
         transform: 'translateY(-2px)',
       },
     }),
   },
   primaryButtonText: {
-    color: '#111827',
+    color: DESIGN_TOKENS.colors.textOnPrimary,
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: 0.1,
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     borderRadius: DESIGN_TOKENS.radii.lg,
     ...Platform.select({
       web: {
-        boxShadow: '0 20px 60px rgba(31, 31, 31, 0.15), 0 8px 24px rgba(31, 31, 31, 0.1)',
+        boxShadow: DESIGN_TOKENS.shadows.modal,
         transition: 'transform 0.3s ease, box-shadow 0.3s ease',
       },
     }),

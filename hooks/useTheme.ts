@@ -121,26 +121,28 @@ export function useThemedColors() {
 
   return {
     // Primary
-    primary: isDark ? '#60A5FA' : '#0066CC',
-    primaryDark: isDark ? '#3B82F6' : '#0052A3',
-    primaryLight: isDark ? '#93C5FD' : '#E6F2FF',
+    primary: isDark ? '#60A5FA' : '#7A9D8F',
+    primaryDark: isDark ? '#3B82F6' : '#6A8D7F',
+    primaryLight: isDark ? 'rgba(96, 165, 250, 0.18)' : '#F0F5F3',
 
     // Text
-    text: isDark ? '#F5F7FA' : '#1A1A1A',
-    textMuted: isDark ? '#9CA3AF' : '#4A4A4A',
-    textInverse: isDark ? '#1A1A1A' : '#FFFFFF',
+    text: isDark ? '#F8FAFC' : '#3A3A3A',
+    textMuted: isDark ? '#CBD5E1' : '#6A6A6A',
+    textInverse: isDark ? '#0F172A' : '#FFFFFF',
+    textOnPrimary: isDark ? '#0F172A' : '#111827',
+    textOnDark: isDark ? '#F8FAFC' : '#FFFFFF',
 
     // Background
-    background: isDark ? '#0F172A' : '#FFFFFF',
-    surface: isDark ? '#1E293B' : '#FFFFFF',
-    surfaceLight: isDark ? '#334155' : '#F5F7FA',
-    border: isDark ? '#475569' : '#E5E7EB',
+    background: isDark ? '#0F172A' : '#FDFCFB',
+    surface: isDark ? '#111827' : '#FFFFFF',
+    surfaceLight: isDark ? '#1F2937' : '#F5F4F2',
+    border: isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(58, 58, 58, 0.06)',
 
     // Status
-    success: isDark ? '#4ADE80' : '#059669',
-    error: isDark ? '#F87171' : '#DC2626',
-    warning: isDark ? '#FBBF24' : '#D97706',
-    info: isDark ? '#38BDF8' : '#0284C7',
+    success: isDark ? '#4ADE80' : '#7A9D8A',
+    error: isDark ? '#F87171' : '#B89090',
+    warning: isDark ? '#FBBF24' : '#B5A88A',
+    info: isDark ? '#38BDF8' : '#8A9DB0',
   };
 }
 

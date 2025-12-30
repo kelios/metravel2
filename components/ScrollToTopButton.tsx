@@ -112,7 +112,7 @@ export default function ScrollToTopButton({
         })}
         testID="scroll-to-top-button"
       >
-        <Feather name="arrow-up" size={20} color="#fff" />
+        <Feather name="arrow-up" size={20} color={DESIGN_TOKENS.colors.textOnPrimary} />
       </Pressable>
     </Animated.View>
   );
@@ -140,15 +140,12 @@ const styles = StyleSheet.create({
         transition: 'all 0.2s ease',
         // @ts-ignore
         ':hover': {
-          backgroundColor: '#3a7a7a', // Темнее primary для hover
+          backgroundColor: DESIGN_TOKENS.colors.primaryDark, // Темнее primary для hover
           transform: 'translateY(-2px) scale(1.05)',
         },
       },
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        ...DESIGN_TOKENS.shadowsNative.medium,
       },
       android: {
         elevation: 4,
@@ -156,4 +153,3 @@ const styles = StyleSheet.create({
     }),
   },
 });
-

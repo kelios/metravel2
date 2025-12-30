@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Platform.select({
       web: {
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        boxShadow: DESIGN_TOKENS.shadows.medium,
         transition: 'all 0.2s ease',
         cursor: 'pointer',
         // @ts-ignore
@@ -127,9 +127,8 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.05 }],
   },
   linkText: {
-    color: '#fff',
+    color: palette.textOnPrimary,
     fontSize: 14,
     fontWeight: '600',
   },
 });
-

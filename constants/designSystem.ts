@@ -1,80 +1,89 @@
+import { Platform } from 'react-native';
 import { MODERN_MATTE_PALETTE, MODERN_MATTE_SHADOWS, MODERN_MATTE_BOX_SHADOWS } from './modernMattePalette';
+
+const colorVar = (name: string, fallback: string) =>
+  Platform.OS === 'web' ? `var(--color-${name}, ${fallback})` : fallback;
+
+const shadowVar = (name: string, fallback: string) =>
+  Platform.OS === 'web' ? `var(--shadow-${name}, ${fallback})` : fallback;
 
 export const DESIGN_TOKENS = {
   colors: {
-    transparent: MODERN_MATTE_PALETTE.transparent,
+    transparent: colorVar('transparent', MODERN_MATTE_PALETTE.transparent),
     // Фоны (матовые, теплые)
-    background: MODERN_MATTE_PALETTE.background,
-    backgroundSecondary: MODERN_MATTE_PALETTE.backgroundSecondary,
-    backgroundTertiary: MODERN_MATTE_PALETTE.backgroundTertiary,
-    surface: MODERN_MATTE_PALETTE.surface,
-    surfaceMuted: MODERN_MATTE_PALETTE.surfaceMuted,
-    surfaceElevated: MODERN_MATTE_PALETTE.surfaceElevated,
-    card: MODERN_MATTE_PALETTE.surface,
-    cardMuted: MODERN_MATTE_PALETTE.backgroundSecondary,
-    dockBackground: MODERN_MATTE_PALETTE.surfaceElevated,
-    dockBorder: MODERN_MATTE_PALETTE.border,
+    background: colorVar('background', MODERN_MATTE_PALETTE.background),
+    backgroundSecondary: colorVar('backgroundSecondary', MODERN_MATTE_PALETTE.backgroundSecondary),
+    backgroundTertiary: colorVar('backgroundTertiary', MODERN_MATTE_PALETTE.backgroundTertiary),
+    surface: colorVar('surface', MODERN_MATTE_PALETTE.surface),
+    surfaceMuted: colorVar('surfaceMuted', MODERN_MATTE_PALETTE.surfaceMuted),
+    surfaceElevated: colorVar('surfaceElevated', MODERN_MATTE_PALETTE.surfaceElevated),
+    card: colorVar('card', MODERN_MATTE_PALETTE.surface),
+    cardMuted: colorVar('cardMuted', MODERN_MATTE_PALETTE.backgroundSecondary),
+    dockBackground: colorVar('dockBackground', MODERN_MATTE_PALETTE.surfaceElevated),
+    dockBorder: colorVar('dockBorder', MODERN_MATTE_PALETTE.border),
     
     // Текст (высококонтрастный, но мягкий)
-    text: MODERN_MATTE_PALETTE.text,
-    textMuted: MODERN_MATTE_PALETTE.textSecondary,
-    textSubtle: MODERN_MATTE_PALETTE.textTertiary,
-    textInverse: MODERN_MATTE_PALETTE.textInverse,
+    text: colorVar('text', MODERN_MATTE_PALETTE.text),
+    textMuted: colorVar('textMuted', MODERN_MATTE_PALETTE.textSecondary),
+    textSubtle: colorVar('textSubtle', MODERN_MATTE_PALETTE.textTertiary),
+    textInverse: colorVar('textInverse', MODERN_MATTE_PALETTE.textInverse),
+    textOnPrimary: colorVar('textOnPrimary', MODERN_MATTE_PALETTE.textOnPrimary),
+    textOnDark: colorVar('textOnDark', MODERN_MATTE_PALETTE.textOnDark),
     
     // Акцентные цвета (мягкие, матовые)
-    primary: MODERN_MATTE_PALETTE.primary,
-    primaryDark: MODERN_MATTE_PALETTE.primaryDark,
-    primaryLight: MODERN_MATTE_PALETTE.primaryLight,
-    primarySoft: MODERN_MATTE_PALETTE.primarySoft,
+    primary: colorVar('primary', MODERN_MATTE_PALETTE.primary),
+    primaryDark: colorVar('primaryDark', MODERN_MATTE_PALETTE.primaryDark),
+    primaryLight: colorVar('primaryLight', MODERN_MATTE_PALETTE.primaryLight),
+    primarySoft: colorVar('primarySoft', MODERN_MATTE_PALETTE.primarySoft),
     
-    accent: MODERN_MATTE_PALETTE.accent,
-    accentDark: MODERN_MATTE_PALETTE.accentDark,
-    accentLight: MODERN_MATTE_PALETTE.accentLight,
-    accentSoft: MODERN_MATTE_PALETTE.accentSoft,
+    accent: colorVar('accent', MODERN_MATTE_PALETTE.accent),
+    accentDark: colorVar('accentDark', MODERN_MATTE_PALETTE.accentDark),
+    accentLight: colorVar('accentLight', MODERN_MATTE_PALETTE.accentLight),
+    accentSoft: colorVar('accentSoft', MODERN_MATTE_PALETTE.accentSoft),
     
     // Функциональные цвета (мягкие, не агрессивные)
-    success: MODERN_MATTE_PALETTE.success,
-    successDark: MODERN_MATTE_PALETTE.successDark,
-    successLight: MODERN_MATTE_PALETTE.successLight,
-    successSoft: MODERN_MATTE_PALETTE.successSoft,
+    success: colorVar('success', MODERN_MATTE_PALETTE.success),
+    successDark: colorVar('successDark', MODERN_MATTE_PALETTE.successDark),
+    successLight: colorVar('successLight', MODERN_MATTE_PALETTE.successLight),
+    successSoft: colorVar('successSoft', MODERN_MATTE_PALETTE.successSoft),
     
-    warning: MODERN_MATTE_PALETTE.warning,
-    warningDark: MODERN_MATTE_PALETTE.warningDark,
-    warningLight: MODERN_MATTE_PALETTE.warningLight,
-    warningSoft: MODERN_MATTE_PALETTE.warningSoft,
+    warning: colorVar('warning', MODERN_MATTE_PALETTE.warning),
+    warningDark: colorVar('warningDark', MODERN_MATTE_PALETTE.warningDark),
+    warningLight: colorVar('warningLight', MODERN_MATTE_PALETTE.warningLight),
+    warningSoft: colorVar('warningSoft', MODERN_MATTE_PALETTE.warningSoft),
     
-    danger: MODERN_MATTE_PALETTE.danger,
-    dangerDark: MODERN_MATTE_PALETTE.dangerDark,
-    dangerLight: MODERN_MATTE_PALETTE.dangerLight,
-    dangerSoft: MODERN_MATTE_PALETTE.dangerSoft,
-    error: MODERN_MATTE_PALETTE.danger,
-    errorDark: MODERN_MATTE_PALETTE.dangerDark,
-    errorLight: MODERN_MATTE_PALETTE.dangerLight,
-    errorSoft: MODERN_MATTE_PALETTE.dangerSoft,
+    danger: colorVar('danger', MODERN_MATTE_PALETTE.danger),
+    dangerDark: colorVar('dangerDark', MODERN_MATTE_PALETTE.dangerDark),
+    dangerLight: colorVar('dangerLight', MODERN_MATTE_PALETTE.dangerLight),
+    dangerSoft: colorVar('dangerSoft', MODERN_MATTE_PALETTE.dangerSoft),
+    error: colorVar('error', MODERN_MATTE_PALETTE.danger),
+    errorDark: colorVar('errorDark', MODERN_MATTE_PALETTE.dangerDark),
+    errorLight: colorVar('errorLight', MODERN_MATTE_PALETTE.dangerLight),
+    errorSoft: colorVar('errorSoft', MODERN_MATTE_PALETTE.dangerSoft),
     
-    info: MODERN_MATTE_PALETTE.info,
-    infoDark: MODERN_MATTE_PALETTE.infoDark,
-    infoLight: MODERN_MATTE_PALETTE.infoLight,
-    infoSoft: MODERN_MATTE_PALETTE.infoSoft,
+    info: colorVar('info', MODERN_MATTE_PALETTE.info),
+    infoDark: colorVar('infoDark', MODERN_MATTE_PALETTE.infoDark),
+    infoLight: colorVar('infoLight', MODERN_MATTE_PALETTE.infoLight),
+    infoSoft: colorVar('infoSoft', MODERN_MATTE_PALETTE.infoSoft),
     
     // Границы (мягкие, матовые)
-    border: MODERN_MATTE_PALETTE.border,
-    borderLight: MODERN_MATTE_PALETTE.borderLight,
-    borderStrong: MODERN_MATTE_PALETTE.borderStrong,
-    borderAccent: MODERN_MATTE_PALETTE.borderAccent,
+    border: colorVar('border', MODERN_MATTE_PALETTE.border),
+    borderLight: colorVar('borderLight', MODERN_MATTE_PALETTE.borderLight),
+    borderStrong: colorVar('borderStrong', MODERN_MATTE_PALETTE.borderStrong),
+    borderAccent: colorVar('borderAccent', MODERN_MATTE_PALETTE.borderAccent),
     
     // Focus и интерактивность
-    focus: MODERN_MATTE_PALETTE.focus,
-    focusStrong: MODERN_MATTE_PALETTE.focusStrong,
+    focus: colorVar('focus', MODERN_MATTE_PALETTE.focus),
+    focusStrong: colorVar('focusStrong', MODERN_MATTE_PALETTE.focusStrong),
     
     // Состояния
-    mutedBackground: MODERN_MATTE_PALETTE.mutedBackground,
-    disabled: MODERN_MATTE_PALETTE.disabled,
-    disabledText: MODERN_MATTE_PALETTE.disabledText,
+    mutedBackground: colorVar('mutedBackground', MODERN_MATTE_PALETTE.mutedBackground),
+    disabled: colorVar('disabled', MODERN_MATTE_PALETTE.disabled),
+    disabledText: colorVar('disabledText', MODERN_MATTE_PALETTE.disabledText),
     
     // Overlay
-    overlay: MODERN_MATTE_PALETTE.overlay,
-    overlayLight: MODERN_MATTE_PALETTE.overlayLight,
+    overlay: colorVar('overlay', MODERN_MATTE_PALETTE.overlay),
+    overlayLight: colorVar('overlayLight', MODERN_MATTE_PALETTE.overlayLight),
   },
   radii: {
     xl: 28,
@@ -85,14 +94,14 @@ export const DESIGN_TOKENS = {
     full: 9999,
   },
   shadows: {
-    light: MODERN_MATTE_BOX_SHADOWS.light,
-    medium: MODERN_MATTE_BOX_SHADOWS.medium,
-    heavy: MODERN_MATTE_BOX_SHADOWS.heavy,
-    hover: MODERN_MATTE_BOX_SHADOWS.hover,
-    card: MODERN_MATTE_BOX_SHADOWS.card,
-    modal: MODERN_MATTE_BOX_SHADOWS.modal,
+    light: shadowVar('light', MODERN_MATTE_BOX_SHADOWS.light),
+    medium: shadowVar('medium', MODERN_MATTE_BOX_SHADOWS.medium),
+    heavy: shadowVar('heavy', MODERN_MATTE_BOX_SHADOWS.heavy),
+    hover: shadowVar('hover', MODERN_MATTE_BOX_SHADOWS.hover),
+    card: shadowVar('card', MODERN_MATTE_BOX_SHADOWS.card),
+    modal: shadowVar('modal', MODERN_MATTE_BOX_SHADOWS.modal),
     // Для обратной совместимости
-    soft: MODERN_MATTE_BOX_SHADOWS.light,
+    soft: shadowVar('soft', MODERN_MATTE_BOX_SHADOWS.light),
   },
   shadowsNative: MODERN_MATTE_SHADOWS,
   spacing: {
@@ -154,5 +163,3 @@ export const DESIGN_TOKENS = {
     minWidth: 44,
   },
 };
-
-

@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 export type PdfThemeName = 
   | 'minimal' 
@@ -12,7 +13,10 @@ export type PdfThemeName =
   | 'classic' 
   | 'modern' 
   | 'romantic' 
-  | 'adventure';
+  | 'adventure'
+  | 'black-white'
+  | 'sepia'
+  | 'newspaper';
 
 interface ThemeInfo {
   id: PdfThemeName;
@@ -160,6 +164,54 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
       style: 'playful',
     },
   },
+  'black-white': {
+    id: 'black-white',
+    name: '🖤 Ч/Б Газета',
+    description: 'Классическая монохромная печать',
+    colors: {
+      primary: '#000000',
+      secondary: '#4a4a4a',
+      accent: '#000000',
+      background: '#ffffff',
+    },
+    preview: {
+      headerFont: 'Libre Franklin',
+      bodyFont: 'PT Serif',
+      style: 'classic',
+    },
+  },
+  sepia: {
+    id: 'sepia',
+    name: '📜 Сепия',
+    description: 'Винтажная газета 1920-х',
+    colors: {
+      primary: '#3e2723',
+      secondary: '#6d4c41',
+      accent: '#8d6e63',
+      background: '#f5f1e8',
+    },
+    preview: {
+      headerFont: 'Libre Franklin',
+      bodyFont: 'PT Serif',
+      style: 'classic',
+    },
+  },
+  newspaper: {
+    id: 'newspaper',
+    name: '📰 Газета',
+    description: 'Яркая современная газетная верстка',
+    colors: {
+      primary: '#1a1a1a',
+      secondary: '#4a4a4a',
+      accent: '#d32f2f',
+      background: '#fafaf7',
+    },
+    preview: {
+      headerFont: 'Libre Franklin',
+      bodyFont: 'PT Serif',
+      style: 'modern',
+    },
+  },
 };
 
 interface ThemePreviewProps {
@@ -282,7 +334,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: DESIGN_TOKENS.colors.text,
     marginBottom: 16,
     paddingHorizontal: 16,
   },
@@ -300,12 +352,12 @@ const styles = StyleSheet.create({
     marginHorizontal: '1%',
     marginBottom: 16,
     minHeight: 240,
-    backgroundColor: '#ffffff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#e5e7eb',
+    borderColor: DESIGN_TOKENS.colors.border,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -316,9 +368,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
   },
   themeCardSelected: {
-    borderColor: '#2563eb',
+    borderColor: DESIGN_TOKENS.colors.primary,
     borderWidth: 3,
-    shadowColor: '#2563eb',
+    shadowColor: DESIGN_TOKENS.colors.primary,
     shadowOpacity: 0.3,
     shadowRadius: 8,
   },
@@ -326,7 +378,7 @@ const styles = StyleSheet.create({
     height: 140,
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: DESIGN_TOKENS.colors.border,
   },
   thumbnailContent: {
     flex: 1,
@@ -360,12 +412,12 @@ const styles = StyleSheet.create({
   themeName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: DESIGN_TOKENS.colors.text,
     marginBottom: 4,
   },
   themeDescription: {
     fontSize: 12,
-    color: '#6b7280',
+    color: DESIGN_TOKENS.colors.textMuted,
     marginBottom: 8,
   },
   colorPalette: {
@@ -378,11 +430,11 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: DESIGN_TOKENS.colors.border,
   },
   fontInfo: {
     fontSize: 10,
-    color: '#9ca3af',
+    color: DESIGN_TOKENS.colors.textSubtle,
     fontStyle: 'italic',
   },
   selectedBadge: {
@@ -392,17 +444,17 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#2563eb',
+    backgroundColor: DESIGN_TOKENS.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
   },
   selectedBadgeText: {
-    color: '#ffffff',
+    color: DESIGN_TOKENS.colors.textOnPrimary,
     fontSize: 16,
     fontWeight: 'bold',
   },

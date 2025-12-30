@@ -9,6 +9,7 @@ import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ResponsiveContainer } from '@/components/layout';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { useTheme, useThemedColors } from '@/hooks/useTheme';
 
 type TravelLikeItem = {
   id: string | number;
@@ -81,7 +82,17 @@ function HorizontalCards({
   onPressItem: (url: string) => void;
   testID: string;
 }) {
+  const { isDark } = useTheme();
+  const themedColors = useThemedColors();
   const scrollRef = useRef<any>(null);
+  const historyBadge =
+    badge?.icon === 'history'
+      ? {
+          icon: 'history' as const,
+          backgroundColor: DESIGN_TOKENS.colors.overlay,
+          iconColor: isDark ? themedColors.text : themedColors.textInverse,
+        }
+      : undefined;
 
   const resolveScrollElement = useCallback(() => {
     const target = scrollRef.current as any;
@@ -124,11 +135,7 @@ function HorizontalCards({
               city: item.city ?? null,
               country: item.country ?? (item as any).countryName ?? null,
             }}
-            badge={
-              badge?.icon === 'history'
-                ? { icon: 'history', backgroundColor: 'rgba(0,0,0,0.7)', iconColor: '#fff' }
-                : undefined
-            }
+            badge={historyBadge}
             onPress={() => onPressItem(item.url)}
           />
         ))}
@@ -150,11 +157,7 @@ function HorizontalCards({
             city: item.city ?? null,
             country: item.country ?? (item as any).countryName ?? null,
           }}
-          badge={
-            badge?.icon === 'history'
-              ? { icon: 'history', backgroundColor: 'rgba(0,0,0,0.7)', iconColor: '#fff' }
-              : undefined
-          }
+          badge={historyBadge}
           onPress={() => onPressItem(item.url)}
         />
       )}

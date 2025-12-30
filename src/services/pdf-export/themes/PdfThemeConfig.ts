@@ -13,7 +13,10 @@ export type PdfThemeName =
   | 'modern'
   | 'romantic'
   | 'adventure'
-  | 'illustrated';
+  | 'illustrated'
+  | 'black-white'
+  | 'sepia'
+  | 'newspaper';
 
 /**
  * Конфигурация темы оформления PDF
@@ -910,6 +913,286 @@ export const illustratedTheme: PdfThemeConfig = {
 };
 
 /**
+ * Black & White Newspaper - черно-белая газетная тема
+ * Классическая газетная вёрстка в монохромной палитре
+ */
+export const blackWhiteTheme: PdfThemeConfig = {
+  name: 'black-white',
+  displayName: 'Черно-белая газета',
+  description: 'Классическая газетная вёрстка в черно-белом исполнении',
+
+  colors: {
+    text: '#000000',
+    textSecondary: '#1a1a1a',
+    textMuted: '#4a4a4a',
+    background: '#ffffff',
+    surface: '#fafafa',
+    surfaceAlt: '#f5f5f5',
+
+    // Черный акцент для газетного стиля
+    accent: '#000000',
+    accentStrong: '#0a0a0a',
+    accentSoft: '#666666',
+    accentLight: '#cccccc',
+
+    border: '#d0d0d0',
+    borderLight: '#e5e5e5',
+
+    infoBlock: {
+      background: '#f5f5f5',
+      border: '#000000',
+      text: '#1a1a1a',
+      icon: '#333333',
+    },
+    warningBlock: {
+      background: '#e8e8e8',
+      border: '#4a4a4a',
+      text: '#1a1a1a',
+      icon: '#333333',
+    },
+    tipBlock: {
+      background: '#f0f0f0',
+      border: '#666666',
+      text: '#0a0a0a',
+      icon: '#2a2a2a',
+    },
+    dangerBlock: {
+      background: '#e0e0e0',
+      border: '#000000',
+      text: '#000000',
+      icon: '#1a1a1a',
+    },
+
+    cover: {
+      background: '#ffffff',
+      backgroundGradient: ['#000000', '#2a2a2a'],
+      text: '#ffffff',
+      textSecondary: '#d0d0d0',
+    },
+  },
+
+  typography: {
+    // Газетные шрифты - жирные заголовки
+    headingFont: "'Libre Franklin', 'Arial Black', 'Arial', sans-serif",
+    bodyFont: "'PT Serif', Georgia, 'Times New Roman', serif",
+    monoFont: "'Courier New', monospace",
+
+    // Крупные жирные заголовки как в газетах
+    h1: { size: '44pt', weight: 900, lineHeight: 1.05, marginBottom: '10pt' },
+    h2: { size: '32pt', weight: 800, lineHeight: 1.15, marginBottom: '8pt' },
+    h3: { size: '24pt', weight: 700, lineHeight: 1.25, marginBottom: '8pt' },
+    h4: { size: '18pt', weight: 700, lineHeight: 1.3, marginBottom: '6pt' },
+
+    // Компактный текст для колонок
+    body: { size: '11pt', lineHeight: 1.65, marginBottom: '9pt' },
+    small: { size: '10pt', lineHeight: 1.6 },
+    caption: { size: '9pt', lineHeight: 1.5 },
+  },
+
+  spacing: {
+    // Компактная газетная верстка
+    pagePadding: '18mm',
+    sectionSpacing: '18pt',
+    blockSpacing: '12pt',
+    elementSpacing: '8pt',
+    contentMaxWidth: '100%',
+    columnGap: '12pt',
+  },
+
+  blocks: {
+    borderRadius: '0px', // Прямые углы как в газетах
+    shadow: 'none',
+    borderWidth: '2px',
+  },
+};
+
+/**
+ * Sepia Newspaper - газета в стиле сепия
+ * Винтажная газетная вёрстка с теплыми коричневыми тонами
+ */
+export const sepiaTheme: PdfThemeConfig = {
+  name: 'sepia',
+  displayName: 'Газета Сепия',
+  description: 'Винтажная газетная вёрстка с теплыми коричневыми тонами старых газет',
+
+  colors: {
+    text: '#3e2723',
+    textSecondary: '#4e342e',
+    textMuted: '#6d4c41',
+    background: '#f5f1e8',
+    surface: '#faf6ed',
+    surfaceAlt: '#f0ebe0',
+
+    // Коричневый акцент для винтажного газетного стиля
+    accent: '#8d6e63',
+    accentStrong: '#6d4c41',
+    accentSoft: '#a1887f',
+    accentLight: '#d7ccc8',
+
+    border: '#bcaaa4',
+    borderLight: '#d7ccc8',
+
+    infoBlock: {
+      background: '#f0ebe0',
+      border: '#8d6e63',
+      text: '#3e2723',
+      icon: '#6d4c41',
+    },
+    warningBlock: {
+      background: '#fff3e0',
+      border: '#d84315',
+      text: '#bf360c',
+      icon: '#ff6f00',
+    },
+    tipBlock: {
+      background: '#f1f8e9',
+      border: '#689f38',
+      text: '#33691e',
+      icon: '#558b2f',
+    },
+    dangerBlock: {
+      background: '#f3e5f5',
+      border: '#8d6e63',
+      text: '#4a148c',
+      icon: '#6d4c41',
+    },
+
+    cover: {
+      background: '#f5f1e8',
+      backgroundGradient: ['#6d4c41', '#3e2723'],
+      text: '#f5f1e8',
+      textSecondary: '#d7ccc8',
+    },
+  },
+
+  typography: {
+    // Те же газетные шрифты для единообразия
+    headingFont: "'Libre Franklin', 'Arial Black', 'Arial', sans-serif",
+    bodyFont: "'PT Serif', Georgia, 'Times New Roman', serif",
+    monoFont: "'Courier New', monospace",
+
+    // Идентичная газетная типографика
+    h1: { size: '44pt', weight: 900, lineHeight: 1.05, marginBottom: '10pt' },
+    h2: { size: '32pt', weight: 800, lineHeight: 1.15, marginBottom: '8pt' },
+    h3: { size: '24pt', weight: 700, lineHeight: 1.25, marginBottom: '8pt' },
+    h4: { size: '18pt', weight: 700, lineHeight: 1.3, marginBottom: '6pt' },
+
+    body: { size: '11pt', lineHeight: 1.65, marginBottom: '9pt' },
+    small: { size: '10pt', lineHeight: 1.6 },
+    caption: { size: '9pt', lineHeight: 1.5 },
+  },
+
+  spacing: {
+    // Идентичная газетная верстка
+    pagePadding: '18mm',
+    sectionSpacing: '18pt',
+    blockSpacing: '12pt',
+    elementSpacing: '8pt',
+    contentMaxWidth: '100%',
+    columnGap: '12pt',
+  },
+
+  blocks: {
+    borderRadius: '0px', // Прямые углы
+    shadow: 'none',
+    borderWidth: '2px',
+  },
+};
+
+/**
+ * Color Newspaper - цветная газета
+ * Современная яркая газетная вёрстка с цветными акцентами
+ */
+export const newspaperTheme: PdfThemeConfig = {
+  name: 'newspaper',
+  displayName: 'Цветная газета',
+  description: 'Яркая современная газетная вёрстка с цветными акцентами',
+
+  colors: {
+    text: '#1a1a1a',
+    textSecondary: '#2d2d2d',
+    textMuted: '#4a4a4a',
+    background: '#fafaf7',
+    surface: '#ffffff',
+    surfaceAlt: '#f5f5f2',
+
+    // Яркий красный акцент как в современных газетах
+    accent: '#d32f2f',
+    accentStrong: '#b71c1c',
+    accentSoft: '#ef5350',
+    accentLight: '#ffcdd2',
+
+    border: '#bdbdbd',
+    borderLight: '#e0e0e0',
+
+    infoBlock: {
+      background: '#e3f2fd',
+      border: '#1976d2',
+      text: '#0d47a1',
+      icon: '#1565c0',
+    },
+    warningBlock: {
+      background: '#fff9c4',
+      border: '#f57f17',
+      text: '#f57f17',
+      icon: '#fbc02d',
+    },
+    tipBlock: {
+      background: '#e8f5e9',
+      border: '#43a047',
+      text: '#1b5e20',
+      icon: '#2e7d32',
+    },
+    dangerBlock: {
+      background: '#ffebee',
+      border: '#d32f2f',
+      text: '#b71c1c',
+      icon: '#c62828',
+    },
+
+    cover: {
+      background: '#fafaf7',
+      backgroundGradient: ['#d32f2f', '#b71c1c'],
+      text: '#ffffff',
+      textSecondary: '#ffcdd2',
+    },
+  },
+
+  typography: {
+    // Единая газетная типографика
+    headingFont: "'Libre Franklin', 'Arial Black', 'Arial', sans-serif",
+    bodyFont: "'PT Serif', Georgia, 'Times New Roman', serif",
+    monoFont: "'Courier New', monospace",
+
+    // Крупные жирные заголовки
+    h1: { size: '44pt', weight: 900, lineHeight: 1.05, marginBottom: '10pt' },
+    h2: { size: '32pt', weight: 800, lineHeight: 1.15, marginBottom: '8pt' },
+    h3: { size: '24pt', weight: 700, lineHeight: 1.25, marginBottom: '8pt' },
+    h4: { size: '18pt', weight: 700, lineHeight: 1.3, marginBottom: '6pt' },
+
+    body: { size: '11pt', lineHeight: 1.65, marginBottom: '9pt' },
+    small: { size: '10pt', lineHeight: 1.6 },
+    caption: { size: '9pt', lineHeight: 1.5 },
+  },
+
+  spacing: {
+    // Компактная газетная верстка
+    pagePadding: '18mm',
+    sectionSpacing: '18pt',
+    blockSpacing: '12pt',
+    elementSpacing: '8pt',
+    contentMaxWidth: '100%',
+    columnGap: '12pt',
+  },
+
+  blocks: {
+    borderRadius: '0px', // Прямые углы
+    shadow: 'none',
+    borderWidth: '2px',
+  },
+};
+
+/**
  * Реестр тем
  */
 export const PDF_THEMES: Record<PdfThemeName, PdfThemeConfig> = {
@@ -922,6 +1205,9 @@ export const PDF_THEMES: Record<PdfThemeName, PdfThemeConfig> = {
   romantic: romanticTheme,
   adventure: adventureTheme,
   illustrated: illustratedTheme,
+  'black-white': blackWhiteTheme,
+  sepia: sepiaTheme,
+  newspaper: newspaperTheme,
 };
 
 /**

@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     }),
   },
   actionText: {
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.textInverse,
     fontSize: 16, // ✅ ДИЗАЙН: Увеличен размер
     fontWeight: '700', // ✅ ДИЗАЙН: Увеличен weight
     letterSpacing: 0.3,
@@ -358,4 +358,3 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 });
-

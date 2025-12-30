@@ -61,7 +61,7 @@ export default function CategoryChips({
         const iconName = category.icon || CATEGORY_ICONS[category.name];
         const shouldShowIcon = showIcons && iconName && !isSelected;
         const icon = isSelected ? (
-          <Feather name="x" size={14} color="#fff" />
+          <Feather name="x" size={14} color={DESIGN_TOKENS.colors.textOnPrimary} />
         ) : shouldShowIcon ? (
           <Feather name={iconName as any} size={14} color={DESIGN_TOKENS.colors.primary} />
         ) : undefined;
@@ -113,4 +113,3 @@ const styles = StyleSheet.create({
     color: DESIGN_TOKENS.colors.textMuted,
   },
 });
-

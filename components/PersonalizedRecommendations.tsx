@@ -5,8 +5,6 @@ import { useFavorites } from '@/context/FavoritesContext';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// ✅ ДИЗАЙН: Импорт максимально легкой и воздушной палитры
-import { AIRY_COLORS } from '@/constants/airyColors';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -145,7 +143,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                         style={styles.expandButton}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                        <MaterialIcons name="expand-more" size={20} color="#6b8e7f" />
+                        <MaterialIcons name="expand-more" size={20} color={DESIGN_TOKENS.colors.primary} />
                         <Text style={styles.expandButtonText}>Персонализация</Text>
                     </Pressable>
                 </View>
@@ -159,8 +157,8 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                 {showHeader && (
                     <>
                         <View style={styles.header}>
-                            <View style={[styles.iconContainer, { backgroundColor: '#f0f9f9' }]}>
-                                <MaterialIcons name="star" size={24} color="#6b8e7f" />
+                            <View style={[styles.iconContainer, { backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary }]}>
+                                <MaterialIcons name="star" size={24} color={DESIGN_TOKENS.colors.primary} />
                             </View>
                             <View style={styles.titleContainer}>
                                 <Text style={styles.title}>Рекомендации для вас</Text>
@@ -176,7 +174,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <View style={[styles.promptCard, isMobile ? styles.promptCardMobile : styles.promptCardDesktop]}>
                         <View style={styles.promptLead}>
                             <View style={styles.promptIcon}>
-                                <MaterialIcons name="login" size={28} color="#6b8e7f" />
+                                <MaterialIcons name="login" size={28} color={DESIGN_TOKENS.colors.primary} />
                             </View>
                             <View style={styles.promptCopy}>
                                 <Text style={[styles.promptText, !isMobile && styles.promptTextDesktop]}>
@@ -187,10 +185,15 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                         <Pressable 
                             style={[styles.loginButton, !isMobile && styles.loginButtonInline]}
                             onPress={handleLoginPress}
-                            android_ripple={{ color: 'rgba(74, 140, 140, 0.1)' }}
+                            android_ripple={{ color: DESIGN_TOKENS.colors.primarySoft }}
                         >
                             <Text style={styles.loginButtonText}>Войти или зарегистрироваться</Text>
-                            <MaterialIcons name="arrow-forward" size={18} color="#6b8e7f" style={{ marginLeft: 6 }} />
+                            <MaterialIcons
+                              name="arrow-forward"
+                              size={18}
+                              color={DESIGN_TOKENS.colors.primary}
+                              style={{ marginLeft: 6 }}
+                            />
                         </Pressable>
                     </View>
                 </View>
@@ -206,8 +209,8 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                 {showHeader && (
                     <>
                         <View style={styles.header}>
-                            <View style={[styles.iconContainer, { backgroundColor: AIRY_COLORS.primaryLight }]}>
-                                <MaterialIcons name="star" size={24} color={AIRY_COLORS.primary} />
+                            <View style={[styles.iconContainer, { backgroundColor: DESIGN_TOKENS.colors.primaryLight }]}>
+                                <MaterialIcons name="star" size={24} color={DESIGN_TOKENS.colors.primary} />
                             </View>
                             <View style={styles.titleContainer}>
                                 <Text style={styles.title}>Рекомендации для вас</Text>
@@ -223,7 +226,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                 <View style={[styles.emptyCard, isMobile ? styles.promptCardMobile : styles.promptCardDesktop]}>
                     <View style={styles.promptLead}>
                         <View style={styles.promptIcon}>
-                            <MaterialIcons name="explore" size={28} color="#6b7280" />
+                            <MaterialIcons name="explore" size={28} color={DESIGN_TOKENS.colors.textMuted} />
                         </View>
                         <View style={styles.promptCopy}>
                             <Text style={[styles.emptyText, !isMobile && styles.promptTextDesktop]}>
@@ -241,8 +244,8 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
             {showHeader && (
                 <>
                     <View style={styles.header}>
-                        <View style={[styles.iconContainer, { backgroundColor: '#fff5eb' }]}> 
-                            <MaterialIcons name="star" size={24} color={AIRY_COLORS.primary} />
+                        <View style={[styles.iconContainer, { backgroundColor: DESIGN_TOKENS.colors.primarySoft }]}> 
+                            <MaterialIcons name="star" size={24} color={DESIGN_TOKENS.colors.primary} />
                         </View>
                         <View style={styles.titleContainer}>
                             <Text style={styles.title}>Рекомендации для вас</Text>
@@ -345,7 +348,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 10,
-        backgroundColor: '#fef2f2',
+        backgroundColor: DESIGN_TOKENS.colors.primaryLight,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -359,11 +362,11 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 15, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше размер
         fontWeight: '600', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше жирность
-        color: '#1a202c',
+        color: DESIGN_TOKENS.colors.text,
         letterSpacing: -0.1,
     },
     badgeContainer: {
-        backgroundColor: 'rgba(74, 140, 140, 0.1)', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Прозрачный фон
+        backgroundColor: DESIGN_TOKENS.colors.primarySoft, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Прозрачный фон
         borderRadius: 8,
         paddingHorizontal: 8,
         paddingVertical: 3,
@@ -371,23 +374,23 @@ const styles = StyleSheet.create({
     badgeText: {
         fontSize: 11,
         fontWeight: '600',
-        color: '#4a8c8c', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Цвет текста вместо белого
+        color: DESIGN_TOKENS.colors.primary, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Цвет текста вместо белого
         letterSpacing: 0.1,
     },
     subtitle: {
         fontSize: 13,
-        color: '#4a5568',
+        color: DESIGN_TOKENS.colors.textMuted,
         marginLeft: 0,
         marginBottom: 12,
     },
     sectionTitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#1a202c',
+        color: DESIGN_TOKENS.colors.text,
         marginBottom: 8,
     },
     countBadge: {
-        backgroundColor: '#fee2e2',
+        backgroundColor: DESIGN_TOKENS.colors.dangerLight,
         borderRadius: 12,
         paddingHorizontal: 10,
         paddingVertical: 4,
@@ -396,7 +399,7 @@ const styles = StyleSheet.create({
     },
     count: {
         fontSize: 14,
-        color: '#ef4444',
+        color: DESIGN_TOKENS.colors.danger,
         fontWeight: '700',
     },
     scrollContent: {
@@ -425,10 +428,10 @@ const styles = StyleSheet.create({
     },
     item: {
         width: 168,
-        backgroundColor: '#ffffff',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         borderRadius: 16,
         overflow: 'hidden',
-        shadowColor: '#1f1f1f',
+        shadowColor: DESIGN_TOKENS.colors.text,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 8,
@@ -443,7 +446,7 @@ const styles = StyleSheet.create({
     itemImage: {
         width: '100%',
         height: 96,
-        backgroundColor: '#f3f4f6',
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     },
     itemImagePlaceholder: {
         justifyContent: 'center',
@@ -483,7 +486,7 @@ const styles = StyleSheet.create({
         backgroundColor: DESIGN_TOKENS.colors.surface,
         borderRadius: 14,
         padding: 6,
-        shadowColor: '#1f1f1f',
+        shadowColor: DESIGN_TOKENS.colors.text,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
         shadowRadius: 6,
@@ -492,16 +495,16 @@ const styles = StyleSheet.create({
         borderColor: DESIGN_TOKENS.colors.border,
         ...Platform.select({
             web: {
-                boxShadow: '0 2px 6px rgba(31, 31, 31, 0.06)',
+                boxShadow: DESIGN_TOKENS.shadows.light,
             },
         }),
     },
     promptCard: {
-        backgroundColor: '#fdf8f3',
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
         borderRadius: 16,
         padding: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255, 159, 90, 0.25)',
+        borderColor: DESIGN_TOKENS.colors.borderAccent,
     },
     promptCardMobile: {
         alignItems: 'flex-start',
@@ -524,15 +527,15 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 12,
-        backgroundColor: '#fff',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(15,23,42,0.08)',
+        borderColor: DESIGN_TOKENS.colors.border,
     },
     promptText: {
         fontSize: 14,
-        color: '#6b7280',
+        color: DESIGN_TOKENS.colors.textMuted,
         textAlign: 'left',
         lineHeight: 20,
         fontWeight: '500',
@@ -544,9 +547,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#ffffff',
+        backgroundColor: DESIGN_TOKENS.colors.surface,
         borderWidth: 1,
-        borderColor: '#6b8e7f',
+        borderColor: DESIGN_TOKENS.colors.primary,
         borderRadius: 12,
         paddingVertical: 10,
         paddingHorizontal: 18,
@@ -566,19 +569,19 @@ const styles = StyleSheet.create({
     loginButtonText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#6b8e7f',
+        color: DESIGN_TOKENS.colors.primary,
         letterSpacing: -0.2,
     },
     emptyCard: {
-        backgroundColor: '#f9fafb',
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
         borderRadius: 16,
         padding: 16,
         borderWidth: 1,
-        borderColor: 'rgba(15, 23, 42, 0.08)',
+        borderColor: DESIGN_TOKENS.colors.border,
     },
     emptyText: {
         fontSize: 14,
-        color: '#6b7280',
+        color: DESIGN_TOKENS.colors.textMuted,
         lineHeight: 20,
         fontWeight: '500',
     },
@@ -596,10 +599,10 @@ const styles = StyleSheet.create({
         marginHorizontal: 4,
         paddingVertical: 8,
         paddingHorizontal: 12,
-        backgroundColor: '#f0f9f9',
+        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: '#d1e7e7',
+        borderColor: DESIGN_TOKENS.colors.borderLight,
     },
     expandButton: {
         flexDirection: 'row',
@@ -615,10 +618,9 @@ const styles = StyleSheet.create({
     expandButtonText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#6b8e7f',
+        color: DESIGN_TOKENS.colors.primary,
         marginLeft: 6,
     },
 });
 
 export default memo(PersonalizedRecommendations);
-

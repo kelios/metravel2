@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { aboutStyles } from './aboutStyles';
+import { globalFocusStyles } from '@/styles/globalFocus';
 
 type Props = {
   onOpenInstagram: () => void;
@@ -11,7 +12,11 @@ export const SocialSection: React.FC<Props> = ({ onOpenInstagram }) => (
     <Text style={aboutStyles.socialTitle}>Мы в социальных сетях</Text>
     <Pressable
       onPress={onOpenInstagram}
-      style={({ pressed }) => [aboutStyles.socialButton, pressed && aboutStyles.socialButtonPressed]}
+      style={({ pressed }) => [
+        aboutStyles.socialButton,
+        pressed && aboutStyles.socialButtonPressed,
+        globalFocusStyles.focusable,
+      ]}
       accessibilityRole="button"
       accessibilityLabel="@metravelby в Instagram"
     >

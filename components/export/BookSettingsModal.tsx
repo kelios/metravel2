@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Modal, Platform } from 'react-native';
-import ThemePreview from './ThemePreview';
+import ThemePreview, { type PdfThemeName } from './ThemePreview';
 import PresetSelector from './PresetSelector';
 import GalleryLayoutSelector from './GalleryLayoutSelector';
 import type { BookPreset } from '@/src/types/pdf-presets';
@@ -12,8 +12,6 @@ import { METRICS } from '@/constants/layout';
 // ✅ ИСПРАВЛЕНИЕ: Picker не используется в веб-версии модального окна
 // import { Picker } from '@react-native-picker/picker';
 
-export type ColorThemeOption = 'blue' | 'green' | 'orange' | 'gray' | 'pastel' | 'mono';
-export type FontOption = 'sans' | 'serif' | 'rounded';
 export type ChecklistSection =
   | 'clothing'
   | 'food'
@@ -27,7 +25,7 @@ export interface BookSettings {
   subtitle?: string;
   coverType: 'auto' | 'first-photo' | 'gradient' | 'custom';
   coverImage?: string;
-  template: 'minimal' | 'light' | 'dark' | 'travel-magazine' | 'classic' | 'modern' | 'romantic' | 'adventure';
+  template: PdfThemeName;
   sortOrder: 'date-desc' | 'date-asc' | 'country' | 'alphabetical';
   includeToc: boolean;
   includeGallery: boolean;
@@ -89,6 +87,31 @@ const defaultBookSettings: BookSettings = {
   showCaptions: true,
   captionPosition: 'bottom',
   gallerySpacing: 'normal',
+};
+
+const MODAL_COLORS = {
+  overlay: 'var(--color-overlay)',
+  surface: 'var(--color-surface)',
+  surfaceMuted: 'var(--color-surfaceMuted)',
+  backgroundSecondary: 'var(--color-backgroundSecondary)',
+  backgroundTertiary: 'var(--color-backgroundTertiary)',
+  text: 'var(--color-text)',
+  textMuted: 'var(--color-textMuted)',
+  textSubtle: 'var(--color-textSubtle)',
+  border: 'var(--color-border)',
+  borderStrong: 'var(--color-borderStrong)',
+  primary: 'var(--color-primary)',
+  primaryDark: 'var(--color-primaryDark)',
+  primaryLight: 'var(--color-primaryLight)',
+  focus: 'var(--color-focus)',
+  textOnPrimary: 'var(--color-textOnPrimary)',
+};
+
+const MODAL_SHADOWS = {
+  light: 'var(--shadow-light)',
+  medium: 'var(--shadow-medium)',
+  heavy: 'var(--shadow-heavy)',
+  modal: 'var(--shadow-modal)',
 };
 
 const buildInitialSettings = (
@@ -226,7 +249,7 @@ export default function BookSettingsModal({
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(31, 31, 31, 0.4)', // Матовый overlay
+          backgroundColor: MODAL_COLORS.overlay, // Матовый overlay
           backdropFilter: 'blur(4px)',
           WebkitBackdropFilter: 'blur(4px)',
           display: 'flex',
@@ -238,15 +261,15 @@ export default function BookSettingsModal({
       >
         <div
           style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: MODAL_COLORS.surface,
             borderRadius: '20px',
             padding: window.innerWidth <= METRICS.breakpoints.tablet ? '20px' : '28px',
             maxWidth: '800px',
             width: '95%',
             maxHeight: '92vh',
             overflow: 'auto',
-            boxShadow: '0 8px 24px rgba(31, 31, 31, 0.12), 0 2px 4px rgba(31, 31, 31, 0.08)',
-            border: '1px solid rgba(31, 31, 31, 0.08)',
+            boxShadow: MODAL_SHADOWS.modal,
+            border: `1px solid ${MODAL_COLORS.border}`,
           }}
           role="dialog"
           aria-modal="true"
@@ -261,16 +284,16 @@ export default function BookSettingsModal({
               fontSize: window.innerWidth <= METRICS.breakpoints.tablet ? '20px' : '24px',
               fontWeight: 600,
               margin: '0 0 20px 0',
-              color: '#1f1f1f',
+              color: MODAL_COLORS.text,
               letterSpacing: '-0.3px',
             }}
           >
             Настройки фотоальбома
           </h2>
 
-        <div style={{ marginBottom: '20px', color: '#4a4946', fontSize: '14px' }}>
+        <div style={{ marginBottom: '20px', color: MODAL_COLORS.textMuted, fontSize: '14px' }}>
           Выбрано путешествий:&nbsp;
-          <span style={{ fontWeight: 600, color: '#1f1f1f' }}>{travelCount}</span>
+          <span style={{ fontWeight: 600, color: MODAL_COLORS.text }}>{travelCount}</span>
         </div>
 
           {/* Пресеты настроек */}
@@ -284,7 +307,7 @@ export default function BookSettingsModal({
           <div style={{ 
             margin: '24px 0', 
             height: '1px', 
-            backgroundColor: '#e5e7eb',
+            backgroundColor: MODAL_COLORS.border,
           }} />
 
           {/* Выбор темы */}
@@ -298,7 +321,7 @@ export default function BookSettingsModal({
           <div style={{ 
             margin: '24px 0', 
             height: '1px', 
-            backgroundColor: '#e5e7eb',
+            backgroundColor: MODAL_COLORS.border,
           }} />
 
           {/* Настройки галереи */}
@@ -321,7 +344,7 @@ export default function BookSettingsModal({
               <div style={{ 
                 margin: '24px 0', 
                 height: '1px', 
-                backgroundColor: '#e5e7eb',
+                backgroundColor: MODAL_COLORS.border,
               }} />
             </>
           )}
@@ -338,21 +361,21 @@ export default function BookSettingsModal({
               style={{
                 padding: '10px 20px',
                 backgroundColor: 'transparent',
-                border: '1.5px solid #e5e7eb',
+                border: `1.5px solid ${MODAL_COLORS.border}`,
                 borderRadius: '12px',
                 fontSize: '14px',
                 fontWeight: '500',
-                color: '#6b7280',
+                color: MODAL_COLORS.textMuted,
                 cursor: 'pointer',
                 transition: 'all 0.2s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#2563eb';
-                e.currentTarget.style.color = '#2563eb';
+                e.currentTarget.style.borderColor = MODAL_COLORS.primary;
+                e.currentTarget.style.color = MODAL_COLORS.primary;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#e5e7eb';
-                e.currentTarget.style.color = '#6b7280';
+                e.currentTarget.style.borderColor = MODAL_COLORS.border;
+                e.currentTarget.style.color = MODAL_COLORS.textMuted;
               }}
             >
               {showAdvanced ? '▲ Скрыть детальные настройки' : '▼ Показать детальные настройки'}
@@ -362,7 +385,7 @@ export default function BookSettingsModal({
           {showAdvanced && (
             <>
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
                   Название книги
                 </label>
             <input
@@ -372,21 +395,21 @@ export default function BookSettingsModal({
               style={{
                 width: '100%',
                 padding: '12px 14px',
-                border: '1.5px solid rgba(31, 31, 31, 0.08)',
+                border: `1.5px solid ${MODAL_COLORS.border}`,
                 borderRadius: '12px',
                 fontSize: '15px',
                 minHeight: '44px',
-                backgroundColor: '#ffffff',
-                color: '#1f1f1f',
+                backgroundColor: MODAL_COLORS.surface,
+                color: MODAL_COLORS.text,
                 outline: 'none',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#5b8a7a';
-                e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3)';
+                e.target.style.borderColor = MODAL_COLORS.primary;
+                e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(31, 31, 31, 0.08)';
+                e.target.style.borderColor = MODAL_COLORS.border;
                 e.target.style.boxShadow = 'none';
               }}
               placeholder="Мои путешествия"
@@ -394,7 +417,7 @@ export default function BookSettingsModal({
           </div>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
               Подзаголовок (опционально)
             </label>
             <input
@@ -404,21 +427,21 @@ export default function BookSettingsModal({
               style={{
                 width: '100%',
                 padding: '12px 14px',
-                border: '1.5px solid rgba(31, 31, 31, 0.08)',
+                border: `1.5px solid ${MODAL_COLORS.border}`,
                 borderRadius: '12px',
                 fontSize: '15px',
                 minHeight: '44px',
-                backgroundColor: '#ffffff',
-                color: '#1f1f1f',
+                backgroundColor: MODAL_COLORS.surface,
+                color: MODAL_COLORS.text,
                 outline: 'none',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#5b8a7a';
-                e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3)';
+                e.target.style.borderColor = MODAL_COLORS.primary;
+                e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(31, 31, 31, 0.08)';
+                e.target.style.borderColor = MODAL_COLORS.border;
                 e.target.style.boxShadow = 'none';
               }}
               placeholder="Воспоминания 2024"
@@ -426,7 +449,7 @@ export default function BookSettingsModal({
           </div>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
               Тип обложки
             </label>
             <select
@@ -435,22 +458,22 @@ export default function BookSettingsModal({
               style={{
                 width: '100%',
                 padding: '12px 14px',
-                border: '1.5px solid rgba(31, 31, 31, 0.08)',
+                border: `1.5px solid ${MODAL_COLORS.border}`,
                 borderRadius: '12px',
                 fontSize: '15px',
                 minHeight: '44px',
-                backgroundColor: '#ffffff',
-                color: '#1f1f1f',
+                backgroundColor: MODAL_COLORS.surface,
+                color: MODAL_COLORS.text,
                 outline: 'none',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 cursor: 'pointer',
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#5b8a7a';
-                e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3)';
+                e.target.style.borderColor = MODAL_COLORS.primary;
+                e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(31, 31, 31, 0.08)';
+                e.target.style.borderColor = MODAL_COLORS.border;
                 e.target.style.boxShadow = 'none';
               }}
             >
@@ -463,7 +486,7 @@ export default function BookSettingsModal({
 
           {settings.coverType === 'custom' && (
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
                 Ссылка на изображение обложки
               </label>
               <input
@@ -473,20 +496,20 @@ export default function BookSettingsModal({
                 style={{
                   width: '100%',
                   padding: '12px 14px',
-                  border: '1.5px solid rgba(31, 31, 31, 0.08)',
+                  border: `1.5px solid ${MODAL_COLORS.border}`,
                   borderRadius: '12px',
                   fontSize: '15px',
-                  backgroundColor: '#ffffff',
-                  color: '#1f1f1f',
+                  backgroundColor: MODAL_COLORS.surface,
+                  color: MODAL_COLORS.text,
                   outline: 'none',
                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#5b8a7a';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3)';
+                  e.target.style.borderColor = MODAL_COLORS.primary;
+                  e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(31, 31, 31, 0.08)';
+                  e.target.style.borderColor = MODAL_COLORS.border;
                   e.target.style.boxShadow = 'none';
                 }}
                 placeholder="https://example.com/cover.jpg"
@@ -495,7 +518,7 @@ export default function BookSettingsModal({
           )}
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
               Тема оформления
             </label>
             <select
@@ -504,35 +527,45 @@ export default function BookSettingsModal({
               style={{
                 width: '100%',
                 padding: '12px 14px',
-                border: '1.5px solid rgba(31, 31, 31, 0.08)',
+                border: `1.5px solid ${MODAL_COLORS.border}`,
                 borderRadius: '12px',
                 fontSize: '15px',
                 minHeight: '44px',
-                backgroundColor: '#ffffff',
-                color: '#1f1f1f',
+                backgroundColor: MODAL_COLORS.surface,
+                color: MODAL_COLORS.text,
                 outline: 'none',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 cursor: 'pointer',
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#5b8a7a';
-                e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3)';
+                e.target.style.borderColor = MODAL_COLORS.primary;
+                e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(31, 31, 31, 0.08)';
+                e.target.style.borderColor = MODAL_COLORS.border;
                 e.target.style.boxShadow = 'none';
               }}
             >
-              <option value="minimal">Минималистичная - чистое оформление</option>
-              <option value="light">Светлая - много воздуха, мягкие цвета</option>
-              <option value="dark">Темная - элегантное темное оформление</option>
-              <option value="travel-magazine">Travel Magazine - журнальная вёрстка</option>
-              <option value="classic">Классическая - традиционная типографика</option>
-              <option value="modern">Современная - геометрические формы</option>
-              <option value="romantic">Романтическая - пастельные цвета</option>
-              <option value="adventure">Приключенческая - динамичная типографика</option>
+              <optgroup label="📰 Газетная верстка (NEW!)">
+                <option value="newspaper">📰 Цветная газета - яркая современная</option>
+                <option value="black-white">🖤 Черно-белая газета - классическая печать</option>
+                <option value="sepia">📜 Газета Сепия - винтажный стиль</option>
+              </optgroup>
+              <optgroup label="📚 Классические темы">
+                <option value="minimal">Минималистичная - чистое оформление</option>
+                <option value="light">Светлая - много воздуха, мягкие цвета</option>
+                <option value="dark">Темная - элегантное темное оформление</option>
+                <option value="travel-magazine">Travel Magazine - журнальная вёрстка</option>
+                <option value="classic">Классическая - традиционная типографика</option>
+                <option value="modern">Современная - геометрические формы</option>
+                <option value="romantic">Романтическая - пастельные цвета</option>
+                <option value="adventure">Приключенческая - динамичная типографика</option>
+              </optgroup>
             </select>
-            <div style={{ marginTop: '6px', fontSize: '12px', color: '#6b6b6b', lineHeight: '1.4' }}>
+            <div style={{ marginTop: '6px', fontSize: '12px', color: MODAL_COLORS.textSubtle, lineHeight: '1.4' }}>
+              {settings.template === 'newspaper' && '📰 Крупные заголовки (44pt), яркий красный акцент, компактные колонки - идеально для репортажей'}
+              {settings.template === 'black-white' && '🖤 Монохромная газета, максимальный контраст - идеально для ч/б печати и официальных документов'}
+              {settings.template === 'sepia' && '📜 Винтажная газета в коричневых тонах - создает атмосферу старинных изданий 1920-х'}
               {settings.template === 'minimal' && 'Чистое и простое оформление с акцентом на контент'}
               {settings.template === 'light' && 'Светлые тона, много воздуха, подходит для пляжного отдыха'}
               {settings.template === 'dark' && 'Элегантное темное оформление, подходит для вечерних фото'}
@@ -545,7 +578,7 @@ export default function BookSettingsModal({
           </div>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
               Сортировка
             </label>
             <select
@@ -554,22 +587,22 @@ export default function BookSettingsModal({
               style={{
                 width: '100%',
                 padding: '12px 14px',
-                border: '1.5px solid rgba(31, 31, 31, 0.08)',
+                border: `1.5px solid ${MODAL_COLORS.border}`,
                 borderRadius: '12px',
                 fontSize: '15px',
                 minHeight: '44px',
-                backgroundColor: '#ffffff',
-                color: '#1f1f1f',
+                backgroundColor: MODAL_COLORS.surface,
+                color: MODAL_COLORS.text,
                 outline: 'none',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 cursor: 'pointer',
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#5b8a7a';
-                e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3)';
+                e.target.style.borderColor = MODAL_COLORS.primary;
+                e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(31, 31, 31, 0.08)';
+                e.target.style.borderColor = MODAL_COLORS.border;
                 e.target.style.boxShadow = 'none';
               }}
             >
@@ -594,26 +627,26 @@ export default function BookSettingsModal({
                   cursor: 'pointer',
                 }}
               />
-              <span style={{ fontWeight: 500, color: '#1f1f1f', fontSize: '15px' }}>Включить оглавление</span>
+              <span style={{ fontWeight: 500, color: MODAL_COLORS.text, fontSize: '15px' }}>Включить оглавление</span>
             </label>
           </div>
 
-          <div style={{ marginBottom: '20px', padding: '18px', borderRadius: '14px', border: '1px solid rgba(31,31,31,0.08)', backgroundColor: '#f8f7f4' }}>
+          <div style={{ marginBottom: '20px', padding: '18px', borderRadius: '14px', border: `1px solid ${MODAL_COLORS.border}`, backgroundColor: MODAL_COLORS.backgroundSecondary }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <label style={{ fontWeight: 600, color: '#1f1f1f', fontSize: '14px' }}>
+              <label style={{ fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
                 Чек-листы путешественника
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: MODAL_COLORS.textMuted }}>
                 <input
                   type="checkbox"
                   checked={settings.includeChecklists}
                   onChange={(e) => handleToggleChecklists(e.target.checked)}
-                  style={{ width: '20px', height: '20px', accentColor: '#5b8a7a', cursor: 'pointer' }}
+                  style={{ width: '20px', height: '20px', accentColor: MODAL_COLORS.primary, cursor: 'pointer' }}
                 />
                 Добавить в PDF
               </label>
             </div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: settings.includeChecklists ? '12px' : 0 }}>
+            <div style={{ fontSize: '12px', color: MODAL_COLORS.textSubtle, marginBottom: settings.includeChecklists ? '12px' : 0 }}>
               Стандартные списки для печати: экипировка, еда, документы, техника и аптечка.
             </div>
             {settings.includeChecklists && (
@@ -625,24 +658,26 @@ export default function BookSettingsModal({
                       key={option.value}
                       style={{
                         borderRadius: '12px',
-                        border: selected ? '2px solid #5b8a7a' : '1px solid rgba(31,31,31,0.12)',
+                        border: selected
+                          ? `2px solid ${MODAL_COLORS.primary}`
+                          : `1px solid ${MODAL_COLORS.borderStrong}`,
                         padding: '12px',
-                        backgroundColor: '#fff',
+                        backgroundColor: MODAL_COLORS.surface,
                         cursor: 'pointer',
                         display: 'block',
-                        boxShadow: selected ? '0 6px 18px rgba(91, 138, 122, 0.1)' : '0 1px 3px rgba(31,31,31,0.05)',
+                        boxShadow: selected ? MODAL_SHADOWS.medium : MODAL_SHADOWS.light,
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <span style={{ fontWeight: 600, color: '#1f1f1f' }}>{option.label}</span>
+                        <span style={{ fontWeight: 600, color: MODAL_COLORS.text }}>{option.label}</span>
                         <input
                           type="checkbox"
                           checked={selected}
                           onChange={() => toggleChecklistSection(option.value)}
-                          style={{ width: '18px', height: '18px', accentColor: '#5b8a7a', cursor: 'pointer' }}
+                          style={{ width: '18px', height: '18px', accentColor: MODAL_COLORS.primary, cursor: 'pointer' }}
                         />
                       </div>
-                      <ul style={{ margin: 0, padding: '0 0 0 16px', fontSize: '12px', color: '#6b7280' }}>
+                      <ul style={{ margin: 0, padding: '0 0 0 16px', fontSize: '12px', color: MODAL_COLORS.textMuted }}>
                         {option.items.map((item) => (
                           <li key={item}>{item}</li>
                         ))}
@@ -661,10 +696,10 @@ export default function BookSettingsModal({
               onClick={onClose}
               style={{
                 padding: '12px 20px',
-                border: '1px solid rgba(31, 31, 31, 0.08)',
+                border: `1px solid ${MODAL_COLORS.border}`,
                 borderRadius: '12px',
-                backgroundColor: '#ffffff',
-                color: '#1f1f1f',
+                backgroundColor: MODAL_COLORS.surface,
+                color: MODAL_COLORS.text,
                 fontSize: '15px',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -672,27 +707,27 @@ export default function BookSettingsModal({
                 minHeight: '44px',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 outline: 'none',
-                boxShadow: '0 1px 3px rgba(31, 31, 31, 0.04)',
+                boxShadow: MODAL_SHADOWS.light,
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#5b8a7a';
-                e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3)';
+                e.target.style.borderColor = MODAL_COLORS.primary;
+                e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(31, 31, 31, 0.08)';
-                e.target.style.boxShadow = '0 1px 3px rgba(31, 31, 31, 0.04)';
+                e.target.style.borderColor = MODAL_COLORS.border;
+                e.target.style.boxShadow = MODAL_SHADOWS.light;
               }}
               onMouseEnter={(e) => {
                 const target = e.target as HTMLButtonElement;
-                target.style.backgroundColor = '#f5f4f2';
+                target.style.backgroundColor = MODAL_COLORS.backgroundTertiary;
                 target.style.transform = 'translateY(-1px)';
-                target.style.boxShadow = '0 2px 6px rgba(31, 31, 31, 0.08)';
+                target.style.boxShadow = MODAL_SHADOWS.medium;
               }}
               onMouseLeave={(e) => {
                 const target = e.target as HTMLButtonElement;
-                target.style.backgroundColor = '#ffffff';
+                target.style.backgroundColor = MODAL_COLORS.surface;
                 target.style.transform = 'translateY(0)';
-                target.style.boxShadow = '0 1px 3px rgba(31, 31, 31, 0.04)';
+                target.style.boxShadow = MODAL_SHADOWS.light;
               }}
             >
               Отмена
@@ -702,10 +737,10 @@ export default function BookSettingsModal({
                 onClick={handlePreview}
                 style={{
                   padding: '12px 20px',
-                  border: '1px solid #5b8a7a',
+                  border: `1px solid ${MODAL_COLORS.primary}`,
                   borderRadius: '12px',
-                  backgroundColor: '#ffffff',
-                  color: '#5b8a7a',
+                  backgroundColor: MODAL_COLORS.surface,
+                  color: MODAL_COLORS.primary,
                   fontSize: '15px',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -713,27 +748,27 @@ export default function BookSettingsModal({
                   minHeight: '44px',
                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                   outline: 'none',
-                  boxShadow: '0 1px 3px rgba(31, 31, 31, 0.04)',
+                  boxShadow: MODAL_SHADOWS.light,
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#5b8a7a';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3)';
+                  e.target.style.borderColor = MODAL_COLORS.primary;
+                  e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = '#5b8a7a';
-                  e.target.style.boxShadow = '0 1px 3px rgba(31, 31, 31, 0.04)';
+                  e.target.style.borderColor = MODAL_COLORS.primary;
+                  e.target.style.boxShadow = MODAL_SHADOWS.light;
                 }}
                 onMouseEnter={(e) => {
                   const target = e.target as HTMLButtonElement;
-                  target.style.backgroundColor = '#e8f0ed';
+                  target.style.backgroundColor = MODAL_COLORS.primaryLight;
                   target.style.transform = 'translateY(-1px)';
-                  target.style.boxShadow = '0 2px 6px rgba(31, 31, 31, 0.08)';
+                  target.style.boxShadow = MODAL_SHADOWS.medium;
                 }}
                 onMouseLeave={(e) => {
                   const target = e.target as HTMLButtonElement;
-                  target.style.backgroundColor = '#ffffff';
+                  target.style.backgroundColor = MODAL_COLORS.surface;
                   target.style.transform = 'translateY(0)';
-                  target.style.boxShadow = '0 1px 3px rgba(31, 31, 31, 0.04)';
+                  target.style.boxShadow = MODAL_SHADOWS.light;
                 }}
               >
                 Превью
@@ -745,8 +780,8 @@ export default function BookSettingsModal({
                 padding: '12px 20px',
                 border: 'none',
                 borderRadius: '12px',
-                backgroundColor: '#5b8a7a',
-                color: '#ffffff',
+                backgroundColor: MODAL_COLORS.primary,
+                color: MODAL_COLORS.textOnPrimary,
                 fontSize: '15px',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -754,25 +789,25 @@ export default function BookSettingsModal({
                 minHeight: '44px',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 outline: 'none',
-                boxShadow: '0 2px 6px rgba(31, 31, 31, 0.06)',
+                boxShadow: MODAL_SHADOWS.medium,
               }}
               onFocus={(e) => {
-                e.target.style.boxShadow = '0 0 0 3px rgba(91, 138, 122, 0.3), 0 2px 6px rgba(31, 31, 31, 0.06)';
+                e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}, ${MODAL_SHADOWS.medium}`;
               }}
               onBlur={(e) => {
-                e.target.style.boxShadow = '0 2px 6px rgba(31, 31, 31, 0.06)';
+                e.target.style.boxShadow = MODAL_SHADOWS.medium;
               }}
               onMouseEnter={(e) => {
                 const target = e.target as HTMLButtonElement;
-                target.style.backgroundColor = '#4a7264';
+                target.style.backgroundColor = MODAL_COLORS.primaryDark;
                 target.style.transform = 'translateY(-1px)';
-                target.style.boxShadow = '0 3px 8px rgba(31, 31, 31, 0.12)';
+                target.style.boxShadow = MODAL_SHADOWS.heavy;
               }}
               onMouseLeave={(e) => {
                 const target = e.target as HTMLButtonElement;
-                target.style.backgroundColor = '#5b8a7a';
+                target.style.backgroundColor = MODAL_COLORS.primary;
                 target.style.transform = 'translateY(0)';
-                target.style.boxShadow = '0 2px 6px rgba(31, 31, 31, 0.06)';
+                target.style.boxShadow = MODAL_SHADOWS.medium;
                 target.style.transform = 'translateY(0)';
               }}
             >
