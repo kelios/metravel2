@@ -22,6 +22,7 @@ import type { BookSettings } from "@/components/export/BookSettingsModal";
 import { useSingleTravelExport } from "@/components/travel/hooks/useSingleTravelExport";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 const Fallback = () => (
@@ -84,6 +85,9 @@ function CompactSideBarTravel({
 }: SideBarProps) {
   const { isTablet } = useResponsive();
   const isWeb = Platform.OS === 'web';
+  const themedColors = useThemedColors();
+  const textColor = themedColors.text;
+  const mutedText = themedColors.textMuted;
   const travelAddress = travel.travelAddress;
   const travelOwnerId = (travel as any).userIds ?? (travel as any).userId ?? (travel as any).user?.id ?? null;
   const avatar = (travel as any).user?.avatar;
@@ -323,7 +327,7 @@ function CompactSideBarTravel({
     },
     [handleOpenPrintBookWithSettings]
   );
-  
+
   const menuItems = [
     isMobile ? (
       <View key="close-top" style={styles.closeTopBar}>
@@ -334,12 +338,12 @@ function CompactSideBarTravel({
           accessibilityLabel="Закрыть меню"
           hitSlop={8}
         >
-          <MaterialIcons name="close" size={20} color="#111827" />
+          <MaterialIcons name="close" size={20} color={textColor} />
         </Pressable>
       </View>
     ) : null,
 
-    <View key="author-card" style={styles.card}>
+    <View key="author-card" style={[styles.card, { backgroundColor: themedColors.surface }]}>
       <View style={styles.cardRow}>
         <View style={styles.avatarWrap}>
           {headerImageUri ? (
@@ -356,7 +360,7 @@ function CompactSideBarTravel({
               style={styles.avatar}
             />
           ) : (
-            <MaterialIcons name="image" size={60} color="#ccc" />
+            <MaterialIcons name="image" size={60} color={mutedText} />
           )}
         </View>
 
@@ -375,9 +379,13 @@ function CompactSideBarTravel({
               ]}
               {...Platform.select({ web: authorUserId ? { cursor: 'pointer' } : {} })}
             >
-              <Text style={styles.userName} numberOfLines={1}>
-                <Text style={styles.userNamePrimary}>{userName || 'Пользователь'}</Text>
-                {countryName ? <Text style={styles.userCountry}>{` | ${countryName}`}</Text> : null}
+              <Text style={[styles.userName, { color: textColor }]} numberOfLines={1}>
+                <Text style={[styles.userNamePrimary, { color: textColor }]}>
+                  {userName || 'Пользователь'}
+                </Text>
+                {countryName ? (
+                  <Text style={[styles.userCountry, { color: mutedText }]}>{` | ${countryName}`}</Text>
+                ) : null}
               </Text>
             </Pressable>
 
@@ -389,7 +397,7 @@ function CompactSideBarTravel({
                   accessibilityLabel="Редактировать путешествие"
                   style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
                 >
-                  <MaterialIcons name="edit" size={18} color="#2F332E" />
+                  <MaterialIcons name="edit" size={18} color={textColor} />
                 </Pressable>
               )}
 
@@ -406,9 +414,9 @@ function CompactSideBarTravel({
                   ]}
                 >
                   {pdfExport.isGenerating ? (
-                    <ActivityIndicator size="small" color="#6b7280" />
+                    <ActivityIndicator size="small" color={mutedText} />
                   ) : (
-                    <MaterialIcons name="picture-as-pdf" size={18} color="#6b7280" />
+                    <MaterialIcons name="picture-as-pdf" size={18} color={mutedText} />
                   )}
                 </Pressable>
               )}
@@ -419,24 +427,24 @@ function CompactSideBarTravel({
             <View style={styles.metaRow}>
               {whenLine ? (
                 <View style={styles.metaItem}>
-                  <MaterialIcons name="calendar-today" size={14} color="#9ca3af" />
-                  <Text style={styles.metaText} numberOfLines={1}>
+                  <MaterialIcons name="calendar-today" size={14} color={mutedText} />
+                  <Text style={[styles.metaText, { color: mutedText }]} numberOfLines={1}>
                     {whenLine}
                   </Text>
                 </View>
               ) : null}
               {daysText ? (
                 <View style={styles.metaItem}>
-                  <MaterialIcons name="schedule" size={14} color="#9ca3af" />
-                  <Text style={styles.metaText} numberOfLines={1}>
+                  <MaterialIcons name="schedule" size={14} color={mutedText} />
+                  <Text style={[styles.metaText, { color: mutedText }]} numberOfLines={1}>
                     {daysText}
                   </Text>
                 </View>
               ) : null}
               {viewsSafe != null && Number.isFinite(viewsSafe) ? (
                 <View style={styles.metaItem}>
-                  <MaterialIcons name="visibility" size={14} color="#9ca3af" />
-                  <Text style={styles.metaText} numberOfLines={1}>
+                  <MaterialIcons name="visibility" size={14} color={mutedText} />
+                  <Text style={[styles.metaText, { color: mutedText }]} numberOfLines={1}>
                     {viewsSafe.toLocaleString('ru-RU')}
                   </Text>
                 </View>
@@ -449,7 +457,7 @@ function CompactSideBarTravel({
       <View style={styles.infoSection}>
         {categories.length > 0 ? (
           <View style={styles.infoRow}>
-            <MaterialIcons name="category" size={14} color="#6b7280" />
+            <MaterialIcons name="category" size={14} color={mutedText} />
             <View
               style={[
                 styles.categoriesWrap,
@@ -458,7 +466,7 @@ function CompactSideBarTravel({
             >
               {(showAllCategories ? categories : categories.slice(0, 2)).map((cat, idx) => (
                 <View key={`${cat}-${idx}`} style={styles.categoryTagWrapper}>
-                  <Text style={styles.categoryTag} numberOfLines={1}>
+                  <Text style={[styles.categoryTag, { color: mutedText }]} numberOfLines={1}>
                     {cat}
                   </Text>
                 </View>
@@ -474,7 +482,9 @@ function CompactSideBarTravel({
                     pressed ? styles.categoryMoreBtnPressed : null,
                   ]}
                 >
-                  <Text style={styles.categoryMore}>+{categories.length - 2}</Text>
+                  <Text style={[styles.categoryMore, { color: mutedText }]}>
+                    +{categories.length - 2}
+                  </Text>
                 </Pressable>
               ) : null}
               {showAllCategories && categories.length > 2 ? (
@@ -488,7 +498,7 @@ function CompactSideBarTravel({
                     pressed ? styles.categoryMoreBtnPressed : null,
                   ]}
                 >
-                  <Text style={styles.categoryMore}>Свернуть</Text>
+                  <Text style={[styles.categoryMore, { color: mutedText }]}>Свернуть</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -508,9 +518,12 @@ function CompactSideBarTravel({
             accessibilityRole="button"
             accessibilityLabel="Координаты"
           >
-            <MaterialIcons name="place" size={14} color="#6b7280" />
+            <MaterialIcons name="place" size={14} color={mutedText} />
             <Text
-              style={[styles.infoText, { marginLeft: DESIGN_TOKENS.spacing.xs, flex: 1 }]}
+              style={[
+                styles.infoText,
+                { marginLeft: DESIGN_TOKENS.spacing.xs, flex: 1, color: mutedText },
+              ]}
               numberOfLines={1}
             >
               {firstCoord}
@@ -519,7 +532,7 @@ function CompactSideBarTravel({
               <MaterialIcons
                 name="content-copy"
                 size={12}
-                color="#9ca3af"
+                color={mutedText}
                 style={{ marginLeft: DESIGN_TOKENS.spacing.xs }}
               />
             ) : null}
@@ -566,13 +579,14 @@ function CompactSideBarTravel({
                   default: 18,
                   web: isTablet ? 20 : 18,
                 })}
-                color={currentActive === key ? "#1f2937" : "#2F332E"}
+                color={currentActive === key ? textColor : mutedText}
               />
               <Text
                 style={[
                   styles.linkTxt,
                   isTablet && { fontSize: DESIGN_TOKENS.typography.sizes.sm },
                   currentActive === key && styles.linkTxtActive,
+                  { color: currentActive === key ? textColor : mutedText },
                 ]}
               >
                 {label}
@@ -580,7 +594,7 @@ function CompactSideBarTravel({
             </View>
             {meta ? (
               <View style={styles.linkMetaPill}>
-                <Text style={styles.linkMetaText}>{meta}</Text>
+                <Text style={[styles.linkMetaText, { color: mutedText }]}>{meta}</Text>
               </View>
             ) : null}
           </Pressable>
@@ -605,7 +619,7 @@ function CompactSideBarTravel({
   ];
   
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: themedColors.background }]}>
       {isWeb ? (
         <View
           style={[
@@ -692,7 +706,6 @@ const styles = StyleSheet.create({
       width: '100%',
     } : {}), // ✅ UX: Прижато к левому краю
   },
-
   // ✅ РЕДИЗАЙН: Компактная карточка автора
   card: {
     backgroundColor: "#ffffff",
@@ -787,10 +800,7 @@ const styles = StyleSheet.create({
     marginBottom: 3, // Уменьшено с 4
   },
   categoryTag: {
-    fontSize: Platform.select({
-      default: 9, // Мобильные
-      web: 10, // Десктоп
-    }),
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: "#9ca3af",
     backgroundColor: "transparent",
     paddingHorizontal: 0,
@@ -803,7 +813,7 @@ const styles = StyleSheet.create({
     maxWidth: 90,
   },
   categoryMore: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xs, // Уменьшено с 11
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: "#9ca3af",
     fontFamily: "Georgia",
     fontWeight: "500",
@@ -916,25 +926,22 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   metaText: {
-    fontSize: Platform.select({
-      default: 11,
-      web: 12,
-    }),
+    fontSize: 14,
     color: '#6b7280',
     fontFamily: 'Georgia',
     fontWeight: '600',
-    lineHeight: 14,
+    lineHeight: 20,
     flexShrink: 1,
   },
   userDays: { 
-    fontSize: DESIGN_TOKENS.typography.sizes.xs, // Уменьшено с 14
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
     color: "#374151", 
     fontFamily: "Georgia",
-    lineHeight: 15,
+    lineHeight: 20,
   },
   exportSummary: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: "#6b7280",
     marginTop: 4,
   },
@@ -1002,14 +1009,11 @@ const styles = StyleSheet.create({
       default: 6, // Мобильные
       web: 8, // Десктоп - уменьшено
     }),
-    fontSize: Platform.select({
-      default: 11, // Мобильные
-      web: 12, // Десктоп - уменьшено
-    }),
+    fontSize: 14,
     fontFamily: "Georgia", 
     color: "#2F332E",
     fontWeight: "600",
-    lineHeight: 18,
+    lineHeight: 20,
   },
   linkTxtActive: {
     color: "#1f2937", // ✅ УЛУЧШЕНИЕ: Нейтральный темно-серый
@@ -1026,11 +1030,11 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   linkMetaText: {
-    fontSize: 10,
+    fontSize: 14,
     color: "#9ca3af",
     fontFamily: "Georgia",
     fontWeight: "600",
-    lineHeight: 14,
+    lineHeight: 18,
   },
   linkDivider: {
     height: 1,

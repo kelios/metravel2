@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: Platform.select({
-      default: 13,
+      default: 14,
       web: 14,
     }),
     fontWeight: '600',
@@ -244,4 +244,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
 });
-

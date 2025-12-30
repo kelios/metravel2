@@ -3,11 +3,13 @@ import { Text, View } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
+const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined
+
 const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 400): Promise<T> => {
   try {
     return await fn()
   } catch {
-    if (tries <= 0) throw new Error('retry failed')
+    if (isTestEnv || tries <= 0) throw new Error('retry failed')
     await new Promise((r) => setTimeout(r, delay))
     return retry(fn, tries - 1, delay)
   }

@@ -327,7 +327,12 @@ export function TravelHeroSection({
           : {})}
       />
 
-      <View testID="travel-details-hero" style={[styles.sectionContainer, styles.contentStable]}>
+      <View
+        testID="travel-details-hero"
+        accessibilityRole="region"
+        accessibilityLabel="Галерея маршрута"
+        style={[styles.sectionContainer, styles.contentStable]}
+      >
         <View
           style={styles.sliderContainer}
           collapsable={false}
@@ -378,13 +383,19 @@ export function TravelHeroSection({
 
       <View
         testID="travel-details-quick-facts"
+        accessibilityRole="region"
+        accessibilityLabel="Краткие факты"
         style={[styles.sectionContainer, styles.contentStable, styles.quickFactsContainer]}
       >
         <QuickFacts travel={travel} />
       </View>
 
       {isMobile && travel.travelAddress && (
-        <View style={[styles.sectionContainer, styles.contentStable, { marginTop: 16 }]}>
+        <View
+          accessibilityRole="region"
+          accessibilityLabel="Погода"
+          style={[styles.sectionContainer, styles.contentStable, { marginTop: 16 }]}
+        >
           <Suspense fallback={null}>
             <WeatherWidget points={travel.travelAddress as any} />
           </Suspense>
@@ -433,6 +444,8 @@ export function TravelHeroSection({
       {isMobile && (
         <View
           testID="travel-details-primary-actions"
+          accessibilityRole="region"
+          accessibilityLabel="Поделиться маршрутом"
           style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
         >
           <ShareButtons travel={travel} />
@@ -442,6 +455,8 @@ export function TravelHeroSection({
       {!isMobile && (
         <View
           testID="travel-details-author"
+          accessibilityRole="region"
+          accessibilityLabel="Автор маршрута"
           style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
         >
           <Text style={styles.sectionHeaderText}>Автор</Text>

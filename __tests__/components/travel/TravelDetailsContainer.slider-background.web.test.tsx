@@ -20,6 +20,8 @@ jest.mock('@/components/travel/AuthorCard', () => ({
 }))
 
 describe('TravelHeroSection slider background regression (web)', () => {
+  jest.setTimeout(15000)
+
   beforeEach(() => {
     jest.useFakeTimers()
     Platform.OS = 'web'

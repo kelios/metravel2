@@ -219,6 +219,7 @@ const CollapsibleSection: React.FC<{
       <View style={[styles.sectionContainer, styles.contentStable]} collapsable={false}>
         <TouchableOpacity
           accessibilityRole="button"
+          accessibilityState={{ expanded: open }}
           onPress={handleToggle}
           style={[
             styles.sectionHeaderBtn,
@@ -619,6 +620,8 @@ const TravelContentSections: React.FC<{
           <View
             ref={anchors.description}
             collapsable={false}
+            accessibilityRole="region"
+            accessibilityLabel="Описание маршрута"
             {...(Platform.OS === 'web' ? { 'data-section-key': 'description' } : {})}
           >
             <CollapsibleSection
@@ -761,6 +764,8 @@ const TravelContentSections: React.FC<{
           style={[styles.sectionContainer, styles.contentStable]}
           ref={anchors.video}
           collapsable={false}
+          accessibilityRole="region"
+          accessibilityLabel="Видео маршрута"
           {...(Platform.OS === 'web' ? { 'data-section-key': 'video' } : {})}
         >
           <Text style={styles.sectionHeaderText}>Видео</Text>
@@ -772,7 +777,11 @@ const TravelContentSections: React.FC<{
       )}
 
       {shouldUseMobileInsights && (
-        <View style={[styles.sectionContainer, styles.mobileInsightTabsWrapper]}>
+        <View
+          accessibilityRole="region"
+          accessibilityLabel="Быстрый доступ к разделам"
+          style={[styles.sectionContainer, styles.mobileInsightTabsWrapper]}
+        >
           <Text style={styles.mobileInsightLabel}>Быстрый доступ к разделам</Text>
           <View style={styles.mobileInsightTabs}>
             {insightConfigs.map((section) => (
@@ -805,6 +814,8 @@ const TravelContentSections: React.FC<{
           <View
             ref={anchors.recommendation}
             collapsable={false}
+            accessibilityRole="region"
+            accessibilityLabel="Рекомендации"
             {...(Platform.OS === 'web' ? { 'data-section-key': 'recommendation' } : {})}
           >
             <CollapsibleSection
@@ -829,6 +840,8 @@ const TravelContentSections: React.FC<{
           <View
             ref={anchors.plus}
             collapsable={false}
+            accessibilityRole="region"
+            accessibilityLabel="Плюсы"
             {...(Platform.OS === 'web' ? { 'data-section-key': 'plus' } : {})}
           >
             <CollapsibleSection
@@ -853,6 +866,8 @@ const TravelContentSections: React.FC<{
           <View
             ref={anchors.minus}
             collapsable={false}
+            accessibilityRole="region"
+            accessibilityLabel="Минусы"
             {...(Platform.OS === 'web' ? { 'data-section-key': 'minus' } : {})}
           >
             <CollapsibleSection
@@ -905,6 +920,8 @@ const TravelVisualSections: React.FC<{
               ref={anchors.excursions}
               style={[styles.sectionContainer, styles.contentStable]}
               collapsable={false}
+              accessibilityRole="region"
+              accessibilityLabel="Экскурсии"
               {...(Platform.OS === 'web' ? { 'data-section-key': 'excursions' } : {})}
             >
               <Text style={styles.sectionHeaderText}>Экскурсии</Text>
@@ -927,6 +944,8 @@ const TravelVisualSections: React.FC<{
         testID="travel-details-map"
         style={[styles.sectionContainer, styles.contentStable]}
         collapsable={false}
+        accessibilityRole="region"
+        accessibilityLabel="Карта маршрута"
         {...(Platform.OS === 'web' ? { 'data-section-key': 'map', 'data-map-for-pdf': '1' } : {})}
       >
         {Platform.OS === 'web' && (
@@ -968,6 +987,8 @@ const TravelVisualSections: React.FC<{
         testID="travel-details-points"
         style={[styles.sectionContainer, styles.contentStable]}
         collapsable={false}
+        accessibilityRole="region"
+        accessibilityLabel="Координаты мест"
         {...(Platform.OS === 'web' ? { 'data-section-key': 'points' } : {})}
       >
         <Text style={styles.sectionHeaderText}>Координаты мест</Text>
@@ -1103,6 +1124,8 @@ const TravelRelatedContent: React.FC<{
         ref={anchors.near}
         style={[styles.sectionContainer, styles.contentStable]}
         collapsable={false}
+        accessibilityRole="region"
+        accessibilityLabel="Рядом можно посмотреть"
         onLayout={
           isWeb
             ? undefined
@@ -1149,7 +1172,11 @@ const TravelRelatedContent: React.FC<{
       </View>
 
       {relatedTravels.length > 0 && (
-        <View style={[styles.sectionContainer, styles.navigationArrowsContainer]}>
+        <View
+          style={[styles.sectionContainer, styles.navigationArrowsContainer]}
+          accessibilityRole="region"
+          accessibilityLabel="Навигация по похожим маршрутам"
+        >
           <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
         </View>
       )}
@@ -1158,6 +1185,8 @@ const TravelRelatedContent: React.FC<{
         ref={anchors.popular}
         style={[styles.sectionContainer, styles.contentStable]}
         collapsable={false}
+        accessibilityRole="region"
+        accessibilityLabel="Популярные маршруты"
         onLayout={
           isWeb
             ? undefined
@@ -1205,17 +1234,32 @@ const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boolean }> =
   isMobile,
 }) => (
   <>
-    <View testID="travel-details-telegram" style={[styles.sectionContainer, styles.authorCardContainer]}>
+    <View
+      testID="travel-details-telegram"
+      accessibilityRole="region"
+      accessibilityLabel="Обсуждение в Telegram"
+      style={[styles.sectionContainer, styles.authorCardContainer]}
+    >
       <TelegramDiscussionSection travel={travel} />
     </View>
 
     {!isMobile && (
-      <View testID="travel-details-share" style={[styles.sectionContainer, styles.shareButtonsContainer]}>
+      <View
+        testID="travel-details-share"
+        accessibilityRole="region"
+        accessibilityLabel="Поделиться маршрутом"
+        style={[styles.sectionContainer, styles.shareButtonsContainer]}
+      >
         <ShareButtons travel={travel} />
       </View>
     )}
 
-    <View testID="travel-details-cta" style={[styles.sectionContainer, styles.ctaContainer]}>
+    <View
+      testID="travel-details-cta"
+      accessibilityRole="region"
+      accessibilityLabel="Призыв к действию"
+      style={[styles.sectionContainer, styles.ctaContainer]}
+    >
       <CTASection travel={travel} />
     </View>
   </>

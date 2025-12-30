@@ -114,7 +114,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => Str
 
 export default function Root({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru">
+    <html lang="ru" data-theme="light">
     <head>
       <meta charSet="utf-8" />
       <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />
@@ -301,7 +301,9 @@ img[fetchpriority="high"]{content-visibility:auto;will-change:auto}
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important}
 }
-@media (prefers-color-scheme: dark){body{background:#000;color:#fff}}
+html[data-theme="dark"] body{background:#0f172a;color:#f5f7fa}
+html[data-theme="dark"]{color-scheme:dark}
+html[data-theme="light"]{color-scheme:light}
 :focus-visible{outline:2px solid #007bff;outline-offset:2px}
 /* ✅ ИСПРАВЛЕНИЕ: Оптимизация для мобильных устройств (320-430px) */
 @media (max-width:768px){

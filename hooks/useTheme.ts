@@ -15,7 +15,7 @@ interface ThemeContextType {
   toggleTheme: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 /**
  * Hook для управления темой (light/dark mode)
@@ -35,7 +35,7 @@ export function useTheme(): ThemeContextType {
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
-  const [savedTheme, setSavedTheme] = useState<Theme>('auto');
+  const [savedTheme, setSavedTheme] = useState<Theme>('light');
   const [isDark, setIsDark] = useState(false);
 
   // Инициализация темы при монтировании
@@ -80,6 +80,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     darkModeQuery.addEventListener('change', handleChange);
     return () => darkModeQuery.removeEventListener('change', handleChange);
   }, [savedTheme]);
+
+  // Синхронизация темы для web (data-theme + color-scheme)
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof document === 'undefined') return;
+
+    const root = document.documentElement;
+    root.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    root.style.colorScheme = isDark ? 'dark' : 'light';
+  }, [isDark]);
 
   const setTheme = useCallback((theme: Theme) => {
     setSavedTheme(theme);
@@ -193,4 +203,3 @@ export function useAnimationTiming() {
     slow: prefersReducedMotion ? 0 : 500,
   };
 }
-

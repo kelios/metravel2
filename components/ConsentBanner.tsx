@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
   },
   manageLinkText: {
     fontSize: 12,
-    color: '#bfdbfe',
+    color: '#1f2937',
     textDecorationLine: 'underline',
   },
   container: {
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4a8c8c',
   },
   primaryText: {
-    color: '#f9fafb',
+    color: '#111827',
     fontSize: 13,
     fontWeight: '600',
   },

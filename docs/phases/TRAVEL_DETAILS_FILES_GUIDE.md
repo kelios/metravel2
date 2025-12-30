@@ -5,14 +5,27 @@
 ```
 metravel2/
 ├── components/travel/details/
-│   └── TravelDetailsContainer.tsx          [UPDATED] Main component (3032 lines)
+│   ├── TravelDetailsContainer.tsx          [UPDATED] Main component
+│   ├── TravelDetailsHero.tsx               [NEW] Hero + LCP section
+│   ├── TravelDetailsDeferred.tsx           [NEW] Deferred sections (content/map/related/engagement)
+│   ├── TravelDetailsLazy.tsx               [NEW] Shared lazy loader
+│   ├── TravelDetailsIcons.tsx              [NEW] Lazy icon wrapper
+│   ├── TravelDetailsSections.tsx           [UPDATED] Re-export layer
+│   ├── TravelDetailsStyles.ts              [UPDATED] Shared styles
+│   └── TravelDetailsTypes.ts               [UPDATED] Shared types
 │
 ├── utils/
 │   ├── travelDetailsSecure.ts              [NEW] Security utilities
 │   └── travelDetailsUIUX.ts                [NEW] UI/UX utilities
 │
 ├── hooks/
-│   └── useTravelDetailsUtils.ts            [NEW] Custom hooks
+│   ├── useTravelDetailsUtils.ts            [NEW] Custom hooks
+│   ├── useTravelDetailsData.ts             [NEW] Data hook wrapper
+│   ├── useTravelDetailsLayout.ts           [NEW] Layout calculations
+│   ├── useTravelDetailsNavigation.ts       [NEW] Navigation + anchors
+│   ├── useTravelDetailsMenu.ts             [NEW] Menu wiring
+│   ├── useTravelDetailsPerformance.ts      [NEW] LCP/defer/perf wiring
+│   └── useTravelDetailsScrollState.ts      [NEW] Scroll state + metrics
 │
 ├── __tests__/components/travel/
 │   └── TravelDetailsContainer.security.test.tsx [NEW] Security tests
@@ -94,6 +107,41 @@ const stripToDescription = (html) => stripHtml(html).slice(0, 160);
 - Line 1638: Updated JSON-LD creation
 - Line 1659: Fixed preconnect domain whitelisting
 - Lines 2188: Fixed conditional simplification
+
+### Phase 5 Refactor Split (Latest)
+- `components/travel/details/TravelDetailsHero.tsx` - Hero + LCP rendering
+- `components/travel/details/TravelDetailsDeferred.tsx` - Deferred content/map/related/engagement sections
+- `components/travel/details/TravelDetailsLazy.tsx` - Shared lazy loader helper
+- `components/travel/details/TravelDetailsIcons.tsx` - Lazy icon wrapper
+- `hooks/useTravelDetailsLayout.ts` - Layout calculations
+- `hooks/useTravelDetailsNavigation.ts` - Anchors + open-section bridge
+- `hooks/useTravelDetailsPerformance.ts` - LCP/defer/perf wiring
+- `hooks/useTravelDetailsMenu.ts` - Menu wiring
+- `hooks/useTravelDetailsScrollState.ts` - Scroll metrics + progress
+- `hooks/useTravelDetailsData.ts` - Data wrapper
+
+### Hook APIs (TravelDetails)
+#### Core hooks
+- `useTravelDetails()` - Composed TravelDetails state (data + layout + navigation).
+- `useTravelDetailsData()` - Loads travel, related travels, and errors/loading state.
+- `useTravelDetailsLayout({ isMobile, screenWidth })` - Header offsets, side menu layout, and horizontal padding.
+- `useTravelDetailsNavigation({ anchors, scrollRef, headerOffset, menuWidth, onNavigate })` - Scroll/anchor helpers and active section wiring.
+- `useTravelDetailsMenu(isMobile, deferAllowed)` - Side menu open/close state + auto-close on navigation.
+- `useTravelDetailsPerformance({ travel, isMobile, isLoading })` - LCP tracking, slider deferral, and idle prefetching.
+- `useTravelDetailsScrollState({ scrollY, viewportHeight, scrollRef })` - Active section detection, scroll progress, and CTA thresholds.
+
+#### Utility hooks (useTravelDetailsUtils.ts)
+- `useScrollListener(scrollY, handler, deps)` - Attaches/removes Animated.Value listeners safely.
+- `useTimeout(callback, delay, deps)` - Managed timeout with cleanup.
+- `useInterval(callback, delay, deps)` - Managed interval with cleanup.
+- `useDOMElement(ref)` - Resolves RN web refs to DOM nodes with retry.
+- `useIdleCallback(callback, { timeout, enabled })` - requestIdleCallback wrapper with fallback.
+- `useIntersectionObserver(ref, handler, options)` - Safe IntersectionObserver wiring.
+- `useAnimationFrame(callback, enabled)` - RAF loop with teardown.
+- `useEventListener(eventName, handler, element, options)` - DOM event wiring with cleanup.
+- `useControlledState(controlledValue, initialValue, onChange)` - Controlled/uncontrolled state helper.
+- `useDebouncedCallback(callback, delay)` - Debounced callback helper.
+- `useComponentLifecycle(componentName)` - Dev-only mount/unmount logging.
 
 ---
 
@@ -435,4 +483,3 @@ A: Create an issue and reference the specific function/hook.
 **Last Updated:** 2025-01-01  
 
 👉 **Start with:** `TRAVEL_DETAILS_QUICK_START.md` (10 min read)
-

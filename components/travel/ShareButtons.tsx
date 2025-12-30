@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     marginTop: 8,
-    fontSize: 12,
+    fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
   },

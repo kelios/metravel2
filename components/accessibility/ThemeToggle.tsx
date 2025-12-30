@@ -6,7 +6,7 @@
 import React from 'react';
 import { Platform, Pressable, StyleSheet, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme, useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface ThemeToggleProps {
@@ -22,6 +22,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
   showLabel = false,
 }) => {
   const { theme, isDark, setTheme, toggleTheme } = useTheme();
+  const colors = useThemedColors();
 
   const sizeMap = {
     small: 20,
@@ -46,7 +47,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         onPress={handlePress}
         style={({ pressed }) => [
           styles.mobileToggle,
-          pressed && styles.mobileTogglePressed,
+          pressed && { ...styles.mobileTogglePressed, backgroundColor: colors.surfaceLight },
         ]}
         accessibilityRole="button"
         accessibilityLabel={`Переключить тему (текущая: ${isDark ? 'тёмная' : 'светлая'})`}
@@ -55,16 +56,18 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         <MaterialIcons
           name={isDark ? 'light-mode' : 'dark-mode'}
           size={iconSize}
-          color={DESIGN_TOKENS.colors.text}
+          color={colors.text}
         />
         {showLabel && (
-          <Text style={styles.label}>{isDark ? 'Light' : 'Dark'}</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{isDark ? 'Light' : 'Dark'}</Text>
         )}
       </Pressable>
     );
   }
 
   // Web version with dropdown
+  const webStyles = getWebStyles(colors);
+
   return (
     <div style={webStyles.container}>
       <button
@@ -77,7 +80,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         <MaterialIcons
           name={isDark ? 'light-mode' : 'dark-mode'}
           size={iconSize}
-          color={DESIGN_TOKENS.colors.text}
+          color={colors.text}
         />
         {showLabel && <span style={webStyles.label}>
           {theme === 'auto' ? 'Auto' : isDark ? 'Dark' : 'Light'}
@@ -97,7 +100,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           onClick={() => setTheme('light')}
           style={webStyles.menuItem}
         >
-          <MaterialIcons name="light-mode" size={16} color={DESIGN_TOKENS.colors.text} />
+          <MaterialIcons name="light-mode" size={16} color={colors.text} />
           <span>Light</span>
         </button>
 
@@ -107,7 +110,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           onClick={() => setTheme('dark')}
           style={webStyles.menuItem}
         >
-          <MaterialIcons name="dark-mode" size={16} color={DESIGN_TOKENS.colors.text} />
+          <MaterialIcons name="dark-mode" size={16} color={colors.text} />
           <span>Dark</span>
         </button>
 
@@ -117,7 +120,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           onClick={handlePressAuto}
           style={webStyles.menuItem}
         >
-          <MaterialIcons name="brightness-auto" size={16} color={DESIGN_TOKENS.colors.text} />
+          <MaterialIcons name="brightness-auto" size={16} color={colors.text} />
           <span>Auto</span>
         </button>
       </div>
@@ -234,7 +237,9 @@ const styles = StyleSheet.create({
   },
 });
 
-const webStyles: Record<string, React.CSSProperties> = {
+const getWebStyles = (
+  colors: ReturnType<typeof useThemedColors>
+): Record<string, React.CSSProperties> => ({
   container: {
     position: 'relative',
   },
@@ -247,7 +252,7 @@ const webStyles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   label: {
     fontSize: 14,
@@ -258,8 +263,8 @@ const webStyles: Record<string, React.CSSProperties> = {
     top: '100%',
     right: 0,
     marginTop: 8,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    border: `1px solid ${DESIGN_TOKENS.colors.border}`,
+    backgroundColor: colors.surface,
+    border: `1px solid ${colors.border}`,
     borderRadius: 8,
     zIndex: 1000,
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
@@ -274,14 +279,13 @@ const webStyles: Record<string, React.CSSProperties> = {
     background: 'transparent',
     border: 'none',
     cursor: 'pointer',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontSize: 14,
     textAlign: 'left',
     display: 'flex',
     alignItems: 'center',
     gap: 8,
   },
-};
+});
 
 export default ThemeToggle;
-

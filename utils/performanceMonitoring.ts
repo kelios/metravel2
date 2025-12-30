@@ -8,6 +8,7 @@ import { initializeWebVitalsMonitoring } from '@/utils/webVitalsMonitoring';
 export interface PerformanceMetrics {
   lcp: number; // Largest Contentful Paint
   fid: number; // First Input Delay
+  inp: number; // Interaction to Next Paint
   cls: number; // Cumulative Layout Shift
   ttfb: number; // Time to First Byte
   fcp: number; // First Contentful Paint
@@ -41,6 +42,7 @@ export class PerformanceMonitor {
   private init() {
     this.measureLCP();
     this.measureFID();
+    this.measureINP();
     this.measureCLS();
     this.measureTTFB();
     this.measureFCP();
@@ -78,6 +80,41 @@ export class PerformanceMonitor {
       this.observers.push(observer);
     } catch {
       console.warn('[Performance] FID measurement not supported');
+    }
+  }
+
+  private measureINP() {
+    try {
+      const interactionDurations = new Map<number, number>();
+      const observer = new PerformanceObserver((entryList) => {
+        entryList.getEntries().forEach((entry: any) => {
+          const duration = entry.duration || 0;
+          const interactionId = entry.interactionId || 0;
+
+          if (interactionId) {
+            const current = interactionDurations.get(interactionId) || 0;
+            if (duration > current) {
+              interactionDurations.set(interactionId, duration);
+            }
+          } else if (duration > (this.metrics.inp || 0)) {
+            this.metrics.inp = duration;
+          }
+        });
+
+        let maxInteraction = 0;
+        interactionDurations.forEach((value) => {
+          if (value > maxInteraction) maxInteraction = value;
+        });
+
+        if (maxInteraction > 0) {
+          this.metrics.inp = maxInteraction;
+          this.sendMetric('inp', maxInteraction);
+        }
+      });
+      observer.observe({ type: 'event', buffered: true, durationThreshold: 40 });
+      this.observers.push(observer);
+    } catch {
+      console.warn('[Performance] INP measurement not supported');
     }
   }
 
@@ -180,9 +217,10 @@ export class PerformanceMonitor {
       suggestions.push('- Remove render-blocking resources');
     }
 
-    // FID suggestions
-    if (metrics.fid && metrics.fid > 100) {
-      suggestions.push('FID > 100ms: Reduce first input delay');
+    // FID/INP suggestions
+    const interactionDelay = metrics.inp ?? metrics.fid;
+    if (interactionDelay && interactionDelay > 100) {
+      suggestions.push('FID/INP > 100ms: Improve interaction responsiveness');
       suggestions.push('- Minimize JavaScript execution time');
       suggestions.push('- Use code splitting');
       suggestions.push('- Reduce main thread work');

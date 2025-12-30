@@ -71,6 +71,9 @@ export function initializeWebVitalsMonitoring(): void {
   // Track CLS (Cumulative Layout Shift)
   trackCLS();
 
+  // Track INP (Interaction to Next Paint)
+  trackINP();
+
   // Track FCP (First Contentful Paint)
   trackFCP();
 
@@ -151,6 +154,50 @@ function trackCLS(): void {
     observer.observe({ entryTypes: ['layout-shift'] });
   } catch (error) {
     console.warn('[trackCLS] Error:', error);
+  }
+}
+
+/**
+ * Track Interaction to Next Paint (INP)
+ * Measures responsiveness to user interactions
+ * Target: < 100ms
+ */
+function trackINP(): void {
+  if (!('PerformanceObserver' in window)) return;
+
+  try {
+    const interactionDurations = new Map<number, number>();
+
+    const observer = new PerformanceObserver((list) => {
+      list.getEntries().forEach((entry: any) => {
+        const duration = entry.duration || 0;
+        const interactionId = entry.interactionId || 0;
+
+        if (interactionId) {
+          const current = interactionDurations.get(interactionId) || 0;
+          if (duration > current) {
+            interactionDurations.set(interactionId, duration);
+          }
+        } else if (duration > (monitor.metrics.inp || 0)) {
+          monitor.metrics.inp = duration;
+        }
+      });
+
+      let maxInteraction = 0;
+      interactionDurations.forEach((value) => {
+        if (value > maxInteraction) maxInteraction = value;
+      });
+
+      if (maxInteraction > 0) {
+        monitor.metrics.inp = maxInteraction;
+      }
+
+      notifyCallbacks();
+    });
+
+    observer.observe({ type: 'event', buffered: true, durationThreshold: 40 });
+  } catch (error) {
+    console.warn('[trackINP] Error:', error);
   }
 }
 
@@ -360,6 +407,7 @@ export function checkMetricsHealth(metrics: WebVitalsMetrics): {
   cls: 'good' | 'fair' | 'poor';
   fcp: 'good' | 'fair' | 'poor';
   ttfb: 'good' | 'fair' | 'poor';
+  inp: 'good' | 'fair' | 'poor';
 } {
   const getStatus = (value: number | undefined, good: number, fair: number): 'good' | 'fair' | 'poor' => {
     if (value === undefined) return 'fair';
@@ -373,14 +421,16 @@ export function checkMetricsHealth(metrics: WebVitalsMetrics): {
   const clsStatus = getStatus(metrics.cls, 0.1, 0.25);
   const fcpStatus = getStatus(metrics.fcp, 1800, 3000);
   const ttfbStatus = getStatus(metrics.ttfb, 600, 1800);
+  const inpStatus = getStatus(metrics.inp, 100, 300);
 
   return {
-    isHealthy: [lcpStatus, fidStatus, clsStatus, fcpStatus, ttfbStatus].every(s => s !== 'poor'),
+    isHealthy: [lcpStatus, fidStatus, clsStatus, fcpStatus, ttfbStatus, inpStatus].every(s => s !== 'poor'),
     lcp: lcpStatus,
     fid: fidStatus,
     cls: clsStatus,
     fcp: fcpStatus,
     ttfb: ttfbStatus,
+    inp: inpStatus,
   };
 }
 
@@ -392,9 +442,9 @@ export function formatMetricsForDisplay(metrics: WebVitalsMetrics): string {
 📊 Web Vitals:
   LCP: ${metrics.lcp ? `${metrics.lcp.toFixed(0)}ms` : 'N/A'}
   FID: ${metrics.fid ? `${metrics.fid.toFixed(0)}ms` : 'N/A'}
+  INP: ${metrics.inp ? `${metrics.inp.toFixed(0)}ms` : 'N/A'}
   CLS: ${metrics.cls ? `${metrics.cls.toFixed(3)}` : 'N/A'}
   FCP: ${metrics.fcp ? `${metrics.fcp.toFixed(0)}ms` : 'N/A'}
   TTFB: ${metrics.ttfb ? `${metrics.ttfb.toFixed(0)}ms` : 'N/A'}
 `;
 }
-

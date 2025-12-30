@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     }),
   },
   buttonText: {
-    color: DESIGN_TOKENS.colors.surface,
+    color: '#111827',
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 0.2,

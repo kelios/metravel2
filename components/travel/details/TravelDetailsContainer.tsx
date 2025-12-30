@@ -56,6 +56,7 @@ import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
 import SkipToContentLink from "@/components/accessibility/SkipToContentLink";
 import AccessibilityAnnouncer from "@/components/accessibility/AccessibilityAnnouncer";
 import { useAccessibilityAnnounce, useReducedMotion } from "@/hooks/useKeyboardNavigation";
+import { useTheme, useThemedColors } from "@/hooks/useTheme";
 
 /* -------------------- helpers -------------------- */
 
@@ -127,6 +128,8 @@ export default function TravelDetailsContainer() {
   const { announcement, priority: announcementPriority } = useAccessibilityAnnounce();
   // Note: useReducedMotion hook will be used in future for animation handling
   useReducedMotion();
+  const { isDark } = useTheme();
+  const themedColors = useThemedColors();
 
   // ✅ УЛУЧШЕНИЕ: Состояние для похожих путешествий (для навигации)
   const [relatedTravels, setRelatedTravels] = useState<Travel[]>([]);
@@ -322,7 +325,7 @@ export default function TravelDetailsContainer() {
                   {firstImgOrigin && <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />}
                 </>
               )}
-              <meta name="theme-color" content="#f9f8f2" />
+              <meta name="theme-color" content={isDark ? "#0f172a" : "#f9f8f2"} />
               {jsonLd && (
                 <script
                   type="application/ld+json"
@@ -343,10 +346,13 @@ export default function TravelDetailsContainer() {
       aria-label={`Travel details for ${travel?.name || 'travel'}`}
       style={[
         styles.wrapper,
+        { backgroundColor: themedColors.background },
         Platform.OS === "web" &&
           ({
             // @ts-ignore - web-specific CSS property
-            backgroundImage: "linear-gradient(180deg, #ffffff 0%, #f9f8f2 100%)",
+            backgroundImage: isDark
+              ? "linear-gradient(180deg, #0f172a 0%, #1e293b 100%)"
+              : "linear-gradient(180deg, #ffffff 0%, #f9f8f2 100%)",
           } as any),
       ]}
     >
@@ -367,6 +373,8 @@ export default function TravelDetailsContainer() {
                     transform: [{ translateX: animatedX }],
                     width: menuWidth as any,
                     zIndex: 1000,
+                    backgroundColor: themedColors.surface,
+                    borderRightColor: themedColors.border,
                   },
                 ]}
               >

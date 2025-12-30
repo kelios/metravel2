@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     title: {
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '600',
         fontFamily: 'Roboto-Medium',
         color: '#374151',
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     },
     tooltipText: {
         color: '#fff',
-        fontSize: 12,
+        fontSize: 14,
         fontFamily: 'Roboto-Regular',
     },
     forecastContainer: {
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
         marginBottom: 6, // ✅ UX: Уменьшено с 8
     },
     date: {
-        fontSize: 11, // ✅ UX: Уменьшено с 13
+        fontSize: 14,
         fontWeight: '500',
         fontFamily: 'Roboto-Medium',
         color: '#9ca3af',
@@ -221,13 +221,13 @@ const styles = StyleSheet.create({
         color: '#374151',
     },
     tempMin: {
-        fontSize: 12, // ✅ UX: Уменьшено с 14
+        fontSize: 14,
         fontWeight: '400',
         fontFamily: 'Roboto-Regular',
         color: '#9ca3af',
     },
     desc: {
-        fontSize: 10, // ✅ UX: Уменьшено с 12 для компактности
+        fontSize: 14,
         color: '#9ca3af',
         fontFamily: 'Roboto-Regular',
         textAlign: 'center',

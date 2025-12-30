@@ -1,7 +1,7 @@
 // components/export/BookSettingsModal.tsx
 // ✅ УЛУЧШЕНИЕ: Модальное окно настроек фотоальбома
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Modal, Platform } from 'react-native';
 import ThemePreview from './ThemePreview';
 import PresetSelector from './PresetSelector';
@@ -128,6 +128,7 @@ export default function BookSettingsModal({
   userName,
   mode: _mode = 'save',
 }: BookSettingsModalProps) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const [settings, setSettings] = useState<BookSettings>(() =>
     buildInitialSettings(defaultSettings, userName)
   );
@@ -137,6 +138,24 @@ export default function BookSettingsModal({
   useEffect(() => {
     setSettings(buildInitialSettings(defaultSettings, userName));
   }, [defaultSettings, userName]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!visible) return;
+    if (typeof document === 'undefined') return;
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeydown);
+    requestAnimationFrame(() => dialogRef.current?.focus?.());
+
+    return () => document.removeEventListener('keydown', handleKeydown);
+  }, [onClose, visible]);
 
   const handlePresetSelect = (preset: BookPreset) => {
     setSettings({
@@ -232,6 +251,8 @@ export default function BookSettingsModal({
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"
+          ref={dialogRef}
+          tabIndex={-1}
           onClick={(e) => e.stopPropagation()}
         >
           <h2

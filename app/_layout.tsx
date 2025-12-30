@@ -19,6 +19,7 @@ import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { useResponsive } from "@/hooks/useResponsive"; 
 import { createOptimizedQueryClient } from "@/src/utils/reactQueryConfig";
+import { ThemeProvider } from "@/hooks/useTheme";
 
 // ✅ ИСПРАВЛЕНИЕ: Глобальный CSS для web (box-sizing fix)
 if (Platform.OS === 'web') {
@@ -308,70 +309,72 @@ function RootLayoutNav() {
 
     return (
       <ErrorBoundary>
-        <PaperProvider theme={theme}>
-            <AuthProvider>
-                <FavoritesProvider>
-                    <QueryClientProvider client={queryClient}>
-                        <FiltersProvider>
-                            <View style={styles.container}>
-                            {showMapBackground && (
-                              <Image
-                                source={mapBackground}
-                                style={styles.backgroundImage}
-                                resizeMode="cover"
-                              />
-                            )}
-                            <Head>
-                                <link rel="icon" href="/favicon.ico" />
-                                <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-                                <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-                                <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-                                <title key="fallback-title">{defaultTitle}</title>
-                                <meta key="fallback-description" name="description" content={defaultDescription} />
-                                <link key="fallback-canonical" rel="canonical" href={canonical} />
-                                {/* Оптимизация шрифтов - font-display: swap уже в +html.tsx */}
-                                {Platform.OS === 'web' && (
-                                    <>
-                                        <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
-                                        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-                                    </>
-                                )}
-                            </Head>
-
-                            {/* ✅ УЛУЧШЕНИЕ: Skip links для доступности */}
-                            {Platform.OS === 'web' && <SkipLinks />}
-
-                            {/* ✅ FIX-005: Индикатор статуса сети */}
-                            <NetworkStatus position="top" />
-
-                            <View style={[styles.content]}>
-                                <Stack screenOptions={{ headerShown: false }}>
-                                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                                </Stack>
-
-                                {/* Прокладка: только высота док-строки футера */}
-                                <BottomGutter />
-                            </View>
-
-                            {/* Баннер согласия с компактным интерфейсом (web only) */}
-                            <ConsentBanner />
-
-                            {showFooter && (!isWeb || isMounted) && (
-                              <View style={[styles.footerWrapper, isWeb && isMobile ? ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 100 } as any) : null]}>
-                                <Footer
-                                  /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
-                                  onDockHeight={(h) => setDockHeight(h)}
+        <ThemeProvider>
+          <PaperProvider theme={theme}>
+              <AuthProvider>
+                  <FavoritesProvider>
+                      <QueryClientProvider client={queryClient}>
+                          <FiltersProvider>
+                              <View style={styles.container}>
+                              {showMapBackground && (
+                                <Image
+                                  source={mapBackground}
+                                  style={styles.backgroundImage}
+                                  resizeMode="cover"
                                 />
+                              )}
+                              <Head>
+                                  <link rel="icon" href="/favicon.ico" />
+                                  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+                                  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+                                  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+                                  <title key="fallback-title">{defaultTitle}</title>
+                                  <meta key="fallback-description" name="description" content={defaultDescription} />
+                                  <link key="fallback-canonical" rel="canonical" href={canonical} />
+                                  {/* Оптимизация шрифтов - font-display: swap уже в +html.tsx */}
+                                  {Platform.OS === 'web' && (
+                                      <>
+                                          <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
+                                          <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+                                      </>
+                                  )}
+                              </Head>
+
+                              {/* ✅ УЛУЧШЕНИЕ: Skip links для доступности */}
+                              {Platform.OS === 'web' && <SkipLinks />}
+
+                              {/* ✅ FIX-005: Индикатор статуса сети */}
+                              <NetworkStatus position="top" />
+
+                              <View style={[styles.content]}>
+                                  <Stack screenOptions={{ headerShown: false }}>
+                                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                                  </Stack>
+
+                                  {/* Прокладка: только высота док-строки футера */}
+                                  <BottomGutter />
                               </View>
-                            )}
-                      </View>
-                  </FiltersProvider>
-              </QueryClientProvider>
-          </FavoritesProvider>
-          </AuthProvider>
-          {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
-          {isMounted && <Toast />}
-      </PaperProvider>
+
+                              {/* Баннер согласия с компактным интерфейсом (web only) */}
+                              <ConsentBanner />
+
+                              {showFooter && (!isWeb || isMounted) && (
+                                <View style={[styles.footerWrapper, isWeb && isMobile ? ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 100 } as any) : null]}>
+                                  <Footer
+                                    /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
+                                    onDockHeight={(h) => setDockHeight(h)}
+                                  />
+                                </View>
+                              )}
+                        </View>
+                    </FiltersProvider>
+                </QueryClientProvider>
+            </FavoritesProvider>
+            </AuthProvider>
+            {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
+            {isMounted && <Toast />}
+        </PaperProvider>
+        </ThemeProvider>
       </ErrorBoundary>
     );
 }

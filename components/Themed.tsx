@@ -1,3 +1,4 @@
+import { useContext } from 'react';
 import {
   Button as DefaultButton,
   ButtonProps as RNButtonProps,
@@ -8,6 +9,7 @@ import {
   ViewProps as RNViewProps,
 } from 'react-native';
 import Colors from '@/constants/Colors';
+import { ThemeContext } from '@/hooks/useTheme';
 
 type ThemeProps = {
   lightColor?: string;
@@ -25,7 +27,9 @@ export function useThemeColor(
     props: { light?: string; dark?: string },
     colorName: keyof typeof Colors.light & keyof typeof Colors.dark
 ) {
-  const theme = useColorScheme() ?? 'light';
+  const themeContext = useContext(ThemeContext);
+  const systemTheme = useColorScheme() ?? 'light';
+  const theme = themeContext ? (themeContext.isDark ? 'dark' : 'light') : systemTheme;
   const colorFromProps = props[theme];
   return colorFromProps ?? Colors[theme][colorName];
 }

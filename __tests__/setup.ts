@@ -24,6 +24,32 @@ console.info = (message, ...args) => {
 
 require('@testing-library/jest-native/extend-expect')
 
+jest.mock('@/hooks/useTheme', () => ({
+  useTheme: () => ({
+    theme: 'light',
+    isDark: false,
+    setTheme: jest.fn(),
+    toggleTheme: jest.fn(),
+  }),
+  useThemedColors: () => ({
+    primary: '#0066CC',
+    primaryDark: '#0052A3',
+    primaryLight: '#E6F2FF',
+    text: '#1A1A1A',
+    textMuted: '#4A4A4A',
+    textInverse: '#FFFFFF',
+    background: '#FFFFFF',
+    surface: '#FFFFFF',
+    surfaceLight: '#F5F7FA',
+    border: '#E5E7EB',
+    success: '#059669',
+    error: '#DC2626',
+    warning: '#D97706',
+    info: '#0284C7',
+  }),
+  ThemeProvider: ({ children }: { children: any }) => children,
+}))
+
 // Mock console.error to avoid error logs in test output
 const originalError = console.error;
 console.error = (message, ...args) => {
@@ -94,6 +120,14 @@ if (typeof window !== 'undefined' && (window as any).HTMLCanvasElement?.prototyp
   proto.toDataURL = jest.fn(() => 'data:image/webp;base64,AAAA')
 }
 
+// Polyfill setImmediate/clearImmediate for react-native StatusBar cleanup in tests
+if (typeof (global as any).setImmediate !== 'function') {
+  ;(global as any).setImmediate = (fn: any, ...args: any[]) => setTimeout(fn, 0, ...args)
+}
+if (typeof (global as any).clearImmediate !== 'function') {
+  ;(global as any).clearImmediate = (id: any) => clearTimeout(id)
+}
+
 // Polyfill TextEncoder/TextDecoder for JSDOM environment
 import { TextEncoder, TextDecoder } from 'util'
 global.TextEncoder = TextEncoder
@@ -128,6 +162,36 @@ if (!('matchMedia' in window)) {
     removeListener: jest.fn(),
     dispatchEvent: jest.fn(),
   }));
+}
+
+if (typeof (window as any).IntersectionObserver === 'undefined') {
+  class IntersectionObserverMock {
+    callback: IntersectionObserverCallback
+    options?: IntersectionObserverInit
+
+    constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+      this.callback = callback
+      this.options = options
+    }
+
+    observe = jest.fn()
+    unobserve = jest.fn()
+    disconnect = jest.fn()
+    takeRecords = jest.fn(() => [])
+  }
+
+  ;(window as any).IntersectionObserver = IntersectionObserverMock
+  ;(global as any).IntersectionObserver = IntersectionObserverMock
+}
+
+if (typeof (window as any).performance === 'undefined') {
+  ;(window as any).performance = {
+    now: () => Date.now(),
+    mark: jest.fn(),
+    measure: jest.fn(),
+    clearMarks: jest.fn(),
+    clearMeasures: jest.fn(),
+  }
 }
 
 if (typeof document === 'undefined') {

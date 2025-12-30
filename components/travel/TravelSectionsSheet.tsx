@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { MaterialIcons } from "@expo/vector-icons"
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
@@ -35,6 +35,9 @@ const getGroupKey = (key: string): GroupKey => {
 
 const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate, testID }) => {
   const [open, setOpen] = useState(false)
+  const triggerRef = useRef<any>(null)
+  const closeRef = useRef<any>(null)
+  const wasOpenRef = useRef(false)
 
   const grouped = useMemo(() => {
     const items = links.map((l, idx) => {
@@ -54,6 +57,38 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
     [onNavigate]
   )
 
+  useEffect(() => {
+    if (Platform.OS !== "web") return
+    if (!open) return
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault()
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener("keydown", handleKeydown)
+    requestAnimationFrame(() => {
+      closeRef.current?.focus?.()
+    })
+
+    return () => document.removeEventListener("keydown", handleKeydown)
+  }, [open])
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return
+    if (open) {
+      wasOpenRef.current = true
+      return
+    }
+    if (!wasOpenRef.current) return
+    wasOpenRef.current = false
+    requestAnimationFrame(() => {
+      triggerRef.current?.focus?.()
+    })
+  }, [open])
+
   if (!links.length) return null
 
   return (
@@ -64,6 +99,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           onPress={() => setOpen(true)}
           accessibilityRole="button"
           accessibilityLabel="Открыть список секций"
+          ref={triggerRef}
           style={({ pressed }) => [styles.trigger, pressed && styles.triggerPressed]}
         >
           <MaterialIcons name={"list" as any} size={18} color="#2f332e" />
@@ -88,6 +124,9 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
             testID="travel-sections-sheet"
             style={styles.sheet}
             onPress={() => undefined}
+            accessibilityRole="dialog"
+            accessibilityLabel="Список разделов"
+            accessibilityViewIsModal
           >
             <View style={styles.header}>
               <Text style={styles.title}>Разделы</Text>
@@ -96,6 +135,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
                 onPress={() => setOpen(false)}
                 accessibilityRole="button"
                 accessibilityLabel="Закрыть"
+                ref={closeRef}
                 style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
               >
                 <MaterialIcons name={"close" as any} size={20} color="#1f2937" />
@@ -261,7 +301,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.05)",
   },
   metaText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
     color: "#4b5563",
   },

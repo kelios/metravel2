@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   socialChipText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: '#6b7280',
   },

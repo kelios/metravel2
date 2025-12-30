@@ -13,12 +13,14 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/src/utils/confirmAction';
 import { fetchUserProfile, updateUserProfile, uploadUserProfileAvatarFile, type UpdateUserProfilePayload, type UploadUserProfileAvatarFile, type UserProfileDto } from '@/src/api/user';
 import { ApiError } from '@/src/api/client';
+import { Theme, useTheme } from '@/hooks/useTheme';
 
 export default function SettingsScreen() {
     const router = useRouter();
     const { isAuthenticated, logout, username, userId, triggerProfileRefresh } = useAuth();
     const isWeb = Platform.OS === 'web';
     const favoritesContext = useFavorites();
+    const { theme, setTheme } = useTheme();
     const {
         clearHistory = async () => {},
         clearFavorites = async () => {},
@@ -53,6 +55,30 @@ export default function SettingsScreen() {
         const full = `${cleanText(firstName)} ${cleanText(lastName)}`.trim();
         return full || username || 'Пользователь';
     }, [cleanText, firstName, lastName, username]);
+
+    const themeOptions = useMemo(
+        () => [
+            {
+                value: 'light' as Theme,
+                label: 'Светлая',
+                description: 'По умолчанию',
+                icon: 'sun' as const,
+            },
+            {
+                value: 'dark' as Theme,
+                label: 'Тёмная',
+                description: 'Комфортно в темноте',
+                icon: 'moon' as const,
+            },
+            {
+                value: 'auto' as Theme,
+                label: 'Системная',
+                description: 'Следовать настройкам устройства',
+                icon: 'smartphone' as const,
+            },
+        ],
+        []
+    );
 
     const hasUnsavedChanges = useMemo(() => {
         if (!profile) return false;
@@ -428,6 +454,56 @@ export default function SettingsScreen() {
                         </View>
                     </View>
 
+                    <Text style={styles.sectionTitle}>Тема</Text>
+
+                    <View style={styles.card}>
+                        <View style={styles.cardRow}>
+                            <View style={styles.cardIcon}>
+                                <Feather name="sun" size={18} color={DESIGN_TOKENS.colors.primary} />
+                            </View>
+                            <View style={styles.cardText}>
+                                <Text style={styles.cardTitle}>Тема оформления</Text>
+                                <Text style={styles.cardMeta}>По умолчанию светлая</Text>
+                            </View>
+                        </View>
+
+                        <View
+                            style={styles.themeOptions}
+                            accessibilityRole="radiogroup"
+                            accessibilityLabel="Выбор темы оформления"
+                        >
+                            {themeOptions.map((option) => {
+                                const isSelected = theme === option.value;
+                                return (
+                                    <Pressable
+                                        key={option.value}
+                                        onPress={() => setTheme(option.value)}
+                                        style={({ pressed }) => [
+                                            styles.themeOption,
+                                            isSelected && styles.themeOptionActive,
+                                            pressed && styles.themeOptionPressed,
+                                        ]}
+                                        accessibilityRole="radio"
+                                        accessibilityState={{ selected: isSelected }}
+                                        accessibilityLabel={option.label}
+                                        {...Platform.select({ web: { cursor: 'pointer' } })}
+                                    >
+                                        <View style={[styles.themeOptionIcon, isSelected && styles.themeOptionIconActive]}>
+                                            <Feather name={option.icon} size={16} color={DESIGN_TOKENS.colors.primary} />
+                                        </View>
+                                        <View style={styles.themeOptionText}>
+                                            <Text style={styles.themeOptionTitle}>{option.label}</Text>
+                                            <Text style={styles.themeOptionDescription}>{option.description}</Text>
+                                        </View>
+                                        {isSelected ? (
+                                            <Feather name="check" size={16} color={DESIGN_TOKENS.colors.primary} />
+                                        ) : null}
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+                    </View>
+
                     <Text style={styles.sectionTitle}>Аккаунт</Text>
 
                     <View style={styles.card}>
@@ -635,6 +711,50 @@ const styles = StyleSheet.create({
         color: DESIGN_TOKENS.colors.text,
     },
     cardMeta: {
+        marginTop: 2,
+        fontSize: 12,
+        color: DESIGN_TOKENS.colors.textMuted,
+    },
+    themeOptions: {
+        gap: 10,
+    },
+    themeOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: DESIGN_TOKENS.colors.border,
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+    },
+    themeOptionActive: {
+        borderColor: DESIGN_TOKENS.colors.primary,
+        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    },
+    themeOptionPressed: {
+        opacity: 0.9,
+    },
+    themeOptionIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    themeOptionIconActive: {
+        backgroundColor: DESIGN_TOKENS.colors.surface,
+    },
+    themeOptionText: {
+        flex: 1,
+    },
+    themeOptionTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: DESIGN_TOKENS.colors.text,
+    },
+    themeOptionDescription: {
         marginTop: 2,
         fontSize: 12,
         color: DESIGN_TOKENS.colors.textMuted,

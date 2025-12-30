@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     }),
   },
   primaryButtonText: {
-    color: DESIGN_TOKENS.colors.surface,
+    color: '#111827',
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: 0.1,
@@ -264,4 +264,3 @@ const styles = StyleSheet.create({
 });
 
 export default HomeHero;
-

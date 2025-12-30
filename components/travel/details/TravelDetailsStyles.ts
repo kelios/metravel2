@@ -61,7 +61,7 @@ export const styles = StyleSheet.create({
   
   contentStable: {
     // Предотвращает layout shift при загрузке контента
-    minHeight: 48,
+    minHeight: DESIGN_TOKENS.spacing.xxl,
   },
   
   contentOuter: {
@@ -94,8 +94,11 @@ export const styles = StyleSheet.create({
   quickJumpChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: Platform.select({ default: 10, web: 12 }),
-    paddingHorizontal: Platform.select({ default: 14, web: 20 }),
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: Platform.select({
+      default: DESIGN_TOKENS.spacing.md,
+      web: DESIGN_TOKENS.spacing.sm + DESIGN_TOKENS.spacing.xs,
+    }),
     borderRadius: 999,
     borderWidth: 1,
     borderColor: DESIGN_TOKENS.colors.borderLight,
@@ -117,7 +120,7 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600" as any,
     color: DESIGN_TOKENS.colors.text,
-    marginLeft: 8,
+    marginLeft: DESIGN_TOKENS.spacing.xs,
   },
   
   descriptionIntroWrapper: {
@@ -125,7 +128,7 @@ export const styles = StyleSheet.create({
   },
   
   descriptionIntroTitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
+    fontSize: Platform.select({ default: 22, web: 24 }),
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
     color: DESIGN_TOKENS.colors.text,
     marginBottom: DESIGN_TOKENS.spacing.sm,
@@ -152,7 +155,7 @@ export const styles = StyleSheet.create({
     }),
   },
   decisionSummaryTitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
+    fontSize: Platform.select({ default: 22, web: 24 }),
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
     color: DESIGN_TOKENS.colors.text,
     marginBottom: DESIGN_TOKENS.spacing.sm,
@@ -167,7 +170,7 @@ export const styles = StyleSheet.create({
   },
   decisionSummaryBulletIcon: {
     width: 20,
-    marginTop: 3,
+    marginTop: DESIGN_TOKENS.spacing.xxs,
     opacity: 0.75,
   },
   decisionSummaryBulletText: {
@@ -181,11 +184,11 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: DESIGN_TOKENS.spacing.sm,
-    paddingLeft: 20,
+    paddingLeft: DESIGN_TOKENS.spacing.sm + DESIGN_TOKENS.spacing.xs,
   },
   decisionSummarySubBulletIcon: {
     width: 20,
-    marginTop: 10,
+    marginTop: DESIGN_TOKENS.spacing.xs,
     opacity: 0.6,
   },
   decisionSummarySubBulletText: {
@@ -197,8 +200,8 @@ export const styles = StyleSheet.create({
     fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
   },
   decisionSummaryBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
     borderRadius: 999,
     borderWidth: 1,
   },
@@ -215,7 +218,7 @@ export const styles = StyleSheet.create({
     borderColor: 'rgba(239, 68, 68, 0.18)',
   },
   decisionSummaryBadgeText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '800' as any,
     letterSpacing: 0.2,
   },
@@ -288,7 +291,7 @@ export const styles = StyleSheet.create({
     borderRightWidth: 0,
     maxHeight: "100vh" as any,
     overflowY: "auto" as any,
-    paddingTop: HEADER_OFFSET_MOBILE + 32,
+    paddingTop: HEADER_OFFSET_MOBILE + DESIGN_TOKENS.spacing.xl,
   },
 
   // ✅ РЕДИЗАЙН: Современные карточки с улучшенными тенями
@@ -358,7 +361,7 @@ export const styles = StyleSheet.create({
     flexShrink: 0,
   },
   sectionHeaderBadge: {
-    fontSize: Platform.select({ default: 11, web: 12 }),
+    fontSize: 14,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
     color: DESIGN_TOKENS.colors.textMuted,
     backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
@@ -370,15 +373,15 @@ export const styles = StyleSheet.create({
 
   sectionHeaderText: { 
     fontSize: Platform.select({
-      default: 20,
-      web: 24,
+      default: 22,
+      web: 26,
     }),
     fontWeight: '700' as any,
     color: DESIGN_TOKENS.colors.text,
     letterSpacing: -0.4,
     lineHeight: Platform.select({
-      default: 28,
-      web: 32,
+      default: 30,
+      web: 34,
     }),
     flexShrink: 1,
   },
@@ -430,8 +433,8 @@ export const styles = StyleSheet.create({
   },
   neutralActionButton: {
     alignSelf: "flex-start",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.10)",
@@ -448,7 +451,7 @@ export const styles = StyleSheet.create({
   },
   videoHintText: {
     color: DESIGN_TOKENS.colors.surface,
-    fontSize: Platform.select({ default: 12, web: 13 }),
+    fontSize: 14,
     marginTop: DESIGN_TOKENS.spacing.sm,
     textAlign: "center",
     fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
@@ -475,7 +478,7 @@ export const styles = StyleSheet.create({
   mobileInsightTabsWrapper: {
     backgroundColor: "rgba(15, 23, 42, 0.03)",
     padding: DESIGN_TOKENS.spacing.lg,
-    borderRadius: 16,
+    borderRadius: DESIGN_TOKENS.radii.md,
     borderWidth: 1,
     borderColor: "rgba(148, 163, 184, 0.3)",
   },
@@ -483,7 +486,7 @@ export const styles = StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
     color: "#1f2937",
-    marginBottom: 8,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   mobileInsightTabs: {
     flexDirection: "row",
@@ -491,8 +494,8 @@ export const styles = StyleSheet.create({
     gap: DESIGN_TOKENS.spacing.sm,
   },
   mobileInsightChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     borderRadius: 999,
     backgroundColor: "rgba(148, 163, 184, 0.2)",
   },
@@ -511,7 +514,7 @@ export const styles = StyleSheet.create({
   mapEmptyState: {
     width: "100%",
     padding: DESIGN_TOKENS.spacing.xl,
-    borderRadius: 16,
+    borderRadius: DESIGN_TOKENS.radii.md,
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderWidth: 1,
     borderStyle: "dashed",
@@ -533,11 +536,11 @@ export const styles = StyleSheet.create({
   sectionBadgeRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginTop: 12,
+    marginTop: DESIGN_TOKENS.spacing.sm,
     gap: DESIGN_TOKENS.spacing.sm,
   },
   sectionBadgePill: {
-    paddingHorizontal: 12,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     borderRadius: 999,
   },
@@ -548,7 +551,7 @@ export const styles = StyleSheet.create({
     backgroundColor: "rgba(249, 115, 22, 0.18)",
   },
   sectionBadgeText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
     color: "#1f2937",
   },
@@ -559,7 +562,7 @@ export const styles = StyleSheet.create({
     color: "#9a3412",
   },
 
-  fallback: { paddingVertical: 32, alignItems: "center" },
+  fallback: { paddingVertical: DESIGN_TOKENS.spacing.xl, alignItems: "center" },
   travelListFallback: {
     width: '100%',
     minHeight: Platform.select({
@@ -576,14 +579,14 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#f9f8f2",
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingVertical: 40,
+    paddingVertical: DESIGN_TOKENS.spacing.xl + DESIGN_TOKENS.spacing.xs,
   },
   errorTitle: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: "600",
     color: "#1f2937",
     marginTop: DESIGN_TOKENS.spacing.lg,
-    marginBottom: 8,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
     textAlign: "center",
     fontFamily: "Georgia",
   },
@@ -597,7 +600,7 @@ export const styles = StyleSheet.create({
   errorButton: {
     backgroundColor: DESIGN_TOKENS.colors.primary,
     paddingHorizontal: DESIGN_TOKENS.spacing.xl,
-    paddingVertical: 12,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
     borderRadius: 8,
     ...Platform.select({
       web: {
@@ -615,4 +618,3 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-
