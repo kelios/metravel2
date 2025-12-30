@@ -1,11 +1,9 @@
 // app/travels/[param].tsx
 import React, {
-  lazy,
   Suspense,
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useTransition,
 } from "react";
@@ -18,7 +16,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  DeviceEventEmitter,
   useWindowDimensions,
 } from "react-native";
 
@@ -29,11 +26,12 @@ import { useResponsive } from '@/hooks/useResponsive';
 
 import type { Travel } from "@/src/types/types";
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
-import { useTravelDetails } from "@/hooks/useTravelDetails";
-import { useActiveSection } from "@/hooks/useActiveSection";
-import { useScrollNavigation } from "@/hooks/useScrollNavigation";
-import { useMenuState } from "@/hooks/useMenuState";
-import { useScrollListener } from "@/hooks/useTravelDetailsUtils";
+import { useTravelDetailsData } from "@/hooks/useTravelDetailsData";
+import { useTravelDetailsLayout } from "@/hooks/useTravelDetailsLayout";
+import { useTravelDetailsMenu } from "@/hooks/useTravelDetailsMenu";
+import { useTravelDetailsNavigation } from "@/hooks/useTravelDetailsNavigation";
+import { useTravelDetailsPerformance } from "@/hooks/useTravelDetailsPerformance";
+import { useTravelDetailsScrollState } from "@/hooks/useTravelDetailsScrollState";
 import InstantSEO from "@/components/seo/InstantSEO";
 import { createSafeJsonLd, stripHtml, createSafeImageUrl, getSafeOrigin } from "@/utils/travelDetailsSecure";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
@@ -42,10 +40,7 @@ import TravelSectionsSheet from "@/components/travel/TravelSectionsSheet";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import { ProgressiveWrapper } from '@/hooks/useProgressiveLoading';
 import { optimizeImageUrl, getPreferredImageFormat } from "@/utils/imageOptimization";
-import { injectCriticalStyles } from '@/styles/criticalCSS';
-import { initPerformanceMonitoring } from '@/utils/performanceMonitoring';
 import { SectionSkeleton } from '@/components/SectionSkeleton';
-import { optimizeCriticalPath } from '@/utils/advancedPerformanceOptimization';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
@@ -54,8 +49,8 @@ import {
   useLCPPreload,
   OptimizedLCPHero,
 } from "@/components/travel/details/TravelDetailsSections";
-import type { AnchorsMap } from "@/components/travel/details/TravelDetailsTypes";
-import { styles, HEADER_OFFSET_DESKTOP, HEADER_OFFSET_MOBILE } from "@/components/travel/details/TravelDetailsStyles";
+import { styles } from "@/components/travel/details/TravelDetailsStyles";
+import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
 
 /* ✅ PHASE 2: Accessibility (WCAG AAA) */
 import SkipToContentLink from "@/components/accessibility/SkipToContentLink";
@@ -63,30 +58,6 @@ import AccessibilityAnnouncer from "@/components/accessibility/AccessibilityAnno
 import { useAccessibilityAnnounce, useReducedMotion } from "@/hooks/useKeyboardNavigation";
 
 /* -------------------- helpers -------------------- */
-const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 400): Promise<T> => {
-  try {
-    return await fn();
-  } catch {
-    if (tries <= 0) throw new Error('retry failed');
-    await new Promise((r) => setTimeout(r, delay));
-    return retry(fn, tries - 1, delay);
-  }
-}
-
-const withLazy = <T extends React.ComponentType<any>>(f: () => Promise<{ default: T }>) =>
-  lazy(async () => {
-    try {
-      return await retry(f, 2, 400);
-    } catch {
-      return {
-        default: (() => (
-          <View style={{ padding: DESIGN_TOKENS.spacing.md }}>
-            <Text>Component failed to load</Text>
-          </View>
-        )) as unknown as T,
-      };
-    }
-  });
 
 const CompactSideBarTravel = withLazy(() => import("@/components/travel/CompactSideBarTravel"));
 
@@ -161,81 +132,31 @@ export default function TravelDetailsContainer() {
   const [relatedTravels, setRelatedTravels] = useState<Travel[]>([]);
   
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
-  const { travel, isLoading, isError, error, refetch, slug, isMissingParam } = useTravelDetails();
-  const { anchors, scrollTo, scrollRef } = useScrollNavigation() as { anchors: AnchorsMap; scrollTo: any; scrollRef: any };
-  const [scrollRootEl, setScrollRootEl] = useState<HTMLElement | null>(null);
-  const headerOffset = useMemo(
-    () => (isMobile ? HEADER_OFFSET_MOBILE : HEADER_OFFSET_DESKTOP),
-    [isMobile]
-  );
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-
-    let cancelled = false;
-    let attempts = 0;
-    let rafId: number | null = null;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-    const readNode = (): HTMLElement | null => {
-      const scrollViewAny = scrollRef.current as any;
-      const node: HTMLElement | null =
-        (typeof scrollViewAny?.getScrollableNode === 'function' && scrollViewAny.getScrollableNode()) ||
-        scrollViewAny?._scrollNode ||
-        scrollViewAny?._innerViewNode ||
-        scrollViewAny?._nativeNode ||
-        scrollViewAny?._domNode ||
-        null;
-
-      if (node && typeof node === 'object' && typeof (node as any).getBoundingClientRect === 'function') {
-        return node;
-      }
-
-      return null;
-    };
-
-    const tick = () => {
-      if (cancelled) return;
-      attempts += 1;
-
-      const node = readNode();
-      if (node) {
-        setScrollRootEl((prev) => (prev === node ? prev : node));
-        return;
-      }
-
-      if (attempts >= 60) return;
-
-      const raf =
-        (typeof window !== 'undefined' && window.requestAnimationFrame) ||
-        (typeof globalThis !== 'undefined' && (globalThis as any).requestAnimationFrame);
-
-      if (typeof raf === 'function') {
-        rafId = raf(() => tick()) as any;
-      } else {
-        timeoutId = setTimeout(() => tick(), 16);
-      }
-    };
-
-    tick();
-
-    return () => {
-      cancelled = true;
-      if (rafId != null && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
-        try {
-          window.cancelAnimationFrame(rafId);
-        } catch {
-          // noop
-        }
-      }
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [scrollRef, slug]);
-
-  const { activeSection, setActiveSection } = useActiveSection(anchors, headerOffset, scrollRootEl);
-  const { closeMenu, animatedX, menuWidth, menuWidthNum, openMenuOnDesktop } = useMenuState(isMobile);
+  const { travel, isLoading, isError, error, refetch, slug, isMissingParam } = useTravelDetailsData();
+  const { headerOffset, contentHorizontalPadding, sideMenuPlatformStyles } = useTravelDetailsLayout({
+    isMobile,
+    screenWidth,
+  });
+  const { anchors, scrollTo, scrollRef, activeSection, setActiveSection, forceOpenKey } =
+    useTravelDetailsNavigation({
+      headerOffset,
+      slug,
+      startTransition,
+    });
+  const { setLcpLoaded, sliderReady, deferAllowed } = useTravelDetailsPerformance({
+    travel,
+    isMobile,
+    isLoading,
+  });
+  const { closeMenu, animatedX, menuWidth, menuWidthNum } = useTravelDetailsMenu(isMobile, deferAllowed);
+  const {
+    scrollY,
+    contentHeight,
+    viewportHeight,
+    setHeroBlockHeight,
+    handleContentSizeChange,
+    handleLayout,
+  } = useTravelDetailsScrollState({ isMobile });
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
   // Стабильный ключ для <Head>, чтобы избежать ReferenceError при отрисовке
   const headKey = useMemo(
@@ -291,189 +212,7 @@ export default function TravelDetailsContainer() {
       jsonLd: structuredData,
     };
   }, [travel]);
-  const contentHorizontalPadding = useMemo(() => {
-    // Mobile should use the full width with a compact, consistent gutter.
-    if (isMobile) return 16;
-    if (screenWidth >= 1600) return 80;
-    if (screenWidth >= 1440) return 64;
-    if (screenWidth >= 1024) return 48;
-    if (screenWidth >= 768) return 32;
-    return 16;
-  }, [isMobile, screenWidth]);
-  const sideMenuPlatformStyles =
-    Platform.OS === "web"
-      ? isMobile
-        ? styles.sideMenuWebMobile
-        : styles.sideMenuWebDesktop
-      : styles.sideMenuNative;
-
-  /* ---- open-section bridge ---- */
-  const [forceOpenKey, setForceOpenKey] = useState<string | null>(null);
-  const handleSectionOpen = useCallback((key: string) => {
-    try {
-      const dbg = Platform.OS === 'web' && typeof window !== 'undefined' && (window as any).__NAV_DEBUG__;
-      if (dbg) {
-        // eslint-disable-next-line no-console
-        console.debug('[nav] open-section received', { key });
-      }
-    } catch {
-      // noop
-    }
-    startTransition(() => setForceOpenKey(key));
-  }, []);
-
-  useEffect(() => {
-    if (!forceOpenKey) return;
-
-    try {
-      const dbg = Platform.OS === 'web' && typeof window !== 'undefined' && (window as any).__NAV_DEBUG__;
-      if (dbg) {
-        // eslint-disable-next-line no-console
-        console.debug('[nav] forceOpenKey effect', { forceOpenKey });
-      }
-    } catch {
-      // noop
-    }
-
-    // Когда секции монтируются лениво, первый scrollTo может промахнуться.
-    // Делаем несколько попыток с небольшим интервалом, чтобы дождаться DOM/layout.
-    const timeouts: Array<ReturnType<typeof setTimeout>> = [];
-    const MAX_ATTEMPTS = 10;
-    const INTERVAL_MS = 120;
-
-    for (let i = 0; i < MAX_ATTEMPTS; i += 1) {
-      timeouts.push(
-        setTimeout(() => {
-          scrollTo(forceOpenKey);
-        }, i * INTERVAL_MS)
-      );
-    }
-
-    return () => {
-      timeouts.forEach((t) => clearTimeout(t));
-    };
-  }, [forceOpenKey, scrollTo]);
-
-  useEffect(() => {
-    const handler =
-      Platform.OS === "web"
-        ? (e: any) => handleSectionOpen(e?.detail?.key ?? "")
-        : (key: string) => handleSectionOpen(key);
-
-    if (Platform.OS === "web") {
-      window.addEventListener("open-section", handler as unknown as EventListener, { passive: true } as any);
-      return () => window.removeEventListener("open-section", handler as unknown as EventListener);
-    } else {
-      const sub = DeviceEventEmitter.addListener("open-section", handler);
-      return () => sub.remove();
-    }
-  }, [handleSectionOpen]);
-
-  /* ---- Inject critical CSS for faster First Paint ---- */
-  useEffect(() => {
-    if (Platform.OS === "web") {
-      injectCriticalStyles();
-      initPerformanceMonitoring();
-      optimizeCriticalPath();
-    }
-  }, []);
-
-  /* ---- warm up heavy lazy chunks on web (без Slider) ---- */
-  useEffect(() => {
-    if (Platform.OS !== "web") return;
-    rIC(() => {
-      Promise.allSettled([
-        import("@/components/travel/TravelDescription"),
-        import("@/components/travel/PointList"),
-        import("@/components/travel/NearTravelList"),
-        import("@/components/travel/PopularTravelList"),
-        import("@/components/travel/ToggleableMapSection"),
-        import("@/components/Map"),
-        import("@expo/vector-icons/MaterialIcons"),
-      ]);
-    }, 800);
-  }, []);
-
-  // ✅ АРХИТЕКТУРА: anchors и scrollRef теперь создаются в useScrollNavigation
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const [contentHeight, setContentHeight] = useState(0);
-  const [viewportHeight, setViewportHeight] = useState(0);
-  const [showMobileSectionTabs, setShowMobileSectionTabs] = useState(false);
-  const [heroBlockHeight, setHeroBlockHeight] = useState(0);
   const forceDeferMount = !!forceOpenKey;
-  
-  // ✅ АРХИТЕКТУРА: activeSection теперь управляется через useActiveSection
-  
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
-    // По умолчанию считаем активной секцию галереи, чтобы в меню
-    // всегда был выделен хотя бы один пункт при первом рендере
-    setActiveSection("gallery");
-  }, [slug, setActiveSection, scrollRef]);
-
-  // Измеряем высоту контента для прогресс-бара
-  const handleContentSizeChange = useCallback((_w: number, h: number) => {
-    setContentHeight(h);
-  }, []);
-
-  const handleLayout = useCallback((e: any) => {
-    setViewportHeight(e.nativeEvent.layout.height);
-  }, []);
-
-  // ✅ SECURITY: Используем useScrollListener хук вместо ручного управления памятью
-  useScrollListener(
-    scrollY,
-    (value) => {
-      if (isMobile) {
-        const threshold = Math.max(140, (heroBlockHeight || 0) - 24);
-        const next = value > threshold;
-        setShowMobileSectionTabs((prev) => (prev === next ? prev : next));
-      }
-    },
-    [isMobile, heroBlockHeight]
-  );
-
-  useEffect(() => {
-    if (!isMobile) {
-      if (showMobileSectionTabs) setShowMobileSectionTabs(false);
-      return;
-    }
-  }, [isMobile, showMobileSectionTabs]);
-
-  // ✅ АРХИТЕКТУРА: Intersection Observer логика теперь в useActiveSection
-  // Остается только логика установки data-section-key атрибутов
-  useEffect(() => {
-    if (Platform.OS !== "web") return;
-    
-    const setupSectionAttributes = () => {
-      Object.keys(anchors).forEach((key) => {
-        const ref = anchors[key as keyof typeof anchors];
-        if (ref?.current && Platform.OS === "web") {
-          // Для React Native Web получаем DOM элемент
-          setTimeout(() => {
-            try {
-              // @ts-ignore - для web используем DOM API
-              const domNode = ref.current?._nativeNode || ref.current?._domNode || ref.current;
-              if (domNode && domNode.setAttribute) {
-                domNode.setAttribute("data-section-key", key);
-              } else if (domNode && typeof domNode === "object" && "ownerDocument" in domNode) {
-                // Если это уже DOM элемент
-                (domNode as HTMLElement).setAttribute("data-section-key", key);
-              }
-            } catch {
-              // Игнорируем ошибки
-            }
-          }, 100);
-        }
-      });
-    };
-
-    // Устанавливаем атрибуты после монтирования
-    setupSectionAttributes();
-
-    // Observer регистрация теперь обрабатывается в useActiveSection
-    // Нет необходимости в дополнительной регистрации здесь
-  }, [anchors, headerOffset, activeSection]);
 
   // ✅ АРХИТЕКТУРА: scrollTo теперь приходит из useScrollNavigation
   // Расширяем scrollTo для добавления логики закрытия меню на мобильных
@@ -501,42 +240,6 @@ export default function TravelDetailsContainer() {
   //     }, 1100);
   //   }
   // }, [travel?.id, queryClient]);
-  /* ---- LCP gate ---- */
-  const [lcpLoaded, setLcpLoaded] = useState(false);
-  const [sliderReady, setSliderReady] = useState(Platform.OS !== "web");
-  const [deferAllowed, setDeferAllowed] = useState(false);
-
-  useLCPPreload(travel, isMobile);
-
-  useEffect(() => {
-    if (Platform.OS !== "web") return;
-    if (!lcpLoaded) return;
-    rIC(() => setSliderReady(true), 600);
-  }, [lcpLoaded]);
-
-  useEffect(() => {
-    if (!isLoading) {
-      setDeferAllowed(true);
-    }
-  }, [isLoading]);
-
-  useEffect(() => {
-    if (lcpLoaded) setDeferAllowed(true);
-    else rIC(() => setDeferAllowed(true), 800);
-  }, [lcpLoaded]);
-
-  useEffect(() => {
-    if (Platform.OS !== "web" || lcpLoaded) return;
-    const timeout = setTimeout(() => setLcpLoaded(true), 2500);
-    return () => clearTimeout(timeout);
-  }, [lcpLoaded]);
-
-  /* ---- show menu on desktop after defer ---- */
-  useEffect(() => {
-    if (deferAllowed && !isMobile) {
-      openMenuOnDesktop();
-    }
-  }, [deferAllowed, isMobile, openMenuOnDesktop]);
 
   /* ---- user flags ---- */
   const { isSuperuser, userId } = useAuth();
@@ -737,6 +440,7 @@ export default function TravelDetailsContainer() {
                     onFirstImageLoad={() => setLcpLoaded(true)}
                     sectionLinks={sectionLinks}
                     onQuickJump={scrollToWithMenuClose}
+                    lcpPreloadHref={lcpPreloadImage}
                   />
                   </View>
 

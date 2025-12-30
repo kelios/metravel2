@@ -3,7 +3,7 @@
  */
 
 import { render } from '@testing-library/react-native';
-import { TravelEngagementSection } from '@/components/travel/details/TravelDetailsContainer';
+import { TravelEngagementSection } from '@/components/travel/details/TravelDetailsSections';
 
 // Stub heavy child components to simple markers
 jest.mock('@/components/travel/TelegramDiscussionSection', () => {

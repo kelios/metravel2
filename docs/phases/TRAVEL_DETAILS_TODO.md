@@ -1,202 +1,32 @@
-# TravelDetailsContainer - Финальный Чеклист и Рекомендации
+# TravelDetailsContainer — короткий чеклист актуальных задач
 
-## ✅ ВЫПОЛНЕНО
+Сосредоточено только на том, что осталось сделать.
 
-### Phase 2: Accessibility (WCAG AAA) - 35% COMPLETE ✅
-- [x] **Utilities (a11y.ts)** - 16 утилит для доступности
-  - Color contrast checker (WCAG AA/AAA)
-  - ARIA role mapping
-  - Keyboard event handler
-  - Focus management, live regions, alt text validator
-- [x] **Custom Hooks (useKeyboardNavigation.ts)** - 6 хуков
-  - useKeyboardNavigation, useFocusManager, useAccessibilityAnnounce
-  - useReducedMotion, useFocusVisible, useScrollAnnounce
-- [x] **Components**
-  - SkipToContentLink, AccessibilityAnnouncer, AccessibilityAlert
-- [x] **Tests** - 28 тестов, все ✅ PASSED
-  - Color contrast, ARIA roles, Alt text, Keyboard navigation
-  - Design system WCAG compliance, Typography, Spacing
-- [x] **Integration in TravelDetailsContainer**
-  - Skip to content link добавлен в main return
-  - Accessibility Announcer интегрирован
-  - ARIA labels добавлены на CollapsibleSection
-  - getAccessibilityLabel утилита используется
-  - Все ошибки компиляции исправлены
+## 1) Производительность (Phase 3, в работе)
+- [ ] Снять baseline: `npm run build`, `npm run lighthouse`, `npm run analyze:bundle`.
+- [ ] Сократить бандл: dynamic imports для тяжёлых секций/иконок, tree shaking, удалить неиспользуемые зависимости.
+- [ ] Оптимизация изображений: WebP/AVIF + fallback, lazy-loading через Intersection Observer, LQIP/blur-up.
+- [ ] Уменьшить перерендеры TravelDetailsContainer: мемоизация props/handlers, вынос тяжёлых расчётов в хуки.
+- [ ] Веб-виталии: таргеты LCP < 2.5s, CLS < 0.1, FID/INP < 100ms.
 
-### Security Improvements
-- [x] **Валидация YouTube ID** с защитой от injection
-- [x] **HTML Sanitization** (stripHtml) с защитой от XSS
-- [x] **Safe JSON-LD** creation без dangerouslySetInnerHTML уязвимостей
-- [x] **URL Validation** для origin и image URLs
-- [x] **Preconnect Domain Whitelisting** для предотвращения DNS leaks
-- [x] **Type Safety** - убрали все `any` и `@ts-ignore`
+## 2) Рефакторинг TravelDetails
+- [x] Разбить TravelDetailsContainer на подкомпоненты: hero, content, map, related, engagement (layout остаётся в контейнере).
+- [x] Вынести логику в хуки: useTravelDetailsData, useTravelDetailsLayout, useTravelDetailsNavigation/Menu, useTravelDetailsPerformance.
+- [ ] Привести стили к единой spacing системе (4px grid) и убрать дубли.
 
-### Performance Optimizations
-- [x] **Memory Leak Prevention** через useScrollListener хук
-- [x] **Safe Event Listener Cleanup** в useScrollListener
-- [x] **Redundant Variable Removal** (optimizedSrc, lastMainIndex)
-- [x] **Image Optimization Utils** (getImageOptimizationParams)
-- [x] **Responsive Utils** (getResponsiveSpacing, getResponsiveFontSize)
+## 3) Доступность (добить Phase 2)
+- [ ] Финальные проверки screen reader: NVDA/JAWS/VoiceOver; логичный порядок фокуса, Escape для модалок.
+- [ ] Проверить/добавить aria-label/aria-expanded/role="region" на ключевые секции.
+- [ ] Контраст и размеры шрифтов ≥14px, пройти axe-core.
 
-### Code Quality
-- [x] **Separated Utils** - функции перемещены в отдельные файлы
-- [x] **Custom Hooks** - для переиспользования логики
-- [x] **Test Suite** - базовый набор security тестов
-- [x] **Documentation** - подробные комментарии в коде
+## 4) Тесты
+- [ ] Расширить unit-тесты утилит/хуков (coverage 80%+).
+- [ ] Интеграционные тесты TravelDetails: навигация между секциями, загрузка изображений, scroll, меню.
+- [ ] Проверить мокирование браузерных API (performance, IntersectionObserver) в jest.
 
-### Cross-Platform Support
-- [x] **Web Support** - optimized для Chrome, Firefox, Safari
-- [x] **iOS/Android** - React Native Web compatibility
-- [x] **TypeScript Types** - полная типизация для всех платформ
-
----
-
-## 🔜 TODO (NEXT PHASES)
-
-### Phase 1: Design & Accessibility (PLANNED)
-
-#### Typography
-- [ ] Увеличить мобильные заголовки: 20px → 22px
-- [ ] Увеличить основной текст: 14px → 16px
-- [ ] Установить consistent line-height: 1.5 (desktop), 1.6 (mobile)
-- [ ] Использовать system fonts для лучшей производительности
-
-#### Color Scheme (WCAG AAA Compliant)
-```
-ТЕКУЩЕЕ → НОВОЕ:
-Primary:     #FF8C42 → #0066CC (лучше контрастность)
-Text:        #1F2937 → #1A1A1A (AAA compliant)
-TextMuted:   #6B7280 → #4A4A4A (AAA compliant)
-Background:  #F9F8F2 → #FFFFFF (более современный)
-Success:     #10B981 → #059669 (AAA compliant)
-Error:       #EF4444 → #DC2626 (AAA compliant)
-```
-
-#### Spacing & Layout
-- [ ] Внедрить 4px grid систему
-- [ ] Увеличить padding в карточках: 12px → 16px
-- [ ] Увеличить gap между элементами: 12px → 16px
-- [ ] Улучшить margin для больших экранов: 24px → 32px
-
-#### Dark Mode Support
-- [ ] Добавить `prefers-color-scheme` detection
-- [ ] Создать dark mode цветовую схему
-- [ ] Сохранять предпочтение в localStorage
-- [ ] Плавный transition при переключении (300ms)
-
-### Phase 2: Accessibility (WCAG AAA)
-
-#### ARIA & Semantics
-- [ ] Добавить `role="region"` для основных секций
-- [ ] Добавить `aria-label` на интерактивные элементы
-- [ ] Добавить `aria-expanded` на CollapsibleSection
-- [ ] Использовать семантические HTML элементы (`<article>`, `<section>`)
-
-#### Keyboard Navigation
-- [ ] Тестировать Tab navigation
-- [ ] Добавить skip-to-content link
-- [ ] Убедиться что focus order логичен
-- [ ] Добавить Escape key handling для модалей
-
-#### Screen Reader Support
-- [ ] Тестировать с NVDA (Windows)
-- [ ] Тестировать с JAWS (Windows)
-- [ ] Тестировать с VoiceOver (Mac/iOS)
-- [ ] Написать alt text для всех изображений
-
-#### Visual Accessibility
-- [ ] Проверить контрастность с axe-core
-- [ ] Убедиться что текст <14px нет
-- [ ] Проверить на color-blind режимах
-- [ ] Убедиться что действия не полагаются только на цвет
-
-### Phase 3: Performance Optimization
-
-#### Bundle Size
-- [ ] Анализировать с `npm run build:web -- --analyze`
-- [ ] Целевой размер: < 100KB (gzipped)
-- [ ] Использовать dynamic imports для lazy-loaded компонентов
-- [ ] Tree-shake неиспользуемый код
-
-#### Image Optimization
-- [ ] Использовать WebP с fallback на JPG
-- [ ] Добавить LQIP (Low Quality Image Placeholder)
-- [ ] Реализовать image lazy-loading с Intersection Observer
-- [ ] Оптимизировать для 3G сетей (detectSlowNetwork)
-
-#### Web Vitals
-```
-TARGETS:
-- LCP (Largest Contentful Paint): < 2.5s
-- FID (First Input Delay): < 100ms
-- CLS (Cumulative Layout Shift): < 0.1
-- TTFB (Time to First Byte): < 600ms
-```
-
-### Phase 4: Component Refactoring
-
-#### Разделение на Подкомпоненты
-```
-TravelDetailsContainer.tsx (3000+ строк) → разделить на:
-
-1. TravelDetailsPage.tsx (контейнер, логика)
-   - Управление состоянием
-   - Загрузка данных
-   - Routing
-
-2. TravelDetailsLayout.tsx (макет)
-   - Боковое меню
-   - Основной контент
-   - Responsive логика
-
-3. TravelHeroBlock.tsx (hero section)
-   - Изображение
-   - Быстрые факты
-   - Quick jump buttons
-
-4. TravelContentBlock.tsx (текстовый контент)
-   - Описание
-   - Рекомендации
-   - Plus/Minus секции
-
-5. TravelMapBlock.tsx (карта и точки)
-   - Карта маршрута
-   - Координаты
-   - Экскурсии
-
-6. TravelRelatedBlock.tsx (похожие путешествия)
-   - Рядом можно посмотреть
-   - Популярные маршруты
-   - Навигация между путешествиями
-
-7. TravelEngagementBlock.tsx (engagement)
-   - Telegram обсуждения
-   - Кнопки поделиться
-   - CTA секция
-```
-
-#### Extracting Custom Hooks
-```
-Создать отдельные файлы для:
-- useTravelDetailsData (загрузка и управление данными)
-- useTravelDetailsLayout (responsive логика)
-- useTravelDetailsNavigation (scroll to section)
-- useTravelDetailsMenu (sidebar menu state)
-- useTravelDetailsPerformance (metrics & monitoring)
-```
-
-### Phase 5: Testing Coverage
-
-#### Unit Tests (80%+ coverage)
-- [ ] Все functions в utils протестированы
-- [ ] Все hooks протестированы в изоляции
-- [ ] Граничные случаи (edge cases) покрыты
-
-#### Integration Tests
-- [ ] Навигация между секциями
-- [ ] Загрузка изображений
-- [ ] Scroll поведение
-- [ ] Menu взаимодействие
+## 5) UX/Тема (низкий приоритет)
+- [ ] Минимальный темный режим (prefers-color-scheme, сохранение выбора).
+- [ ] Подправить типографику под 16px тело / 22px mobile h, согласованные line-height.
 
 #### E2E Tests (Playwright)
 - [ ] Загрузка страницы с данными
@@ -268,9 +98,20 @@ onCLS(console.log);  // CLS
 - `/utils/travelDetailsUIUX.ts` - UI/UX utilities
 - `/hooks/useTravelDetailsUtils.ts` - Custom hooks
 - `/__tests__/components/travel/TravelDetailsContainer.security.test.tsx` - Security tests
+- `/hooks/useTravelDetailsData.ts` - Data hook wrapper (refactor)
+- `/hooks/useTravelDetailsLayout.ts` - Layout calculations (refactor)
+- `/hooks/useTravelDetailsNavigation.ts` - Navigation + anchors (refactor)
+- `/hooks/useTravelDetailsPerformance.ts` - LCP/defer/perf wiring (refactor)
+- `/hooks/useTravelDetailsMenu.ts` - Menu wiring (refactor)
+- `/hooks/useTravelDetailsScrollState.ts` - Scroll state + metrics (refactor)
+- `/components/travel/details/TravelDetailsHero.tsx` - Hero + LCP logic (refactor)
+- `/components/travel/details/TravelDetailsDeferred.tsx` - Deferred sections (refactor)
+- `/components/travel/details/TravelDetailsLazy.tsx` - Shared lazy loader (refactor)
+- `/components/travel/details/TravelDetailsIcons.tsx` - Lazy icons (refactor)
 
 ### Изменённые файлы
 - `/components/travel/details/TravelDetailsContainer.tsx` - Main component (refactored)
+- `/components/travel/details/TravelDetailsSections.tsx` - Re-export layer after split
 
 ### Документация
 - `/ANALYSIS_TRAVEL_DETAILS.md` - Initial analysis
@@ -337,4 +178,3 @@ onCLS(console.log);  // CLS
 **Последнее обновление:** 2025-01-01  
 **Статус:** 🟢 PHASE 1 COMPLETE, 🟡 PHASE 2 PLANNED  
 **Версия:** 1.1.0
-

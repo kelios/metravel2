@@ -61,11 +61,13 @@ const styles = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
   },
   image: {
-    ...Platform.select({
-      web: {
-        transition: 'opacity 0.3s ease-in-out',
-      },
-    }),
+    ...(Platform.OS === 'web'
+      ? ({
+          transitionProperty: 'opacity',
+          transitionDuration: '300ms',
+          transitionTimingFunction: 'ease-in-out',
+        } as any)
+      : {}),
   },
   placeholder: {
     position: 'absolute',
@@ -74,11 +76,20 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    ...Platform.select({
-      web: {
-        animation: 'pulse 1.5s ease-in-out infinite',
-      },
-    }),
+    ...(Platform.OS === 'web'
+      ? ({
+          animationKeyframes: [
+            {
+              '0%': { opacity: 1 },
+              '50%': { opacity: 0.6 },
+              '100%': { opacity: 1 },
+            },
+          ],
+          animationDuration: '1500ms',
+          animationTimingFunction: 'ease-in-out',
+          animationIterationCount: 'infinite',
+        } as any)
+      : {}),
   },
   errorPlaceholder: {
     position: 'absolute',
