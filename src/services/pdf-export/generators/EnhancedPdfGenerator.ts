@@ -274,6 +274,7 @@ export class EnhancedPdfGenerator {
               height: 100%;
               object-fit: contain;
               z-index: 1;
+              ${this.getImageFilterStyle()}
             "
           />
           <div style="
@@ -473,7 +474,7 @@ export class EnhancedPdfGenerator {
                 position: relative;
               ">
                 <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
-                  style="width: 100%; height: 48mm; object-fit: cover; display: block;"
+                  style="width: 100%; height: 48mm; object-fit: cover; display: block; ${this.getImageFilterStyle()}"
                   crossorigin="anonymous"
                   onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
                 ${index === 3 ? `
@@ -515,7 +516,7 @@ export class EnhancedPdfGenerator {
             position: relative;
           ">
             <img src="${this.escapeHtml(photos[0])}" alt="Фото путешествия"
-              style="width: 100%; height: 85mm; object-fit: cover; display: block;"
+              style="width: 100%; height: 85mm; object-fit: cover; display: block; ${this.getImageFilterStyle()}"
               crossorigin="anonymous"
               onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
             ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
@@ -554,7 +555,7 @@ export class EnhancedPdfGenerator {
             ">
               ${caption && captionPosition === 'top' ? caption.wrapperStart + caption.wrapperEnd : ''}
               <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
-                style="width: 100%; height: ${imageHeight}; object-fit: cover; display: block;"
+                style="width: 100%; height: ${imageHeight}; object-fit: cover; display: block; ${this.getImageFilterStyle()}"
                 crossorigin="anonymous"
                 onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
               ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
@@ -704,6 +705,7 @@ export class EnhancedPdfGenerator {
                 height: 100%;
                 object-fit: cover;
                 display: block;
+                ${this.getImageFilterStyle()}
               "
               crossorigin="anonymous"
               onerror="this.style.display='none'; this.parentElement.style.background='${colors.accentSoft}';" />
@@ -1181,6 +1183,7 @@ export class EnhancedPdfGenerator {
                   height: ${resolvedHeight};
                   object-fit: cover;
                   display: block;
+                  ${this.getImageFilterStyle()}
                 "
                 crossorigin="anonymous"
                 onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
@@ -1279,7 +1282,7 @@ export class EnhancedPdfGenerator {
             ">
               ${snapshotDataUrl ? `
                 <img src="${this.escapeHtml(snapshotDataUrl)}" alt="Карта маршрута"
-                  style="width: 100%; height: 100%; display: block; object-fit: cover;" />
+                  style="width: 100%; height: 100%; display: block; object-fit: cover; ${this.getImageFilterStyle()}" />
               ` : `
                 ${mapSvg}
               `}
@@ -1875,7 +1878,7 @@ export class EnhancedPdfGenerator {
               background: ${colors.surfaceAlt};
             ">
               <img src="${this.escapeHtml(location.thumbnailUrl)}" alt="Точка ${index + 1}"
-                style="width: 100%; height: auto; object-fit: cover; display: block;" />
+                style="width: 100%; height: auto; object-fit: cover; display: block; ${this.getImageFilterStyle()}" />
             </div>
           ` : ''}
           <div style="flex: 1; min-width: 0;">
@@ -2056,6 +2059,13 @@ export class EnhancedPdfGenerator {
   }
 
   /**
+   * Получает CSS-фильтр для изображений в зависимости от темы
+   */
+  private getImageFilterStyle(): string {
+    return this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '';
+  }
+
+  /**
    * Рендерит блоки контента
    */
   private renderBlocks(blocks: ReturnType<typeof this.parser.parse>): string {
@@ -2082,7 +2092,7 @@ export class EnhancedPdfGenerator {
           case 'image':
             return `<img src="${this.escapeHtml(block.src)}" alt="${this.escapeHtml(
               block.alt || ''
-            )}" />${block.caption ? `<figcaption>${this.escapeHtml(block.caption)}</figcaption>` : ''}`;
+            )}" style="${this.getImageFilterStyle()}" />${block.caption ? `<figcaption>${this.escapeHtml(block.caption)}</figcaption>` : ''}`;
           default:
             return '';
         }

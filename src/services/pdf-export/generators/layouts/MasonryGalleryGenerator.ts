@@ -116,6 +116,7 @@ export class MasonryGalleryGenerator {
               width: 100%;
               height: 100%;
               object-fit: cover;
+              ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
             "
           />
           ${captionPosition === 'overlay' && showCaption ? this.generateCaption(photo, 'overlay') : ''}

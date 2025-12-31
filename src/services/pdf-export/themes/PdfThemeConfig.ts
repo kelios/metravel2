@@ -115,6 +115,9 @@ export interface PdfThemeConfig {
     shadow: string;
     borderWidth: string;
   };
+
+  // Фильтры для изображений
+  imageFilter?: string;
 }
 
 /**
@@ -1004,6 +1007,9 @@ export const blackWhiteTheme: PdfThemeConfig = {
     shadow: 'none',
     borderWidth: '2px',
   },
+
+  // Полный черно-белый фильтр для изображений
+  imageFilter: 'grayscale(100%)',
 };
 
 /**
@@ -1097,6 +1103,9 @@ export const sepiaTheme: PdfThemeConfig = {
     shadow: 'none',
     borderWidth: '1.5px',
   },
+
+  // Полная сепия для изображений
+  imageFilter: 'sepia(100%)',
 };
 
 /**

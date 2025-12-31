@@ -80,6 +80,7 @@ export class PolaroidGalleryGenerator {
               width: 100%;
               height: 100%;
               object-fit: cover;
+              ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
             "
           />
         </div>

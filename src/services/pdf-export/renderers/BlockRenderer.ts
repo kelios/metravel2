@@ -185,6 +185,7 @@ export class BlockRenderer {
       border-radius: ${this.theme.blocks.borderRadius};
       box-shadow: ${this.theme.blocks.shadow};
       page-break-inside: avoid;
+      ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
     `;
 
     const imageTag = `
@@ -247,6 +248,7 @@ export class BlockRenderer {
             display: block;
             border-radius: ${this.theme.blocks.borderRadius};
             box-shadow: ${this.theme.blocks.shadow};
+            ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
           "
           onerror="this.style.display='none';"
           crossorigin="anonymous"

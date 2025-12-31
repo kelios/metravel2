@@ -237,6 +237,7 @@ export class CollageGalleryGenerator {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
           "
         />
         ${showCaption ? this.generateCaption(photo) : ''}

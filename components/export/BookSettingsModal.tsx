@@ -103,8 +103,11 @@ const MODAL_COLORS = {
   primary: 'var(--color-primary)',
   primaryDark: 'var(--color-primaryDark)',
   primaryLight: 'var(--color-primaryLight)',
+  primarySoft: 'var(--color-primarySoft)',
   focus: 'var(--color-focus)',
   textOnPrimary: 'var(--color-textOnPrimary)',
+  accent: 'var(--color-accent)',
+  accentLight: 'var(--color-accentLight)',
 };
 
 const MODAL_SHADOWS = {
@@ -112,6 +115,7 @@ const MODAL_SHADOWS = {
   medium: 'var(--shadow-medium)',
   heavy: 'var(--shadow-heavy)',
   modal: 'var(--shadow-modal)',
+  soft: 'var(--shadow-soft)',
 };
 
 const buildInitialSettings = (
@@ -249,15 +253,14 @@ export default function BookSettingsModal({
           left: 0,
           right: 0,
           bottom: 0,
-          // Оpaque, theme-aware backdrop (no transparency)
-          backgroundColor: MODAL_COLORS.backgroundSecondary,
-          opacity: 1,
-          backdropFilter: 'none',
-          WebkitBackdropFilter: 'none',
+          backgroundColor: MODAL_COLORS.overlay,
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
+          transition: 'background-color 0.3s ease',
         }}
         onClick={onClose}
       >
@@ -271,7 +274,8 @@ export default function BookSettingsModal({
             maxHeight: '92vh',
             overflow: 'auto',
             boxShadow: MODAL_SHADOWS.modal,
-            border: `1px solid ${MODAL_COLORS.border}`,
+            border: `1px solid ${MODAL_COLORS.borderStrong}`,
+            transition: 'all 0.3s ease',
           }}
           role="dialog"
           aria-modal="true"
@@ -369,15 +373,17 @@ export default function BookSettingsModal({
                 fontWeight: '500',
                 color: MODAL_COLORS.textMuted,
                 cursor: 'pointer',
-                transition: 'all 0.2s',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = MODAL_COLORS.primary;
                 e.currentTarget.style.color = MODAL_COLORS.primary;
+                e.currentTarget.style.backgroundColor = MODAL_COLORS.primarySoft;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = MODAL_COLORS.border;
                 e.currentTarget.style.color = MODAL_COLORS.textMuted;
+                e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
               {showAdvanced ? '▲ Скрыть детальные настройки' : '▼ Показать детальные настройки'}
@@ -405,10 +411,12 @@ export default function BookSettingsModal({
                 color: MODAL_COLORS.text,
                 outline: 'none',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxSizing: 'border-box',
               }}
               onFocus={(e) => {
                 e.target.style.borderColor = MODAL_COLORS.primary;
                 e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
+                e.target.style.backgroundColor = MODAL_COLORS.surface;
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = MODAL_COLORS.border;
@@ -437,10 +445,12 @@ export default function BookSettingsModal({
                 color: MODAL_COLORS.text,
                 outline: 'none',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxSizing: 'border-box',
               }}
               onFocus={(e) => {
                 e.target.style.borderColor = MODAL_COLORS.primary;
                 e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
+                e.target.style.backgroundColor = MODAL_COLORS.surface;
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = MODAL_COLORS.border;
@@ -469,10 +479,17 @@ export default function BookSettingsModal({
                 outline: 'none',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 cursor: 'pointer',
+                boxSizing: 'border-box',
+                appearance: 'none',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 14px center',
+                paddingRight: '40px',
               }}
               onFocus={(e) => {
                 e.target.style.borderColor = MODAL_COLORS.primary;
                 e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
+                e.target.style.backgroundColor = MODAL_COLORS.surface;
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = MODAL_COLORS.border;
@@ -538,10 +555,17 @@ export default function BookSettingsModal({
                 outline: 'none',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 cursor: 'pointer',
+                boxSizing: 'border-box',
+                appearance: 'none',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 14px center',
+                paddingRight: '40px',
               }}
               onFocus={(e) => {
                 e.target.style.borderColor = MODAL_COLORS.primary;
                 e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
+                e.target.style.backgroundColor = MODAL_COLORS.surface;
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = MODAL_COLORS.border;
@@ -598,10 +622,17 @@ export default function BookSettingsModal({
                 outline: 'none',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 cursor: 'pointer',
+                boxSizing: 'border-box',
+                appearance: 'none',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 14px center',
+                paddingRight: '40px',
               }}
               onFocus={(e) => {
                 e.target.style.borderColor = MODAL_COLORS.primary;
                 e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
+                e.target.style.backgroundColor = MODAL_COLORS.surface;
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = MODAL_COLORS.border;
