@@ -36,6 +36,8 @@ export class GridGalleryGenerator {
     settings: GallerySettings,
     borderStyle: string
   ): string {
+    // Тема может быть необязательной — берём фильтр с безопасным доступом
+    const imageFilter = (settings as any)?.theme?.imageFilter ?? (settings as any)?.imageFilter;
     const showCaption = settings.showCaptions && photo.caption;
     const captionPosition = settings.captionPosition;
 
@@ -64,7 +66,7 @@ export class GridGalleryGenerator {
               width: 100%;
               height: 100%;
               object-fit: cover;
-              ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
+              ${imageFilter ? `filter: ${imageFilter};` : ''}
             "
           />
           ${captionPosition === 'overlay' && showCaption ? this.generateCaption(photo, 'overlay') : ''}

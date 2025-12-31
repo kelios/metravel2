@@ -602,7 +602,7 @@ function CompactSideBarTravel({
             {...(Platform.OS === 'web' ? {
               'data-sidebar-link': true,
               'data-active': currentActive === key ? 'true' : 'false',
-              'aria-selected': currentActive === key ? 'true' : 'false',
+              'aria-selected': currentActive === key,
               role: 'button',
               'aria-label': label,
             } : {})}

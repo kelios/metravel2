@@ -419,7 +419,6 @@ describe('CompactSideBarTravel - Web', () => {
     it('все элементы должны иметь aria-label', () => {
       render(<CompactSideBarTravel {...defaultProps} />);
 
-      const editButton = screen.queryByLabelText('Редактировать путешествие');
       const pdfButton = screen.getByLabelText('Экспорт в PDF');
 
       expect(pdfButton).toBeTruthy();

@@ -18,7 +18,6 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
