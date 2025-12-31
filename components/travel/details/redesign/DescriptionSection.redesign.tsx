@@ -19,7 +19,6 @@ import {
   StyleSheet,
   Platform,
   Pressable,
-  ScrollView,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -86,15 +85,16 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = memo(({
         { backgroundColor: colors.surface }
       ]}
       testID="description-section-redesign"
-      accessibilityRole="region"
+      accessible
       accessibilityLabel="Описание маршрута"
+      {...(Platform.OS === 'web' ? { role: 'region' } as any : {})}
     >
       {/* Интро */}
       <View style={styles.introWrapper}>
         <Text
           style={[styles.introTitle, { color: colors.text }]}
           accessibilityRole="header"
-          accessibilityLevel={2}
+          {...(Platform.OS === 'web' ? { 'aria-level': 2 } as any : {})}
         >
           Описание маршрута
         </Text>
@@ -115,8 +115,9 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = memo(({
               borderColor: colors.borderLight,
             }
           ]}
-          accessibilityRole="complementary"
+          accessible
           accessibilityLabel="Полезные советы перед поездкой"
+          {...(Platform.OS === 'web' ? { role: 'complementary' } as any : {})}
         >
           <View style={styles.tipsHeader}>
             <MaterialIcons
