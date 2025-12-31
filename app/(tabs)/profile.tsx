@@ -47,6 +47,19 @@ export default function ProfileScreen() {
   const scrollRef = useRef<ScrollView | null>(null);
   const sectionOffsetsRef = useRef<Record<string, number>>({});
 
+  const socialLinks = useMemo(
+    () =>
+      profile
+        ? [
+            { key: 'youtube', label: 'YouTube', url: profile.youtube },
+            { key: 'instagram', label: 'Instagram', url: profile.instagram },
+            { key: 'twitter', label: 'Twitter', url: profile.twitter },
+            { key: 'vk', label: 'VK', url: profile.vk },
+          ].filter((link) => !!link.url)
+        : [],
+    [profile]
+  );
+
   const favoritesPreview = Array.isArray(favorites) ? favorites.slice(0, 8) : [];
   const historyPreview = Array.isArray(viewHistory) ? viewHistory.slice(0, 8) : [];
 
@@ -240,16 +253,17 @@ export default function ProfileScreen() {
           }}
         >
           <View style={styles.headerRow}>
-            <View style={styles.avatar}>{profile?.avatar ? (
-                <Image
-                  source={{ uri: profile.avatar }}
-                  style={styles.avatarImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <Feather name="user" size={28} color={DESIGN_TOKENS.colors.primary} />
-              )}
-            </View>
+              <View style={styles.avatar}>
+                {profile?.avatar ? (
+                  <Image
+                    source={{ uri: profile.avatar }}
+                    style={styles.avatarImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Feather name="user" size={28} color={DESIGN_TOKENS.colors.primary} />
+                )}
+              </View>
             <View style={styles.headerTextBlock}>
               <Text style={styles.userName}>
                 {(() => {
@@ -305,59 +319,20 @@ export default function ProfileScreen() {
             ))}
           </ScrollView>
 
-          {!!profile && (
-            <View style={styles.socialsRow}>{!!profile.youtube && (
+          {socialLinks.length > 0 && (
+            <View style={styles.socialsRow}>
+              {socialLinks.map((link) => (
                 <Pressable
+                  key={link.key}
                   style={[styles.socialChip, globalFocusStyles.focusable]}
-                  onPress={() => {
-                    openExternalUrl(String(profile.youtube || ''));
-                  }}
+                  onPress={() => openExternalUrl(String(link.url))}
                   accessibilityRole="link"
-                  accessibilityLabel="Открыть YouTube"
+                  accessibilityLabel={`Открыть ${link.label}`}
                   {...Platform.select({ web: { cursor: 'pointer' } })}
                 >
-                  <Text style={styles.socialChipText}>YouTube</Text>
+                  <Text style={styles.socialChipText}>{link.label}</Text>
                 </Pressable>
-              )}
-              {!!profile.instagram && (
-                <Pressable
-                  style={[styles.socialChip, globalFocusStyles.focusable]}
-                  onPress={() => {
-                    openExternalUrl(String(profile.instagram || ''));
-                  }}
-                  accessibilityRole="link"
-                  accessibilityLabel="Открыть Instagram"
-                  {...Platform.select({ web: { cursor: 'pointer' } })}
-                >
-                  <Text style={styles.socialChipText}>Instagram</Text>
-                </Pressable>
-              )}
-              {!!profile.twitter && (
-                <Pressable
-                  style={[styles.socialChip, globalFocusStyles.focusable]}
-                  onPress={() => {
-                    openExternalUrl(String(profile.twitter || ''));
-                  }}
-                  accessibilityRole="link"
-                  accessibilityLabel="Открыть Twitter"
-                  {...Platform.select({ web: { cursor: 'pointer' } })}
-                >
-                  <Text style={styles.socialChipText}>Twitter</Text>
-                </Pressable>
-              )}
-              {!!profile.vk && (
-                <Pressable
-                  style={[styles.socialChip, globalFocusStyles.focusable]}
-                  onPress={() => {
-                    openExternalUrl(String(profile.vk || ''));
-                  }}
-                  accessibilityRole="link"
-                  accessibilityLabel="Открыть VK"
-                  {...Platform.select({ web: { cursor: 'pointer' } })}
-                >
-                  <Text style={styles.socialChipText}>VK</Text>
-                </Pressable>
-              )}
+              ))}
             </View>
           )}
 
@@ -378,110 +353,114 @@ export default function ProfileScreen() {
         </View>
 
         {(favoritesPreview.length > 0 || historyPreview.length > 0) && (
-          <View style={styles.dashboardSections}>{favoritesPreview.length > 0 && (
-              <View
-                style={styles.dashboardSectionCard}
-                onLayout={(e) => {
-                  sectionOffsetsRef.current.favorites = e.nativeEvent.layout.y;
-                }}
-              >
-                <View style={styles.sectionHeaderRow}>
-                  <View style={styles.sectionHeaderLeft}>
-                    <Text style={styles.sectionTitle}>Избранное</Text>
-                    <Text style={styles.sectionSubtitle}>{favorites.length} шт.</Text>
-                  </View>
-                  <Pressable
-                    style={[styles.sectionAction, globalFocusStyles.focusable]}
-                    onPress={() => router.push('/favorites')}
-                    accessibilityRole="button"
-                    accessibilityLabel="Открыть избранное"
-                    {...Platform.select({ web: { cursor: 'pointer' } })}
-                  >
-                    <Text style={styles.sectionActionText}>Смотреть все</Text>
-                    <Feather name="chevron-right" size={16} color={DESIGN_TOKENS.colors.primary} />
-                  </Pressable>
-                </View>
-
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.cardsRow}
-                  {...Platform.select({
-                    web: {
-                      style: { overflowX: 'auto', overflowY: 'hidden', width: '100%' } as any,
-                    },
-                    default: {},
-                  })}
+          <View style={styles.dashboardSections}>
+            {[
+              favoritesPreview.length > 0 ? (
+                <View
+                  key="favorites"
+                  style={styles.dashboardSectionCard}
+                  onLayout={(e) => {
+                    sectionOffsetsRef.current.favorites = e.nativeEvent.layout.y;
+                  }}
                 >
-                  {favoritesPreview.map((item: any) => (
-                    <TabTravelCard
-                      key={`${item.type || 'travel'}-${item.id}`}
-                      item={{
-                        id: item.id,
-                        title: item.title,
-                        imageUrl: item.imageUrl,
-                        city: item.city ?? null,
-                        country: item.country ?? null,
-                      }}
-                      onPress={() => router.push(item.url as any)}
-                    />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {historyPreview.length > 0 && (
-              <View
-                style={styles.dashboardSectionCard}
-                onLayout={(e) => {
-                  sectionOffsetsRef.current.history = e.nativeEvent.layout.y;
-                }}
-              >
-                <View style={styles.sectionHeaderRow}>
-                  <View style={styles.sectionHeaderLeft}>
-                    <Text style={styles.sectionTitle}>История</Text>
-                    <Text style={styles.sectionSubtitle}>{viewHistory.length} шт.</Text>
+                  <View style={styles.sectionHeaderRow}>
+                    <View style={styles.sectionHeaderLeft}>
+                      <Text style={styles.sectionTitle}>Избранное</Text>
+                      <Text style={styles.sectionSubtitle}>{favorites.length} шт.</Text>
+                    </View>
+                    <Pressable
+                      style={[styles.sectionAction, globalFocusStyles.focusable]}
+                      onPress={() => router.push('/favorites')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Открыть избранное"
+                      {...Platform.select({ web: { cursor: 'pointer' } })}
+                    >
+                      <Text style={styles.sectionActionText}>Смотреть все</Text>
+                      <Feather name="chevron-right" size={16} color={DESIGN_TOKENS.colors.primary} />
+                    </Pressable>
                   </View>
-                  <Pressable
-                    style={[styles.sectionAction, globalFocusStyles.focusable]}
-                    onPress={() => router.push('/history')}
-                    accessibilityRole="button"
-                    accessibilityLabel="Открыть историю просмотров"
-                    {...Platform.select({ web: { cursor: 'pointer' } })}
-                  >
-                    <Text style={styles.sectionActionText}>Смотреть все</Text>
-                    <Feather name="chevron-right" size={16} color={DESIGN_TOKENS.colors.primary} />
-                  </Pressable>
-                </View>
 
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.cardsRow}
-                  {...Platform.select({
-                    web: {
-                      style: { overflowX: 'auto', overflowY: 'hidden', width: '100%' } as any,
-                    },
-                    default: {},
-                  })}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.cardsRow}
+                    {...Platform.select({
+                      web: {
+                        style: { overflowX: 'auto', overflowY: 'hidden', width: '100%' } as any,
+                      },
+                      default: {},
+                    })}
+                  >
+                    {favoritesPreview.map((item: any) => (
+                      <TabTravelCard
+                        key={`${item.type || 'travel'}-${item.id}`}
+                        item={{
+                          id: item.id,
+                          title: item.title,
+                          imageUrl: item.imageUrl,
+                          city: item.city ?? null,
+                          country: item.country ?? null,
+                        }}
+                        onPress={() => router.push(item.url as any)}
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : null,
+              historyPreview.length > 0 ? (
+                <View
+                  key="history"
+                  style={styles.dashboardSectionCard}
+                  onLayout={(e) => {
+                    sectionOffsetsRef.current.history = e.nativeEvent.layout.y;
+                  }}
                 >
-                  {historyPreview.map((item: any) => (
-                    <TabTravelCard
-                      key={`history-${item.type || 'travel'}-${item.id}-${item.viewedAt || ''}`}
-                      item={{
-                        id: item.id,
-                        title: item.title,
-                        imageUrl: item.imageUrl,
-                        city: item.city ?? null,
-                        country: item.country ?? null,
-                      }}
-                      badge={{ icon: 'history', backgroundColor: 'rgba(0,0,0,0.75)', iconColor: '#ffffff' }}
-                      onPress={() => router.push(item.url as any)}
-                    />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
+                  <View style={styles.sectionHeaderRow}>
+                    <View style={styles.sectionHeaderLeft}>
+                      <Text style={styles.sectionTitle}>История</Text>
+                      <Text style={styles.sectionSubtitle}>{viewHistory.length} шт.</Text>
+                    </View>
+                    <Pressable
+                      style={[styles.sectionAction, globalFocusStyles.focusable]}
+                      onPress={() => router.push('/history')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Открыть историю просмотров"
+                      {...Platform.select({ web: { cursor: 'pointer' } })}
+                    >
+                      <Text style={styles.sectionActionText}>Смотреть все</Text>
+                      <Feather name="chevron-right" size={16} color={DESIGN_TOKENS.colors.primary} />
+                    </Pressable>
+                  </View>
+
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.cardsRow}
+                    {...Platform.select({
+                      web: {
+                        style: { overflowX: 'auto', overflowY: 'hidden', width: '100%' } as any,
+                      },
+                      default: {},
+                    })}
+                  >
+                    {historyPreview.map((item: any) => (
+                      <TabTravelCard
+                        key={`history-${item.type || 'travel'}-${item.id}-${item.viewedAt || ''}`}
+                        item={{
+                          id: item.id,
+                          title: item.title,
+                          imageUrl: item.imageUrl,
+                          city: item.city ?? null,
+                          country: item.country ?? null,
+                        }}
+                        badge={{ icon: 'history', backgroundColor: 'rgba(0,0,0,0.75)', iconColor: '#ffffff' }}
+                        onPress={() => router.push(item.url as any)}
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : null,
+            ].filter(Boolean)}
           </View>
         )}
 
@@ -680,7 +659,6 @@ const styles = StyleSheet.create({
   avatarImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
   socialsRow: {
     flexDirection: 'row',

@@ -16,6 +16,7 @@ import AuthorCard from '@/components/travel/AuthorCard'
 import ShareButtons from '@/components/travel/ShareButtons'
 import WeatherWidget from '@/components/WeatherWidget'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useThemedColors } from '@/hooks/useTheme'
 import {
   createSafeImageUrl,
   getSafeOrigin,
@@ -113,7 +114,10 @@ const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }) => {
           width: '100%',
           height: height ? `${height}px` : '100%',
           borderRadius: 12,
-          background: `linear-gradient(180deg, ${DESIGN_TOKENS.colors.backgroundSecondary} 0%, ${DESIGN_TOKENS.colors.backgroundTertiary} 100%)`,
+          // React Native Web doesn't support shorthand `background`; use long-form.
+          backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+          // @ts-ignore web-only property
+          backgroundImage: `linear-gradient(180deg, ${DESIGN_TOKENS.colors.backgroundSecondary} 0%, ${DESIGN_TOKENS.colors.backgroundTertiary} 100%)`,
           border: `1px solid ${DESIGN_TOKENS.colors.borderLight}`,
           boxSizing: 'border-box',
         }}
@@ -144,6 +148,7 @@ export const OptimizedLCPHero: React.FC<{
   isMobile?: boolean
 }> = ({ img, alt, onLoad, height, isMobile }) => {
   const [loadError, setLoadError] = useState(false)
+  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
   const baseSrc = buildVersionedImageUrl(
     buildVersioned(img.url, img.updated_at ?? null, img.id),
     img.updated_at ?? null,
@@ -185,7 +190,7 @@ export const OptimizedLCPHero: React.FC<{
             <View
               style={{
                 ...StyleSheet.absoluteFillObject,
-                backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+                backgroundColor: colors.surfaceMuted,
               }}
             />
             <ImageCardMedia
@@ -223,14 +228,14 @@ export const OptimizedLCPHero: React.FC<{
             borderRadius: 12,
             overflow: 'hidden',
             position: 'relative',
-            backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+            backgroundColor: colors.backgroundSecondary,
           }}
         >
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+              backgroundColor: colors.surfaceMuted,
             }}
           />
           <img
@@ -287,14 +292,15 @@ export function TravelHeroSection({
     (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9
   const resolvedWidth = heroContainerWidth ?? winW
   const heroHeight = useMemo(() => {
-    if (Platform.OS === 'web' && !isMobile) return 420
-    if (!resolvedWidth) return isMobile ? 280 : 420
+    // ✅ РЕДИЗАЙН: Уменьшение высоты на 15%
+    if (Platform.OS === 'web' && !isMobile) return 357; // было 420 (-15%)
+    if (!resolvedWidth) return isMobile ? 238 : 357; // было 280/420 (-15%)
     if (isMobile) {
-      const mobileHeight = winH * 0.8
-      return Math.max(200, Math.min(mobileHeight, winH * 0.85))
+      const mobileHeight = winH * 0.68; // было 0.8 (-15%)
+      return Math.max(170, Math.min(mobileHeight, winH * 0.72)); // было 200/0.85 (-15%)
     }
     const h = resolvedWidth / (aspectRatio || 16 / 9)
-    return Math.max(320, Math.min(h, 640))
+    return Math.max(272, Math.min(h, 544)); // было 320/640 (-15%)
   }, [aspectRatio, isMobile, winH, resolvedWidth])
   const galleryImages = useMemo(
     () =>
@@ -329,7 +335,7 @@ export function TravelHeroSection({
 
       <View
         testID="travel-details-hero"
-        accessibilityRole="region"
+        accessibilityRole="none"
         accessibilityLabel="Галерея маршрута"
         style={[styles.sectionContainer, styles.contentStable]}
       >
@@ -383,7 +389,7 @@ export function TravelHeroSection({
 
       <View
         testID="travel-details-quick-facts"
-        accessibilityRole="region"
+        accessibilityRole="none"
         accessibilityLabel="Краткие факты"
         style={[styles.sectionContainer, styles.contentStable, styles.quickFactsContainer]}
       >
@@ -392,7 +398,7 @@ export function TravelHeroSection({
 
       {isMobile && travel.travelAddress && (
         <View
-          accessibilityRole="region"
+          accessibilityRole="none"
           accessibilityLabel="Погода"
           style={[styles.sectionContainer, styles.contentStable, { marginTop: 16 }]}
         >
@@ -444,7 +450,7 @@ export function TravelHeroSection({
       {isMobile && (
         <View
           testID="travel-details-primary-actions"
-          accessibilityRole="region"
+          accessibilityRole="none"
           accessibilityLabel="Поделиться маршрутом"
           style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
         >
@@ -455,7 +461,7 @@ export function TravelHeroSection({
       {!isMobile && (
         <View
           testID="travel-details-author"
-          accessibilityRole="region"
+          accessibilityRole="none"
           accessibilityLabel="Автор маршрута"
           style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
         >

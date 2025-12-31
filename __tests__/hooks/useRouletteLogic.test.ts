@@ -93,9 +93,9 @@ describe('useRouletteLogic', () => {
   it('builds filter groups and summary with default countries when none selected', async () => {
     const { result } = renderHook(() => useRouletteLogic());
 
-    await waitFor(() => expect(result.current.filterGroups.length).toBeGreaterThan(0));
+    await waitFor(() => expect(result.current.filtersSummary).toBe('Беларусь и ещё 1'));
 
-    expect(result.current.filtersSummary).toBe('Беларусь и ещё 1');
+    expect(result.current.filterGroups.length).toBeGreaterThan(0);
     expect(result.current.activeFiltersCount).toBeGreaterThan(0);
   });
 

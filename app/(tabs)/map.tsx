@@ -34,6 +34,7 @@ import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { getStyles } from './map.styles';
+import { useThemedColors } from '@/hooks/useTheme';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 
 // Ensure RouteHint is bundled (used inside FiltersPanel)
@@ -55,6 +56,7 @@ export default function MapScreen() {
     const pathname = usePathname();
     const isFocused = useIsFocused();
     const { isPhone, isLargePhone, width } = useResponsive();
+    const themedColors = useThemedColors();
     const insets = useSafeAreaInsets();
     const isMobile = isPhone || isLargePhone;
     const queryClient = useQueryClient();
@@ -426,8 +428,8 @@ export default function MapScreen() {
     const headerOffset = Platform.OS === 'web' ? HEADER_HEIGHT_WEB : 0;
 
     const styles = useMemo(
-        () => getStyles(isMobile, insets.top, headerOffset, width),
-        [isMobile, insets.top, headerOffset, width],
+        () => getStyles(isMobile, insets.top, headerOffset, width, themedColors),
+        [isMobile, insets.top, headerOffset, width, themedColors],
     );
     const mapPanelPlaceholder = (
         <View style={styles.mapPlaceholder}>

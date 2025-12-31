@@ -5,6 +5,18 @@ import { METRICS } from '@/constants/layout';
 
 describe('map layout header offset', () => {
   const originalOS = Platform.OS;
+  const themedColors = {
+    primary: '#000000',
+    primaryDark: '#000000',
+    primaryLight: '#000000',
+    text: '#000000',
+    textMuted: '#666666',
+    textInverse: '#ffffff',
+    background: '#ffffff',
+    surface: '#ffffff',
+    surfaceLight: '#f5f5f5',
+    border: '#e5e5e5',
+  };
 
   beforeAll(() => {
     // Ensure StyleSheet returns plain objects in tests
@@ -23,7 +35,7 @@ describe('map layout header offset', () => {
     Object.defineProperty(Platform, 'OS', { value: 'web' });
 
     const headerOffset = 88;
-    const styles = getStyles(false, 0, headerOffset, 1280);
+    const styles = getStyles(false, 0, headerOffset, 1280, themedColors);
 
     expect(styles.container.paddingTop).toBe(0);
     expect(styles.rightPanel.top).toBe(0);
@@ -43,7 +55,7 @@ describe('map layout header offset', () => {
 
     const headerOffset = 88;
     const insetTop = 12;
-    const styles = getStyles(true, insetTop, headerOffset, 360);
+    const styles = getStyles(true, insetTop, headerOffset, 360, themedColors);
 
     // For mobile web: header offset handled by DOM, only inset applies
     expect(styles.tabsContainer.paddingTop).toBe(insetTop + 6);

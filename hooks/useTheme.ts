@@ -5,6 +5,16 @@
 
 import { useEffect, useState, useCallback, createContext, useContext, createElement } from 'react';
 import { Platform, useColorScheme } from 'react-native';
+import {
+  MODERN_MATTE_PALETTE,
+  MODERN_MATTE_PALETTE_DARK,
+  MODERN_MATTE_SHADOWS,
+  MODERN_MATTE_SHADOWS_DARK,
+  MODERN_MATTE_BOX_SHADOWS,
+  MODERN_MATTE_BOX_SHADOWS_DARK,
+  MODERN_MATTE_GRADIENTS,
+  MODERN_MATTE_GRADIENTS_DARK,
+} from '@/constants/modernMattePalette';
 
 export type Theme = 'light' | 'dark' | 'auto';
 
@@ -115,34 +125,90 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 /**
  * Хук для получения цветов в зависимости от темы
+ * Использует современную матовую палитру (светлая/тёмная).
  */
+type MattePalette = Record<keyof typeof MODERN_MATTE_PALETTE, string>;
+
 export function useThemedColors() {
   const { isDark } = useTheme();
+  const raw = isDark ? MODERN_MATTE_PALETTE_DARK : MODERN_MATTE_PALETTE;
+  // Normalize to a simple string map to avoid literal-type conflicts.
+  const palette: MattePalette = { ...(MODERN_MATTE_PALETTE as any), ...(raw as any) };
+  const shadows = isDark ? MODERN_MATTE_SHADOWS_DARK : MODERN_MATTE_SHADOWS;
+  const boxShadows = isDark ? MODERN_MATTE_BOX_SHADOWS_DARK : MODERN_MATTE_BOX_SHADOWS;
+  const gradients = isDark ? MODERN_MATTE_GRADIENTS_DARK : MODERN_MATTE_GRADIENTS;
 
   return {
     // Primary
-    primary: isDark ? '#60A5FA' : '#7A9D8F',
-    primaryDark: isDark ? '#3B82F6' : '#6A8D7F',
-    primaryLight: isDark ? 'rgba(96, 165, 250, 0.18)' : '#F0F5F3',
+    primary: palette.primary,
+    primaryDark: palette.primaryDark,
+    primaryLight: palette.primaryLight,
+    primarySoft: palette.primarySoft,
+    accent: palette.accent,
+    accentDark: palette.accentDark,
+    accentLight: palette.accentLight,
+    accentSoft: palette.accentSoft,
 
     // Text
-    text: isDark ? '#F8FAFC' : '#3A3A3A',
-    textMuted: isDark ? '#CBD5E1' : '#6A6A6A',
-    textInverse: isDark ? '#0F172A' : '#FFFFFF',
-    textOnPrimary: isDark ? '#0F172A' : '#111827',
-    textOnDark: isDark ? '#F8FAFC' : '#FFFFFF',
+    text: palette.text,
+    textSecondary: palette.textSecondary,
+    textTertiary: palette.textTertiary,
+    textMuted: palette.textMuted,
+    textInverse: palette.textInverse,
+    textOnPrimary: palette.textOnPrimary,
+    textOnDark: palette.textOnDark,
 
     // Background
-    background: isDark ? '#0F172A' : '#FDFCFB',
-    surface: isDark ? '#111827' : '#FFFFFF',
-    surfaceLight: isDark ? '#1F2937' : '#F5F4F2',
-    border: isDark ? 'rgba(148, 163, 184, 0.18)' : 'rgba(58, 58, 58, 0.06)',
+    background: palette.background,
+    backgroundSecondary: palette.backgroundSecondary,
+    backgroundTertiary: palette.backgroundTertiary,
+    surface: palette.surface,
+    surfaceElevated: palette.surfaceElevated,
+    surfaceMuted: palette.surfaceMuted,
+    surfaceLight: palette.backgroundTertiary,
+    border: palette.border,
+    borderLight: palette.borderLight,
+    borderStrong: palette.borderStrong,
+    borderAccent: palette.borderAccent,
+    mutedBackground: palette.mutedBackground ?? palette.backgroundSecondary,
 
     // Status
-    success: isDark ? '#4ADE80' : '#7A9D8A',
-    error: isDark ? '#F87171' : '#B89090',
-    warning: isDark ? '#FBBF24' : '#B5A88A',
-    info: isDark ? '#38BDF8' : '#8A9DB0',
+    success: palette.success,
+    successDark: palette.successDark,
+    successLight: palette.successLight,
+    successSoft: palette.successSoft,
+
+    warning: palette.warning,
+    warningDark: palette.warningDark,
+    warningLight: palette.warningLight,
+    warningSoft: palette.warningSoft,
+
+    danger: palette.danger,
+    dangerDark: palette.dangerDark,
+    dangerLight: palette.dangerLight,
+    dangerSoft: palette.dangerSoft,
+
+    info: palette.info,
+    infoDark: palette.infoDark,
+    infoLight: palette.infoLight,
+    infoSoft: palette.infoSoft,
+
+    // Focus и состояния
+    focus: palette.focus,
+    focusStrong: palette.focusStrong,
+    disabled: palette.disabled,
+    disabledText: palette.disabledText,
+
+    // Overlay
+    overlay: palette.overlay,
+    overlayLight: palette.overlayLight,
+
+    // Тени
+    shadows,
+    boxShadows,
+
+    // Градиенты
+    gradients,
   };
 }
 

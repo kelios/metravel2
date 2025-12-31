@@ -27,6 +27,7 @@ function IconButton({
   testID,
 }: IconButtonProps) {
   const dimension = size === 'sm' ? 36 : 42;
+  const handlePress = disabled ? undefined : onPress
 
   return (
     <Pressable
@@ -34,7 +35,7 @@ function IconButton({
       accessibilityLabel={label}
       accessibilityState={{ disabled, selected: active }}
       disabled={disabled}
-      onPress={onPress}
+      onPress={handlePress}
       testID={testID}
       style={({ pressed }) => [
         styles.base,

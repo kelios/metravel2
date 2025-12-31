@@ -57,12 +57,13 @@ describe('ExportBar', () => {
   });
 
   it('не вызывает onSave, если нет выбора или идёт генерация', () => {
-    const { getByText, onSave } = setup({ hasSelection: false });
+    const { getByRole, onSave } = setup({ hasSelection: false });
 
-    const button = getByText('Сохранить PDF');
-    expect(button).toBeDisabled();
-
-    fireEvent.press(button);
+    const button = getByRole('button', { name: 'Сохранить PDF' });
+    expect(button.props.accessibilityState?.disabled).toBe(true);
+    expect(button.props.pointerEvents).toBe('none');
+    expect(button.props.onPress).toBeUndefined();
+    expect(button.props.onClick).toBeUndefined();
     expect(onSave).not.toHaveBeenCalled();
   });
 });

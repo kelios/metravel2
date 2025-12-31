@@ -3,14 +3,14 @@
  * Изолирует логику меню от UI-компонентов
  */
 
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing } from 'react-native';
+
 import { useResponsive } from '@/hooks/useResponsive';
 
 export interface UseMenuStateReturn {
   menuOpen: boolean;
-export interface UseMenuStateReturn {
-  menuOpen: boolean;
+  isMenuOpen: boolean;
   toggleMenu: () => void;
   openMenu: () => void;
   closeMenu: () => void;
@@ -75,11 +75,6 @@ export function useMenuState(isMobile: boolean): UseMenuStateReturn {
     animateMenu(false);
   }, [animateMenu]);
 
-  const openMenu = useCallback(() => {
-    setMenuOpen(true);
-    animateMenu(true);
-  }, [animateMenu]);
-
   // ✅ АРХИТЕКТУРА: Автоматически открываем меню на десктопе
   useEffect(() => {
     if (!isMobile) {
@@ -98,8 +93,7 @@ export function useMenuState(isMobile: boolean): UseMenuStateReturn {
 
   return {
     menuOpen,
-  return {
-    menuOpen,
+    isMenuOpen: menuOpen,
     toggleMenu,
     openMenu,
     closeMenu,

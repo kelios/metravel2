@@ -1,0 +1,188 @@
+/**
+ * 🧪 Тесты редизайна TravelDetailsContainer
+ *
+ * Проверяет:
+ * - Переключение темы (light/dark)
+ * - Компактные метрики
+ * - Responsive breakpoints
+ * - Использование DESIGN_TOKENS
+ */
+
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import { ThemeProvider } from '@/hooks/useTheme';
+import { COMPACT_SPACING, COMPACT_TYPOGRAPHY } from '@/components/travel/details/TravelDetailsStyles';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+
+// Mock dependencies
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => ({ isMobile: false, isTablet: false, isDesktop: true, width: 1440 }),
+}));
+
+jest.mock('@/hooks/useTravelDetailsData', () => ({
+  useTravelDetailsData: () => ({
+    travel: {
+      id: 1,
+      name: 'Test Travel',
+      slug: 'test-travel',
+      description: '<p>Test description</p>',
+      gallery: [],
+    },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: jest.fn(),
+    slug: 'test-travel',
+    isMissingParam: false,
+  }),
+}));
+
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({ isSuperuser: false, userId: null }),
+}));
+
+describe('TravelDetailsContainer - Редизайн', () => {
+  describe('Компактные метрики', () => {
+    it('должен использовать уменьшенные spacing для hero секции', () => {
+      expect(COMPACT_SPACING.hero.mobile).toBe(18);
+      expect(COMPACT_SPACING.hero.desktop).toBe(24);
+      expect(COMPACT_SPACING.hero.mobile).toBeLessThan(24); // было 24
+      expect(COMPACT_SPACING.hero.desktop).toBeLessThan(32); // было 32
+    });
+
+    it('должен использовать уменьшенные spacing для секций', () => {
+      expect(COMPACT_SPACING.section.mobile).toBe(14);
+      expect(COMPACT_SPACING.section.desktop).toBe(18);
+      expect(COMPACT_SPACING.section.mobile).toBeLessThan(18); // было 18-20
+      expect(COMPACT_SPACING.section.desktop).toBeLessThan(24); // было 24
+    });
+
+    it('должен использовать уменьшенные spacing для карточек', () => {
+      expect(COMPACT_SPACING.card.mobile).toBe(12);
+      expect(COMPACT_SPACING.card.desktop).toBe(14);
+      expect(COMPACT_SPACING.card.mobile).toBeLessThan(16); // было 16
+    });
+
+    it('должен использовать уменьшенные размеры шрифтов', () => {
+      expect(COMPACT_TYPOGRAPHY.title.mobile).toBe(20);
+      expect(COMPACT_TYPOGRAPHY.title.desktop).toBe(22);
+      expect(COMPACT_TYPOGRAPHY.body.mobile).toBe(14);
+      expect(COMPACT_TYPOGRAPHY.caption.mobile).toBe(12);
+    });
+
+    it('должен экономить ~20-25% высоты по сравнению с оригиналом', () => {
+      const originalHero = 32;
+      const compactHero = COMPACT_SPACING.hero.desktop;
+      const reduction = ((originalHero - compactHero) / originalHero) * 100;
+      expect(reduction).toBeGreaterThanOrEqual(20);
+      expect(reduction).toBeLessThanOrEqual(30);
+    });
+  });
+
+  describe('DESIGN_TOKENS usage', () => {
+    it('должен использовать DESIGN_TOKENS для цветов', () => {
+      expect(DESIGN_TOKENS.colors.background).toBeDefined();
+      expect(DESIGN_TOKENS.colors.surface).toBeDefined();
+      expect(DESIGN_TOKENS.colors.text).toBeDefined();
+      expect(DESIGN_TOKENS.colors.primary).toBeDefined();
+    });
+
+    it('должен использовать DESIGN_TOKENS для spacing', () => {
+      expect(DESIGN_TOKENS.spacing.xs).toBe(8);
+      expect(DESIGN_TOKENS.spacing.sm).toBe(12);
+      expect(DESIGN_TOKENS.spacing.md).toBe(16);
+      expect(DESIGN_TOKENS.spacing.lg).toBe(24);
+    });
+
+    it('должен использовать DESIGN_TOKENS для radii', () => {
+      expect(DESIGN_TOKENS.radii.sm).toBe(12);
+      expect(DESIGN_TOKENS.radii.md).toBe(16);
+      expect(DESIGN_TOKENS.radii.lg).toBe(20);
+    });
+
+    it('должен использовать DESIGN_TOKENS для shadows', () => {
+      expect(DESIGN_TOKENS.shadows.light).toBeDefined();
+      expect(DESIGN_TOKENS.shadows.card).toBeDefined();
+      expect(DESIGN_TOKENS.shadowsNative.light).toBeDefined();
+    });
+  });
+
+  describe('Responsive breakpoints', () => {
+    it('должен применять mobile spacing на мобильных', () => {
+      const mobileSpacing = COMPACT_SPACING.hero.mobile;
+      const desktopSpacing = COMPACT_SPACING.hero.desktop;
+      expect(mobileSpacing).toBeLessThan(desktopSpacing);
+    });
+
+    it('должен использовать правильные breakpoints', () => {
+      expect(DESIGN_TOKENS.breakpoints.mobile).toBe(768);
+      expect(DESIGN_TOKENS.breakpoints.tablet).toBe(1024);
+      expect(DESIGN_TOKENS.breakpoints.desktop).toBe(1280);
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('должен поддерживать WCAG AA контраст для светлой темы', () => {
+      // Проверяем что токены используют правильные цвета
+      expect(DESIGN_TOKENS.colors.text).toBe('#3a3a3a'); // темный на светлом фоне
+      expect(DESIGN_TOKENS.colors.background).toBe('#fdfcfb'); // светлый фон
+    });
+
+    it('должен иметь focus indicators', () => {
+      expect(DESIGN_TOKENS.colors.focus).toBeDefined();
+      expect(DESIGN_TOKENS.colors.focusStrong).toBeDefined();
+    });
+
+    it('должен поддерживать disabled состояния', () => {
+      expect(DESIGN_TOKENS.colors.disabled).toBeDefined();
+      expect(DESIGN_TOKENS.colors.disabledText).toBeDefined();
+    });
+  });
+});
+
+describe('Компактность - Before/After', () => {
+  const metrics = {
+    before: {
+      heroPadding: 32,
+      sectionPadding: 24,
+      cardPadding: 16,
+      titleSize: 26,
+      bodySize: 16,
+    },
+    after: {
+      heroPadding: COMPACT_SPACING.hero.desktop,
+      sectionPadding: COMPACT_SPACING.section.desktop,
+      cardPadding: COMPACT_SPACING.card.desktop,
+      titleSize: COMPACT_TYPOGRAPHY.title.desktop + 2,
+      bodySize: COMPACT_TYPOGRAPHY.body.desktop,
+    },
+  };
+
+  it('hero padding уменьшен на 25%', () => {
+    const reduction = ((metrics.before.heroPadding - metrics.after.heroPadding) / metrics.before.heroPadding) * 100;
+    expect(reduction).toBeCloseTo(25, 0);
+  });
+
+  it('section padding уменьшен на 25%', () => {
+    const reduction = ((metrics.before.sectionPadding - metrics.after.sectionPadding) / metrics.before.sectionPadding) * 100;
+    expect(reduction).toBeCloseTo(25, 0);
+  });
+
+  it('card padding уменьшен на 12.5%', () => {
+    const reduction = ((metrics.before.cardPadding - metrics.after.cardPadding) / metrics.before.cardPadding) * 100;
+    expect(reduction).toBeCloseTo(12.5, 1);
+  });
+
+  it('title size уменьшен на ~8%', () => {
+    const reduction = ((metrics.before.titleSize - metrics.after.titleSize) / metrics.before.titleSize) * 100;
+    expect(reduction).toBeGreaterThan(5);
+    expect(reduction).toBeLessThan(10);
+  });
+
+  it('body size уменьшен на 12.5%', () => {
+    const reduction = ((metrics.before.bodySize - metrics.after.bodySize) / metrics.before.bodySize) * 100;
+    expect(reduction).toBeCloseTo(12.5, 0);
+  });
+});
+

@@ -4,22 +4,44 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { getTravelsListPath } from './helpers/routes';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-const TRAVEL_SLUG = 'minsk-capital';
-const TRAVEL_URL = `${BASE_URL}/travels/${TRAVEL_SLUG}`;
+let travelBasePath: string | null = null;
 
 test.describe('TravelDetailsContainer - E2E Tests', () => {
   let page: Page;
 
-  test.beforeEach(async ({ page: testPage }) => {
+  test.beforeAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(500);
+
+    const cards = page.locator('[data-testid="travel-card-link"]');
+    if ((await cards.count()) === 0) {
+      travelBasePath = null;
+      await page.close();
+      return;
+    }
+
+    await cards.first().click();
+    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+
+    const url = new URL(page.url());
+    travelBasePath = `${url.pathname}${url.search}`;
+    await page.close();
+  });
+
+  test.beforeEach(async ({ page: testPage }, testInfo) => {
     page = testPage;
+    if (!travelBasePath) {
+      testInfo.skip('No travel cards available in this environment');
+    }
 
     // Set viewport for mobile testing
     await page.setViewportSize({ width: 1280, height: 720 });
 
     // Go to travel details page
-    await page.goto(TRAVEL_URL);
+    await page.goto(travelBasePath!);
 
     // Wait for main content to load
     await page.waitForSelector('[testID="travel-details-page"]', { timeout: 10000 });
@@ -67,7 +89,6 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
     test('should have correct page title', async () => {
       const title = await page.title();
       expect(title).toContain('MeTravel');
-      expect(title).toContain('Минск'); // Travel name should be in title
     });
   });
 
@@ -107,7 +128,7 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
 
     test('should support deep linking to sections', async () => {
       // Navigate directly to map section
-      await page.goto(`${TRAVEL_URL}#map`);
+      await page.goto(`${travelBasePath}#map`);
 
       // Wait for content
       await page.waitForTimeout(500);
@@ -436,4 +457,3 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
     });
   });
 });
-

@@ -5,6 +5,47 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 export const HEADER_OFFSET_DESKTOP = 72
 export const HEADER_OFFSET_MOBILE = 56
 
+/* ✅ РЕДИЗАЙН: Компактные константы (по аналогии с CompactSideBarTravel) */
+export const COMPACT_SPACING = {
+  // Уменьшение на 20-25%
+  hero: {
+    mobile: 18, // было 24
+    desktop: 24, // было 32
+  },
+  section: {
+    mobile: 14, // было 18-20
+    desktop: 18, // было 24
+  },
+  card: {
+    mobile: 12, // было 16
+    desktop: 14, // было 18
+  },
+  margin: {
+    section: 14, // было 18
+    card: 9, // было 12
+  },
+} as const;
+
+export const COMPACT_TYPOGRAPHY = {
+  // Уменьшение font sizes на 15-20%
+  title: {
+    mobile: 20, // было 24
+    desktop: 22, // было 26-28
+  },
+  subtitle: {
+    mobile: 16, // было 18-20
+    desktop: 18, // было 20-22
+  },
+  body: {
+    mobile: 14, // было 16
+    desktop: 14, // было 16
+  },
+  caption: {
+    mobile: 12, // было 13-14
+    desktop: 13, // было 14
+  },
+} as const;
+
 /* -------------------- styles -------------------- */
 export const styles = StyleSheet.create({
   // ✅ РЕДИЗАЙН: Светлый современный фон
@@ -51,8 +92,8 @@ export const styles = StyleSheet.create({
   },
   sectionContainer: {
     marginBottom: Platform.select({
-      default: DESIGN_TOKENS.spacing.lg,
-      web: DESIGN_TOKENS.spacing.xxl,
+      default: COMPACT_SPACING.section.desktop, // было lg (24px)
+      web: COMPACT_SPACING.section.desktop + 4, // было xxl (48px), теперь 22
     }),
     // Horizontal gutters are applied once at the page level (contentWrapper).
     // Keeping additional padding here makes mobile content look "squeezed".
@@ -94,10 +135,10 @@ export const styles = StyleSheet.create({
   quickJumpChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: COMPACT_SPACING.card.mobile, // было sm (12px)
     paddingHorizontal: Platform.select({
-      default: DESIGN_TOKENS.spacing.md,
-      web: DESIGN_TOKENS.spacing.sm + DESIGN_TOKENS.spacing.xs,
+      default: COMPACT_SPACING.section.mobile, // было md (16px)
+      web: COMPACT_SPACING.card.mobile, // было sm+xs (14px)
     }),
     borderRadius: 999,
     borderWidth: 1,
@@ -117,27 +158,30 @@ export const styles = StyleSheet.create({
     borderColor: DESIGN_TOKENS.colors.borderAccent,
   },
   quickJumpLabel: {
-    fontSize: 14,
+    fontSize: COMPACT_TYPOGRAPHY.body.mobile, // было 14
     fontWeight: "600" as any,
     color: DESIGN_TOKENS.colors.text,
     marginLeft: DESIGN_TOKENS.spacing.xs,
   },
   
   descriptionIntroWrapper: {
-    marginBottom: DESIGN_TOKENS.spacing.lg,
+    marginBottom: COMPACT_SPACING.section.mobile + 4, // было lg (24px)
   },
   
   descriptionIntroTitle: {
-    fontSize: Platform.select({ default: 22, web: 24 }),
+    fontSize: Platform.select({
+      default: COMPACT_TYPOGRAPHY.subtitle.mobile, // было 22
+      web: COMPACT_TYPOGRAPHY.subtitle.desktop, // было 24
+    }),
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
     color: DESIGN_TOKENS.colors.text,
     marginBottom: DESIGN_TOKENS.spacing.sm,
   },
   
   descriptionIntroText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontSize: COMPACT_TYPOGRAPHY.body.mobile, // было md (16)
     color: DESIGN_TOKENS.colors.textMuted,
-    lineHeight: 24,
+    lineHeight: Platform.select({ default: 22, web: 21 }), // уменьшено
   },
 
   decisionSummaryBox: {
@@ -300,19 +344,19 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: Platform.select({
-      default: DESIGN_TOKENS.spacing.md,
-      web: DESIGN_TOKENS.spacing.xl,
+      default: COMPACT_SPACING.section.mobile, // было md (16px)
+      web: COMPACT_SPACING.section.desktop, // было xl (32px)
     }),
     paddingHorizontal: Platform.select({
-      default: DESIGN_TOKENS.spacing.md,
-      web: DESIGN_TOKENS.spacing.xl,
+      default: COMPACT_SPACING.section.mobile, // было md (16px)
+      web: COMPACT_SPACING.section.desktop, // было xl (32px)
     }),
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
     justifyContent: "space-between",
     borderWidth: 1,
     borderColor: DESIGN_TOKENS.colors.borderLight,
-    minHeight: 64,
+    minHeight: 56, // было 64
     ...Platform.select({
       web: {
         boxShadow: DESIGN_TOKENS.shadows.card,
@@ -373,15 +417,15 @@ export const styles = StyleSheet.create({
 
   sectionHeaderText: { 
     fontSize: Platform.select({
-      default: 22,
-      web: 26,
+      default: COMPACT_TYPOGRAPHY.title.mobile, // было 22
+      web: COMPACT_TYPOGRAPHY.title.desktop + 2, // было 26, теперь 24
     }),
     fontWeight: '700' as any,
     color: DESIGN_TOKENS.colors.text,
     letterSpacing: -0.4,
     lineHeight: Platform.select({
-      default: 30,
-      web: 34,
+      default: 28, // было 30
+      web: 32, // было 34
     }),
     flexShrink: 1,
   },
@@ -458,8 +502,8 @@ export const styles = StyleSheet.create({
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
     padding: Platform.select({
-      default: DESIGN_TOKENS.spacing.md,
-      web: DESIGN_TOKENS.spacing.xl,
+      default: COMPACT_SPACING.section.mobile, // было md (16px)
+      web: COMPACT_SPACING.section.desktop, // было xl (32px), теперь 18
     }),
     borderWidth: 1,
     borderColor: DESIGN_TOKENS.colors.borderLight,

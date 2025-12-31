@@ -12,6 +12,7 @@ describe('TravelDetails accessibility (web)', () => {
   jest.setTimeout(15000)
 
   it('OptimizedLCPHero has no obvious a11y violations', async () => {
+    jest.useRealTimers()
     const RN = require('react-native')
     RN.Platform.OS = 'web'
     RN.Platform.select = (obj: any) => obj.web ?? obj.default

@@ -1,5 +1,10 @@
+/**
+ * Компонент виджета погоды
+ * ✅ РЕДИЗАЙН: Поддержка темной темы + компактный дизайн
+ */
 import React, { useEffect, useState, useRef } from 'react';
 import { Platform, View, Text, StyleSheet, Image } from 'react-native';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type Props = {
     points: { coord: string; address?: string }[];
@@ -20,6 +25,7 @@ export default function WeatherWidget({ points, countryName }: Props) {
     const [isTitleTruncated, setIsTitleTruncated] = useState(false);
     const [showFullTitle, setShowFullTitle] = useState(false);
     const titleRef = useRef<Text>(null);
+    const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 
     useEffect(() => {
         if (Platform.OS !== 'web' || !points?.length) return;
@@ -85,7 +91,7 @@ export default function WeatherWidget({ points, countryName }: Props) {
           <View style={styles.titleContainer}>
               <Text
                 ref={titleRef}
-                style={styles.title}
+                style={[styles.title, { color: colors.text }]}
                 numberOfLines={1}
                 ellipsizeMode="tail"
                 {...webTitleEvents}
@@ -93,8 +99,8 @@ export default function WeatherWidget({ points, countryName }: Props) {
                   Погода в {locationLabel}
               </Text>
               {showFullTitle && isTitleTruncated && (
-                <View style={styles.tooltip}>
-                    <Text style={styles.tooltipText}>Погода в {locationLabel}</Text>
+                <View style={[styles.tooltip, { backgroundColor: colors.surfaceElevated }]}>
+                    <Text style={[styles.tooltipText, { color: colors.text }]}>Погода в {locationLabel}</Text>
                 </View>
               )}
           </View>
@@ -106,7 +112,7 @@ export default function WeatherWidget({ points, countryName }: Props) {
                     index === forecast.length - 1 && styles.lastItem
                 ]}>
                     <View style={styles.dateIconContainer}>
-                        <Text style={styles.date}>{formatDateShort(day.date)}</Text>
+                        <Text style={[styles.date, { color: colors.textMuted }]}>{formatDateShort(day.date)}</Text>
                         <Image
                           source={{ uri: day.icon }}
                           style={styles.icon}
@@ -114,10 +120,10 @@ export default function WeatherWidget({ points, countryName }: Props) {
                         />
                     </View>
                     <View style={styles.tempContainer}>
-                        <Text style={styles.tempMax}>{Math.round(day.temperatureMax)}°</Text>
-                        <Text style={styles.tempMin}>/{Math.round(day.temperatureMin)}°</Text>
+                        <Text style={[styles.tempMax, { color: colors.text }]}>{Math.round(day.temperatureMax)}°</Text>
+                        <Text style={[styles.tempMin, { color: colors.textMuted }]}>/{Math.round(day.temperatureMin)}°</Text>
                     </View>
-                    <Text style={styles.desc} numberOfLines={1} ellipsizeMode="tail">
+                    <Text style={[styles.desc, { color: colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">
                         {day.condition}
                     </Text>
                 </View>
@@ -133,12 +139,13 @@ function formatDateShort(dateStr: string): string {
 }
 
 const styles = StyleSheet.create({
+    // ✅ РЕДИЗАЙН: Компактный wrapper
     wrapper: {
         width: '100%',
         maxWidth: '100%',
         backgroundColor: 'transparent',
         borderRadius: 0,
-        paddingVertical: 10,
+        paddingVertical: 8, // было 10px (-20%)
         paddingHorizontal: 0,
         marginBottom: 0,
         shadowColor: '#000',
@@ -148,18 +155,18 @@ const styles = StyleSheet.create({
         elevation: 0,
         borderWidth: 0,
         borderColor: 'transparent',
-        marginTop: 12,
+        marginTop: 10, // было 12px (-17%)
         overflow: 'visible',
     },
     titleContainer: {
         position: 'relative',
-        marginBottom: 8,
+        marginBottom: 7, // было 8px (-12.5%)
     },
     title: {
-        fontSize: 14,
+        fontSize: 13, // было 14px (-7%)
         fontWeight: '600',
         fontFamily: 'Roboto-Medium',
-        color: '#374151',
+        color: '#374151', // будет переопределен через props
         cursor: 'default',
         width: '100%',
         flexWrap: 'wrap',
@@ -168,7 +175,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: '100%',
         left: 0,
-        backgroundColor: '#333',
+        backgroundColor: '#333', // будет переопределен через props
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 4,
@@ -176,14 +183,14 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     tooltipText: {
-        color: '#fff',
-        fontSize: 14,
+        color: '#fff', // будет переопределен через props
+        fontSize: 13, // было 14px (-7%)
         fontFamily: 'Roboto-Regular',
     },
     forecastContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        gap: 6,
+        gap: 5, // было 6px (-17%)
     },
     forecastItem: {
         flex: 1,
@@ -195,40 +202,40 @@ const styles = StyleSheet.create({
     },
     dateIconContainer: {
         alignItems: 'center',
-        marginBottom: 6, // ✅ UX: Уменьшено с 8
+        marginBottom: 5, // было 6px (-17%)
     },
     date: {
-        fontSize: 14,
+        fontSize: 13, // было 14px (-7%)
         fontWeight: '500',
         fontFamily: 'Roboto-Medium',
-        color: '#9ca3af',
-        marginBottom: 4, // ✅ UX: Уменьшено с 6
+        color: '#9ca3af', // будет переопределен через props
+        marginBottom: 3, // было 4px (-25%)
         textAlign: 'center',
     },
     icon: {
-        width: 32, // ✅ UX: Уменьшено с 36
-        height: 32, // ✅ UX: Уменьшено с 36
+        width: 28, // было 32px (-12.5%)
+        height: 28, // было 32px (-12.5%)
     },
     tempContainer: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        marginBottom: 2, // ✅ UX: Уменьшено с 4
+        marginBottom: 2,
     },
     tempMax: {
-        fontSize: 14, // ✅ UX: Уменьшено с 16
+        fontSize: 13, // было 14px (-7%)
         fontWeight: '600',
         fontFamily: 'Roboto-Medium',
-        color: '#374151',
+        color: '#374151', // будет переопределен через props
     },
     tempMin: {
-        fontSize: 14,
+        fontSize: 13, // было 14px (-7%)
         fontWeight: '400',
         fontFamily: 'Roboto-Regular',
-        color: '#9ca3af',
+        color: '#9ca3af', // будет переопределен через props
     },
     desc: {
-        fontSize: 14,
-        color: '#9ca3af',
+        fontSize: 13, // было 14px (-7%)
+        color: '#9ca3af', // будет переопределен через props
         fontFamily: 'Roboto-Regular',
         textAlign: 'center',
         maxWidth: '100%',

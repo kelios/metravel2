@@ -236,7 +236,12 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     await act(async () => {
-      fireEvent.press(getByText('Сохранить как черновик'));
+      const draftLabel = getByText('Сохранить как черновик');
+      const draftRow = draftLabel.parent?.parent;
+      if (!draftRow) {
+        throw new Error('Draft option row not found');
+      }
+      fireEvent.press(draftRow);
     });
 
     const primaryButtons = getAllByText('Сохранить');

@@ -238,7 +238,7 @@ export default function BookSettingsModal({
   return (
     <Modal
       visible={visible}
-      transparent
+      transparent={false}
       animationType="fade"
       onRequestClose={onClose}
     >
@@ -249,9 +249,11 @@ export default function BookSettingsModal({
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: MODAL_COLORS.overlay, // Матовый overlay
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
+          // Оpaque, theme-aware backdrop (no transparency)
+          backgroundColor: MODAL_COLORS.backgroundSecondary,
+          opacity: 1,
+          backdropFilter: 'none',
+          WebkitBackdropFilter: 'none',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

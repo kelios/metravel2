@@ -1,6 +1,7 @@
 /**
  * Компонент QuickFacts - быстрые факты о путешествии
  * Показывает ключевую информацию: дата, длительность, страна, категории
+ * ✅ РЕДИЗАЙН: Поддержка темной темы + компактный дизайн
  */
 
 import React, { useMemo } from 'react';
@@ -9,10 +10,38 @@ import { MaterialIcons, Feather } from '@expo/vector-icons';
 import type { Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 
-const SafeView = ({ children, ...props }: React.ComponentProps<typeof View>) => {
+const isWeb = Platform.OS === 'web' || typeof document !== 'undefined';
+
+const getWebA11yProps = (label?: string, role?: string) => {
+  if (!isWeb) {
+    return {};
+  }
+  const webProps: { role?: string; 'aria-label'?: string } = {};
+  if (role) {
+    webProps.role = role;
+  }
+  if (label) {
+    webProps['aria-label'] = label;
+  }
+  return webProps;
+};
+
+const SafeView = ({
+  children,
+  accessibilityLabel,
+  accessibilityRole,
+  ...props
+}: React.ComponentProps<typeof View>) => {
+  const webA11yProps = getWebA11yProps(accessibilityLabel, accessibilityRole);
   return (
-    <View {...props}>
+    <View
+      {...props}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={accessibilityRole}
+      {...(webA11yProps as any)}
+    >
       {React.Children.map(children, (child) => (typeof child === 'string' ? <Text>{child}</Text> : child))}
     </View>
   );
@@ -26,6 +55,7 @@ interface QuickFactsProps {
 export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
+  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 
   // Извлекаем данные о путешествии
   const monthName = (travel as any).monthName || '';
@@ -75,70 +105,86 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
 
   return (
     <SafeView 
-      style={[styles.container, isMobile && styles.containerMobile]}
+      style={[
+        styles.container,
+        isMobile && styles.containerMobile,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.borderLight,
+        }
+      ]}
       accessibilityLabel="Ключевая информация о путешествии"
     >
       {/* Дата */}
       {whenLine && (
         <SafeView style={styles.factItem}>
-          {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
           <MaterialIcons
             name="calendar-today"
             size={Platform.select({ default: 16, web: 18 })}
-            color="#6b7280"
+            color={colors.textMuted} // ✅ РЕДИЗАЙН: Темная тема
           />
-          <Text style={styles.factText}>{whenLine}</Text>
+          <Text style={[styles.factText, { color: colors.text }]}>{whenLine}</Text>
         </SafeView>
       )}
 
       {/* Длительность */}
       {daysText && (
         <SafeView style={styles.factItem}>
-          {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
           <MaterialIcons
             name="schedule"
             size={Platform.select({ default: 16, web: 18 })}
-            color="#6b7280"
+            color={colors.textMuted} // ✅ РЕДИЗАЙН: Темная тема
           />
-          <Text style={styles.factText}>{daysText}</Text>
+          <Text style={[styles.factText, { color: colors.text }]}>{daysText}</Text>
         </SafeView>
       )}
 
       {/* Страна */}
       {countryName && (
         <SafeView style={styles.factItem}>
-          {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
           <Feather
             name="map-pin"
             size={Platform.select({ default: 16, web: 18 })}
-            color="#6b7280"
+            color={colors.textMuted} // ✅ РЕДИЗАЙН: Темная тема
           />
-          <Text style={styles.factText}>{countryName}</Text>
+          <Text style={[styles.factText, { color: colors.text }]}>{countryName}</Text>
         </SafeView>
       )}
 
       {/* Категории */}
       {categories.length > 0 && (
         <SafeView style={[styles.factItem, styles.categoriesContainer]}>
-          {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
           <MaterialIcons
             name="label"
             size={Platform.select({ default: 16, web: 18 })}
-            color="#6b7280"
+            color={colors.textMuted} // ✅ РЕДИЗАЙН: Темная тема
           />
           <SafeView style={styles.categoriesWrap}>
-            {categories.map((cat, index) => (
-              <Pressable
-                key={index}
-                onPress={() => onCategoryPress?.(cat)}
-                style={styles.categoryTag}
-                disabled={!onCategoryPress}
-                accessibilityRole={onCategoryPress ? "button" : "text"}
-                accessibilityLabel={`Категория: ${cat}`}
-              >
-                <Text style={styles.categoryText}>{cat}</Text>
-              </Pressable>
-            ))}
+            {categories.map((cat, index) => {
+              const categoryRole = onCategoryPress ? 'button' : 'text';
+              const categoryLabel = `Категория: ${cat}`;
+              const webA11yProps = getWebA11yProps(categoryLabel, categoryRole);
+
+              return (
+                <Pressable
+                  key={index}
+                  onPress={() => onCategoryPress?.(cat)}
+                  style={[
+                    styles.categoryTag,
+                    {
+                      backgroundColor: colors.primarySoft,
+                      borderColor: colors.borderLight,
+                    }
+                  ]}
+                  disabled={!onCategoryPress}
+                  accessibilityRole={categoryRole}
+                  accessibilityLabel={categoryLabel}
+                  {...(webA11yProps as any)}
+                >
+                <Text style={[styles.categoryText, { color: colors.primary }]}>{cat}</Text>
+                </Pressable>
+              );
+            })}
           </SafeView>
         </SafeView>
       )}
@@ -147,22 +193,22 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
 }
 
 const styles = StyleSheet.create({
-  // ✅ РЕДИЗАЙН: Светлая современная карточка с generous spacing
+  // ✅ РЕДИЗАЙН: Компактная карточка с темной темой
   container: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: Platform.select({
-      default: DESIGN_TOKENS.spacing.lg,
-      web: DESIGN_TOKENS.spacing.xl,
+      default: 18, // было lg 24px (-25%)
+      web: 24, // было xl 32px (-25%)
     }),
     paddingVertical: Platform.select({
-      default: DESIGN_TOKENS.spacing.xl,
-      web: DESIGN_TOKENS.spacing.xxl,
+      default: 18, // было xl 32px (-44%)
+      web: 24, // было xxl 48px (-50%)
     }),
     paddingHorizontal: Platform.select({
-      default: DESIGN_TOKENS.spacing.xl,
-      web: DESIGN_TOKENS.spacing.xxl,
+      default: 18, // было xl 32px (-44%)
+      web: 24, // было xxl 48px (-50%)
     }),
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
@@ -176,9 +222,9 @@ const styles = StyleSheet.create({
     }),
   },
   containerMobile: {
-    paddingVertical: DESIGN_TOKENS.spacing.lg,
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    gap: DESIGN_TOKENS.spacing.md,
+    paddingVertical: 18, // было lg 24px (-25%)
+    paddingHorizontal: 18, // было lg 24px (-25%)
+    gap: 14, // было md 16px (-12.5%)
   },
   factItem: {
     flexDirection: 'row',
@@ -192,7 +238,7 @@ const styles = StyleSheet.create({
       web: 17,
     }),
     fontWeight: '500',
-    color: DESIGN_TOKENS.colors.text,
+    color: DESIGN_TOKENS.colors.text, // будет переопределен через props
     letterSpacing: -0.1,
   },
   categoriesContainer: {
@@ -208,20 +254,20 @@ const styles = StyleSheet.create({
     gap: DESIGN_TOKENS.spacing.sm,
     flex: 1,
   },
-  // ✅ РЕДИЗАЙН: Легкие теги категорий
+  // ✅ РЕДИЗАЙН: Компактные теги категорий
   categoryTag: {
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
+    backgroundColor: DESIGN_TOKENS.colors.primaryLight, // будет переопределен через props
     paddingHorizontal: Platform.select({
-      default: 12,
-      web: 16,
+      default: 12, // было 12
+      web: 14, // было 16px (-12.5%)
     }),
     paddingVertical: Platform.select({
       default: 6,
-      web: 8,
+      web: 7, // было 8px (-12.5%)
     }),
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: DESIGN_TOKENS.colors.borderLight, // будет переопределен через props
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
@@ -235,12 +281,9 @@ const styles = StyleSheet.create({
     }),
   },
   categoryText: {
-    fontSize: Platform.select({
-      default: 14,
-      web: 14,
-    }),
+    fontSize: 14,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.primary,
+    color: DESIGN_TOKENS.colors.primary, // будет переопределен через props
     letterSpacing: 0,
   },
 });

@@ -1,6 +1,7 @@
 /**
  * Компонент карточки автора для основного контента
  * Показывает информацию об авторе путешествия для установления доверия
+ * ✅ РЕДИЗАЙН: Поддержка темной темы + компактный дизайн
  */
 
 import React, { useMemo, useCallback } from 'react';
@@ -12,6 +13,7 @@ import { openExternalUrl } from '@/src/utils/externalLinks';
 import { useUserProfileCached } from '@/src/hooks/useUserProfileCached';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 interface AuthorCardProps {
@@ -28,6 +30,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
   const router = useRouter();
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
+  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 
   const normalizeMediaUrl = useCallback((raw: string) => {
     const value = String(raw ?? '').trim();
@@ -178,7 +181,14 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
   }
 
   return (
-    <SafeView style={[styles.container, isMobile && styles.containerMobile]}>
+    <SafeView style={[
+      styles.container,
+      isMobile && styles.containerMobile,
+      {
+        backgroundColor: colors.surface,
+        borderColor: colors.borderLight,
+      }
+    ]}>
       <SafeView style={[styles.content, isMobile && styles.contentMobile]}>
         {/* Аватар */}
         <Pressable
@@ -202,8 +212,12 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
               style={[styles.avatar, isMobile && styles.avatarMobile]}
             />
           ) : (
-            <SafeView style={[styles.avatarPlaceholder, isMobile && styles.avatarMobile]}>
-              <MaterialIcons name="person" size={isMobile ? 32 : 40} color={DESIGN_TOKENS.colors.textSubtle} />
+            <SafeView style={[
+              styles.avatarPlaceholder,
+              isMobile && styles.avatarMobile,
+              { backgroundColor: colors.backgroundSecondary }
+            ]}>
+              <MaterialIcons name="person" size={isMobile ? 32 : 40} color={colors.textMuted} />
             </SafeView>
           )}
         </Pressable>
@@ -217,14 +231,14 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
             accessibilityLabel={userId ? `Открыть профиль автора ${userName || 'Аноним'}` : undefined}
             style={({ pressed }) => [pressed && userId ? { opacity: 0.85 } : null]}
           >
-            <Text style={[styles.authorName, isMobile && styles.authorNameMobile]}>
+            <Text style={[styles.authorName, isMobile && styles.authorNameMobile, { color: colors.text }]}>
               {userName || 'Аноним'}
             </Text>
           </Pressable>
           {authorCountryName && (
             <SafeView style={styles.locationRow}>
-              <Feather name="map-pin" size={14} color={DESIGN_TOKENS.colors.textMuted} />
-              <Text style={styles.locationText}>{authorCountryName}</Text>
+              <Feather name="map-pin" size={14} color={colors.textMuted} />
+              <Text style={[styles.locationText, { color: colors.textSecondary }]}>{authorCountryName}</Text>
             </SafeView>
           )}
 
@@ -236,9 +250,16 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
                   onPress={() => openExternalUrl(String(s.value))}
                   accessibilityRole="link"
                   accessibilityLabel={`Открыть ${s.label}`}
-                  style={({ pressed }) => [styles.socialChip, pressed && styles.socialChipPressed]}
+                  style={({ pressed }) => [
+                    styles.socialChip,
+                    pressed && styles.socialChipPressed,
+                    {
+                      backgroundColor: colors.primarySoft,
+                      borderColor: colors.borderLight,
+                    }
+                  ]}
                 >
-                  <Text style={styles.socialChipText}>{s.label}</Text>
+                  <Text style={[styles.socialChipText, { color: colors.primary }]}>{s.label}</Text>
                 </Pressable>
               ))}
             </SafeView>
@@ -246,9 +267,8 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
 
           {travelsCount !== null && (
             <SafeView style={styles.statsRow}>
-              {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
-              <MaterialIcons name="explore" size={16} color={DESIGN_TOKENS.colors.textMuted} />
-              <Text style={styles.statsText}>
+              <MaterialIcons name="explore" size={16} color={colors.textMuted} />
+              <Text style={[styles.statsText, { color: colors.textSecondary }]}>
                 {travelsCount} {travelsCount === 1 ? 'путешествие' : travelsCount < 5 ? 'путешествия' : 'путешествий'}
               </Text>
             </SafeView>
@@ -262,16 +282,19 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
               styles.viewButton,
               isMobile && styles.viewButtonMobile,
               pressed && styles.viewButtonPressed,
+              {
+                backgroundColor: colors.backgroundSecondary,
+                borderColor: colors.border,
+              }
             ]}
             onPress={handleViewAuthorTravels}
             accessibilityRole="button"
             accessibilityLabel={`Смотреть все путешествия автора ${userName}`}
           >
-            <Text style={[styles.viewButtonText, isMobile && styles.viewButtonTextMobile]}>
+            <Text style={[styles.viewButtonText, isMobile && styles.viewButtonTextMobile, { color: colors.text }]}>
               Все путешествия
             </Text>
-            {/* ✅ УЛУЧШЕНИЕ: Нейтральный серый */}
-            <Feather name="arrow-right" size={16} color={DESIGN_TOKENS.colors.textMuted} />
+            <Feather name="arrow-right" size={16} color={colors.textMuted} />
           </Pressable>
         )}
       </SafeView>
@@ -280,13 +303,14 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
 }
 
 const styles = StyleSheet.create({
+  // ✅ РЕДИЗАЙН: Компактная карточка (-25% padding)
   container: {
     width: '100%',
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
     padding: Platform.select({
-      default: DESIGN_TOKENS.spacing.xl,
-      web: DESIGN_TOKENS.spacing.xxl,
+      default: 24, // было 32px (-25%)
+      web: 32, // было 48px (-33%)
     }),
     borderWidth: 1,
     borderColor: DESIGN_TOKENS.colors.borderLight,
@@ -298,34 +322,35 @@ const styles = StyleSheet.create({
     }),
   },
   containerMobile: {
-    padding: DESIGN_TOKENS.spacing.lg,
+    padding: 18, // было 24px (-25%)
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.lg,
+    gap: 18, // было 24px (-25%)
   },
   contentMobile: {
     flexDirection: 'column',
     alignItems: 'flex-start',
-    gap: DESIGN_TOKENS.spacing.md,
+    gap: 14, // было 16px (-12.5%)
   },
   avatarSection: {
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // ✅ РЕДИЗАЙН: Уменьшенный аватар (-15%)
   avatar: {
     width: Platform.select({
-      default: 72,
-      web: 96,
+      default: 60, // было 72px (-17%)
+      web: 80, // было 96px (-17%)
     }),
     height: Platform.select({
-      default: 72,
-      web: 96,
+      default: 60, // было 72px
+      web: 80, // было 96px
     }),
     borderRadius: Platform.select({
-      default: 36,
-      web: 48,
+      default: 30, // было 36px
+      web: 40, // было 48px
     }),
     borderWidth: 2,
     borderColor: DESIGN_TOKENS.colors.borderLight,
@@ -337,26 +362,26 @@ const styles = StyleSheet.create({
     }),
   },
   avatarMobile: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 2
+    width: 56, // было 64px (-12.5%)
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
   },
   avatarPlaceholder: {
     width: Platform.select({
-      default: 64, // Мобильные
-      web: 80, // Десктоп
+      default: 56, // было 64px
+      web: 72, // было 80px
     }),
     height: Platform.select({
-      default: 64, // Мобильные
-      web: 80, // Десктоп
+      default: 56,
+      web: 72,
     }),
     borderRadius: Platform.select({
-      default: 32, // Мобильные
-      web: 40, // Десктоп
+      default: 28,
+      web: 36,
     }),
     backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 3
+    borderWidth: 1,
     borderColor: DESIGN_TOKENS.colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',

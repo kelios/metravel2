@@ -342,6 +342,7 @@ function CompactSideBarTravel({
           accessibilityRole="button"
           accessibilityLabel="Закрыть меню"
           hitSlop={8}
+          {...(Platform.OS === 'web' ? { role: 'button', 'aria-label': 'Закрыть меню' } : {})}
         >
           <MaterialIcons name="close" size={20} color={textColor} />
         </Pressable>
@@ -389,7 +390,11 @@ function CompactSideBarTravel({
                 styles.userNameWrap,
                 pressed && authorUserId ? { opacity: 0.9 } : null,
               ]}
-              {...Platform.select({ web: authorUserId ? { cursor: 'pointer' } : {} })}
+              {...Platform.select({
+                web: authorUserId
+                  ? { cursor: 'pointer', role: 'button', 'aria-label': `Открыть профиль автора ${userName || 'Пользователь'}` }
+                  : {},
+              })}
             >
               <Text style={[styles.userName, { color: textColor }]} numberOfLines={1}>
                 <Text style={[styles.userNamePrimary, { color: textColor }]}>
@@ -408,7 +413,9 @@ function CompactSideBarTravel({
                   accessibilityRole="button"
                   accessibilityLabel="Редактировать путешествие"
                   style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
-                  {...(Platform.OS === 'web' ? { 'data-action-btn': true } : {})}
+                  {...(Platform.OS === 'web'
+                    ? { 'data-action-btn': true, role: 'button', 'aria-label': 'Редактировать путешествие' }
+                    : {})}
                 >
                   <MaterialIcons name="edit" size={18} color={textColor} />
                 </Pressable>
@@ -427,7 +434,9 @@ function CompactSideBarTravel({
                   ]}
                   {...(Platform.OS === 'web' ? {
                     'data-action-btn': true,
-                    'data-disabled': pdfExport.isGenerating ? 'true' : 'false'
+                    'data-disabled': pdfExport.isGenerating ? 'true' : 'false',
+                    role: 'button',
+                    'aria-label': 'Экспорт в PDF',
                   } : {})}
                 >
                   {pdfExport.isGenerating ? (
@@ -592,7 +601,10 @@ function CompactSideBarTravel({
             accessibilityState={{ selected: currentActive === key }}
             {...(Platform.OS === 'web' ? {
               'data-sidebar-link': true,
-              'data-active': currentActive === key ? 'true' : 'false'
+              'data-active': currentActive === key ? 'true' : 'false',
+              'aria-selected': currentActive === key ? 'true' : 'false',
+              role: 'button',
+              'aria-label': label,
             } : {})}
           >
             <View
@@ -640,6 +652,9 @@ function CompactSideBarTravel({
         onPress={handleUserTravels}
         accessibilityRole="link"
         accessibilityLabel={`Путешествия автора ${userName}`}
+        {...(Platform.OS === 'web'
+          ? { role: 'link', 'aria-label': `Путешествия автора ${userName}` }
+          : {})}
       >
         <Text style={styles.allTravels}>Путешествия {userName}</Text>
       </Pressable>
@@ -703,6 +718,7 @@ function CompactSideBarTravel({
             ]}
             accessibilityRole="button"
             accessibilityLabel="Закрыть меню"
+            {...(Platform.OS === 'web' ? { role: 'button', 'aria-label': 'Закрыть меню' } : {})}
           >
             <MaterialIcons name="close" size={20} color={themedColors.textInverse} />
             <Text style={[styles.closeTxt, { color: themedColors.textInverse }]}>Закрыть</Text>

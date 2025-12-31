@@ -26,6 +26,12 @@ require('@testing-library/jest-native/extend-expect')
 
 jest.mock('@/hooks/useTheme', () => {
   const React = require('react')
+  const {
+    MODERN_MATTE_PALETTE,
+    MODERN_MATTE_SHADOWS,
+    MODERN_MATTE_BOX_SHADOWS,
+    MODERN_MATTE_GRADIENTS,
+  } = require('@/constants/modernMattePalette')
 
   const defaultTheme = {
     theme: 'light',
@@ -40,20 +46,16 @@ jest.mock('@/hooks/useTheme', () => {
     ThemeContext,
     useTheme: () => defaultTheme,
     useThemedColors: () => ({
-      primary: '#0066CC',
-      primaryDark: '#0052A3',
-      primaryLight: '#E6F2FF',
-      text: '#1A1A1A',
-      textMuted: '#4A4A4A',
-      textInverse: '#FFFFFF',
-      background: '#FFFFFF',
-      surface: '#FFFFFF',
-      surfaceLight: '#F5F7FA',
-      border: '#E5E7EB',
-      success: '#059669',
-      error: '#DC2626',
-      warning: '#D97706',
-      info: '#0284C7',
+      ...MODERN_MATTE_PALETTE,
+      surfaceLight: MODERN_MATTE_PALETTE.backgroundTertiary,
+      mutedBackground: MODERN_MATTE_PALETTE.mutedBackground ?? MODERN_MATTE_PALETTE.backgroundSecondary,
+      error: MODERN_MATTE_PALETTE.danger,
+      errorDark: MODERN_MATTE_PALETTE.dangerDark,
+      errorLight: MODERN_MATTE_PALETTE.dangerLight,
+      errorSoft: MODERN_MATTE_PALETTE.dangerSoft,
+      shadows: MODERN_MATTE_SHADOWS,
+      boxShadows: MODERN_MATTE_BOX_SHADOWS,
+      gradients: MODERN_MATTE_GRADIENTS,
     }),
     ThemeProvider: ({ children }: { children: any }) =>
       React.createElement(ThemeContext.Provider, { value: defaultTheme }, children),
@@ -508,11 +510,50 @@ jest.mock('react-native', () => {
     return React.createElement('Image', { ...props, ref })
   })
 
+  const getA11yProps = (props: any) => {
+    if (typeof globalThis.document === 'undefined') {
+      return {}
+    }
+    const ariaLabel = props.accessibilityLabel ?? props['aria-label']
+    const role = props.accessibilityRole ?? props.role
+    const ariaSelected = typeof props.accessibilityState?.selected === 'boolean'
+      ? String(props.accessibilityState.selected)
+      : props['aria-selected']
+
+    return {
+      ...(ariaLabel ? { 'aria-label': ariaLabel } : {}),
+      ...(role ? { role } : {}),
+      ...(ariaSelected != null ? { 'aria-selected': ariaSelected } : {}),
+    }
+  }
+
+  const Pressable = React.forwardRef((props: any, ref: any) => {
+    const { onPress, style, children, ...rest } = props
+    const pressState = { pressed: false, hovered: false, focused: false }
+    const resolvedStyle = typeof style === 'function' ? style(pressState) : style
+    const resolvedChildren = typeof children === 'function' ? children(pressState) : children
+    const isDisabled = Boolean(props.disabled || props.accessibilityState?.disabled)
+    const accessible = props.accessible ?? Boolean(props.accessibilityRole || props.accessibilityLabel)
+    const pointerEvents = isDisabled ? 'none' : rest.pointerEvents
+
+    return React.createElement(RN.View, {
+      ...rest,
+      ref,
+      style: resolvedStyle,
+      pointerEvents,
+      onPress: isDisabled ? undefined : onPress,
+      onClick: isDisabled ? undefined : onPress,
+      accessible,
+      ...getA11yProps(props),
+    }, resolvedChildren)
+  })
+
   return {
     ...RN,
     // Desktop-like default; individual tests can override via jest.fn mock
     useWindowDimensions: jest.fn(() => ({ width: 1024, height: 768 })),
     Image: MockImage,
+    Pressable,
     Settings: {
       get: jest.fn(),
       set: jest.fn(),

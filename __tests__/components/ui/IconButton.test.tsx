@@ -1,20 +1,24 @@
 // IconButton.test.tsx - Тесты для компонента IconButton
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
-import { View } from 'react-native'
+import { Platform, View } from 'react-native'
 
 import IconButton from '@/components/ui/IconButton'
 
-// Mock Platform, чтобы корректно отрабатывали web-специфичные стили
-jest.mock('react-native', () => {
-  const RN = jest.requireActual('react-native')
-  return {
-    ...RN,
-    Platform: { OS: 'web', select: jest.fn((obj) => obj.web || obj.default) },
-  }
-})
+// Ensure Platform.select returns web styles without overriding shared Pressable mock
+const mockPlatformSelect = () => {
+  jest.spyOn(Platform, 'select').mockImplementation((obj) => obj.web || obj.default)
+}
 
 describe('IconButton', () => {
+  beforeAll(() => {
+    mockPlatformSelect()
+  })
+
+  afterAll(() => {
+    jest.restoreAllMocks()
+  })
+
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -51,10 +55,10 @@ describe('IconButton', () => {
     const { getByRole } = renderIconButton({ onPress, disabled: true })
 
     const button = getByRole('button')
-    fireEvent.press(button)
-
-    expect(onPress).not.toHaveBeenCalled()
     expect(button.props.accessibilityState.disabled).toBe(true)
+    expect(button.props.pointerEvents).toBe('none')
+    expect(button.props.onPress).toBeUndefined()
+    expect(button.props.onClick).toBeUndefined()
   })
 
   it('marks as active when active prop is true', () => {

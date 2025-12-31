@@ -13,6 +13,18 @@ export const getStyles = (
   insetTop: number,
   headerOffset: number,
   windowWidth: number = METRICS.breakpoints.tablet,
+  themedColors: {
+    primary: string;
+    primaryDark: string;
+    primaryLight: string;
+    text: string;
+    textMuted: string;
+    textInverse: string;
+    background: string;
+    surface: string;
+    surfaceLight: string;
+    border: string;
+  },
 ) => {
   const effectiveHeaderOffset = Platform.OS === 'web' ? 0 : headerOffset;
   const panelSlideDistance = Math.max(windowWidth, PANEL_WIDTH_TABLET);
@@ -26,7 +38,7 @@ export const getStyles = (
             minHeight: 0,
           } as any)
         : null),
-      backgroundColor: '#f5f5f5',
+      backgroundColor: themedColors.background,
       paddingTop: effectiveHeaderOffset,
     },
       content: {
@@ -57,7 +69,7 @@ export const getStyles = (
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: '#4a8c8c',
+        backgroundColor: themedColors.primary,
         justifyContent: 'center',
         alignItems: 'center',
         ...Platform.select({
@@ -91,7 +103,7 @@ export const getStyles = (
         bottom: isMobile ? 0 : undefined,
         width: isMobile ? '100%' : PANEL_WIDTH_DESKTOP,
         maxWidth: isMobile ? '100%' : PANEL_WIDTH_DESKTOP + 40,
-        backgroundColor: '#fff',
+        backgroundColor: themedColors.surface,
         ...Platform.select({
           web: {
             // @ts-ignore: web-only style
@@ -173,9 +185,9 @@ export const getStyles = (
         paddingTop: (isMobile ? insetTop + 6 : 8) + effectiveHeaderOffset,
         paddingBottom: 10,
         paddingHorizontal: isMobile ? 12 : 8,
-        backgroundColor: '#fff',
+        backgroundColor: themedColors.surface,
         borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: '#e2e8f0',
+        borderBottomColor: themedColors.border,
         columnGap: 8,
         ...Platform.select({
           web: {
@@ -206,7 +218,7 @@ export const getStyles = (
       tabsSegment: {
         flex: 1,
         flexDirection: 'row',
-        backgroundColor: '#f1f5f9',
+        backgroundColor: themedColors.surfaceLight,
         borderRadius: 16,
         padding: 4,
         columnGap: 6,
@@ -221,7 +233,7 @@ export const getStyles = (
         gap: 10,
       },
       tabActive: {
-        backgroundColor: '#4a8c8c',
+        backgroundColor: themedColors.primary,
       },
       tabPressed: {
         opacity: 0.92,
@@ -232,10 +244,10 @@ export const getStyles = (
         borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#e2e8f0',
+        backgroundColor: themedColors.surfaceLight,
       },
       tabIconBubbleActive: {
-        backgroundColor: 'rgba(255,255,255,0.18)',
+        backgroundColor: themedColors.primaryLight,
       },
       tabLabelColumn: {
         flex: 1,
@@ -243,31 +255,31 @@ export const getStyles = (
       tabText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#1f2933',
+        color: themedColors.text,
       },
       tabTextActive: {
-        color: '#fff',
+        color: themedColors.textInverse,
       },
       tabHint: {
         fontSize: 12,
         fontWeight: '500',
-        color: '#64748b',
+        color: themedColors.textMuted,
       },
       tabHintActive: {
-        color: 'rgba(255,255,255,0.85)',
+        color: themedColors.textInverse,
       },
       panelContent: {
         flex: 1,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: '#fff',
+        backgroundColor: themedColors.surface,
       },
       closePanelButton: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: '#eef2f6',
+        backgroundColor: themedColors.surfaceLight,
         alignItems: 'center',
         justifyContent: 'center',
       },
@@ -306,18 +318,18 @@ export const getStyles = (
         flex: 1,
         minHeight: 260,
         borderRadius: 20,
-        backgroundColor: '#fff',
+        backgroundColor: themedColors.surface,
         marginLeft: Platform.OS === 'web' ? 16 : 0,
         marginRight: Platform.OS === 'web' ? 16 : 0,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: '#e2e8f0',
+        borderColor: themedColors.border,
       },
       mapPlaceholderText: {
         marginTop: 8,
         fontSize: 14,
-        color: '#8c99a6',
+        color: themedColors.textMuted,
       },
       errorContainer: {
         flex: 1,

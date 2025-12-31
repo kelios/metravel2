@@ -5,6 +5,21 @@
 import React from 'react'
 import { render, waitFor } from '@testing-library/react'
 
+jest.mock('@/hooks/useMenuState', () => ({
+  useMenuState: () => ({
+    menuOpen: false,
+    isMenuOpen: false,
+    toggleMenu: jest.fn(),
+    openMenu: jest.fn(),
+    closeMenu: jest.fn(),
+    animatedX: { interpolate: jest.fn(), setValue: jest.fn() },
+    animateMenu: jest.fn(),
+    menuWidth: 320,
+    menuWidthNum: 320,
+    openMenuOnDesktop: jest.fn(),
+  }),
+}))
+
 describe('TravelDetailsContainer performance (web)', () => {
   let __testables: any
 

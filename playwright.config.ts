@@ -17,6 +17,10 @@ export default defineConfig({
         url: baseURL,
         reuseExistingServer: true,
         timeout: 240_000,
+        env: {
+          ...process.env,
+          NODE_OPTIONS: process.env.NODE_OPTIONS || '--max-old-space-size=6144',
+        },
       },
   expect: {
     timeout: 15_000,

@@ -21,11 +21,13 @@ describe('Button', () => {
 
   it('does not call onPress when disabled', () => {
     const onPress = jest.fn()
-    const { getByText } = render(
+    const { getByRole } = render(
       <Button label="Test Button" onPress={onPress} disabled />
     )
-    fireEvent.press(getByText('Test Button'))
-    expect(onPress).not.toHaveBeenCalled()
+    const button = getByRole('button')
+    expect(button.props.pointerEvents).toBe('none')
+    expect(button.props.onPress).toBeUndefined()
+    expect(button.props.onClick).toBeUndefined()
   })
 
   it('applies disabled styles when disabled', () => {
@@ -36,8 +38,6 @@ describe('Button', () => {
     expect(button).toBeTruthy()
   })
 })
-
-
 
 
 

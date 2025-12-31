@@ -1,6 +1,7 @@
 /**
  * Компонент кнопок "Поделиться"
  * Позволяет поделиться путешествием через различные платформы
+ * ✅ РЕДИЗАЙН: Поддержка темной темы + компактный дизайн
  */
 
 import React, { useCallback, useState, useMemo, lazy, Suspense } from 'react';
@@ -12,8 +13,9 @@ import type { Travel } from '@/src/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { useSingleTravelExport } from '@/components/travel/hooks/useSingleTravelExport';
 import { ExportStage } from '@/src/types/pdf-export';
-import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
 
@@ -27,6 +29,7 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const isSticky = variant === 'sticky';
+  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 
   const [copied, setCopied] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -252,11 +255,15 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
           styles.collapsedIndicator,
           isSticky && styles.collapsedIndicatorSticky,
           pressed && styles.collapsedIndicatorPressed,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.borderLight,
+          }
         ]}
         accessibilityRole="button"
         accessibilityLabel="Показать панель действий"
       >
-        <MaterialIcons name="more-horiz" size={24} color="#667085" />
+        <MaterialIcons name="more-horiz" size={24} color={colors.textMuted} />
       </Pressable>
     );
   }
@@ -268,17 +275,22 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
           styles.container,
           isMobile && styles.containerMobile,
           isSticky && styles.containerSticky,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.borderLight,
+          }
         ]}
       >
         {!isSticky && (
           <View style={styles.header}>
-            <Text style={styles.title}>Поделиться</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Поделиться</Text>
             {isMobile && (
               <Pressable
                 onPress={toggleCollapse}
                 style={({ pressed }) => [
                   styles.collapseButton,
                   pressed && styles.collapseButtonPressed,
+                  { backgroundColor: colors.backgroundSecondary }
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel={isCollapsed ? 'Показать панель действий' : 'Скрыть панель действий'}
@@ -286,7 +298,7 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
                 <MaterialIcons 
                   name={isCollapsed ? 'expand-more' : 'expand-less'} 
                   size={24} 
-                  color="#667085" 
+                  color={colors.textMuted}
                 />
               </Pressable>
             )}
@@ -309,11 +321,12 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
                     styles.buttonSticky,
                     styles.closeButton,
                     pressed && styles.buttonPressed,
+                    { backgroundColor: colors.backgroundSecondary }
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel="Скрыть панель действий"
                 >
-                  <MaterialIcons name="close" size={20} color="#667085" />
+                  <MaterialIcons name="close" size={20} color={colors.textMuted} />
                 </Pressable>
               )}
               {shareButtons.map((button) => (
@@ -327,7 +340,8 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
                     pressed && styles.buttonPressed,
                     button.key === 'copy' && copied && styles.buttonCopied,
                     button.disabled && styles.buttonDisabled,
-                    globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                    globalFocusStyles.focusable,
+                    { backgroundColor: colors.backgroundSecondary }
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel={button.label}
@@ -338,7 +352,7 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
                   ) : (
                     <MaterialIcons name={button.icon as any} size={20} color={button.color} />
                   )}
-                  {!isMobile && !isSticky && <Text style={styles.buttonText}>{button.label}</Text>}
+                  {!isMobile && !isSticky && <Text style={[styles.buttonText, { color: colors.text }]}>{button.label}</Text>}
                   {button.key === 'copy' && copied && (
                     <Text style={styles.copiedText}>✓</Text>
                   )}
