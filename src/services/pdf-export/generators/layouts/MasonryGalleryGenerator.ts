@@ -82,6 +82,8 @@ export class MasonryGalleryGenerator {
     settings: FullGallerySettings,
     masonrySettings: MasonrySettings
   ): string {
+    // Тема может быть необязательной — берём фильтр из theme (если передан) с безопасным доступом
+    const imageFilter = (settings as any)?.theme?.imageFilter ?? (settings as any)?.imageFilter;
     const showCaption = settings.showCaptions && photo.caption;
     const captionPosition = settings.captionPosition;
     const borderStyle = this.getBorderStyle(settings.borderStyle);
@@ -116,7 +118,7 @@ export class MasonryGalleryGenerator {
               width: 100%;
               height: 100%;
               object-fit: cover;
-              ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
+              ${imageFilter ? `filter: ${imageFilter};` : ''}
             "
           />
           ${captionPosition === 'overlay' && showCaption ? this.generateCaption(photo, 'overlay') : ''}

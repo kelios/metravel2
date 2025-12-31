@@ -118,6 +118,7 @@ const MODAL_SHADOWS = {
   soft: 'var(--shadow-soft)',
 };
 
+
 const buildInitialSettings = (
   overrides?: Partial<BookSettings>,
   userName?: string
@@ -522,10 +523,13 @@ export default function BookSettingsModal({
                   color: MODAL_COLORS.text,
                   outline: 'none',
                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxSizing: 'border-box',
+                  minHeight: '44px',
                 }}
                 onFocus={(e) => {
                   e.target.style.borderColor = MODAL_COLORS.primary;
                   e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
+                  e.target.style.backgroundColor = MODAL_COLORS.surface;
                 }}
                 onBlur={(e) => {
                   e.target.style.borderColor = MODAL_COLORS.border;
@@ -610,6 +614,7 @@ export default function BookSettingsModal({
             <select
               value={settings.sortOrder}
               onChange={(e) => setSettings({ ...settings, sortOrder: e.target.value as any })}
+              className="modal-select"
               style={{
                 width: '100%',
                 padding: '12px 14px',
@@ -624,7 +629,6 @@ export default function BookSettingsModal({
                 cursor: 'pointer',
                 boxSizing: 'border-box',
                 appearance: 'none',
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'right 14px center',
                 paddingRight: '40px',
@@ -664,7 +668,7 @@ export default function BookSettingsModal({
             </label>
           </div>
 
-          <div style={{ marginBottom: '20px', padding: '18px', borderRadius: '14px', border: `1px solid ${MODAL_COLORS.border}`, backgroundColor: MODAL_COLORS.backgroundSecondary }}>
+          <div style={{ marginBottom: '20px', padding: '18px', borderRadius: '14px', border: `1px solid ${MODAL_COLORS.border}`, backgroundColor: MODAL_COLORS.backgroundSecondary, transition: 'all 0.3s ease' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
               <label style={{ fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
                 Чек-листы путешественника
@@ -674,7 +678,15 @@ export default function BookSettingsModal({
                   type="checkbox"
                   checked={settings.includeChecklists}
                   onChange={(e) => handleToggleChecklists(e.target.checked)}
-                  style={{ width: '20px', height: '20px', accentColor: MODAL_COLORS.primary, cursor: 'pointer' }}
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    minWidth: '20px',
+                    minHeight: '20px',
+                    accentColor: MODAL_COLORS.primary,
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                  }}
                 />
                 Добавить в PDF
               </label>
@@ -693,12 +705,25 @@ export default function BookSettingsModal({
                         borderRadius: '12px',
                         border: selected
                           ? `2px solid ${MODAL_COLORS.primary}`
-                          : `1px solid ${MODAL_COLORS.borderStrong}`,
+                          : `1px solid ${MODAL_COLORS.border}`,
                         padding: '12px',
-                        backgroundColor: MODAL_COLORS.surface,
+                        backgroundColor: selected ? MODAL_COLORS.primarySoft : MODAL_COLORS.surface,
                         cursor: 'pointer',
                         display: 'block',
-                        boxShadow: selected ? MODAL_SHADOWS.medium : MODAL_SHADOWS.light,
+                        boxShadow: selected ? MODAL_SHADOWS.medium : MODAL_SHADOWS.soft,
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!selected) {
+                          e.currentTarget.style.borderColor = MODAL_COLORS.borderStrong;
+                          e.currentTarget.style.boxShadow = MODAL_SHADOWS.light;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!selected) {
+                          e.currentTarget.style.borderColor = MODAL_COLORS.border;
+                          e.currentTarget.style.boxShadow = MODAL_SHADOWS.soft;
+                        }
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -707,7 +732,15 @@ export default function BookSettingsModal({
                           type="checkbox"
                           checked={selected}
                           onChange={() => toggleChecklistSection(option.value)}
-                          style={{ width: '18px', height: '18px', accentColor: MODAL_COLORS.primary, cursor: 'pointer' }}
+                          style={{
+                            width: '18px',
+                            height: '18px',
+                            minWidth: '18px',
+                            minHeight: '18px',
+                            accentColor: MODAL_COLORS.primary,
+                            cursor: 'pointer',
+                            borderRadius: '4px',
+                          }}
                         />
                       </div>
                       <ul style={{ margin: 0, padding: '0 0 0 16px', fontSize: '12px', color: MODAL_COLORS.textMuted }}>

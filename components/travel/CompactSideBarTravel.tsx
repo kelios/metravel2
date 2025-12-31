@@ -1125,7 +1125,9 @@ const styles = StyleSheet.create({
     marginVertical: 16,
     marginHorizontal: 12,
     ...(Platform.OS === 'web' ? {
-      background: `linear-gradient(90deg, transparent, ${DESIGN_TOKENS.colors.border}, transparent)`,
+      // React Native Web не поддерживает shorthand background
+      backgroundImage: `linear-gradient(90deg, transparent, ${DESIGN_TOKENS.colors.border}, transparent)`,
+      backgroundRepeat: 'no-repeat',
     } as any : {}),
   },
 
