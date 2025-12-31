@@ -918,8 +918,8 @@ export const illustratedTheme: PdfThemeConfig = {
  */
 export const blackWhiteTheme: PdfThemeConfig = {
   name: 'black-white',
-  displayName: 'Черно-белая газета',
-  description: 'Классическая газетная вёрстка в черно-белом исполнении',
+  displayName: 'Черно-белая',
+  description: 'Классическая монохромная газетная вёрстка',
 
   colors: {
     text: '#000000',
@@ -973,7 +973,7 @@ export const blackWhiteTheme: PdfThemeConfig = {
 
   typography: {
     // Газетные шрифты - жирные заголовки
-    headingFont: "'Libre Franklin', 'Arial Black', 'Arial', sans-serif",
+    headingFont: "'Helvetica', 'Arial', sans-serif",
     bodyFont: "'PT Serif', Georgia, 'Times New Roman', serif",
     monoFont: "'Courier New', monospace",
 
@@ -1000,7 +1000,7 @@ export const blackWhiteTheme: PdfThemeConfig = {
   },
 
   blocks: {
-    borderRadius: '0px', // Прямые углы как в газетах
+    borderRadius: '4px',
     shadow: 'none',
     borderWidth: '2px',
   },
@@ -1012,8 +1012,8 @@ export const blackWhiteTheme: PdfThemeConfig = {
  */
 export const sepiaTheme: PdfThemeConfig = {
   name: 'sepia',
-  displayName: 'Газета Сепия',
-  description: 'Винтажная газетная вёрстка с теплыми коричневыми тонами старых газет',
+  displayName: 'Сепия',
+  description: 'винтажная газетная вёрстка с теплыми коричневыми тонами старых газет',
 
   colors: {
     text: '#3e2723',
@@ -1067,8 +1067,8 @@ export const sepiaTheme: PdfThemeConfig = {
 
   typography: {
     // Те же газетные шрифты для единообразия
-    headingFont: "'Libre Franklin', 'Arial Black', 'Arial', sans-serif",
-    bodyFont: "'PT Serif', Georgia, 'Times New Roman', serif",
+    headingFont: "'Merriweather', 'Georgia', serif",
+    bodyFont: "'Crimson Text', 'Georgia', 'Times New Roman', serif",
     monoFont: "'Courier New', monospace",
 
     // Идентичная газетная типографика
@@ -1093,9 +1093,9 @@ export const sepiaTheme: PdfThemeConfig = {
   },
 
   blocks: {
-    borderRadius: '0px', // Прямые углы
+    borderRadius: '8px',
     shadow: 'none',
-    borderWidth: '2px',
+    borderWidth: '1.5px',
   },
 };
 
@@ -1117,8 +1117,8 @@ export const newspaperTheme: PdfThemeConfig = {
     surfaceAlt: '#f5f5f2',
 
     // Яркий красный акцент как в современных газетах
-    accent: '#d32f2f',
-    accentStrong: '#b71c1c',
+    accent: '#c8102e',
+    accentStrong: '#a00d26',
     accentSoft: '#ef5350',
     accentLight: '#ffcdd2',
 
@@ -1165,7 +1165,7 @@ export const newspaperTheme: PdfThemeConfig = {
     monoFont: "'Courier New', monospace",
 
     // Крупные жирные заголовки
-    h1: { size: '44pt', weight: 900, lineHeight: 1.05, marginBottom: '10pt' },
+    h1: { size: '42pt', weight: 900, lineHeight: 1.05, marginBottom: '10pt' },
     h2: { size: '32pt', weight: 800, lineHeight: 1.15, marginBottom: '8pt' },
     h3: { size: '24pt', weight: 700, lineHeight: 1.25, marginBottom: '8pt' },
     h4: { size: '18pt', weight: 700, lineHeight: 1.3, marginBottom: '6pt' },
@@ -1177,16 +1177,16 @@ export const newspaperTheme: PdfThemeConfig = {
 
   spacing: {
     // Компактная газетная верстка
-    pagePadding: '18mm',
+    pagePadding: '20mm',
     sectionSpacing: '18pt',
     blockSpacing: '12pt',
     elementSpacing: '8pt',
     contentMaxWidth: '100%',
-    columnGap: '12pt',
+    columnGap: '14pt',
   },
 
   blocks: {
-    borderRadius: '0px', // Прямые углы
+    borderRadius: '2px',
     shadow: 'none',
     borderWidth: '2px',
   },
@@ -1216,4 +1216,3 @@ export const PDF_THEMES: Record<PdfThemeName, PdfThemeConfig> = {
 export function getThemeConfig(themeName: PdfThemeName | string): PdfThemeConfig {
   return PDF_THEMES[themeName as PdfThemeName] || minimalTheme;
 }
-

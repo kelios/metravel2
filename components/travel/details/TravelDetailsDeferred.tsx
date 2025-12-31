@@ -1229,7 +1229,7 @@ const TravelRelatedContent: React.FC<{
   )
 }
 
-const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boolean }> = ({
+export const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boolean }> = ({
   travel,
   isMobile,
 }) => (

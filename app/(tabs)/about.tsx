@@ -11,7 +11,6 @@ import { ContactForm } from '@/components/about/ContactForm';
 import { SocialSection } from '@/components/about/SocialSection';
 import { sendFeedback } from '@/src/api/misc';
 import { useIsFocused } from '@react-navigation/native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { aboutStyles } from '@/components/about/aboutStyles';
 

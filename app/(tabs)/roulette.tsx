@@ -26,8 +26,6 @@ export default function RouletteScreen() {
     activeFiltersCount,
     travels,
     isEmpty,
-    isFetching,
-    filtersLoading,
     result,
     spinning,
     handleSpin,

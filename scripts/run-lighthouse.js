@@ -78,7 +78,7 @@ const server = http.createServer((req, res) => {
       res.setHeader('Content-Type', contentType)
       res.end(data)
     })
-  } catch (error) {
+  } catch {
     res.statusCode = 500
     res.end('Server error')
   }

@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { Animated, Easing } from 'react-native';
+import { Animated } from 'react-native';
 
 import { useRouletteLogic } from '@/components/roulette/useRoulette';
 
@@ -15,7 +15,7 @@ jest.mock('@/components/listTravel/hooks/useListTravelFilters', () => ({
   useListTravelFilters: jest.fn(),
 }));
 
-jest.mock('@/components/listTravel/hooks/useRandomTravelData', () => ({
+jest.mock('@/components/listTravel/hooks/useListTravelData', () => ({
   useRandomTravelData: jest.fn(),
 }));
 
@@ -28,7 +28,7 @@ const useQuery = jest.requireMock('@tanstack/react-query').useQuery as jest.Mock
 const { useListTravelFilters } = jest.requireMock('@/components/listTravel/hooks/useListTravelFilters') as {
   useListTravelFilters: jest.Mock;
 };
-const { useRandomTravelData } = jest.requireMock('@/components/listTravel/hooks/useRandomTravelData') as {
+const { useRandomTravelData } = jest.requireMock('@/components/listTravel/hooks/useListTravelData') as {
   useRandomTravelData: jest.Mock;
 };
 const { fetchAllFiltersOptimized, fetchAllCountries } = jest.requireMock('@/src/api/miscOptimized') as {
@@ -58,8 +58,11 @@ describe('useRouletteLogic', () => {
       },
     })) as any);
 
-    fetchAllFiltersOptimized.mockResolvedValue({
-      countries: [{ id: 1, title_ru: 'Беларусь' }, { id: 2, title_ru: 'Польша' }],
+    fetchAllFiltersOptimized.mockReturnValue({
+      countries: [
+        { id: 1, name: 'Беларусь', title_ru: 'Беларусь' },
+        { id: 2, name: 'Польша', title_ru: 'Польша' },
+      ],
     });
 
     fetchAllCountries.mockResolvedValue([
@@ -81,7 +84,7 @@ describe('useRouletteLogic', () => {
       isEmpty: false,
       refetch: jest.fn().mockResolvedValue({
         data: {
-          pages: [{ items: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }] }],
+          pages: [{ data: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }] }],
         },
       }),
     });

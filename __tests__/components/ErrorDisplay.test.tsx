@@ -17,8 +17,28 @@ jest.mock('@/constants/designSystem', () => ({
   DESIGN_TOKENS: {
     colors: {
       primary: '#6b8e7f',
+      warning: '#f59e0b',
+      info: '#3b82f6',
+      danger: '#ef4444',
+      warningLight: '#fef3c7',
+      infoLight: '#dbeafe',
+      dangerLight: '#fee2e2',
       text: '#1f2937',
       textMuted: '#6b7280',
+      textOnPrimary: '#ffffff',
+      mutedBackground: '#f3f4f6',
+    },
+    shadows: {
+      card: '0 2px 8px rgba(0,0,0,0.08)',
+    },
+    shadowsNative: {
+      medium: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 2,
+      },
     },
   },
 }));

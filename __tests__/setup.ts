@@ -24,31 +24,41 @@ console.info = (message, ...args) => {
 
 require('@testing-library/jest-native/extend-expect')
 
-jest.mock('@/hooks/useTheme', () => ({
-  useTheme: () => ({
+jest.mock('@/hooks/useTheme', () => {
+  const React = require('react')
+
+  const defaultTheme = {
     theme: 'light',
     isDark: false,
     setTheme: jest.fn(),
     toggleTheme: jest.fn(),
-  }),
-  useThemedColors: () => ({
-    primary: '#0066CC',
-    primaryDark: '#0052A3',
-    primaryLight: '#E6F2FF',
-    text: '#1A1A1A',
-    textMuted: '#4A4A4A',
-    textInverse: '#FFFFFF',
-    background: '#FFFFFF',
-    surface: '#FFFFFF',
-    surfaceLight: '#F5F7FA',
-    border: '#E5E7EB',
-    success: '#059669',
-    error: '#DC2626',
-    warning: '#D97706',
-    info: '#0284C7',
-  }),
-  ThemeProvider: ({ children }: { children: any }) => children,
-}))
+  }
+
+  const ThemeContext = React.createContext(defaultTheme)
+
+  return {
+    ThemeContext,
+    useTheme: () => defaultTheme,
+    useThemedColors: () => ({
+      primary: '#0066CC',
+      primaryDark: '#0052A3',
+      primaryLight: '#E6F2FF',
+      text: '#1A1A1A',
+      textMuted: '#4A4A4A',
+      textInverse: '#FFFFFF',
+      background: '#FFFFFF',
+      surface: '#FFFFFF',
+      surfaceLight: '#F5F7FA',
+      border: '#E5E7EB',
+      success: '#059669',
+      error: '#DC2626',
+      warning: '#D97706',
+      info: '#0284C7',
+    }),
+    ThemeProvider: ({ children }: { children: any }) =>
+      React.createElement(ThemeContext.Provider, { value: defaultTheme }, children),
+  }
+})
 
 // Mock console.error to avoid error logs in test output
 const originalError = console.error;

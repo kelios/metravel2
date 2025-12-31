@@ -9,7 +9,10 @@ import { useResponsive } from '@/hooks/useResponsive';
 
 export interface UseMenuStateReturn {
   menuOpen: boolean;
+export interface UseMenuStateReturn {
+  menuOpen: boolean;
   toggleMenu: () => void;
+  openMenu: () => void;
   closeMenu: () => void;
   animatedX: Animated.Value;
   animateMenu: (open: boolean) => void;
@@ -62,9 +65,19 @@ export function useMenuState(isMobile: boolean): UseMenuStateReturn {
     animateMenu(newState);
   }, [menuOpen, animateMenu]);
 
+  const openMenu = useCallback(() => {
+    setMenuOpen(true);
+    animateMenu(true);
+  }, [animateMenu]);
+
   const closeMenu = useCallback(() => {
     setMenuOpen(false);
     animateMenu(false);
+  }, [animateMenu]);
+
+  const openMenu = useCallback(() => {
+    setMenuOpen(true);
+    animateMenu(true);
   }, [animateMenu]);
 
   // ✅ АРХИТЕКТУРА: Автоматически открываем меню на десктопе
@@ -85,7 +98,10 @@ export function useMenuState(isMobile: boolean): UseMenuStateReturn {
 
   return {
     menuOpen,
+  return {
+    menuOpen,
     toggleMenu,
+    openMenu,
     closeMenu,
     animatedX,
     animateMenu,

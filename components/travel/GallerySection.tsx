@@ -3,7 +3,7 @@ import { View, StyleSheet, Text, ActivityIndicator, Platform } from 'react-nativ
 import { TravelFormData, Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ImageGalleryComponent from '@/components/travel/ImageGalleryComponent';
-import { useTheme, useThemedColors } from '@/hooks/useTheme';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface GallerySectionProps {
     formData: TravelFormData | null;
@@ -12,7 +12,6 @@ interface GallerySectionProps {
 }
 
 const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) => {
-    const { isDark } = useTheme();
     const themedColors = useThemedColors();
     const gallerySource = formData?.gallery;
 

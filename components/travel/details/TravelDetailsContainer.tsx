@@ -18,11 +18,12 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-
+import { MaterialIcons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
+import FloatingActionButton from '@/components/ui/FloatingActionButton';
 
 import type { Travel } from "@/src/types/types";
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
@@ -56,7 +57,7 @@ import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
 import SkipToContentLink from "@/components/accessibility/SkipToContentLink";
 import AccessibilityAnnouncer from "@/components/accessibility/AccessibilityAnnouncer";
 import { useAccessibilityAnnounce, useReducedMotion } from "@/hooks/useKeyboardNavigation";
-import { useTheme, useThemedColors } from "@/hooks/useTheme";
+import { useThemedColors } from "@/hooks/useTheme";
 
 /* -------------------- helpers -------------------- */
 
@@ -128,7 +129,6 @@ export default function TravelDetailsContainer() {
   const { announcement, priority: announcementPriority } = useAccessibilityAnnounce();
   // Note: useReducedMotion hook will be used in future for animation handling
   useReducedMotion();
-  const { isDark } = useTheme();
   const themedColors = useThemedColors();
 
   // ✅ УЛУЧШЕНИЕ: Состояние для похожих путешествий (для навигации)
@@ -151,7 +151,7 @@ export default function TravelDetailsContainer() {
     isMobile,
     isLoading,
   });
-  const { closeMenu, animatedX, menuWidth, menuWidthNum } = useTravelDetailsMenu(isMobile, deferAllowed);
+  const { closeMenu, toggleMenu, isMenuOpen, animatedX, menuWidth, menuWidthNum } = useTravelDetailsMenu(isMobile, deferAllowed);
   const {
     scrollY,
     contentHeight,
@@ -393,8 +393,22 @@ export default function TravelDetailsContainer() {
             </Defer>
           )}
 
-          {/* ✅ РЕДИЗАЙН: Оптимизированная FAB кнопка (отступ от низа 80px)
-              На мобильном скрываем FAB, когда открыто боковое меню, чтобы оно не перекрывалось. */}
+          {/* ✅ НОВОЕ: FAB кнопка для открытия меню на мобильном */}
+          {isMobile && !isMenuOpen && (
+            <FloatingActionButton
+              label="Меню"
+              icon="☰"
+              onPress={toggleMenu}
+              position="bottom-left"
+              accessibilityLabel="Открыть навигационное меню"
+              testID="mobile-menu-fab"
+              style={{
+                bottom: 80,
+                left: 16,
+                zIndex: 999,
+              }}
+            />
+          )}
 
           {/* Прогресс-бар чтения */}
           {contentHeight > viewportHeight && (

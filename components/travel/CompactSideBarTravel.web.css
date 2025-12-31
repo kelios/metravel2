@@ -1,0 +1,206 @@
+/* Современные стили для бокового меню (Web) */
+
+/* Плавные hover эффекты для карточки */
+[data-sidebar-card]:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+  transform: translateY(-1px);
+}
+
+/* Аватарка с эффектом при наведении */
+[data-sidebar-avatar] {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-sidebar-avatar]:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(122, 157, 143, 0.25), 0 3px 6px rgba(122, 157, 143, 0.15) !important;
+}
+
+/* Пункты меню с градиентом при наведении */
+[data-sidebar-link] {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-sidebar-link]:hover {
+  background-color: var(--color-primarySoft) !important;
+}
+
+[data-sidebar-link]:hover::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg,
+    var(--color-primary) 0%,
+    var(--color-primaryDark) 100%);
+  opacity: 0.5;
+}
+
+[data-sidebar-link][data-active="true"] {
+  background: linear-gradient(90deg,
+    var(--color-primaryLight) 0%,
+    rgba(122, 157, 143, 0.04) 100%) !important;
+}
+
+[data-sidebar-link][data-active="true"]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 24px;
+  width: 4px;
+  background: var(--color-primary);
+  border-radius: 0 999px 999px 0;
+  box-shadow: 0 0 8px rgba(122, 157, 143, 0.5);
+  opacity: 1;
+}
+
+/* Иконки с плавным переходом цвета */
+[data-sidebar-link] [data-icon] {
+  transition: all 0.2s ease;
+}
+
+[data-sidebar-link]:hover [data-icon] {
+  color: var(--color-primary) !important;
+  transform: scale(1.1);
+}
+
+[data-sidebar-link][data-active="true"] [data-icon] {
+  color: var(--color-primary) !important;
+}
+
+/* Текст пунктов меню */
+[data-sidebar-link] [data-link-text] {
+  transition: all 0.2s ease;
+}
+
+[data-sidebar-link]:hover [data-link-text] {
+  color: var(--color-primary) !important;
+  font-weight: 600;
+}
+
+/* Кнопки действий */
+[data-action-btn] {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-action-btn]:hover:not([data-disabled="true"]) {
+  background-color: var(--color-primaryLight) !important;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(122, 157, 143, 0.2) !important;
+}
+
+[data-action-btn]:active:not([data-disabled="true"]) {
+  transform: translateY(0) scale(0.98);
+}
+
+[data-action-btn][data-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* Категории-бейджи */
+[data-category-tag] {
+  transition: all 0.2s ease;
+}
+
+[data-category-tag]:hover {
+  background-color: var(--color-primaryLight) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(122, 157, 143, 0.15);
+}
+
+/* Разделители с градиентом */
+[data-link-divider] {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-border) 50%,
+    transparent 100%
+  );
+  opacity: 0.6;
+}
+
+/* Плавная прокрутка */
+[data-sidebar-menu] {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+[data-sidebar-menu]::-webkit-scrollbar {
+  width: 6px;
+}
+
+[data-sidebar-menu]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-sidebar-menu]::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 999px;
+}
+
+[data-sidebar-menu]::-webkit-scrollbar-thumb:hover {
+  background: var(--color-borderStrong);
+}
+
+/* Анимация появления элементов меню */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+[data-sidebar-link] {
+  animation: slideInLeft 0.3s ease-out backwards;
+}
+
+[data-sidebar-link]:nth-child(1) { animation-delay: 0.05s; }
+[data-sidebar-link]:nth-child(2) { animation-delay: 0.1s; }
+[data-sidebar-link]:nth-child(3) { animation-delay: 0.15s; }
+[data-sidebar-link]:nth-child(4) { animation-delay: 0.2s; }
+[data-sidebar-link]:nth-child(5) { animation-delay: 0.25s; }
+[data-sidebar-link]:nth-child(6) { animation-delay: 0.3s; }
+[data-sidebar-link]:nth-child(7) { animation-delay: 0.35s; }
+[data-sidebar-link]:nth-child(8) { animation-delay: 0.4s; }
+
+/* Гладкие переходы для всех интерактивных элементов */
+* {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Оптимизация для темной темы */
+html[data-theme="dark"] [data-sidebar-card] {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+html[data-theme="dark"] [data-sidebar-link]:hover {
+  background-color: rgba(96, 165, 250, 0.1) !important;
+}
+
+html[data-theme="dark"] [data-sidebar-link][data-active="true"] {
+  background: linear-gradient(90deg,
+    rgba(96, 165, 250, 0.15) 0%,
+    rgba(96, 165, 250, 0.05) 100%) !important;
+}
+
+/* Медиа-запрос для уменьшения анимаций на слабых устройствах */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+

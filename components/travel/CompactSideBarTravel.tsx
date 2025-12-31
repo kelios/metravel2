@@ -25,6 +25,11 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
+// ✅ УЛУЧШЕНИЕ: Импорт CSS для современных стилей (только для web)
+if (Platform.OS === 'web') {
+  require('./CompactSideBarTravel.web.css');
+}
+
 const Fallback = () => (
   <View style={styles.fallback}>
     <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.primary} />
@@ -343,9 +348,16 @@ function CompactSideBarTravel({
       </View>
     ) : null,
 
-    <View key="author-card" style={[styles.card, { backgroundColor: themedColors.surface }]}>
+    <View
+      key="author-card"
+      style={[styles.card, { backgroundColor: themedColors.surface }]}
+      {...(Platform.OS === 'web' ? { 'data-sidebar-card': true } : {})}
+    >
       <View style={styles.cardRow}>
-        <View style={styles.avatarWrap}>
+        <View
+          style={styles.avatarWrap}
+          {...(Platform.OS === 'web' ? { 'data-sidebar-avatar': true } : {})}
+        >
           {headerImageUri ? (
             <ImageCardMedia
               src={headerImageUri}
@@ -396,6 +408,7 @@ function CompactSideBarTravel({
                   accessibilityRole="button"
                   accessibilityLabel="Редактировать путешествие"
                   style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
+                  {...(Platform.OS === 'web' ? { 'data-action-btn': true } : {})}
                 >
                   <MaterialIcons name="edit" size={18} color={textColor} />
                 </Pressable>
@@ -412,6 +425,10 @@ function CompactSideBarTravel({
                     pressed && !pdfExport.isGenerating ? styles.actionBtnPressed : null,
                     pdfExport.isGenerating ? styles.actionBtnDisabled : null,
                   ]}
+                  {...(Platform.OS === 'web' ? {
+                    'data-action-btn': true,
+                    'data-disabled': pdfExport.isGenerating ? 'true' : 'false'
+                  } : {})}
                 >
                   {pdfExport.isGenerating ? (
                     <ActivityIndicator size="small" color={mutedText} />
@@ -465,7 +482,11 @@ function CompactSideBarTravel({
               ]}
             >
               {(showAllCategories ? categories : categories.slice(0, 2)).map((cat, idx) => (
-                <View key={`${cat}-${idx}`} style={styles.categoryTagWrapper}>
+                <View
+                  key={`${cat}-${idx}`}
+                  style={styles.categoryTagWrapper}
+                  {...(Platform.OS === 'web' ? { 'data-category-tag': true } : {})}
+                >
                   <Text style={[styles.categoryTag, { color: mutedText }]} numberOfLines={1}>
                     {cat}
                   </Text>
@@ -552,7 +573,12 @@ function CompactSideBarTravel({
 
       return (
         <React.Fragment key={key}>
-          {shouldAddDivider ? <View style={styles.linkDivider} /> : null}
+          {shouldAddDivider ? (
+            <View
+              style={styles.linkDivider}
+              {...(Platform.OS === 'web' ? { 'data-link-divider': true } : {})}
+            />
+          ) : null}
           <Pressable
             style={({ pressed }) => [
               styles.link,
@@ -564,6 +590,10 @@ function CompactSideBarTravel({
             accessibilityRole="button"
             accessibilityLabel={label}
             accessibilityState={{ selected: currentActive === key }}
+            {...(Platform.OS === 'web' ? {
+              'data-sidebar-link': true,
+              'data-active': currentActive === key ? 'true' : 'false'
+            } : {})}
           >
             <View
               pointerEvents="none"
@@ -580,6 +610,7 @@ function CompactSideBarTravel({
                   web: isTablet ? 20 : 18,
                 })}
                 color={currentActive === key ? textColor : mutedText}
+                {...(Platform.OS === 'web' ? { 'data-icon': true } : {})}
               />
               <Text
                 style={[
@@ -588,6 +619,7 @@ function CompactSideBarTravel({
                   currentActive === key && styles.linkTxtActive,
                   { color: currentActive === key ? textColor : mutedText },
                 ]}
+                {...(Platform.OS === 'web' ? { 'data-link-text': true } : {})}
               >
                 {label}
               </Text>
@@ -627,6 +659,7 @@ function CompactSideBarTravel({
             isMobile ? { width: '100%' } : { width: '100%', maxWidth: 350 },
             { paddingBottom: isMobile ? 80 : 32, paddingLeft: 12, paddingRight: 12 },
           ]}
+          {...(Platform.OS === 'web' ? { 'data-sidebar-menu': true } : {})}
         >
           {menuItems}
         </View>
@@ -639,6 +672,7 @@ function CompactSideBarTravel({
             paddingRight: 10,
           }}
           showsHorizontalScrollIndicator={false}
+          {...(Platform.OS === 'web' ? { 'data-sidebar-menu': true } : {})}
         >
           {menuItems}
         </ScrollView>
@@ -684,87 +718,97 @@ export default memo(CompactSideBarTravel);
 const styles = StyleSheet.create({
   root: { 
     flex: 1, 
-    backgroundColor: DESIGN_TOKENS.colors.background,
-    ...(Platform.OS === "web" ? { 
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    ...(Platform.OS === "web" ? {
       // На web прокрутка должна быть общей для страницы,
       // поэтому убираем собственный scroll/100vh/position: fixed
       position: "relative" as any,
     } : {}),
   },
-  // ✅ РЕДИЗАЙН: Компактное меню с уменьшенными отступами
-  menu: { 
+  // ✅ РЕДИЗАЙН: Современное меню с изящными отступами
+  menu: {
     paddingTop: Platform.select({
-      ios: 10,
-      android: 10,
-      web: 12,
+      ios: 16,
+      android: 16,
+      web: 20,
     }),
-    alignSelf: "flex-start", // ✅ UX: Прижато к левому краю
-    ...(Platform.OS === 'web' ? { 
+    alignSelf: "flex-start",
+    ...(Platform.OS === 'web' ? {
       maxWidth: 350, 
       overflowX: 'hidden' as any,
       overflow: 'hidden' as any,
       width: '100%',
-    } : {}), // ✅ UX: Прижато к левому краю
+    } : {}),
   },
-  // ✅ РЕДИЗАЙН: Компактная карточка автора
+  // ✅ РЕДИЗАЙН: Компактная карточка автора (оптимизация для отображения без скролла)
   card: {
     backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: Platform.select({
-      default: 10, // Мобильные
-      web: 10, // Десктоп - уменьшено
+      default: 12,
+      web: 14,
     }),
     marginBottom: Platform.select({
-      default: 8, // Мобильные
-      web: 10, // Десктоп - уменьшено
+      default: 10,
+      web: 12,
     }),
-    shadowColor: DESIGN_TOKENS.colors.text,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-    borderWidth: 0,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
     width: '100%',
     maxWidth: '100%',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04)',
+      transition: 'all 0.2s ease',
+    } as any : {}),
   },
   cardRow: { 
     flexDirection: "row", 
     alignItems: "center",
-    marginBottom: DESIGN_TOKENS.spacing.sm, // Уменьшено с 12
+    marginBottom: DESIGN_TOKENS.spacing.sm,
   },
   avatarWrap: { 
-    marginRight: DESIGN_TOKENS.spacing.sm, // Уменьшено с 14
+    marginRight: DESIGN_TOKENS.spacing.sm,
     alignItems: "center",
     justifyContent: "center",
+    ...(Platform.OS === 'web' ? {
+      position: 'relative' as any,
+    } : {}),
   },
-  // ✅ РЕДИЗАЙН: Компактная аватарка
-  avatar: { 
+  // ✅ РЕДИЗАЙН: Компактная аватарка (52px для экономии места)
+  avatar: {
     width: Platform.select({
-      default: 48, // Мобильные
-      web: 48, // Десктоп - уменьшено
+      default: 50,
+      web: 52,
     }),
     height: Platform.select({
-      default: 48, // Мобильные
-      web: 48, // Десктоп - уменьшено
+      default: 50,
+      web: 52,
     }),
     borderRadius: Platform.select({
-      default: 24, // Мобильные
-      web: 24, // Десктоп - уменьшено
+      default: 25,
+      web: 26,
     }),
-    borderWidth: 0.5, // ✅ УЛУЧШЕНИЕ: Уменьшено с 2
-    borderColor: DESIGN_TOKENS.colors.borderLight,
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02, // ✅ УЛУЧШЕНИЕ: Упрощенная тень
-    shadowRadius: 2,
-    elevation: 1, // ✅ УЛУЧШЕНИЕ: Уменьшено с 2
+    borderWidth: 2,
+    borderColor: DESIGN_TOKENS.colors.primaryLight,
+    shadowColor: DESIGN_TOKENS.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 12px rgba(122, 157, 143, 0.2), 0 2px 4px rgba(122, 157, 143, 0.1)',
+    } as any : {}),
   },
-  
   
   infoSection: {
     marginTop: 10,
     paddingTop: 10,
-    borderTopWidth: 0.5,
+    borderTopWidth: 1,
     borderTopColor: DESIGN_TOKENS.colors.borderLight,
   },
   // ✅ РЕДИЗАЙН: Компактные информационные строки
@@ -772,8 +816,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: Platform.select({
-      default: 4,
-      web: 4,
+      default: 5,
+      web: 6,
     }),
     paddingHorizontal: 0,
     marginBottom: 6,
@@ -783,7 +827,7 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   infoText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm, // Уменьшено с 14
+    fontSize: 13,
     color: DESIGN_TOKENS.colors.textMuted,
     fontFamily: "Georgia",
     fontWeight: "500",
@@ -794,30 +838,31 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     alignItems: "center",
   },
-  // ✅ РЕДИЗАЙН: Компактные категории
+  // ✅ РЕДИЗАЙН: Стильные категории-бейджи
   categoryTagWrapper: {
-    marginRight: 4, // Уменьшено с 6
-    marginBottom: 3, // Уменьшено с 4
+    marginRight: 6,
+    marginBottom: 6,
   },
   categoryTag: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.textSubtle,
-    backgroundColor: "transparent",
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    borderRadius: 0,
+    fontSize: 13,
+    color: DESIGN_TOKENS.colors.primary,
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
     fontFamily: "Georgia",
     fontWeight: "600",
-    borderWidth: 0,
-    borderColor: "transparent",
-    maxWidth: 90,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.primaryLight,
+    maxWidth: 100,
+    overflow: 'hidden',
   },
   categoryMore: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.textSubtle,
+    fontSize: 13,
+    color: DESIGN_TOKENS.colors.primary,
     fontFamily: "Georgia",
-    fontWeight: "500",
-    marginLeft: 3, // Уменьшено с 4
+    fontWeight: "600",
+    marginLeft: 4,
   },
   categoryMoreBtn: {
     marginLeft: 3,
@@ -855,22 +900,28 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-    borderColor: 'transparent',
-    ...Platform.select({
-      web: {
-        cursor: 'pointer' as any,
-      },
-      default: {},
-    }),
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
+    shadowColor: DESIGN_TOKENS.colors.primary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer' as any,
+      transition: 'all 0.2s ease',
+      boxShadow: '0 1px 3px rgba(122, 157, 143, 0.1)',
+    } as any : {}),
   },
   actionBtnPressed: {
-    transform: [{ scale: 0.96 }],
-    opacity: 0.9,
+    transform: [{ scale: 0.95 }],
+    opacity: 0.85,
+    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
   },
   actionBtnDisabled: {
-    opacity: 0.6,
+    opacity: 0.4,
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
   },
   userNameWrap: {
     flexGrow: 1,
@@ -946,34 +997,33 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // ✅ РЕДИЗАЙН: Компактные пункты меню
-  link: { 
+  // ✅ РЕДИЗАЙН: Современные пункты меню с плавными переходами
+  link: {
     position: "relative",
     flexDirection: "row", 
     alignItems: "center", 
     paddingVertical: Platform.select({
-      default: 6, // Мобильные
-      web: 7, // Десктоп - уменьшено
+      default: 10,
+      web: 12,
     }),
     paddingHorizontal: Platform.select({
-      default: 8, // Мобильные
-      web: 10, // Десктоп - уменьшено
+      default: 12,
+      web: 14,
     }),
     paddingLeft: Platform.select({
-      default: 14,
-      web: 16,
+      default: 18,
+      web: 20,
     }),
-    borderRadius: 8,
-    marginBottom: 2,
+    borderRadius: 12,
+    marginBottom: 4,
     width: '100%',
     maxWidth: '100%',
     justifyContent: "space-between",
-    ...Platform.select({
-      web: {
-        cursor: 'pointer' as any,
-      },
-      default: {},
-    }),
+    backgroundColor: "transparent",
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer' as any,
+      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+    } : {}),
   },
   linkLeft: {
     flexDirection: "row",
@@ -984,39 +1034,56 @@ const styles = StyleSheet.create({
   activeIndicator: {
     position: "absolute",
     left: 0,
-    top: 6,
-    bottom: 6,
-    width: 2,
+    top: '50%',
+    marginTop: -12,
+    height: 24,
+    width: 3,
     borderRadius: 999,
     backgroundColor: "transparent",
+    ...(Platform.OS === 'web' ? {
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    } : {}),
   },
   activeIndicatorActive: {
-    backgroundColor: DESIGN_TOKENS.colors.text,
+    backgroundColor: DESIGN_TOKENS.colors.primary,
+    width: 4,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 0 8px rgba(122, 157, 143, 0.5)',
+    } as any : {}),
   },
-  linkPressed: { backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary },
-  linkActive: { 
-    backgroundColor: "transparent",
+  linkPressed: {
+    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    transform: [{ scale: 0.98 }],
+  },
+  linkActive: {
+    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
     borderLeftWidth: 0,
     borderLeftColor: "transparent",
-    shadowColor: DESIGN_TOKENS.colors.text,
+    shadowColor: DESIGN_TOKENS.colors.primary,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 1,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 1px 4px rgba(122, 157, 143, 0.15)',
+    } as any : {}),
   },
   linkTxt: { 
     marginLeft: Platform.select({
-      default: 6, // Мобильные
-      web: 8, // Десктоп - уменьшено
+      default: 10,
+      web: 12,
     }),
-    fontSize: 14,
-    fontFamily: "Georgia", 
+    fontSize: 15,
+    fontFamily: "Georgia",
     color: DESIGN_TOKENS.colors.text,
-    fontWeight: "600",
-    lineHeight: 20,
+    fontWeight: "500",
+    lineHeight: 22,
+    ...(Platform.OS === 'web' ? {
+      transition: 'all 0.2s ease',
+    } as any : {}),
   },
   linkTxtActive: {
-    color: DESIGN_TOKENS.colors.text, // ✅ УЛУЧШЕНИЕ: Нейтральный темно-серый
+    color: DESIGN_TOKENS.colors.primary,
     fontWeight: "700",
   },
   linkMetaPill: {
@@ -1039,8 +1106,11 @@ const styles = StyleSheet.create({
   linkDivider: {
     height: 1,
     backgroundColor: DESIGN_TOKENS.colors.borderLight,
-    marginVertical: 10,
-    marginHorizontal: 0,
+    marginVertical: 16,
+    marginHorizontal: 12,
+    ...(Platform.OS === 'web' ? {
+      background: `linear-gradient(90deg, transparent, ${DESIGN_TOKENS.colors.border}, transparent)`,
+    } as any : {}),
   },
 
   allTravels: {

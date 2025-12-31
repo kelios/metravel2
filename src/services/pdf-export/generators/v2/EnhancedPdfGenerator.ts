@@ -62,8 +62,8 @@ export class EnhancedPdfGenerator {
    * Показывает, как работают все генераторы через фабрику
    */
   async generateV2Demo(
-    travels: TravelForBook[],
-    settings: BookSettings
+    _travels: TravelForBook[],
+    _settings: BookSettings
   ): Promise<string> {
     // Выбираем случайные цитаты
     const coverQuote = pickRandomQuote();
@@ -71,14 +71,6 @@ export class EnhancedPdfGenerator {
     this.selectedQuotes = { cover: coverQuote, final: finalQuote };
 
     const pages: string[] = [];
-
-    // Базовый контекст для генераторов
-    const baseContext = {
-      travels,
-      settings,
-      theme: this.theme,
-      pageNumber: 1,
-    };
 
     // Демонстрация использования фабрики для создания страниц
     // Здесь показан принцип работы - в production будет полная реализация

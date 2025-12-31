@@ -17,12 +17,23 @@ jest.mock('@/constants/designSystem', () => ({
   DESIGN_TOKENS: {
     colors: {
       primary: '#6b8e7f',
+      primaryDark: '#5a7a6d',
+      textOnPrimary: '#ffffff',
     },
     radii: {
       pill: 24,
     },
     shadows: {
       medium: '0 4px 12px rgba(0,0,0,0.1)',
+    },
+    shadowsNative: {
+      medium: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 2,
+      },
     },
   },
 }));
