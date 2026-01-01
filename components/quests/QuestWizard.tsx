@@ -688,7 +688,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
     title: { fontSize: 20, fontWeight: '700', color: colors.text, flex: 1 },
     resetButton: { padding: SPACING.xs },
-    resetText: { color: colors.error, fontWeight: '600', fontSize: 14 },
+    resetText: { color: colors.danger, fontWeight: '600', fontSize: 14 },
     toggleText: { color: colors.primaryDark, fontWeight: '600', fontSize: 14 },
 
     progressContainer: { marginBottom: SPACING.sm },
@@ -702,7 +702,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     stepPill: {
         flexDirection: 'row', alignItems: 'center', borderRadius: 999,
         paddingVertical: 6, paddingHorizontal: 10, // ✅ УЛУЧШЕНИЕ: Убрана граница
-        backgroundColor: '#FFF', maxWidth: 260, marginRight: 6, marginBottom: 6,
+        backgroundColor: colors.surface, maxWidth: 260, marginRight: 6, marginBottom: 6,
         shadowColor: '#1f1f1f',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.04,
@@ -710,7 +710,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         elevation: 1,
     },
     stepPillNarrow: { maxWidth: 140, paddingHorizontal: 8, paddingVertical: 6 },
-    stepPillUnlocked: { backgroundColor: '#FFF' },
+    stepPillUnlocked: { backgroundColor: colors.surface },
     stepPillActive: { backgroundColor: colors.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
     stepPillDone: { backgroundColor: colors.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
     stepPillLocked: { opacity: 0.5 },
@@ -721,7 +721,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         width: 32, height: 32, borderRadius: 16, marginRight: 6,
         alignItems: 'center', justifyContent: 'center',
         // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
-        backgroundColor: '#FFF',
+        backgroundColor: colors.surface,
         shadowColor: '#1f1f1f',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.04,
@@ -756,7 +756,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     stepTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 2 },
     location: { fontSize: 14, color: colors.primary, fontWeight: '500' },
     completedBadge: { backgroundColor: colors.success, borderRadius: 12, padding: 4, width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
-    completedText: { color: '#FFF', fontWeight: 'bold', fontSize: 12 },
+    completedText: { color: colors.textOnPrimary, fontWeight: 'bold', fontSize: 12 },
 
     section: { marginBottom: SPACING.lg },
     sectionTitle: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: SPACING.sm, textTransform: 'uppercase', letterSpacing: 0.5 },
@@ -829,7 +829,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
                 cursor: 'pointer',
                 // @ts-ignore
                 ':hover': {
-                    backgroundColor: '#3a7a7a',
+                    backgroundColor: colors.primaryDark,
                     transform: 'translateY(-1px)',
                 },
                 ':active': {
@@ -838,7 +838,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
             },
         }),
     },
-    buttonText: { color: '#FFF', fontWeight: '600', textAlign: 'center', fontSize: 14 },
+    buttonText: { color: colors.textOnPrimary, fontWeight: '600', textAlign: 'center', fontSize: 14 },
     secondaryButton: { 
         // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
         paddingHorizontal: SPACING.lg, 
@@ -860,7 +860,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
             web: {
                 transition: 'all 0.2s ease',
                 cursor: 'pointer',
-                boxShadow: DESIGN_TOKENS.shadows.light,
+                boxShadow: colors.boxShadows.light,
                 // @ts-ignore
                 ':hover': {
                     backgroundColor: colors.primarySoft,
@@ -900,13 +900,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     answerValue: { fontSize: 16, fontWeight: '600', color: colors.text },
 
     mapActions: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.md },
-    mapButton: { backgroundColor: '#FFF', // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    mapButton: { backgroundColor: colors.surface, // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
         paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, minWidth: 110, marginRight: 6, marginBottom: 6,
         shadowColor: '#1f1f1f', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
     mapButtonText: { color: colors.text, fontSize: 12, fontWeight: '500', textAlign: 'center' },
 
     mapPhotoButton: { // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
-        backgroundColor: colors.chip, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 999,
+        backgroundColor: colors.primarySoft, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 999,
         shadowColor: colors.primaryDark, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
     mapPhotoButtonText: { color: colors.primaryDark, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
@@ -915,10 +915,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     imagePreview: { height: 120, borderRadius: 8, overflow: 'hidden', position: 'relative' },
     previewImage: { width: '100%', height: '100%' },
     imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.7)', padding: 6, alignItems: 'center' },
-    overlayText: { color: '#FFF', fontSize: 12, fontWeight: '500' },
+    overlayText: { color: colors.textOnDark, fontSize: 12, fontWeight: '500' },
 
     startButton: { backgroundColor: colors.primary, padding: SPACING.lg, borderRadius: 10, alignItems: 'center' },
-    startButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+    startButtonText: { color: colors.textOnPrimary, fontSize: 16, fontWeight: '700' },
 
     fullMapSection: { backgroundColor: colors.surface, borderRadius: 12, padding: SPACING.md, marginBottom: SPACING.md },
 
@@ -944,16 +944,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: 'rgba(0,0,0,0.7)',
         borderRadius: 8,
     },
-    openExternText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+    openExternText: { color: colors.textOnDark, fontWeight: '700', fontSize: 14 },
 
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
     gestureContainer: { flex: 1, width: '100%' },
     animatedContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     zoomedImage: { width: Dimensions.get('window').width, height: Dimensions.get('window').height },
     closeButton: { position: 'absolute', top: 50, right: 20, backgroundColor: 'rgba(0,0,0,0.6)', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-    closeButtonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
+    closeButtonText: { color: colors.textOnDark, fontSize: 18, fontWeight: 'bold' },
     zoomHintContainer: { position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center' },
-    zoomHint: { color: '#FFF', fontSize: 14, backgroundColor: 'rgba(0,0,0,0.6)', padding: 8, borderRadius: 6 },
+    zoomHint: { color: colors.textOnDark, fontSize: 14, backgroundColor: 'rgba(0,0,0,0.6)', padding: 8, borderRadius: 6 },
 
     // flip badge
     flipBadge: {
@@ -961,7 +961,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: 'rgba(34,197,94,0.96)',
         shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.22, shadowRadius: 16, elevation: 6,
     },
-    flipText: { color: '#FFF', fontWeight: '800', fontSize: 16 },
+    flipText: { color: colors.textOnDark, fontWeight: '800', fontSize: 16 },
 });
 
 const QuestMapSkeleton = () => (
