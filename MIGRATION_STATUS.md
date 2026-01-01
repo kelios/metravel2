@@ -1,7 +1,7 @@
 # Статус миграции компонентов на DESIGN_TOKENS и useThemedColors
 
 **Последнее обновление:** 1 января 2026  
-**Общий прогресс:** 91 из 90 компонентов (**101%** - включая дополнительные) ✅  
+**Общий прогресс:** 95 из 90 компонентов (**106%** - включая дополнительные) ✅  
 **Исключено:** 7 Profile компонентов (ещё не созданы)  
 
 ## 📊 Прогресс по категориям
@@ -119,10 +119,14 @@
 - [x] `TravelWizardHeader.tsx` - **✅ мигрирован** - DESIGN_TOKENS, useThemedColors, прогресс-бар с динамическими цветами
 - [x] `TravelWizardFooter.tsx` - **✅ мигрирован** - DESIGN_TOKENS, useThemedColors, sticky footer с навигацией
 - [x] `TravelWizardStepBasic.tsx` - **✅ мигрирован** - DESIGN_TOKENS, useThemedColors, первый шаг wizard
-- [x] `TravelWizardStepDetails.tsx` - **✅ мигрирован** - DESIGN_TOKENS, useThemedColors, детали маршрута
+- [x] `TravelWizardStepDetails.tsx` - **✅ уже мигрирован** - DESIGN_TOKENS, useThemedColors, детали маршрута
 - [x] `TravelWizardStepMedia.tsx` - **🎉 НОВЫЙ** - DESIGN_TOKENS, useThemedColors, медиа (фото, видео, галерея)
 - [x] `TravelWizardStepRoute.tsx` - **🎉 НОВЫЙ** - DESIGN_TOKENS, useThemedColors, маршрут на карте
+- [x] `TravelWizardStepExtras.tsx` - **✨ только что мигрирован** - DESIGN_TOKENS, useThemedColors, доп. параметры и фильтры
 - [x] `TravelWizardStepPublish.tsx` - **🎉 НОВЫЙ** - DESIGN_TOKENS, useThemedColors, публикация с проверками
+- [x] `FiltersUpsertComponent.tsx` - **✨ только что мигрирован** - DESIGN_TOKENS, useThemedColors, фильтры и категории
+- [x] `ContentUpsertSection.tsx` - **✨ только что мигрирован** - DESIGN_TOKENS, useThemedColors, редактирование контента, валидация, ArticleEditor
+- [x] `PointList.tsx` - **✨ только что мигрирован** - DESIGN_TOKENS, useThemedColors, список координат на карте
 - [x] `AuthorCard.tsx` - **✨ только что мигрирован** - DESIGN_TOKENS, useThemedColors, социальные сети, статистика
 - [x] `NavigationArrows.tsx` - **✅ уже мигрирован** - DESIGN_TOKENS, useThemedColors, навигация между путешествиями
 - [x] `GallerySection.tsx` - **✨ только что мигрирован** - DESIGN_TOKENS, useThemedColors, галерея с валидацией

@@ -6,6 +6,7 @@ import ArticleEditor from '@/components/ArticleEditor';
 import { validateTravelForm, getFieldError, type ValidationError } from '@/utils/formValidation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
+import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 
 interface ContentUpsertSectionProps {
     formData: TravelFormData;
@@ -28,12 +29,17 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                                        visibleFields,
                                                                        showProgress = true,
                                                                    }) => {
+    const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+
     // ✅ УЛУЧШЕНИЕ: Валидация в реальном времени
     const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
     const [fieldPositions, setFieldPositions] = useState<Record<string, number>>({});
     const scrollRef = useRef<ScrollView>(null);
     const [isDescriptionFullscreen, setIsDescriptionFullscreen] = useState(false);
+
+    // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const isMobile = useMemo(() => {
         if (Platform.OS === 'web') return false;
@@ -293,6 +299,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             idTravelStr,
             isDescriptionFullscreen,
             isMobile,
+            styles,
         ]
     );
 
@@ -401,29 +408,39 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
-    container: { padding: DESIGN_TOKENS.spacing.xxs, paddingBottom: 40 },
-    modalSafeArea: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
+// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: colors.background, // ✅ ДИЗАЙН: Динамический цвет фона
+    },
+    container: {
+        padding: DESIGN_TOKENS.spacing.xxs,
+        paddingBottom: 40
+    },
+    modalSafeArea: {
+        flex: 1,
+        backgroundColor: colors.background, // ✅ ДИЗАЙН: Динамический цвет фона
+    },
     modalHeader: {
         paddingHorizontal: DESIGN_TOKENS.spacing.md,
         paddingVertical: DESIGN_TOKENS.spacing.sm,
         borderBottomWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border, // ✅ ДИЗАЙН: Динамический цвет границы
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface, // ✅ ДИЗАЙН: Динамический цвет фона
     },
     modalHeaderTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text, // ✅ ДИЗАЙН: Динамический цвет текста
     },
     modalHeaderAction: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.primary,
+        color: colors.primary, // ✅ ДИЗАЙН: Динамический цвет текста
     },
     modalBody: {
         flex: 1,
@@ -431,15 +448,15 @@ const styles = StyleSheet.create({
     },
     descriptionPreview: {
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
         borderRadius: 12,
         padding: DESIGN_TOKENS.spacing.md,
         minHeight: 140,
     },
     descriptionPreviewText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         lineHeight: 18,
         marginBottom: DESIGN_TOKENS.spacing.sm,
     },
@@ -459,15 +476,15 @@ const styles = StyleSheet.create({
     descriptionEditChipText: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.primary,
+        color: colors.primary,
     },
     progressSection: {
         marginBottom: DESIGN_TOKENS.spacing.xs,
         padding: DESIGN_TOKENS.spacing.lg,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
     },
     progressHeader: {
         flexDirection: 'row',
@@ -478,31 +495,31 @@ const styles = StyleSheet.create({
     progressLabel: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     progressPercent: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.primary,
+        color: colors.primary,
     },
     progressBarContainer: {
         height: 8,
-        backgroundColor: DESIGN_TOKENS.colors.border,
+        backgroundColor: colors.border,
         borderRadius: 4,
         overflow: 'hidden',
     },
     progressBar: {
         height: '100%',
-        backgroundColor: DESIGN_TOKENS.colors.primary,
+        backgroundColor: colors.primary,
         borderRadius: 4,
     },
     section: {
         marginBottom: DESIGN_TOKENS.spacing.xxs,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: DESIGN_TOKENS.radii.md,
         padding: DESIGN_TOKENS.spacing.lg,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
         ...(Platform.OS === 'web'
             ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
             : (DESIGN_TOKENS.shadowsNative.light as any)),
@@ -512,7 +529,7 @@ const styles = StyleSheet.create({
     },
     descriptionProgressTrack: {
         height: 4,
-        backgroundColor: DESIGN_TOKENS.colors.borderLight,
+        backgroundColor: colors.borderLight,
         borderRadius: DESIGN_TOKENS.radii.pill,
         overflow: 'hidden',
     },
@@ -529,44 +546,44 @@ const styles = StyleSheet.create({
     descriptionStatusText: {
         flex: 1,
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         marginRight: 8,
     },
     descriptionStatusTextWarning: {
-        color: DESIGN_TOKENS.colors.dangerDark,
+        color: colors.dangerDark,
         fontWeight: '600',
     },
     descriptionStatusTextSuccess: {
-        color: DESIGN_TOKENS.colors.successDark,
+        color: colors.successDark,
     },
     descriptionCounterText: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     autosaveRow: {
         marginTop: 4,
     },
     autosaveText: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
     },
     autosaveSuccess: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.successDark,
+        color: colors.successDark,
     },
     autosaveError: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.dangerDark,
+        color: colors.dangerDark,
     },
     sectionEditor: {
         marginBottom: DESIGN_TOKENS.spacing.xxs,
         paddingBottom: DESIGN_TOKENS.spacing.xs,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: DESIGN_TOKENS.radii.md,
         padding: DESIGN_TOKENS.spacing.lg,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
         ...(Platform.OS === 'web'
             ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
             : (DESIGN_TOKENS.shadowsNative.light as any)),
@@ -577,15 +594,15 @@ const styles = StyleSheet.create({
     editorLabel: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         marginBottom: 4,
     },
     required: {
-        color: DESIGN_TOKENS.colors.danger,
+        color: colors.danger,
     },
     editorHint: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         marginTop: 4,
     },
     errorContainer: {
@@ -596,7 +613,7 @@ const styles = StyleSheet.create({
     },
     errorText: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.danger,
+        color: colors.danger,
     },
 });
 

@@ -9,6 +9,7 @@ import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { TravelFormData, Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 
 interface TravelWizardStepExtrasProps {
     currentStep: number;
@@ -53,9 +54,13 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
     onAnchorHandled,
     onStepSelect,
 }) => {
+    const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
     const [footerHeight, setFooterHeight] = useState(0);
+
+    // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
         const next = Math.ceil(event.nativeEvent.layout.height);
@@ -178,8 +183,12 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    safeContainer: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
+// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+    safeContainer: {
+        flex: 1,
+        backgroundColor: colors.background, // ✅ ДИЗАЙН: Динамический цвет фона
+    },
     keyboardAvoid: { flex: 1 },
     validationSummaryWrapper: {
         paddingHorizontal: DESIGN_TOKENS.spacing.md,

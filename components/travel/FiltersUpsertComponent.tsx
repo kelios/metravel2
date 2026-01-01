@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
     View,
     Text,
@@ -19,6 +19,7 @@ import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { TravelFormData, TravelFilters, Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
+import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 
 const { width } = Dimensions.get('window');
 const isMobile = width <= METRICS.breakpoints.tablet;
@@ -112,7 +113,11 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                                                                      showCoverImage = true,
                                                                      showAdditionalFields = true,
                                                                  }) => {
+    const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const isLoading = !formData || !filters;
+
+    // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     useEffect(() => {
         // если новая запись — явно фиксируем publish=false,
@@ -126,8 +131,8 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     if (isLoading) {
         return (
             <View style={styles.loaderContainer}>
-                <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} />
-                <Text>Загрузка фильтров...</Text>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={styles.loadingText}>Загрузка фильтров...</Text>
             </View>
         );
     }
@@ -359,43 +364,60 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     }
 };
 
-const styles = StyleSheet.create({
+// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {
         padding: DESIGN_TOKENS.spacing.lg,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface, // ✅ ДИЗАЙН: Динамический цвет фона
         flex: 1,
     },
-    loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: DESIGN_TOKENS.spacing.xxs },
-    imageUploadWrapper: { alignItems: 'center', marginVertical: 12 },
+    loaderContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: DESIGN_TOKENS.spacing.xxs
+    },
+    loadingText: {
+        marginTop: DESIGN_TOKENS.spacing.sm,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        color: colors.textMuted, // ✅ ДИЗАЙН: Динамический цвет текста
+    },
+    imageUploadWrapper: {
+        alignItems: 'center',
+        marginVertical: 12
+    },
     coverHint: {
         marginTop: 8,
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted, // ✅ ДИЗАЙН: Динамический цвет текста
         textAlign: 'center',
     },
 
     inputGroup: { marginBottom: 12 },
     input: {
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border, // ✅ ДИЗАЙН: Динамический цвет границы
         padding: DESIGN_TOKENS.spacing.sm,
         borderRadius: DESIGN_TOKENS.radii.sm,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        color: DESIGN_TOKENS.colors.text,
+        backgroundColor: colors.surface, // ✅ ДИЗАЙН: Динамический цвет фона
+        color: colors.text, // ✅ ДИЗАЙН: Динамический цвет текста
     },
     label: {
         fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
         marginBottom: 4,
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text, // ✅ ДИЗАЙН: Динамический цвет текста
     },
 
-    resetButton: { marginTop: DESIGN_TOKENS.spacing.lg, borderColor: DESIGN_TOKENS.colors.warning },
+    resetButton: {
+        marginTop: DESIGN_TOKENS.spacing.lg,
+        borderColor: colors.warning, // ✅ ДИЗАЙН: Динамический цвет границы
+    },
 
     closeIcon: {
         position: 'absolute',
         top: -16,
         right: -14,
-        backgroundColor: DESIGN_TOKENS.colors.danger,
+        backgroundColor: colors.danger, // ✅ ДИЗАЙН: Динамический цвет фона
         borderRadius: 12,
         width: 20,
         height: 20,
@@ -404,13 +426,13 @@ const styles = StyleSheet.create({
         zIndex: 1,
     },
     closeButtonText: {
-        color: DESIGN_TOKENS.colors.textInverse,
+        color: colors.textInverse, // ✅ ДИЗАЙН: Динамический цвет текста
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         lineHeight: 12,
     },
 
     saveButton: {
-        backgroundColor: DESIGN_TOKENS.colors.primary,
+        backgroundColor: colors.primary, // ✅ ДИЗАЙН: Динамический цвет фона
         borderRadius: 12,
         marginBottom: 12,
     },
@@ -419,7 +441,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface, // ✅ ДИЗАЙН: Динамический цвет фона
         elevation: 3,
         marginBottom: 12,
     },

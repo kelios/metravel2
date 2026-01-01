@@ -19,6 +19,7 @@ import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛ�
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
 import { useResponsive } from '@/hooks/useResponsive';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 
 type Point = {
   id: string;
@@ -101,6 +102,7 @@ const PointCard = React.memo(function PointCard({
                                                   onCopy,
                                                   onShare,
                                                   onOpenMap,
+                                                  styles,
                                                 }: {
   point: Point;
   isMobile: boolean;
@@ -108,6 +110,7 @@ const PointCard = React.memo(function PointCard({
   onCopy: (coordStr: string) => void;
   onShare: (coordStr: string) => void;
   onOpenMap: (coordStr: string) => void;
+  styles: ReturnType<typeof createStyles>;
 }) {
   const [hovered, setHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -257,12 +260,16 @@ const PointCard = React.memo(function PointCard({
 /* ---------------- list ---------------- */
 
 const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
+  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
   const safePoints = useMemo(() => (Array.isArray(points) ? points : []), [points]);
   const { width, isPhone, isLargePhone, isTablet } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const isLargeDesktop = width >= 1440;
 
   const [showList, setShowList] = useState(false);
+
+  // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   // ✅ УЛУЧШЕНИЕ: Пропорциональные карточки с фиксированным aspect ratio
   const responsive: Responsive = useMemo(
@@ -395,11 +402,12 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
             onCopy={onCopy}
             onShare={onShare}
             onOpenMap={onOpenMap}
+            styles={styles}
           />
         )}
       </View>
     ),
-    [baseUrl, isMobile, numColumns, onCopy, onOpenMap, onShare, responsive]
+    [baseUrl, isMobile, numColumns, onCopy, onOpenMap, onShare, responsive, styles]
   );
 
   return (
@@ -413,14 +421,14 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
       >
         <View style={styles.toggleRow}>
           {[
-            <Feather key="icon" name="map-pin" size={22} color={DESIGN_TOKENS.colors.text as any} />,
+            <Feather key="icon" name="map-pin" size={22} color={colors.text} />,
             <Text key="text" style={[styles.toggleText, isMobile && styles.toggleTextSm]}>
               {showList ? 'Скрыть координаты мест' : 'Показать координаты мест'}
             </Text>,
             showList ? (
-              <Feather key="chevron" name="chevron-up" size={18} color={DESIGN_TOKENS.colors.text as any} />
+              <Feather key="chevron" name="chevron-up" size={18} color={colors.text} />
             ) : (
-              <Feather key="chevron" name="chevron-down" size={18} color={DESIGN_TOKENS.colors.text as any} />
+              <Feather key="chevron" name="chevron-down" size={18} color={colors.text} />
             ),
           ]}
         </View>
@@ -473,15 +481,16 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 
 /* ============================= styles ============================= */
 
-const styles = StyleSheet.create<any>({
+// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create<any>({
   wrapper: { width: '100%', marginTop: DESIGN_TOKENS.spacing.lg },
 
   // ✅ ИСПРАВЛЕНИЕ: Современная кнопка переключения с улучшенной интерактивностью и единой палитрой
   toggle: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface, // ✅ ДИЗАЙН: Динамический цвет фона
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     borderWidth: 1.5,
-    borderColor: DESIGN_TOKENS.colors.border, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    borderColor: colors.border, // ✅ ДИЗАЙН: Динамический цвет границы
     marginBottom: DESIGN_TOKENS.spacing.md,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -494,11 +503,11 @@ const styles = StyleSheet.create<any>({
         transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         cursor: 'pointer' as any,
         ':hover': {
-          borderColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
+          borderColor: colors.primary, // ✅ ДИЗАЙН: Динамический цвет границы
           shadowOpacity: 0.12,
           shadowRadius: 14,
           transform: 'translateY(-1px)',
-          backgroundColor: DESIGN_TOKENS.colors.primarySoft, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+          backgroundColor: colors.primarySoft, // ✅ ДИЗАЙН: Динамический цвет фона
         } as any,
         ':active': {
           transform: 'translateY(0)',
@@ -507,8 +516,8 @@ const styles = StyleSheet.create<any>({
     }),
   },
   togglePressed: { 
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    borderColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
+    backgroundColor: colors.primarySoft, // ✅ ДИЗАЙН: Динамический цвет фона
+    borderColor: colors.primary, // ✅ ДИЗАЙН: Динамический цвет границы
     transform: [{ scale: 0.98 }],
   },
   toggleRow: {
@@ -522,7 +531,7 @@ const styles = StyleSheet.create<any>({
   toggleText: { 
     fontSize: DESIGN_TOKENS.typography.sizes.md, 
     fontWeight: '600', 
-    color: DESIGN_TOKENS.colors.text, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    color: colors.text, // ✅ ДИЗАЙН: Динамический цвет текста
     letterSpacing: -0.3,
   },
   toggleTextSm: { 
@@ -573,7 +582,7 @@ const styles = StyleSheet.create<any>({
 
   // ✅ УЛУЧШЕНИЕ: Матовая карточка без границ, только тени
   card: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface, // ✅ ДИЗАЙН: Динамический цвет фона
     borderRadius: DESIGN_TOKENS.radii.lg,
     overflow: 'hidden',
     shadowColor: '#1f1f1f',
