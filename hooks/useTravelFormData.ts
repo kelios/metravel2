@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import { fetchTravel } from '@/src/api/travelsApi';
@@ -27,6 +27,10 @@ interface UseTravelFormDataOptions {
 export function useTravelFormData(options: UseTravelFormDataOptions) {
   const { travelId, isNew, userId, isSuperAdmin, isAuthenticated, authReady } = options;
   const router = useRouter();
+  const stableTravelId = useMemo(() => {
+    if (isNew) return null;
+    return travelId ? normalizeTravelId(travelId) : null;
+  }, [isNew, travelId]);
 
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [travelDataOld, setTravelDataOld] = useState<Travel | null>(null);
@@ -163,16 +167,17 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         })
       : [];
 
+    const resolvedId = normalizeTravelId(mergedData.id) ?? stableTravelId ?? null;
     const cleanedData = cleanEmptyFields({
       ...mergedData,
-      id: normalizeTravelId(mergedData.id),
+      id: resolvedId,
       coordsMeTravel: normalizedMarkers,
     });
 
     const payload = ensureRequiredDraftFields(cleanedData as TravelFormData);
 
     return await saveFormData(payload);
-  }, [ensureRequiredDraftFields]);
+  }, [ensureRequiredDraftFields, stableTravelId]);
 
   const applySavedData = useCallback(
     (savedData: TravelFormData) => {

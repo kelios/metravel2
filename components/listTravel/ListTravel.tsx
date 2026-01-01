@@ -1,4 +1,4 @@
-// ListTravel.tsx
+// ✅ УЛУЧШЕНИЕ: ListTravel.tsx - мигрирован на DESIGN_TOKENS и useThemedColors
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
@@ -19,7 +19,8 @@ import SidebarFilters from './SidebarFilters'
 import RightColumn from './RightColumn'
 import UIButton from '@/components/ui/Button'
 import BookSettingsModal from '@/components/export/BookSettingsModal'
-import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext'
 import { fetchAllFiltersOptimized } from '@/src/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
@@ -37,11 +38,11 @@ import { useListTravelData } from './hooks/useListTravelData'
 import { useListTravelExport } from './hooks/useListTravelExport'
 import { calculateColumns } from './utils/listTravelHelpers'
 
-// Define styles at the top level before any component definitions
-const styles = StyleSheet.create({
+// ✅ ДИЗАЙН: Создание динамических стилей с useThemedColors
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: TOKENS.colors.background,
+    backgroundColor: colors.background,
     // Современный минималистичный layout
     display: 'flex',
     flexDirection: 'row',
@@ -60,25 +61,25 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     flexDirection: 'row',
-    paddingHorizontal: TOKENS.spacing.lg,
-    paddingTop: TOKENS.spacing.lg,
-    paddingBottom: TOKENS.spacing.lg,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    paddingTop: DESIGN_TOKENS.spacing.lg,
+    paddingBottom: DESIGN_TOKENS.spacing.lg,
     overflow: 'hidden',
     width: '100%',
   },
   contentMobile: {
-    paddingHorizontal: TOKENS.spacing.md,
-    paddingTop: TOKENS.spacing.md,
-    paddingBottom: TOKENS.spacing.md,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingTop: DESIGN_TOKENS.spacing.md,
+    paddingBottom: DESIGN_TOKENS.spacing.md,
   },
   sidebar: {
     width: 320,
     flexShrink: 0,
     borderRightWidth: 1,
-    borderRightColor: TOKENS.colors.border,
-    backgroundColor: TOKENS.colors.surface,
-    paddingHorizontal: TOKENS.spacing.lg,
-    paddingTop: TOKENS.spacing.lg,
+    borderRightColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    paddingTop: DESIGN_TOKENS.spacing.lg,
     overflowY: 'auto',
     overflowX: 'hidden',
     ...(Platform.OS === 'web' ? ({ scrollbarGutter: 'stable' } as any) : null),
@@ -89,66 +90,71 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   listContainer: {
-    paddingHorizontal: TOKENS.spacing.lg,
-    paddingTop: TOKENS.spacing.lg,
-    paddingBottom: TOKENS.spacing.lg,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    paddingTop: DESIGN_TOKENS.spacing.lg,
+    paddingBottom: DESIGN_TOKENS.spacing.lg,
   },
   listContainerMobile: {
-    paddingHorizontal: TOKENS.spacing.md,
-    paddingTop: TOKENS.spacing.md,
-    paddingBottom: TOKENS.spacing.md,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingTop: DESIGN_TOKENS.spacing.md,
+    paddingBottom: DESIGN_TOKENS.spacing.md,
   },
   exportBar: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    backgroundColor: TOKENS.colors.surface,
-    borderRadius: TOKENS.radii.md,
-    padding: TOKENS.spacing.md,
-    marginBottom: TOKENS.spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    padding: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.md,
     borderWidth: 1,
-    borderColor: TOKENS.colors.border,
-    ...(Platform.OS === 'web'
-      ? ({ shadowColor: TOKENS.colors.border, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4 } as const)
-      : TOKENS.shadowsNative.subtle),
+    borderColor: colors.border,
+    ...Platform.select({
+      web: {
+        boxShadow: DESIGN_TOKENS.shadows.medium,
+      } as any,
+      ios: DESIGN_TOKENS.shadowsNative.medium,
+      android: { elevation: 4 },
+      default: DESIGN_TOKENS.shadowsNative.medium,
+    }),
   },
   exportBarMobile: {
     flexDirection: 'column',
-    gap: TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.sm,
     alignItems: 'stretch',
-    padding: TOKENS.spacing.sm,
+    padding: DESIGN_TOKENS.spacing.sm,
   },
   exportBarMobileWeb: {
-    marginHorizontal: -TOKENS.spacing.xs,
-    marginBottom: TOKENS.spacing.sm,
+    marginHorizontal: -DESIGN_TOKENS.spacing.xs,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
   },
   exportBarInfo: {
     flex: 1,
-    marginRight: TOKENS.spacing.md,
+    marginRight: DESIGN_TOKENS.spacing.md,
   },
   exportBarInfoTitle: {
-    fontSize: TOKENS.typography.sizes.lg,
-    fontWeight: TOKENS.typography.weights.semibold,
-    color: TOKENS.colors.text,
-    marginBottom: TOKENS.spacing.xs,
+    fontSize: DESIGN_TOKENS.typography.sizes.lg,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    color: colors.text,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   exportBarInfoSubtitle: {
-    fontSize: TOKENS.typography.sizes.sm,
-    color: TOKENS.colors.textSecondary,
-    marginBottom: TOKENS.spacing.sm,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.textMuted,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
   },
   exportBarInfoActions: {
     flexDirection: 'row',
-    gap: TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   linkButton: {
-    fontSize: TOKENS.typography.sizes.sm,
-    color: TOKENS.colors.primary,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.primary,
     textDecorationLine: 'underline',
   },
   exportBarButtons: {
     flexDirection: 'row',
-    gap: TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   exportBarButtonsMobile: {
     flexDirection: 'column',
@@ -156,13 +162,13 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   progressWrapper: {
-    marginTop: TOKENS.spacing.sm,
+    marginTop: DESIGN_TOKENS.spacing.sm,
   },
   recommendationsLoader: {
-    marginTop: TOKENS.spacing.lg,
-    padding: TOKENS.spacing.md,
-    backgroundColor: TOKENS.colors.surface,
-    borderRadius: TOKENS.radii.md,
+    marginTop: DESIGN_TOKENS.spacing.lg,
+    padding: DESIGN_TOKENS.spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.md,
     alignItems: 'center',
   },
   recommendationsSkeleton: {
@@ -172,27 +178,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.md,
   },
   recommendationsSkeletonTitle: {
     width: 120,
     height: 20,
-    backgroundColor: TOKENS.colors.skeleton,
-    borderRadius: TOKENS.radii.sm,
+    backgroundColor: colors.borderLight,
+    borderRadius: DESIGN_TOKENS.radii.sm,
   },
   recommendationsSkeletonTabs: {
     flexDirection: 'row',
-    gap: TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   recommendationsSkeletonContent: {
     flexDirection: 'row',
-    gap: TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   recommendationsSkeletonCard: {
     flex: 1,
     height: 80,
-    backgroundColor: TOKENS.colors.skeleton,
-    borderRadius: TOKENS.radii.sm,
+    backgroundColor: colors.borderLight,
+    borderRadius: DESIGN_TOKENS.radii.sm,
   },
   // ✅ RIGHT COLUMN: Основной контейнер правой части
   rightColumn: {
@@ -207,7 +213,7 @@ const styles = StyleSheet.create({
         minHeight: 900,
       },
     }),
-    ...(Platform.OS === 'web' ? ({ paddingTop: TOKENS.spacing.lg } as const) : null),
+    ...(Platform.OS === 'web' ? ({ paddingTop: DESIGN_TOKENS.spacing.lg } as const) : null),
   },
   rightColumnMobile: {
     width: '100%',
@@ -216,10 +222,15 @@ const styles = StyleSheet.create({
   searchHeader: {
     position: 'relative',
     zIndex: 10,
-    backgroundColor: TOKENS.colors.surface,
-    ...(Platform.OS === 'web'
-      ? ({ shadowColor: TOKENS.colors.border, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3 } as const)
-      : TOKENS.shadowsNative.subtle),
+    backgroundColor: colors.surface,
+    ...Platform.select({
+      web: {
+        boxShadow: DESIGN_TOKENS.shadows.light,
+      } as any,
+      ios: DESIGN_TOKENS.shadowsNative.light,
+      android: { elevation: 2 },
+      default: DESIGN_TOKENS.shadowsNative.light,
+    }),
   },
   // ✅ CARDS CONTAINER: Прокручиваемый контейнер для карточек
   cardsContainer: {
@@ -228,8 +239,8 @@ const styles = StyleSheet.create({
     overflowX: 'hidden',
     ...(Platform.OS === 'web' ? ({ scrollbarGutter: 'stable' } as any) : null),
     // Горизонтальные отступы задаются динамически через contentPadding, чтобы избежать лишних белых полей
-    paddingTop: TOKENS.spacing.lg,
-    paddingBottom: TOKENS.spacing.md,
+    paddingTop: DESIGN_TOKENS.spacing.lg,
+    paddingBottom: DESIGN_TOKENS.spacing.md,
     ...Platform.select({
       web: {
         minHeight: 900,
@@ -239,7 +250,7 @@ const styles = StyleSheet.create({
   cardsContainerMobile: {
     // Reserve space for the fixed mobile footer/dock so the last card is not covered.
     // Uses tabBarHeight as a stable dock height across platforms.
-    paddingBottom: LAYOUT.tabBarHeight + TOKENS.spacing.xl,
+    paddingBottom: LAYOUT.tabBarHeight + DESIGN_TOKENS.spacing.xl,
     minHeight: 720,
   },
   // ✅ CARDS GRID: Flexbox layout for both platforms
@@ -251,15 +262,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   resultsCount: {
-    marginBottom: TOKENS.spacing.lg,
+    marginBottom: DESIGN_TOKENS.spacing.lg,
   },
   resultsCountText: {
-    fontSize: TOKENS.typography.sizes.md,
-    fontWeight: TOKENS.typography.weights.medium,
-    color: TOKENS.colors.text,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+    color: colors.text,
   },
   footerLoader: {
-    paddingVertical: TOKENS.spacing.lg,
+    paddingVertical: DESIGN_TOKENS.spacing.lg,
     alignItems: 'center',
   },
 });
@@ -298,6 +309,7 @@ const ExportBar = memo(function ExportBar({
                        progress,
                        settingsSummary,
                        hasSelection,
+                       styles,
                    }: {
     isMobile: boolean;
     selectedCount: number;
@@ -310,6 +322,7 @@ const ExportBar = memo(function ExportBar({
     progress?: number;
     settingsSummary: string;
     hasSelection: boolean;
+    styles: ReturnType<typeof createStyles>;
 }) {
     const selectionText = selectedCount
       ? `Выбрано ${selectedCount} ${pluralizeTravels(selectedCount)}`
@@ -390,6 +403,10 @@ function ListTravel({
     onToggleWeeklyHighlights,
     isWeeklyHighlightsVisible: externalWeeklyHighlightsVisible,
 }: ListTravelProps = {}) {
+    // ✅ ДИЗАЙН: Используем динамические цвета темы
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     // ✅ АРХИТЕКТУРА: Использование кастомного хука для видимости
     useListTravelVisibility({
         externalPersonalizationVisible,
@@ -450,7 +467,7 @@ function ListTravel({
       }
 
       return styleArray
-    }, [gapSize]);
+    }, [gapSize, styles.cardsGrid]);
 
     // ✅ ОПТИМИЗАЦИЯ: Стабильные адаптивные отступы и ширина правой колонки
     // На мобильном layout используем полную ширину, на десктопе вычитаем ширину sidebar
@@ -1130,6 +1147,7 @@ function ListTravel({
               progress={pdfExport.progress}
               settingsSummary={exportState.settingsSummary}
               hasSelection={hasSelection}
+              styles={styles}
             />
           ) : null
         }

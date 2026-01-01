@@ -1,3 +1,4 @@
+// ✅ УЛУЧШЕНИЕ: Страница поиска с DESIGN_TOKENS и useThemedColors
 import React, { memo, useMemo } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
 import { usePathname } from 'expo-router';
@@ -7,10 +8,13 @@ import InstantSEO from '@/components/seo/InstantSEO';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import ListTravel from '@/components/listTravel/ListTravel';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 function SearchScreen() {
     const pathname = usePathname();
     const isFocused = useIsFocused();
+    const colors = useThemedColors();
 
     const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
 
@@ -18,6 +22,20 @@ function SearchScreen() {
 
     const title = 'Поиск путешествий | Metravel';
     const description = 'Найдите путешествия по фильтрам и сохраните лучшие идеи в свою книгу.';
+
+    // ✅ ДИЗАЙН: Динамические стили с DESIGN_TOKENS
+    const styles = useMemo(() => StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        errorContainer: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: DESIGN_TOKENS.spacing.lg,
+        },
+    }), [colors]);
 
     return (
         <>
@@ -54,17 +72,5 @@ function SearchScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f5f5f5',
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-    },
-});
 
 export default memo(SearchScreen);

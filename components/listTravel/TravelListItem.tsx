@@ -1,4 +1,4 @@
-// src/components/listTravel/TravelListItem.tsx
+// ✅ УЛУЧШЕНИЕ: src/components/listTravel/TravelListItem.tsx - мигрирован на DESIGN_TOKENS и useThemedColors
 import React, { memo, useCallback, useMemo, useRef, useEffect } from "react";
 import { View, Pressable, Text, StyleSheet, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -9,7 +9,8 @@ import OptimizedFavoriteButton from "@/components/OptimizedFavoriteButton";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travelsApi";
 import { optimizeImageUrl } from "@/utils/imageOptimization";
 import UnifiedTravelCard from "@/components/ui/UnifiedTravelCard";
-import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import { getResponsiveCardValues } from './enhancedTravelCardStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { formatViewCount } from "@/components/travel/utils/travelHelpers";
@@ -85,6 +86,10 @@ function TravelListItem({
                             viewportWidth,
                             hideAuthor = false,
                         }: Props) {
+
+    // ✅ ДИЗАЙН: Используем динамические цвета темы
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const {
         id,
@@ -725,7 +730,8 @@ return (
 );
 }
 
-const styles = StyleSheet.create({
+// ✅ ДИЗАЙН: Создание динамических стилей с useThemedColors
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   wrap: {
     width: '100%',
   },
@@ -733,10 +739,10 @@ const styles = StyleSheet.create({
   // Современная минималистичная карточка
   card: {
     width: '100%',
-    backgroundColor: TOKENS.colors.surface,
-    borderRadius: TOKENS.radii.lg,
+    backgroundColor: colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.lg,
     borderWidth: Platform.OS === 'web' ? 1 : 0,
-    borderColor: TOKENS.colors.border,
+    borderColor: colors.border,
     overflow: 'hidden',
     ...(Platform.OS === 'web'
       ? ({
@@ -745,9 +751,14 @@ const styles = StyleSheet.create({
         } as any)
       : null),
     // Минимальные тени для глубины - разделены по платформам
-    ...(Platform.OS === 'web'
-      ? { boxShadow: TOKENS.shadows.subtle }
-      : TOKENS.shadowsNative.subtle),
+    ...Platform.select({
+      web: {
+        boxShadow: DESIGN_TOKENS.shadows.light,
+      } as any,
+      ios: DESIGN_TOKENS.shadowsNative.light,
+      android: { elevation: 2 },
+      default: DESIGN_TOKENS.shadowsNative.light,
+    }),
   },
 
   androidOptimized: {
@@ -758,15 +769,19 @@ const styles = StyleSheet.create({
   },
 
   selected: {
-    ...(Platform.OS === 'web'
-      ? ({ boxShadow: TOKENS.shadows.soft, borderColor: TOKENS.colors.primary } as any)
-      : {
-          shadowColor: TOKENS.colors.primary,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15,
-          shadowRadius: 8,
-          elevation: 4,
-        }),
+    ...Platform.select({
+      web: {
+        boxShadow: DESIGN_TOKENS.shadows.soft,
+        borderColor: colors.primary,
+      } as any,
+      default: {
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
+      },
+    }),
   },
 
   single: {
@@ -775,26 +790,26 @@ const styles = StyleSheet.create({
   },
 
   infoBadgeText: {
-    fontSize: TOKENS.typography.sizes.sm,
-    color: TOKENS.colors.text,
-    fontWeight: TOKENS.typography.weights.medium,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.text,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
     letterSpacing: -0.2,
   },
 
   // Упрощенные кнопки управления
   adminActionsContainer: {
     position: 'absolute',
-    top: TOKENS.spacing.sm,
-    left: TOKENS.spacing.sm,
+    top: DESIGN_TOKENS.spacing.sm,
+    left: DESIGN_TOKENS.spacing.sm,
     zIndex: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: TOKENS.spacing.xs,
+    gap: DESIGN_TOKENS.spacing.xs,
     // Компактный glass-пил, по высоте близкий к кнопке избранного
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: TOKENS.radii.full,
-    paddingHorizontal: TOKENS.spacing.xs,
-    paddingVertical: TOKENS.spacing.xs * 0.75,
+    borderRadius: DESIGN_TOKENS.radii.full,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+    paddingVertical: DESIGN_TOKENS.spacing.xs * 0.75,
     ...(Platform.OS === 'web' ? {
       backdropFilter: 'blur(8px)',
       WebkitBackdropFilter: 'blur(8px)',
@@ -802,9 +817,9 @@ const styles = StyleSheet.create({
   },
 
   adminBtn: {
-    paddingHorizontal: TOKENS.spacing.xs,
-    paddingVertical: TOKENS.spacing.xs * 0.25,
-    borderRadius: TOKENS.radii.full,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+    paddingVertical: DESIGN_TOKENS.spacing.xs * 0.25,
+    borderRadius: DESIGN_TOKENS.radii.full,
     justifyContent: 'center',
     alignItems: 'center',
     ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
@@ -813,13 +828,13 @@ const styles = StyleSheet.create({
   adminDivider: {
     width: 1,
     height: 16,
-    backgroundColor: TOKENS.colors.border,
+    backgroundColor: colors.border,
   },
 
   favoriteButtonContainer: {
     position: 'absolute',
-    top: TOKENS.spacing.sm,
-    right: TOKENS.spacing.sm,
+    top: DESIGN_TOKENS.spacing.sm,
+    right: DESIGN_TOKENS.spacing.sm,
     zIndex: 20,
   },
 
@@ -829,7 +844,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 4,
     gap: 4,
-    backgroundColor: TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     width: '100%',
     minWidth: 0,
     ...(Platform.OS === 'web'
@@ -853,10 +868,10 @@ const styles = StyleSheet.create({
 
   // Современная типографика
   title: {
-    fontSize: TOKENS.card.title.size,
-    fontWeight: TOKENS.card.title.weight,
-    lineHeight: TOKENS.card.title.lineHeight,
-    color: Platform.OS === 'web' ? '#0f172a' : TOKENS.colors.text,
+    fontSize: DESIGN_TOKENS.typography.sizes.lg,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    lineHeight: 22,
+    color: colors.text,
     marginBottom: 0,
   },
 
@@ -865,7 +880,7 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "stretch",
     justifyContent: 'flex-start',
-    gap: Platform.OS === 'web' ? 6 : TOKENS.spacing.xs,
+    gap: Platform.OS === 'web' ? 6 : DESIGN_TOKENS.spacing.xs,
   },
 
   // Первая строка: пользователь + просмотры
@@ -882,8 +897,8 @@ const styles = StyleSheet.create({
   metaBadgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: TOKENS.spacing.xs,
-    marginTop: Platform.OS === 'web' ? 4 : TOKENS.spacing.xs * 0.5,
+    gap: DESIGN_TOKENS.spacing.xs,
+    marginTop: Platform.OS === 'web' ? 4 : DESIGN_TOKENS.spacing.xs * 0.5,
     marginBottom: Platform.OS === 'web' ? 8 : 0,
     flexWrap: Platform.OS === 'web' ? 'nowrap' : 'wrap',
     overflow: Platform.OS === 'web' ? 'hidden' : 'visible',
@@ -894,7 +909,7 @@ const styles = StyleSheet.create({
   metaBox: {
     flexDirection: "row",
     alignItems: "center",
-    gap: TOKENS.spacing.xs,
+    gap: DESIGN_TOKENS.spacing.xs,
     flex: 1,
     minWidth: 0,
   },
@@ -903,17 +918,17 @@ const styles = StyleSheet.create({
   metaBoxViews: {
     flexDirection: "row",
     alignItems: "center",
-    gap: TOKENS.spacing.xs,
-    paddingHorizontal: TOKENS.spacing.xs,
+    gap: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
     paddingVertical: 2,
     flexShrink: 0,
   },
 
   metaTxt: {
-    fontSize: TOKENS.card.meta.size,
-    color: Platform.OS === 'web' ? TOKENS.colors.text : TOKENS.colors.textSecondary,
-    fontWeight: Platform.OS === 'web' ? '500' : TOKENS.card.meta.weight,
-    lineHeight: Platform.OS === 'web' ? 16 : TOKENS.card.meta.lineHeight,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.textSecondary,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+    lineHeight: Platform.OS === 'web' ? 16 : 18,
     flex: 1, // Занимаем доступное пространство в контейнере
     minWidth: 0, // Важно для корректного обрезания текста
     opacity: 1,
@@ -921,10 +936,10 @@ const styles = StyleSheet.create({
 
   // Отдельный стиль для текста просмотров - не обрезается
   metaTxtViews: {
-    fontSize: TOKENS.card.meta.size,
-    color: Platform.OS === 'web' ? TOKENS.colors.text : TOKENS.colors.textSecondary,
-    fontWeight: Platform.OS === 'web' ? '500' : TOKENS.card.meta.weight,
-    lineHeight: Platform.OS === 'web' ? 16 : TOKENS.card.meta.lineHeight,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.textSecondary,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+    lineHeight: Platform.OS === 'web' ? 16 : 18,
     opacity: 1,
   },
 
@@ -932,13 +947,13 @@ const styles = StyleSheet.create({
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: TOKENS.spacing.xs,
-    paddingHorizontal: TOKENS.spacing.sm,
-    paddingVertical: TOKENS.spacing.xs * 0.75,
-    borderRadius: TOKENS.radii.full,
+    gap: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: DESIGN_TOKENS.spacing.xs * 0.75,
+    borderRadius: DESIGN_TOKENS.radii.full,
     borderWidth: 1,
-    backgroundColor: TOKENS.colors.backgroundSecondary,
-    borderColor: TOKENS.colors.border,
+    backgroundColor: colors.backgroundSecondary,
+    borderColor: colors.border,
   },
 
   statusBadgePopular: {},
@@ -946,10 +961,10 @@ const styles = StyleSheet.create({
   statusBadgeNew: {},
 
   statusBadgeText: {
-    fontSize: TOKENS.typography.sizes.xs,
-    fontWeight: TOKENS.typography.weights.semibold,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
     letterSpacing: -0.1,
-    color: TOKENS.colors.textSecondary,
+    color: colors.textSecondary,
   },
 
   statusBadgeTextPopular: {},
@@ -960,48 +975,48 @@ const styles = StyleSheet.create({
   tags: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: TOKENS.spacing.xs,
+    gap: DESIGN_TOKENS.spacing.xs,
   },
 
   tag: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: TOKENS.colors.backgroundSecondary,
-    borderRadius: TOKENS.radii.sm,
-    paddingHorizontal: TOKENS.spacing.sm,
-    paddingVertical: Platform.OS === 'web' ? TOKENS.spacing.xxs : TOKENS.spacing.xs,
-    gap: TOKENS.spacing.xs,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: Platform.OS === 'web' ? DESIGN_TOKENS.spacing.xxs : DESIGN_TOKENS.spacing.xs,
+    gap: DESIGN_TOKENS.spacing.xs,
   },
 
   tagTxt: {
-    fontSize: Platform.OS === 'web' ? TOKENS.typography.sizes.xs : TOKENS.typography.sizes.sm,
-    color: TOKENS.colors.textSecondary,
-    fontWeight: TOKENS.typography.weights.medium,
+    fontSize: Platform.OS === 'web' ? DESIGN_TOKENS.typography.sizes.xs : DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.textSecondary,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
   },
 
   // Упрощенные чекбоксы
   checkWrap: {
     position: "absolute",
-    top: TOKENS.spacing.sm,
-    right: TOKENS.spacing.sm,
+    top: DESIGN_TOKENS.spacing.sm,
+    right: DESIGN_TOKENS.spacing.sm,
     zIndex: 20,
   },
 
   checkbox: {
     width: 24,
     height: 24,
-    borderRadius: TOKENS.radii.sm,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     borderWidth: 2,
-    borderColor: TOKENS.colors.borderStrong,
-    backgroundColor: TOKENS.colors.surface,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     cursor: Platform.OS === 'web' ? 'pointer' : undefined,
   },
 
   checkboxChecked: {
-    backgroundColor: TOKENS.colors.primary,
-    borderColor: TOKENS.colors.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
 });
 
