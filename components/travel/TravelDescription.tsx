@@ -11,6 +11,7 @@ import ImageCardMedia from "@/components/ui/ImageCardMedia";
 import StableContent from "@/components/travel/StableContent";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const buildWeservProxyUrl = (src: string) => {
     try {
@@ -53,6 +54,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                                                              }) => {
     const { width, height } = useResponsive();
     const isMobileLayout = width < 768;
+    const colors = useThemedColors();
 
     // ✅ ОПТИМИЗАЦИЯ: Адаптивные размеры контейнера
     const pageHeight = useMemo(() => Math.round(height * 0.7), [height]);
@@ -258,6 +260,97 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
         };
     }, []);
 
+    const styles = useMemo(() => StyleSheet.create({
+        // ✅ РЕДИЗАЙН: Улучшенный контейнер с современными стилями
+        wrapper: {
+            alignSelf: "center",
+            width: "100%",
+            maxWidth: 760,
+            paddingHorizontal: Platform.select({
+                web: 32,
+                default: 16
+            }),
+            paddingTop: Platform.select({
+                web: 32,
+                default: 24
+            }),
+            paddingBottom: Platform.select({
+                web: 48,
+                default: 32
+            }),
+            backgroundColor: "transparent",
+        },
+
+        wrapperNoBoxMobile: {
+            alignSelf: "stretch",
+            maxWidth: undefined,
+            paddingHorizontal: 0,
+            paddingTop: 0,
+            paddingBottom: 0,
+        },
+
+        inner: {
+            position: "relative",
+            paddingTop: 8,
+        },
+
+        placeholder: {
+            textAlign: "center",
+            color: colors.textMuted,
+            fontSize: DESIGN_TOKENS.typography.sizes.md,
+            paddingVertical: DESIGN_TOKENS.spacing.xxs,
+            fontFamily: "Georgia",
+        },
+
+        fixedHeightBlock: {
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            borderRadius: Platform.select({ web: 16, default: 12 }),
+            backgroundColor: colors.surface,
+            overflow: "hidden",
+            ...Platform.select({
+                web: {
+                    // @ts-ignore: web-only style
+                    boxShadow: colors.isDark
+                        ? '0 8px 24px rgba(0, 0, 0, 0.3)'
+                        : '0 8px 24px rgba(0, 0, 0, 0.08)',
+                },
+                ios: {
+                    shadowColor: colors.text,
+                    shadowOpacity: 0.08,
+                    shadowRadius: 8,
+                    shadowOffset: { width: 0, height: 2 },
+                },
+                android: {
+                    elevation: 2,
+                },
+                default: {
+                    shadowColor: colors.text,
+                    shadowOpacity: 0.08,
+                    shadowRadius: 8,
+                    shadowOffset: { width: 0, height: 2 },
+                    elevation: 2,
+                },
+            }),
+        },
+
+        scrollArea: {},
+
+        scrollContent: {
+            paddingBottom: DESIGN_TOKENS.spacing.lg,
+        },
+
+        stamp: {
+            position: "absolute",
+            top: 8,
+            right: 8,
+            width: Platform.select({ web: 80, default: 60 }),
+            height: Platform.select({ web: 80, default: 60 }),
+            opacity: 0.15,
+            zIndex: 1,
+        },
+    }), [colors]);
+
     const inner = (
       <View
         style={[
@@ -328,92 +421,3 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
 };
 
 export default memo(TravelDescription);
-
-const styles = StyleSheet.create({
-    // ✅ РЕДИЗАЙН: Улучшенный контейнер с современными стилями
-    wrapper: {
-        alignSelf: "center",
-        width: "100%",
-        maxWidth: 760,
-        paddingHorizontal: Platform.select({ 
-            web: 32, 
-            default: 16  // ✅ ОПТИМИЗАЦИЯ: Меньше отступы на мобильных
-        }),
-        paddingTop: Platform.select({ 
-            web: 32, 
-            default: 24  // ✅ ОПТИМИЗАЦИЯ: Меньше отступ сверху на мобильных
-        }),
-        paddingBottom: Platform.select({ 
-            web: 48, 
-            default: 32  // ✅ ОПТИМИЗАЦИЯ: Меньше отступ снизу на мобильных
-        }),
-        backgroundColor: "transparent",
-    },
-
-    wrapperNoBoxMobile: {
-        alignSelf: "stretch",
-        maxWidth: undefined,
-        paddingHorizontal: 0,
-        paddingTop: 0,
-        paddingBottom: 0,
-    },
-
-    inner: {
-        position: "relative",
-        paddingTop: 8,
-    },
-
-    placeholder: {
-        textAlign: "center",
-        color: "#718096",
-        fontSize: DESIGN_TOKENS.typography.sizes.md,
-        paddingVertical: DESIGN_TOKENS.spacing.xxs,
-        fontFamily: "Georgia",
-    },
-
-    fixedHeightBlock: {
-        borderWidth: 1,
-        borderColor: "rgba(0, 0, 0, 0.06)",
-        borderRadius: Platform.select({ web: 16, default: 12 }),  // ✅ ОПТИМИЗАЦИЯ: Меньше радиус на мобильных
-        backgroundColor: "#FFF",
-        overflow: "hidden",
-        ...Platform.select({
-            web: {
-                // @ts-ignore: web-only style
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
-            },
-            ios: {
-                shadowColor: "#000",
-                shadowOpacity: 0.08,
-                shadowRadius: 8,
-                shadowOffset: { width: 0, height: 2 },
-            },
-            android: {
-                elevation: 2,
-            },
-            default: {
-                shadowColor: "#000",
-                shadowOpacity: 0.08,
-                shadowRadius: 8,
-                shadowOffset: { width: 0, height: 2 },
-                elevation: 2,
-            },
-        }),
-    },
-
-    scrollArea: {},
-
-    scrollContent: {
-        paddingBottom: DESIGN_TOKENS.spacing.lg,
-    },
-
-    stamp: {
-        position: "absolute",
-        top: 8,
-        right: 8,
-        width: Platform.select({ web: 80, default: 60 }),  // ✅ ОПТИМИЗАЦИЯ: Меньше штамп на мобильных
-        height: Platform.select({ web: 80, default: 60 }),
-        opacity: 0.15,
-        zIndex: 1,
-    },
-});

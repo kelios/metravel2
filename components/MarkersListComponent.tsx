@@ -6,6 +6,7 @@ import { MarkerData } from "@/src/types/types";
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import MultiSelectField from '@/components/MultiSelectField';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const MultiSelectFieldAny: any = MultiSelectField;
  
@@ -35,6 +36,368 @@ const normalizeImageUrl = (url?: string | null) => {
     return result;
 };
 
+const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => ({
+    container: {
+        backgroundColor: 'transparent',
+        padding: '0',
+    },
+    headerRow: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '10px',
+    },
+    headerTitle: {
+        fontSize: '14px',
+        fontWeight: 700,
+        letterSpacing: '0.2px',
+        color: colors.text,
+    },
+    headerBadge: {
+        fontSize: '12px',
+        fontWeight: 700,
+        padding: '2px 10px',
+        borderRadius: '999px',
+        backgroundColor: colors.primarySoft,
+        color: colors.primaryDark,
+    },
+    searchRow: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '10px 12px',
+        borderRadius: '10px',
+        border: `1px solid ${colors.border}`,
+        backgroundColor: colors.surface,
+        marginBottom: '12px',
+    },
+    searchInput: {
+        width: '100%',
+        border: 'none',
+        outline: 'none',
+        fontSize: '13px',
+        color: colors.text,
+        backgroundColor: 'transparent',
+    },
+    emptyText: {
+        textAlign: 'center' as const,
+        color: colors.textMuted,
+        fontSize: '13px',
+        lineHeight: 1.4,
+    },
+    list: {
+        display: 'flex',
+        flexDirection: 'column' as const,
+        gap: '8px',
+    },
+    markerItem: {
+        border: `1px solid ${colors.border}`,
+        borderRadius: '12px',
+        padding: '10px 12px',
+        backgroundColor: colors.surface,
+        boxShadow: DESIGN_TOKENS.shadows.card,
+        cursor: 'pointer',
+        transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+    },
+    editingItem: {
+        border: `1px solid ${colors.borderAccent}`,
+        boxShadow: `0 0 0 3px ${colors.primarySoft}`,
+    },
+    activeItem: {
+        border: `1px solid ${colors.borderAccent}`,
+        boxShadow: `0 0 0 3px ${colors.accentSoft}`,
+    },
+    row: {
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '8px',
+    },
+    indexBadge: {
+        width: '26px',
+        height: '26px',
+        borderRadius: '999px',
+        backgroundColor: colors.backgroundSecondary,
+        color: colors.text,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '12px',
+    },
+    thumbnailWrapper: {
+        width: '56px',
+        height: '56px',
+        borderRadius: '10px',
+        backgroundColor: colors.backgroundSecondary,
+        border: `1px solid ${colors.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        flexShrink: 0,
+    },
+    previewImage: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover' as const,
+    },
+    previewMedia: {
+        width: '100%',
+        height: '100%',
+    },
+    placeholderImage: {
+        fontSize: '10px',
+        color: colors.textMuted,
+        textAlign: 'center' as const,
+        padding: '4px',
+        lineHeight: 1.2,
+    },
+    previewText: {
+        flex: 1,
+        minWidth: 0,
+        marginRight: '8px',
+    },
+    markerTitle: {
+        fontSize: '13px',
+        fontWeight: 700,
+        color: colors.text,
+        lineHeight: 1.25,
+        marginBottom: '4px',
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical' as const,
+        overflow: 'hidden',
+    },
+    metaRow: {
+        display: 'flex',
+        flexWrap: 'wrap' as const,
+        gap: '6px',
+        marginTop: '4px',
+    },
+    badge: {
+        fontSize: '11px',
+        padding: '2px 6px',
+        borderRadius: '999px',
+        backgroundColor: colors.accentSoft,
+        color: colors.accentDark,
+    },
+    badgeMuted: {
+        fontSize: '11px',
+        padding: '2px 6px',
+        borderRadius: '999px',
+        backgroundColor: colors.backgroundSecondary,
+        color: colors.textMuted,
+    },
+    actions: {
+        display: 'flex',
+        flexDirection: 'column' as const,
+        gap: '6px',
+        marginLeft: '8px',
+        flexShrink: 0,
+        alignSelf: 'flex-start',
+    },
+    editButton: {
+        backgroundColor: colors.primarySoft,
+        color: colors.text,
+        border: `1px solid ${colors.border}`,
+        padding: '6px 10px',
+        borderRadius: '10px',
+        cursor: 'pointer',
+        fontSize: '11px',
+        whiteSpace: 'nowrap' as const,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        fontWeight: 600,
+    },
+    deleteButton: {
+        backgroundColor: colors.dangerSoft,
+        color: colors.dangerDark,
+        border: `1px solid ${colors.dangerLight}`,
+        padding: '6px 10px',
+        borderRadius: '10px',
+        cursor: 'pointer',
+        fontSize: '11px',
+        whiteSpace: 'nowrap' as const,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        fontWeight: 600,
+    },
+    editForm: {
+        display: 'flex',
+        flexDirection: 'column' as const,
+        gap: '12px',
+    },
+    editHeader: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '4px',
+    },
+    editTitle: {
+        fontSize: '14px',
+        fontWeight: 600,
+        color: colors.text,
+    },
+    editSubtitle: {
+        fontSize: '12px',
+        color: colors.textMuted,
+        marginTop: '2px',
+        maxWidth: '260px',
+        whiteSpace: 'nowrap' as const,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+    },
+    closeIconButton: {
+        border: 'none',
+        backgroundColor: 'transparent',
+        fontSize: '16px',
+        lineHeight: 1,
+        cursor: 'pointer',
+        color: colors.textMuted,
+        padding: '2px 6px',
+        borderRadius: '999px',
+    },
+    helperText: {
+        fontSize: '12px',
+        color: colors.textMuted,
+        lineHeight: 1.4,
+    },
+    field: {
+        display: 'flex',
+        flexDirection: 'column' as const,
+        gap: '4px',
+        fontSize: '12px',
+    },
+    fieldLabel: {
+        fontWeight: 500,
+        color: colors.text,
+    },
+    fieldHint: {
+        fontSize: '11px',
+        color: colors.textMuted,
+        lineHeight: 1.4,
+    },
+    input: {
+        width: '100%',
+        padding: '8px',
+        border: `1px solid ${colors.border}`,
+        borderRadius: '6px',
+        fontSize: '13px',
+        color: colors.text,
+        backgroundColor: colors.surface,
+    },
+    imagePreview: {
+        width: '100px',
+        height: '100px',
+        objectFit: 'cover' as const,
+        borderRadius: '6px',
+        backgroundColor: colors.backgroundSecondary,
+        marginTop: '4px',
+    },
+    actionsRow: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '8px',
+        marginTop: '4px',
+        flexWrap: 'wrap' as const,
+    },
+    primaryActions: {
+        display: 'flex',
+        gap: '8px',
+        flexWrap: 'wrap' as const,
+    },
+    primaryButton: {
+        backgroundColor: colors.primary,
+        color: colors.textInverse,
+        border: 'none',
+        padding: '6px 14px',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        fontSize: '13px',
+        fontWeight: 500,
+    },
+    secondaryButton: {
+        backgroundColor: colors.surface,
+        color: colors.text,
+        border: `1px solid ${colors.border}`,
+        padding: '6px 12px',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        fontSize: '13px',
+    },
+    deleteTextButton: {
+        backgroundColor: 'transparent',
+        color: colors.danger,
+        border: 'none',
+        padding: '4px 0',
+        cursor: 'pointer',
+        fontSize: '12px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        whiteSpace: 'nowrap' as const,
+    },
+    modalOverlay: {
+        position: 'fixed' as const,
+        inset: 0,
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    modalBackdrop: {
+        position: 'absolute' as const,
+        inset: 0,
+        backgroundColor: DESIGN_TOKENS.colors.overlay,
+    },
+    modalContent: {
+        position: 'relative' as const,
+        backgroundColor: colors.surface,
+        borderRadius: '12px',
+        maxWidth: '720px',
+        width: '90%',
+        maxHeight: '90vh',
+        padding: '20px 24px',
+        boxShadow: DESIGN_TOKENS.shadows.modal,
+        overflowY: 'auto' as const,
+    },
+    multiSelect: {
+        border: `1px solid ${colors.border}`,
+        borderRadius: '10px',
+        padding: '8px 12px',
+        backgroundColor: colors.surface,
+        minHeight: '44px',
+        boxShadow: DESIGN_TOKENS.shadows.card,
+    },
+    multiSelectDropdownContainer: {
+        borderRadius: '12px',
+        border: `1px solid ${colors.border}`,
+        backgroundColor: colors.surface,
+        boxShadow: DESIGN_TOKENS.shadows.card,
+        padding: '6px',
+    },
+    multiSelectPlaceholder: {
+        fontSize: '13px',
+        color: colors.textMuted,
+        fontWeight: 500,
+    },
+    multiSelectSelectedText: {
+        fontSize: '13px',
+        color: colors.text,
+        fontWeight: 600,
+    },
+    multiSelectSearchInput: {
+        border: `1px solid ${colors.border}`,
+        borderRadius: '8px',
+        padding: '8px 10px',
+        fontSize: '13px',
+        color: colors.text,
+        backgroundColor: colors.backgroundSecondary,
+    },
+}), [colors]);
+
 const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                                                markers,
                                                                categoryTravelAddress,
@@ -46,6 +409,8 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                                                activeIndex,
                                                                setActiveIndex,
                                                            }) => {
+    const colors = useThemedColors();
+    const styles = useStyles(colors);
     const [search, setSearch] = useState('');
     const onRemove = useCallback((index: number) => handleMarkerRemove(index), [handleMarkerRemove]);
     const onEdit = useCallback((index: number) => {
@@ -93,7 +458,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
             </div>
             {markers.length > 0 && (
                 <div style={styles.searchRow}>
-                    <Feather name="search" size={14} color={palette.textMuted} />
+                    <Feather name="search" size={14} color={colors.textMuted} />
                     <input
                         type="text"
                         value={search}
@@ -167,7 +532,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                             style={styles.editButton}
                                             type="button"
                                         >
-                                            <Feather name="edit-2" size={13} color={palette.primaryDark} />
+                                            <Feather name="edit-2" size={13} color={colors.primaryDark} />
                                             <span>Редактировать</span>
                                         </button>
                                         <button
@@ -178,7 +543,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                             style={styles.deleteButton}
                                             type="button"
                                         >
-                                            <Feather name="trash-2" size={13} color={palette.dangerDark} />
+                                            <Feather name="trash-2" size={13} color={colors.dangerDark} />
                                             <span>Удалить</span>
                                         </button>
                                     </div>
@@ -198,6 +563,8 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                     handleImageUpload={handleImageUpload}
                     onClose={() => setEditingIndex(null)}
                     onRemove={onRemove}
+                    styles={styles}
+                    colors={colors}
                 />
             )}
         </div>
@@ -212,6 +579,8 @@ interface EditMarkerModalProps {
     handleImageUpload: (index: number, imageUrl: string) => void;
     onClose: () => void;
     onRemove: (index: number) => void;
+    styles: any;
+    colors: ReturnType<typeof useThemedColors>;
 }
  
 
@@ -223,6 +592,8 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                                                              handleImageUpload,
                                                              onClose,
                                                              onRemove,
+                                                             styles,
+                                                             colors,
                                                          }) => {
     const normalizedCategoryItems = useMemo(
         () => categoryTravelAddress.map((cat) => ({ ...cat, id: String(cat.id) })),
@@ -356,7 +727,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                             onClick={handleDelete}
                             style={styles.deleteTextButton}
                         >
-                            <Feather name="trash-2" size={14} color={palette.danger} />
+                            <Feather name="trash-2" size={14} color={colors.danger} />
                             <span>Удалить точку</span>
                         </button>
                     </div>
@@ -367,368 +738,5 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
     );
 };
 
-const palette = DESIGN_TOKENS.colors;
-
-const styles: any = {
-    container: {
-        backgroundColor: 'transparent',
-        padding: '0',
-    },
-    headerRow: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: '10px',
-    },
-    headerTitle: {
-        fontSize: '14px',
-        fontWeight: 700,
-        letterSpacing: '0.2px',
-        color: palette.text,
-    },
-    headerBadge: {
-        fontSize: '12px',
-        fontWeight: 700,
-        padding: '2px 10px',
-        borderRadius: '999px',
-        backgroundColor: palette.primarySoft,
-        color: palette.primaryDark,
-    },
-    searchRow: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '10px 12px',
-        borderRadius: '10px',
-        border: `1px solid ${palette.border}`,
-        backgroundColor: palette.surface,
-        marginBottom: '12px',
-    },
-    searchInput: {
-        width: '100%',
-        border: 'none',
-        outline: 'none',
-        fontSize: '13px',
-        color: palette.text,
-        backgroundColor: 'transparent',
-    },
-    emptyText: {
-        textAlign: 'center',
-        color: palette.textMuted,
-        fontSize: '13px',
-        lineHeight: 1.4,
-    },
-    list: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-    },
-    markerItem: {
-        border: `1px solid ${palette.border}`,
-        borderRadius: '12px',
-        padding: '10px 12px',
-        backgroundColor: palette.surface,
-        boxShadow: DESIGN_TOKENS.shadows.card,
-        cursor: 'pointer',
-        transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-    },
-    editingItem: {
-        border: `1px solid ${palette.borderAccent}`,
-        boxShadow: `0 0 0 3px ${palette.primarySoft}`,
-    },
-    activeItem: {
-        border: `1px solid ${palette.borderAccent}`,
-        boxShadow: `0 0 0 3px ${palette.accentSoft}`,
-    },
-    row: {
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '8px',
-    },
-    indexBadge: {
-        width: '26px',
-        height: '26px',
-        borderRadius: '999px',
-        backgroundColor: palette.backgroundSecondary,
-        color: palette.text,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '12px',
-    },
-    thumbnailWrapper: {
-        width: '56px',
-        height: '56px',
-        borderRadius: '10px',
-        backgroundColor: palette.backgroundSecondary,
-        border: `1px solid ${palette.border}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-        flexShrink: 0,
-    },
-    previewImage: {
-        width: '100%',
-        height: '100%',
-        objectFit: 'cover',
-    },
-    previewMedia: {
-        width: '100%',
-        height: '100%',
-    },
-    placeholderImage: {
-        fontSize: '10px',
-        color: palette.textSubtle,
-        textAlign: 'center',
-        padding: '4px',
-        lineHeight: 1.2,
-    },
-    previewText: {
-        flex: 1,
-        minWidth: 0,
-        marginRight: '8px',
-    },
-    markerTitle: {
-        fontSize: '13px',
-        fontWeight: 700,
-        color: palette.text,
-        lineHeight: 1.25,
-        marginBottom: '4px',
-        display: '-webkit-box',
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
-    },
-    metaRow: {
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '6px',
-        marginTop: '4px',
-    },
-    badge: {
-        fontSize: '11px',
-        padding: '2px 6px',
-        borderRadius: '999px',
-        backgroundColor: palette.accentSoft,
-        color: palette.accentDark,
-    },
-    badgeMuted: {
-        fontSize: '11px',
-        padding: '2px 6px',
-        borderRadius: '999px',
-        backgroundColor: palette.backgroundSecondary,
-        color: palette.textMuted,
-    },
-    actions: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
-        marginLeft: '8px',
-        flexShrink: 0,
-        alignSelf: 'flex-start',
-    },
-    editButton: {
-        backgroundColor: palette.primarySoft,
-        color: palette.text,
-        border: `1px solid ${palette.border}`,
-        padding: '6px 10px',
-        borderRadius: '10px',
-        cursor: 'pointer',
-        fontSize: '11px',
-        whiteSpace: 'nowrap',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '6px',
-        fontWeight: 600,
-    },
-    deleteButton: {
-        backgroundColor: palette.dangerSoft,
-        color: palette.dangerDark,
-        border: `1px solid ${palette.dangerLight}`,
-        padding: '6px 10px',
-        borderRadius: '10px',
-        cursor: 'pointer',
-        fontSize: '11px',
-        whiteSpace: 'nowrap',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '6px',
-        fontWeight: 600,
-    },
-    editForm: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-    },
-    editHeader: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: '4px',
-    },
-    editTitle: {
-        fontSize: '14px',
-        fontWeight: 600,
-        color: palette.text,
-    },
-    editSubtitle: {
-        fontSize: '12px',
-        color: palette.textMuted,
-        marginTop: '2px',
-        maxWidth: '260px',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-    },
-    closeIconButton: {
-        border: 'none',
-        backgroundColor: 'transparent',
-        fontSize: '16px',
-        lineHeight: 1,
-        cursor: 'pointer',
-        color: palette.textMuted,
-        padding: '2px 6px',
-        borderRadius: '999px',
-    },
-    helperText: {
-        fontSize: '12px',
-        color: palette.textMuted,
-        lineHeight: 1.4,
-    },
-    field: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4px',
-        fontSize: '12px',
-    },
-    fieldLabel: {
-        fontWeight: 500,
-        color: palette.text,
-    },
-    fieldHint: {
-        fontSize: '11px',
-        color: palette.textMuted,
-        lineHeight: 1.4,
-    },
-    input: {
-        width: '100%',
-        padding: '8px',
-        border: `1px solid ${palette.border}`,
-        borderRadius: '6px',
-        fontSize: '13px',
-        color: palette.text,
-        backgroundColor: palette.surface,
-    },
-    imagePreview: {
-        width: '100px',
-        height: '100px',
-        objectFit: 'cover',
-        borderRadius: '6px',
-        backgroundColor: palette.backgroundSecondary,
-        marginTop: '4px',
-    },
-    actionsRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '8px',
-        marginTop: '4px',
-        flexWrap: 'wrap',
-    },
-    primaryActions: {
-        display: 'flex',
-        gap: '8px',
-        flexWrap: 'wrap',
-    },
-    primaryButton: {
-        backgroundColor: palette.primary,
-        color: palette.textInverse,
-        border: 'none',
-        padding: '6px 14px',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontSize: '13px',
-        fontWeight: 500,
-    },
-    secondaryButton: {
-        backgroundColor: palette.surface,
-        color: palette.text,
-        border: `1px solid ${palette.border}`,
-        padding: '6px 12px',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontSize: '13px',
-    },
-    deleteTextButton: {
-        backgroundColor: 'transparent',
-        color: palette.danger,
-        border: 'none',
-        padding: '4px 0',
-        cursor: 'pointer',
-        fontSize: '12px',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '4px',
-        whiteSpace: 'nowrap',
-    },
-    modalOverlay: {
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    modalBackdrop: {
-        position: 'absolute',
-        inset: 0,
-        backgroundColor: DESIGN_TOKENS.colors.overlay,
-    },
-    modalContent: {
-        position: 'relative',
-        backgroundColor: palette.surface,
-        borderRadius: '12px',
-        maxWidth: '720px',
-        width: '90%',
-        maxHeight: '90vh',
-        padding: '20px 24px',
-        boxShadow: DESIGN_TOKENS.shadows.modal,
-        overflowY: 'auto',
-    },
-    multiSelect: {
-        border: `1px solid ${palette.border}`,
-        borderRadius: '10px',
-        padding: '8px 12px',
-        backgroundColor: palette.surface,
-        minHeight: '44px',
-        boxShadow: DESIGN_TOKENS.shadows.card,
-    },
-    multiSelectDropdownContainer: {
-        borderRadius: '12px',
-        border: `1px solid ${palette.border}`,
-        backgroundColor: palette.surface,
-        boxShadow: DESIGN_TOKENS.shadows.card,
-        padding: '6px',
-    },
-    multiSelectPlaceholder: {
-        fontSize: '13px',
-        color: palette.textMuted,
-        fontWeight: 500,
-    },
-    multiSelectSelectedText: {
-        fontSize: '13px',
-        color: palette.text,
-        fontWeight: 600,
-    },
-    multiSelectSearchInput: {
-        border: `1px solid ${palette.border}`,
-        borderRadius: '8px',
-        padding: '8px 10px',
-        fontSize: '13px',
-        color: palette.text,
-        backgroundColor: palette.backgroundSecondary,
-    },
-};
 
 export default React.memo(MarkersListComponent);

@@ -1,6 +1,7 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useMemo} from 'react';
 import {StyleSheet, Text, TextInput, View, Platform} from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface YoutubeLinkComponentProps {
     label: string;
@@ -10,9 +11,7 @@ interface YoutubeLinkComponentProps {
     hint?: string;
 }
 
-const palette = DESIGN_TOKENS.colors;
-
-const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({ 
+const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({
     label, 
     value, 
     onChange,
@@ -21,6 +20,50 @@ const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({
 }) => {
     const [inputValue, setInputValue] = useState(value);
     const [localError, setLocalError] = useState<string | null>(null);
+    const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Динамическая поддержка тем
+
+    const styles = useMemo(() => StyleSheet.create({
+        container: {
+            marginBottom: DESIGN_TOKENS.spacing.md,
+        },
+        label: {
+            marginBottom: DESIGN_TOKENS.spacing.xs,
+            fontSize: DESIGN_TOKENS.typography.sizes.sm,
+            fontWeight: '600',
+            color: colors.text,
+        },
+        hint: {
+            fontSize: DESIGN_TOKENS.typography.sizes.xs,
+            color: colors.textMuted,
+            marginBottom: DESIGN_TOKENS.spacing.xs,
+        },
+        input: {
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: DESIGN_TOKENS.radii.sm,
+            paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+            paddingVertical: DESIGN_TOKENS.spacing.sm,
+            fontSize: DESIGN_TOKENS.typography.sizes.md,
+            backgroundColor: colors.surface,
+            color: colors.text,
+            minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+            ...Platform.select({
+                web: {
+                    transition: 'border-color 0.2s ease',
+                },
+            }),
+        },
+        invalidInput: {
+            borderColor: colors.danger,
+        },
+        errorContainer: {
+            marginTop: DESIGN_TOKENS.spacing.xs,
+        },
+        errorText: {
+            fontSize: DESIGN_TOKENS.typography.sizes.xs,
+            color: colors.danger,
+        },
+    }), [colors]);
 
     useEffect(() => {
         setInputValue(value);
@@ -78,13 +121,13 @@ const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({
                 onChangeText={handleChange}
                 onBlur={handleBlur}
                 placeholder="Введите ссылку на YouTube"
-                placeholderTextColor={palette.textMuted}
+                placeholderTextColor={colors.textMuted}
                 {...Platform.select({
                     web: {
                         outlineWidth: 0,
                         // @ts-ignore
                         ':focus': {
-                            borderColor: displayError ? palette.error : palette.primary,
+                            borderColor: displayError ? colors.danger : colors.primary,
                         },
                     },
                 })}
@@ -98,47 +141,5 @@ const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        marginBottom: 16,
-    },
-    label: {
-        marginBottom: 6,
-        fontSize: 14,
-        fontWeight: '600',
-        color: palette.text,
-    },
-    hint: {
-        fontSize: 12,
-        color: palette.textMuted,
-        marginBottom: 6,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: palette.border,
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        fontSize: 15,
-        backgroundColor: palette.surface,
-        color: palette.text,
-        minHeight: 44,
-        ...Platform.select({
-            web: {
-                transition: 'border-color 0.2s ease',
-            },
-        }),
-    },
-    invalidInput: {
-        borderColor: palette.error,
-    },
-    errorContainer: {
-        marginTop: 4,
-    },
-    errorText: {
-        fontSize: 12,
-        color: palette.error,
-    },
-});
 
 export default YoutubeLinkComponent;

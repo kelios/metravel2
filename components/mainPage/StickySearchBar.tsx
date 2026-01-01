@@ -1,7 +1,7 @@
 // StickySearchBar.tsx
 // ✅ НОВЫЙ КОМПОНЕНТ: Sticky поисковая строка с быстрыми действиями
 
-import React, { useState, useRef, useEffect, memo } from 'react';
+import React, { useState, useRef, useEffect, memo, useMemo } from 'react';
 import {
   View,
   TextInput,
@@ -13,6 +13,7 @@ import {
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface StickySearchBarProps {
   search: string;
@@ -28,9 +29,251 @@ interface StickySearchBarProps {
   activeFiltersCount?: number;
 }
 
-const palette = DESIGN_TOKENS.colors;
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
+
+const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => StyleSheet.create({
+  container: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
+    paddingVertical: Platform.select({ default: spacing.sm, web: spacing.sm }),
+    gap: Platform.select({ default: spacing.xs, web: spacing.xs }),
+    minHeight: Platform.select({ default: 52, web: 60 }),
+    ...Platform.select({
+      web: {
+        boxShadow: 'none',
+      },
+    }),
+  },
+  containerFlush: {
+    paddingHorizontal: 0,
+  },
+  containerMobileWeb: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    minHeight: 0,
+  },
+  inner: {
+    width: '100%',
+    ...Platform.select({
+      web: {
+        maxWidth: 1120,
+        marginLeft: 'auto',
+        marginRight: 'auto',
+      } as any,
+    }),
+  },
+  innerFlush: {
+    ...Platform.select({
+      web: {
+        maxWidth: '100%',
+        marginLeft: 0,
+        marginRight: 0,
+      } as any,
+    }),
+  },
+  containerFocused: {
+    borderColor: colors.primary,
+    ...Platform.select({
+      web: {
+        boxShadow: 'none',
+      },
+    }),
+  },
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
+  },
+  contentRowMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+  },
+  searchBox: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
+    paddingVertical: Platform.select({ default: spacing.xs, web: spacing.sm }),
+    gap: spacing.xs,
+    height: Platform.select({ default: 46, web: 52 }),
+    ...Platform.select({
+      web: {
+        transition: 'all 0.2s ease',
+      } as any,
+    }),
+  },
+  searchBoxMobile: {
+    flex: 1,
+    minWidth: 0,
+    marginBottom: 0,
+  },
+  input: {
+    flex: 1,
+    fontSize: Platform.select({ default: 14, web: 15 }),
+    color: colors.text,
+    padding: 0,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        boxShadow: 'none',
+        borderColor: 'transparent',
+      },
+    }),
+  },
+  clearButton: {
+    padding: spacing.xs,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
+  },
+  shortcutHint: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  shortcutText: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontFamily: Platform.select({
+      web: 'monospace',
+      default: 'monospace',
+    }),
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
+  },
+  actionsDesktop: {
+    flexShrink: 0,
+    flexWrap: 'nowrap',
+  },
+  resultsInline: {
+    paddingHorizontal: 10,
+    height: Platform.select({ default: 40, web: 52 }),
+    minWidth: Platform.select({ default: 0, web: 160 }),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  primaryActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    height: Platform.select({ default: 40, web: 44 }),
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
+  },
+  primaryActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  primaryActionRowMobile: {
+    paddingTop: spacing.xs,
+    alignItems: 'flex-start',
+  },
+  actionsMobile: {
+    flexShrink: 0,
+    justifyContent: 'flex-start',
+  },
+  actionButton: {
+    width: Platform.select({ default: 46, web: 52 }),
+    height: Platform.select({ default: 46, web: 52 }),
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    position: 'relative',
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        // @ts-ignore
+        ':hover': {
+          backgroundColor: colors.primarySoft,
+          borderColor: colors.primary,
+        },
+      },
+    }),
+  },
+  actionButtonMobileWeb: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+  },
+  actionButtonActive: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+  },
+  badge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+  badgeDot: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+  clearAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    height: Platform.select({ default: 46, web: 52 }),
+    borderRadius: radii.pill,
+    backgroundColor: colors.surfaceMuted,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
+  },
+  clearAllText: {
+    fontSize: 13,
+    color: colors.textMuted,
+    fontWeight: '500',
+  },
+  resultsText: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontWeight: '500',
+  },
+}), [colors]);
 
 function StickySearchBar({
   search,
@@ -45,6 +288,7 @@ function StickySearchBar({
   onClearAll,
   activeFiltersCount,
 }: StickySearchBarProps) {
+  const colors = useThemedColors();
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const inputRef = useRef<TextInput>(null);
@@ -74,6 +318,8 @@ function StickySearchBar({
   // Mobile web specific styles (оставлено для будущего использования)
   // const isMobileWeb = Platform.OS === 'web' && webWidth > 0 && webWidth <= 1024;
 
+  const styles = useStyles(colors);
+
   return (
     <View
       style={[
@@ -91,13 +337,12 @@ function StickySearchBar({
             style={[
               styles.searchBox,
               isMobile && styles.searchBoxMobile,
-              // Убираем жёсткое ограничение ширины на десктопе, чтобы поле могло растягиваться по доступной области
             ]}
           >
           <Feather
             name="search"
             size={18}
-            color={isFocused ? palette.primary : palette.textMuted}
+            color={isFocused ? colors.primary : colors.textMuted}
           />
           <TextInput
             ref={inputRef}
@@ -106,7 +351,7 @@ function StickySearchBar({
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             placeholder={placeholder}
-            placeholderTextColor={palette.textSubtle}
+            placeholderTextColor={colors.textMuted}
             style={styles.input}
             returnKeyType="search"
             accessibilityLabel="Поиск путешествий"
@@ -123,7 +368,7 @@ function StickySearchBar({
               style={styles.clearButton}
               accessibilityLabel="Очистить поиск"
             >
-              <Feather name="x" size={16} color={palette.textMuted} />
+              <Feather name="x" size={16} color={colors.textMuted} />
             </Pressable>
           )}
           {!isMobile && Platform.OS === 'web' && (
@@ -174,7 +419,7 @@ function StickySearchBar({
               <MaterialIcons
                 name="lightbulb-outline"
                 size={20}
-                color={isRecommendationsVisible ? palette.primary : palette.textMuted}
+                color={isRecommendationsVisible ? colors.primary : colors.textMuted}
               />
             </Pressable>
           )}
@@ -195,7 +440,7 @@ function StickySearchBar({
               <Feather
                 name="filter"
                 size={16}
-                color={hasActiveFilters ? palette.primary : palette.textMuted}
+                color={hasActiveFilters ? colors.primary : colors.textMuted}
               />
               {hasActiveFilters && (
                 <View style={styles.badge} testID="filters-badge">
@@ -221,7 +466,7 @@ function StickySearchBar({
                 : {})}
               accessibilityLabel="Сбросить все фильтры и поиск"
             >
-              <Feather name="x-circle" size={14} color={palette.textMuted} />
+              <Feather name="x-circle" size={14} color={colors.textMuted} />
               {!isMobile && <Text style={styles.clearAllText}>Сбросить</Text>}
             </Pressable>
           )}
@@ -232,248 +477,6 @@ function StickySearchBar({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
-    borderRadius: radii.lg,
-    paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
-    paddingVertical: Platform.select({ default: spacing.sm, web: spacing.sm }),
-    gap: Platform.select({ default: spacing.xs, web: spacing.xs }),
-    minHeight: Platform.select({ default: 52, web: 60 }),
-    ...Platform.select({
-      web: {
-        boxShadow: 'none',
-      },
-    }),
-  },
-  containerFlush: {
-    paddingHorizontal: 0,
-  },
-  containerMobileWeb: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    minHeight: 0,
-  },
-  inner: {
-    width: '100%',
-    ...Platform.select({
-      web: {
-        maxWidth: 1120,
-        marginLeft: 'auto',
-        marginRight: 'auto',
-      } as any,
-    }),
-  },
-  innerFlush: {
-    ...Platform.select({
-      web: {
-        maxWidth: '100%',
-        marginLeft: 0,
-        marginRight: 0,
-      } as any,
-    }),
-  },
-  containerFocused: {
-    borderColor: palette.primary,
-    ...Platform.select({
-      web: {
-        boxShadow: 'none',
-      },
-    }),
-  },
-  contentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
-  },
-  contentRowMobile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'nowrap',
-  },
-  searchBox: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: palette.background,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: palette.border,
-    paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
-    paddingVertical: Platform.select({ default: spacing.xs, web: spacing.sm }),
-    gap: spacing.xs,
-    height: Platform.select({ default: 46, web: 52 }), // Чуть ниже на мобильных и единая высота на десктопе
-    ...Platform.select({
-      web: {
-        transition: 'all 0.2s ease',
-      } as any,
-    }),
-  },
-  searchBoxMobile: {
-    flex: 1,
-    minWidth: 0,
-    marginBottom: 0,
-  },
-  input: {
-    flex: 1,
-    fontSize: Platform.select({ default: 14, web: 15 }),
-    color: palette.text,
-    padding: 0,
-    ...Platform.select({
-      web: {
-        outlineStyle: 'none',
-        boxShadow: 'none',
-        borderColor: 'transparent',
-      },
-    }),
-  },
-  clearButton: {
-    padding: spacing.xs,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
-  },
-  shortcutHint: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    backgroundColor: palette.surfaceMuted,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  shortcutText: {
-    fontSize: 11,
-    color: palette.textMuted,
-    fontFamily: Platform.select({
-      web: 'monospace',
-      default: 'monospace',
-    }),
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
-  },
-  actionsDesktop: {
-    flexShrink: 0,
-    flexWrap: 'nowrap',
-  },
-  resultsInline: {
-    paddingHorizontal: 10,
-    height: Platform.select({ default: 40, web: 52 }),
-    minWidth: Platform.select({ default: 0, web: 160 }),
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.surfaceMuted,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  primaryActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    height: Platform.select({ default: 40, web: 44 }),
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: palette.primary,
-    backgroundColor: palette.surface,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
-  },
-  primaryActionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: palette.primary,
-  },
-  primaryActionRowMobile: {
-    paddingTop: spacing.xs,
-    alignItems: 'flex-start',
-  },
-  actionsMobile: {
-    flexShrink: 0,
-    justifyContent: 'flex-start',
-  },
-  actionButton: {
-    width: Platform.select({ default: 46, web: 52 }),
-    height: Platform.select({ default: 46, web: 52 }),
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.md,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
-    position: 'relative',
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: palette.primarySoft,
-          borderColor: palette.primary,
-        },
-      },
-    }),
-  },
-  actionButtonMobileWeb: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
-  },
-  actionButtonActive: {
-    backgroundColor: palette.primarySoft,
-    borderColor: palette.primary,
-  },
-  badge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: palette.primary,
-  },
-  badgeDot: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 4,
-    backgroundColor: palette.primary,
-  },
-  clearAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.sm,
-    height: Platform.select({ default: 46, web: 52 }),
-    borderRadius: radii.pill,
-    backgroundColor: palette.surfaceMuted,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
-  },
-  clearAllText: {
-    fontSize: 13,
-    color: palette.textMuted,
-    fontWeight: '500',
-  },
-  resultsText: {
-    fontSize: 11,
-    color: palette.textMuted,
-    fontWeight: '500',
-  },
-});
 
 // ✅ ОПТИМИЗАЦИЯ: Мемоизация компонента
 export default memo(StickySearchBar);

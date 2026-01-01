@@ -28,7 +28,7 @@ function Chip({ label, selected = false, count, icon, onPress, testID }: ChipPro
       borderRadius: radii.lg,
       backgroundColor: colors.surface,
       gap: spacing.xs,
-      minHeight: DESIGN_TOKENS.minTouchTarget, // ✅ УЛУЧШЕНИЕ: Минимальная высота для touch-целей
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight, // ✅ УЛУЧШЕНИЕ: Минимальная высота для touch-целей
       shadowColor: colors.text,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.04,

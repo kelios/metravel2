@@ -20,14 +20,14 @@ export const DescriptionSkeleton: React.FC = () => {
   const gap = 8;
   const reservedH = lines * lineH + Math.max(0, lines - 1) * gap;
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     descriptionContainer: {
       padding: DESIGN_TOKENS.spacing.lg,
       backgroundColor: colors.surface,
       borderRadius: 12,
       width: '100%',
     },
-  });
+  }), [colors.surface]);
 
   return (
     <View style={styles.descriptionContainer}>
@@ -53,7 +53,7 @@ export const MapSkeleton: React.FC = () => {
 export const PointListSkeleton: React.FC = () => {
   const colors = useThemedColors();
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     pointListContainer: {
       width: '100%',
       flexDirection: 'row',
@@ -74,7 +74,7 @@ export const PointListSkeleton: React.FC = () => {
     marginBottom: {
       marginBottom: 8,
     },
-  });
+  }), [colors.surface]);
 
   return (
     <View style={styles.pointListContainer}>
@@ -97,7 +97,7 @@ export const PointListSkeleton: React.FC = () => {
 export const TravelListSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) => {
   const colors = useThemedColors();
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     travelListContainer: {
       width: '100%',
       flexDirection: 'row',
@@ -115,7 +115,7 @@ export const TravelListSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) 
     marginBottom: {
       marginBottom: 8,
     },
-  });
+  }), [colors.surface]);
 
   return (
     <View style={styles.travelListContainer}>
@@ -150,14 +150,14 @@ export const SectionSkeleton: React.FC<{ lines?: number }> = ({ lines = 4 }) => 
   const gap = 8;
   const reservedH = lines * lineH + Math.max(0, lines - 1) * gap;
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     sectionContainer: {
       padding: DESIGN_TOKENS.spacing.lg,
       backgroundColor: colors.surface,
       borderRadius: 12,
       width: '100%',
     },
-  });
+  }), [colors.surface]);
 
   return (
     <View style={styles.sectionContainer}>

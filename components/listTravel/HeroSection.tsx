@@ -1,5 +1,5 @@
 // HeroSection.tsx
-import React, { useState, memo } from 'react';
+import React, { useState, memo, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,8 @@ import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { AIRY_GRADIENTS, AIRY_COLORS } from '@/constants/airyColors';
+import { useThemedColors } from '@/hooks/useTheme';
 
-const palette = DESIGN_TOKENS.colors;
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
 
@@ -31,185 +31,7 @@ interface HeroSectionProps {
   onCategoryPress?: (categoryId: string | number) => void;
 }
 
-function HeroSection({
-  title = 'Откройте мир путешествий',
-  subtitle = 'Авторские маршруты и идеи для вашего приключения',
-  stats = [
-    { icon: 'map-pin', value: '500+', label: 'маршрутов' },
-    { icon: 'globe', value: '50+', label: 'стран' },
-    { icon: 'users', value: '10k+', label: 'путешественников' },
-  ],
-  popularCategories = [],
-  onCategoryPress,
-}: HeroSectionProps) {
-  const { isPhone } = useResponsive();
-  const isMobile = isPhone;
-  const [isExpanded, setIsExpanded] = useState(false); // По умолчанию свернут, чтобы не отвлекать от путешествий
-  
-  // На десктопе тоже можно свернуть для компактности
-  const showCollapseButton = true; // Показываем кнопку сворачивания всегда
-
-  return (
-    <View style={styles.container}>
-      {Platform.OS === 'web' ? (
-        <View
-          style={[
-            styles.gradientContainer,
-            Platform.OS === 'web' ? { backgroundImage: AIRY_GRADIENTS.primary } as any : undefined,
-          ]}
-        >
-          <View style={styles.content}>
-            <View style={styles.textSection}>
-              {showCollapseButton && (
-                <Pressable
-                  onPress={() => setIsExpanded(!isExpanded)}
-                  style={styles.expandButton}
-                  accessibilityRole="button"
-                  accessibilityLabel={isExpanded ? "Свернуть" : "Развернуть"}
-                >
-                  <Text style={styles.expandButtonText}>
-                    {isExpanded ? 'Свернуть' : 'О нас'}
-                  </Text>
-                  <Feather
-                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={14}
-                    color={palette.primary}
-                  />
-                </Pressable>
-              )}
-
-              {isExpanded && (
-                <>
-              <Text
-                style={[styles.title, isMobile && styles.titleMobile]}
-                accessibilityRole="header"
-              >
-                {title}
-              </Text>
-              <Text
-                style={[styles.subtitle, isMobile && styles.subtitleMobile]}
-              >
-                {subtitle}
-              </Text>
-                </>
-              )}
-
-              {isExpanded && (
-              <View style={[styles.statsContainer, isMobile && styles.statsContainerMobile]}>
-                {stats.map((stat, index) => (
-                  <View key={index} style={styles.statItem}>
-                    <Feather
-                      name={stat.icon as any}
-                      size={isMobile ? 18 : 20}
-                      color={palette.primary}
-                    />
-                    <View style={styles.statText}>
-                      <Text style={styles.statValue}>{stat.value}</Text>
-                      <Text style={styles.statLabel}>{stat.label}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-              )}
-            </View>
-          </View>
-        </View>
-      ) : (
-        <LinearGradient
-          colors={[AIRY_COLORS.primaryLight, AIRY_COLORS.background]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradientContainer}
-        >
-          <View style={styles.content}>
-            <View style={styles.textSection}>
-              {showCollapseButton && (
-                <Pressable
-                  onPress={() => setIsExpanded(!isExpanded)}
-                  style={styles.expandButton}
-                  accessibilityRole="button"
-                  accessibilityLabel={isExpanded ? "Свернуть" : "Развернуть"}
-                >
-                  <Text style={styles.expandButtonText}>
-                    {isExpanded ? 'Свернуть' : 'О нас'}
-                  </Text>
-                  <Feather
-                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={14}
-                    color={palette.primary}
-                  />
-                </Pressable>
-              )}
-
-              {isExpanded && (
-                <>
-              <Text
-                style={[styles.title, isMobile && styles.titleMobile]}
-                accessibilityRole="header"
-              >
-                {title}
-              </Text>
-              <Text
-                style={[styles.subtitle, isMobile && styles.subtitleMobile]}
-              >
-                {subtitle}
-              </Text>
-                </>
-              )}
-
-              {isExpanded && (
-              <View style={[styles.statsContainer, isMobile && styles.statsContainerMobile]}>
-                {stats.map((stat, index) => (
-                  <View key={index} style={styles.statItem}>
-                    <Feather
-                      name={stat.icon as any}
-                      size={isMobile ? 18 : 20}
-                      color={palette.primary}
-                    />
-                    <View style={styles.statText}>
-                      <Text style={styles.statValue}>{stat.value}</Text>
-                      <Text style={styles.statLabel}>{stat.label}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-              )}
-            </View>
-          </View>
-        </LinearGradient>
-      )}
-
-      {popularCategories.length > 0 && isExpanded && (
-        <View style={styles.categoriesSection}>
-          <Text style={styles.categoriesLabel}>Популярные категории:</Text>
-          <View style={styles.categoriesContainer}>
-            {popularCategories.slice(0, 4).map((category) => (
-              <Pressable
-                key={category.id}
-                style={styles.categoryChip}
-                onPress={() => onCategoryPress?.(category.id)}
-                accessibilityRole="button"
-                accessibilityLabel={`Категория ${category.name}`}
-              >
-                {category.icon && (
-                  <Feather
-                    name={category.icon as any}
-                    size={14}
-                    color={palette.primary}
-                    style={styles.categoryIcon}
-                  />
-                )}
-                <Text style={styles.categoryText}>{category.name}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      )}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
+const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => StyleSheet.create({
   container: {
     width: '100%',
     marginBottom: spacing.xs,
@@ -220,8 +42,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       web: {
-        backgroundColor: AIRY_GRADIENTS.primary.split(' ')[0] || '#6b8e7f', // ✅ FIX: Заменено background на backgroundColor
-        backgroundImage: AIRY_GRADIENTS.primary, // Для веба
+        backgroundColor: AIRY_GRADIENTS.primary.split(' ')[0] || '#6b8e7f',
+        backgroundImage: AIRY_GRADIENTS.primary,
       } as any,
     }),
   },
@@ -253,7 +75,7 @@ const styles = StyleSheet.create({
       web: 56,
     }),
     fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-    color: palette.text,
+    color: colors.text,
     ...Platform.select({
       web: {
         fontFamily: DESIGN_TOKENS.typography.fontFamily,
@@ -274,7 +96,7 @@ const styles = StyleSheet.create({
       web: 28,
     }),
     fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
-    color: palette.textMuted,
+    color: colors.textMuted,
     ...Platform.select({
       web: {
         fontFamily: DESIGN_TOKENS.typography.fontFamily,
@@ -314,7 +136,7 @@ const styles = StyleSheet.create({
       web: 24,
     }),
     fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-    color: palette.text,
+    color: colors.text,
     ...Platform.select({
       web: {
         fontFamily: DESIGN_TOKENS.typography.fontFamily,
@@ -327,7 +149,7 @@ const styles = StyleSheet.create({
       web: 14,
     }),
     fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
-    color: palette.textMuted,
+    color: colors.textMuted,
     ...Platform.select({
       web: {
         fontFamily: DESIGN_TOKENS.typography.fontFamily,
@@ -351,7 +173,7 @@ const styles = StyleSheet.create({
       web: 14,
     }),
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    color: palette.textMuted,
+    color: colors.textMuted,
     ...Platform.select({
       web: {
         fontFamily: DESIGN_TOKENS.typography.fontFamily,
@@ -369,10 +191,10 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    backgroundColor: palette.surface,
+    backgroundColor: colors.surface,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: colors.border,
     ...Platform.select({
       web: {
         cursor: 'pointer',
@@ -389,7 +211,7 @@ const styles = StyleSheet.create({
       web: 14,
     }),
     fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-    color: palette.text,
+    color: colors.text,
     ...Platform.select({
       web: {
         fontFamily: DESIGN_TOKENS.typography.fontFamily,
@@ -415,8 +237,189 @@ const styles = StyleSheet.create({
   expandButtonText: {
     fontSize: 12,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    color: palette.primary,
+    color: colors.primary,
   },
-});
+}), [colors]);
+
+function HeroSection({
+  title = 'Откройте мир путешествий',
+  subtitle = 'Авторские маршруты и идеи для вашего приключения',
+  stats = [
+    { icon: 'map-pin', value: '500+', label: 'маршрутов' },
+    { icon: 'globe', value: '50+', label: 'стран' },
+    { icon: 'users', value: '10k+', label: 'путешественников' },
+  ],
+  popularCategories = [],
+  onCategoryPress,
+}: HeroSectionProps) {
+  const colors = useThemedColors();
+  const { isPhone } = useResponsive();
+  const isMobile = isPhone;
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const showCollapseButton = true;
+
+  const styles = useStyles(colors);
+
+  return (
+    <View style={styles.container}>
+      {Platform.OS === 'web' ? (
+        <View
+          style={[
+            styles.gradientContainer,
+            Platform.OS === 'web' ? { backgroundImage: AIRY_GRADIENTS.primary } as any : undefined,
+          ]}
+        >
+          <View style={styles.content}>
+            <View style={styles.textSection}>
+              {showCollapseButton && (
+                <Pressable
+                  onPress={() => setIsExpanded(!isExpanded)}
+                  style={[styles.expandButton, globalFocusStyles.focusable]}
+                  accessibilityRole="button"
+                  accessibilityLabel={isExpanded ? "Свернуть" : "Развернуть"}
+                >
+                  <Text style={styles.expandButtonText}>
+                    {isExpanded ? 'Свернуть' : 'О нас'}
+                  </Text>
+                  <Feather
+                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                    size={14}
+                    color={colors.primary}
+                  />
+                </Pressable>
+              )}
+
+              {isExpanded && (
+                <>
+              <Text
+                style={[styles.title, isMobile && styles.titleMobile]}
+                accessibilityRole="header"
+              >
+                {title}
+              </Text>
+              <Text
+                style={[styles.subtitle, isMobile && styles.subtitleMobile]}
+              >
+                {subtitle}
+              </Text>
+                </>
+              )}
+
+              {isExpanded && (
+              <View style={[styles.statsContainer, isMobile && styles.statsContainerMobile]}>
+                {stats.map((stat, index) => (
+                  <View key={index} style={styles.statItem}>
+                    <Feather
+                      name={stat.icon as any}
+                      size={isMobile ? 18 : 20}
+                      color={colors.primary}
+                    />
+                    <View style={styles.statText}>
+                      <Text style={styles.statValue}>{stat.value}</Text>
+                      <Text style={styles.statLabel}>{stat.label}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+              )}
+            </View>
+          </View>
+        </View>
+      ) : (
+        <LinearGradient
+          colors={[AIRY_COLORS.primaryLight, AIRY_COLORS.background]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.gradientContainer}
+        >
+          <View style={styles.content}>
+            <View style={styles.textSection}>
+              {showCollapseButton && (
+                <Pressable
+                  onPress={() => setIsExpanded(!isExpanded)}
+                  style={[styles.expandButton, globalFocusStyles.focusable]}
+                  accessibilityRole="button"
+                  accessibilityLabel={isExpanded ? "Свернуть" : "Развернуть"}
+                >
+                  <Text style={styles.expandButtonText}>
+                    {isExpanded ? 'Свернуть' : 'О нас'}
+                  </Text>
+                  <Feather
+                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                    size={14}
+                    color={colors.primary}
+                  />
+                </Pressable>
+              )}
+
+              {isExpanded && (
+                <>
+              <Text
+                style={[styles.title, isMobile && styles.titleMobile]}
+                accessibilityRole="header"
+              >
+                {title}
+              </Text>
+              <Text
+                style={[styles.subtitle, isMobile && styles.subtitleMobile]}
+              >
+                {subtitle}
+              </Text>
+                </>
+              )}
+
+              {isExpanded && (
+              <View style={[styles.statsContainer, isMobile && styles.statsContainerMobile]}>
+                {stats.map((stat, index) => (
+                  <View key={index} style={styles.statItem}>
+                    <Feather
+                      name={stat.icon as any}
+                      size={isMobile ? 18 : 20}
+                      color={colors.primary}
+                    />
+                    <View style={styles.statText}>
+                      <Text style={styles.statValue}>{stat.value}</Text>
+                      <Text style={styles.statLabel}>{stat.label}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+              )}
+            </View>
+          </View>
+        </LinearGradient>
+      )}
+
+      {popularCategories.length > 0 && isExpanded && (
+        <View style={styles.categoriesSection}>
+          <Text style={styles.categoriesLabel}>Популярные категории:</Text>
+          <View style={styles.categoriesContainer}>
+            {popularCategories.slice(0, 4).map((category) => (
+              <Pressable
+                key={category.id}
+                style={[styles.categoryChip, globalFocusStyles.focusable]}
+                onPress={() => onCategoryPress?.(category.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`Категория ${category.name}`}
+              >
+                {category.icon && (
+                  <Feather
+                    name={category.icon as any}
+                    size={14}
+                    color={colors.primary}
+                    style={styles.categoryIcon}
+                  />
+                )}
+                <Text style={styles.categoryText}>{category.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
 
 export default memo(HeroSection);

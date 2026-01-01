@@ -8,6 +8,7 @@ import TextInputComponent from '@/components/TextInputComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { validateField, STEP_VALIDATION_RULES } from '@/utils/travelWizardValidation';
 import { CharacterCounter, FieldValidationMessage } from './ValidationFeedback';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface ValidatedTextInputProps {
   label: string;
@@ -36,6 +37,8 @@ export const ValidatedTextInput: React.FC<ValidatedTextInputProps> = ({
   showCounter = true,
   nativeID,
 }) => {
+  const colors = useThemedColors();
+
   const rules = useMemo(() => {
     const stepRules = STEP_VALIDATION_RULES[step];
     return stepRules?.fields?.[fieldName];
@@ -47,6 +50,44 @@ export const ValidatedTextInput: React.FC<ValidatedTextInputProps> = ({
 
   const hasError = !validation.isValid;
   const showValidation = value.length > 0 || hasError;
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      marginBottom: DESIGN_TOKENS.spacing.md,
+    },
+    labelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 6,
+    },
+    label: {
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    required: {
+      color: colors.danger,
+      fontWeight: '700',
+    },
+    hint: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      color: colors.textMuted,
+      marginBottom: 8,
+      lineHeight: 18,
+    },
+    inputWrapper: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: DESIGN_TOKENS.radii.md,
+    },
+    inputError: {
+      borderColor: colors.dangerLight,
+      borderWidth: 2,
+    },
+    inputSuccess: {
+      borderColor: colors.successLight,
+    },
+  }), [colors]);
 
   return (
     <View style={styles.container} nativeID={nativeID}>
@@ -81,40 +122,3 @@ export const ValidatedTextInput: React.FC<ValidatedTextInputProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: DESIGN_TOKENS.spacing.md,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  label: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
-  },
-  required: {
-    color: DESIGN_TOKENS.colors.dangerDark,
-    fontWeight: '700',
-  },
-  hint: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    color: DESIGN_TOKENS.colors.textMuted,
-    marginBottom: 8,
-    lineHeight: 18,
-  },
-  inputWrapper: {
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-    borderRadius: DESIGN_TOKENS.radii.md,
-  },
-  inputError: {
-    borderColor: DESIGN_TOKENS.colors.dangerLight,
-    borderWidth: 2,
-  },
-  inputSuccess: {
-    borderColor: DESIGN_TOKENS.colors.successLight,
-  },
-});

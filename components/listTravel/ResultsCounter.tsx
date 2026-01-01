@@ -1,9 +1,10 @@
 // ResultsCounter.tsx - Компонент для отображения количества результатов поиска
-import React, { memo } from 'react';
+// ✅ РЕДИЗАЙН: Поддержка темной темы с useThemedColors
+import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
-const palette = DESIGN_TOKENS.colors;
 const spacing = DESIGN_TOKENS.spacing;
 
 interface ResultsCounterProps {
@@ -19,10 +20,51 @@ function ResultsCounter({
   query,
   hasFilters = false,
 }: ResultsCounterProps) {
+  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Динамическая поддержка тем
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: Platform.select({
+        default: spacing.md,
+        web: 0,
+      }),
+    },
+    text: {
+      fontSize: Platform.select({
+        default: DESIGN_TOKENS.typography.sizes.sm,
+        web: DESIGN_TOKENS.typography.sizes.md,
+      }),
+      fontWeight: Number(DESIGN_TOKENS.typography.weights.medium) as any,
+      color: colors.textMuted,
+      ...Platform.select({
+        web: {
+          fontFamily: DESIGN_TOKENS.typography.fontFamily,
+        },
+      }),
+    },
+    loadingText: {
+      fontSize: Platform.select({
+        default: DESIGN_TOKENS.typography.sizes.sm,
+        web: DESIGN_TOKENS.typography.sizes.md,
+      }),
+      fontWeight: Number(DESIGN_TOKENS.typography.weights.regular) as any,
+      color: colors.textMuted,
+      ...Platform.select({
+        web: {
+          fontFamily: DESIGN_TOKENS.typography.fontFamily,
+        },
+      }),
+    },
+  }), [colors]);
+
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="small" color={palette.primary} />
+        <ActivityIndicator size="small" color={colors.primary} />
         <Text style={styles.loadingText}>Загрузка...</Text>
       </View>
     );
@@ -76,44 +118,4 @@ function ResultsCounter({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: Platform.select({
-      default: spacing.md,
-      web: 0,
-    }),
-  },
-  text: {
-    fontSize: Platform.select({
-      default: 13,
-      web: 14,
-    }),
-    fontWeight: Number(DESIGN_TOKENS.typography.weights.medium) as any,
-    color: palette.textMuted,
-    ...Platform.select({
-      web: {
-        fontFamily: DESIGN_TOKENS.typography.fontFamily,
-      },
-    }),
-  },
-  loadingText: {
-    fontSize: Platform.select({
-      default: 13,
-      web: 14,
-    }),
-    fontWeight: Number(DESIGN_TOKENS.typography.weights.regular) as any,
-    color: palette.textMuted,
-    ...Platform.select({
-      web: {
-        fontFamily: DESIGN_TOKENS.typography.fontFamily,
-      },
-    }),
-  },
-});
-
 export default memo(ResultsCounter);
-

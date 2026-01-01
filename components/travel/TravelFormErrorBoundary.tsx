@@ -1,6 +1,7 @@
 import React, { Component, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface Props {
   children: ReactNode;
@@ -117,66 +118,66 @@ class TravelFormErrorBoundary extends Component<Props, State> {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: DESIGN_TOKENS.spacing.xl,
   },
   title: {
-    fontSize: 24,
+    fontSize: DESIGN_TOKENS.typography.sizes.xl,
     fontWeight: 'bold',
-    color: '#333',
+    color: DESIGN_TOKENS.colors.text,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: DESIGN_TOKENS.spacing.md,
   },
   message: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    color: DESIGN_TOKENS.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 24,
+    marginBottom: DESIGN_TOKENS.spacing.xl,
   },
   errorDetails: {
-    backgroundColor: '#f5f5f5',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 24,
+    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
+    padding: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    marginBottom: DESIGN_TOKENS.spacing.xl,
     width: '100%',
     maxHeight: 200,
   },
   errorTitle: {
-    fontSize: 14,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    color: DESIGN_TOKENS.colors.text,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
   },
   errorText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    color: DESIGN_TOKENS.colors.textMuted,
     fontFamily: 'monospace',
   },
   actions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: DESIGN_TOKENS.spacing.md,
   },
   button: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    paddingVertical: DESIGN_TOKENS.spacing.md,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
+    borderRadius: DESIGN_TOKENS.radii.md,
     minWidth: 120,
   },
   retryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: DESIGN_TOKENS.colors.primary,
   },
   refreshButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: DESIGN_TOKENS.colors.success,
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
     textAlign: 'center',
   },

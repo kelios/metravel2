@@ -1,7 +1,8 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 export interface TravelTemplate {
   id: string;
@@ -147,6 +148,7 @@ interface TravelTemplatesProps {
 }
 
 const TravelTemplates = ({ onSelectTemplate, onClose }: TravelTemplatesProps) => {
+  const colors = useThemedColors();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const categories = [
@@ -162,16 +164,179 @@ const TravelTemplates = ({ onSelectTemplate, onClose }: TravelTemplatesProps) =>
     ? TEMPLATES.filter((t) => t.category === selectedCategory)
     : TEMPLATES;
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    closeButton: {
+      padding: 4,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: colors.textMuted,
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 16,
+    },
+    categories: {
+      paddingHorizontal: 20,
+      paddingBottom: 16,
+      gap: 8,
+    },
+    categoryChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    categoryChipActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    categoryIcon: {
+      fontSize: 16,
+    },
+    categoryText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    categoryTextActive: {
+      color: colors.surface,
+    },
+    templatesList: {
+      flex: 1,
+    },
+    templatesContent: {
+      padding: 20,
+      gap: 16,
+    },
+    templateCard: {
+      backgroundColor: colors.surface,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+      ...Platform.select({
+        web: {
+          boxShadow: colors.isDark
+            ? '0 2px 8px rgba(0, 0, 0, 0.4)'
+            : '0 2px 8px rgba(0, 0, 0, 0.08)',
+        } as any,
+      }),
+    },
+    templateHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      padding: 16,
+    },
+    templateIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    templateIconText: {
+      fontSize: 24,
+    },
+    templateInfo: {
+      flex: 1,
+      gap: 4,
+    },
+    templateName: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    templateDescription: {
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 18,
+    },
+    templateDetails: {
+      padding: 16,
+      paddingTop: 0,
+      gap: 16,
+    },
+    templateSection: {
+      gap: 12,
+    },
+    templateSectionTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    highlightsList: {
+      gap: 8,
+    },
+    highlightItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    highlightText: {
+      fontSize: 14,
+      color: colors.text,
+    },
+    useTemplateButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: colors.primary,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+        },
+      }),
+    },
+    useTemplateButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.surface,
+    },
+  }), [colors]);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Feather name="file-text" size={24} color={DESIGN_TOKENS.colors.primary} />
+          <Feather name="file-text" size={24} color={colors.primary} />
           <Text style={styles.headerTitle}>Шаблоны статей</Text>
         </View>
         {onClose && (
           <Pressable onPress={onClose} style={styles.closeButton}>
-            <Feather name="x" size={24} color={DESIGN_TOKENS.colors.text} />
+            <Feather name="x" size={24} color={colors.text} />
           </Pressable>
         )}
       </View>
@@ -232,49 +397,142 @@ interface TemplateCardProps {
 }
 
 const TemplateCard = memo(({ template, onSelect }: TemplateCardProps) => {
+  const colors = useThemedColors();
   const [expanded, setExpanded] = useState(false);
 
+  const cardStyles = useMemo(() => StyleSheet.create({
+    templateCard: {
+      backgroundColor: colors.surface,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+      ...Platform.select({
+        web: {
+          boxShadow: colors.isDark
+            ? '0 2px 8px rgba(0, 0, 0, 0.4)'
+            : '0 2px 8px rgba(0, 0, 0, 0.08)',
+        } as any,
+      }),
+    },
+    templateHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      padding: 16,
+    },
+    templateIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    templateIconText: {
+      fontSize: 24,
+    },
+    templateInfo: {
+      flex: 1,
+      gap: 4,
+    },
+    templateName: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    templateDescription: {
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 18,
+    },
+    templateDetails: {
+      padding: 16,
+      paddingTop: 0,
+      gap: 16,
+    },
+    templateSection: {
+      gap: 12,
+    },
+    templateSectionTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    highlightsList: {
+      gap: 8,
+    },
+    highlightItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    highlightText: {
+      fontSize: 14,
+      color: colors.text,
+    },
+    useTemplateButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: colors.primary,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+        },
+      }),
+    },
+    useTemplateButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.surface,
+    },
+  }), [colors]);
+
   return (
-    <View style={styles.templateCard}>
+    <View style={cardStyles.templateCard}>
       <Pressable
-        style={styles.templateHeader}
+        style={cardStyles.templateHeader}
         onPress={() => setExpanded(!expanded)}
       >
-        <View style={[styles.templateIcon, { backgroundColor: template.color }]}>
-          <Text style={styles.templateIconText}>{template.icon}</Text>
+        <View style={[cardStyles.templateIcon, { backgroundColor: template.color }]}>
+          <Text style={cardStyles.templateIconText}>{template.icon}</Text>
         </View>
 
-        <View style={styles.templateInfo}>
-          <Text style={styles.templateName}>{template.name}</Text>
-          <Text style={styles.templateDescription}>{template.description}</Text>
+        <View style={cardStyles.templateInfo}>
+          <Text style={cardStyles.templateName}>{template.name}</Text>
+          <Text style={cardStyles.templateDescription}>{template.description}</Text>
         </View>
 
         <Feather
           name={expanded ? 'chevron-up' : 'chevron-down'}
           size={20}
-          color={DESIGN_TOKENS.colors.textMuted}
+          color={colors.textMuted}
         />
       </Pressable>
 
       {expanded && (
-        <View style={styles.templateDetails}>
-          <View style={styles.templateSection}>
-            <Text style={styles.templateSectionTitle}>Что включает:</Text>
+        <View style={cardStyles.templateDetails}>
+          <View style={cardStyles.templateSection}>
+            <Text style={cardStyles.templateSectionTitle}>Что включает:</Text>
             {template.fields.highlights && (
-              <View style={styles.highlightsList}>
+              <View style={cardStyles.highlightsList}>
                 {template.fields.highlights.map((highlight, index) => (
-                  <View key={index} style={styles.highlightItem}>
-                    <Feather name="check" size={14} color={DESIGN_TOKENS.colors.primary} />
-                    <Text style={styles.highlightText}>{highlight}</Text>
+                  <View key={index} style={cardStyles.highlightItem}>
+                    <Feather name="check" size={14} color={colors.primary} />
+                    <Text style={cardStyles.highlightText}>{highlight}</Text>
                   </View>
                 ))}
               </View>
             )}
           </View>
 
-          <Pressable style={styles.useTemplateButton} onPress={onSelect}>
-            <Feather name="edit-3" size={18} color="#fff" />
-            <Text style={styles.useTemplateButtonText}>Использовать шаблон</Text>
+          <Pressable style={cardStyles.useTemplateButton} onPress={onSelect}>
+            <Feather name="edit-3" size={18} color={colors.surface} />
+            <Text style={cardStyles.useTemplateButtonText}>Использовать шаблон</Text>
           </Pressable>
         </View>
       )}
@@ -282,165 +540,5 @@ const TemplateCard = memo(({ template, onSelect }: TemplateCardProps) => {
   );
 });
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: DESIGN_TOKENS.colors.border,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
-  },
-  categories: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    gap: 8,
-  },
-  categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-  },
-  categoryChipActive: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    borderColor: DESIGN_TOKENS.colors.primary,
-  },
-  categoryIcon: {
-    fontSize: 16,
-  },
-  categoryText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
-  },
-  categoryTextActive: {
-    color: '#fff',
-  },
-  templatesList: {
-    flex: 1,
-  },
-  templatesContent: {
-    padding: 20,
-    gap: 16,
-  },
-  templateCard: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-    overflow: 'hidden',
-    ...Platform.select({
-      web: {
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-      },
-    }),
-  },
-  templateHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-  },
-  templateIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  templateIconText: {
-    fontSize: 24,
-  },
-  templateInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  templateName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
-  },
-  templateDescription: {
-    fontSize: 13,
-    color: DESIGN_TOKENS.colors.textMuted,
-    lineHeight: 18,
-  },
-  templateDetails: {
-    padding: 16,
-    paddingTop: 0,
-    gap: 16,
-  },
-  templateSection: {
-    gap: 12,
-  },
-  templateSectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
-  },
-  highlightsList: {
-    gap: 8,
-  },
-  highlightItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  highlightText: {
-    fontSize: 14,
-    color: DESIGN_TOKENS.colors.text,
-  },
-  useTemplateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
-  },
-  useTemplateButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#fff',
-  },
-});
 
 export default memo(TravelTemplates);

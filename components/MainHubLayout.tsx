@@ -1,9 +1,11 @@
 // components/MainHubLayout.tsx
 // ✅ РЕДИЗАЙН: Обновленный layout для главной страницы
+// ✅ РЕДИЗАЙН: Поддержка темной темы с useThemedColors
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface MainHubLayoutProps {
   children: React.ReactNode;
@@ -11,13 +13,47 @@ interface MainHubLayoutProps {
   maxWidth?: number;
 }
 
-const palette = DESIGN_TOKENS.colors;
-
 export default function MainHubLayout({
   children,
   sidebar,
   maxWidth = 1400,
 }: MainHubLayoutProps) {
+  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Динамическая поддержка тем
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      flex: 1,
+      flexDirection: 'row',
+      width: '100%',
+      ...Platform.select({
+        web: {
+          paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+        },
+        default: {
+          paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        },
+      }),
+    },
+    sidebar: {
+      width: 260,
+      paddingRight: DESIGN_TOKENS.spacing.lg,
+      paddingTop: DESIGN_TOKENS.spacing.sm,
+    },
+    main: {
+      flex: 1,
+      padding: DESIGN_TOKENS.spacing.md,
+      ...Platform.select({
+        web: {
+          paddingLeft: DESIGN_TOKENS.spacing.lg,
+        },
+      }),
+    },
+  }), [colors]);
+
   const webContentStyle: any =
     Platform.OS === 'web' ? { marginHorizontal: 'auto' } : undefined;
 
@@ -48,38 +84,4 @@ export default function MainHubLayout({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: palette.background,
-  },
-  content: {
-    flex: 1,
-    flexDirection: 'row',
-    width: '100%',
-    ...Platform.select({
-      web: {
-        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-      },
-      default: {
-        paddingHorizontal: DESIGN_TOKENS.spacing.md,
-      },
-    }),
-  },
-  sidebar: {
-    width: 260,
-    paddingRight: DESIGN_TOKENS.spacing.lg,
-    paddingTop: DESIGN_TOKENS.spacing.sm,
-  },
-  main: {
-    flex: 1,
-    padding: DESIGN_TOKENS.spacing.md,
-    ...Platform.select({
-      web: {
-        paddingLeft: DESIGN_TOKENS.spacing.lg,
-      },
-    }),
-  },
-});
 
