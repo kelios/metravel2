@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, Platform, Text, ActivityIndicator } from 'react-native';
 import { useLazyMap } from '@/hooks/useLazyMap';
 import { useThemedColors } from '@/hooks/useTheme';
+import MapErrorBoundary from './MapErrorBoundary';
+import { MapSkeleton } from '@/components/SkeletonLoader';
 
 type LatLng = { latitude: number; longitude: number };
 
@@ -20,8 +22,17 @@ interface MapPanelProps {
 }
 
 /** Плейсхолдер для нативных платформ или во время загрузки карты */
-function Placeholder({ text = 'Карта доступна только в браузере' }: { text?: string }) {
+function Placeholder({ text = 'Карта доступна только в браузере', showSkeleton = false }: { text?: string; showSkeleton?: boolean }) {
     const themeColors = useThemedColors();
+
+    if (showSkeleton) {
+        return (
+            <View style={[styles.placeholder, { backgroundColor: themeColors.surface }]}>
+                <MapSkeleton />
+            </View>
+        );
+    }
+
     return (
         <View style={[styles.placeholder, { backgroundColor: themeColors.surface }]}>
             <ActivityIndicator size="large" color={themeColors.primary} />
@@ -87,13 +98,13 @@ const MapPanel: React.FC<MapPanelProps> = ({
                 style={[styles.mapContainer, { backgroundColor: themeColors.surface }]}
                 ref={setElementRef as any}
             >
-                <Placeholder text="Карта загрузится при прокрутке…" />
+                <Placeholder text="Карта загрузится при прокрутке…" showSkeleton={true} />
             </View>
         );
     }
 
     if (loading || !WebMap) {
-        return <Placeholder text="Инициализация карты…" />;
+        return <Placeholder text="Инициализация карты…" showSkeleton={true} />;
     }
 
     return (
@@ -101,19 +112,21 @@ const MapPanel: React.FC<MapPanelProps> = ({
             style={[styles.mapContainer, { backgroundColor: themeColors.surface }]}
             ref={setElementRef as any}
         >
-            <WebMap
-                travel={travelProp}
-                coordinates={coordinates}
-                routePoints={routePoints}
-                placesAlongRoute={placesAlongRoute}
-                mode={mode}
-                setRoutePoints={setRoutePoints}
-                onMapClick={onMapClick}
-                transportMode={transportMode}
-                setRouteDistance={setRouteDistance}
-                setFullRouteCoords={setFullRouteCoords}
-                radius={radius}
-            />
+            <MapErrorBoundary>
+                <WebMap
+                    travel={travelProp}
+                    coordinates={coordinates}
+                    routePoints={routePoints}
+                    placesAlongRoute={placesAlongRoute}
+                    mode={mode}
+                    setRoutePoints={setRoutePoints}
+                    onMapClick={onMapClick}
+                    transportMode={transportMode}
+                    setRouteDistance={setRouteDistance}
+                    setFullRouteCoords={setFullRouteCoords}
+                    radius={radius}
+                />
+            </MapErrorBoundary>
         </View>
     );
 };

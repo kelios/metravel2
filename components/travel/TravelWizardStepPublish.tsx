@@ -734,8 +734,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderWidth: 1,
         borderColor: colors.border,
         ...(Platform.OS === 'web'
-            ? ({ boxShadow: colors.boxShadows.card } as any)
-            : (colors.shadows.light as any)),
+            ? ({ boxShadow: (colors.boxShadows as any)?.card ?? DESIGN_TOKENS.shadows.card } as any)
+            : ((colors.shadows as any)?.light ?? DESIGN_TOKENS.shadowsNative.light)),
     },
     cardTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,

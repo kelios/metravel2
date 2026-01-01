@@ -44,7 +44,8 @@ interface Props {
 }
 
 const MOBILE_BREAKPOINT = METRICS.breakpoints.tablet || 768;
-const CLUSTER_THRESHOLD = 50;
+// ✅ ОПТИМИЗАЦИЯ: Снижен порог кластеризации для улучшения производительности
+const CLUSTER_THRESHOLD = 25;
 const CLUSTER_GRID = 0.045; // ~5 км ячейка на широте 55-60
 const CLUSTER_EXPAND_ZOOM = 15;
 

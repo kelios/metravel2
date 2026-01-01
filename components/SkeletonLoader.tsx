@@ -1,61 +1,60 @@
+// SkeletonLoader.tsx - компонент для skeleton loading состояний
 import React from 'react';
-import { View, StyleSheet, Platform, ViewStyle, StyleProp } from 'react-native';
-import { LIGHT_MODERN_DESIGN_TOKENS as TOKENS } from '@/constants/lightModernDesignTokens';
-import { BREAKPOINTS, TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_HEIGHT, TRAVEL_CARD_WEB_MOBILE_HEIGHT, TRAVEL_CARD_MIN_WIDTH, TRAVEL_CARD_MAX_WIDTH } from '@/components/listTravel/utils/listTravelConstants';
-import { useResponsive } from '@/hooks/useResponsive';
+import { View, StyleSheet, Animated, Easing } from 'react-native';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface SkeletonLoaderProps {
-  testID?: string;
   width?: number | string;
-  height?: number | string;
+  height?: number;
   borderRadius?: number;
   style?: any;
 }
 
-type SkeletonVariant = 'detailed' | 'reserve';
-
-/**
- * Компонент skeleton loader для улучшения воспринимаемой производительности
- * Показывает placeholder во время загрузки вместо спиннера
- * ✅ УЛУЧШЕНИЕ: Мягкие оттенки с градиентом для лучшей выразительности
- */
 export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
-  testID,
   width = '100%',
   height = 20,
-  borderRadius = 4,
+  borderRadius = 8,
   style,
 }) => {
-  const [reduceMotion, setReduceMotion] = React.useState(false);
+  const colors = useThemedColors();
+  const animatedValue = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(animatedValue, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(animatedValue, {
+          toValue: 0,
+          duration: 1000,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [animatedValue]);
 
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-    const update = () => setReduceMotion(!!media.matches);
-    update();
-
-    if (typeof media.addEventListener === 'function') {
-      media.addEventListener('change', update);
-      return () => media.removeEventListener('change', update);
-    }
-
-    media.addListener(update);
-    return () => media.removeListener(update);
-  }, []);
+  const opacity = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.7],
+  });
 
   return (
-    <View
-      testID={testID}
-      {...(Platform.OS === 'web' && !reduceMotion ? { className: 'skeleton-pulse' } : {})}
+    <Animated.View
       style={[
         styles.skeleton,
         {
           width,
           height,
           borderRadius,
+          backgroundColor: colors.surfaceLight,
+          opacity,
         },
         style,
       ]}
@@ -63,228 +62,78 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   );
 };
 
-/**
- * Skeleton для карточки путешествия
- * ✅ ИСПРАВЛЕНИЕ: Высоты должны совпадать с реальными карточками
- */
-export const TravelCardSkeleton: React.FC = () => {
-  const { width } = useResponsive();
+interface MapSkeletonProps {
+  count?: number;
+}
 
-  // ✅ FIX: Унифицированная высота изображения с реальными карточками и учетом маленьких экранов
-  const imageHeight = TRAVEL_CARD_IMAGE_HEIGHT;
-  const titleHeight = Platform.select({ default: 14, web: 16 });
-  const metaHeight = Platform.select({ default: 11, web: 12 });
-
-  const cardHeight =
-    Platform.OS === 'web'
-      ? width > 0 && width < BREAKPOINTS.MOBILE
-        ? TRAVEL_CARD_WEB_MOBILE_HEIGHT
-        : TRAVEL_CARD_WEB_HEIGHT
-      : undefined;
-  
+export const MapSkeleton: React.FC<MapSkeletonProps> = () => {
   return (
-    <View testID="travel-card-skeleton" style={[styles.card, cardHeight != null ? ({ height: cardHeight } as any) : null]}>
-      <SkeletonLoader
-        testID="travel-card-skeleton-image"
-        width="100%"
-        height={imageHeight}
-        borderRadius={12}
-        style={styles.image}
-      />
-      <View style={styles.content}>
-        <SkeletonLoader width="90%" height={titleHeight} style={styles.marginBottom} />
-        <SkeletonLoader width="75%" height={titleHeight} style={styles.marginBottomLarge} />
-        <View style={styles.metaRow}>
-          <SkeletonLoader width="30%" height={metaHeight} />
-          <SkeletonLoader width="25%" height={metaHeight} />
+    <View style={styles.mapSkeletonContainer}>
+      <SkeletonLoader width="100%" height={300} borderRadius={16} />
+    </View>
+  );
+};
+
+export const TravelListSkeleton: React.FC<MapSkeletonProps> = ({ count = 3 }) => {
+  return (
+    <View style={styles.listSkeletonContainer}>
+      {Array.from({ length: count }).map((_, index) => (
+        <View key={index} style={styles.travelItemSkeleton}>
+          <SkeletonLoader width={80} height={80} borderRadius={12} />
+          <View style={styles.travelItemContent}>
+            <SkeletonLoader width="70%" height={16} />
+            <SkeletonLoader width="50%" height={14} style={{ marginTop: 8 }} />
+            <SkeletonLoader width="90%" height={12} style={{ marginTop: 8 }} />
+          </View>
         </View>
+      ))}
+    </View>
+  );
+};
+
+export const FiltersSkeleton: React.FC = () => {
+  return (
+    <View style={styles.filtersSkeletonContainer}>
+      <SkeletonLoader width="100%" height={44} borderRadius={12} />
+      <SkeletonLoader width="100%" height={44} borderRadius={12} style={{ marginTop: 12 }} />
+      <View style={styles.chipContainer}>
+        <SkeletonLoader width={80} height={32} borderRadius={16} />
+        <SkeletonLoader width={100} height={32} borderRadius={16} />
+        <SkeletonLoader width={90} height={32} borderRadius={16} />
       </View>
     </View>
   );
 };
 
-export const TravelCardReserveSkeleton: React.FC = () => {
-  const { width } = useResponsive();
-
-  const effectiveWidth =
-    Platform.OS === 'web' && width === 0 && typeof window !== 'undefined' ? window.innerWidth : width;
-
-  const cardHeight =
-    Platform.OS === 'web'
-      ? effectiveWidth > 0 && effectiveWidth < BREAKPOINTS.MOBILE
-        ? TRAVEL_CARD_WEB_MOBILE_HEIGHT
-        : TRAVEL_CARD_WEB_HEIGHT
-      : 320;
-
-  return (
-    <View testID="travel-card-skeleton" style={[styles.card, { height: cardHeight } as any]}>
-      <SkeletonLoader testID="travel-card-skeleton-image" width="100%" height={cardHeight} borderRadius={12} />
-    </View>
-  );
-};
-
-/**
- * Skeleton для списка путешествий
- */
-export const TravelListSkeleton: React.FC<{
-  count?: number;
-  columns?: number;
-  rowStyle?: StyleProp<ViewStyle>;
-  variant?: SkeletonVariant;
-}> = ({ count = 6, columns = 1, rowStyle, variant = 'detailed' }) => {
-  const isWeb = Platform.OS === 'web';
-  const itemsCount = Math.max(0, count ?? 0);
-
-  if (itemsCount === 0) {
-    return null;
-  }
-
-  // На web делаем сетку по колонкам, чтобы скелетоны совпадали с реальными карточками
-  if (isWeb) {
-    const cols = Math.max(1, columns || 1);
-
-    // Important: match real card slot sizing used in listTravel/RightColumn.tsx
-    // Real cards on desktop use flexBasis/minWidth/maxWidth (not percentage width).
-    const itemContainerStyle =
-      cols <= 1
-        ? ({
-            flex: 1,
-            width: '100%',
-            maxWidth: '100%',
-            minWidth: 0,
-            flexBasis: '100%',
-          } as any)
-        : ({
-            flexGrow: 0,
-            flexShrink: 0,
-            flexBasis: 320,
-            minWidth: TRAVEL_CARD_MIN_WIDTH,
-            maxWidth: TRAVEL_CARD_MAX_WIDTH,
-          } as any);
-
-    const rowsCount = Math.ceil(itemsCount / cols);
-
-    return (
-      <>
-        {Array.from({ length: rowsCount }).map((_, rowIndex) => (
-          <View
-            key={`skeleton-row-${rowIndex}`}
-            style={[rowStyle, { flexDirection: 'row', flexWrap: 'nowrap' } as any]}
-          >
-            {Array.from({ length: cols }).map((__, colIndex) => {
-              const index = rowIndex * cols + colIndex;
-              if (index >= itemsCount) return null;
-              return (
-                <View key={`skeleton-${rowIndex}-${colIndex}`} style={itemContainerStyle}>
-                  {variant === 'reserve' ? <TravelCardReserveSkeleton /> : <TravelCardSkeleton />}
-                </View>
-              );
-            })}
-          </View>
-        ))}
-      </>
-    );
-  }
-
-  // На native оставляем простой вертикальный список
-  return (
-    <>
-      {Array.from({ length: itemsCount }).map((_, index) => (
-        variant === 'reserve' ? <TravelCardReserveSkeleton key={index} /> : <TravelCardSkeleton key={index} />
-      ))}
-    </>
-  );
-};
-
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: TOKENS.colors.skeleton,
-    // Современные скелетоны - очень светлые
-  },
-
-  // Современная карточка скелетона
-  card: {
-    width: '100%',
-    maxWidth: '100%',
-    borderRadius: TOKENS.radii.lg,
-    backgroundColor: TOKENS.colors.surface,
     overflow: 'hidden',
-    // Высота теперь определяется содержимым, чтобы совпадать с реальной карточкой
-    borderWidth: Platform.OS === 'web' ? 1 : 0,
-    borderColor: TOKENS.colors.border,
-    // Минимальные тени
-    ...(Platform.OS === 'web'
-      ? { boxShadow: TOKENS.shadows.subtle } as any
-      : TOKENS.shadowsNative.subtle
-    ),
   },
-
-  image: {
-    marginBottom: 0,
+  mapSkeletonContainer: {
+    padding: 16,
   },
-
-  // Упрощенный контент скелетона
-  content: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 10,
-    gap: 4,
-    backgroundColor: TOKENS.colors.surface,
+  listSkeletonContainer: {
+    padding: 16,
   },
-
-  marginBottom: {
-    marginBottom: TOKENS.spacing.xs,
-  },
-
-  marginBottomLarge: {
-    marginBottom: TOKENS.spacing.sm,
-  },
-
-  // Упрощенная мета-информация скелетона
-  metaRow: {
+  travelItemSkeleton: {
     flexDirection: 'row',
-    gap: TOKENS.spacing.md,
-    marginTop: TOKENS.spacing.sm,
+    padding: 12,
+    marginBottom: 12,
+    gap: 12,
   },
-
-  // Упрощенный контейнер списка
-  listContainer: {
+  travelItemContent: {
+    flex: 1,
+  },
+  filtersSkeletonContainer: {
+    padding: 16,
+  },
+  chipContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Platform.select({ default: TOKENS.spacing.md, web: TOKENS.spacing.lg }),
-    padding: Platform.select({ default: TOKENS.spacing.md, web: TOKENS.spacing.lg }),
+    gap: 8,
+    marginTop: 12,
   },
 });
 
-// CSS анимация для веб (добавить в глобальные стили)
-if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  const styleId = 'skeleton-loader-styles';
-  if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = `
-      .skeleton-pulse {
-        background: linear-gradient(90deg, ${TOKENS.colors.skeleton} 0%, ${TOKENS.colors.skeletonHighlight} 50%, ${TOKENS.colors.skeleton} 100%);
-        background-size: 200% 100%;
-        animation: skeleton-pulse 2s ease-in-out infinite;
-      }
-      @keyframes skeleton-pulse {
-        0% {
-          background-position: 200% 0;
-        }
-        100% {
-          background-position: -200% 0;
-        }
-      }
-      @keyframes pulse {
-        0%, 100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0.6;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-}
+export default SkeletonLoader;
+

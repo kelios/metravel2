@@ -330,9 +330,9 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
 
     describe('✅ Кнопки навигации', () => {
         it('должна вызвать onBack при нажатии "Назад"', () => {
-            const { getByText } = render(<TravelWizardStepRoute {...defaultProps} />);
+            const { getByTestId } = render(<TravelWizardStepRoute {...defaultProps} />);
 
-            const backButton = getByText('Назад');
+            const backButton = getByTestId('travel-wizard-back');
             fireEvent.press(backButton);
 
             expect(defaultProps.onBack).toHaveBeenCalled();
@@ -348,4 +348,3 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
         });
     });
 });
-

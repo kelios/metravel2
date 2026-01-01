@@ -234,6 +234,7 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                                     globalFocusStyles.focusable,
                                     pressed && { opacity: 0.8 }
                                 ]}
+                                testID="travel-wizard-back"
                                 accessibilityRole="button"
                                 accessibilityLabel="Назад"
                                 {...Platform.select({ web: { cursor: 'pointer' } })}
@@ -311,6 +312,7 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                                     globalFocusStyles.focusable,
                                     pressed && { opacity: 0.8 }
                                 ]}
+                                testID="travel-wizard-back"
                                 accessibilityRole="button"
                                 accessibilityLabel="Назад"
                                 {...Platform.select({ web: { cursor: 'pointer' } })}

@@ -1090,11 +1090,12 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
     },
     transportTabText: {
       fontSize: 13,
-      fontWeight: '600',
-      color: colors.textMuted,
+      fontWeight: '700', // ✅ УЛУЧШЕНИЕ: Увеличен вес шрифта для лучшей читаемости
+      color: colors.text, // ✅ УЛУЧШЕНИЕ: Изменен цвет на более контрастный
     },
     transportTabTextActive: {
       color: colors.textOnPrimary,
+      fontWeight: '800', // ✅ УЛУЧШЕНИЕ: Еще более жирный шрифт для активного состояния
     },
     routeInfo: {
       backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,

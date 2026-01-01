@@ -127,8 +127,7 @@ export default function MapScreen() {
         if (!isMobile) return;
         const body = document.body;
         const prevOverflow = body.style.overflow;
-        const shouldLock = rightPanelVisible;
-        if (shouldLock) {
+        if (rightPanelVisible) {
             body.style.overflow = 'hidden';
         } else {
             body.style.overflow = prevOverflow || '';
@@ -150,15 +149,16 @@ export default function MapScreen() {
         return () => cancelAnimationFrame(id);
     }, [isMobile, rightPanelVisible]);
 
-    // ✅ ОПТИМИЗАЦИЯ: Debounce для фильтров и координат
-    const debouncedCoordinates = useDebouncedValue(coordinates, 500);
+    // ✅ ОПТИМИЗАЦИЯ: Debounce для фильтров и координат (меньше на мобильных)
+    const debounceTime = isMobile ? 300 : 500;
+    const debouncedCoordinates = useDebouncedValue(coordinates, debounceTime);
     const debouncedFilterValues = useDebouncedValue(filterValues, 300);
     // ✅ ИСПРАВЛЕНИЕ: Создаем стабильный строковый ключ для routePoints вместо массива
     const routePointsKey = useMemo(
         () => routePoints.length > 0 ? routePoints.map(p => p.join(',')).join('|') : '',
         [routePoints]
     );
-    const debouncedRoutePointsKey = useDebouncedValue(routePointsKey, 500);
+    const debouncedRoutePointsKey = useDebouncedValue(routePointsKey, debounceTime);
 
     const normalizedCategoryIds = useMemo(
         () => mapCategoryNamesToIds(filterValues.categories, filters.categories),

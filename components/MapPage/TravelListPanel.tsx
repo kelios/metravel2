@@ -100,4 +100,19 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   list: { paddingBottom: 8 },
   loader: { paddingVertical: 16, alignItems: 'center' },
   endText: { textAlign: 'center', color: colors.textMuted, paddingVertical: 16, fontSize: 12 },
+  emptyContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  emptyHint: {
+    fontSize: 14,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
 });

@@ -147,16 +147,27 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
     setQuery(value || '');
   }, [value]);
 
+  // ✅ ИСПРАВЛЕНИЕ: Cleanup для debounce и AbortController
   useEffect(() => {
     return () => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }
+      // Отменяем текущий запрос при размонтировании
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
   }, []);
+
+  // ✅ НОВОЕ: Cleanup при изменении query для предотвращения race conditions
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [query]);
 
   return (
     <View style={styles.container}>
