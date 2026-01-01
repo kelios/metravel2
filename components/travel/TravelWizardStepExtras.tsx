@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView, Platform, View, StyleSheet, ScrollView, findNodeHandle, UIManager, LayoutChangeEvent } from 'react-native';
+import { KeyboardAvoidingView, Platform, View, StyleSheet, ScrollView, findNodeHandle, UIManager, LayoutChangeEvent, Text } from 'react-native';
 
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
+import GroupedFiltersSection from '@/components/travel/GroupedFiltersSection';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
@@ -113,6 +114,27 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
     // Валидация шага 5 (опциональный, показываем только warnings)
     const validation = useMemo(() => {
         return validateStep(5, formData);
+    }, [formData]);
+
+    // ✅ УЛУЧШЕНИЕ: Подсчет заполненных полей для каждой группы
+    const groupsFilledCounts = useMemo(() => {
+        const hasCategories = Array.isArray((formData as any).categories) && ((formData as any).categories as any[]).length > 0;
+        const hasTransports = Array.isArray((formData as any).transports) && ((formData as any).transports as any[]).length > 0;
+
+        const hasMonths = Array.isArray((formData as any).month) && ((formData as any).month as any[]).length > 0;
+        const hasComplexity = Array.isArray((formData as any).complexity) && ((formData as any).complexity as any[]).length > 0;
+
+        const hasCompanions = Array.isArray((formData as any).companions) && ((formData as any).companions as any[]).length > 0;
+        const hasNightStay = Array.isArray((formData as any).over_nights_stay) && ((formData as any).over_nights_stay as any[]).length > 0;
+
+        const hasVisa = (formData as any).visa !== undefined && (formData as any).visa !== null;
+
+        return {
+            main: [hasCategories, hasTransports].filter(Boolean).length,
+            timeComplexity: [hasMonths, hasComplexity].filter(Boolean).length,
+            style: [hasCompanions, hasNightStay].filter(Boolean).length,
+            practical: [hasVisa].filter(Boolean).length,
+        };
     }, [formData]);
 
     return (
