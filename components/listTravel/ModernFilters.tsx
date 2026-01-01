@@ -63,6 +63,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   onApply,
   onClose,
 }) => {
+  // ✅ УЛУЧШЕНИЕ: Поддержка тем через useThemedColors
+  const colors = useThemedColors();
+  const styles = createStyles(colors);
+
   const isNarrowWeb = Platform.OS === 'web' && Dimensions.get('window').width <= METRICS.breakpoints.tablet;
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set()
@@ -93,14 +97,14 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         next.delete(groupKey);
         Animated.timing(animated, {
           toValue: 0,
-          duration: animations.duration.base,
+          duration: DESIGN_TOKENS.animations.duration.normal,
           useNativeDriver: false,
         }).start();
       } else {
         next.add(groupKey);
         Animated.timing(animated, {
           toValue: 1,
-          duration: animations.duration.base,
+          duration: DESIGN_TOKENS.animations.duration.normal,
           useNativeDriver: false,
         }).start();
       }
@@ -197,7 +201,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
           accessibilityLabel="Очистить все фильтры"
           hitSlop={8}
         >
-          <Feather name="x-circle" size={16} color={BRAND_ORANGE} />
+          <Feather name="x-circle" size={16} color={colors.brand.primary} />
           <Text style={styles.clearAllMobileButtonText}>Очистить все фильтры</Text>
         </Pressable>
       )}
@@ -218,7 +222,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             const animated = animatedValues[key];
             Animated.timing(animated, {
               toValue: allExpanded ? 0 : 1,
-              duration: animations.duration.base,
+              duration: DESIGN_TOKENS.animations.duration.base,
               useNativeDriver: false,
             }).start();
 
@@ -441,399 +445,399 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   );
 });
 
-const styles = StyleSheet.create<any>({
-  container: {
-    flex: 1,
-    backgroundColor: SURFACE,
-    borderWidth: 1,
-    borderColor: BORDER_SUBTLE,
-    borderRadius: radii['2xl'],
-    // Чуть более компактные отступы, чтобы панель влезала по высоте без скрола
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    ...Platform.select({
-      web: {
-        ...shadows.sm,
-        width: 280,
-        position: 'sticky' as any,
-        top: spacing.lg,
-        maxHeight: '100%',
-      },
-      default: {},
-    }),
-  },
-  containerMobile: {
-    flex: 1,
-    borderRadius: 0,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-    backgroundColor: colors.surface.default,
-    // Убираем web‑тени/карточный вид на native
-    shadowColor: 'transparent',
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-  },
-  containerWebFull: {
-    width: '100%',
-    maxWidth: '100%',
-    height: '100%',
-    borderRadius: 0,
-    position: 'relative',
-    top: 0,
-    maxHeight: 'none' as any,
-    boxShadow: 'none' as any,
-  },
-  containerCompact: {
-    padding: spacing.md,
-    ...Platform.select({
-      web: {
-        width: 240,
-      },
-    }),
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  headerTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: TEXT_MAIN,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flex: 1,
-  },
-  iconSlot16: {
-    width: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  iconSlot18: {
-    width: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  closeButton: {
-    padding: spacing.xs,
-  },
-  toggleAllButton: {
-    marginBottom: spacing.xs,
-    backgroundColor: SURFACE_SUBTLE,
-    borderRadius: radii.pill,
-    paddingVertical: 8,
-    paddingHorizontal: spacing.sm,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
-  },
-  toggleAllButtonInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  toggleAllButtonText: {
-    fontSize: typography.fontSize.xs,
-    color: TEXT_SUBTLE,
-    fontWeight: typography.fontWeight.medium,
-  },
-  clearButton: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.pill,
-    backgroundColor: colors.neutral[100],
-  },
-  clearButtonText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.medium,
-    color: BRAND_ORANGE,
-  },
-  clearAllMobileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: 10,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.pill,
-    backgroundColor: SURFACE_SUBTLE,
-    borderWidth: 1,
-    borderColor: BORDER_SUBTLE,
-    marginBottom: spacing.xs,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
-  },
-  clearAllMobileButtonText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    color: TEXT_SUBTLE,
-  },
-  resultsBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: SURFACE_SUBTLE,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: radii.pill,
-    marginBottom: spacing.xs,
-  },
-  resultsBadgeText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    color: TEXT_SUBTLE,
-  },
-  extraFilters: {
-    marginBottom: spacing.xs,
-    gap: spacing.xs,
-  },
-  yearGroup: {
-    borderTopWidth: 1,
-    borderTopColor: BORDER_SUBTLE,
-    borderBottomWidth: 0,
-    marginTop: spacing.md,
-    marginBottom: 0,
-    paddingTop: spacing.sm,
-    paddingBottom: 0,
-  },
-  yearInlineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  yearGroupContent: {
-    marginTop: spacing.sm,
-  },
-  yearRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  yearLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  yearLabel: {
-    fontSize: typography.fontSize.sm,
-    color: TEXT_SUBTLE,
-    fontWeight: typography.fontWeight.semibold,
-  },
-  yearInput: {
-    flexBasis: 96,
-    maxWidth: 96,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: BORDER_SUBTLE,
-    backgroundColor: SURFACE_SUBTLE,
-    fontSize: typography.fontSize.sm,
-    textAlign: 'center',
-    alignSelf: 'flex-start',
-    minHeight: 32,
-    ...Platform.select({
-      web: {
-        outlineWidth: 0,
-      },
-    }),
-  },
-  moderationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: 6,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radii.md,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
-  },
-  moderationRowSelected: {
-    backgroundColor: BRAND_PRIMARY_SOFT,
-  },
-  moderationLabel: {
-    fontSize: typography.fontSize.sm,
-    color: TEXT_SUBTLE,
-  },
-  moderationLabelSelected: {
-    color: BRAND_PRIMARY_DARK,
-    fontWeight: typography.fontWeight.medium,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    // Даем достаточный нижний отступ, чтобы последний пункт (Год) не упирался в низ/док
-    paddingBottom: spacing.lg,
-  },
-  filterGroup: {
-    marginBottom: spacing.sm,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER_SUBTLE,
-  },
-  filterGroupLast: {
-    borderBottomWidth: 0,
-    marginBottom: 0,
-    paddingBottom: 0,
-  },
-  groupHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
-  },
-  groupHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    flex: 1,
-  },
-  groupTitle: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.semibold,
-    color: TEXT_SUBTLE,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  selectedBadge: {
-    backgroundColor: BRAND_PRIMARY,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: radii.pill,
-    minWidth: 20,
-    alignItems: 'center',
-  },
-  selectedBadgeText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.semibold,
-    color: '#fff',
-  },
-  groupContent: {
-    marginTop: spacing.xs,
-    overflow: 'hidden',
-  },
-  filterOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radii.md,
-    marginBottom: spacing.xxs,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-        transition: `all ${animations.duration.fast}ms ${animations.easing.ease}`,
-        ':hover': {
-          backgroundColor: colors.neutral[50],
+ModernFilters.displayName = 'ModernFilters';
+
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
+  const { spacing, typography, radii, shadows } = DESIGN_TOKENS;
+
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.surface.default,
+      borderWidth: 1,
+      borderColor: colors.border.subtle,
+      borderRadius: radii['2xl'],
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.sm,
+      ...Platform.select({
+        web: {
+          ...shadows.sm,
+          width: 280,
+          position: 'sticky' as any,
+          top: spacing.lg,
+          maxHeight: '100%',
         },
-      },
-    }),
-  },
-  filterOptionSelected: {
-    backgroundColor: BRAND_PRIMARY_SOFT,
-  },
-  filterOptionText: {
-    flex: 1,
-    fontSize: typography.fontSize.sm,
-    color: colors.neutral[600],
-    marginLeft: spacing.sm,
-  },
-  filterOptionTextSelected: {
-    color: BRAND_PRIMARY_DARK,
-    fontWeight: typography.fontWeight.medium,
-  },
-  filterOptionCount: {
-    fontSize: typography.fontSize.xs,
-    color: colors.neutral[400],
-    backgroundColor: colors.neutral[100],
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: radii.pill,
-  },
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: radii.sm,
-    borderWidth: 2,
-    borderColor: colors.neutral[300],
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  checkboxChecked: {
-    backgroundColor: BRAND_PRIMARY,
-    borderColor: BRAND_PRIMARY,
-  },
-  radio: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: colors.neutral[300],
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  radioChecked: {
-    borderColor: BRAND_PRIMARY,
-  },
-  radioDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: BRAND_PRIMARY,
-  },
-  applyButtonContainer: {
-    marginTop: spacing.lg,
-    paddingTop: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral[100],
-  },
-  applyButton: {
-    backgroundColor: BRAND_PRIMARY,
-    paddingVertical: spacing.md,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-  },
-  applyButtonText: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: '#fff',
-  },
-});
+        default: {},
+      }),
+    },
+    containerMobile: {
+      flex: 1,
+      borderRadius: 0,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.lg,
+      backgroundColor: colors.surface.default,
+      shadowColor: 'transparent',
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+    },
+    containerWebFull: {
+      width: '100%',
+      maxWidth: '100%',
+      height: '100%',
+      borderRadius: 0,
+      position: 'relative',
+      top: 0,
+      maxHeight: 'none' as any,
+      boxShadow: 'none' as any,
+    },
+    containerCompact: {
+      padding: spacing.md,
+      ...Platform.select({
+        web: {
+          width: 240,
+        },
+      }),
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    headerTitle: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold as any,
+      color: colors.text.primary,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      flex: 1,
+    },
+    iconSlot16: {
+      width: 16,
+      height: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    iconSlot18: {
+      width: 18,
+      height: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    headerRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    closeButton: {
+      padding: spacing.xs,
+    },
+    toggleAllButton: {
+      marginBottom: spacing.xs,
+      backgroundColor: colors.surface.subtle,
+      borderRadius: radii.pill,
+      paddingVertical: 8,
+      paddingHorizontal: spacing.sm,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+        },
+      }),
+    },
+    toggleAllButtonInner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    toggleAllButtonText: {
+      fontSize: typography.fontSize.xs,
+      color: colors.text.secondary,
+      fontWeight: typography.fontWeight.medium as any,
+    },
+    clearButton: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: radii.pill,
+      backgroundColor: colors.neutral[100],
+    },
+    clearButtonText: {
+      fontSize: typography.fontSize.xs,
+      fontWeight: typography.fontWeight.medium as any,
+      color: colors.brand.primary,
+    },
+    clearAllMobileButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+      paddingVertical: 10,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.pill,
+      backgroundColor: colors.surface.subtle,
+      borderWidth: 1,
+      borderColor: colors.border.subtle,
+      marginBottom: spacing.xs,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+        },
+      }),
+    },
+    clearAllMobileButtonText: {
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium as any,
+      color: colors.text.secondary,
+    },
+    resultsBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      backgroundColor: colors.surface.subtle,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+      borderRadius: radii.pill,
+      marginBottom: spacing.xs,
+    },
+    resultsBadgeText: {
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium as any,
+      color: colors.text.secondary,
+    },
+    extraFilters: {
+      marginBottom: spacing.xs,
+      gap: spacing.xs,
+    },
+    yearGroup: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border.subtle,
+      borderBottomWidth: 0,
+      marginTop: spacing.md,
+      marginBottom: 0,
+      paddingTop: spacing.sm,
+      paddingBottom: 0,
+    },
+    yearInlineRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.sm,
+      marginTop: spacing.sm,
+    },
+    yearGroupContent: {
+      marginTop: spacing.sm,
+    },
+    yearRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    yearLabelContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    yearLabel: {
+      fontSize: typography.fontSize.sm,
+      color: colors.text.secondary,
+      fontWeight: typography.fontWeight.semibold as any,
+    },
+    yearInput: {
+      flexBasis: 96,
+      maxWidth: 96,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+      borderRadius: radii.pill,
+      borderWidth: 1,
+      borderColor: colors.border.subtle,
+      backgroundColor: colors.surface.subtle,
+      fontSize: typography.fontSize.sm,
+      textAlign: 'center',
+      alignSelf: 'flex-start',
+      minHeight: 32,
+      ...Platform.select({
+        web: {
+          outlineWidth: 0,
+        },
+      }),
+    },
+    moderationRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingVertical: 6,
+      paddingHorizontal: spacing.xs,
+      borderRadius: radii.md,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+        },
+      }),
+    },
+    moderationRowSelected: {
+      backgroundColor: colors.brand.primarySoft,
+    },
+    moderationLabel: {
+      fontSize: typography.fontSize.sm,
+      color: colors.text.secondary,
+    },
+    moderationLabelSelected: {
+      color: colors.brand.primaryDark,
+      fontWeight: typography.fontWeight.medium as any,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingBottom: spacing.lg,
+    },
+    filterGroup: {
+      marginBottom: spacing.sm,
+      paddingBottom: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border.subtle,
+    },
+    filterGroupLast: {
+      borderBottomWidth: 0,
+      marginBottom: 0,
+      paddingBottom: 0,
+    },
+    groupHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.xs,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+        },
+      }),
+    },
+    groupHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      flex: 1,
+    },
+    groupTitle: {
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.semibold as any,
+      color: colors.text.secondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    selectedBadge: {
+      backgroundColor: colors.brand.primary,
+      paddingHorizontal: spacing.xs,
+      paddingVertical: 2,
+      borderRadius: radii.pill,
+      minWidth: 20,
+      alignItems: 'center',
+    },
+    selectedBadgeText: {
+      fontSize: typography.fontSize.xs,
+      fontWeight: typography.fontWeight.semibold as any,
+      color: '#fff',
+    },
+    groupContent: {
+      marginTop: spacing.xs,
+      overflow: 'hidden',
+    },
+    filterOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 6,
+      paddingHorizontal: spacing.xs,
+      borderRadius: radii.md,
+      marginBottom: spacing.xxs,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          transition: `all ${DESIGN_TOKENS.animations.duration.fast}ms ${DESIGN_TOKENS.animations.easing.ease}`,
+        },
+      }),
+    },
+    filterOptionSelected: {
+      backgroundColor: colors.brand.primarySoft,
+    },
+    filterOptionText: {
+      flex: 1,
+      fontSize: typography.fontSize.sm,
+      color: colors.neutral[600],
+      marginLeft: spacing.sm,
+    },
+    filterOptionTextSelected: {
+      color: colors.brand.primaryDark,
+      fontWeight: typography.fontWeight.medium as any,
+    },
+    filterOptionCount: {
+      fontSize: typography.fontSize.xs,
+      color: colors.neutral[400],
+      backgroundColor: colors.neutral[100],
+      paddingHorizontal: spacing.xs,
+      paddingVertical: 2,
+      borderRadius: radii.pill,
+    },
+    checkbox: {
+      width: 18,
+      height: 18,
+      borderRadius: radii.sm,
+      borderWidth: 2,
+      borderColor: colors.neutral[300],
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#fff',
+    },
+    checkboxChecked: {
+      backgroundColor: colors.brand.primary,
+      borderColor: colors.brand.primary,
+    },
+    radio: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      borderWidth: 2,
+      borderColor: colors.neutral[300],
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#fff',
+    },
+    radioChecked: {
+      borderColor: colors.brand.primary,
+    },
+    radioDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.brand.primary,
+    },
+    applyButtonContainer: {
+      marginTop: spacing.lg,
+      paddingTop: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.neutral[100],
+    },
+    applyButton: {
+      backgroundColor: colors.brand.primary,
+      paddingVertical: spacing.md,
+      borderRadius: radii.pill,
+      alignItems: 'center',
+    },
+    applyButtonText: {
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold as any,
+      color: '#fff',
+    },
+  });
+};
 
 export default ModernFilters;
