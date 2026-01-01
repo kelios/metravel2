@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, Pressable, Platform, Animated } from 
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const STORAGE_KEY_NOTIFICATIONS = 'user_notifications';
 const STORAGE_KEY_LAST_CHECK = 'notifications_last_check';
@@ -33,6 +34,7 @@ interface NotificationSystemProps {
 }
 
 const NotificationSystem = ({ onNotificationPress }: NotificationSystemProps) => {
+  const colors = useThemedColors();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -97,28 +99,28 @@ const NotificationSystem = ({ onNotificationPress }: NotificationSystemProps) =>
   if (notifications.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Feather name="bell-off" size={48} color={DESIGN_TOKENS.colors.textMuted} />
-        <Text style={styles.emptyTitle}>Нет уведомлений</Text>
-        <Text style={styles.emptyText}>Здесь будут появляться важные события</Text>
+        <Feather name="bell-off" size={48} color={colors.textMuted} />
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>Нет уведомлений</Text>
+        <Text style={[styles.emptyText, { color: colors.textMuted }]}>Здесь будут появляться важные события</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.headerLeft}>
-          <Feather name="bell" size={20} color={DESIGN_TOKENS.colors.primary} />
-          <Text style={styles.headerTitle}>Уведомления</Text>
+          <Feather name="bell" size={20} color={colors.primary} />
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Уведомления</Text>
           {unreadCount > 0 && (
-            <View style={styles.badge}>
+            <View style={[styles.badge, { backgroundColor: colors.danger }]}>
               <Text style={styles.badgeText}>{unreadCount}</Text>
             </View>
           )}
         </View>
         {unreadCount > 0 && (
           <Pressable onPress={markAllAsRead}>
-            <Text style={styles.markAllRead}>Прочитать все</Text>
+            <Text style={[styles.markAllRead, { color: colors.primary }]}>Прочитать все</Text>
           </Pressable>
         )}
       </View>
@@ -140,6 +142,7 @@ interface NotificationItemProps {
 }
 
 const NotificationItem = memo(({ notification, onPress }: NotificationItemProps) => {
+  const colors = useThemedColors();
   const { title, message, icon, color, timestamp, read } = notification;
   const [fadeAnim] = useState(new Animated.Value(read ? 1 : 0.95));
 
@@ -172,7 +175,11 @@ const NotificationItem = memo(({ notification, onPress }: NotificationItemProps)
   return (
     <Animated.View style={{ transform: [{ scale: fadeAnim }] }}>
       <Pressable
-        style={[styles.notificationItem, !read && styles.notificationItemUnread]}
+        style={[
+          styles.notificationItem,
+          { borderBottomColor: colors.border, backgroundColor: colors.surface },
+          !read && [styles.notificationItemUnread, { backgroundColor: colors.primaryLight }]
+        ]}
         onPress={onPress}
       >
         <View style={[styles.notificationIcon, { backgroundColor: color }]}>
@@ -180,16 +187,16 @@ const NotificationItem = memo(({ notification, onPress }: NotificationItemProps)
         </View>
 
         <View style={styles.notificationContent}>
-          <Text style={[styles.notificationTitle, !read && styles.notificationTitleUnread]}>
+          <Text style={[styles.notificationTitle, { color: colors.text }, !read && styles.notificationTitleUnread]}>
             {title}
           </Text>
-          <Text style={styles.notificationMessage} numberOfLines={2}>
+          <Text style={[styles.notificationMessage, { color: colors.textMuted }]} numberOfLines={2}>
             {message}
           </Text>
-          <Text style={styles.notificationTime}>{getTimeAgo(timestamp)}</Text>
+          <Text style={[styles.notificationTime, { color: colors.textMuted }]}>{getTimeAgo(timestamp)}</Text>
         </View>
 
-        {!read && <View style={styles.unreadDot} />}
+        {!read && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
       </Pressable>
     </Animated.View>
   );
@@ -198,7 +205,6 @@ const NotificationItem = memo(({ notification, onPress }: NotificationItemProps)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -207,7 +213,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: DESIGN_TOKENS.colors.border,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -217,10 +222,8 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
   },
   badge: {
-    backgroundColor: DESIGN_TOKENS.colors.danger,
     borderRadius: DESIGN_TOKENS.radii.pill,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -235,7 +238,6 @@ const styles = StyleSheet.create({
   markAllRead: {
     fontSize: 14,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.primary,
   },
   list: {
     paddingVertical: 8,
@@ -247,8 +249,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: DESIGN_TOKENS.colors.border,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
     ...Platform.select({
       web: {
         cursor: 'pointer',
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     }),
   },
   notificationItemUnread: {
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
+    // backgroundColor moved to inline styles
   },
   notificationIcon: {
     width: 40,
@@ -276,25 +276,21 @@ const styles = StyleSheet.create({
   notificationTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
   },
   notificationTitleUnread: {
     fontWeight: '700',
   },
   notificationMessage: {
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
     lineHeight: 20,
   },
   notificationTime: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
     marginTop: 6,
   },
   emptyContainer: {
@@ -307,11 +303,9 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
   },
   emptyText: {
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
     textAlign: 'center',
   },
 });

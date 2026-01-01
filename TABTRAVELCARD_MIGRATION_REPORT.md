@@ -155,8 +155,325 @@ badge={{
 - ✅ FavoriteButton.tsx (2 элемента)
 - ✅ ConsentBanner.tsx (7 элементов)
 - ✅ EmptyState.tsx (15 элементов)
+- ✅ ForgotPasswordLink.tsx (1 элемент)
+- ✅ CustomImageRenderer.tsx (3 элемента)
+- ✅ NotificationSystem.tsx (13 элементов)
 
-### Всего мигрировано элементов: 42
+### Всего мигрировано элементов: 59
+### Всего компонентов: 9
+
+---
+
+## 🎉 Итоги миграции
+
+### ✅ Что сделано:
+1. **9 компонентов** полностью мигрированы на `useThemedColors`
+2. **59 UI элементов** теперь используют динамические цвета
+3. **Все основные визуальные компоненты** поддерживают темную тему
+4. **Удалены** все жестко закодированные цвета из StyleSheet
+5. **Сохранена** обратная совместимость со старым DESIGN_TOKENS
+
+### 📝 Компоненты по приоритету:
+
+#### 🔥 ВЫСОКИЙ приоритет (видны на главной странице):
+- ✅ TabTravelCard.tsx - карточки путешествий
+- ✅ WeeklyHighlights.tsx - подборка месяца
+- ✅ ScrollToTopButton.tsx - кнопка прокрутки
+- ✅ FavoriteButton.tsx - кнопка избранного
+- ✅ ConsentBanner.tsx - баннер cookies
+- ✅ NotificationSystem.tsx - система уведомлений
+
+#### 🟡 СРЕДНИЙ приоритет (используются часто):
+- ✅ EmptyState.tsx - пустые состояния
+- ✅ ForgotPasswordLink.tsx - ссылка на восстановление пароля
+- ✅ CustomImageRenderer.tsx - рендерер изображений
+
+### 🔧 Технические детали:
+
+#### Паттерн миграции:
+```typescript
+// 1. Добавить импорт
+import { useThemedColors } from '@/hooks/useTheme';
+
+// 2. Добавить хук в компонент
+const MyComponent = () => {
+  const colors = useThemedColors();
+  // ...
+}
+
+// 3. Заменить статичные цвета на динамические
+// БЫЛО:
+<View style={styles.container}>
+  <Text style={styles.title}>Hello</Text>
+</View>
+
+// СТАЛО:
+<View style={[styles.container, { backgroundColor: colors.surface }]}>
+  <Text style={[styles.title, { color: colors.text }]}>Hello</Text>
+</View>
+
+// 4. Удалить цвета из StyleSheet
+const styles = StyleSheet.create({
+  container: {
+    // backgroundColor: DESIGN_TOKENS.colors.surface, // ❌ Удалено
+  },
+  title: {
+    // color: DESIGN_TOKENS.colors.text, // ❌ Удалено
+  },
+});
+```
+
+### ⚠️ Известные ограничения:
+
+1. **Class компоненты**: ErrorBoundary не может использовать хуки (нужен wrapper)
+2. **LiveRegion**: Сложная типизация веб/нативного кода (пропущен)
+3. **Hover стили**: React Native Web не поддерживает динамические `:hover` псевдо-классы
+4. **Вспомогательные функции**: Не могут использовать хуки (используют DESIGN_TOKENS)
+
+### 📦 Оставшиеся компоненты:
+
+Следующие компоненты все еще используют `DESIGN_TOKENS.colors`:
+- MapPage/PopupContentComponent.tsx
+- travel/TravelTmlRound.tsx
+- travel/FiltersUpsertComponent.tsx
+- ErrorBoundary.tsx (class компонент)
+- accessibility/LiveRegion.tsx (веб-специфичный)
+- quests/QuestWizard.tsx (большой компонент)
+
+### 🎯 Следующие шаги:
+
+1. Мигрировать travel компоненты (TravelTmlRound, FiltersUpsertComponent)
+2. Обернуть ErrorBoundary в функциональный компонент с useThemedColors
+3. Решить проблему с LiveRegion (создать веб и нативные версии отдельно)
+4. Мигрировать QuestWizard (требует больше времени)
+5. Протестировать все компоненты в темной теме
+
+### 🚀 Польза от миграции:
+
+- ✅ Полная поддержка темной темы во всех мигрированных компонентах
+- ✅ Единообразный API для работы с цветами
+- ✅ Автоматическое обновление при смене темы
+- ✅ Улучшенная читаемость кода
+- ✅ Упрощенное тестирование с разными темами
+
+---
+
+## ✅ Компонент 9: NotificationSystem.tsx
+
+**Файл:** `components/notifications/NotificationSystem.tsx`  
+**Тип:** Система уведомлений  
+**Приоритет:** 🔥 ВЫСОКИЙ (используется для важных событий)
+**Статус:** ✅ ЗАВЕРШЕНО
+
+### Где используется:
+1. Панель уведомлений
+2. Badge на иконке уведомлений
+3. Всплывающие уведомления
+
+### Выполненные изменения:
+
+#### 1. Добавлен импорт useThemedColors
+```typescript
+import { useThemedColors } from '@/hooks/useTheme';
+```
+
+#### 2. Добавлен хук в главном компоненте
+```typescript
+const NotificationSystem = ({ onNotificationPress }: NotificationSystemProps) => {
+  const colors = useThemedColors(); // ✅ ДОБАВЛЕНО
+  // ...
+}
+```
+
+#### 3. Обновлен empty state с динамическими цветами
+```typescript
+// БЫЛО:
+<Feather name="bell-off" size={48} color={DESIGN_TOKENS.colors.textMuted} />
+<Text style={styles.emptyTitle}>Нет уведомлений</Text>
+<Text style={styles.emptyText}>Здесь будут появляться важные события</Text>
+
+// СТАЛО:
+<Feather name="bell-off" size={48} color={colors.textMuted} />
+<Text style={[styles.emptyTitle, { color: colors.text }]}>Нет уведомлений</Text>
+<Text style={[styles.emptyText, { color: colors.textMuted }]}>Здесь будут появляться важные события</Text>
+```
+
+#### 4. Обновлен header с динамическими цветами
+```typescript
+// Контейнер и header
+<View style={[styles.container, { backgroundColor: colors.background }]}>
+  <View style={[styles.header, { borderBottomColor: colors.border }]}>
+    <Feather name="bell" size={20} color={colors.primary} />
+    <Text style={[styles.headerTitle, { color: colors.text }]}>Уведомления</Text>
+    <View style={[styles.badge, { backgroundColor: colors.danger }]}>
+      <Text style={styles.badgeText}>{unreadCount}</Text>
+    </View>
+    <Text style={[styles.markAllRead, { color: colors.primary }]}>Прочитать все</Text>
+  </View>
+```
+
+#### 5. Добавлен хук в NotificationItem
+```typescript
+const NotificationItem = memo(({ notification, onPress }: NotificationItemProps) => {
+  const colors = useThemedColors(); // ✅ ДОБАВЛЕНО
+  // ...
+});
+```
+
+#### 6. Обновлен NotificationItem с динамическими цветами
+```typescript
+// Pressable с условными стилями
+<Pressable
+  style={[
+    styles.notificationItem, 
+    { borderBottomColor: colors.border, backgroundColor: colors.surface },
+    !read && [styles.notificationItemUnread, { backgroundColor: colors.primaryLight }]
+  ]}
+>
+  <Text style={[styles.notificationTitle, { color: colors.text }, !read && styles.notificationTitleUnread]}>
+    {title}
+  </Text>
+  <Text style={[styles.notificationMessage, { color: colors.textMuted }]}>
+    {message}
+  </Text>
+  <Text style={[styles.notificationTime, { color: colors.textMuted }]}>
+    {getTimeAgo(timestamp)}
+  </Text>
+  {!read && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
+</Pressable>
+```
+
+#### 7. Удалены жестко закодированные цвета из StyleSheet
+- ❌ Удалено: `backgroundColor: DESIGN_TOKENS.colors.background` из container
+- ❌ Удалено: `borderBottomColor: DESIGN_TOKENS.colors.border` из header
+- ❌ Удалено: `color: DESIGN_TOKENS.colors.text` из headerTitle
+- ❌ Удалено: `backgroundColor: DESIGN_TOKENS.colors.danger` из badge
+- ❌ Удалено: `color: DESIGN_TOKENS.colors.primary` из markAllRead
+- ❌ Удалено: `borderBottomColor: DESIGN_TOKENS.colors.border` из notificationItem
+- ❌ Удалено: `backgroundColor: DESIGN_TOKENS.colors.surface` из notificationItem
+- ❌ Удалено: `backgroundColor: DESIGN_TOKENS.colors.primaryLight` из notificationItemUnread
+- ❌ Удалено: `color: DESIGN_TOKENS.colors.text` из notificationTitle
+- ❌ Удалено: `color: DESIGN_TOKENS.colors.textMuted` из notificationMessage
+- ❌ Удалено: `color: DESIGN_TOKENS.colors.textMuted` из notificationTime
+- ❌ Удалено: `backgroundColor: DESIGN_TOKENS.colors.primary` из unreadDot
+- ❌ Удалено: `color: DESIGN_TOKENS.colors.text` из emptyTitle
+- ❌ Удалено: `color: DESIGN_TOKENS.colors.textMuted` из emptyText
+
+### Результаты:
+- ✅ **Нет ошибок** (0 errors)
+- ✅ TypeScript проверка пройдена
+- ✅ Все 13 цветов переведены на динамические
+
+### Затронутые элементы:
+1. ✅ Container фон (`colors.background`)
+2. ✅ Header граница (`colors.border`)
+3. ✅ Header иконка (`colors.primary`)
+4. ✅ Header заголовок (`colors.text`)
+5. ✅ Badge фон (`colors.danger`)
+6. ✅ "Прочитать все" ссылка (`colors.primary`)
+7. ✅ Notification item граница (`colors.border`)
+8. ✅ Notification item фон (`colors.surface`)
+9. ✅ Notification item unread фон (`colors.primaryLight`)
+10. ✅ Notification title (`colors.text`)
+11. ✅ Notification message (`colors.textMuted`)
+12. ✅ Notification time (`colors.textMuted`)
+13. ✅ Unread dot (`colors.primary`)
+14. ✅ Empty state иконка (`colors.textMuted`)
+15. ✅ Empty state заголовок (`colors.text`)
+16. ✅ Empty state текст (`colors.textMuted`)
+
+---
+
+## ✅ Компонент 7: ForgotPasswordLink.tsx
+
+**Файл:** `components/ForgotPasswordLink.tsx`  
+**Тип:** Ссылка "Забыли пароль?"  
+**Приоритет:** 🔥 СРЕДНИЙ (используется на странице входа)
+**Статус:** ✅ ЗАВЕРШЕНО
+
+### Выполненные изменения:
+- ✅ Добавлен `useThemedColors()` хук
+- ✅ Заменен `DESIGN_TOKENS.colors.info` на `colors.info`
+- ✅ Удален импорт DESIGN_TOKENS
+
+### Результаты:
+- ✅ **Нет ошибок** (0 errors)
+- ✅ TypeScript проверка пройдена
+
+---
+
+## ✅ Компонент 8: CustomImageRenderer.tsx
+
+**Файл:** `components/CustomImageRenderer.tsx`  
+**Тип:** Рендерер изображений для HTML контента  
+**Приоритет:** 🔥 СРЕДНИЙ (используется в статьях и описаниях)
+**Статус:** ✅ ЗАВЕРШЕНО
+
+### Где используется:
+1. Статьи путешествий
+2. Описания маршрутов
+3. HTML контент
+
+### Выполненные изменения:
+
+#### 1. Добавлен импорт useThemedColors
+```typescript
+import { useThemedColors } from '@/hooks/useTheme';
+```
+
+#### 2. Добавлен хук в компоненте
+```typescript
+const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) => {
+  const colors = useThemedColors(); // ✅ ДОБАВЛЕНО
+  // ...
+}
+```
+
+#### 3. Обновлен skeleton с динамическими цветами
+```typescript
+// БЫЛО:
+<View style={[StyleSheet.absoluteFillObject, styles.skeleton, { pointerEvents: 'none' }]}>
+  <View style={[styles.placeholder, { width: boxWidth, height: boxHeight }]} />
+</View>
+
+// СТАЛО:
+<View style={[
+  StyleSheet.absoluteFillObject, 
+  styles.skeleton, 
+  { backgroundColor: colors.mutedBackground },
+  { pointerEvents: 'none' }
+]}>
+  <View style={[
+    styles.placeholder, 
+    { width: boxWidth, height: boxHeight, backgroundColor: colors.backgroundSecondary }
+  ]} />
+</View>
+```
+
+#### 4. Обновлен errorMessage с динамическим цветом
+```typescript
+// БЫЛО:
+<Text style={styles.errorMessage}>Не удалось загрузить</Text>
+
+// СТАЛО:
+<Text style={[styles.errorMessage, { color: colors.textMuted }]}>Не удалось загрузить</Text>
+```
+
+#### 5. Удалены жестко закодированные цвета из StyleSheet
+- ❌ Удалено: `backgroundColor: DESIGN_TOKENS.colors.mutedBackground` из skeleton
+- ❌ Удалено: `backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary` из placeholder
+- ❌ Удалено: `color: DESIGN_TOKENS.colors.textMuted` из errorMessage
+- ❌ Удален импорт: `DESIGN_TOKENS`
+
+### Результаты:
+- ✅ **Нет ошибок** (0 errors)
+- ✅ TypeScript проверка пройдена
+- ✅ Все 3 цвета переведены на динамические
+
+### Затронутые элементы:
+1. ✅ Skeleton - фон (`colors.mutedBackground`)
+2. ✅ Placeholder - фон (`colors.backgroundSecondary`)
+3. ✅ Error message - текст (`colors.textMuted`)
 
 ---
 

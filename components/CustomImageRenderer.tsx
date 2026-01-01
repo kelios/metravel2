@@ -9,7 +9,7 @@ import {
 import { CustomRendererProps } from "react-native-render-html";
 import { useResponsive } from '@/hooks/useResponsive';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface CustomImageRendererProps extends CustomRendererProps<any> {
   contentWidth: number;
@@ -55,6 +55,7 @@ const normalizeUrl = (url: string) => {
 
 /* ─ component ─ */
 const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) => {
+  const colors = useThemedColors();
   const raw = pickSrc(tnode);
   const attW = tnode.attributes?.width ? Number(tnode.attributes.width) : undefined;
   const attH = tnode.attributes?.height ? Number(tnode.attributes.height) : undefined;
@@ -140,10 +141,11 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
             style={[
               StyleSheet.absoluteFillObject,
               styles.skeleton,
+              { backgroundColor: colors.mutedBackground },
               { pointerEvents: 'none' } as any,
             ]}
           >
-            <View style={[styles.placeholder, { width: boxWidth, height: boxHeight }]} />
+            <View style={[styles.placeholder, { width: boxWidth, height: boxHeight, backgroundColor: colors.backgroundSecondary }]} />
           </View>
         )}
 
@@ -163,7 +165,7 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
         {err && (
           <View style={[StyleSheet.absoluteFillObject, styles.errorContainer]}>
             <Text style={styles.errorText}>📷</Text>
-            <Text style={styles.errorMessage}>Не удалось загрузить</Text>
+            <Text style={[styles.errorMessage, { color: colors.textMuted }]}>Не удалось загрузить</Text>
           </View>
         )}
       </View>
@@ -194,11 +196,9 @@ const styles = StyleSheet.create({
   skeleton: {
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
     borderRadius: 8,
   },
   placeholder: {
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     borderRadius: 8,
   },
   errorContainer: {
@@ -207,5 +207,5 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   errorText: { fontSize: 32, marginBottom: 8 },
-  errorMessage: { fontSize: 14, color: DESIGN_TOKENS.colors.textMuted, textAlign: "center" },
+  errorMessage: { fontSize: 14, textAlign: "center" },
 });
