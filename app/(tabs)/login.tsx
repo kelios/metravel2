@@ -1,5 +1,5 @@
 // app/login.tsx (или соответствующий путь)
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
     Dimensions,
     KeyboardAvoidingView,
@@ -24,6 +24,7 @@ import FormFieldWithValidation from '@/components/FormFieldWithValidation'; // �
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const { height } = Dimensions.get('window');
 
@@ -46,6 +47,8 @@ export default function Login() {
     const pathname = usePathname();
     const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
     const canonical = `${SITE}${pathname || '/login'}`;
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const showMsg = (text: string, error = false) => setMsg({ text, error });
 
@@ -192,7 +195,7 @@ export default function Login() {
                                                         onBlur={handleBlur('email')}
                                                         keyboardType="email-address"
                                                         autoCapitalize="none"
-                                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                                        placeholderTextColor={colors.textMuted}
                                                         returnKeyType="next"
                                                         blurOnSubmit={false}
                                                         onSubmitEditing={() => passwordRef.current?.focus()}
@@ -217,7 +220,7 @@ export default function Login() {
                                                         onChangeText={handleChange('password')}
                                                         onBlur={handleBlur('password')}
                                                         secureTextEntry
-                                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                                        placeholderTextColor={colors.textMuted}
                                                         returnKeyType="done"
                                                         onSubmitEditing={() => handleSubmit()}
                                                     />
@@ -269,10 +272,10 @@ export default function Login() {
 }
 
 /* ---------- styles ---------- */
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
     },
     mapBackground: {
         ...StyleSheet.absoluteFillObject,
@@ -320,13 +323,13 @@ const styles = StyleSheet.create({
     input: {
         marginBottom: 0, // ✅ Отступ управляется FormFieldWithValidation
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
         borderRadius: DESIGN_TOKENS.radii.md,
         paddingHorizontal: 14,
         paddingVertical: 12,
         fontSize: 16,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        color: DESIGN_TOKENS.colors.text,
+        backgroundColor: colors.surface,
+        color: colors.text,
         minHeight: 48,
         ...Platform.select({
             web: {
@@ -335,7 +338,7 @@ const styles = StyleSheet.create({
         }),
     },
     btn: {
-        backgroundColor: DESIGN_TOKENS.colors.primary,
+        backgroundColor: colors.primary,
         borderRadius: DESIGN_TOKENS.radii.lg,
         marginTop: 8,
     },
@@ -343,7 +346,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     forgot: {
-        color: DESIGN_TOKENS.colors.primary,
+        color: colors.primary,
         textDecorationLine: 'underline',
         marginTop: 16,
         textAlign: 'center',
@@ -360,11 +363,11 @@ const styles = StyleSheet.create({
     },
     registerText: {
         fontSize: 14,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
     },
     registerLink: {
         fontSize: 14,
-        color: DESIGN_TOKENS.colors.primary,
+        color: colors.primary,
         fontWeight: '600',
         textDecorationLine: 'underline',
     },
@@ -377,25 +380,25 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     err: { 
-        color: DESIGN_TOKENS.colors.danger,
+        color: colors.danger,
         backgroundColor: 'rgba(239, 68, 68, 0.1)',
         borderLeftWidth: 3,
-        borderLeftColor: DESIGN_TOKENS.colors.danger,
+        borderLeftColor: colors.danger,
     },
     ok: { 
-        color: DESIGN_TOKENS.colors.success,
+        color: colors.success,
         backgroundColor: 'rgba(34, 197, 94, 0.1)',
         borderLeftWidth: 3,
-        borderLeftColor: DESIGN_TOKENS.colors.success,
+        borderLeftColor: colors.success,
     },
     inputError: {
-        borderColor: DESIGN_TOKENS.colors.danger,
+        borderColor: colors.danger,
         borderWidth: 2,
         backgroundColor: 'rgba(239, 68, 68, 0.05)', // ✅ ИСПРАВЛЕНИЕ: Светло-красный фон для ошибок
     },
     // ✅ ИСПРАВЛЕНИЕ: Стиль больше не используется (ошибки показываются через FormFieldWithValidation)
     errorText: {
-        color: DESIGN_TOKENS.colors.danger,
+        color: colors.danger,
         fontSize: 12,
         marginTop: -10,
         marginBottom: 10,

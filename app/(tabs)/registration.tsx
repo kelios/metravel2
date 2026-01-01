@@ -1,5 +1,5 @@
 // app/register.tsx (или соответствующий путь)
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     Dimensions,
     KeyboardAvoidingView,
@@ -26,6 +26,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import FormFieldWithValidation from '@/components/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const { height } = Dimensions.get('window');
 
@@ -34,6 +35,8 @@ export default function RegisterForm() {
     const [generalMsg, setMsg] = useState<{ text: string; error: boolean }>({ text: '', error: false });
     const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
     const router = useRouter();
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const isFocused = useIsFocused();
     const pathname = usePathname();
@@ -97,7 +100,7 @@ export default function RegisterForm() {
             )}
 
             <KeyboardAvoidingView
-                style={{ flex: 1, backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary }}
+                style={{ flex: 1, backgroundColor: colors.backgroundSecondary }}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
                 {Platform.OS === 'web' && (
@@ -151,8 +154,8 @@ export default function RegisterForm() {
                                                         name="account" 
                                                         size={20} 
                                                         color={touched.username && errors.username 
-                                                            ? DESIGN_TOKENS.colors.danger 
-                                                            : DESIGN_TOKENS.colors.textMuted
+                                                            ? colors.danger
+                                                            : colors.textMuted
                                                         } 
                                                     />
                                                     <TextInput
@@ -161,7 +164,7 @@ export default function RegisterForm() {
                                                             globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                                                         ]}
                                                         placeholder="Имя пользователя"
-                                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                                        placeholderTextColor={colors.textMuted}
                                                         value={values.username}
                                                         onChangeText={handleChange('username')}
                                                         onBlur={handleBlur('username')}
@@ -185,8 +188,8 @@ export default function RegisterForm() {
                                                         name="email" 
                                                         size={20} 
                                                         color={touched.email && errors.email 
-                                                            ? DESIGN_TOKENS.colors.danger 
-                                                            : DESIGN_TOKENS.colors.textMuted
+                                                            ? colors.danger
+                                                            : colors.textMuted
                                                         } 
                                                     />
                                                     <TextInput
@@ -195,7 +198,7 @@ export default function RegisterForm() {
                                                             globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                                                         ]}
                                                         placeholder="Email"
-                                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                                        placeholderTextColor={colors.textMuted}
                                                         value={values.email}
                                                         onChangeText={handleChange('email')}
                                                         onBlur={handleBlur('email')}
@@ -220,8 +223,8 @@ export default function RegisterForm() {
                                                         name="lock" 
                                                         size={20} 
                                                         color={touched.password && errors.password 
-                                                            ? DESIGN_TOKENS.colors.danger 
-                                                            : DESIGN_TOKENS.colors.textMuted
+                                                            ? colors.danger
+                                                            : colors.textMuted
                                                         } 
                                                     />
                                                     <TextInput
@@ -230,7 +233,7 @@ export default function RegisterForm() {
                                                             globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                                                         ]}
                                                         placeholder="Пароль"
-                                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                                        placeholderTextColor={colors.textMuted}
                                                         value={values.password}
                                                         onChangeText={handleChange('password')}
                                                         onBlur={handleBlur('password')}
@@ -245,7 +248,7 @@ export default function RegisterForm() {
                                                         <MaterialCommunityIcons
                                                             name={showPass ? 'eye-off' : 'eye'}
                                                             size={20}
-                                                            color={DESIGN_TOKENS.colors.textMuted}
+                                                            color={colors.textMuted}
                                                         />
                                                     </TouchableOpacity>
                                                 </View>
@@ -265,8 +268,8 @@ export default function RegisterForm() {
                                                         name="lock-check" 
                                                         size={20} 
                                                         color={touched.confirmPassword && errors.confirmPassword 
-                                                            ? DESIGN_TOKENS.colors.danger 
-                                                            : DESIGN_TOKENS.colors.textMuted
+                                                            ? colors.danger
+                                                            : colors.textMuted
                                                         } 
                                                     />
                                                     <TextInput
@@ -275,7 +278,7 @@ export default function RegisterForm() {
                                                             globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                                                         ]}
                                                         placeholder="Повторите пароль"
-                                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                                        placeholderTextColor={colors.textMuted}
                                                         value={values.confirmPassword}
                                                         onChangeText={handleChange('confirmPassword')}
                                                         onBlur={handleBlur('confirmPassword')}
@@ -309,7 +312,7 @@ export default function RegisterForm() {
                                                 disabled={isSubmitting}
                                                 style={{ marginTop: 12 }}
                                             >
-                                                <Text style={{ textAlign: 'center', color: DESIGN_TOKENS.colors.primary, fontWeight: '600' }}>
+                                                <Text style={{ textAlign: 'center', color: colors.primary, fontWeight: '600' }}>
                                                     Уже есть аккаунт? Войти
                                                 </Text>
                                             </TouchableOpacity>
@@ -326,7 +329,7 @@ export default function RegisterForm() {
 }
 
 /* ---------- styles ---------- */
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     bg: {
         flex: 1,
         justifyContent: 'center',
@@ -347,7 +350,7 @@ const styles = StyleSheet.create({
     card: {
         padding: 24,
         borderRadius: DESIGN_TOKENS.radii.xl,
-        backgroundColor: 'rgba(255,255,255,0.96)',
+        backgroundColor: colors.surface,
         ...Platform.select({
             ios: {
                 shadowColor: '#0f172a',
@@ -368,9 +371,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
         borderRadius: DESIGN_TOKENS.radii.sm,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         paddingHorizontal: 12,
         marginBottom: 0, // ✅ ИСПРАВЛЕНИЕ: Отступ управляется FormFieldWithValidation
         minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
@@ -382,7 +385,7 @@ const styles = StyleSheet.create({
     },
     // ✅ ИСПРАВЛЕНИЕ: Стиль для ошибок в inputWrap
     inputWrapError: {
-        borderColor: DESIGN_TOKENS.colors.danger,
+        borderColor: colors.danger,
         borderWidth: 2,
         backgroundColor: 'rgba(239, 68, 68, 0.05)', // Светло-красный фон для ошибок
     },
@@ -390,7 +393,7 @@ const styles = StyleSheet.create({
         flex: 1, 
         paddingVertical: 10, 
         fontSize: 16,
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
         ...Platform.select({
             web: {
@@ -406,9 +409,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     // ✅ ИСПРАВЛЕНИЕ: Стили больше не используются (ошибки показываются через FormFieldWithValidation)
-    err: { color: DESIGN_TOKENS.colors.danger, marginBottom: 6, textAlign: 'left' },
+    err: { color: colors.danger, marginBottom: 6, textAlign: 'left' },
     ok: { 
-        color: DESIGN_TOKENS.colors.success, 
+        color: colors.success, 
         marginBottom: 20, 
         textAlign: 'center', 
         fontWeight: 'bold',
@@ -416,7 +419,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         backgroundColor: 'rgba(34, 197, 94, 0.1)',
         borderLeftWidth: 3,
-        borderLeftColor: DESIGN_TOKENS.colors.success,
+        borderLeftColor: colors.success,
     },
     msg: { 
         marginBottom: 20, 
@@ -427,7 +430,7 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     btn: {
-        backgroundColor: DESIGN_TOKENS.colors.primary,
+        backgroundColor: colors.primary,
         borderRadius: DESIGN_TOKENS.radii.lg,
         marginTop: 8,
     },

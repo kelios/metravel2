@@ -377,9 +377,8 @@ export const fetchRandomTravels = async (
             query: search,
         });
 
-        // для запросов с query убираем завершающий слеш
-        const baseUrl = GET_RANDOM_TRAVELS.replace(/\/+$/, '');
-        const urlTravel = `${baseUrl}?${params}`;
+        // DRF endpoints expect the trailing slash; keep it to avoid 301 redirects
+        const urlTravel = `${GET_RANDOM_TRAVELS}?${params}`;
 
         const res = options?.signal
             ? await fetchWithTimeout(urlTravel, { signal: options.signal }, LONG_TIMEOUT)

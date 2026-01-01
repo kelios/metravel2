@@ -647,6 +647,22 @@ const MapPageComponent: React.FC<Props> = ({
   const lastAutoFitKeyRef = useRef<string | null>(null);
   const mapInstanceKeyRef = useRef<string>(`leaflet-map-${Math.random().toString(36).slice(2)}`);
 
+  // На случай горячей перезагрузки/ошибок очищаем старые контейнеры Leaflet перед инициализацией
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const containers = document.querySelectorAll('.leaflet-container');
+    containers.forEach((el) => {
+      const anyEl = el as any;
+      if (anyEl._leaflet_id) {
+        try {
+          delete anyEl._leaflet_id;
+        } catch {
+          // noop
+        }
+      }
+    });
+  }, []);
+
   // Функция для центрирования на местоположении пользователя (должна быть до условных возвратов)
   const centerOnUserLocation = useCallback(() => {
     if (!mapRef.current || !userLocation) return;
