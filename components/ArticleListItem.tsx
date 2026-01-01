@@ -1,10 +1,13 @@
-import React from 'react';
+// ✅ МИГРАЦИЯ: Добавлена поддержка useThemedColors для динамических тем
+import React, { useMemo } from 'react';
 import { View, Pressable, Dimensions, StyleSheet } from 'react-native';
 import { Article } from '@/src/types/types';
 import { Card, Title, Paragraph, Text } from 'react-native-paper';
 import { widthPercentageToDP as wp } from 'react-native-responsive-screen';
 import RenderHTML from 'react-native-render-html';
 import { router } from 'expo-router';
+import { useThemedColors } from '@/hooks/useTheme';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type ArticleListItemProps = {
   article: Article;
@@ -16,6 +19,10 @@ const DEFAULT_IMAGE =
 
 const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
   const { id, name, description, article_image_thumb_url, article_type } = article;
+  const colors = useThemedColors();
+
+  // ✅ МИГРАЦИЯ: Мемоизация стилей для производительности
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
       <View style={styles.container}>
@@ -46,21 +53,23 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
   );
 };
 
-const styles = StyleSheet.create({
+// ✅ МИГРАЦИЯ: Вынесена функция создания стилей для мемоизации
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
-    marginVertical: 10,
+    marginVertical: DESIGN_TOKENS.spacing.medium,
     width: '100%',
   },
   card: {
-    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderRadius: DESIGN_TOKENS.borderRadius.medium,
     elevation: 2,
     padding: wp(1.5),
     marginHorizontal: wp(1.5),
     maxWidth: 500,
   },
   imageWrapper: {
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
+    borderTopLeftRadius: DESIGN_TOKENS.borderRadius.medium,
+    borderTopRightRadius: DESIGN_TOKENS.borderRadius.medium,
     overflow: 'hidden',
     alignItems: 'center',
   },
@@ -70,11 +79,11 @@ const styles = StyleSheet.create({
     height: width < 600 ? 340 : 500,
   },
   htmlText: {
-    fontSize: 14,
-    color: '#444',
+    fontSize: DESIGN_TOKENS.typography.fontSize.small,
+    color: colors.textSecondary, // ✅ МИГРАЦИЯ: Заменен hardcoded #444
   },
   textOrange: {
-    color: '#ff9f5a',
+    color: colors.primary, // ✅ МИГРАЦИЯ: Заменен hardcoded #ff9f5a
   },
 });
 

@@ -199,26 +199,34 @@ const ClusterLayer: React.FC<{
   }, [points, grid]);
 
   const clusterIcon = useCallback(
-    (count: number) =>
-      (window as any)?.L?.divIcon
-        ? (window as any).L.divIcon({
-            className: 'custom-cluster-icon',
-            html: `<div style="
-              background: var(--color-primary);
-              color: var(--color-textOnDark);
-              width:42px;height:42px;
-              border-radius:21px;
-              display:flex;
-              align-items:center;
-              justify-content:center;
-              font-weight:800;
-              box-shadow: var(--shadow-medium);
-              border:2px solid var(--color-border);
-            ">${count}</div>`,
-            iconSize: [42, 42],
-            iconAnchor: [21, 21],
-          })
-        : undefined,
+    (count: number) => {
+      if (!(window as any)?.L?.divIcon) return undefined;
+
+      // Читаем актуальные css-переменные темы, чтобы пузырьки были видимы в тёмной теме
+      const root = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
+      const primary = root?.getPropertyValue('--color-primary')?.trim() || '#4a8c8c';
+      const textOnDark = root?.getPropertyValue('--color-textOnDark')?.trim() || '#fff';
+      const shadow = root?.getPropertyValue('--shadow-medium')?.trim() || '0 10px 30px rgba(0,0,0,0.25)';
+      const border = root?.getPropertyValue('--color-border')?.trim() || 'rgba(0,0,0,0.15)';
+
+      return (window as any).L.divIcon({
+        className: 'custom-cluster-icon',
+        html: `<div style="
+          background:${primary};
+          color:${textOnDark};
+          width:42px;height:42px;
+          border-radius:21px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-weight:800;
+          box-shadow:${shadow};
+          border:2px solid ${border};
+        ">${count}</div>`,
+        iconSize: [42, 42],
+        iconAnchor: [21, 21],
+      });
+    },
     []
   );
 

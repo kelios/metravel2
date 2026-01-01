@@ -17,6 +17,7 @@ export const getStyles = (
     primary: string;
     primaryDark: string;
     primaryLight: string;
+    primarySoft: string;
     text: string;
     textMuted: string;
     textInverse: string;
@@ -33,9 +34,10 @@ export const getStyles = (
     // На native (если появится) оставляем headerOffset
     container: {
       flex: 1,
+      // Заполняем экран и окрашиваем фон на web, чтобы не просвечивал белый фон body
       ...(Platform.OS === 'web'
         ? ({
-            minHeight: 0,
+            minHeight: '100vh',
           } as any)
         : null),
       backgroundColor: themedColors.background,
@@ -44,6 +46,7 @@ export const getStyles = (
       content: {
         flex: 1,
         position: 'relative',
+        backgroundColor: themedColors.background,
         ...(Platform.OS === 'web'
           ? ({
               flexDirection: isMobile ? 'column' : 'row',
@@ -295,7 +298,7 @@ export const getStyles = (
       },
       loaderText: {
         marginTop: 8,
-        color: '#666',
+        color: themedColors.textMuted,
         fontSize: 14,
       },
       updatingIndicator: {
@@ -304,15 +307,15 @@ export const getStyles = (
         justifyContent: 'center',
         paddingVertical: 8,
         paddingHorizontal: 12,
-        backgroundColor: '#f0f7ff',
+        backgroundColor: themedColors.primarySoft,
         borderRadius: 8,
         marginBottom: 8,
       },
       updatingText: {
         marginLeft: 8,
-        color: '#4a8c8c',
+        color: themedColors.text,
         fontSize: 12,
-        fontWeight: '500',
+        fontWeight: '600',
       },
       mapPlaceholder: {
         flex: 1,

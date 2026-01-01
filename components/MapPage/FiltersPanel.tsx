@@ -1194,7 +1194,7 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
     compactButtonText: {
       fontSize: 13,
       fontWeight: '700',
-      color: COLORS.textOnPrimary,
+      color: colors.textOnPrimary,
       marginLeft: 6,
     },
     footer: {
@@ -1203,7 +1203,7 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
       // ✅ УЛУЧШЕНИЕ: Убрана граница, используется отступ для разделения
     },
     infoBox: {
-      backgroundColor: COLORS.primarySoft,
+      backgroundColor: colors.primarySoft,
       borderRadius: 10,
       padding: 12,
       marginBottom: 12,

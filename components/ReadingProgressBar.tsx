@@ -1,7 +1,8 @@
-// Прогресс-бар чтения для детальной страницы
-import React, { useEffect, useRef } from 'react';
+// ✅ МИГРАЦИЯ: Прогресс-бар чтения с поддержкой useThemedColors
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, StyleSheet, Animated, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface ReadingProgressBarProps {
   scrollY: Animated.Value;
@@ -14,9 +15,13 @@ export default function ReadingProgressBar({
   contentHeight,
   viewportHeight,
 }: ReadingProgressBarProps) {
+  const colors = useThemedColors();
   const progressAnim = useRef(new Animated.Value(0)).current;
   const lastScrollValue = useRef(0);
   const animationFrameId = useRef<number | null>(null);
+
+  // ✅ МИГРАЦИЯ: Мемоизация стилей
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     const listener = scrollY.addListener(({ value }) => {
@@ -72,14 +77,15 @@ export default function ReadingProgressBar({
   );
 }
 
-const styles = StyleSheet.create({
+// ✅ МИГРАЦИЯ: Вынесена функция создания стилей с динамическими цветами
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 4, // ✅ УВЕЛИЧЕНО: с 3 до 4 для лучшей видимости
-    backgroundColor: DESIGN_TOKENS.colors.overlayLight, // ✅ Более прозрачный фон
+    height: 4,
+    backgroundColor: colors.overlayLight,
     zIndex: 1000,
     ...Platform.select({
       web: {
@@ -89,11 +95,11 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИЗМЕНЕН ЦВЕТ: акцентный цвет темы
+    backgroundColor: colors.primary,
     ...Platform.select({
       web: {
-        transition: 'width 0.15s ease-out', // ✅ Более плавная анимация
-        boxShadow: DESIGN_TOKENS.shadows.light, // ✅ Добавлена тень для глубины
+        transition: 'width 0.15s ease-out',
+        boxShadow: DESIGN_TOKENS.shadows.light,
       },
     }),
   },

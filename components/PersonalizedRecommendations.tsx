@@ -1,3 +1,4 @@
+// ✅ МИГРАЦИЯ: Добавлена поддержка useThemedColors для динамических тем
 import React, { useMemo, memo, useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -8,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const COLLAPSED_KEY = 'personalization_collapsed';
 
@@ -24,9 +26,13 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
     const router = useRouter();
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
-    
+    const colors = useThemedColors(); // ✅ МИГРАЦИЯ: Добавлен useThemedColors
+
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
+
+    // ✅ МИГРАЦИЯ: Мемоизация стилей
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     // Проверяем состояние сворачивания при монтировании
     useEffect(() => {
@@ -71,7 +77,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
     const containerStyles = useMemo(() => [
         styles.container,
         !showHeader && styles.containerCompact,
-    ], [showHeader]);
+    ], [styles.container, styles.containerCompact, showHeader]);
 
     // ВАЖНО: все хуки должны быть вызваны до условных возвратов
     const handleItemPress = useCallback((url: string) => {
@@ -143,7 +149,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                         style={styles.expandButton}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                        <MaterialIcons name="expand-more" size={20} color={DESIGN_TOKENS.colors.primary} />
+                        <MaterialIcons name="expand-more" size={20} color={colors.primary} />
                         <Text style={styles.expandButtonText}>Персонализация</Text>
                     </Pressable>
                 </View>
@@ -157,8 +163,8 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                 {showHeader && (
                     <>
                         <View style={styles.header}>
-                            <View style={[styles.iconContainer, { backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary }]}>
-                                <MaterialIcons name="star" size={24} color={DESIGN_TOKENS.colors.primary} />
+                            <View style={[styles.iconContainer, { backgroundColor: colors.backgroundSecondary }]}>
+                                <MaterialIcons name="star" size={24} color={colors.primary} />
                             </View>
                             <View style={styles.titleContainer}>
                                 <Text style={styles.title}>Рекомендации для вас</Text>
@@ -174,7 +180,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <View style={[styles.promptCard, isMobile ? styles.promptCardMobile : styles.promptCardDesktop]}>
                         <View style={styles.promptLead}>
                             <View style={styles.promptIcon}>
-                                <MaterialIcons name="login" size={28} color={DESIGN_TOKENS.colors.primary} />
+                                <MaterialIcons name="login" size={28} color={colors.primary} />
                             </View>
                             <View style={styles.promptCopy}>
                                 <Text style={[styles.promptText, !isMobile && styles.promptTextDesktop]}>
@@ -185,13 +191,13 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                         <Pressable 
                             style={[styles.loginButton, !isMobile && styles.loginButtonInline]}
                             onPress={handleLoginPress}
-                            android_ripple={{ color: DESIGN_TOKENS.colors.primarySoft }}
+                            android_ripple={{ color: colors.primarySoft }}
                         >
                             <Text style={styles.loginButtonText}>Войти или зарегистрироваться</Text>
                             <MaterialIcons
                               name="arrow-forward"
                               size={18}
-                              color={DESIGN_TOKENS.colors.primary}
+                              color={colors.primary}
                               style={{ marginLeft: 6 }}
                             />
                         </Pressable>
@@ -209,8 +215,8 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                 {showHeader && (
                     <>
                         <View style={styles.header}>
-                            <View style={[styles.iconContainer, { backgroundColor: DESIGN_TOKENS.colors.primaryLight }]}>
-                                <MaterialIcons name="star" size={24} color={DESIGN_TOKENS.colors.primary} />
+                            <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
+                                <MaterialIcons name="star" size={24} color={colors.primary} />
                             </View>
                             <View style={styles.titleContainer}>
                                 <Text style={styles.title}>Рекомендации для вас</Text>
@@ -226,7 +232,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                 <View style={[styles.emptyCard, isMobile ? styles.promptCardMobile : styles.promptCardDesktop]}>
                     <View style={styles.promptLead}>
                         <View style={styles.promptIcon}>
-                            <MaterialIcons name="explore" size={28} color={DESIGN_TOKENS.colors.textMuted} />
+                            <MaterialIcons name="explore" size={28} color={colors.textMuted} />
                         </View>
                         <View style={styles.promptCopy}>
                             <Text style={[styles.emptyText, !isMobile && styles.promptTextDesktop]}>
@@ -244,8 +250,8 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
             {showHeader && (
                 <>
                     <View style={styles.header}>
-                        <View style={[styles.iconContainer, { backgroundColor: DESIGN_TOKENS.colors.primarySoft }]}> 
-                            <MaterialIcons name="star" size={24} color={DESIGN_TOKENS.colors.primary} />
+                        <View style={[styles.iconContainer, { backgroundColor: colors.primarySoft }]}>
+                            <MaterialIcons name="star" size={24} color={colors.primary} />
                         </View>
                         <View style={styles.titleContainer}>
                             <Text style={styles.title}>Рекомендации для вас</Text>
@@ -316,13 +322,14 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
     );
 }
 
-const styles = StyleSheet.create({
+// ✅ МИГРАЦИЯ: Вынесена функция создания стилей с динамическими цветами
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {
-        marginVertical: 8, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше отступов
-        padding: 12, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше padding
-        backgroundColor: 'transparent', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Прозрачный фон
-        borderRadius: 12, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше радиус
-        borderWidth: 0, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Без границы
+        marginVertical: 8,
+        padding: 12,
+        backgroundColor: 'transparent',
+        borderRadius: 12,
+        borderWidth: 0,
         borderColor: 'transparent',
         shadowColor: 'transparent',
         shadowOffset: { width: 0, height: 0 },
@@ -348,7 +355,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 10,
-        backgroundColor: DESIGN_TOKENS.colors.primaryLight,
+        backgroundColor: colors.primaryLight,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -360,13 +367,13 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     title: {
-        fontSize: 15, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше размер
-        fontWeight: '600', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше жирность
-        color: DESIGN_TOKENS.colors.text,
+        fontSize: 15,
+        fontWeight: '600',
+        color: colors.text,
         letterSpacing: -0.1,
     },
     badgeContainer: {
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Прозрачный фон
+        backgroundColor: colors.primarySoft,
         borderRadius: 8,
         paddingHorizontal: 8,
         paddingVertical: 3,
@@ -374,23 +381,23 @@ const styles = StyleSheet.create({
     badgeText: {
         fontSize: 11,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.primary, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Цвет текста вместо белого
+        color: colors.primary,
         letterSpacing: 0.1,
     },
     subtitle: {
         fontSize: 13,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         marginLeft: 0,
         marginBottom: 12,
     },
     sectionTitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         marginBottom: 8,
     },
     countBadge: {
-        backgroundColor: DESIGN_TOKENS.colors.dangerLight,
+        backgroundColor: colors.dangerLight,
         borderRadius: 12,
         paddingHorizontal: 10,
         paddingVertical: 4,
@@ -399,7 +406,7 @@ const styles = StyleSheet.create({
     },
     count: {
         fontSize: 14,
-        color: DESIGN_TOKENS.colors.danger,
+        color: colors.danger,
         fontWeight: '700',
     },
     scrollContent: {
@@ -428,15 +435,14 @@ const styles = StyleSheet.create({
     },
     item: {
         width: 168,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: 16,
         overflow: 'hidden',
-        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowColor: colors.text,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 8,
         elevation: 3,
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
         marginRight: 12,
         transform: [{ scale: 1 }],
     },
@@ -446,21 +452,21 @@ const styles = StyleSheet.create({
     itemImage: {
         width: '100%',
         height: 96,
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
     },
     itemImagePlaceholder: {
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
+        backgroundColor: colors.mutedBackground,
     },
     itemContent: {
         padding: 10,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
     },
     itemTitle: {
         fontSize: 13,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         marginBottom: 6,
         lineHeight: 18,
         letterSpacing: -0.1,
@@ -468,7 +474,7 @@ const styles = StyleSheet.create({
     itemMeta: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -476,23 +482,23 @@ const styles = StyleSheet.create({
     },
     itemMetaText: {
         fontSize: 12,
-        color: DESIGN_TOKENS.colors.primary,
+        color: colors.primary,
         fontWeight: '600',
     },
     historyBadge: {
         position: 'absolute',
         top: 10,
         right: 10,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: 14,
         padding: 6,
-        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowColor: colors.text,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
         shadowRadius: 6,
         elevation: 2,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
         ...Platform.select({
             web: {
                 boxShadow: DESIGN_TOKENS.shadows.light,
@@ -500,11 +506,11 @@ const styles = StyleSheet.create({
         }),
     },
     promptCard: {
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         borderRadius: 16,
         padding: 16,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.borderAccent,
+        borderColor: colors.borderAccent,
     },
     promptCardMobile: {
         alignItems: 'flex-start',
@@ -527,15 +533,15 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 12,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
     },
     promptText: {
         fontSize: 14,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         textAlign: 'left',
         lineHeight: 20,
         fontWeight: '500',
@@ -547,9 +553,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.primary,
+        borderColor: colors.primary,
         borderRadius: 12,
         paddingVertical: 10,
         paddingHorizontal: 18,
@@ -569,19 +575,19 @@ const styles = StyleSheet.create({
     loginButtonText: {
         fontSize: 14,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.primary,
+        color: colors.primary,
         letterSpacing: -0.2,
     },
     emptyCard: {
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         borderRadius: 16,
         padding: 16,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
     },
     emptyText: {
         fontSize: 14,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         lineHeight: 20,
         fontWeight: '500',
     },
@@ -599,10 +605,10 @@ const styles = StyleSheet.create({
         marginHorizontal: 4,
         paddingVertical: 8,
         paddingHorizontal: 12,
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
+        borderColor: colors.borderLight,
     },
     expandButton: {
         flexDirection: 'row',
@@ -618,7 +624,7 @@ const styles = StyleSheet.create({
     expandButtonText: {
         fontSize: 14,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.primary,
+        color: colors.primary,
         marginLeft: 6,
     },
 });

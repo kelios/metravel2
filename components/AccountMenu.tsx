@@ -12,15 +12,148 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useFilters } from '@/providers/FiltersProvider';
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
+import { useThemedColors } from '@/hooks/useTheme';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 function AccountMenu() {
   const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth();
   const { favorites } = useFavorites();
   const { updateFilters } = useFilters();
+  const colors = useThemedColors();
 
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [avatarLoadError, setAvatarLoadError] = useState(false);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        anchor: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: colors.surface,
+          paddingVertical: 7,
+          paddingHorizontal: 12,
+          borderRadius: 20,
+          maxWidth: 220,
+          minHeight: 44,
+          minWidth: 44,
+          gap: 6,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+          ...(Platform.OS === 'web'
+            ? ({
+                cursor: 'pointer',
+                transition: 'background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease' as any,
+              } as any)
+            : null),
+        },
+        anchorHover: {
+          backgroundColor: colors.surfaceMuted,
+          borderColor: colors.border,
+          ...(Platform.OS === 'web'
+            ? ({
+                boxShadow: (colors.boxShadows as any)?.hover ?? '0 8px 16px rgba(17, 24, 39, 0.12)',
+              } as any)
+            : null),
+        },
+        avatarSlot: {
+          width: 24,
+          height: 24,
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        },
+        avatar: {
+          width: 24,
+          height: 24,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+        },
+        anchorText: {
+          fontSize: 16,
+          color: colors.text,
+          flexShrink: 1,
+        },
+        chevronSlot: {
+          width: 18,
+          height: 18,
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        },
+        menuContent: {
+          backgroundColor: colors.surface,
+          borderRadius: 16,
+          paddingVertical: 8,
+          minWidth: 280,
+          borderColor: colors.borderLight,
+          borderWidth: 1,
+          ...(Platform.OS === 'web'
+            ? ({
+                marginTop: 4,
+                boxShadow: (colors.boxShadows as any)?.medium ?? '0 18px 40px rgba(17, 24, 39, 0.16), 0 6px 14px rgba(17, 24, 39, 0.10)',
+              } as any)
+            : DESIGN_TOKENS.shadowsNative.light),
+        },
+        sectionTitle: {
+          paddingHorizontal: 14,
+          paddingTop: 10,
+          paddingBottom: 6,
+          fontSize: 12,
+          letterSpacing: 0.6,
+          textTransform: 'uppercase',
+          color: colors.textMuted,
+          fontWeight: '600',
+        },
+        sectionDivider: {
+          height: 1,
+          backgroundColor: colors.border,
+          marginVertical: 6,
+          marginHorizontal: 12,
+        },
+        themeSection: {
+          paddingHorizontal: 12,
+          paddingVertical: 4,
+        },
+        menuItem: {
+          borderRadius: 12,
+          marginHorizontal: 8,
+          minHeight: 44,
+          justifyContent: 'center',
+        },
+        menuItemPrimary: {
+          borderRadius: 12,
+          marginHorizontal: 8,
+          minHeight: 44,
+          justifyContent: 'center',
+          backgroundColor: colors.primarySoft,
+        },
+        menuItemTitle: {
+          fontSize: 16,
+          color: colors.text,
+          fontWeight: '500',
+        },
+        menuItemTitleStrong: {
+          fontSize: 16,
+          color: colors.text,
+          fontWeight: '600',
+        },
+        menuItemTitlePrimary: {
+          fontSize: 16,
+          color: colors.primary,
+          fontWeight: '700',
+        },
+        iconMuted: {
+          color: colors.textMuted,
+        },
+        iconPrimary: {
+          color: colors.primary,
+        },
+      }),
+    [colors],
+  );
 
   const avatarUri = useMemo(() => {
     if (avatarLoadError) return null;
@@ -95,7 +228,14 @@ function AccountMenu() {
     <Menu
       visible={visible}
       onDismiss={closeMenu}
-      contentStyle={styles.menuContent}
+      contentStyle={[
+        styles.menuContent,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.borderLight,
+          shadowColor: colors.shadows?.shadowColor ?? '#000',
+        },
+      ]}
       anchor={
         <Pressable
           onPress={openMenu}
@@ -106,7 +246,18 @@ function AccountMenu() {
           accessibilityState={{ expanded: visible }}
           style={({ pressed }) => [
             styles.anchor,
-            (hovered || pressed || visible) && styles.anchorHover,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.borderLight,
+            },
+            (hovered || pressed || visible) && [
+              styles.anchorHover,
+              {
+                backgroundColor: colors.surfaceMuted,
+                borderColor: colors.border,
+                shadowColor: colors.shadows?.shadowColor ?? '#000',
+              },
+            ],
           ]}
           testID="account-menu-anchor"
           {...(Platform.OS === 'web'
@@ -131,11 +282,11 @@ function AccountMenu() {
                 onError={() => setAvatarLoadError(true)}
               />
             ) : (
-              <Icon name="account-circle" size={24} color="#333" />
+              <Icon name="account-circle" size={24} color={colors.text} />
             )}
           </View>
 
-          <Text style={styles.anchorText} numberOfLines={1}>
+          <Text style={[styles.anchorText, { color: colors.text }]} numberOfLines={1}>
             {isAuthenticated && username ? username : 'Гость'}
           </Text>
 
@@ -143,7 +294,11 @@ function AccountMenu() {
             <Icon
               name={visible ? 'chevron-up' : 'chevron-down'}
               size={18}
-              color={visible ? '#2f5e50' : hovered ? '#2f5e50' : '#667085'}
+              color={
+                visible || hovered
+                  ? colors.primary
+                  : colors.textMuted
+              }
             />
           </View>
         </Pressable>
