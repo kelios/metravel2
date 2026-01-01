@@ -440,6 +440,12 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                 </View>
                             )}
 
+                            {/* ✅ ФАЗА 2: Поиск мест на карте */}
+                            <LocationSearchInput
+                                onLocationSelect={handleLocationSelect}
+                                placeholder="Поиск места (например: Эйфелева башня, Париж)"
+                            />
+
                             <View style={[styles.manualPointRow, isMobile && styles.manualPointRowMobile]}>
                                 <Button
                                     mode={isManualPointVisible ? 'contained' : 'outlined'}
