@@ -430,6 +430,29 @@ const MapPageComponent: React.FC<Props> = ({
     };
   }, []);
 
+  // Полное удаление экземпляра карты при размонтировании, чтобы Leaflet не ругался на переиспользование контейнера
+  useEffect(() => {
+    return () => {
+      try {
+        const map = mapRef.current;
+        const container = map?.getContainer?.();
+        map?.off?.();
+        map?.remove?.();
+        if (container && (container as any)._leaflet_id) {
+          try {
+            delete (container as any)._leaflet_id;
+          } catch {
+            // noop
+          }
+        }
+      } catch {
+        // noop
+      } finally {
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
@@ -622,6 +645,7 @@ const MapPageComponent: React.FC<Props> = ({
   const savedMapViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const resizeRafRef = useRef<number | null>(null);
   const lastAutoFitKeyRef = useRef<string | null>(null);
+  const mapInstanceKeyRef = useRef<string>(`leaflet-map-${Math.random().toString(36).slice(2)}`);
 
   // Функция для центрирования на местоположении пользователя (должна быть до условных возвратов)
   const centerOnUserLocation = useCallback(() => {
@@ -925,6 +949,7 @@ const MapPageComponent: React.FC<Props> = ({
         style={styles.map as any}
         center={safeCenter}
         zoom={initialZoomRef.current}
+        key={mapInstanceKeyRef.current}
       >
         <TileLayer
           attribution="&copy; OpenStreetMap contributors"

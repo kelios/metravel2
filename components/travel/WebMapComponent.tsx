@@ -247,6 +247,7 @@ const WebMapComponent = ({
         if (typeof window === 'undefined') return false;
         return window.innerWidth >= 1024;
     });
+    const mapInstanceKeyRef = useRef<string>(`leaflet-map-${Math.random().toString(36).slice(2)}`);
     // Только для старта: если маркеры пришли извне (редактирование маршрута), разрешаем авто-fit.
     // При создании нового маршрута (маркер ставит пользователь) авто-fit отключён.
     const hasInitialMarkersRef = useRef(markers.length > 0);
@@ -303,6 +304,24 @@ const WebMapComponent = ({
 
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // Очистка Leaflet контейнеров при размонтировании, чтобы избежать ошибки "Map container is already initialized"
+    useEffect(() => {
+        return () => {
+            if (typeof document === 'undefined') return;
+            const containers = document.querySelectorAll('.leaflet-container');
+            containers.forEach((el) => {
+                const anyEl = el as any;
+                if (anyEl._leaflet_id) {
+                    try {
+                        delete anyEl._leaflet_id;
+                    } catch {
+                        // noop
+                    }
+                }
+            });
+        };
     }, []);
 
     const isValidCoordinates = ({ lat, lng }: { lat: number; lng: number }) =>
@@ -665,6 +684,7 @@ const WebMapComponent = ({
                                 center={[51.505, -0.09]}
                                 zoom={13}
                                 keyboard={false}
+                                key={mapInstanceKeyRef.current}
                                 style={{ height: isWideLayout ? 600 : 460, width: '100%' }}
                             >
                                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />

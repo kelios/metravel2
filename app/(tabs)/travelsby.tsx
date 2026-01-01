@@ -5,12 +5,14 @@ import { usePathname } from 'expo-router';
 import ListTravel from '@/components/listTravel/ListTravel';
 import InstantSEO from '@/components/seo/InstantSEO';
 import {useIsFocused} from "@react-navigation/native";
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 export default function TravelsByScreen() {
     const pathname = usePathname();
     const isFocused = useIsFocused();
     const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const canonical = useMemo(
         () => `${SITE}${pathname || '/travelsby'}`,
@@ -40,9 +42,9 @@ export default function TravelsByScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: DESIGN_TOKENS.colors.background,
+        backgroundColor: colors.background,
     },
 });

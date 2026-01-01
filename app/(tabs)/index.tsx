@@ -7,11 +7,13 @@ import InstantSEO from '@/components/seo/InstantSEO';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import Home from '@/components/home/Home';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 function HomeScreen() {
     const pathname = usePathname();
     const isFocused = useIsFocused();
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
 
@@ -59,10 +61,10 @@ function HomeScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: DESIGN_TOKENS.colors.background,
+        backgroundColor: colors.background,
     },
     errorContainer: {
         flex: 1,

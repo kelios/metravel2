@@ -1,10 +1,14 @@
 import { Link, Stack, router } from 'expo-router'
 import { Platform, Pressable, StyleSheet } from 'react-native'
+import React, { useMemo } from 'react'
 
 import { Text, View } from '@/components/Themed'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useThemedColors } from '@/hooks/useTheme'
 
 export default function NotFoundScreen() {
+  const colors = useThemedColors()
+  const styles = useMemo(() => createStyles(colors), [colors])
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
@@ -39,7 +43,7 @@ export default function NotFoundScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
@@ -49,20 +53,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     textAlign: 'center',
   },
   subtitle: {
     marginTop: DESIGN_TOKENS.spacing.lg,
     fontSize: 14,
     lineHeight: 20,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
     maxWidth: 420,
   },
   primaryButton: {
     marginTop: DESIGN_TOKENS.spacing.lg,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: DESIGN_TOKENS.spacing.xl,
     paddingVertical: DESIGN_TOKENS.spacing.md,
     borderRadius: DESIGN_TOKENS.radii.md,
@@ -72,7 +76,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryButtonText: {
-    color: DESIGN_TOKENS.colors.textInverse,
+    color: colors.textInverse,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -88,7 +92,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   secondaryButtonText: {
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },

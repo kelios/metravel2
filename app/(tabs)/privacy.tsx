@@ -1,15 +1,15 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { usePathname } from 'expo-router';
 import InstantSEO from '@/components/seo/InstantSEO';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-
-const palette = DESIGN_TOKENS.colors;
+import { useThemedColors } from '@/hooks/useTheme';
 
 export default function PrivacyScreen() {
   const pathname = usePathname();
   const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
   const canonical = `${SITE}${pathname || '/privacy'}`;
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const title = 'Политика конфиденциальности | Metravel';
   const description = 'Подробная политика конфиденциальности Metravel в соответствии с требованиями GDPR.';
@@ -147,10 +147,10 @@ export default function PrivacyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: palette.background,
+    backgroundColor: colors.background,
   },
   container: {
     paddingHorizontal: 16,
@@ -161,20 +161,20 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 24,
     fontWeight: '700',
-    color: palette.text,
+    color: colors.text,
     marginBottom: 16,
   },
   subheading: {
     fontSize: 18,
     fontWeight: '600',
-    color: palette.text,
+    color: colors.text,
     marginTop: 20,
     marginBottom: 8,
   },
   paragraph: {
     fontSize: 14,
     lineHeight: 20,
-    color: palette.textMuted,
+    color: colors.textMuted,
     marginBottom: 8,
   },
 });
