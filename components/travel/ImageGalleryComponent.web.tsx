@@ -109,6 +109,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
 }) => {
     // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
     const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const [images, setImages] = useState<GalleryItem[]>([]);
     const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
@@ -540,7 +541,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
 
 export default ImageGalleryComponent;
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {
         padding: DESIGN_TOKENS.spacing.xl,
         width: '100%',
@@ -583,9 +584,9 @@ const styles = StyleSheet.create({
         borderRadius: DESIGN_TOKENS.radii.md,
         overflow: 'hidden',
         position: 'relative',
-        backgroundColor: DESIGN_TOKENS.colors.cardMuted,
+        backgroundColor: colors.backgroundSecondary,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
+        borderColor: colors.borderLight,
     },
     image: {
         width: '100%',
@@ -614,8 +615,8 @@ const styles = StyleSheet.create({
         marginBottom: DESIGN_TOKENS.spacing.xl,
     },
     activeDropzone: {
-        borderColor: DESIGN_TOKENS.colors.primaryDark,
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        borderColor: colors.primaryDark,
+        backgroundColor: colors.primarySoft,
     },
     dropzoneText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -643,7 +644,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: DESIGN_TOKENS.colors.overlay,
+        backgroundColor: colors.overlay,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -653,11 +654,11 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     errorImageContainer: {
-        backgroundColor: DESIGN_TOKENS.colors.warningSoft,
+        backgroundColor: colors.warningSoft,
         borderRadius: DESIGN_TOKENS.radii.md,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.warningLight,
+        borderColor: colors.warningLight,
         position: 'relative',
     },
     errorImage: {
@@ -668,7 +669,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: DESIGN_TOKENS.colors.overlayLight,
+        backgroundColor: colors.overlayLight,
         paddingHorizontal: DESIGN_TOKENS.spacing.md,
     },
     errorOverlaySubtext: {

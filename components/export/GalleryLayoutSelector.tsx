@@ -1,10 +1,11 @@
 // components/export/GalleryLayoutSelector.tsx
 // Компонент для выбора раскладки галереи
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface GalleryLayoutInfo {
   id: GalleryLayout;
@@ -83,6 +84,8 @@ export default function GalleryLayoutSelector({
   spacing = 'normal',
   onSpacingChange,
 }: GalleryLayoutSelectorProps) {
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const webScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -126,6 +129,7 @@ export default function GalleryLayoutSelector({
                 layout={layout}
                 isSelected={selectedLayout === layout.id}
                 onSelect={() => onLayoutSelect(layout.id)}
+                styles={styles}
               />
             ))}
           </div>
@@ -143,6 +147,7 @@ export default function GalleryLayoutSelector({
               layout={layout}
               isSelected={selectedLayout === layout.id}
               onSelect={() => onLayoutSelect(layout.id)}
+              styles={styles}
             />
           ))}
         </ScrollView>
@@ -263,9 +268,10 @@ interface LayoutCardProps {
   layout: GalleryLayoutInfo;
   isSelected: boolean;
   onSelect: () => void;
+  styles: ReturnType<typeof createStyles>;
 }
 
-function LayoutCard({ layout, isSelected, onSelect }: LayoutCardProps) {
+function LayoutCard({ layout, isSelected, onSelect, styles }: LayoutCardProps) {
   return (
     <Pressable
       style={[styles.layoutCard, isSelected && styles.layoutCardSelected]}
@@ -299,14 +305,14 @@ function LayoutCard({ layout, isSelected, onSelect }: LayoutCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     paddingVertical: 16,
   },
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 12,
     paddingHorizontal: 16,
   },
@@ -341,30 +347,38 @@ const styles = StyleSheet.create({
   } as any,
   layoutCard: {
     width: 180,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     padding: 16,
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: colors.boxShadows.card,
+      },
+      default: {
+        ...colors.shadows.medium,
+      },
+    }),
     flexShrink: 0,
   },
   layoutCardSelected: {
-    borderColor: DESIGN_TOKENS.colors.primary,
+    borderColor: colors.primary,
     borderWidth: 3,
-    shadowColor: DESIGN_TOKENS.colors.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    ...Platform.select({
+      web: {
+        boxShadow: colors.boxShadows.heavy,
+      },
+      default: {
+        ...colors.shadows.hover,
+      },
+    }),
   },
   layoutIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -375,23 +389,23 @@ const styles = StyleSheet.create({
   layoutName: {
     fontSize: 15,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 6,
   },
   layoutDescription: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     lineHeight: 16,
     marginBottom: 8,
   },
   layoutBestFor: {
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: DESIGN_TOKENS.colors.borderLight,
+    borderTopColor: colors.borderLight,
   },
   layoutBestForText: {
     fontSize: 11,
-    color: DESIGN_TOKENS.colors.textSubtle,
+    color: colors.textTertiary,
     fontStyle: 'italic',
     lineHeight: 14,
   },
@@ -402,12 +416,12 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   selectedBadgeText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -423,7 +437,7 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   columnsButtons: {
     flexDirection: 'row',
@@ -433,45 +447,48 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
   },
   columnButtonActive: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    borderColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   columnButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   columnButtonTextActive: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
   },
   toggle: {
     width: 50,
     height: 28,
     borderRadius: 14,
-    backgroundColor: DESIGN_TOKENS.colors.disabled,
+    backgroundColor: colors.disabled,
     padding: 2,
     justifyContent: 'center',
   },
   toggleActive: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
   },
   toggleThumb: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    backgroundColor: colors.surface,
+    ...Platform.select({
+      web: {
+        boxShadow: colors.boxShadows.light,
+      },
+      default: {
+        ...colors.shadows.light,
+      },
+    }),
   },
   toggleThumbActive: {
     alignSelf: 'flex-end',
@@ -484,21 +501,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
   },
   positionButtonActive: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    borderColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   positionButtonText: {
     fontSize: 12,
     fontWeight: '500',
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   positionButtonTextActive: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
   },
   spacingButtons: {
     flexDirection: 'row',
@@ -508,20 +525,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
   },
   spacingButtonActive: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    borderColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   spacingButtonText: {
     fontSize: 11,
     fontWeight: '500',
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   spacingButtonTextActive: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
   },
 });

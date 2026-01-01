@@ -1,7 +1,7 @@
-import React, { memo, useEffect, useState, useCallback } from 'react';
+import React, { memo, useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import BadgeCard, { Badge } from './BadgeCard';
 
 const STORAGE_KEY_BADGES = 'user_badges';
@@ -53,6 +53,8 @@ interface BadgeSystemProps {
 
 const BadgeSystem = ({ userId, compact = false }: BadgeSystemProps) => {
   const [badges, setBadges] = useState<Badge[]>(AVAILABLE_BADGES);
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const updateBadgesProgress = useCallback((userStats: UserStats) => {
     setBadges((prev) =>
@@ -138,7 +140,7 @@ const BadgeSystem = ({ userId, compact = false }: BadgeSystemProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     gap: 16,
   },
@@ -150,12 +152,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   subtitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   scrollContentHorizontal: {
     flexDirection: 'row',

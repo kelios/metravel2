@@ -1,6 +1,8 @@
 import { Platform, StyleSheet } from 'react-native'
+import { useMemo } from 'react'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 
 export const HEADER_OFFSET_DESKTOP = 72
 export const HEADER_OFFSET_MOBILE = 56
@@ -47,11 +49,11 @@ export const COMPACT_TYPOGRAPHY = {
 } as const;
 
 /* -------------------- styles -------------------- */
-export const styles = StyleSheet.create({
+export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.create({
   // ✅ РЕДИЗАЙН: Светлый современный фон
   wrapper: { 
     flex: 1, 
-    backgroundColor: DESIGN_TOKENS.colors.background,
+    backgroundColor: colors.background,
   },
   safeArea: { flex: 1 },
   mainContainer: { 
@@ -77,9 +79,9 @@ export const styles = StyleSheet.create({
 
   // ✅ РЕДИЗАЙН: Адаптивное боковое меню
   sideMenuBase: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRightWidth: 1,
-    borderRightColor: DESIGN_TOKENS.colors.borderLight,
+    borderRightColor: colors.borderLight,
   },
   scrollView: {
     flex: 1,
@@ -142,25 +144,25 @@ export const styles = StyleSheet.create({
     }),
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surface,
     marginRight: DESIGN_TOKENS.spacing.sm,
     marginBottom: DESIGN_TOKENS.spacing.sm,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.light,
+        boxShadow: colors.boxShadows.light,
       } as any,
-      default: DESIGN_TOKENS.shadowsNative.light,
+      default: colors.shadows.light,
     }),
   },
   quickJumpChipPressed: {
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
-    borderColor: DESIGN_TOKENS.colors.borderAccent,
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.borderAccent,
   },
   quickJumpLabel: {
     fontSize: COMPACT_TYPOGRAPHY.body.mobile, // было 14
     fontWeight: "600" as any,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginLeft: DESIGN_TOKENS.spacing.xs,
   },
   
@@ -174,13 +176,13 @@ export const styles = StyleSheet.create({
       web: COMPACT_TYPOGRAPHY.subtitle.desktop, // было 24
     }),
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: DESIGN_TOKENS.spacing.sm,
   },
   
   descriptionIntroText: {
     fontSize: COMPACT_TYPOGRAPHY.body.mobile, // было md (16)
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     lineHeight: Platform.select({ default: 22, web: 21 }), // уменьшено
   },
 
@@ -189,19 +191,19 @@ export const styles = StyleSheet.create({
     padding: Platform.select({ default: DESIGN_TOKENS.spacing.lg, web: DESIGN_TOKENS.spacing.xl }),
     borderRadius: DESIGN_TOKENS.radii.lg,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderAccent,
-    backgroundColor: DESIGN_TOKENS.colors.accentSoft,
+    borderColor: colors.borderAccent,
+    backgroundColor: colors.accentSoft,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.card,
+        boxShadow: colors.boxShadows.card,
       } as any,
-      default: DESIGN_TOKENS.shadowsNative.medium,
+      default: colors.shadows.medium,
     }),
   },
   decisionSummaryTitle: {
     fontSize: Platform.select({ default: 22, web: 24 }),
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: DESIGN_TOKENS.spacing.sm,
   },
   decisionSummaryList: {
@@ -221,7 +223,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     lineHeight: Platform.select({ default: 28, web: 26 }),
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
   },
   decisionSummarySubBulletRow: {
@@ -239,7 +241,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     lineHeight: Platform.select({ default: 24, web: 22 }),
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     opacity: 0.9,
     fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
   },
@@ -250,16 +252,16 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
   },
   decisionSummaryBadgeInfo: {
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    borderColor: DESIGN_TOKENS.colors.border,
+    backgroundColor: colors.backgroundSecondary,
+    borderColor: colors.border,
   },
   decisionSummaryBadgePositive: {
-    backgroundColor: DESIGN_TOKENS.colors.successSoft,
-    borderColor: DESIGN_TOKENS.colors.successLight,
+    backgroundColor: colors.successSoft,
+    borderColor: colors.successLight,
   },
   decisionSummaryBadgeNegative: {
-    backgroundColor: DESIGN_TOKENS.colors.dangerSoft,
-    borderColor: DESIGN_TOKENS.colors.dangerLight,
+    backgroundColor: colors.dangerSoft,
+    borderColor: colors.dangerLight,
   },
   decisionSummaryBadgeText: {
     fontSize: 14,
@@ -267,19 +269,19 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   decisionSummaryBadgeTextInfo: {
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   decisionSummaryBadgeTextPositive: {
-    color: DESIGN_TOKENS.colors.successDark,
+    color: colors.successDark,
   },
   decisionSummaryBadgeTextNegative: {
-    color: DESIGN_TOKENS.colors.dangerDark,
+    color: colors.dangerDark,
   },
   decisionSummaryText: {
     flex: 1,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     lineHeight: Platform.select({ default: 24, web: 22 }),
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
   },
   
@@ -290,7 +292,7 @@ export const styles = StyleSheet.create({
   
   backToTopText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   
   navigationArrowsContainer: {
@@ -318,7 +320,7 @@ export const styles = StyleSheet.create({
   sideMenuWebDesktop: {
     position: "sticky" as any,
     top: HEADER_OFFSET_DESKTOP as any,
-    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+    backgroundColor: colors.surfaceMuted,
     backdropFilter: "blur(20px)" as any,
     // Ensure the sidebar can scroll independently on long menus
     maxHeight: `calc(100vh - ${HEADER_OFFSET_DESKTOP}px)` as any,
@@ -331,7 +333,7 @@ export const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRightWidth: 0,
     maxHeight: "100vh" as any,
     overflowY: "auto" as any,
@@ -351,36 +353,36 @@ export const styles = StyleSheet.create({
       default: COMPACT_SPACING.section.mobile, // было md (16px)
       web: COMPACT_SPACING.section.desktop, // было xl (32px)
     }),
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
     justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     minHeight: 56, // было 64
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.card,
+        boxShadow: colors.boxShadows.card,
       } as any,
-      default: DESIGN_TOKENS.shadowsNative.medium,
+      default: colors.shadows.medium,
     }),
   },
   sectionHeaderPositive: {
-    backgroundColor: DESIGN_TOKENS.colors.successSoft,
-    borderColor: DESIGN_TOKENS.colors.successLight,
+    backgroundColor: colors.successSoft,
+    borderColor: colors.successLight,
   },
   sectionHeaderNegative: {
-    backgroundColor: DESIGN_TOKENS.colors.dangerSoft,
-    borderColor: DESIGN_TOKENS.colors.dangerLight,
+    backgroundColor: colors.dangerSoft,
+    borderColor: colors.dangerLight,
   },
   sectionHeaderInfo: {
-    backgroundColor: DESIGN_TOKENS.colors.infoSoft,
-    borderColor: DESIGN_TOKENS.colors.infoLight,
+    backgroundColor: colors.infoSoft,
+    borderColor: colors.infoLight,
   },
   sectionHeaderActive: {
     shadowOpacity: 0.10,
     shadowRadius: 10,
-    borderColor: DESIGN_TOKENS.colors.primary,
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
   },
   sectionHeaderTitleWrap: {
     flexDirection: "row",
@@ -394,7 +396,7 @@ export const styles = StyleSheet.create({
     width: Platform.select({ default: 32, web: 36 }),
     height: Platform.select({ default: 32, web: 36 }),
     borderRadius: Platform.select({ default: 16, web: 18 }),
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -407,8 +409,8 @@ export const styles = StyleSheet.create({
   sectionHeaderBadge: {
     fontSize: 14,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    color: DESIGN_TOKENS.colors.textMuted,
-    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+    color: colors.textMuted,
+    backgroundColor: colors.surfaceMuted,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: DESIGN_TOKENS.spacing.xxs,
     borderRadius: DESIGN_TOKENS.radii.pill,
@@ -421,7 +423,7 @@ export const styles = StyleSheet.create({
       web: COMPACT_TYPOGRAPHY.title.desktop + 2, // было 26, теперь 24
     }),
     fontWeight: '700' as any,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     letterSpacing: -0.4,
     lineHeight: Platform.select({
       default: 28, // было 30
@@ -431,7 +433,7 @@ export const styles = StyleSheet.create({
   },
   sectionSubtitle: {
     fontSize: Platform.select({ default: 14, web: 16 }),
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     marginTop: DESIGN_TOKENS.spacing.sm,
     lineHeight: Platform.select({ default: 22, web: 24 }),
   },
@@ -444,10 +446,10 @@ export const styles = StyleSheet.create({
     // Объединенные стили теней
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.light,
+        boxShadow: colors.boxShadows.light,
       },
       default: {
-        ...DESIGN_TOKENS.shadowsNative.light,
+        ...colors.shadows.light,
       },
     }),
   },
@@ -457,7 +459,7 @@ export const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: DESIGN_TOKENS.radii.md,
     overflow: "hidden",
-    backgroundColor: DESIGN_TOKENS.colors.text,
+    backgroundColor: colors.text,
   },
 
   playOverlay: {
@@ -469,7 +471,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    backgroundColor: DESIGN_TOKENS.colors.overlay,
+    backgroundColor: colors.overlay,
   },
   neutralActionButton: {
     alignSelf: "flex-start",
@@ -477,20 +479,20 @@ export const styles = StyleSheet.create({
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
   },
   neutralActionButtonPressed: {
     opacity: 0.92,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundTertiary,
+    backgroundColor: colors.backgroundTertiary,
   },
   neutralActionButtonText: {
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontSize: 14,
     fontWeight: "600" as any,
   },
   videoHintText: {
-    color: DESIGN_TOKENS.colors.textOnDark,
+    color: colors.textOnDark,
     fontSize: 14,
     marginTop: DESIGN_TOKENS.spacing.sm,
     textAlign: "center",
@@ -499,33 +501,33 @@ export const styles = StyleSheet.create({
 
   descriptionContainer: {
     width: "100%",
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
     padding: Platform.select({
       default: COMPACT_SPACING.section.mobile, // было md (16px)
       web: COMPACT_SPACING.section.desktop, // было xl (32px), теперь 18
     }),
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.card,
+        boxShadow: colors.boxShadows.card,
       } as any,
-      default: DESIGN_TOKENS.shadowsNative.medium,
+      default: colors.shadows.medium,
     }),
   },
 
   mobileInsightTabsWrapper: {
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     padding: DESIGN_TOKENS.spacing.lg,
     borderRadius: DESIGN_TOKENS.radii.md,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
   },
   mobileInsightLabel: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   mobileInsightTabs: {
@@ -537,41 +539,41 @@ export const styles = StyleSheet.create({
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     borderRadius: 999,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundTertiary,
+    backgroundColor: colors.backgroundTertiary,
   },
   mobileInsightChipActive: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
   },
   mobileInsightChipText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "500",
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   mobileInsightChipTextActive: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
   },
 
   mapEmptyState: {
     width: "100%",
     padding: DESIGN_TOKENS.spacing.xl,
     borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: DESIGN_TOKENS.colors.borderStrong,
+    borderColor: colors.borderStrong,
     alignItems: "center",
     justifyContent: "center",
   },
   mapEmptyText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: "600",
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   nearSubtitle: {
-    color: DESIGN_TOKENS.colors.successDark,
+    color: colors.successDark,
   },
   popularSubtitle: {
-    color: DESIGN_TOKENS.colors.warningDark,
+    color: colors.warningDark,
   },
   sectionBadgeRow: {
     flexDirection: "row",
@@ -585,21 +587,21 @@ export const styles = StyleSheet.create({
     borderRadius: 999,
   },
   sectionBadgeNear: {
-    backgroundColor: DESIGN_TOKENS.colors.successSoft,
+    backgroundColor: colors.successSoft,
   },
   sectionBadgePopular: {
-    backgroundColor: DESIGN_TOKENS.colors.warningSoft,
+    backgroundColor: colors.warningSoft,
   },
   sectionBadgeText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   sectionBadgeTextNear: {
-    color: DESIGN_TOKENS.colors.successDark,
+    color: colors.successDark,
   },
   sectionBadgeTextPopular: {
-    color: DESIGN_TOKENS.colors.warningDark,
+    color: colors.warningDark,
   },
 
   fallback: { paddingVertical: DESIGN_TOKENS.spacing.xl, alignItems: "center" },
@@ -617,14 +619,14 @@ export const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     paddingVertical: DESIGN_TOKENS.spacing.xl + DESIGN_TOKENS.spacing.xs,
   },
   errorTitle: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: "600",
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginTop: DESIGN_TOKENS.spacing.lg,
     marginBottom: DESIGN_TOKENS.spacing.xs,
     textAlign: "center",
@@ -632,13 +634,13 @@ export const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     textAlign: "center",
     marginBottom: DESIGN_TOKENS.spacing.xl,
     lineHeight: 24,
   },
   errorButton: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: DESIGN_TOKENS.spacing.xl,
     paddingVertical: DESIGN_TOKENS.spacing.sm,
     borderRadius: 8,
@@ -647,14 +649,19 @@ export const styles = StyleSheet.create({
         cursor: "pointer",
         transition: "all 0.2s ease",
         ":hover": {
-          backgroundColor: DESIGN_TOKENS.colors.primaryDark,
+          backgroundColor: colors.primaryDark,
         } as any,
       },
     }),
   },
   errorButtonText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: "600",
   },
 });
+
+export const useTravelDetailsStyles = () => {
+  const colors = useThemedColors();
+  return useMemo(() => getTravelDetailsStyles(colors), [colors]);
+};

@@ -1,6 +1,7 @@
-import React, { memo, useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Platform, Pressable } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface BadgeNotificationProps {
   badgeName: string;
@@ -19,6 +20,8 @@ const BadgeNotification = ({
   onDismiss,
   duration = 4000,
 }: BadgeNotificationProps) => {
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(-100));
 
@@ -91,7 +94,7 @@ const BadgeNotification = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     position: 'absolute',
     top: Platform.select({ default: 60, web: 80 }),
@@ -110,21 +113,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
     padding: 16,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     ...Platform.select({
       web: {
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+        boxShadow: colors.boxShadows.modal,
       },
       default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 8,
+        ...colors.shadows.heavy,
       },
     }),
   },
@@ -145,12 +144,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   badgeName: {
     fontSize: 16,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
 });
 

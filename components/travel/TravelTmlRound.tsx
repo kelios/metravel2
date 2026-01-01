@@ -14,6 +14,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useResponsive } from '@/hooks/useResponsive';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type Props = { travel: Travel };
 
@@ -22,6 +23,8 @@ const CARD_IMAGE_HEIGHT = 170;
 
 const TravelTmlRound: React.FC<Props> = ({ travel }) => {
     useResponsive();
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const {
         name = "Без названия",
@@ -146,7 +149,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
 
 export default memo(TravelTmlRound);
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: { 
         width: '100%',
         height: CARD_HEIGHT,
@@ -157,27 +160,24 @@ const styles = StyleSheet.create({
     card: {
         alignItems: "center",
         borderRadius: DESIGN_TOKENS.radii.lg,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         width: '100%',
         height: '100%',
-        shadowColor: "#1f1f1f",
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
+        ...colors.shadows.light,
         // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
         ...(Platform.OS === "android" ? { elevation: 3 } : null),
         ...Platform.select({
             web: {
                 cursor: "pointer" as any,
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: DESIGN_TOKENS.shadows.card,
+                boxShadow: colors.boxShadows.card,
                 ':hover': {
                     transform: 'translateY(-2px)',
-                    boxShadow: DESIGN_TOKENS.shadows.hover,
+                    boxShadow: colors.boxShadows.hover,
                 } as any,
                 ':active': {
                     transform: 'translateY(-1px)',
-                    boxShadow: DESIGN_TOKENS.shadows.medium,
+                    boxShadow: colors.boxShadows.medium,
                 } as any,
             },
         }),
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     imageWrapper: {
         width: '100%',
         overflow: "hidden",
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         borderRadius: DESIGN_TOKENS.radii.lg,
     },
     image: { 
@@ -224,8 +224,8 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: DESIGN_TOKENS.radii.lg,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        borderColor: colors.borderLight,
+        backgroundColor: colors.backgroundSecondary,
     },
 
     // ✅ Нижний оверлей как в попапе
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
         paddingVertical: 8,
-        backgroundColor: 'rgba(15,23,42,0.78)',
+        backgroundColor: colors.overlay,
         flexDirection: 'column',
         gap: DESIGN_TOKENS.spacing.xs,
         ...Platform.select({
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
         }),
     },
     overlayTitle: {
-        color: '#f9fafb',
+        color: colors.textOnDark,
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '700',
         lineHeight: 18,
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
         }),
     },
     overlaySubtitle: {
-        color: '#e5e7eb',
+        color: colors.textOnDark,
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '500',
         ...Platform.select({
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     locationText: {
         fontSize: 12,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         flex: 1,
     },
 
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     contentTitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         lineHeight: 18,
         letterSpacing: -0.2,
         minHeight: 36,

@@ -1,9 +1,9 @@
 // components/export/ThemePreview.tsx
 // Компонент для предпросмотра тем PDF с миниатюрами
 
-import React from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
+import { useThemedColors } from '@/hooks/useTheme';
 
 export type PdfThemeName = 
   | 'minimal' 
@@ -225,6 +225,8 @@ export default function ThemePreview({
   onThemeSelect,
   compact = false,
 }: ThemePreviewProps) {
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const themes = Object.values(THEME_CATALOG);
 
   return (
@@ -242,6 +244,7 @@ export default function ThemePreview({
             isSelected={selectedTheme === theme.id}
             onSelect={() => onThemeSelect(theme.id)}
             compact={compact}
+            styles={styles}
           />
         ))}
       </ScrollView>
@@ -254,9 +257,10 @@ interface ThemeCardProps {
   isSelected: boolean;
   onSelect: () => void;
   compact: boolean;
+  styles: ReturnType<typeof createStyles>;
 }
 
-function ThemeCard({ theme, isSelected, onSelect, compact }: ThemeCardProps) {
+function ThemeCard({ theme, isSelected, onSelect, compact, styles }: ThemeCardProps) {
   return (
     <Pressable
       style={[
@@ -327,14 +331,14 @@ function ThemeCard({ theme, isSelected, onSelect, compact }: ThemeCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     paddingVertical: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 16,
     paddingHorizontal: 16,
   },
@@ -352,33 +356,41 @@ const styles = StyleSheet.create({
     marginHorizontal: '1%',
     marginBottom: 16,
     minHeight: 240,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     overflow: 'hidden',
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: colors.boxShadows.card,
+      },
+      default: {
+        ...colors.shadows.medium,
+      },
+    }),
   },
   themeCardCompact: {
     width: 180,
     marginHorizontal: 0,
   },
   themeCardSelected: {
-    borderColor: DESIGN_TOKENS.colors.primary,
+    borderColor: colors.primary,
     borderWidth: 3,
-    shadowColor: DESIGN_TOKENS.colors.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    ...Platform.select({
+      web: {
+        boxShadow: colors.boxShadows.heavy,
+      },
+      default: {
+        ...colors.shadows.hover,
+      },
+    }),
   },
   thumbnail: {
     height: 140,
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: DESIGN_TOKENS.colors.border,
+    borderBottomColor: colors.border,
   },
   thumbnailContent: {
     flex: 1,
@@ -412,12 +424,12 @@ const styles = StyleSheet.create({
   themeName: {
     fontSize: 16,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 4,
   },
   themeDescription: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     marginBottom: 8,
   },
   colorPalette: {
@@ -430,11 +442,11 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
   },
   fontInfo: {
     fontSize: 10,
-    color: DESIGN_TOKENS.colors.textSubtle,
+    color: colors.textTertiary,
     fontStyle: 'italic',
   },
   selectedBadge: {
@@ -444,17 +456,20 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    ...Platform.select({
+      web: {
+        boxShadow: colors.boxShadows.medium,
+      },
+      default: {
+        ...colors.shadows.medium,
+      },
+    }),
   },
   selectedBadgeText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
     fontSize: 16,
     fontWeight: 'bold',
   },

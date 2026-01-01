@@ -1,11 +1,11 @@
 // components/export/PresetSelector.tsx
 // Компонент для выбора пресетов настроек PDF
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import type { BookPreset, PresetCategory } from '@/src/types/pdf-presets';
 import { BOOK_PRESETS, PRESET_CATEGORIES } from '@/src/types/pdf-presets';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 // Добавляем стили для web через style tag
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -81,6 +81,8 @@ export default function PresetSelector({
   selectedPresetId,
   showCategories = true,
 }: PresetSelectorProps) {
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [selectedCategory, setSelectedCategory] = useState<PresetCategory | 'all'>('all');
 
   const categoriesScrollRef = useRef<HTMLDivElement | null>(null);
@@ -142,6 +144,7 @@ export default function PresetSelector({
                 label="Все"
                 isSelected={selectedCategory === 'all'}
                 onPress={() => setSelectedCategory('all')}
+                styles={styles}
               />
               {Object.entries(PRESET_CATEGORIES).map(([key, category]) => (
                 <CategoryChip
@@ -149,6 +152,7 @@ export default function PresetSelector({
                   label={category.name}
                   isSelected={selectedCategory === key}
                   onPress={() => setSelectedCategory(key as PresetCategory)}
+                  styles={styles}
                 />
               ))}
             </div>
@@ -165,6 +169,7 @@ export default function PresetSelector({
                 label="Все"
                 isSelected={selectedCategory === 'all'}
                 onPress={() => setSelectedCategory('all')}
+                styles={styles}
               />
               {Object.entries(PRESET_CATEGORIES).map(([key, category]) => (
                 <CategoryChip
@@ -172,6 +177,7 @@ export default function PresetSelector({
                   label={category.name}
                   isSelected={selectedCategory === key}
                   onPress={() => setSelectedCategory(key as PresetCategory)}
+                  styles={styles}
                 />
               ))}
             </View>
@@ -194,6 +200,7 @@ export default function PresetSelector({
                   preset={preset}
                   isSelected={selectedPresetId === preset.id}
                   onSelect={() => onPresetSelect(preset)}
+                  styles={styles}
                 />
               ))}
             </div>
@@ -212,6 +219,7 @@ export default function PresetSelector({
                   preset={preset}
                   isSelected={selectedPresetId === preset.id}
                   onSelect={() => onPresetSelect(preset)}
+                  styles={styles}
                 />
               ))}
             </View>
@@ -226,9 +234,10 @@ interface CategoryChipProps {
   label: string;
   isSelected: boolean;
   onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
 }
 
-function CategoryChip({ label, isSelected, onPress }: CategoryChipProps) {
+function CategoryChip({ label, isSelected, onPress, styles }: CategoryChipProps) {
   return (
     <Pressable
       style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
@@ -245,9 +254,10 @@ interface PresetCardProps {
   preset: BookPreset;
   isSelected: boolean;
   onSelect: () => void;
+  styles: ReturnType<typeof createStyles>;
 }
 
-function PresetCard({ preset, isSelected, onSelect }: PresetCardProps) {
+function PresetCard({ preset, isSelected, onSelect, styles }: PresetCardProps) {
   return (
     <Pressable
       style={[styles.presetCard, isSelected && styles.presetCardSelected]}
@@ -270,13 +280,13 @@ function PresetCard({ preset, isSelected, onSelect }: PresetCardProps) {
         {/* Особенности пресета */}
         <View style={styles.presetFeatures}>
           {preset.settings.includeGallery && (
-            <FeatureBadge icon="📸" label="Галерея" />
+            <FeatureBadge icon="📸" label="Галерея" styles={styles} />
           )}
           {preset.settings.includeMap && (
-            <FeatureBadge icon="🗺️" label="Карты" />
+            <FeatureBadge icon="🗺️" label="Карты" styles={styles} />
           )}
           {preset.settings.includeChecklists && (
-            <FeatureBadge icon="✓" label="Чек-листы" />
+            <FeatureBadge icon="✓" label="Чек-листы" styles={styles} />
           )}
         </View>
       </View>
@@ -308,9 +318,10 @@ function PresetCard({ preset, isSelected, onSelect }: PresetCardProps) {
 interface FeatureBadgeProps {
   icon: string;
   label: string;
+  styles: ReturnType<typeof createStyles>;
 }
 
-function FeatureBadge({ icon, label }: FeatureBadgeProps) {
+function FeatureBadge({ icon, label, styles }: FeatureBadgeProps) {
   return (
     <View style={styles.featureBadge}>
       <Text style={styles.featureBadgeIcon}>{icon}</Text>
@@ -319,7 +330,7 @@ function FeatureBadge({ icon, label }: FeatureBadgeProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     paddingTop: 16,
     paddingBottom: 16,
@@ -327,13 +338,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 4,
     paddingHorizontal: 16,
   },
   subtitle: {
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     marginBottom: 16,
     paddingHorizontal: 16,
   },
@@ -373,21 +384,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
   },
   categoryChipSelected: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    borderColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   categoryChipText: {
     fontSize: 14,
     fontWeight: '500',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   categoryChipTextSelected: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
   },
 
   presetsWrapper: {
@@ -429,29 +440,37 @@ const styles = StyleSheet.create({
     width: 260,
     minHeight: 200,
     flexShrink: 0,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     padding: 16,
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: colors.boxShadows.card,
+      },
+      default: {
+        ...colors.shadows.medium,
+      },
+    }),
   },
   presetCardSelected: {
-    borderColor: DESIGN_TOKENS.colors.primary,
+    borderColor: colors.primary,
     borderWidth: 3,
-    shadowColor: DESIGN_TOKENS.colors.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    ...Platform.select({
+      web: {
+        boxShadow: colors.boxShadows.heavy,
+      },
+      default: {
+        ...colors.shadows.hover,
+      },
+    }),
   },
   presetIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -465,12 +484,12 @@ const styles = StyleSheet.create({
   presetName: {
     fontSize: 16,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 6,
   },
   presetDescription: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     lineHeight: 16,
     marginBottom: 12,
     minHeight: 32,
@@ -486,7 +505,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     gap: 4,
   },
   featureBadgeIcon: {
@@ -494,7 +513,7 @@ const styles = StyleSheet.create({
   },
   featureBadgeText: {
     fontSize: 11,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontWeight: '500',
   },
   selectedIndicator: {
@@ -504,17 +523,20 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    ...Platform.select({
+      web: {
+        boxShadow: colors.boxShadows.medium,
+      },
+      default: {
+        ...colors.shadows.medium,
+      },
+    }),
   },
   selectedIndicatorText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -525,12 +547,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: DESIGN_TOKENS.colors.success,
+    backgroundColor: colors.success,
   },
   defaultBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
   },
   customBadge: {
     position: 'absolute',
@@ -539,11 +561,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: DESIGN_TOKENS.colors.warning,
+    backgroundColor: colors.warning,
   },
   customBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
   },
 });

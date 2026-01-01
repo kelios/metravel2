@@ -518,7 +518,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                             <Icon
                                                 source={item.ok ? 'check' : 'alert-circle'}
                                                 size={16}
-                                                color={item.ok ? DESIGN_TOKENS.colors.successDark : DESIGN_TOKENS.colors.dangerDark}
+                                                color={item.ok ? colors.successDark : colors.dangerDark}
                                             />
                                         </View>
                                         <View style={styles.checklistTextColumn}>
@@ -540,7 +540,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                             <Icon
                                                 source="chevron-right"
                                                 size={16}
-                                                color={DESIGN_TOKENS.colors.textMuted}
+                                                color={colors.textMuted}
                                             />
                                         )}
                                     </RowWrapper>
@@ -584,7 +584,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                             <Icon
                                                 source={item.ok ? 'check' : 'information'}
                                                 size={16}
-                                                color={item.ok ? DESIGN_TOKENS.colors.successDark : DESIGN_TOKENS.colors.primary}
+                                                color={item.ok ? colors.successDark : colors.primary}
                                             />
                                         </View>
                                         <View style={styles.checklistTextColumn}>
@@ -612,7 +612,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                             <Icon
                                                 source="chevron-right"
                                                 size={16}
-                                                color={DESIGN_TOKENS.colors.textMuted}
+                                                color={colors.textMuted}
                                             />
                                         )}
                                     </RowWrapper>
@@ -669,7 +669,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                             <Icon
                                                 source={'alert'}
                                                 size={14}
-                                                color={DESIGN_TOKENS.colors.dangerDark}
+                                                color={colors.dangerDark}
                                             />
                                         </View>
                                         <Text style={[styles.checklistLabel, isClickable && styles.checklistLabelClickable]}>
@@ -734,8 +734,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderWidth: 1,
         borderColor: colors.border,
         ...(Platform.OS === 'web'
-            ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
-            : (DESIGN_TOKENS.shadowsNative.light as any)),
+            ? ({ boxShadow: colors.boxShadows.card } as any)
+            : (colors.shadows.light as any)),
     },
     cardTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
@@ -749,17 +749,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginTop: DESIGN_TOKENS.spacing.md,
         paddingTop: DESIGN_TOKENS.spacing.md,
         borderTopWidth: 1,
-        borderTopColor: DESIGN_TOKENS.colors.borderLight,
+        borderTopColor: colors.borderLight,
     },
     suggestionsTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         marginBottom: DESIGN_TOKENS.spacing.xs,
     },
     suggestionItem: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         marginBottom: 4,
         lineHeight: 20,
     },
@@ -774,9 +774,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderRadius: DESIGN_TOKENS.radii.md,
     },
     statusOptionActive: {
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        backgroundColor: colors.primarySoft,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.borderAccent,
+        borderColor: colors.borderAccent,
     },
     statusTextCol: {
         flex: 1,
@@ -784,7 +784,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     divider: {
         height: 1,
-        backgroundColor: DESIGN_TOKENS.colors.border,
+        backgroundColor: colors.border,
         opacity: 0.8,
     },
     radioOuter: {
@@ -792,7 +792,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         height: 18,
         borderRadius: 9,
         borderWidth: 2,
-        borderColor: DESIGN_TOKENS.colors.primary,
+        borderColor: colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 8,
@@ -802,39 +802,39 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: DESIGN_TOKENS.colors.primary,
+        backgroundColor: colors.primary,
     },
     statusLabel: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     statusHint: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
     },
     statusChipCard: {
         marginTop: DESIGN_TOKENS.spacing.lg,
         padding: DESIGN_TOKENS.spacing.lg,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
     },
     statusChipRow: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.md },
     statusChip: {
         paddingVertical: 6,
         paddingHorizontal: 12,
         borderRadius: DESIGN_TOKENS.radii.pill,
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
     },
     statusChipSuccess: { backgroundColor: '#e9f8ef', borderColor: '#b6e4c6' },
     statusChipWarning: { backgroundColor: '#fff5e6', borderColor: '#ffd9a8' },
-    statusChipMuted: { backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary, borderColor: DESIGN_TOKENS.colors.border },
-    statusChipText: { fontWeight: '700', color: DESIGN_TOKENS.colors.text },
-    statusChipHint: { flex: 1, color: DESIGN_TOKENS.colors.textMuted, fontSize: DESIGN_TOKENS.typography.sizes.sm },
+    statusChipMuted: { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+    statusChipText: { fontWeight: '700', color: colors.text },
+    statusChipHint: { flex: 1, color: colors.textMuted, fontSize: DESIGN_TOKENS.typography.sizes.sm },
     checklistCard: {},
     checklistHeader: {
         flexDirection: 'row',
@@ -846,16 +846,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         width: 42,
         height: 42,
         borderRadius: 21,
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        backgroundColor: colors.primarySoft,
         borderWidth: 3,
-        borderColor: DESIGN_TOKENS.colors.primary,
+        borderColor: colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
     },
     progressRingText: {
         fontSize: 14,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.primary,
+        color: colors.primary,
     },
     checklistRow: {
         flexDirection: 'row',
@@ -868,12 +868,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderColor: 'transparent',
     },
     checklistRowClickable: {
-        borderColor: DESIGN_TOKENS.colors.borderLight,
-        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+        borderColor: colors.borderLight,
+        backgroundColor: colors.surfaceMuted,
     },
     checklistRowComplete: {
-        backgroundColor: DESIGN_TOKENS.colors.successSoft,
-        borderColor: DESIGN_TOKENS.colors.successLight,
+        backgroundColor: colors.successSoft,
+        borderColor: colors.successLight,
     },
     checklistTextColumn: {
         flex: 1,
@@ -889,38 +889,38 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderWidth: 0,
     },
     checkBadgeOk: {
-        backgroundColor: DESIGN_TOKENS.colors.successSoft,
-        borderColor: DESIGN_TOKENS.colors.successLight,
+        backgroundColor: colors.successSoft,
+        borderColor: colors.successLight,
     },
     checkBadgeMissing: {
-        backgroundColor: DESIGN_TOKENS.colors.errorSoft,
-        borderColor: DESIGN_TOKENS.colors.dangerLight,
+        backgroundColor: colors.dangerSoft,
+        borderColor: colors.dangerLight,
     },
     checkBadgeRecommended: {
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-        borderColor: DESIGN_TOKENS.colors.primary + '40',
+        backgroundColor: colors.primarySoft,
+        borderColor: colors.primary + '40',
     },
     checklistLabel: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         lineHeight: 20,
         fontWeight: '500',
     },
     checklistLabelComplete: {
-        color: DESIGN_TOKENS.colors.successDark,
+        color: colors.successDark,
     },
     checklistLabelClickable: {
         fontWeight: '600',
     },
     checklistDetail: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         marginTop: 2,
         lineHeight: 16,
     },
     checklistHint: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         marginTop: 2,
         fontStyle: 'italic',
     },
@@ -931,7 +931,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     checklistSectionRecommended: {
         paddingTop: DESIGN_TOKENS.spacing.sm,
         borderTopWidth: 1,
-        borderTopColor: DESIGN_TOKENS.colors.borderLight,
+        borderTopColor: colors.borderLight,
     },
     sectionHeaderRow: {
         flexDirection: 'row',
@@ -945,7 +945,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     sectionHeaderText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     benefitRow: {
         flexDirection: 'row',
@@ -959,7 +959,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     benefitText: {
         flex: 1,
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.primary,
+        color: colors.primary,
         fontWeight: '600',
         lineHeight: 16,
     },
@@ -974,21 +974,21 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     bannerTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.dangerDark,
+        color: colors.dangerDark,
         marginBottom: 4,
     },
     bannerDescription: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.dangerDark,
+        color: colors.dangerDark,
         marginBottom: DESIGN_TOKENS.spacing.xs,
     },
     adminCard: {
         backgroundColor: '#f8fafc',
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
     },
     adminHint: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         marginTop: DESIGN_TOKENS.spacing.xs,
         lineHeight: 20,
     },
@@ -1007,14 +1007,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         paddingVertical: DESIGN_TOKENS.spacing.md,
         paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         borderRadius: DESIGN_TOKENS.radii.md,
-        borderColor: DESIGN_TOKENS.colors.border,
-        backgroundColor: DESIGN_TOKENS.colors.success,
+        borderColor: colors.border,
+        backgroundColor: colors.success,
     },
     adminButtonApprove: {
-        backgroundColor: DESIGN_TOKENS.colors.success,
+        backgroundColor: colors.success,
     },
     adminButtonReject: {
-        backgroundColor: DESIGN_TOKENS.colors.danger,
+        backgroundColor: colors.danger,
     },
     adminButtonText: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,

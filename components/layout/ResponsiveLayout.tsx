@@ -6,8 +6,8 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, Platform, ViewStyle } from 'react-native';
 import { useResponsive } from '@/hooks/useResponsive';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface ResponsiveLayoutProps {
   children: React.ReactNode;
@@ -29,12 +29,14 @@ export default function ResponsiveLayout({
   footer,
   maxWidth = 1400,
   sidebarWidth = 280,
-  backgroundColor = DESIGN_TOKENS.colors.surface,
+  backgroundColor,
   scrollable = true,
   style,
   testID,
 }: ResponsiveLayoutProps) {
   const { isLargeTablet, isDesktop } = useResponsive();
+  const colors = useThemedColors();
+  const resolvedBackground = backgroundColor ?? colors.surface;
 
   // Показываем sidebar только на больших экранах
   const showSidebar = sidebar && (isLargeTablet || isDesktop);
@@ -49,7 +51,7 @@ export default function ResponsiveLayout({
   } : {};
 
   const content = (
-    <View style={[styles.wrapper, { backgroundColor }]}>
+    <View style={[styles.wrapper, { backgroundColor: resolvedBackground }]}>
       {header}
       
       <View

@@ -30,11 +30,15 @@ if (Platform.OS === 'web') {
   require('./CompactSideBarTravel.web.css');
 }
 
-const Fallback = () => (
-  <View style={styles.fallback}>
-    <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.primary} />
-  </View>
-);
+const Fallback = () => {
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return (
+    <View style={styles.fallback}>
+      <ActivityIndicator size="small" color={colors.primary} />
+    </View>
+  );
+};
 
 const BookSettingsModalLazy = lazy(() => import("@/components/export/BookSettingsModal"));
 
@@ -91,6 +95,7 @@ function CompactSideBarTravel({
   const { isTablet } = useResponsive();
   const isWeb = Platform.OS === 'web';
   const themedColors = useThemedColors();
+  const styles = useMemo(() => createStyles(themedColors), [themedColors]);
   const textColor = themedColors.text;
   const mutedText = themedColors.textMuted;
   const travelAddress = travel.travelAddress;
@@ -595,7 +600,7 @@ function CompactSideBarTravel({
               pressed && styles.linkPressed,
             ]}
             onPress={() => setActiveNavigateAndOpen(key as keyof SideBarProps['refs'])}
-            android_ripple={{ color: DESIGN_TOKENS.colors.primarySoft }}
+            android_ripple={{ color: themedColors.primarySoft }}
             accessibilityRole="button"
             accessibilityLabel={label}
             accessibilityState={{ selected: currentActive === key }}
@@ -731,10 +736,10 @@ function CompactSideBarTravel({
 
 export default memo(CompactSideBarTravel);
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   root: { 
     flex: 1, 
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     ...(Platform.OS === "web" ? {
       // На web прокрутка должна быть общей для страницы,
       // поэтому убираем собственный scroll/100vh/position: fixed
@@ -758,7 +763,7 @@ const styles = StyleSheet.create({
   },
   // ✅ РЕДИЗАЙН: Компактная карточка автора (оптимизация для отображения без скролла)
   card: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 14,
     padding: Platform.select({
       default: 12,
@@ -774,7 +779,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     width: '100%',
     maxWidth: '100%',
     ...(Platform.OS === 'web' ? {
@@ -810,8 +815,8 @@ const styles = StyleSheet.create({
       web: 26,
     }),
     borderWidth: 2,
-    borderColor: DESIGN_TOKENS.colors.primaryLight,
-    shadowColor: DESIGN_TOKENS.colors.primary,
+    borderColor: colors.primaryLight,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -825,7 +830,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: DESIGN_TOKENS.colors.borderLight,
+    borderTopColor: colors.borderLight,
   },
   // ✅ РЕДИЗАЙН: Компактные информационные строки
   infoRow: {
@@ -844,7 +849,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontFamily: "Georgia",
     fontWeight: "500",
   },
@@ -861,21 +866,21 @@ const styles = StyleSheet.create({
   },
   categoryTag: {
     fontSize: 13,
-    color: DESIGN_TOKENS.colors.primary,
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    color: colors.primary,
+    backgroundColor: colors.primarySoft,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
     fontFamily: "Georgia",
     fontWeight: "600",
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.primaryLight,
+    borderColor: colors.primaryLight,
     maxWidth: 100,
     overflow: 'hidden',
   },
   categoryMore: {
     fontSize: 13,
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontFamily: "Georgia",
     fontWeight: "600",
     marginLeft: 4,
@@ -916,10 +921,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
-    shadowColor: DESIGN_TOKENS.colors.primary,
+    borderColor: colors.borderLight,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -933,11 +938,11 @@ const styles = StyleSheet.create({
   actionBtnPressed: {
     transform: [{ scale: 0.95 }],
     opacity: 0.85,
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
+    backgroundColor: colors.primaryLight,
   },
   actionBtnDisabled: {
     opacity: 0.4,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
   },
   userNameWrap: {
     flexGrow: 1,
@@ -950,18 +955,18 @@ const styles = StyleSheet.create({
       web: 16,
     }),
     fontWeight: "700",
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontFamily: "Georgia", 
     flexShrink: 1,
     lineHeight: 20,
   },
   userNamePrimary: {
     fontWeight: "800",
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   userCountry: {
     fontWeight: "600",
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   // ✅ РЕДИЗАЙН: Компактная ключевая информация
   keyInfoRow: {
@@ -974,7 +979,7 @@ const styles = StyleSheet.create({
   userYear: { 
     fontSize: DESIGN_TOKENS.typography.sizes.sm, // Уменьшено с 15
     fontWeight: "600", 
-    color: DESIGN_TOKENS.colors.text, 
+    color: colors.text, 
     fontFamily: "Georgia",
     lineHeight: 16,
   },
@@ -994,7 +999,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontFamily: 'Georgia',
     fontWeight: '600',
     lineHeight: 20,
@@ -1003,13 +1008,13 @@ const styles = StyleSheet.create({
   userDays: { 
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
-    color: DESIGN_TOKENS.colors.text, 
+    color: colors.text, 
     fontFamily: "Georgia",
     lineHeight: 20,
   },
   exportSummary: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     marginTop: 4,
   },
 
@@ -1061,21 +1066,21 @@ const styles = StyleSheet.create({
     } : {}),
   },
   activeIndicatorActive: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     width: 4,
     ...(Platform.OS === 'web' ? {
       boxShadow: '0 0 8px rgba(122, 157, 143, 0.5)',
     } as any : {}),
   },
   linkPressed: {
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
     transform: [{ scale: 0.98 }],
   },
   linkActive: {
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
+    backgroundColor: colors.primaryLight,
     borderLeftWidth: 0,
     borderLeftColor: "transparent",
-    shadowColor: DESIGN_TOKENS.colors.primary,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1091,7 +1096,7 @@ const styles = StyleSheet.create({
     }),
     fontSize: 15,
     fontFamily: "Georgia",
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontWeight: "500",
     lineHeight: 22,
     ...(Platform.OS === 'web' ? {
@@ -1099,7 +1104,7 @@ const styles = StyleSheet.create({
     } as any : {}),
   },
   linkTxtActive: {
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontWeight: "700",
   },
   linkMetaPill: {
@@ -1107,26 +1112,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
-    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+    backgroundColor: colors.surfaceMuted,
     borderWidth: 0,
     borderColor: "transparent",
     flexShrink: 0,
   },
   linkMetaText: {
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontFamily: "Georgia",
     fontWeight: "600",
     lineHeight: 18,
   },
   linkDivider: {
     height: 1,
-    backgroundColor: DESIGN_TOKENS.colors.borderLight,
+    backgroundColor: colors.borderLight,
     marginVertical: 16,
     marginHorizontal: 12,
     ...(Platform.OS === 'web' ? {
       // React Native Web не поддерживает shorthand background
-      backgroundImage: `linear-gradient(90deg, transparent, ${DESIGN_TOKENS.colors.border}, transparent)`,
+      backgroundImage: `linear-gradient(90deg, transparent, ${colors.border}, transparent)`,
       backgroundRepeat: 'no-repeat',
     } as any : {}),
   },
@@ -1136,7 +1141,7 @@ const styles = StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     textAlign: "center",
     fontWeight: "500",
-    color: DESIGN_TOKENS.colors.accentDark,
+    color: colors.accentDark,
     fontFamily: "Georgia",
     width: '100%',
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
@@ -1147,13 +1152,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: DESIGN_TOKENS.colors.primaryDark,
+    backgroundColor: colors.primaryDark,
     paddingVertical: DESIGN_TOKENS.spacing.lg,
     alignItems: "center",
   },
   closeBtn: { flexDirection: "row", alignItems: "center" },
   closeBtnPressed: { opacity: 0.7 },
-  closeTxt: { color: DESIGN_TOKENS.colors.textOnDark, fontSize: DESIGN_TOKENS.typography.sizes.md, fontFamily: "Georgia", marginLeft: 8 },
+  closeTxt: { color: colors.textOnDark, fontSize: DESIGN_TOKENS.typography.sizes.md, fontFamily: "Georgia", marginLeft: 8 },
 
   closeTopBar: {
     alignItems: "flex-end",
@@ -1166,7 +1171,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 999,
-    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+    backgroundColor: colors.surfaceMuted,
   },
   closeTopBtnPressed: {
     opacity: 0.7,
@@ -1174,7 +1179,7 @@ const styles = StyleSheet.create({
   closeTopTxt: {
     marginLeft: 6,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontFamily: "Georgia",
   },
 

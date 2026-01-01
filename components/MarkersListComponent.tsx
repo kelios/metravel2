@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { Feather } from '@expo/vector-icons';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { MarkerData } from "@/src/types/types";
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import MultiSelectField from '@/components/MultiSelectField';
@@ -95,7 +94,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
         borderRadius: '12px',
         padding: '10px 12px',
         backgroundColor: colors.surface,
-        boxShadow: DESIGN_TOKENS.shadows.card,
+        boxShadow: colors.boxShadows.card,
         cursor: 'pointer',
         transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
     },
@@ -350,7 +349,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     modalBackdrop: {
         position: 'absolute' as const,
         inset: 0,
-        backgroundColor: DESIGN_TOKENS.colors.overlay,
+        backgroundColor: colors.overlay,
     },
     modalContent: {
         position: 'relative' as const,
@@ -360,7 +359,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
         width: '90%',
         maxHeight: '90vh',
         padding: '20px 24px',
-        boxShadow: DESIGN_TOKENS.shadows.modal,
+        boxShadow: colors.boxShadows.modal,
         overflowY: 'auto' as const,
     },
     multiSelect: {
@@ -369,13 +368,13 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
         padding: '8px 12px',
         backgroundColor: colors.surface,
         minHeight: '44px',
-        boxShadow: DESIGN_TOKENS.shadows.card,
+        boxShadow: colors.boxShadows.card,
     },
     multiSelectDropdownContainer: {
         borderRadius: '12px',
         border: `1px solid ${colors.border}`,
         backgroundColor: colors.surface,
-        boxShadow: DESIGN_TOKENS.shadows.card,
+        boxShadow: colors.boxShadows.card,
         padding: '6px',
     },
     multiSelectPlaceholder: {

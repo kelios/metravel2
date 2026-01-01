@@ -6,7 +6,7 @@
 import type { Travel } from "@/src/types/types";
 import type { FilterOptions, CategoryWithCount } from "./listTravelTypes";
 import { BREAKPOINTS, BADGE_THRESHOLDS, GRID_COLUMNS } from "./listTravelConstants";
-import { DESIGN_TOKENS } from "@/constants/designSystem";
+import { getThemedColors, type ThemedColors } from "@/hooks/useTheme";
 
 // ✅ АРХИТЕКТУРА: Нормализация ответа API
 export function normalizeApiResponse(data: any): { items: Travel[]; total: number } {
@@ -115,7 +115,15 @@ export function calculateColumns(width: number, orientation: 'portrait' | 'lands
 }
 
 // ✅ АРХИТЕКТУРА: Определение badges для социального доказательства
-export function calculateBadges(travel: Travel): Array<{ label: string; color: string; bgColor: string }> {
+const resolveIsDark = () => {
+  if (typeof document === 'undefined') return false;
+  return document.documentElement.getAttribute('data-theme') === 'dark';
+};
+
+export function calculateBadges(
+  travel: Travel,
+  colors: ThemedColors = getThemedColors(resolveIsDark())
+): Array<{ label: string; color: string; bgColor: string }> {
   const result: Array<{ label: string; color: string; bgColor: string }> = [];
   const views = Number(travel.countUnicIpView) || 0;
   const updatedAt = (travel as any).updated_at;
@@ -125,8 +133,8 @@ export function calculateBadges(travel: Travel): Array<{ label: string; color: s
   if (views > BADGE_THRESHOLDS.POPULAR_VIEWS) {
     result.push({
       label: 'Популярное',
-      color: DESIGN_TOKENS.colors.textOnPrimary,
-      bgColor: DESIGN_TOKENS.colors.warning,
+      color: colors.textOnPrimary,
+      bgColor: colors.warning,
     });
   }
   
@@ -137,8 +145,8 @@ export function calculateBadges(travel: Travel): Array<{ label: string; color: s
     if (daysSinceCreated <= BADGE_THRESHOLDS.NEW_DAYS) {
       result.push({
         label: 'Новое',
-        color: DESIGN_TOKENS.colors.textOnPrimary,
-        bgColor: DESIGN_TOKENS.colors.success,
+        color: colors.textOnPrimary,
+        bgColor: colors.success,
       });
     }
   }
@@ -150,8 +158,8 @@ export function calculateBadges(travel: Travel): Array<{ label: string; color: s
     if (daysSinceUpdated <= BADGE_THRESHOLDS.TREND_DAYS && !result.find(b => b.label === 'Новое')) {
       result.push({
         label: 'Тренд',
-        color: DESIGN_TOKENS.colors.textOnPrimary,
-        bgColor: DESIGN_TOKENS.colors.info,
+        color: colors.textOnPrimary,
+        bgColor: colors.info,
       });
     }
   }

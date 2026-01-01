@@ -1,8 +1,7 @@
 // Кнопка "Наверх" с анимацией и прогресс-баром
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Pressable, StyleSheet, Animated, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
@@ -22,6 +21,40 @@ export default function ScrollToTopButton({
   forceVisible,
 }: ScrollToTopButtonProps) {
   const colors = useThemedColors();
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      position: 'absolute',
+      bottom: 80,
+      right: 16,
+      zIndex: 1000,
+    },
+    button: {
+      width: 48,
+      height: 48,
+      minWidth: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная ширина для touch-целей
+      minHeight: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+      borderRadius: 999,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...Platform.select({
+        web: {
+          boxShadow: colors.boxShadows.medium,
+          transition: 'all 0.2s ease',
+          // @ts-ignore
+          ':hover': {
+            backgroundColor: colors.primaryDark, // Темнее primary для hover
+            transform: 'translateY(-2px) scale(1.05)',
+          },
+        },
+        ios: {
+          ...colors.shadows.medium,
+        },
+        android: {
+          elevation: 4,
+        },
+      }),
+    },
+  }), [colors]);
   const [isVisible, setIsVisible] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -119,38 +152,3 @@ export default function ScrollToTopButton({
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    bottom: 80,
-    right: 16,
-    zIndex: 1000,
-  },
-  button: {
-    width: 48,
-    height: 48,
-    minWidth: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная ширина для touch-целей
-    minHeight: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
-    borderRadius: DESIGN_TOKENS.radii.pill, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.medium,
-        transition: 'all 0.2s ease',
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.primaryDark, // Темнее primary для hover
-          transform: 'translateY(-2px) scale(1.05)',
-        },
-      },
-      ios: {
-        ...DESIGN_TOKENS.shadowsNative.medium,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-});

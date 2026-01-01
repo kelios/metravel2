@@ -222,10 +222,10 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           ref={triggerRef}
           style={({ pressed }) => [styles.trigger, pressed && styles.triggerPressed]}
         >
-          <MaterialIcons name={"list" as any} size={18} color={DESIGN_TOKENS.colors.text} />
+          <MaterialIcons name={"list" as any} size={18} color={colors.text} />
           <Text style={styles.triggerText}>Секции</Text>
           <View style={{ flex: 1 }} />
-          <MaterialIcons name={"expand-more" as any} size={20} color={DESIGN_TOKENS.colors.textMuted} />
+          <MaterialIcons name={"expand-more" as any} size={20} color={colors.textMuted} />
         </Pressable>
       </View>
 
@@ -311,4 +311,3 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
 }
 
 export default TravelSectionsSheet
-

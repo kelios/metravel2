@@ -536,13 +536,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
         paddingVertical: DESIGN_TOKENS.spacing.xxs,
         borderRadius: 999,
-        backgroundColor: DESIGN_TOKENS.colors.successSoft,
+        backgroundColor: colors.successSoft,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.successLight,
+        borderColor: colors.successLight,
     },
     syncBadgeText: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.successDark,
+        color: colors.successDark,
         fontWeight: '700',
     },
     headerActions: {
@@ -566,13 +566,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     card: {
         marginTop: DESIGN_TOKENS.spacing.lg,
         padding: DESIGN_TOKENS.spacing.lg,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
         ...(Platform.OS === 'web'
-            ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
-            : (DESIGN_TOKENS.shadowsNative.light as any)),
+            ? ({ boxShadow: colors.boxShadows.card } as any)
+            : (colors.shadows.light as any)),
         overflow: 'hidden',
     },
     mapHeader: {
@@ -592,9 +592,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginBottom: 8,
         padding: DESIGN_TOKENS.spacing.md,
         borderRadius: DESIGN_TOKENS.radii.md,
-        backgroundColor: DESIGN_TOKENS.colors.infoSoft,
+        backgroundColor: colors.infoSoft,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.infoLight,
+        borderColor: colors.infoLight,
         flexDirection: 'row',
         alignItems: 'center',
         gap: DESIGN_TOKENS.spacing.sm,
@@ -602,12 +602,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     coachmarkTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.infoDark,
+        color: colors.infoDark,
         marginBottom: 2,
     },
     coachmarkBody: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     manualPointRow: {
         paddingBottom: 8,
@@ -621,9 +621,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginBottom: 8,
         padding: DESIGN_TOKENS.spacing.md,
         borderRadius: DESIGN_TOKENS.radii.md,
-        backgroundColor: DESIGN_TOKENS.colors.surfaceElevated,
+        backgroundColor: colors.surfaceElevated,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
     },
     manualCoordsWrapper: {
         marginBottom: DESIGN_TOKENS.spacing.sm,
@@ -637,18 +637,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     manualPointLabel: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         marginBottom: 6,
         fontWeight: '600',
     },
     manualPointInput: {
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
         borderRadius: 10,
         paddingHorizontal: DESIGN_TOKENS.spacing.md,
         paddingVertical: 10,
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
     },
     manualPointActionsRow: {
         marginTop: DESIGN_TOKENS.spacing.sm,
@@ -659,17 +659,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     mapTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         marginBottom: DESIGN_TOKENS.spacing.xxs,
     },
     mapHint: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
     },
     mapCount: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.primary,
+        color: colors.primary,
     },
     mapContainer: {
         marginTop: 4,
@@ -683,34 +683,34 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     lazyFallback: {
         padding: DESIGN_TOKENS.spacing.lg,
         borderRadius: DESIGN_TOKENS.radii.md,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: 240,
     },
     lazyFallbackText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         fontWeight: '600',
     },
     nativeMapPlaceholder: {
         padding: DESIGN_TOKENS.spacing.lg,
         borderRadius: DESIGN_TOKENS.radii.md,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
     },
     nativeMapTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         marginBottom: 6,
     },
     nativeMapBody: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         lineHeight: 18,
     },
     filtersRow: {
@@ -731,14 +731,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         width: 120,
         height: 12,
         borderRadius: 4,
-        backgroundColor: DESIGN_TOKENS.colors.borderLight,
+        backgroundColor: colors.borderLight,
         marginBottom: 8,
     },
     filtersSkeletonInput: {
         width: '100%',
         height: 40,
         borderRadius: 8,
-        backgroundColor: DESIGN_TOKENS.colors.borderLight,
+        backgroundColor: colors.borderLight,
     },
 });
 

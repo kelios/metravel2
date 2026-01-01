@@ -317,7 +317,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       web: 32, // было 48px (-33%)
     }),
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
         boxShadow: DESIGN_TOKENS.shadows.card,
@@ -357,7 +357,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       web: 40, // было 48px
     }),
     borderWidth: 2,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
         boxShadow: DESIGN_TOKENS.shadows.light,
@@ -384,9 +384,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       default: 28,
       web: 36,
     }),
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -403,9 +403,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 0.5,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
@@ -413,18 +413,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     }),
   },
   socialChipPressed: {
-    backgroundColor: DESIGN_TOKENS.colors.backgroundTertiary,
+    backgroundColor: colors.backgroundTertiary,
     transform: [{ scale: 0.98 }],
   },
   socialChipText: {
     fontSize: 14,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   authorName: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontFamily: 'Georgia',
     letterSpacing: -0.3,
   },
@@ -438,7 +438,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   locationText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontWeight: '500',
   },
   statsRow: {
@@ -449,7 +449,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   statsText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.textSubtle,
+    color: colors.textTertiary,
     fontWeight: '600',
   },
   viewButton: {
@@ -465,17 +465,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       web: 24,
     }),
     borderRadius: 999,
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
+    backgroundColor: colors.primaryLight,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
         transition: 'all 0.2s ease' as any,
         boxShadow: DESIGN_TOKENS.shadows.light,
         ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.primary,
-          borderColor: DESIGN_TOKENS.colors.primary,
+          backgroundColor: colors.primary,
+          borderColor: colors.primary,
           boxShadow: DESIGN_TOKENS.shadows.hover,
         } as any,
       },
@@ -488,7 +488,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     marginTop: DESIGN_TOKENS.spacing.sm,
   },
   viewButtonPressed: {
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary, // ✅ УЛУЧШЕНИЕ: Нейтральный фон
+    backgroundColor: colors.backgroundSecondary, // ✅ УЛУЧШЕНИЕ: Нейтральный фон
     transform: [{ scale: 0.98 }],
   },
   viewButtonText: {
@@ -497,7 +497,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       web: 15,
     }),
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
   },
   viewButtonTextMobile: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,

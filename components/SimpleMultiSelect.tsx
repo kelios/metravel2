@@ -30,6 +30,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   disabled = false,
 }) => {
   const colors = useThemedColors(); // ✅ УЛУЧШЕНИЕ: Поддержка темной темы
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -137,7 +138,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
         <Feather
           name={isOpen ? 'chevron-up' : 'chevron-down'}
           size={20}
-          color={DESIGN_TOKENS.colors.textMuted}
+          color={colors.textMuted}
         />
       </Pressable>
 
@@ -204,18 +205,18 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   trigger: {
     minHeight: DESIGN_TOKENS.touchTarget.minHeight,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1.5,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     borderRadius: DESIGN_TOKENS.radii.md,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     paddingVertical: DESIGN_TOKENS.spacing.sm,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     ...Platform.select({
       web: {
         cursor: 'pointer',
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
   },
   triggerDisabled: {
     opacity: 0.6,
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
+    backgroundColor: colors.mutedBackground,
     ...Platform.select({
       web: {
         cursor: 'not-allowed',
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
   },
   chipsContainer: {
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: DESIGN_TOKENS.radii.pill,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 6,
@@ -256,7 +257,7 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    color: DESIGN_TOKENS.colors.textInverse,
+    color: colors.textOnPrimary,
     maxWidth: 150,
   },
   chipRemove: {
@@ -264,7 +265,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.overlay,
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: DESIGN_TOKENS.spacing.lg,
@@ -273,15 +274,15 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 500,
     maxHeight: '80%',
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
     overflow: 'hidden',
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.heavy,
+        boxShadow: colors.boxShadows.modal,
       },
       default: {
-        ...DESIGN_TOKENS.shadowsNative.heavy,
+        ...colors.shadows.heavy,
       },
     }),
   },
@@ -291,12 +292,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: DESIGN_TOKENS.spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: DESIGN_TOKENS.colors.border,
+    borderBottomColor: colors.border,
   },
   modalTitle: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -304,13 +305,13 @@ const styles = StyleSheet.create({
     gap: DESIGN_TOKENS.spacing.sm,
     padding: DESIGN_TOKENS.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: DESIGN_TOKENS.colors.border,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
   },
   searchInput: {
     flex: 1,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     padding: 0,
     ...Platform.select({
       web: {
@@ -333,43 +334,43 @@ const styles = StyleSheet.create({
     gap: DESIGN_TOKENS.spacing.md,
   },
   listItemPressed: {
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
+    backgroundColor: colors.mutedBackground,
   },
   listItemSelected: {
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
   },
   checkbox: {
     width: 20,
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   listItemText: {
     flex: 1,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
   },
   listItemTextSelected: {
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
   },
   emptyText: {
     textAlign: 'center',
     padding: DESIGN_TOKENS.spacing.xl,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   modalFooter: {
     padding: DESIGN_TOKENS.spacing.md,
     borderTopWidth: 1,
-    borderTopColor: DESIGN_TOKENS.colors.border,
+    borderTopColor: colors.border,
   },
   doneButton: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     paddingVertical: DESIGN_TOKENS.spacing.md,
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
     borderRadius: DESIGN_TOKENS.radii.md,
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
   doneButtonText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    color: DESIGN_TOKENS.colors.textInverse,
+    color: colors.textOnPrimary,
   },
 });
 

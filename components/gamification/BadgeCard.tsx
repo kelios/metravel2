@@ -1,6 +1,7 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 export interface Badge {
   id: string;
@@ -19,6 +20,8 @@ interface BadgeCardProps {
 }
 
 const BadgeCard = ({ badge, size = 'medium' }: BadgeCardProps) => {
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { name, description, icon, color, progress = 0, maxProgress = 1, earned } = badge;
 
   const sizeConfig = {
@@ -38,7 +41,7 @@ const BadgeCard = ({ badge, size = 'medium' }: BadgeCardProps) => {
           {
             width: config.containerSize,
             height: config.containerSize,
-            backgroundColor: earned ? color : DESIGN_TOKENS.colors.mutedBackground,
+            backgroundColor: earned ? color : colors.mutedBackground,
             opacity: earned ? 1 : 0.5,
           },
         ]}
@@ -68,7 +71,7 @@ const BadgeCard = ({ badge, size = 'medium' }: BadgeCardProps) => {
       <Text
         style={[
           styles.name,
-          { fontSize: config.fontSize, color: earned ? DESIGN_TOKENS.colors.text : DESIGN_TOKENS.colors.textMuted },
+          { fontSize: config.fontSize, color: earned ? colors.text : colors.textMuted },
         ]}
         numberOfLines={1}
       >
@@ -84,7 +87,7 @@ const BadgeCard = ({ badge, size = 'medium' }: BadgeCardProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     alignItems: 'center',
     gap: 8,
@@ -96,7 +99,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     ...Platform.select({
       web: {
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+        boxShadow: colors.boxShadows.card,
       },
     }),
   },
@@ -120,7 +123,7 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: 10,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     textAlign: 'center',
   },
   name: {
@@ -129,7 +132,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 16,
   },

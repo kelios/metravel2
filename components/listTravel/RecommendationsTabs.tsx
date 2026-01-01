@@ -21,12 +21,12 @@ import {
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 import { TAB_CARD_TEMPLATE } from './recommendationsCardTemplate';
 import TabTravelCard from './TabTravelCard';
+import { useThemedColors } from '@/hooks/useTheme';
 
 /* ---------------- Lazy Components ---------------- */
 
@@ -51,18 +51,28 @@ const TAB_CONTENT_HEIGHT = 320;
 const TAB_HEADER_HEIGHT = 56;
 const TAB_TOTAL_HEIGHT = TAB_HEADER_HEIGHT + TAB_CONTENT_HEIGHT;
 
-const AuthGate = ({ message, onLogin }: { message: string; onLogin: () => void }) => (
+const AuthGate = ({
+  message,
+  onLogin,
+  styles,
+  colors,
+}: {
+  message: string;
+  onLogin: () => void;
+  styles: ReturnType<typeof createStyles>;
+  colors: ReturnType<typeof useThemedColors>;
+}) => (
   <View style={styles.gateContainer}>
     <View style={styles.gateCard}>
       <View style={styles.gateIcon}>
-        <MaterialIcons name="lock" size={24} color={DESIGN_TOKENS.colors.primary} />
+        <MaterialIcons name="lock" size={24} color={colors.primary} />
       </View>
       <View style={styles.gateCopy}>
         <Text style={styles.gateText}>{message}</Text>
       </View>
       <Pressable style={styles.gateButton} onPress={onLogin} accessibilityRole="button">
         <Text style={styles.gateButtonText}>Войти</Text>
-        <MaterialIcons name="arrow-forward" size={18} color={DESIGN_TOKENS.colors.primary} style={{ marginLeft: 6 }} />
+        <MaterialIcons name="arrow-forward" size={18} color={colors.primary} style={{ marginLeft: 6 }} />
       </Pressable>
     </View>
   </View>
@@ -104,6 +114,8 @@ const RecommendationsPlaceholder = () => (
 
 const RecommendationsTabs = memo(
   ({ forceVisible = false, onVisibilityChange }: RecommendationsTabsProps) => {
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const [activeTab, setActiveTab] = useState<TabType>('highlights');
     const [collapsed, setCollapsed] = useState(false);
 
@@ -234,7 +246,7 @@ const RecommendationsTabs = memo(
         <View style={[styles.container, styles.containerFixedHeight]}>
           <View style={styles.collapsedHeader}>
             <Pressable testID="recommendations-tabs-expand" onPress={toggleCollapse} style={styles.expandButton} accessibilityRole="button">
-              <Feather name="chevron-down" size={20} color={DESIGN_TOKENS.colors.primary} />
+              <Feather name="chevron-down" size={20} color={colors.primary} />
               <Text style={styles.expandText}>Показать рекомендации</Text>
             </Pressable>
           </View>
@@ -269,12 +281,14 @@ const RecommendationsTabs = memo(
               <AuthGate
                 message="Избранное будет доступно после регистрации или авторизации"
                 onLogin={() => router.push('/login' as any)}
+                styles={styles}
+                colors={colors}
               />
             );
           }
           return renderTabPane(
             favorites.length === 0 ? (
-              <EmptyState message="Избранное пусто" icon="favorite-border" />
+              <EmptyState message="Избранное пусто" icon="favorite-border" styles={styles} colors={colors} />
             ) : (
               <View>
                 <View style={styles.favoritesHeaderRow}>
@@ -291,7 +305,7 @@ const RecommendationsTabs = memo(
                       accessibilityLabel="Смотреть все избранное"
                     >
                       <Text style={styles.seeAllButtonText}>Смотреть все</Text>
-                      <Feather name="chevron-right" size={16} color={DESIGN_TOKENS.colors.primary} />
+                      <Feather name="chevron-right" size={16} color={colors.primary} />
                     </Pressable>
 
                     {typeof clearFavorites === 'function' && favorites.length > 0 && (
@@ -301,7 +315,7 @@ const RecommendationsTabs = memo(
                         accessibilityRole="button"
                         accessibilityLabel="Очистить избранное"
                       >
-                        <Feather name="trash-2" size={16} color={DESIGN_TOKENS.colors.danger} />
+                        <Feather name="trash-2" size={16} color={colors.danger} />
                         <Text style={styles.favoritesClearButtonText}>Очистить</Text>
                       </Pressable>
                     )}
@@ -362,12 +376,14 @@ const RecommendationsTabs = memo(
               <AuthGate
                 message="История просмотров будет доступна после регистрации или авторизации"
                 onLogin={() => router.push('/login' as any)}
+                styles={styles}
+                colors={colors}
               />
             );
           }
           return renderTabPane(
             viewHistory.length === 0 ? (
-              <EmptyState message="История просмотров пуста" icon="history" />
+              <EmptyState message="История просмотров пуста" icon="history" styles={styles} colors={colors} />
             ) : (
               <View>
                 <View style={styles.favoritesHeaderRow}>
@@ -384,7 +400,7 @@ const RecommendationsTabs = memo(
                       accessibilityLabel="Смотреть всю историю просмотров"
                     >
                       <Text style={styles.seeAllButtonText}>Смотреть все</Text>
-                      <Feather name="chevron-right" size={16} color={DESIGN_TOKENS.colors.primary} />
+                      <Feather name="chevron-right" size={16} color={colors.primary} />
                     </Pressable>
 
                     {typeof clearHistory === 'function' && viewHistory.length > 0 && (
@@ -394,7 +410,7 @@ const RecommendationsTabs = memo(
                         accessibilityRole="button"
                         accessibilityLabel="Очистить историю просмотров"
                       >
-                        <Feather name="trash-2" size={16} color={DESIGN_TOKENS.colors.danger} />
+                        <Feather name="trash-2" size={16} color={colors.danger} />
                         <Text style={styles.favoritesClearButtonText}>Очистить</Text>
                       </Pressable>
                     )}
@@ -422,8 +438,8 @@ const RecommendationsTabs = memo(
                         }}
                         badge={{
                           icon: 'history',
-                          backgroundColor: DESIGN_TOKENS.colors.overlay,
-                          iconColor: DESIGN_TOKENS.colors.textOnDark,
+                          backgroundColor: colors.overlay,
+                          iconColor: colors.textOnDark,
                         }}
                         onPress={() => router.push(item.url as any)}
                       />
@@ -444,8 +460,8 @@ const RecommendationsTabs = memo(
                         }}
                         badge={{
                           icon: 'history',
-                          backgroundColor: DESIGN_TOKENS.colors.overlay,
-                          iconColor: DESIGN_TOKENS.colors.textOnDark,
+                          backgroundColor: colors.overlay,
+                          iconColor: colors.textOnDark,
                         }}
                         onPress={() => router.push(item.url as any)}
                       />
@@ -485,7 +501,7 @@ const RecommendationsTabs = memo(
                 <MaterialIcons
                   name={tab.icon as any}
                   size={18}
-                  color={activeTab === tab.id ? DESIGN_TOKENS.colors.primary : DESIGN_TOKENS.colors.textMuted}
+                  color={activeTab === tab.id ? colors.primary : colors.textMuted}
                 />
                 <Text
                   style={[
@@ -523,7 +539,7 @@ const RecommendationsTabs = memo(
           </ScrollView>
 
           <Pressable testID="recommendations-tabs-collapse" onPress={toggleCollapse} hitSlop={10} style={styles.collapseButton}>
-            <Feather name="chevron-up" size={20} color={DESIGN_TOKENS.colors.textMuted} />
+            <Feather name="chevron-up" size={20} color={colors.textMuted} />
           </Pressable>
         </View>
 
@@ -537,27 +553,37 @@ RecommendationsTabs.displayName = 'RecommendationsTabs';
 
 /* ---------------- Empty State Helper ---------------- */
 
-const EmptyState = ({ message, icon }: { message: string; icon: any }) => (
+const EmptyState = ({
+  message,
+  icon,
+  styles,
+  colors,
+}: {
+  message: string;
+  icon: any;
+  styles: ReturnType<typeof createStyles>;
+  colors: ReturnType<typeof useThemedColors>;
+}) => (
   <View style={styles.emptyState}>
-    <MaterialIcons name={icon} size={48} color={DESIGN_TOKENS.colors.textSubtle} />
+    <MaterialIcons name={icon} size={48} color={colors.textTertiary} />
     <Text style={styles.emptyText}>{message}</Text>
   </View>
 );
 
 /* ---------------- Styles ---------------- */
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.card,
+        boxShadow: colors.boxShadows.card,
       } as any,
-      default: DESIGN_TOKENS.shadowsNative.light,
+      default: colors.shadows.light,
     }),
   },
   containerFixedHeight: {
@@ -567,10 +593,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: DESIGN_TOKENS.colors.borderLight,
+    borderBottomColor: colors.borderLight,
     minHeight: TAB_HEADER_HEIGHT,
     paddingHorizontal: 12,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
   },
   tabsScroll: {
     flex: 1,
@@ -602,21 +628,21 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   activeTab: {
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-    borderColor: DESIGN_TOKENS.colors.border,
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.border,
   },
   tabLabel: {
     marginLeft: 6,
     fontSize: 13,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontWeight: '600',
   },
   activeTabLabel: {
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontWeight: '600',
   },
   badge: {
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 999,
     minWidth: 20,
     height: 20,
@@ -626,7 +652,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   badgeText: {
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -634,7 +660,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 4,
     height: 3,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: 2,
     opacity: 0,
   },
@@ -646,15 +672,15 @@ const styles = StyleSheet.create({
     height: TAB_CONTENT_HEIGHT,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
   },
   collapsedHeader: {
     height: TAB_HEADER_HEIGHT,
     justifyContent: 'center',
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: DESIGN_TOKENS.colors.borderLight,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.surface,
   },
   collapsedSpacer: {
     height: TAB_CONTENT_HEIGHT,
@@ -697,19 +723,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     borderRadius: 16,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderAccent,
+    borderColor: colors.borderAccent,
   },
   gateIcon: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
   },
   gateCopy: {
     flex: 1,
@@ -718,7 +744,7 @@ const styles = StyleSheet.create({
   },
   gateText: {
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     lineHeight: 20,
     fontWeight: '500',
   },
@@ -729,11 +755,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.primary,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
   },
   gateButtonText: {
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -742,7 +768,7 @@ const styles = StyleSheet.create({
   collapsedContainer: {
     paddingVertical: 12,
     paddingHorizontal: 0,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 16,
   },
   expandButton: {
@@ -753,7 +779,7 @@ const styles = StyleSheet.create({
   expandText: {
     marginLeft: 8,
     fontSize: 15,
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontWeight: '500',
   },
 
@@ -765,20 +791,20 @@ const styles = StyleSheet.create({
   skeletonCard: {
     width: TAB_CARD_TEMPLATE.container.width || 208,
     marginRight: 16,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: TAB_CARD_TEMPLATE.container.borderRadius || 12,
     overflow: 'hidden',
   },
   skeletonImage: {
     height: (TAB_CARD_TEMPLATE.imageContainer as any).height || 136,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
   },
   skeletonContent: {
     padding: (TAB_CARD_TEMPLATE.content as any).padding || 12,
   },
   skeletonLine: {
     height: 14,
-    backgroundColor: DESIGN_TOKENS.colors.borderLight,
+    backgroundColor: colors.borderLight,
     borderRadius: 7,
   },
   skeletonMetaRow: {
@@ -792,14 +818,14 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     width: '100%',
     borderRadius: 16,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
   },
   emptyText: {
     marginTop: 12,
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontWeight: '600',
   },
   errorContainer: {
@@ -810,7 +836,7 @@ const styles = StyleSheet.create({
   errorText: {
     marginTop: 12,
     fontSize: 15,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
   },
   horizontalList: {
@@ -866,7 +892,7 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     marginTop: 2,
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   headerActions: {
     flexDirection: 'row',
@@ -881,17 +907,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
   },
   seeAllButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
   },
   favoritesHeaderTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   favoritesClearButton: {
     flexDirection: 'row',
@@ -902,13 +928,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   favoritesClearButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.danger,
+    color: colors.danger,
   },
 });
 

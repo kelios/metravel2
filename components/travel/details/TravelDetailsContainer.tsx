@@ -42,14 +42,13 @@ import { ProgressiveWrapper } from '@/hooks/useProgressiveLoading';
 import { optimizeImageUrl, getPreferredImageFormat } from "@/utils/imageOptimization";
 import { SectionSkeleton } from '@/components/SectionSkeleton';
 
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import {
   TravelDeferredSections as TravelDeferredSectionsComponent,
   TravelHeroSection,
   useLCPPreload,
   OptimizedLCPHero,
 } from "@/components/travel/details/TravelDetailsSections";
-import { styles } from "@/components/travel/details/TravelDetailsStyles";
+import { useTravelDetailsStyles } from "@/components/travel/details/TravelDetailsStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
 
 /* ✅ PHASE 2: Accessibility (WCAG AAA) */
@@ -129,6 +128,7 @@ export default function TravelDetailsContainer() {
   // Note: useReducedMotion hook will be used in future for animation handling
   useReducedMotion();
   const themedColors = useThemedColors();
+  const styles = useTravelDetailsStyles();
 
   // ✅ УЛУЧШЕНИЕ: Состояние для похожих путешествий (для навигации)
   const [relatedTravels, setRelatedTravels] = useState<Travel[]>([]);
@@ -254,10 +254,10 @@ export default function TravelDetailsContainer() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, styles.mainContainerMobile]}>
-          <Text style={{ color: DESIGN_TOKENS.colors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>
+          <Text style={{ color: themedColors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>
             Путешествие не найдено
           </Text>
-          <Text style={{ color: DESIGN_TOKENS.colors.textMuted, fontSize: 14, textAlign: 'center' }}>
+          <Text style={{ color: themedColors.textMuted, fontSize: 14, textAlign: 'center' }}>
             В ссылке отсутствует идентификатор путешествия.
           </Text>
         </View>
@@ -269,10 +269,10 @@ export default function TravelDetailsContainer() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, styles.mainContainerMobile]}>
-          <Text style={{ color: DESIGN_TOKENS.colors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>
+          <Text style={{ color: themedColors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>
             Не удалось загрузить путешествие
           </Text>
-          <Text style={{ color: DESIGN_TOKENS.colors.textMuted, fontSize: 14, textAlign: 'center', marginBottom: 12 }}>
+          <Text style={{ color: themedColors.textMuted, fontSize: 14, textAlign: 'center', marginBottom: 12 }}>
             {error?.message || 'Попробуйте обновить страницу.'}
           </Text>
           <TouchableOpacity
@@ -281,11 +281,11 @@ export default function TravelDetailsContainer() {
               paddingHorizontal: 14,
               paddingVertical: 10,
               borderRadius: 10,
-              backgroundColor: DESIGN_TOKENS.colors.primary,
+              backgroundColor: themedColors.primary,
             }}
             accessibilityRole="button"
           >
-            <Text style={{ color: DESIGN_TOKENS.colors.textInverse, fontWeight: '700' }}>Повторить</Text>
+            <Text style={{ color: themedColors.textOnPrimary, fontWeight: '700' }}>Повторить</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -296,7 +296,7 @@ export default function TravelDetailsContainer() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, styles.mainContainerMobile]}>
-          <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} />
+          <ActivityIndicator size="large" color={themedColors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -349,7 +349,7 @@ export default function TravelDetailsContainer() {
         Platform.OS === "web" &&
           ({
             // @ts-ignore - web-specific CSS property
-            backgroundImage: `linear-gradient(180deg, ${DESIGN_TOKENS.colors.background} 0%, ${DESIGN_TOKENS.colors.backgroundSecondary} 100%)`,
+            backgroundImage: `linear-gradient(180deg, ${themedColors.background} 0%, ${themedColors.backgroundSecondary} 100%)`,
           } as any),
       ]}
     >

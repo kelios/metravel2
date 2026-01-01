@@ -18,7 +18,6 @@ import { TRAVEL_CARD_IMAGE_HEIGHT } from './utils/listTravelConstants';
 
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
-const ICON_COLOR = "#111827"; // тёмкие иконки под светлое стекло
 const ENABLE_TRAVEL_DETAILS_PREFETCH = false;
 
 // Простая эвристика для отбрасывания изображений с водяными знаками / стоковых доменов
@@ -40,15 +39,16 @@ const isLikelyWatermarked = (url: string | null | undefined): boolean => {
 type CountriesListProps = {
   countries: string[];
   styles: ReturnType<typeof createStyles>;
+  iconColor: string;
 };
 
-const CountriesList = memo(function CountriesList({ countries, styles }: CountriesListProps) {
+const CountriesList = memo(function CountriesList({ countries, styles, iconColor }: CountriesListProps) {
   if (!countries.length) return null;
   return (
     <View style={styles.tags}>
       {countries.slice(0, 1).map((c) => (
         <View key={c} style={styles.tag}>
-          <Feather name="map-pin" size={11} color={ICON_COLOR} style={{ marginRight: 4 }} />
+          <Feather name="map-pin" size={11} color={iconColor} style={{ marginRight: 4 }} />
           <Text style={styles.tagTxt} numberOfLines={1} ellipsizeMode="tail">
             {c}
           </Text>
@@ -95,6 +95,7 @@ function TravelListItem({
     // ✅ ДИЗАЙН: Используем динамические цвета темы
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const tagIconColor = colors.textSecondary;
 
     const {
         id,
@@ -499,7 +500,7 @@ const leftTopSlot = canEdit ? (
           } as any)
         : {})}
     >
-      <Feather name="edit-2" size={14} color={DESIGN_TOKENS.colors.text} />
+      <Feather name="edit-2" size={14} color={colors.text} />
     </InlineWebButton>
     <View style={styles.adminDivider} />
     <InlineWebButton
@@ -523,7 +524,7 @@ const leftTopSlot = canEdit ? (
           } as any)
         : {})}
     >
-      <Feather name="trash-2" size={14} color={DESIGN_TOKENS.colors.danger} />
+      <Feather name="trash-2" size={14} color={colors.danger} />
     </InlineWebButton>
   </View>
 ) : null;
@@ -542,7 +543,9 @@ const hasContentInfo = useMemo(() => {
 const contentSlotWithoutTitle = hasContentInfo ? (
   <>
     <View style={styles.countrySlot}>
-      {countries.length > 0 ? <CountriesList countries={countries} styles={styles} /> : null}
+      {countries.length > 0 ? (
+        <CountriesList countries={countries} styles={styles} iconColor={tagIconColor} />
+      ) : null}
     </View>
 
     <View
@@ -616,13 +619,13 @@ const contentSlotWithoutTitle = hasContentInfo ? (
       <View style={styles.metaBadgesRow}>
         {popularityFlags.isPopular && (
           <View style={[styles.statusBadge, styles.statusBadgePopular]}>
-            <Feather name="trending-up" size={Platform.select({ default: 10, web: 12 })} color={DESIGN_TOKENS.colors.accent} />
+            <Feather name="trending-up" size={Platform.select({ default: 10, web: 12 })} color={colors.accent} />
             <Text style={[styles.statusBadgeText, styles.statusBadgeTextPopular]}>Популярное</Text>
           </View>
         )}
         {popularityFlags.isNew && (
           <View style={[styles.statusBadge, styles.statusBadgeNew]}>
-            <Feather name="star" size={Platform.select({ default: 10, web: 12 })} color={DESIGN_TOKENS.colors.success} />
+            <Feather name="star" size={Platform.select({ default: 10, web: 12 })} color={colors.success} />
             <Text style={[styles.statusBadgeText, styles.statusBadgeTextNew]}>Новое</Text>
           </View>
         )}
@@ -758,11 +761,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     // Минимальные тени для глубины - разделены по платформам
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.light,
+        boxShadow: colors.boxShadows.light,
       } as any,
-      ios: DESIGN_TOKENS.shadowsNative.light,
+      ios: colors.shadows.light,
       android: { elevation: 2 },
-      default: DESIGN_TOKENS.shadowsNative.light,
+      default: colors.shadows.light,
     }),
   },
 
@@ -776,7 +779,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   selected: {
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.soft,
+        boxShadow: colors.boxShadows.hover,
         borderColor: colors.primary,
       } as any,
       default: {
@@ -811,7 +814,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.xs,
     // Компактный glass-пил, по высоте близкий к кнопке избранного
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: colors.surfaceMuted,
     borderRadius: DESIGN_TOKENS.radii.full,
     paddingHorizontal: DESIGN_TOKENS.spacing.xs,
     paddingVertical: DESIGN_TOKENS.spacing.xs * 0.75,

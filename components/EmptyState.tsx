@@ -1,9 +1,7 @@
 // Компонент для пустых состояний
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-// ✅ ДИЗАЙН: Импорт максимально легкой и воздушной палитры
-import { AIRY_COLORS } from '@/constants/airyColors';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
@@ -34,12 +32,13 @@ export default function EmptyState({
   action,
   secondaryAction,
   iconSize = 96, // ✅ ДИЗАЙН: Увеличен размер иконки
-  iconColor = AIRY_COLORS.primary, // ✅ ДИЗАЙН: Воздушный легкий персик по умолчанию
+  iconColor,
   variant = 'default',
   suggestions = [],
   examples = [],
 }: EmptyStateProps) {
   const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   // ✅ УЛУЧШЕНИЕ: Разные цвета для разных вариантов
   const variantColors = {
@@ -51,7 +50,7 @@ export default function EmptyState({
   };
 
   const variantColorScheme = variantColors[variant] || variantColors.default;
-  const finalIconColor = iconColor || variantColorScheme.icon;
+  const finalIconColor = iconColor ?? variantColorScheme.icon;
   return (
     <View style={styles.container}>
       <View style={[styles.iconContainer, { backgroundColor: variantColorScheme.bg }]}>
@@ -152,7 +151,7 @@ export default function EmptyState({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -170,13 +169,13 @@ const styles = StyleSheet.create({
     width: 120, // ✅ ДИЗАЙН: Контейнер для иконки
     height: 120,
     borderRadius: 60,
-    backgroundColor: AIRY_COLORS.primaryLight, // ✅ ДИЗАЙН: Воздушный легкий персиковый фон
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
     ...Platform.select({
       web: {
-        boxShadow: '0 4px 16px rgba(255, 159, 90, 0.15)',
+        boxShadow: colors.boxShadows.light,
       },
     }),
   },
@@ -211,25 +210,25 @@ const styles = StyleSheet.create({
   actionButton: {
     paddingHorizontal: 32, // ✅ ДИЗАЙН: Увеличены отступы
     paddingVertical: 14, // ✅ ДИЗАЙН: Высота 48px (14*2 + 20px текста)
-    backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
+    backgroundColor: colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
     ...Platform.select({
       web: {
-        backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
-        boxShadow: DESIGN_TOKENS.shadows.medium,
+        backgroundColor: colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
+        boxShadow: colors.boxShadows.medium,
         transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         // @ts-ignore
         ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.primaryDark,
+          backgroundColor: colors.primaryDark,
           transform: 'translateY(-2px) scale(1.02)',
-          boxShadow: '0 3px 8px rgba(31, 31, 31, 0.12)',
+          boxShadow: colors.boxShadows.hover,
         },
       },
     }),
   },
   actionText: {
-    color: DESIGN_TOKENS.colors.textInverse,
+    color: colors.textOnPrimary,
     fontSize: 16, // ✅ ДИЗАЙН: Увеличен размер
     fontWeight: '700', // ✅ ДИЗАЙН: Увеличен weight
     letterSpacing: 0.3,
@@ -253,13 +252,13 @@ const styles = StyleSheet.create({
         transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         // @ts-ignore
         ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+          backgroundColor: colors.primarySoft,
         },
       },
     }),
   },
   secondaryActionText: {
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: 0.2,
@@ -272,7 +271,7 @@ const styles = StyleSheet.create({
   suggestionsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     marginBottom: 12,
   },
   suggestionsList: {
@@ -288,7 +287,7 @@ const styles = StyleSheet.create({
   suggestionChip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
+    backgroundColor: colors.mutedBackground, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
     borderRadius: DESIGN_TOKENS.radii.pill, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
     minHeight: 32, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
@@ -298,15 +297,15 @@ const styles = StyleSheet.create({
         transition: 'all 0.2s ease',
         // @ts-ignore
         ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.surface,
-          borderColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
+          backgroundColor: colors.surface,
+          borderColor: colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
         },
       },
     }),
   },
   suggestionText: {
     fontSize: 13,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontWeight: '500',
   },
   examplesContainer: {
@@ -321,7 +320,7 @@ const styles = StyleSheet.create({
   examplesTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -333,13 +332,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 12,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.md,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     ...Platform.select({
       web: {
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+        boxShadow: colors.boxShadows.light,
       },
     }),
   },
@@ -347,11 +346,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   exampleAuthor: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
 });

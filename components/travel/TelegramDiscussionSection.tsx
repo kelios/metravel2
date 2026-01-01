@@ -57,7 +57,7 @@ export default function TelegramDiscussionSection({ travel }: TelegramDiscussion
         accessibilityRole="button"
         accessibilityLabel={hasUrl ? 'Открыть обсуждение в Telegram' : 'Скоро здесь будет обсуждение в Telegram'}
       >
-        <MaterialIcons name="telegram" size={20} color={DESIGN_TOKENS.colors.textOnPrimary} />
+        <MaterialIcons name="telegram" size={20} color={colors.textOnPrimary} />
         <Text style={styles.buttonText}>
           {hasUrl ? 'Открыть обсуждение в Telegram' : 'Скоро здесь будет обсуждение в Telegram'}
         </Text>

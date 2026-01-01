@@ -171,12 +171,12 @@ const prepareHtml = (html: string) => {
 
 const WEB_RICH_TEXT_CLASS = "travel-rich-text";
 const WEB_RICH_TEXT_STYLES_ID = "travel-rich-text-styles";
-const WEB_RICH_TEXT_STYLES = `
+const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 .${WEB_RICH_TEXT_CLASS} {
   font-family: "Georgia", "Times New Roman", serif;
   font-size: 17px;
   line-height: 1.7;
-  color: ${DESIGN_TOKENS.colors.text};
+  color: ${colors.text};
   text-align: justify;
   hyphens: auto;
   width: 100%;
@@ -190,7 +190,7 @@ const WEB_RICH_TEXT_STYLES = `
 .${WEB_RICH_TEXT_CLASS} h1,
 .${WEB_RICH_TEXT_CLASS} h2,
 .${WEB_RICH_TEXT_CLASS} h3 {
-  color: ${DESIGN_TOKENS.colors.text};
+  color: ${colors.text};
   line-height: 1.3;
   margin: 1.6em 0 0.7em;
 }
@@ -211,9 +211,9 @@ const WEB_RICH_TEXT_STYLES = `
   object-fit: cover;
   border-radius: 22px;
   margin: DESIGN_TOKENS.spacing.xxs2px 0 26px;
-  box-shadow: ${DESIGN_TOKENS.shadows.card};
-  border: 6px solid ${DESIGN_TOKENS.colors.borderLight};
-  background: ${DESIGN_TOKENS.colors.surfaceMuted};
+  box-shadow: ${colors.boxShadows.card};
+  border: 6px solid ${colors.borderLight};
+  background: ${colors.surfaceMuted};
 }
 .${WEB_RICH_TEXT_CLASS} img + img,
 .${WEB_RICH_TEXT_CLASS} figure + figure {
@@ -250,7 +250,7 @@ const WEB_RICH_TEXT_STYLES = `
 .${WEB_RICH_TEXT_CLASS} figcaption {
   text-align: center;
   font-size: 0.9rem;
-  color: ${DESIGN_TOKENS.colors.textMuted};
+  color: ${colors.textMuted};
   margin-top: 8px;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -263,7 +263,7 @@ const WEB_RICH_TEXT_STYLES = `
   padding: 0;
   overflow: hidden;
   margin: DESIGN_TOKENS.spacing.xxs4px 0;
-  box-shadow: ${DESIGN_TOKENS.shadows.card};
+  box-shadow: ${colors.boxShadows.card};
 }
 .${WEB_RICH_TEXT_CLASS}::after {
   content: "";
@@ -279,7 +279,7 @@ const WEB_RICH_TEXT_STYLES = `
   margin: DESIGN_TOKENS.spacing.xxs4px auto !important;
   border-radius: 18px !important;
   overflow: hidden !important;
-  box-shadow: ${DESIGN_TOKENS.shadows.card};
+  box-shadow: ${colors.boxShadows.card};
   position: relative;
   display: block;
 }
@@ -340,7 +340,7 @@ const WEB_RICH_TEXT_STYLES = `
 /* Стили для подписей Instagram */
 .${WEB_RICH_TEXT_CLASS} .instagram-caption {
   font-size: 14px;
-  color: ${DESIGN_TOKENS.colors.textMuted};
+  color: ${colors.textMuted};
   line-height: 1.5;
   margin-top: 8px;
   margin-bottom: 20px;
@@ -353,6 +353,7 @@ const WEB_RICH_TEXT_STYLES = `
 
 const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }) => {
   const colors = useThemedColors();
+  const webRichTextStyles = useMemo(() => getWebRichTextStyles(colors), [colors]);
   const [iframeModel, setIframeModel] = useState<IframeModelType | null>(null);
   const prepared = useMemo(() => prepareHtml(html), [html]);
 
@@ -561,7 +562,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         marginVertical: 12,
         display: "block",
         alignSelf: "stretch",
-        boxShadow: Platform.OS === "web" ? DESIGN_TOKENS.shadows.light : undefined,
+        boxShadow: Platform.OS === "web" ? colors.boxShadows.light : undefined,
       },
 
       iframe: {
@@ -573,7 +574,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         marginVertical: 14,
       },
     }),
-    [BASE_FONT_SIZE, contentWidth, colors.text, colors.textMuted]
+    [BASE_FONT_SIZE, contentWidth, colors]
   );
 
   const customHTMLElementModels = useMemo(
@@ -597,12 +598,17 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
-    if (document.getElementById(WEB_RICH_TEXT_STYLES_ID)) return;
+    if (typeof document === "undefined") return;
+    const existing = document.getElementById(WEB_RICH_TEXT_STYLES_ID) as HTMLStyleElement | null;
+    if (existing) {
+      existing.textContent = webRichTextStyles;
+      return;
+    }
     const style = document.createElement("style");
     style.id = WEB_RICH_TEXT_STYLES_ID;
-    style.textContent = WEB_RICH_TEXT_STYLES;
+    style.textContent = webRichTextStyles;
     document.head.appendChild(style);
-  }, []);
+  }, [webRichTextStyles]);
 
   // Обработка Instagram iframe'ов, вставленных напрямую в HTML
   useEffect(() => {

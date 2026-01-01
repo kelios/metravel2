@@ -1,8 +1,9 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import SimpleMultiSelect from './SimpleMultiSelect';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type MultiSelectFieldProps = {
     label?: string;
@@ -18,6 +19,24 @@ type MultiSelectFieldProps = {
 
 const MultiSelectField = forwardRef<any, MultiSelectFieldProps>(
     ({ label, items, value = [], onChange, labelField, valueField, single = false, compact = false, ...rest }, _ref) => {
+        const colors = useThemedColors();
+        const styles = useMemo(() => StyleSheet.create({
+            container: { marginBottom: DESIGN_TOKENS.spacing.md },
+            containerCompact: { marginBottom: DESIGN_TOKENS.spacing.sm },
+            label: {
+                fontSize: DESIGN_TOKENS.typography.sizes.sm,
+                fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+                color: colors.text,
+                marginBottom: DESIGN_TOKENS.spacing.xs,
+            },
+            dropdown: {
+                // Styles are now handled by SimpleMultiSelect
+            },
+            dropdownCompact: {
+                // Compact styles handled by SimpleMultiSelect
+            },
+        }), [colors]);
+
         const extractValue = (item: any) =>
             item && typeof item === 'object' && valueField in item ? item[valueField] : item;
 
@@ -52,22 +71,5 @@ const MultiSelectField = forwardRef<any, MultiSelectFieldProps>(
         );
     }
 );
-
-const styles = StyleSheet.create({
-    container: { marginBottom: DESIGN_TOKENS.spacing.md },
-    containerCompact: { marginBottom: DESIGN_TOKENS.spacing.sm },
-    label: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-        color: DESIGN_TOKENS.colors.text,
-        marginBottom: DESIGN_TOKENS.spacing.xs,
-    },
-    dropdown: {
-        // Styles are now handled by SimpleMultiSelect
-    },
-    dropdownCompact: {
-        // Compact styles handled by SimpleMultiSelect
-    },
-});
 
 export default React.memo(MultiSelectField);

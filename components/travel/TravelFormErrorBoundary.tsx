@@ -2,6 +2,7 @@ import React, { Component, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { ThemeContext, getThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface Props {
   children: ReactNode;
@@ -16,6 +17,9 @@ interface State {
 }
 
 class TravelFormErrorBoundary extends Component<Props, State> {
+  static contextType = ThemeContext;
+  override context: React.ContextType<typeof ThemeContext> | null = null;
+
   constructor(props: Props) {
     super(props);
     this.state = {
@@ -60,6 +64,8 @@ class TravelFormErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      const colors = getThemedColors(this.context?.isDark ?? false);
+      const styles = getStyles(colors);
       // Custom fallback UI
       if (this.props.fallback) {
         return this.props.fallback;
@@ -115,10 +121,10 @@ class TravelFormErrorBoundary extends Component<Props, State> {
   }
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
   },
   content: {
     flex: 1,
@@ -129,19 +135,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: DESIGN_TOKENS.typography.sizes.xl,
     fontWeight: 'bold',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     textAlign: 'center',
     marginBottom: DESIGN_TOKENS.spacing.md,
   },
   message: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: DESIGN_TOKENS.colors.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: DESIGN_TOKENS.spacing.xl,
   },
   errorDetails: {
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
+    backgroundColor: colors.mutedBackground,
     padding: DESIGN_TOKENS.spacing.md,
     borderRadius: DESIGN_TOKENS.radii.md,
     marginBottom: DESIGN_TOKENS.spacing.xl,
@@ -151,12 +157,12 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: 'bold',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: DESIGN_TOKENS.spacing.sm,
   },
   errorText: {
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontFamily: 'monospace',
   },
   actions: {
@@ -170,13 +176,13 @@ const styles = StyleSheet.create({
     minWidth: 120,
   },
   retryButton: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
   },
   refreshButton: {
-    backgroundColor: DESIGN_TOKENS.colors.success,
+    backgroundColor: colors.success,
   },
   buttonText: {
-    color: 'white',
+    color: colors.textOnPrimary,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
     textAlign: 'center',

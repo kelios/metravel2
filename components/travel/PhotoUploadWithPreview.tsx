@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, ActivityIndicator, Pressable, View, Text } from 'react-native';
 import * as ImagePicker from 'react-native-image-picker';
 import { useDropzone } from 'react-dropzone';
@@ -6,6 +6,7 @@ import { uploadImage } from '@/src/api/misc';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface PhotoUploadWithPreviewProps {
     collection: string;
@@ -88,6 +89,8 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     placeholder = 'Перетащите сюда изображение',
     maxSizeMB = 10,
 }) => {
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const [imageUri, setImageUri] = useState<string | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -367,7 +370,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                     <input {...getInputProps()} />
                     {loading ? (
                         <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} />
+                            <ActivityIndicator size="large" color={colors.primary} />
                             {uploadProgress > 0 && (
                                 <View style={styles.progressContainer}>
                                     <View style={[styles.progressBar, { width: `${uploadProgress}%` }]} />
@@ -462,7 +465,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                         </View>
                     ) : (
                         <View style={styles.placeholderContainer}>
-                            <FontAwesome name="cloud-upload" size={40} color={DESIGN_TOKENS.colors.primary} />
+                            <FontAwesome name="cloud-upload" size={40} color={colors.primary} />
                             <Text style={styles.placeholderText}>{placeholder}</Text>
                             <Text style={styles.placeholderSubtext}>или нажмите для выбора файла</Text>
                             <Text style={styles.placeholderHint}>
@@ -521,7 +524,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                     />
                     {!disabled && (
                         <Pressable style={styles.nativeRemoveButton} onPress={handleRemovePress}>
-                            <Feather name="trash-2" size={14} color="#ef4444" />
+                            <Feather name="trash-2" size={14} color={colors.danger} />
                             <Text style={styles.nativeRemoveText}>Удалить</Text>
                         </Pressable>
                     )}
@@ -530,14 +533,14 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
 
             {error && (
                 <View style={styles.errorContainer}>
-                    <Feather name="alert-circle" size={14} color="#ef4444" />
+                    <Feather name="alert-circle" size={14} color={colors.danger} />
                     <Text style={styles.errorText}>{error}</Text>
                 </View>
             )}
 
             {uploadMessage && !error && (
                 <View style={styles.successContainer}>
-                    <Feather name="check-circle" size={14} color="#10b981" />
+                    <Feather name="check-circle" size={14} color={colors.success} />
                     <Text style={styles.successText}>{uploadMessage}</Text>
                 </View>
             )}
@@ -545,26 +548,26 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     );
 };
 
-const styles: any = {
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => ({
     container: {
         width: '100%',
     },
     dropzone: {
-        border: `2px dashed ${DESIGN_TOKENS.colors.border}`,
+        border: `2px dashed ${colors.border}`,
         borderRadius: DESIGN_TOKENS.radii.md,
         padding: DESIGN_TOKENS.spacing.lg,
         textAlign: 'center',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         minHeight: 180,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
     },
     dropzoneActive: {
-        borderColor: DESIGN_TOKENS.colors.primary,
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        borderColor: colors.primary,
+        backgroundColor: colors.primarySoft,
     },
     dropzoneDisabled: {
         opacity: 0.5,
@@ -580,14 +583,14 @@ const styles: any = {
         width: '100%',
         maxWidth: 200,
         height: 24,
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         borderRadius: DESIGN_TOKENS.radii.pill,
         overflow: 'hidden',
         position: 'relative',
     },
     progressBar: {
         height: '100%',
-        backgroundColor: DESIGN_TOKENS.colors.primary,
+        backgroundColor: colors.primary,
         transition: 'width 0.3s ease',
     },
     progressText: {
@@ -601,7 +604,7 @@ const styles: any = {
         justifyContent: 'center',
         fontSize: 11,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     previewContainer: {
         position: 'relative',
@@ -635,16 +638,16 @@ const styles: any = {
     placeholderText: {
         fontSize: 14,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         marginTop: DESIGN_TOKENS.spacing.sm,
     },
     placeholderSubtext: {
         fontSize: 12,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
     },
     placeholderHint: {
         fontSize: 11,
-        color: DESIGN_TOKENS.colors.textSubtle,
+        color: colors.textTertiary,
         marginTop: DESIGN_TOKENS.spacing.xs,
     },
     errorContainer: {
@@ -653,14 +656,14 @@ const styles: any = {
         gap: 6,
         marginTop: DESIGN_TOKENS.spacing.sm,
         padding: DESIGN_TOKENS.spacing.sm,
-        backgroundColor: '#fef2f2',
+        backgroundColor: colors.dangerSoft,
         borderRadius: DESIGN_TOKENS.radii.sm,
         borderWidth: 1,
-        borderColor: '#fecaca',
+        borderColor: colors.dangerLight,
     },
     errorText: {
         fontSize: 12,
-        color: '#ef4444',
+        color: colors.danger,
         flex: 1,
     },
     successContainer: {
@@ -669,14 +672,14 @@ const styles: any = {
         gap: 6,
         marginTop: DESIGN_TOKENS.spacing.sm,
         padding: DESIGN_TOKENS.spacing.sm,
-        backgroundColor: '#f0fdf4',
+        backgroundColor: colors.successSoft,
         borderRadius: DESIGN_TOKENS.radii.sm,
         borderWidth: 1,
-        borderColor: '#bbf7d0',
+        borderColor: colors.successLight,
     },
     successText: {
         fontSize: 12,
-        color: '#10b981',
+        color: colors.success,
         flex: 1,
     },
     uploadButton: {
@@ -684,7 +687,7 @@ const styles: any = {
         alignItems: 'center',
         justifyContent: 'center',
         gap: DESIGN_TOKENS.spacing.xs,
-        backgroundColor: DESIGN_TOKENS.colors.primary,
+        backgroundColor: colors.primary,
         padding: DESIGN_TOKENS.spacing.md,
         borderRadius: DESIGN_TOKENS.radii.md,
         minHeight: 44,
@@ -693,7 +696,7 @@ const styles: any = {
         opacity: 0.5,
     },
     uploadButtonText: {
-        color: DESIGN_TOKENS.colors.textInverse,
+        color: colors.textOnPrimary,
         fontSize: 14,
         fontWeight: '600',
     },
@@ -702,7 +705,7 @@ const styles: any = {
         borderRadius: DESIGN_TOKENS.radii.md,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
     },
     nativePreviewImage: {
         width: '100%',
@@ -715,15 +718,15 @@ const styles: any = {
         justifyContent: 'center',
         gap: 6,
         padding: DESIGN_TOKENS.spacing.sm,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderTopWidth: 1,
-        borderTopColor: DESIGN_TOKENS.colors.border,
+        borderTopColor: colors.border,
     },
     nativeRemoveText: {
         fontSize: 13,
-        color: '#ef4444',
+        color: colors.danger,
         fontWeight: '500',
     },
-};
+});
 
 export default PhotoUploadWithPreview;

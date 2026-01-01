@@ -56,6 +56,7 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Извлекаем данные о путешествии
   const monthName = (travel as any).monthName || '';
@@ -192,7 +193,7 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   // ✅ РЕДИЗАЙН: Компактная карточка с темной темой
   container: {
     flexDirection: 'row',
@@ -210,15 +211,15 @@ const styles = StyleSheet.create({
       default: 18, // было xl 32px (-44%)
       web: 24, // было xxl 48px (-50%)
     }),
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.card,
+        boxShadow: colors.boxShadows.card,
       } as any,
-      default: DESIGN_TOKENS.shadowsNative.medium,
+      default: colors.shadows.medium,
     }),
   },
   containerMobile: {
@@ -238,7 +239,7 @@ const styles = StyleSheet.create({
       web: 17,
     }),
     fontWeight: '500',
-    color: DESIGN_TOKENS.colors.text, // будет переопределен через props
+    color: colors.text,
     letterSpacing: -0.1,
   },
   categoriesContainer: {
@@ -256,7 +257,7 @@ const styles = StyleSheet.create({
   },
   // ✅ РЕДИЗАЙН: Компактные теги категорий
   categoryTag: {
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight, // будет переопределен через props
+    backgroundColor: colors.primaryLight,
     paddingHorizontal: Platform.select({
       default: 12, // было 12
       web: 14, // было 16px (-12.5%)
@@ -267,15 +268,15 @@ const styles = StyleSheet.create({
     }),
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight, // будет переопределен через props
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
         transition: 'all 0.2s ease' as any,
         ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.primary,
-          borderColor: DESIGN_TOKENS.colors.primary,
-          boxShadow: DESIGN_TOKENS.shadows.hover,
+          backgroundColor: colors.primary,
+          borderColor: colors.primary,
+          boxShadow: colors.boxShadows.hover,
         } as any,
       },
     }),
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 14,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.primary, // будет переопределен через props
+    color: colors.primary,
     letterSpacing: 0,
   },
 });

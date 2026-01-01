@@ -109,10 +109,10 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     }, [descriptionPlainLength]);
 
     const descriptionProgressColor = useMemo(() => {
-        if (descriptionPlainLength < 50) return DESIGN_TOKENS.colors.dangerLight;
-        if (descriptionPlainLength <= 150) return '#FFD93D';
-        return DESIGN_TOKENS.colors.successDark;
-    }, [descriptionPlainLength]);
+        if (descriptionPlainLength < 50) return colors.dangerLight;
+        if (descriptionPlainLength <= 150) return colors.warning;
+        return colors.successDark;
+    }, [colors, descriptionPlainLength]);
 
     const handleChange = useCallback(
         <T extends keyof TravelFormData>(name: T, value: TravelFormData[T]) => {
@@ -469,9 +469,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
         paddingVertical: DESIGN_TOKENS.spacing.xxs,
         borderRadius: 999,
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        backgroundColor: colors.primarySoft,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.borderAccent,
+        borderColor: colors.borderAccent,
     },
     descriptionEditChipText: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,

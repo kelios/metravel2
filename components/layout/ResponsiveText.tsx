@@ -5,8 +5,8 @@
 
 import React from 'react';
 import { Text, TextStyle, StyleSheet } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsiveValue } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface ResponsiveTextProps {
   children: React.ReactNode;
@@ -23,6 +23,7 @@ export default function ResponsiveText({
   numberOfLines,
   testID,
 }: ResponsiveTextProps) {
+  const colors = useThemedColors();
   const fontSize = useResponsiveValue(getFontSizeConfig(variant));
   const lineHeight = useResponsiveValue(getLineHeightConfig(variant));
 
@@ -30,7 +31,7 @@ export default function ResponsiveText({
     <Text
       style={[
         styles.base,
-        { fontSize, lineHeight },
+        { fontSize, lineHeight, color: colors.text },
         getVariantStyle(variant),
         style,
       ]}
@@ -82,7 +83,5 @@ function getVariantStyle(variant: string): TextStyle {
 }
 
 const styles = StyleSheet.create({
-  base: {
-    color: DESIGN_TOKENS.colors.text,
-  },
+  base: {},
 });
