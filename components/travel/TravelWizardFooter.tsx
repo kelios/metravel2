@@ -13,8 +13,10 @@ interface TravelWizardFooterProps {
     onBack?: () => void;
     onPrimary: () => void;
     onSave?: () => void;
+    onQuickDraft?: () => void; // ✅ НОВОЕ: Кнопка быстрого черновика
     primaryLabel: string;
     saveLabel?: string;
+    quickDraftLabel?: string; // ✅ НОВОЕ: Текст для кнопки быстрого черновика
     primaryDisabled?: boolean;
     onLayout?: (event: any) => void;
     currentStep?: number;
@@ -102,6 +104,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     primaryButtonContent: {
         flexDirection: 'row-reverse',
     },
+    // ✅ НОВОЕ: Стили для кнопки быстрого черновика
+    buttonsRow: {
+        flexDirection: 'row',
+        gap: DESIGN_TOKENS.spacing.sm,
+        alignItems: 'center',
+    },
+    quickDraftButton: {
+        minWidth: 150,
+    },
+    quickDraftButtonMobile: {
+        minWidth: 50,
+    },
     saveButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -173,8 +187,10 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
     onBack,
     onPrimary,
     onSave,
+    onQuickDraft, // ✅ НОВОЕ: Handler быстрого черновика
     primaryLabel,
     saveLabel = 'Сохранить',
+    quickDraftLabel = '💾 Быстрый черновик', // ✅ НОВОЕ: Текст кнопки
     primaryDisabled = false,
     onLayout,
     currentStep,
@@ -222,6 +238,18 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                                 <Feather name="arrow-left" size={18} color={colors.text} />
                             </Pressable>
                         ) : null}
+
+                        {/* ✅ НОВОЕ: Кнопка быстрого черновика на мобильном */}
+                        {onQuickDraft && (
+                            <Button
+                                mode="outlined"
+                                onPress={onQuickDraft}
+                                style={styles.quickDraftButtonMobile}
+                                compact
+                            >
+                                💾
+                            </Button>
+                        )}
 
                         <Button
                             mode="contained"
@@ -316,16 +344,29 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                                 ))}
                             </View>
                         )}
-                        <Button
-                            mode="contained"
-                            onPress={onPrimary}
-                            style={styles.primaryButton}
-                            disabled={primaryDisabled}
-                            icon="arrow-right"
-                            contentStyle={styles.primaryButtonContent}
-                        >
-                            {primaryLabel}
-                        </Button>
+                        <View style={styles.buttonsRow}>
+                            {/* ✅ НОВОЕ: Кнопка быстрого черновика */}
+                            {onQuickDraft && (
+                                <Button
+                                    mode="outlined"
+                                    onPress={onQuickDraft}
+                                    style={styles.quickDraftButton}
+                                    icon="content-save-outline"
+                                >
+                                    {quickDraftLabel}
+                                </Button>
+                            )}
+                            <Button
+                                mode="contained"
+                                onPress={onPrimary}
+                                style={styles.primaryButton}
+                                disabled={primaryDisabled}
+                                icon="arrow-right"
+                                contentStyle={styles.primaryButtonContent}
+                            >
+                                {primaryLabel}
+                            </Button>
+                        </View>
                     </View>
 
                     <View style={styles.rightSection}>
