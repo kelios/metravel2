@@ -15,7 +15,6 @@ import QuickFacts from '@/components/travel/QuickFacts'
 import AuthorCard from '@/components/travel/AuthorCard'
 import ShareButtons from '@/components/travel/ShareButtons'
 import WeatherWidget from '@/components/WeatherWidget'
-import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import {
   createSafeImageUrl,
@@ -32,7 +31,7 @@ import type { Travel } from '@/src/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
-import { styles } from './TravelDetailsStyles'
+import { useTravelDetailsStyles } from './TravelDetailsStyles'
 import { withLazy } from './TravelDetailsLazy'
 import { Icon } from './TravelDetailsIcons'
 
@@ -107,6 +106,7 @@ type ImgLike = {
 }
 
 const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }) => {
+  const colors = useThemedColors();
   if (Platform.OS === 'web') {
     return (
       <div
@@ -115,10 +115,10 @@ const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }) => {
           height: height ? `${height}px` : '100%',
           borderRadius: 12,
           // React Native Web doesn't support shorthand `background`; use long-form.
-          backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+          backgroundColor: colors.backgroundSecondary,
           // @ts-ignore web-only property
-          backgroundImage: `linear-gradient(180deg, ${DESIGN_TOKENS.colors.backgroundSecondary} 0%, ${DESIGN_TOKENS.colors.backgroundTertiary} 100%)`,
-          border: `1px solid ${DESIGN_TOKENS.colors.borderLight}`,
+          backgroundImage: `linear-gradient(180deg, ${colors.backgroundSecondary} 0%, ${colors.backgroundTertiary} 100%)`,
+          border: `1px solid ${colors.borderLight}`,
           boxSizing: 'border-box',
         }}
         aria-hidden="true"
@@ -132,9 +132,9 @@ const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }) => {
         width: '100%',
         height: height,
         borderRadius: 12,
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
+        borderColor: colors.borderLight,
       }}
     />
   )
@@ -285,6 +285,8 @@ export function TravelHeroSection({
   sectionLinks: TravelSectionLink[]
   onQuickJump: (key: string) => void
 }) {
+  const styles = useTravelDetailsStyles()
+  const colors = useThemedColors()
   const { width: winW, height: winH } = useWindowDimensions()
   const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(null)
   const firstImg = (travel?.gallery?.[0] ?? null) as unknown as ImgLike | null
@@ -425,7 +427,7 @@ export function TravelHeroSection({
                   accessibilityRole="button"
                   accessibilityLabel={`Перейти к разделу ${link.label}`}
                 >
-                  <Icon name={link.icon} size={18} color={DESIGN_TOKENS.colors.primary} />
+                  <Icon name={link.icon} size={18} color={colors.primary} />
                   <Text style={styles.quickJumpLabel}>{link.label}</Text>
                 </Pressable>
               ))}
@@ -439,7 +441,7 @@ export function TravelHeroSection({
                 accessibilityRole="button"
                 accessibilityLabel={`Перейти к разделу ${link.label}`}
               >
-                <Icon name={link.icon} size={18} color={DESIGN_TOKENS.colors.primary} />
+                <Icon name={link.icon} size={18} color={colors.primary} />
                 <Text style={styles.quickJumpLabel}>{link.label}</Text>
               </Pressable>
             ))

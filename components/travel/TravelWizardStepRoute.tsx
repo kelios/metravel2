@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, View, StyleSheet, Text, ScrollView, TextInput, Platform, findNodeHandle, UIManager, LayoutChangeEvent } from 'react-native';
 import { Button } from 'react-native-paper';
 
+import LocationSearchInput from '@/components/travel/LocationSearchInput';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
@@ -199,6 +200,63 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     const handleMarkersChange = (updated: MarkerData[]) => {
         setMarkers(updated);
     };
+
+    // ✅ ФАЗА 2: Handler для выбора места из поиска
+    const handleLocationSelect = useCallback(async (result: any) => {
+        const lat = Number(result.lat);
+        const lng = Number(result.lon);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            return;
+        }
+
+        // Определяем страну из результата поиска
+        let derivedCountryId: number | null = null;
+        const countryCode = result.address?.country_code;
+        const countryName = result.address?.country;
+
+        if (countryCode || countryName) {
+            derivedCountryId = matchCountryId(
+                countryName || '',
+                countries || [],
+                countryCode
+            );
+        }
+
+        // Форматируем адрес
+        const addressParts: string[] = [];
+        if (result.address) {
+            const { city, town, village, state, country } = result.address;
+            const locality = city || town || village;
+            if (locality) addressParts.push(locality);
+            if (state && state !== locality) addressParts.push(state);
+            if (country) addressParts.push(country);
+        }
+        const address = addressParts.length > 0 ? addressParts.join(', ') : result.display_name;
+
+        // Создаем новый маркер
+        const newMarker: MarkerData = {
+            id: null,
+            lat,
+            lng,
+            address,
+            country: derivedCountryId,
+            categories: [],
+            image: '',
+        };
+
+        // Добавляем маркер
+        const updated = [...(markers || []), newMarker];
+        setMarkers(updated);
+
+        // Автоматически добавляем страну в выбранные
+        if (derivedCountryId !== null) {
+            const countryIdStr = String(derivedCountryId);
+            if (!selectedCountryIds.includes(countryIdStr)) {
+                onCountrySelect(countryIdStr);
+            }
+        }
+    }, [markers, setMarkers, countries, selectedCountryIds, onCountrySelect]);
 
     const dismissCoachmark = () => {
         setIsCoachmarkVisible(false);
