@@ -373,7 +373,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -393,7 +392,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },

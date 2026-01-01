@@ -238,7 +238,6 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#fff',
   },
   markAllRead: {
     fontSize: 14,

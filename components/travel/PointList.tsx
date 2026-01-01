@@ -625,7 +625,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     position: 'relative', 
     width: '100%',
     overflow: 'hidden',
-    backgroundColor: '#f5f4f2',
+    backgroundColor: colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -633,7 +633,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     width: '100%',
     height: '100%',
     display: 'block',
-    backgroundColor: '#f0efed',
+    backgroundColor: colors.backgroundTertiary,
     ...Platform.select({
       web: {
         objectFit: 'contain' as any,
@@ -650,11 +650,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     width: '100%',
     ...Platform.select({
       default: {
-        backgroundColor: '#ff9f5a',
+        backgroundColor: colors.primary,
       },
       web: {
         backgroundColor: 'transparent',
-        backgroundImage: 'linear-gradient(135deg, #ff9f5a 0%, #ff6b35 50%, #ff8c42 100%)' as any,
+        backgroundImage:
+          (colors.gradients as any)?.primary ??
+          `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 50%, ${colors.primary} 100%)` as any,
         backgroundSize: '200% 200%',
         // ✅ ИСПРАВЛЕНИЕ: animation убрано из StyleSheet, используется CSS через style элемент
       },
@@ -670,7 +672,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     marginTop: DESIGN_TOKENS.spacing.lg,
     maxWidth: '85%',
     textAlign: 'center',
-    color: '#fff',
+    color: colors.textOnPrimary,
     fontWeight: '700',
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     lineHeight: 22,
@@ -688,7 +690,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   actionsRow: { 
     flexDirection: 'row', 
     gap: DESIGN_TOKENS.spacing.xs,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: colors.overlay,
     borderRadius: 14,
     padding: 5,
     ...Platform.select({
@@ -705,15 +707,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: colors.overlayLight,
     ...Platform.select({
       web: {
         transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         cursor: 'pointer' as any,
         ':hover': {
-          backgroundColor: 'rgba(255,159,90,0.9)',
+          backgroundColor: colors.primary,
           transform: 'scale(1.15) rotate(5deg)',
-          boxShadow: '0 4px 12px rgba(255,159,90,0.4)',
+          boxShadow: (colors.boxShadows as any)?.medium ?? '0 4px 12px rgba(0,0,0,0.2)',
         } as any,
         ':active': {
           transform: 'scale(1.05)',
@@ -730,12 +732,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     bottom: 0,
     paddingHorizontal: 12,
     paddingVertical: DESIGN_TOKENS.spacing.sm,
-    backgroundColor: 'rgba(15,23,42,0.82)',
+    backgroundColor: colors.overlay,
     flexDirection: 'column',
     gap: DESIGN_TOKENS.spacing.xs,
   },
   overlayTitle: {
-    color: '#f9fafb',
+    color: colors.textOnDark,
     fontWeight: '700',
     lineHeight: 20,
     letterSpacing: -0.3,
@@ -748,10 +750,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: 'rgba(15,23,42,0.7)',
+    backgroundColor: colors.overlayLight,
   },
   overlayCoordText: {
-    color: '#e5e7eb',
+    color: colors.textOnDark,
     fontWeight: '600',
     fontFamily: Platform.select({
       web: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
@@ -769,12 +771,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: 'rgba(249,250,251,0.12)',
+    backgroundColor: colors.overlayLight,
     borderWidth: 1,
-    borderColor: 'rgba(248,250,252,0.35)',
+    borderColor: colors.borderLight,
   },
   overlayCategoryText: {
-    color: '#e5e7eb',
+    color: colors.textOnDark,
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
     fontWeight: '600',
   },
