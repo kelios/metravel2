@@ -102,6 +102,7 @@ const PointCard = React.memo(function PointCard({
                                                   onCopy,
                                                   onShare,
                                                   onOpenMap,
+                                                  colors,
                                                   styles,
                                                 }: {
   point: Point;
@@ -110,6 +111,7 @@ const PointCard = React.memo(function PointCard({
   onCopy: (coordStr: string) => void;
   onShare: (coordStr: string) => void;
   onOpenMap: (coordStr: string) => void;
+  colors: ReturnType<typeof useThemedColors>;
   styles: ReturnType<typeof createStyles>;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -161,7 +163,7 @@ const PointCard = React.memo(function PointCard({
             />
           ) : (
             <View style={[styles.noImage, { minHeight: responsive.imageMinHeight }]}>
-              <Feather name="map" size={48} color="#fff" />
+              <Feather name="map" size={48} color={colors.textOnPrimary} />
               <Text style={styles.noImageText} numberOfLines={3}>
                 {point.address}
               </Text>
@@ -186,7 +188,7 @@ const PointCard = React.memo(function PointCard({
                   accessibilityLabel="Открыть в картах"
                   accessibilityRole="button"
                 >
-                  <Feather name="external-link" size={18} color="#fff" />
+                  <Feather name="external-link" size={18} color={colors.textOnDark} />
                 </Pressable>
                 <Pressable
                   style={styles.actionBtn}
@@ -197,7 +199,7 @@ const PointCard = React.memo(function PointCard({
                   accessibilityLabel="Скопировать координаты"
                   accessibilityRole="button"
                 >
-                  <Feather name="copy" size={18} color="#fff" />
+                  <Feather name="copy" size={18} color={colors.textOnDark} />
                 </Pressable>
                 <Pressable
                   style={styles.actionBtn}
@@ -208,7 +210,7 @@ const PointCard = React.memo(function PointCard({
                   accessibilityLabel="Поделиться"
                   accessibilityRole="button"
                 >
-                  <Feather name="send" size={18} color="#fff" />
+                  <Feather name="send" size={18} color={colors.textOnDark} />
                 </Pressable>
               </View>
             </View>
@@ -232,7 +234,7 @@ const PointCard = React.memo(function PointCard({
               accessibilityLabel={`Координаты: ${point.coord}`}
               accessibilityRole="button"
             >
-              <Feather name="map-pin" size={14} color="#e5e7eb" />
+              <Feather name="map-pin" size={14} color={colors.textOnDark} />
               <Text
                 style={[styles.overlayCoordText, { fontSize: responsive.coordSize }]}
                 numberOfLines={1}
@@ -402,12 +404,13 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
             onCopy={onCopy}
             onShare={onShare}
             onOpenMap={onOpenMap}
+            colors={colors}
             styles={styles}
           />
         )}
       </View>
     ),
-    [baseUrl, isMobile, numColumns, onCopy, onOpenMap, onShare, responsive, styles]
+    [baseUrl, colors, isMobile, numColumns, onCopy, onOpenMap, onShare, responsive, styles]
   );
 
   return (
