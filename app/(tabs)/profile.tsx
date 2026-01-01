@@ -355,6 +355,166 @@ export default function ProfileScreen() {
       fontWeight: '600',
       color: colors.text,
     },
+    editProfileButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: colors.primarySoft,
+    },
+    editProfileButtonText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    quickNavRow: {
+      paddingHorizontal: 6,
+      paddingBottom: 4,
+      gap: 8,
+      alignItems: 'center',
+    },
+    quickNavChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 999,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    quickNavChipText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    socialsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      paddingHorizontal: 6,
+      marginBottom: 12,
+    },
+    socialChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: colors.primarySoft,
+    },
+    socialChipText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    statsContainer: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 16,
+    },
+    statNumber: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: colors.text,
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      paddingHorizontal: 4,
+      marginBottom: 8,
+    },
+    sectionHeaderLeft: {
+      flex: 1,
+    },
+    sectionSubtitle: {
+      marginTop: 2,
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    sectionAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: 10,
+      backgroundColor: colors.primarySoft,
+    },
+    sectionActionText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    cardsRow: {
+      paddingHorizontal: 4,
+      paddingBottom: 4,
+    },
+    menuSection: {
+      backgroundColor: colors.surface,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+      marginBottom: 16,
+    },
+    menuSectionTitle: {
+      paddingHorizontal: 16,
+      paddingTop: 14,
+      paddingBottom: 8,
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    menuContainer: {
+      backgroundColor: colors.surface,
+    },
+    menuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      minHeight: 56,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+      ...Platform.select({
+        web: {
+          transition: 'all 0.2s ease',
+          cursor: 'pointer',
+          ':hover': { backgroundColor: colors.primarySoft } as any,
+        },
+      }),
+    },
+    menuIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    menuContent: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    menuLabel: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    menuCount: {
+      fontSize: 14,
+      color: colors.textMuted,
+      marginLeft: 8,
+    },
+    logoutText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.danger,
+    },
   }), [colors]);
 
   if (!isAuthenticated) {
@@ -449,7 +609,7 @@ export default function ProfileScreen() {
                     resizeMode="cover"
                   />
                 ) : (
-                  <Feather name="user" size={28} color={DESIGN_TOKENS.colors.primary} />
+                  <Feather name="user" size={28} color={colors.primary} />
                 )}
               </View>
             <View style={styles.headerTextBlock}>
@@ -477,7 +637,7 @@ export default function ProfileScreen() {
               accessibilityLabel="Редактировать профиль"
               {...Platform.select({ web: { cursor: 'pointer' } })}
             >
-              <Feather name="edit-2" size={16} color={DESIGN_TOKENS.colors.primary} />
+              <Feather name="edit-2" size={16} color={colors.primary} />
               <Text style={styles.editProfileButtonText}>Редактировать</Text>
             </Pressable>
           </View>
@@ -564,7 +724,7 @@ export default function ProfileScreen() {
                       {...Platform.select({ web: { cursor: 'pointer' } })}
                     >
                       <Text style={styles.sectionActionText}>Смотреть все</Text>
-                      <Feather name="chevron-right" size={16} color={DESIGN_TOKENS.colors.primary} />
+                      <Feather name="chevron-right" size={16} color={colors.primary} />
                     </Pressable>
                   </View>
 
@@ -641,7 +801,7 @@ export default function ProfileScreen() {
                           city: item.city ?? null,
                           country: item.country ?? null,
                         }}
-                        badge={{ icon: 'history', backgroundColor: 'rgba(0,0,0,0.75)', iconColor: '#ffffff' }}
+                        badge={{ icon: 'history', backgroundColor: colors.overlay ?? 'rgba(0,0,0,0.75)', iconColor: colors.textOnDark }}
                         onPress={() => router.push(item.url as any)}
                       />
                     ))}
@@ -680,7 +840,7 @@ export default function ProfileScreen() {
                     <Text style={styles.menuCount}>{item.count}</Text>
                   )}
                 </View>
-                <Feather name="chevron-right" size={20} color="#ccc" />
+                <Feather name="chevron-right" size={20} color={colors.textMuted} />
               </Pressable>
             ))}
           </View>
@@ -696,345 +856,10 @@ export default function ProfileScreen() {
             web: { cursor: 'pointer' },
           })}
         >
-          <Feather name="log-out" size={20} color={DESIGN_TOKENS.colors.danger} /> {/* ✅ ИСПРАВЛЕНИЕ: Используем единый danger цвет */}
+          <Feather name="log-out" size={20} color={colors.danger} /> {/* ✅ ИСПРАВЛЕНИЕ: Используем единый danger цвет */}
           <Text style={styles.logoutText}>Выйти</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  dashboardSections: {
-    marginBottom: 16,
-    gap: 12,
-  },
-  dashboardSectionCard: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-    ...Platform.select({
-      web: {
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 1,
-      },
-    }),
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    paddingHorizontal: 4,
-    marginBottom: 8,
-  },
-  sectionHeaderLeft: {
-    flex: 1,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
-  },
-  sectionSubtitle: {
-    marginTop: 2,
-    fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
-  },
-  menuSection: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  menuSectionTitle: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 8,
-    fontSize: 14,
-    fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
-  },
-  sectionAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-  },
-  sectionActionText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.primary,
-  },
-  cardsRow: {
-    paddingHorizontal: 4,
-    paddingBottom: 4,
-  },
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    paddingVertical: 18,
-    paddingHorizontal: 14,
-    backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    borderRadius: DESIGN_TOKENS.radii.lg, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    marginBottom: 16,
-    ...Platform.select({
-      web: {
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 6,
-    marginBottom: 12,
-  },
-  headerTextBlock: {
-    flex: 1,
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#f0f9f9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  socialsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 6,
-    marginBottom: 12,
-  },
-  editProfileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-  },
-  editProfileButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: DESIGN_TOKENS.colors.primary,
-  },
-  quickNavRow: {
-    paddingHorizontal: 6,
-    paddingBottom: 4,
-    gap: 8,
-    alignItems: 'center',
-  },
-  quickNavChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-  },
-  quickNavChipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
-  },
-  socialChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-  },
-  socialChipText: {
-    color: DESIGN_TOKENS.colors.primary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1b1f23',
-    marginBottom: 4,
-  },
-  userEmail: {
-    fontSize: 14,
-    color: '#666',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    padding: 16,
-    alignItems: 'center',
-    ...Platform.select({
-      web: {
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1b1f23',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
-  menuContainer: {
-    backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    borderRadius: DESIGN_TOKENS.radii.lg, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    marginBottom: 16,
-    overflow: 'hidden',
-    ...Platform.select({
-      web: {
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    minHeight: 56, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: DESIGN_TOKENS.colors.border, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    ...Platform.select({
-      web: {
-        transition: 'all 0.2s ease',
-        cursor: 'pointer',
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-        },
-      },
-    }),
-  },
-  menuIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  menuContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  menuLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1b1f23',
-  },
-  menuCount: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 8,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.danger, // ✅ ИСПРАВЛЕНИЕ: Используем единый danger цвет
-    gap: 8,
-    minHeight: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.dangerSoft,
-          borderColor: DESIGN_TOKENS.colors.danger,
-        },
-      },
-    }),
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.danger, // ✅ ИСПРАВЛЕНИЕ: Используем единый danger цвет
-  },
-});

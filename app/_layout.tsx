@@ -128,7 +128,6 @@ export default function RootLayout() {
 function RootLayoutNav() {
     const pathname = usePathname();
     const { width } = useResponsive();
-    const colors = useThemedColors();
     const [clientWidth, setClientWidth] = useState<number | null>(null);
 
     useEffect(() => {
@@ -159,8 +158,6 @@ function RootLayoutNav() {
           ? effectiveWidth < DESIGN_TOKENS.breakpoints.mobile
           : false;
 
-    const SITE = process.env.EXPO_PUBLIC_SITE_URL || "https://metravel.by";
-    const canonical = `${SITE}${pathname || "/"}`;
 
     const showFooter = useMemo(
       () => {
@@ -176,10 +173,6 @@ function RootLayoutNav() {
     );
 
     useIdleFlag(1200);
-    const defaultTitle = "MeTravel — путешествия и маршруты";
-    const defaultDescription = "Маршруты, места и впечатления от путешественников.";
-
-    const WEB_FOOTER_RESERVE_HEIGHT = 56;
 
     /** === динамическая высота ДОКА футера (только иконки) === */
     const [dockHeight, setDockHeight] = useState(0);
@@ -191,23 +184,6 @@ function RootLayoutNav() {
         setIsMounted(true);
     }, []);
 
-    // На web футер-док находится в потоке (position: sticky), поэтому дополнительная прокладка
-    // приводит к поздним layout shifts при измерении высоты дока.
-    // Прокладку используем только на native, где док может перекрывать контент.
-    const BottomGutter = () => {
-      if (!showFooter || !isMobile) return null;
-
-      // On web mobile the footer dock is position: fixed and can overlap content.
-      // Reserve deterministic space using a deterministic height to avoid late layout shifts.
-      if (isWeb) {
-        return <View testID="bottom-gutter" style={{ height: WEB_FOOTER_RESERVE_HEIGHT }} />;
-      }
-
-      const h = dockHeight;
-      if (h <= 0) return null;
-
-      return <View testID="bottom-gutter" style={{ height: h }} />;
-    };
 
     // Fonts:
     // - On native we must load app fonts before rendering.
@@ -275,18 +251,14 @@ function RootLayoutNav() {
       }
     }, [fontError]);
 
-    const styles = useMemo(() => createStyles(colors), [colors]);
-
     if (!fontsLoaded && !isWeb) {
       return (
-        <View style={styles.fontLoader}>
-          <ActivityIndicator size="small" color={colors.primary} />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fdfcfb' }}>
+          <ActivityIndicator size="small" color="#7a9d8f" />
         </View>
       );
     }
 
-    // Фоновая карта для бумажного стиля (используем только на спец-экранах)
-    const mapBackground = require("../assets/travel/roulette-map-bg.jpg");
 
     // Показываем фон-карту только на экранах рулетки, на остальных страницах сохраняем чистый белый фон
     // На мобильном web фон мешает доку/контенту — отключаем.
@@ -298,7 +270,63 @@ function RootLayoutNav() {
     return (
       <ErrorBoundary>
         <ThemeProvider>
-          <ThemedPaperProvider>
+          <ThemedContent
+            pathname={pathname}
+            showMapBackground={showMapBackground}
+            showFooter={showFooter}
+            isMobile={isMobile}
+            dockHeight={dockHeight}
+            setDockHeight={setDockHeight}
+            isMounted={isMounted}
+          />
+        </ThemeProvider>
+      </ErrorBoundary>
+    );
+}
+
+// Компонент с доступом к ThemeProvider
+function ThemedContent({
+  pathname,
+  showMapBackground,
+  showFooter,
+  isMobile,
+  dockHeight,
+  setDockHeight,
+  isMounted,
+}: {
+  pathname: string | null;
+  showMapBackground: boolean;
+  showFooter: boolean;
+  isMobile: boolean;
+  dockHeight: number;
+  setDockHeight: (h: number) => void;
+  isMounted: boolean;
+}) {
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const defaultTitle = "MeTravel — путешествия и маршруты";
+  const defaultDescription = "Маршруты, места и впечатления от путешественников.";
+  const SITE = process.env.EXPO_PUBLIC_SITE_URL || "https://metravel.by";
+  const canonical = `${SITE}${pathname || "/"}`;
+  const mapBackground = require("../assets/travel/roulette-map-bg.jpg");
+  const WEB_FOOTER_RESERVE_HEIGHT = 56;
+
+  const BottomGutter = () => {
+    if (!showFooter || !isMobile) return null;
+
+    if (Platform.OS === 'web') {
+      return <View testID="bottom-gutter" style={{ height: WEB_FOOTER_RESERVE_HEIGHT }} />;
+    }
+
+    const h = dockHeight;
+    if (h <= 0) return null;
+
+    return <View testID="bottom-gutter" style={{ height: h }} />;
+  };
+
+  return (
+    <ThemedPaperProvider>
               <AuthProvider>
                   <FavoritesProvider>
                       <QueryClientProvider client={queryClient}>
@@ -362,9 +390,7 @@ function RootLayoutNav() {
             {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
             {isMounted && <Toast />}
         </ThemedPaperProvider>
-        </ThemeProvider>
-      </ErrorBoundary>
-    );
+  );
 }
 
 function ThemedPaperProvider({ children }: { children: React.ReactNode }) {

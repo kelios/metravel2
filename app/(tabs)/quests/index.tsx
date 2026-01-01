@@ -88,7 +88,7 @@ function getStyles(colors: ThemedColors, ui: UiTheme) {
         subtitleMobile: { fontSize: 12 },
         mapBtn: { flexDirection: 'row', gap: 6, backgroundColor: ui.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
         mapBtnMobile: { paddingHorizontal: 10, paddingVertical: 6 },
-        mapBtnTxt: { color: '#fff', fontWeight: '800', fontSize: 14 },
+        mapBtnTxt: { color: colors.textOnPrimary, fontWeight: '800', fontSize: 14 },
 
         citiesContainer: { gap: 8 },
         citiesRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-start' },
@@ -140,14 +140,14 @@ function getStyles(colors: ThemedColors, ui: UiTheme) {
         coverWrapMobile: { aspectRatio: 16 / 9 },
 
         questCover: { width: '100%', height: '100%' },
-        coverOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12, backgroundColor: 'rgba(0,0,0,0.45)' },
+        coverOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12, backgroundColor: colors.overlay ?? 'rgba(0,0,0,0.45)' },
         coverOverlayMobile: { padding: 10 },
         questTitle: { color: colors.textOnDark, fontSize: 16, fontWeight: '800', marginBottom: 4 },
         questTitleMobile: { fontSize: 14, marginBottom: 3 },
         questMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
         questMetaRowMobile: { gap: 8 },
         metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-        metaText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+        metaText: { color: colors.textOnDark, fontSize: 12, fontWeight: '600' },
         metaTextMobile: { fontSize: 11 },
     });
 }
@@ -353,7 +353,7 @@ export default function QuestsScreen() {
                             <Pressable style={sx(s.mapBtn, isMobile && s.mapBtnMobile)}>
                                 <Suspense fallback={null}>
                                     {/* @ts-ignore */}
-                                    <Ion name="map" size={14} color="#fff" />
+                                    <Ion name="map" size={14} color={colors.textOnPrimary} />
                                 </Suspense>
                                 <Text style={s.mapBtnTxt}>Карта</Text>
                             </Pressable>
@@ -451,6 +451,7 @@ export default function QuestsScreen() {
                                                 nearby={selectedCityId === NEARBY_ID}
                                                 isMobile={isMobile}
                                                 s={s}
+                                                colors={colors}
                                             />
                                         ))}
                                     </View>
@@ -465,13 +466,14 @@ export default function QuestsScreen() {
 }
 
 function QuestCardLink({
-                           cityId, quest, nearby, isMobile, s,
+                           cityId, quest, nearby, isMobile, s, colors,
                        }: {
     cityId: string;
     quest: QuestMeta & { _distanceKm?: number };
     nearby?: boolean;
     isMobile?: boolean;
     s: QuestStyles;
+    colors: ThemedColors;
 }) {
     const durationText = quest.durationMin ? `${Math.round((quest.durationMin ?? 60) / 5) * 5} мин` : '1–2 часа';
 
@@ -489,14 +491,14 @@ function QuestCardLink({
                                 <View style={s.metaItem}>
                                     <Suspense fallback={null}>
                                         {/* @ts-ignore */}
-                                        <Ion name="navigate" size={12} color="#fff" />
+                                        <Ion name="navigate" size={12} color={colors.textOnDark} />
                                     </Suspense>
                                     <Text style={sx(s.metaText, isMobile && s.metaTextMobile)}>{quest.points}</Text>
                                 </View>
                                 <View style={s.metaItem}>
                                     <Suspense fallback={null}>
                                         {/* @ts-ignore */}
-                                        <Ion name="time" size={12} color="#fff" />
+                                        <Ion name="time" size={12} color={colors.textOnDark} />
                                     </Suspense>
                                     <Text style={sx(s.metaText, isMobile && s.metaTextMobile)}>{durationText}</Text>
                                 </View>
@@ -504,7 +506,7 @@ function QuestCardLink({
                                     <View style={s.metaItem}>
                                         <Suspense fallback={null}>
                                             {/* @ts-ignore */}
-                                            <Ion name="walk" size={12} color="#fff" />
+                                            <Ion name="walk" size={12} color={colors.textOnDark} />
                                         </Suspense>
                                         <Text style={sx(s.metaText, isMobile && s.metaTextMobile)}>
                                             {quest._distanceKm < 1
