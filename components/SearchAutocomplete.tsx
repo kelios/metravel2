@@ -1,10 +1,11 @@
 // components/SearchAutocomplete.tsx
 // ✅ УЛУЧШЕНИЕ: Компонент автодополнения для поиска
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, FlatList } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface Suggestion {
   text: string;
@@ -19,7 +20,6 @@ interface SearchAutocompleteProps {
   maxSuggestions?: number;
 }
 
-const palette = DESIGN_TOKENS.colors;
 
 // Популярные запросы (можно заменить на API вызов)
 const POPULAR_QUERIES = [
@@ -77,10 +77,83 @@ export default function SearchAutocomplete({
   onClose,
   maxSuggestions = 7,
 }: SearchAutocompleteProps) {
+  const colors = useThemedColors();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const selectedIndexRef = useRef(-1);
   const listRef = useRef<FlatList>(null);
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      position: 'absolute',
+      top: '100%',
+      left: 0,
+      right: 0,
+      zIndex: 99999,
+      marginTop: 4,
+      ...Platform.select({
+        web: {
+          position: 'absolute',
+          zIndex: 99999,
+        },
+        default: {
+          elevation: 5,
+        },
+      }),
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+    },
+    listContainer: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      maxHeight: 300,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+        },
+        ios: {
+          ...DESIGN_TOKENS.shadowsNative.medium,
+        },
+        android: {
+          elevation: 8,
+        },
+        default: {
+          ...DESIGN_TOKENS.shadowsNative.medium,
+        },
+      }),
+    },
+    list: {
+      flexGrow: 0,
+    },
+    suggestionItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      gap: 12,
+      minHeight: 44,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    suggestionItemSelected: {
+      backgroundColor: colors.primarySoft,
+    },
+    suggestionText: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.text,
+      fontWeight: '500',
+    },
+    suggestionTextSelected: {
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    suggestionType: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontStyle: 'italic',
+    },
+  }), [colors]);
 
   useEffect(() => {
     const newSuggestions = generateSuggestions(query);
@@ -150,7 +223,7 @@ export default function SearchAutocomplete({
             cursor: 'pointer',
             // @ts-ignore
             ':hover': {
-              backgroundColor: palette.primarySoft,
+              backgroundColor: colors.primarySoft,
             },
           },
         })}
@@ -158,7 +231,7 @@ export default function SearchAutocomplete({
         <Feather 
           name={iconName as any} 
           size={16} 
-          color={isSelected ? palette.primary : palette.textMuted} 
+          color={isSelected ? colors.primary : colors.textMuted}
         />
         <Text 
           style={[
@@ -195,78 +268,3 @@ export default function SearchAutocomplete({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    // ✅ Максимальный приоритет поверх карточек и других блоков
-    zIndex: 99999,
-    marginTop: 4,
-    ...Platform.select({
-      web: {
-        position: 'absolute',
-        zIndex: 99999,
-      },
-      default: {
-        // На мобильных используем elevation для Android и shadow для iOS
-        elevation: 5,
-      },
-    }),
-    backgroundColor: palette.surface,
-    borderRadius: 12,
-  },
-  listContainer: {
-    backgroundColor: palette.surface,
-    borderRadius: 12,
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-    maxHeight: 300,
-    // ✅ ИСПРАВЛЕНИЕ: Добавляем тень и правильное позиционирование для всех платформ
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.medium,
-      },
-      ios: {
-        ...DESIGN_TOKENS.shadowsNative.medium,
-      },
-      android: {
-        elevation: 8,
-      },
-      default: {
-        ...DESIGN_TOKENS.shadowsNative.medium,
-      },
-    }),
-  },
-  list: {
-    flexGrow: 0,
-  },
-  suggestionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-    minHeight: 44, // Минимальный размер для touch-целей
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: palette.border,
-  },
-  suggestionItemSelected: {
-    backgroundColor: palette.primarySoft,
-  },
-  suggestionText: {
-    flex: 1,
-    fontSize: 14,
-    color: palette.text,
-    fontWeight: '500',
-  },
-  suggestionTextSelected: {
-    color: palette.primary,
-    fontWeight: '600',
-  },
-  suggestionType: {
-    fontSize: 12,
-    color: palette.textMuted,
-    fontStyle: 'italic',
-  },
-});

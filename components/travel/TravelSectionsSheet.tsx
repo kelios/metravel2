@@ -3,6 +3,7 @@ import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "
 import { MaterialIcons } from "@expo/vector-icons"
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { DESIGN_TOKENS } from "@/constants/designSystem"
+import { useThemedColors } from "@/hooks/useTheme" // ✅ РЕДИЗАЙН: Темная тема
 
 type Props = {
   links: TravelSectionLink[]
@@ -34,6 +35,7 @@ const getGroupKey = (key: string): GroupKey => {
 }
 
 const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate, testID }) => {
+  const colors = useThemedColors() // ✅ РЕДИЗАЙН: Темная тема
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<any>(null)
   const closeRef = useRef<any>(null)
@@ -89,6 +91,124 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
     })
   }, [open])
 
+  // ✅ РЕДИЗАЙН: Стили с поддержкой темной темы
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        wrapper: {
+          width: "100%",
+          marginBottom: DESIGN_TOKENS.spacing.md,
+        },
+        trigger: {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
+          borderRadius: 14,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.border,
+          shadowColor: colors.text,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.02,
+          shadowRadius: 4,
+          elevation: 1,
+        },
+        triggerPressed: {
+          opacity: 0.92,
+          transform: [{ scale: 0.99 }],
+        },
+        triggerText: {
+          fontSize: 14,
+          fontWeight: "700",
+          color: colors.text,
+        },
+        overlay: {
+          flex: 1,
+          backgroundColor: colors.overlay,
+          justifyContent: "flex-end",
+        },
+        sheet: {
+          backgroundColor: colors.surface,
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+          padding: 12,
+          maxHeight: "75%" as any,
+        },
+        header: {
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 4,
+          paddingBottom: 8,
+        },
+        title: {
+          fontSize: 16,
+          fontWeight: "800",
+          color: colors.text,
+        },
+        closeBtn: {
+          padding: 8,
+          borderRadius: 999,
+        },
+        closeBtnPressed: {
+          opacity: 0.9,
+        },
+        list: {
+          paddingBottom: 10,
+        },
+        divider: {
+          height: 1,
+          backgroundColor: colors.border,
+          marginVertical: 8,
+        },
+        item: {
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingVertical: 12,
+          paddingHorizontal: 10,
+          borderRadius: 12,
+        },
+        itemActive: {
+          backgroundColor: colors.surfaceMuted,
+        },
+        itemPressed: {
+          opacity: 0.92,
+        },
+        itemLeft: {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+          flex: 1,
+          paddingRight: 10,
+        },
+        itemText: {
+          fontSize: 14,
+          fontWeight: "600",
+          color: colors.text,
+          flex: 1,
+        },
+        itemTextActive: {
+          color: colors.text,
+          fontWeight: "700",
+        },
+        metaPill: {
+          paddingHorizontal: 10,
+          paddingVertical: 5,
+          borderRadius: 999,
+          backgroundColor: colors.surfaceMuted,
+        },
+        metaText: {
+          fontSize: 14,
+          fontWeight: "700",
+          color: colors.textMuted,
+        },
+      }),
+    [colors]
+  )
+
   if (!links.length) return null
 
   return (
@@ -124,7 +244,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
             testID="travel-sections-sheet"
             style={styles.sheet}
             onPress={() => undefined}
-            accessibilityRole="dialog"
+            accessibilityRole="menu"
             accessibilityLabel="Список разделов"
             accessibilityViewIsModal
           >
@@ -192,117 +312,3 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
 
 export default TravelSectionsSheet
 
-const styles = StyleSheet.create({
-  wrapper: {
-    width: "100%",
-    marginBottom: DESIGN_TOKENS.spacing.md,
-  },
-  trigger: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-    shadowColor: DESIGN_TOKENS.colors.text,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  triggerPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.99 }],
-  },
-  triggerText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: DESIGN_TOKENS.colors.text,
-  },
-
-  overlay: {
-    flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.overlay,
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 12,
-    maxHeight: "75%" as any,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 4,
-    paddingBottom: 8,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: DESIGN_TOKENS.colors.text,
-  },
-  closeBtn: {
-    padding: 8,
-    borderRadius: 999,
-  },
-  closeBtnPressed: {
-    opacity: 0.9,
-  },
-
-  list: {
-    paddingBottom: 10,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: DESIGN_TOKENS.colors.borderLight,
-    marginVertical: 8,
-  },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-  },
-  itemActive: {
-    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
-  },
-  itemPressed: {
-    opacity: 0.92,
-  },
-  itemLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-    paddingRight: 10,
-  },
-  itemText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: DESIGN_TOKENS.colors.text,
-    flex: 1,
-  },
-  itemTextActive: {
-    color: DESIGN_TOKENS.colors.text,
-    fontWeight: "700",
-  },
-  metaPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
-  },
-  metaText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: DESIGN_TOKENS.colors.textMuted,
-  },
-})

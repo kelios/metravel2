@@ -11,6 +11,7 @@ import {
 import { useRouter, type Href } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from "@/constants/designSystem";
+import { useThemedColors } from "@/hooks/useTheme";
 import { globalFocusStyles } from "@/styles/globalFocus";
 import { useResponsive } from "@/hooks/useResponsive";
 
@@ -26,61 +27,64 @@ type DockItem = {
   isMore?: boolean;
 };
 
-const palette = DESIGN_TOKENS.colors;
 const MOBILE_DOCK_HEIGHT_WEB = 56;
-
-const DockButton = memo(function DockButton({
-  label,
-  href,
-  children,
-  testID,
-  showLabel = true,
-  onPress,
-}: {
-  label: string;
-  href: Href;
-  children: React.ReactNode;
-  testID?: string;
-  showLabel?: boolean;
-  onPress?: () => void;
-}) {
-  const router = useRouter();
-
-  return (
-    <Pressable
-      onPress={() => {
-        if (onPress) {
-          onPress();
-          return;
-        }
-        router.push(href as any);
-      }}
-      accessibilityRole="link"
-      accessibilityLabel={label}
-      hitSlop={6}
-      testID={testID}
-      style={({ pressed }) => [
-        styles.item,
-        pressed && styles.pressed,
-        globalFocusStyles.focusable,
-      ]}
-    >
-      <View style={styles.itemInner}>
-        <View style={styles.iconBox}>{children}</View>
-        {showLabel ? (
-          <Text style={styles.itemText} numberOfLines={1} ellipsizeMode="tail">
-            {label}
-          </Text>
-        ) : null}
-      </View>
-    </Pressable>
-  );
-});
 
 export default function BottomDock({ onDockHeight }: BottomDockProps) {
   const { isPhone, isLargePhone, isTablet } = useResponsive();
   const isMobile = Platform.OS !== "web" ? true : (isPhone || isLargePhone || isTablet);
   const [showMore, setShowMore] = useState(false);
+  const colors = useThemedColors();
+
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const DockButton = memo(function DockButton({
+    label,
+    href,
+    children,
+    testID,
+    showLabel = true,
+    onPress,
+  }: {
+    label: string;
+    href: Href;
+    children: React.ReactNode;
+    testID?: string;
+    showLabel?: boolean;
+    onPress?: () => void;
+  }) {
+    const router = useRouter();
+
+    return (
+      <Pressable
+        onPress={() => {
+          if (onPress) {
+            onPress();
+            return;
+          }
+          router.push(href as any);
+        }}
+        accessibilityRole="link"
+        accessibilityLabel={label}
+        hitSlop={6}
+        testID={testID}
+        style={({ pressed }) => [
+          styles.item,
+          pressed && styles.pressed,
+          globalFocusStyles.focusable,
+        ]}
+      >
+        <View style={styles.itemInner}>
+          <View style={styles.iconBox}>{children}</View>
+          {showLabel ? (
+            <Text style={styles.itemText} numberOfLines={1} ellipsizeMode="tail">
+              {label}
+            </Text>
+          ) : null}
+        </View>
+      </Pressable>
+    );
+  });
+
 
   const lastDockH = useRef(0);
   const handleDockLayout = (e: LayoutChangeEvent) => {
@@ -102,7 +106,7 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
     onDockHeight?.(MOBILE_DOCK_HEIGHT_WEB);
   }, [isMobile, onDockHeight]);
 
-  const iconColor = palette.primary;
+  const iconColor = colors.primary;
 
   const items: DockItem[] = useMemo(
     () => [
@@ -209,7 +213,7 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     position: Platform.OS === "web" ? ("fixed" as any) : "relative",
     bottom: 0,
@@ -220,11 +224,11 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: Platform.select({ web: 8, default: 6 }),
     paddingHorizontal: 6,
-    backgroundColor: palette.dockBackground,
+    backgroundColor: colors.surfaceElevated,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     overflow: "hidden",
-    shadowColor: palette.text,
+    shadowColor: colors.text,
     shadowOpacity: 0.12,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: -6 },
@@ -265,7 +269,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   itemText: {
-    color: palette.textMuted,
+    color: colors.textMuted,
     fontSize: 10,
     lineHeight: 10,
     marginTop: 0,
@@ -277,7 +281,7 @@ const styles = StyleSheet.create({
   moreBackdrop: {
     position: "fixed",
     inset: 0,
-    backgroundColor: palette.overlay,
+    backgroundColor: colors.overlay,
     zIndex: 999,
   },
   moreSheet: {
@@ -285,7 +289,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: palette.surface,
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 16,
@@ -300,6 +304,6 @@ const styles = StyleSheet.create({
   },
   moreItemText: {
     fontSize: 14,
-    color: palette.text,
+    color: colors.text,
   },
 });

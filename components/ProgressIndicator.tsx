@@ -1,9 +1,10 @@
 // components/ProgressIndicator.tsx
 // ✅ УЛУЧШЕНИЕ: Компонент для отображения прогресса длительных операций
+// ✅ МИГРАЦИЯ: Полная поддержка динамических цветов через useThemedColors
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface ProgressIndicatorProps {
   progress: number; // 0-100
@@ -14,8 +15,6 @@ interface ProgressIndicatorProps {
   size?: 'small' | 'medium' | 'large';
 }
 
-const palette = DESIGN_TOKENS.colors;
-
 export default function ProgressIndicator({
   progress,
   stage,
@@ -24,7 +23,79 @@ export default function ProgressIndicator({
   onCancel,
   size = 'medium',
 }: ProgressIndicatorProps) {
+  const colors = useThemedColors();
   const clampedProgress = Math.max(0, Math.min(100, progress));
+
+  // ✅ Динамические стили на основе текущей темы
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      padding: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    content: {
+      width: '100%',
+      maxWidth: 400,
+      alignItems: 'center',
+    },
+    spinner: {
+      marginBottom: 16,
+    },
+    info: {
+      width: '100%',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    stage: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 4,
+      textAlign: 'center',
+    },
+    message: {
+      fontSize: 14,
+      color: colors.textMuted,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    percentage: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    progressBarContainer: {
+      width: '100%',
+      height: 8,
+      backgroundColor: colors.border,
+      borderRadius: 4,
+      overflow: 'hidden',
+      marginBottom: 12,
+    },
+    progressBar: {
+      height: '100%',
+      backgroundColor: colors.primary,
+      borderRadius: 4,
+      ...Platform.select({
+        web: {
+          transition: 'width 0.3s ease',
+        },
+      }),
+    },
+    cancelContainer: {
+      marginTop: 8,
+    },
+    cancelButton: {
+      fontSize: 14,
+      color: colors.textMuted,
+      textDecorationLine: 'underline',
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+        },
+      }),
+    },
+  }), [colors]);
 
   return (
     <View style={styles.container}>
@@ -32,7 +103,7 @@ export default function ProgressIndicator({
         {/* Индикатор загрузки */}
         <ActivityIndicator 
           size={size === 'small' ? 'small' : 'large'} 
-          color={palette.primary}
+          color={colors.primary}
           style={styles.spinner}
         />
 
@@ -86,73 +157,4 @@ export default function ProgressIndicator({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  content: {
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-  },
-  spinner: {
-    marginBottom: 16,
-  },
-  info: {
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  stage: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: palette.text,
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  message: {
-    fontSize: 14,
-    color: palette.textMuted,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  percentage: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: palette.primary,
-  },
-  progressBarContainer: {
-    width: '100%',
-    height: 8,
-    backgroundColor: palette.border,
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: palette.primary,
-    borderRadius: 4,
-    ...Platform.select({
-      web: {
-        transition: 'width 0.3s ease',
-      },
-    }),
-  },
-  cancelContainer: {
-    marginTop: 8,
-  },
-  cancelButton: {
-    fontSize: 14,
-    color: palette.textMuted,
-    textDecorationLine: 'underline',
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
-  },
-});
 

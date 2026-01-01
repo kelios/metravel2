@@ -1,11 +1,14 @@
 // components/NetworkStatus.tsx
 // ✅ FIX-005: Компонент для отображения статуса сети
+// ✅ МИГРАЦИЯ: Полная миграция на DESIGN_TOKENS и useThemedColors
+// ✅ УЛУЧШЕНИЕ: Анимированные уведомления о состоянии сети
 
 import React, { useEffect, useState } from 'react';
 import { Text, StyleSheet, Platform } from 'react-native';
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface NetworkStatusProps {
   showWhenOnline?: boolean; // Показывать ли индикатор когда сеть есть
@@ -16,6 +19,7 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
   showWhenOnline = false,
   position = 'top',
 }) => {
+  const colors = useThemedColors();
   const { isConnected } = useNetworkStatus();
   const [wasOffline, setWasOffline] = useState(false);
   const translateY = useSharedValue(isConnected ? -100 : 0);
@@ -51,7 +55,7 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
     ? 'Соединение восстановлено'
     : 'Нет подключения к интернету';
 
-  const backgroundColor = isConnected ? DESIGN_TOKENS.colors.success : DESIGN_TOKENS.colors.danger;
+  const backgroundColor = isConnected ? colors.success : colors.danger;
 
   return (
     <Animated.View
@@ -62,7 +66,7 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
         { backgroundColor },
       ]}
     >
-      <Text style={styles.text}>{message}</Text>
+      <Text style={[styles.text, { color: colors.textInverse }]}>{message}</Text>
     </Animated.View>
   );
 };
@@ -72,8 +76,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
     zIndex: 9999,
     ...Platform.select({
       web: {
@@ -88,7 +92,6 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   text: {
-    color: DESIGN_TOKENS.colors.textInverse,
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',

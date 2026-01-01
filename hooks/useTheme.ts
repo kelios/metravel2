@@ -212,6 +212,9 @@ export function useThemedColors() {
   };
 }
 
+// Экспорт типа возвращаемого значения useThemedColors для использования в компонентах
+export type ThemedColors = ReturnType<typeof useThemedColors>;
+
 /**
  * Хук для проверки предпочтений пользователя (reducedMotion)
  */

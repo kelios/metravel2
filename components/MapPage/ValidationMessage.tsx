@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface ValidationMessageProps {
   type: 'error' | 'warning';
@@ -9,11 +9,49 @@ interface ValidationMessageProps {
 }
 
 const ValidationMessage: React.FC<ValidationMessageProps> = ({ type, messages }) => {
+  const colors = useThemedColors();
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 12,
+      borderWidth: 1,
+    },
+    errorContainer: {
+      backgroundColor: colors.dangerLight,
+      borderColor: colors.danger,
+    },
+    warningContainer: {
+      backgroundColor: colors.warningLight,
+      borderColor: colors.warning,
+    },
+    icon: {
+      marginRight: 8,
+      marginTop: 2,
+    },
+    textContainer: {
+      flex: 1,
+    },
+    text: {
+      fontSize: 13,
+      lineHeight: 18,
+      marginBottom: 4,
+    },
+    errorText: {
+      color: colors.dangerDark,
+    },
+    warningText: {
+      color: colors.warningDark,
+    },
+  }), [colors]);
+
   if (messages.length === 0) return null;
 
   const isError = type === 'error';
   const iconName = isError ? 'error' : 'warning';
-  const iconColor = isError ? DESIGN_TOKENS.colors.danger : DESIGN_TOKENS.colors.warning;
+  const iconColor = isError ? colors.danger : colors.warning;
 
   return (
     <View style={[styles.container, isError ? styles.errorContainer : styles.warningContainer]}>
@@ -28,41 +66,5 @@ const ValidationMessage: React.FC<ValidationMessageProps> = ({ type, messages })
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderWidth: 1,
-  },
-  errorContainer: {
-    backgroundColor: DESIGN_TOKENS.colors.dangerLight,
-    borderColor: DESIGN_TOKENS.colors.danger,
-  },
-  warningContainer: {
-    backgroundColor: DESIGN_TOKENS.colors.warningLight,
-    borderColor: DESIGN_TOKENS.colors.warning,
-  },
-  icon: {
-    marginRight: 8,
-    marginTop: 2,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  text: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 4,
-  },
-  errorText: {
-    color: DESIGN_TOKENS.colors.dangerDark,
-  },
-  warningText: {
-    color: DESIGN_TOKENS.colors.warningDark,
-  },
-});
 
 export default ValidationMessage;

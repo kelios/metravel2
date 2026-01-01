@@ -1,12 +1,14 @@
 /**
  * Компоненты для визуального отображения валидации
+ * ✅ РЕДИЗАЙН: Темная тема
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { FieldValidationResult } from '@/utils/travelWizardValidation';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface CharacterCounterProps {
   current: number;
@@ -24,6 +26,7 @@ export const CharacterCounter: React.FC<CharacterCounterProps> = ({
   max,
   showProgress = true,
 }) => {
+  const colors = useThemedColors();
   const hasMin = min !== undefined;
   const hasMax = max !== undefined;
   
@@ -50,11 +53,11 @@ export const CharacterCounter: React.FC<CharacterCounterProps> = ({
   const getColor = () => {
     switch (status) {
       case 'error':
-        return DESIGN_TOKENS.colors.dangerDark;
+        return colors.danger;
       case 'warning':
         return '#FF9800';
       case 'success':
-        return DESIGN_TOKENS.colors.textMuted;
+        return colors.textMuted;
     }
   };
 
@@ -62,6 +65,27 @@ export const CharacterCounter: React.FC<CharacterCounterProps> = ({
     if (!hasMax) return 0;
     return Math.min((current / max) * 100, 100);
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    counterContainer: {
+      marginTop: 4,
+    },
+    counterText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      fontWeight: '500',
+    },
+    progressBar: {
+      marginTop: 4,
+      height: 3,
+      backgroundColor: colors.border,
+      borderRadius: 2,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: '100%',
+      borderRadius: 2,
+    },
+  }), [colors]);
 
   return (
     <View style={styles.counterContainer}>

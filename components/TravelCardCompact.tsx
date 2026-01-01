@@ -1,7 +1,7 @@
 // components/TravelCardCompact.tsx
 // РЕДИЗАЙН: Компактная карточка путешествия для главной страницы
 
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import type { Travel } from '@/src/types/types';
 import FavoriteButton from '@/components/FavoriteButton';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import { TRAVEL_CARD_MAX_WIDTH } from '@/components/listTravel/utils/listTravelConstants';
 
 interface TravelCardCompactProps {
@@ -17,7 +18,6 @@ interface TravelCardCompactProps {
   showActions?: boolean;
 }
 
-const palette = DESIGN_TOKENS.colors;
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
 
@@ -27,6 +27,32 @@ function TravelCardCompact({
   showActions = true,
 }: TravelCardCompactProps) {
   const router = useRouter();
+  const colors = useThemedColors();
+
+  const styles = useMemo(() => StyleSheet.create({
+    card: {
+      height: '100%',
+      maxWidth: TRAVEL_CARD_MAX_WIDTH,
+      backgroundColor: colors.surface,
+    },
+    viewsBadge: {
+      position: 'absolute',
+      bottom: spacing.xs,
+      left: spacing.xs,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      paddingHorizontal: 6,
+      paddingVertical: 3,
+      borderRadius: radii.sm,
+    },
+    viewsText: {
+      fontSize: 11,
+      color: '#fff',
+      fontWeight: '500',
+    },
+  }), [colors]);
 
   const {
     id,
@@ -82,27 +108,3 @@ function TravelCardCompact({
 
 export default memo(TravelCardCompact);
 
-const styles = StyleSheet.create({
-  card: {
-    height: '100%',
-    maxWidth: TRAVEL_CARD_MAX_WIDTH,
-    backgroundColor: palette.surface,
-  },
-  viewsBadge: {
-    position: 'absolute',
-    bottom: spacing.xs,
-    left: spacing.xs,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: radii.sm,
-  },
-  viewsText: {
-    fontSize: 11,
-    color: '#fff',
-    fontWeight: '500',
-  },
-});

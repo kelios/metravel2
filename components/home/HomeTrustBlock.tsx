@@ -1,9 +1,10 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ResponsiveContainer } from '@/components/layout';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type TrustItem = {
   icon: string;
@@ -32,6 +33,84 @@ const ITEMS: TrustItem[] = [
 function HomeTrustBlock() {
   const { isSmallPhone, isPhone, isLargePhone } = useResponsive();
   const isMobile = isSmallPhone || isPhone || isLargePhone;
+  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+
+  const styles = useMemo(() => StyleSheet.create({
+    band: {
+      width: '100%',
+      alignSelf: 'stretch',
+      paddingVertical: 20,
+      backgroundColor: colors.background,
+    },
+    card: {
+      width: '100%',
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 16,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.card,
+        },
+      }),
+    },
+    items: {
+      width: '100%',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 16,
+      ...Platform.select({
+        web: {
+          rowGap: 16,
+          columnGap: 16,
+        },
+      }),
+    },
+    itemsMobile: {
+      flexDirection: 'column',
+      flexWrap: 'nowrap',
+    },
+    item: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      flexGrow: 1,
+      flexBasis: 0,
+      minWidth: 240,
+      paddingVertical: 6,
+    },
+    itemMobile: {
+      flexGrow: 0,
+      flexBasis: 'auto',
+      minWidth: 0,
+      width: '100%',
+    },
+    iconWrap: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      backgroundColor: colors.primaryLight,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    textWrap: {
+      flex: 1,
+      minWidth: 0,
+    },
+    title: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 4,
+      lineHeight: 18,
+    },
+    subtitle: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: colors.textMuted,
+    },
+  }), [colors]);
 
   return (
     <View style={styles.band} testID="home-trust-block">
@@ -41,7 +120,7 @@ function HomeTrustBlock() {
             {ITEMS.map((item) => (
               <View key={item.title} style={[styles.item, isMobile && styles.itemMobile]}>
                 <View style={styles.iconWrap}>
-                  <Feather name={item.icon as any} size={18} color={DESIGN_TOKENS.colors.primary} />
+                  <Feather name={item.icon as any} size={18} color={colors.primary} />
                 </View>
                 <View style={styles.textWrap}>
                   <Text style={styles.title}>{item.title}</Text>
@@ -55,82 +134,5 @@ function HomeTrustBlock() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  band: {
-    width: '100%',
-    alignSelf: 'stretch',
-    paddingVertical: 20,
-    backgroundColor: DESIGN_TOKENS.colors.background,
-  },
-  card: {
-    width: '100%',
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
-    padding: 16,
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.card,
-      },
-    }),
-  },
-  items: {
-    width: '100%',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    ...Platform.select({
-      web: {
-        rowGap: 16,
-        columnGap: 16,
-      },
-    }),
-  },
-  itemsMobile: {
-    flexDirection: 'column',
-    flexWrap: 'nowrap',
-  },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    flexGrow: 1,
-    flexBasis: 0,
-    minWidth: 240,
-    paddingVertical: 6,
-  },
-  itemMobile: {
-    flexGrow: 0,
-    flexBasis: 'auto',
-    minWidth: 0,
-    width: '100%',
-  },
-  iconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  textWrap: {
-    flex: 1,
-    minWidth: 0,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
-    marginBottom: 4,
-    lineHeight: 18,
-  },
-  subtitle: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: DESIGN_TOKENS.colors.textMuted,
-  },
-});
 
 export default memo(HomeTrustBlock);

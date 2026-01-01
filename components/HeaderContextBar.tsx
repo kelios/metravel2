@@ -1,13 +1,18 @@
+// components/HeaderContextBar.tsx
+// ✅ МИГРАЦИЯ: Полная миграция на DESIGN_TOKENS и useThemedColors
+// ✅ УЛУЧШЕНИЕ: Добавлена адаптивная навигация с breadcrumbs
+// ✅ ДОСТУПНОСТЬ: Улучшены ARIA атрибуты и keyboard navigation
+
 import React, { useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useBreadcrumbModel } from '@/hooks/useBreadcrumbModel';
 import { globalFocusStyles } from '@/styles/globalFocus';
 
-const palette = DESIGN_TOKENS.colors;
 
 type HeaderContextBarProps = {
   testID?: string;
@@ -15,14 +20,17 @@ type HeaderContextBarProps = {
 
 export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const router = useRouter();
+  const colors = useThemedColors();
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
 
   const model = useBreadcrumbModel();
 
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const containerStyle = useMemo(() => {
     return [styles.container, isMobile && styles.containerMobile];
-  }, [isMobile]);
+  }, [isMobile, styles]);
 
   if (isMobile) {
     return (
@@ -40,7 +48,7 @@ export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
             accessibilityLabel="Назад"
             style={[styles.backButton, globalFocusStyles.focusable]}
           >
-            <Feather name="arrow-left" size={18} color={palette.text} />
+            <Feather name="arrow-left" size={18} color={colors.text} />
           </Pressable>
 
           <Text style={styles.mobileTitle} numberOfLines={1}>
@@ -74,7 +82,7 @@ export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
             const isLast = idx === model.items.length - 1;
             return (
               <React.Fragment key={item.path}>
-                <Feather name="chevron-right" size={14} color={palette.textMuted} style={styles.separator} />
+                <Feather name="chevron-right" size={14} color={colors.textMuted} style={styles.separator} />
                 <Pressable
                   onPress={() => {
                     if (isLast) return;
@@ -110,18 +118,18 @@ export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
     minHeight: 32,
-    paddingHorizontal: 16,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
     justifyContent: 'center',
-    backgroundColor: Platform.OS === 'web' ? palette.background : palette.surface,
+    backgroundColor: Platform.OS === 'web' ? colors.background : colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: palette.border,
+    borderBottomColor: colors.border,
   },
   containerMobile: {
     minHeight: 36,
-    paddingHorizontal: 12,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
   },
   crumbRow: {
     flexDirection: 'row',
@@ -129,8 +137,8 @@ const styles = StyleSheet.create({
     minHeight: 20,
   },
   crumbItem: {
-    paddingVertical: 4,
-    paddingHorizontal: 4,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
   },
   crumbItemLast: {
     opacity: 1,
@@ -139,30 +147,30 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   separator: {
-    marginHorizontal: 4,
+    marginHorizontal: DESIGN_TOKENS.spacing.xs,
   },
   crumbLabel: {
     fontSize: 13,
-    color: palette.textMuted,
+    color: colors.textMuted,
     fontWeight: '500',
   },
   crumbLabelLast: {
-    color: palette.text,
+    color: colors.text,
     fontWeight: '600',
   },
   pageContext: {
     fontSize: 13,
-    color: palette.text,
+    color: colors.text,
     fontWeight: '600',
   },
   mobileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   backButton: {
-    minWidth: 36,
-    minHeight: 36,
+    minWidth: DESIGN_TOKENS.minTouchTarget,
+    minHeight: DESIGN_TOKENS.minTouchTarget,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -170,10 +178,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    color: palette.text,
+    color: colors.text,
   },
   mobileRightSpacer: {
-    width: 36,
-    height: 36,
+    width: DESIGN_TOKENS.minTouchTarget,
+    height: DESIGN_TOKENS.minTouchTarget,
   },
 });

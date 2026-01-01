@@ -1,10 +1,11 @@
-import React, { memo, useState, useEffect, useCallback } from 'react';
+import React, { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const STORAGE_KEY_BANNER = 'onboarding_banner_dismissed';
 const STORAGE_KEY_ARTICLES_COUNT = 'user_articles_count';
@@ -17,6 +18,7 @@ interface OnboardingBannerProps {
 const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
   const [visible, setVisible] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 
   const checkShouldShow = useCallback(async () => {
     try {
@@ -92,12 +94,151 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
     handleDismiss(false);
   }, [handleDismiss]);
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      marginHorizontal: 16,
+      marginVertical: 12,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      overflow: 'hidden',
+      ...Platform.select({
+        web: {
+          maxWidth: 800,
+          marginLeft: 'auto',
+          marginRight: 'auto',
+          boxShadow: DESIGN_TOKENS.shadows.card,
+        },
+        default: {
+          shadowColor: colors.text,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 4,
+        },
+      }),
+    },
+    gradient: {
+      padding: 20,
+      position: 'relative',
+    },
+    closeButton: {
+      position: 'absolute',
+      top: 12,
+      right: 12,
+      padding: 4,
+      zIndex: 10,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+        },
+      }),
+    },
+    content: {
+      gap: 16,
+    },
+    iconContainer: {
+      alignSelf: 'flex-start',
+    },
+    icon: {
+      fontSize: 48,
+    },
+    textContainer: {
+      gap: 8,
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text,
+      lineHeight: 28,
+    },
+    description: {
+      fontSize: 15,
+      color: colors.textMuted,
+      lineHeight: 22,
+    },
+    badge: {
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    progressContainer: {
+      marginTop: 8,
+      gap: 6,
+    },
+    progressBar: {
+      height: 8,
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      width: '0%',
+      height: '100%',
+      backgroundColor: colors.primary,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+    },
+    progressText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+    actions: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 8,
+    },
+    button: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        },
+      }),
+    },
+    buttonPrimary: {
+      backgroundColor: colors.primary,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.light,
+        },
+        default: {
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 4,
+          elevation: 3,
+        },
+      }),
+    },
+    buttonSecondary: {
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    buttonTextPrimary: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textOnPrimary,
+    },
+    buttonTextSecondary: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+  }), [colors]);
+
   if (!visible) return null;
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       <LinearGradient
-        colors={[DESIGN_TOKENS.colors.primaryLight, DESIGN_TOKENS.colors.surface]}
+        colors={[colors.primaryLight, colors.surface]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
@@ -107,7 +248,7 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
           onPress={() => handleDismiss(true)}
           accessibilityLabel="Закрыть баннер"
         >
-          <Feather name="x" size={20} color={DESIGN_TOKENS.colors.textMuted} />
+          <Feather name="x" size={20} color={colors.textMuted} />
         </Pressable>
 
         <View style={styles.content}>
@@ -137,7 +278,7 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
               accessibilityRole="button"
               accessibilityLabel="Начать создание статьи"
             >
-              <Feather name="edit-3" size={18} color={DESIGN_TOKENS.colors.textOnPrimary} />
+              <Feather name="edit-3" size={18} color={colors.textOnPrimary} />
               <Text style={styles.buttonTextPrimary}>Начать</Text>
             </Pressable>
 
@@ -156,144 +297,6 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    overflow: 'hidden',
-    ...Platform.select({
-      web: {
-        maxWidth: 800,
-        marginLeft: 'auto',
-        marginRight: 'auto',
-        boxShadow: DESIGN_TOKENS.shadows.card,
-      },
-      default: {
-        shadowColor: DESIGN_TOKENS.colors.text,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
-      },
-    }),
-  },
-  gradient: {
-    padding: 20,
-    position: 'relative',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    padding: 4,
-    zIndex: 10,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
-  },
-  content: {
-    gap: 16,
-  },
-  iconContainer: {
-    alignSelf: 'flex-start',
-  },
-  icon: {
-    fontSize: 48,
-  },
-  textContainer: {
-    gap: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
-    lineHeight: 28,
-  },
-  description: {
-    fontSize: 15,
-    color: DESIGN_TOKENS.colors.textMuted,
-    lineHeight: 22,
-  },
-  badge: {
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.primary,
-  },
-  progressContainer: {
-    marginTop: 8,
-    gap: 6,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    width: '0%',
-    height: '100%',
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-  },
-  progressText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textMuted,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  button: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-      },
-    }),
-  },
-  buttonPrimary: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.light,
-      },
-      default: {
-        shadowColor: DESIGN_TOKENS.colors.primary,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 3,
-      },
-    }),
-  },
-  buttonSecondary: {
-    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-  },
-  buttonTextPrimary: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textOnPrimary,
-  },
-  buttonTextSecondary: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
-  },
-});
 
 export default memo(OnboardingBanner);
 

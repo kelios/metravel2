@@ -1,11 +1,11 @@
-import React, { useEffect, Suspense, lazy, useState, useCallback, memo } from 'react';
+import React, { useEffect, Suspense, lazy, useState, useCallback, memo, useMemo } from 'react';
 import { View, StyleSheet, FlatList, Platform, Animated } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
 import HomeHero from './HomeHero';
 import HomeTrustBlock from './HomeTrustBlock';
@@ -39,6 +39,7 @@ SectionSkeleton.displayName = 'SectionSkeleton';
 function Home() {
   const isFocused = useIsFocused();
   const { isAuthenticated } = useAuth();
+  const colors = useThemedColors();
 
   const [showHeavyContent, setShowHeavyContent] = useState(false);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -125,6 +126,21 @@ function Home() {
     }
   }, [travelsCount, showHeavyContent, fadeAnim]);
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    contentContainer: {
+      flexGrow: 1,
+      paddingBottom: Platform.select({
+        ios: 120,
+        android: 100,
+        default: 96,
+      }),
+    },
+  }), [colors]);
+
   return (
     <FlatList
       data={sections}
@@ -159,17 +175,3 @@ function Home() {
 
 export default memo(Home);
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.background,
-  },
-  contentContainer: {
-    flexGrow: 1,
-    paddingBottom: Platform.select({
-      ios: 120,
-      android: 100,
-      default: 96,
-    }),
-  },
-});

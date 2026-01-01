@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/components/layout';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const STEPS = [
   {
@@ -37,6 +38,7 @@ function HomeHowItWorks() {
   const { isSmallPhone, isPhone, isTablet, isDesktop } = useResponsive();
   const isMobile = isSmallPhone || isPhone;
   const showConnectors = isTablet || isDesktop;
+  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 
   const handleStepPress = useCallback(
     (path: string) => {
@@ -60,6 +62,104 @@ function HomeHowItWorks() {
     [],
   );
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      paddingVertical: 64,
+      backgroundColor: colors.background,
+    },
+    header: {
+      marginBottom: 40,
+      alignItems: 'center',
+    },
+    title: {
+      color: colors.text,
+      textAlign: 'center',
+      letterSpacing: -0.5,
+    },
+    stepWrapper: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 16,
+    },
+    step: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      padding: 28,
+      gap: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.card,
+          transition: 'all 0.3s ease',
+        },
+      }),
+    },
+    stepHover: {
+      ...Platform.select({
+        web: {
+          transform: 'translateY(-2px)',
+          boxShadow: DESIGN_TOKENS.shadows.hover,
+        },
+        default: {},
+      }),
+    },
+    stepHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+      marginBottom: 12,
+    },
+    iconContainer: {
+      width: 56,
+      height: 56,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.primaryLight,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...Platform.select({
+        web: {
+          backgroundImage: `linear-gradient(135deg, ${colors.primarySoft} 0%, ${colors.primaryLight} 100%)`,
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: '100% 100%',
+        },
+      }),
+    },
+    numberBadge: {
+      width: 36,
+      height: 36,
+      borderRadius: DESIGN_TOKENS.radii.full,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.light,
+        },
+      }),
+    },
+    numberText: {
+      color: colors.textOnPrimary,
+      fontSize: 18,
+      fontWeight: '700',
+    },
+    stepTitle: {
+      color: colors.text,
+      letterSpacing: -0.2,
+    },
+    stepDescription: {
+      color: colors.textMuted,
+    },
+    connector: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 8,
+      opacity: 0.3,
+    },
+  }), [colors]);
+
   return (
     <View testID="home-how-it-works" style={styles.container}>
       <ResponsiveContainer maxWidth="xl" padding>
@@ -69,8 +169,8 @@ function HomeHowItWorks() {
           </ResponsiveText>
         </View>
 
-        <ResponsiveStack 
-          direction={isMobile ? 'vertical' : 'horizontal'} 
+        <ResponsiveStack
+          direction={isMobile ? 'vertical' : 'horizontal'}
           gap={isMobile ? 20 : 24}
           justify="space-between"
         >
@@ -91,7 +191,7 @@ function HomeHowItWorks() {
                     <Feather
                       name={step.icon as any}
                       size={24}
-                      color={DESIGN_TOKENS.colors.primary}
+                      color={colors.primary}
                     />
                   </View>
                   <View style={styles.numberBadge}>
@@ -109,7 +209,7 @@ function HomeHowItWorks() {
 
               {index < STEPS.length - 1 && showConnectors && (
                 <View style={styles.connector}>
-                  <Feather name="arrow-right" size={20} color={DESIGN_TOKENS.colors.borderLight} />
+                  <Feather name="arrow-right" size={20} color={colors.border} />
                 </View>
               )}
             </View>
@@ -119,103 +219,5 @@ function HomeHowItWorks() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 64,
-    backgroundColor: DESIGN_TOKENS.colors.background,
-  },
-  header: {
-    marginBottom: 40,
-    alignItems: 'center',
-  },
-  title: {
-    color: DESIGN_TOKENS.colors.text,
-    textAlign: 'center',
-    letterSpacing: -0.5,
-  },
-  stepWrapper: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 16,
-  },
-  step: {
-    flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    padding: 28,
-    gap: 16,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.card,
-        transition: 'all 0.3s ease',
-      },
-    }),
-  },
-  stepHover: {
-    ...Platform.select({
-      web: {
-        transform: 'translateY(-2px)',
-        boxShadow: DESIGN_TOKENS.shadows.hover,
-      },
-      default: {},
-    }),
-  },
-  stepHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 12,
-  },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Platform.select({
-      web: {
-        backgroundImage: `linear-gradient(135deg, ${DESIGN_TOKENS.colors.primarySoft} 0%, ${DESIGN_TOKENS.colors.primaryLight} 100%)`,
-        backgroundRepeat: 'no-repeat',
-        backgroundSize: '100% 100%',
-      },
-    }),
-  },
-  numberBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: DESIGN_TOKENS.radii.full,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.light,
-      },
-    }),
-  },
-  numberText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  stepTitle: {
-    color: DESIGN_TOKENS.colors.text,
-    letterSpacing: -0.2,
-  },
-  stepDescription: {
-    color: DESIGN_TOKENS.colors.textMuted,
-  },
-  connector: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    opacity: 0.3,
-  },
-});
 
 export default memo(HomeHowItWorks);

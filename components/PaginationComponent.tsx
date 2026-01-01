@@ -1,3 +1,4 @@
+// ✅ УЛУЧШЕНИЕ: Компонент пагинации с поддержкой темной темы
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
     View,
@@ -10,6 +11,8 @@ import {
 } from "react-native";
 import { IconButton, Menu } from "react-native-paper";
 import { useResponsive } from '@/hooks/useResponsive';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type Props = {
     currentPage: number; // 0-based
@@ -23,6 +26,179 @@ type Props = {
     bottomInset?: number; // px
 };
 
+// ✅ УЛУЧШЕНИЕ: Динамические стили в зависимости от темы
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+    bar: {
+        borderTopWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+        paddingVertical: DESIGN_TOKENS.spacing.xs,
+        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+    },
+    barMobile: {
+        paddingVertical: DESIGN_TOKENS.spacing.xs / 2,
+        minHeight: 40,
+    },
+
+    centerContainer: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+
+    // Минималистичный вариант (<380px)
+    minimalNav: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: DESIGN_TOKENS.spacing.xs / 2,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    },
+    iconMinimal: {
+        margin: 0,
+        width: 28,
+        height: 28,
+    },
+    minimalText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: colors.text,
+        fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+        marginHorizontal: DESIGN_TOKENS.spacing.xs / 2,
+        minWidth: 40,
+        textAlign: "center",
+    },
+    minimalItemsButton: {
+        backgroundColor: colors.primary,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        paddingVertical: DESIGN_TOKENS.spacing.xs / 2,
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        marginLeft: DESIGN_TOKENS.spacing.xs / 2,
+        minWidth: 28,
+        minHeight: 28, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    minimalItemsText: {
+        color: colors.textOnPrimary,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    },
+
+    // Мобильный вариант (380-480px)
+    mobileNav: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: DESIGN_TOKENS.spacing.xs / 4,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    },
+    iconMobile: {
+        margin: 0,
+        width: 32,
+        height: 32,
+    },
+    mobileInputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginHorizontal: DESIGN_TOKENS.spacing.xs / 2,
+    },
+    mobileInput: {
+        width: 36,
+        textAlign: "center",
+        paddingVertical: DESIGN_TOKENS.spacing.xs / 4,
+        paddingHorizontal: DESIGN_TOKENS.spacing.xs / 2,
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+        color: colors.text,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+    },
+    mobileTotal: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.textMuted,
+        marginLeft: DESIGN_TOKENS.spacing.xs / 4,
+    },
+    mobileItemsButton: {
+        backgroundColor: colors.primary,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        paddingVertical: DESIGN_TOKENS.spacing.xs / 2,
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        marginLeft: DESIGN_TOKENS.spacing.xs / 2,
+        minWidth: 28,
+        minHeight: 28, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    mobileItemsText: {
+        color: colors.textOnPrimary,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    },
+
+    // Десктопный вариант (>480px)
+    desktopNav: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: DESIGN_TOKENS.spacing.xs / 2,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    },
+    iconDesktop: {
+        margin: 0,
+        width: 32,
+        height: 32,
+    },
+    desktopInputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: DESIGN_TOKENS.spacing.xs / 2,
+        marginHorizontal: DESIGN_TOKENS.spacing.xs / 2,
+    },
+    desktopLabel: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.textMuted,
+    },
+    desktopInput: {
+        width: 36,
+        textAlign: "center",
+        paddingVertical: DESIGN_TOKENS.spacing.xs / 4,
+        paddingHorizontal: DESIGN_TOKENS.spacing.xs / 2,
+        borderRadius: DESIGN_TOKENS.radii.sm,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+        color: colors.text,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+    },
+    desktopTotal: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.textMuted,
+    },
+    desktopItemsButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.primary,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        paddingVertical: DESIGN_TOKENS.spacing.xs / 2,
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        gap: DESIGN_TOKENS.spacing.xs / 4,
+        marginLeft: DESIGN_TOKENS.spacing.xs / 2,
+        minHeight: 28, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+    },
+    desktopItemsText: {
+        color: colors.textOnPrimary,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    },
+    desktopItemsIcon: {
+        color: colors.textOnPrimary,
+        fontSize: 10,
+    },
+});
+
 function PaginationComponent({
                                  currentPage,
                                  itemsPerPage,
@@ -32,9 +208,13 @@ function PaginationComponent({
                                  totalItems,
                                  bottomInset = 0,
                              }: Props) {
+    const colors = useThemedColors(); // ✅ УЛУЧШЕНИЕ: Поддержка темной темы
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
     const isVerySmall = isMobile && !isLargePhone;
+
+    // ✅ УЛУЧШЕНИЕ: Динамические стили в зависимости от темы
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const totalPages = useMemo(
       () => Math.max(1, Math.ceil((totalItems || 0) / (itemsPerPage || 1))),
@@ -296,167 +476,3 @@ function PaginationComponent({
 
 export default React.memo(PaginationComponent);
 
-const styles = StyleSheet.create({
-    bar: {
-        borderTopWidth: 1,
-        borderColor: "#e9e9e9",
-        backgroundColor: "#fff",
-        paddingVertical: 6,
-        minHeight: 44,
-    },
-    barMobile: {
-        paddingVertical: 4,
-        minHeight: 40,
-    },
-
-    centerContainer: {
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-
-    // Минималистичный вариант (<380px)
-    minimalNav: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 4,
-        paddingHorizontal: 8,
-    },
-    iconMinimal: {
-        margin: 0,
-        width: 28,
-        height: 28,
-    },
-    minimalText: {
-        fontSize: 14,
-        color: "#444",
-        fontWeight: "500",
-        marginHorizontal: 4,
-        minWidth: 40,
-        textAlign: "center",
-    },
-    minimalItemsButton: {
-        backgroundColor: "#ff7f50",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-        marginLeft: 4,
-        minWidth: 28,
-        alignItems: "center",
-    },
-    minimalItemsText: {
-        color: "#fff",
-        fontSize: 12,
-        fontWeight: "600",
-    },
-
-    // Мобильный вариант (380-480px)
-    mobileNav: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 2,
-        paddingHorizontal: 8,
-    },
-    iconMobile: {
-        margin: 0,
-        width: 32,
-        height: 32,
-    },
-    mobileInputContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginHorizontal: 4,
-    },
-    mobileInput: {
-        width: 36,
-        textAlign: "center",
-        paddingVertical: 2,
-        paddingHorizontal: 4,
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: "#ddd",
-        backgroundColor: "#fff",
-        fontSize: 14,
-        fontWeight: "500",
-    },
-    mobileTotal: {
-        fontSize: 12,
-        color: "#666",
-        marginLeft: 2,
-    },
-    mobileItemsButton: {
-        backgroundColor: "#ff7f50",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-        marginLeft: 4,
-        minWidth: 28,
-        alignItems: "center",
-    },
-    mobileItemsText: {
-        color: "#fff",
-        fontSize: 12,
-        fontWeight: "600",
-    },
-
-    // Десктопный вариант (>480px)
-    desktopNav: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 4,
-        paddingHorizontal: 12,
-    },
-    iconDesktop: {
-        margin: 0,
-        width: 32,
-        height: 32,
-    },
-    desktopInputContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        marginHorizontal: 4,
-    },
-    desktopLabel: {
-        fontSize: 12,
-        color: "#666",
-    },
-    desktopInput: {
-        width: 36,
-        textAlign: "center",
-        paddingVertical: 2,
-        paddingHorizontal: 4,
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: "#ddd",
-        backgroundColor: "#fff",
-        fontSize: 14,
-        fontWeight: "500",
-    },
-    desktopTotal: {
-        fontSize: 12,
-        color: "#666",
-    },
-    desktopItemsButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#ff7f50",
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-        gap: 2,
-        marginLeft: 4,
-    },
-    desktopItemsText: {
-        color: "#fff",
-        fontSize: 12,
-        fontWeight: "600",
-    },
-    desktopItemsIcon: {
-        color: "#fff",
-        fontSize: 10,
-    },
-});

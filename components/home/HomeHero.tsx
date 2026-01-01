@@ -7,6 +7,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/components/layout';
 import OptimizedImage from './OptimizedImage';
 
@@ -17,6 +18,7 @@ interface HomeHeroProps {
 const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const colors = useThemedColors();
   const { isSmallPhone, isPhone, isTablet, isDesktop } = useResponsive();
   const articleUrl =
     'https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele';
@@ -50,6 +52,143 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
 
   const isMobile = isSmallPhone || isPhone;
   const showImage = isTablet || isDesktop;
+
+  const styles = useMemo(() => StyleSheet.create({
+    band: {
+      paddingVertical: 56,
+      backgroundColor: colors.background,
+      width: '100%',
+      alignSelf: 'stretch',
+    },
+    bandMobile: {
+      paddingVertical: 40,
+    },
+    content: {
+      flex: 1,
+      gap: 24,
+    },
+    title: {
+      color: colors.text,
+      letterSpacing: -0.5,
+    },
+    subtitle: {
+      color: colors.textMuted,
+      maxWidth: 540,
+    },
+    hint: {
+      fontSize: 15,
+      color: colors.textMuted,
+      lineHeight: 24,
+      marginTop: 8,
+      paddingLeft: 16,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.primaryLight,
+    },
+    buttonsContainer: {
+      marginTop: 32,
+      width: '100%',
+    },
+    primaryButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 16,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 56,
+      ...Platform.select({
+        web: {
+          flex: 1,
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+          transition: 'all 0.2s ease',
+        },
+      }),
+    },
+    primaryButtonHover: {
+      backgroundColor: colors.primaryDark,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.heavy,
+          transform: 'translateY(-2px)',
+        },
+      }),
+    },
+    primaryButtonText: {
+      color: colors.textOnPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+      letterSpacing: 0.1,
+    },
+    secondaryButton: {
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      minHeight: 56,
+      ...Platform.select({
+        web: {
+          flex: 1,
+          transition: 'all 0.2s ease',
+        },
+      }),
+    },
+    secondaryButtonHover: {
+      backgroundColor: colors.primaryLight,
+      borderColor: colors.primary,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.light,
+        },
+      }),
+    },
+    secondaryButtonText: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '600',
+      letterSpacing: 0.1,
+    },
+    imageContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    imagePlaceholder: {
+      width: 320,
+      height: 400,
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 16,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.card,
+        },
+      }),
+    },
+    imagePlaceholderText: {
+      fontSize: 14,
+      color: colors.textMuted,
+      fontWeight: '500',
+    },
+    bookImage: {
+      width: 320,
+      height: 400,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.modal,
+          transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+        },
+      }),
+    },
+  }), [colors]);
 
   return (
     <View testID="home-hero" style={[styles.band, isMobile && styles.bandMobile]}>
@@ -97,7 +236,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel="Выбрать, куда поехать">
-                <Feather name="compass" size={18} color={DESIGN_TOKENS.colors.text} />
+                <Feather name="compass" size={18} color={colors.text} />
                 <Text style={styles.secondaryButtonText}>Выбрать, куда поехать</Text>
               </Pressable>
             </ResponsiveStack>
@@ -126,141 +265,5 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   );
 });
 
-const styles = StyleSheet.create({
-  band: {
-    paddingVertical: 56,
-    backgroundColor: DESIGN_TOKENS.colors.background,
-    width: '100%',
-    alignSelf: 'stretch',
-  },
-  bandMobile: {
-    paddingVertical: 40,
-  },
-  content: {
-    flex: 1,
-    gap: 24,
-  },
-  title: {
-    color: DESIGN_TOKENS.colors.text,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    color: DESIGN_TOKENS.colors.textMuted,
-    maxWidth: 540,
-  },
-  hint: {
-    fontSize: 15,
-    color: DESIGN_TOKENS.colors.textSubtle,
-    lineHeight: 24,
-    marginTop: 8,
-    paddingLeft: 16,
-    borderLeftWidth: 3,
-    borderLeftColor: DESIGN_TOKENS.colors.primaryLight,
-  },
-  buttonsContainer: {
-    marginTop: 32,
-    width: '100%',
-  },
-  primaryButton: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 56,
-    ...Platform.select({
-      web: {
-        flex: 1,
-        boxShadow: DESIGN_TOKENS.shadows.medium,
-        transition: 'all 0.2s ease',
-      },
-    }),
-  },
-  primaryButtonHover: {
-    backgroundColor: DESIGN_TOKENS.colors.primaryDark,
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.heavy,
-        transform: 'translateY(-2px)',
-      },
-    }),
-  },
-  primaryButtonText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.1,
-  },
-  secondaryButton: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderWidth: 2,
-    borderColor: DESIGN_TOKENS.colors.border,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    minHeight: 56,
-    ...Platform.select({
-      web: {
-        flex: 1,
-        transition: 'all 0.2s ease',
-      },
-    }),
-  },
-  secondaryButtonHover: {
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
-    borderColor: DESIGN_TOKENS.colors.primary,
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.light,
-      },
-    }),
-  },
-  secondaryButtonText: {
-    color: DESIGN_TOKENS.colors.text,
-    fontSize: 15,
-    fontWeight: '600',
-    letterSpacing: 0.1,
-  },
-  imageContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imagePlaceholder: {
-    width: 320,
-    height: 400,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.card,
-      },
-    }),
-  },
-  imagePlaceholderText: {
-    fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
-    fontWeight: '500',
-  },
-  bookImage: {
-    width: 320,
-    height: 400,
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.modal,
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-      },
-    }),
-  },
-});
 
 export default HomeHero;

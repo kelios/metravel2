@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TextInput, View, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface TextInputComponentProps {
     label?: string;
@@ -16,8 +17,6 @@ interface TextInputComponentProps {
     disabled?: boolean; // ✅ ИСПРАВЛЕНИЕ: Добавлена поддержка disabled состояния
 }
 
-const palette = DESIGN_TOKENS.colors;
-
 const TextInputComponent: React.FC<TextInputComponentProps> = ({
                                                                    label,
                                                                    value,
@@ -31,6 +30,86 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
                                                                    numberOfLines = 1,
                                                                    disabled = false, // ✅ ИСПРАВЛЕНИЕ
                                                                }) => {
+    const colors = useThemedColors();
+
+    const styles = useMemo(() => StyleSheet.create({
+        container: { marginBottom: 16 },
+        containerNoLabel: { marginBottom: 0 },
+        labelRow: {
+            marginBottom: 6,
+        },
+        label: {
+            fontSize: 14,
+            color: colors.text,
+            fontWeight: '600'
+        },
+        required: {
+            color: colors.danger,
+        },
+        input: {
+            borderRadius: 12,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            fontSize: 15,
+            backgroundColor: colors.surface,
+            color: colors.text,
+            minHeight: 44,
+            ...DESIGN_TOKENS.shadowsNative.light,
+            ...Platform.select({
+                web: {
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: DESIGN_TOKENS.shadows.light,
+                    ':focus': {
+                        boxShadow: `0 0 0 3px ${colors.focus}, ${DESIGN_TOKENS.shadows.medium}`,
+                    },
+                },
+            }),
+        },
+        inputError: {
+            backgroundColor: colors.dangerLight,
+            ...Platform.select({
+                web: {
+                    boxShadow: `0 0 0 2px ${colors.danger}, ${DESIGN_TOKENS.shadows.light}`,
+                },
+            }),
+        },
+        inputDisabled: {
+            opacity: 0.6,
+            backgroundColor: colors.mutedBackground,
+            color: colors.textMuted,
+            ...Platform.select({
+                web: {
+                    cursor: 'not-allowed',
+                },
+            }),
+        },
+        inputMultiline: {
+            minHeight: 100,
+            textAlignVertical: 'top',
+        },
+        hint: {
+            fontSize: 12,
+            color: colors.textMuted,
+            marginTop: 4,
+        },
+        errorContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            marginTop: 6,
+            padding: 10,
+            backgroundColor: colors.dangerLight,
+            borderRadius: 8,
+            borderLeftWidth: 3,
+            borderLeftColor: colors.danger,
+        },
+        errorText: {
+            fontSize: 13,
+            color: colors.dangerDark,
+            fontWeight: '500',
+            flex: 1,
+        },
+    }), [colors]);
     return (
         <View style={[styles.container, !label && styles.containerNoLabel]}>
             {label ? (
@@ -51,7 +130,7 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
                 value={value}
                 onChangeText={onChange}
                 placeholder={placeholder || (label ? `Введите ${label.toLowerCase()}` : '')}
-                placeholderTextColor={palette.textMuted}
+                placeholderTextColor={colors.textMuted}
                 secureTextEntry={secureTextEntry}
                 multiline={multiline}
                 numberOfLines={numberOfLines}
@@ -61,9 +140,9 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
                         outlineWidth: 0,
                         // @ts-ignore
                         ':focus': {
-                            borderColor: error ? palette.error : palette.primary,
+                            borderColor: error ? colors.danger : colors.primary,
                             outlineWidth: 2,
-                            outlineColor: error ? palette.error : palette.primary,
+                            outlineColor: error ? colors.danger : colors.primary,
                             outlineStyle: 'solid',
                             outlineOffset: 2,
                         },
@@ -82,86 +161,5 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    container: { marginBottom: 16 },
-    containerNoLabel: { marginBottom: 0 },
-    labelRow: {
-        marginBottom: 6,
-    },
-    label: { 
-        fontSize: 14, 
-        color: palette.text, 
-        fontWeight: '600' 
-    },
-    required: {
-        color: palette.danger,
-    },
-    input: {
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-        borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        fontSize: 15,
-        backgroundColor: palette.surface,
-        color: palette.text,
-        minHeight: 44, // Минимальный размер для touch-целей
-        ...DESIGN_TOKENS.shadowsNative.light,
-        ...Platform.select({
-            web: {
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: DESIGN_TOKENS.shadows.light,
-                ':focus': {
-                    boxShadow: `0 0 0 3px ${palette.focus}, ${DESIGN_TOKENS.shadows.medium}`,
-                },
-            },
-        }),
-    },
-    inputError: {
-        backgroundColor: palette.dangerLight,
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон и тень
-        ...Platform.select({
-            web: {
-                boxShadow: `0 0 0 2px ${palette.danger}, ${DESIGN_TOKENS.shadows.light}`,
-            },
-        }),
-    },
-    // ✅ ИСПРАВЛЕНИЕ: Добавлен стиль для disabled состояния
-    inputDisabled: {
-        opacity: 0.6,
-        backgroundColor: palette.mutedBackground,
-        color: palette.textMuted,
-        ...Platform.select({
-            web: {
-                cursor: 'not-allowed',
-            },
-        }),
-    },
-    inputMultiline: {
-        minHeight: 100,
-        textAlignVertical: 'top',
-    },
-    hint: {
-        fontSize: 12,
-        color: palette.textMuted,
-        marginTop: 4,
-    },
-    errorContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginTop: 6,
-        padding: 10,
-        backgroundColor: palette.dangerLight,
-        borderRadius: 8,
-        borderLeftWidth: 3,
-        borderLeftColor: palette.danger,
-    },
-    errorText: {
-        fontSize: 13,
-        color: palette.dangerDark,
-        fontWeight: '500',
-        flex: 1,
-    },
-});
 
 export default React.memo(TextInputComponent);

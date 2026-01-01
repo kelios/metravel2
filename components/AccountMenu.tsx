@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import ThemeToggle from '@/components/ThemeToggle';
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
@@ -180,6 +181,13 @@ function AccountMenu() {
           ))}
 
           <View style={styles.sectionDivider} />
+          <Text style={styles.sectionTitle}>Тема оформления</Text>
+
+          <View style={styles.themeSection}>
+            <ThemeToggle compact />
+          </View>
+
+          <View style={styles.sectionDivider} />
           <Text style={styles.sectionTitle}>Документы</Text>
 
           <Menu.Item
@@ -268,6 +276,13 @@ function AccountMenu() {
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
+
+          <View style={styles.sectionDivider} />
+          <Text style={styles.sectionTitle}>Тема оформления</Text>
+
+          <View style={styles.themeSection}>
+            <ThemeToggle compact />
+          </View>
 
           <View style={styles.sectionDivider} />
           <Text style={styles.sectionTitle}>Документы</Text>
@@ -387,6 +402,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(17, 24, 39, 0.08)',
     marginVertical: 6,
     marginHorizontal: 12,
+  },
+  themeSection: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
   menuItem: {
     borderRadius: 12,

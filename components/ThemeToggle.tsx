@@ -1,0 +1,130 @@
+/**
+ * ThemeToggle Component
+ * Компонент для переключения между светлой, темной и автоматической темой
+ */
+
+import React, { useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTheme, useThemedColors } from '@/hooks/useTheme';
+import type { Theme } from '@/hooks/useTheme';
+
+interface ThemeToggleProps {
+  /** Компактный режим без рамки */
+  compact?: boolean;
+  /** Вертикальное расположение кнопок */
+  layout?: 'horizontal' | 'vertical';
+  /** Показывать подписи */
+  showLabels?: boolean;
+}
+
+export default function ThemeToggle({
+  compact = false,
+  layout = 'horizontal',
+  showLabels = true,
+}: ThemeToggleProps) {
+  const { theme, setTheme } = useTheme();
+  const colors = useThemedColors();
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flexDirection: layout === 'horizontal' ? 'row' : 'column',
+          gap: 8,
+          padding: compact ? 0 : 12,
+          backgroundColor: compact ? 'transparent' : colors.surface,
+          borderRadius: 12,
+          borderWidth: compact ? 0 : 1,
+          borderColor: colors.border,
+        },
+        button: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          paddingVertical: 8,
+          paddingHorizontal: 12,
+          borderRadius: 8,
+          backgroundColor: colors.surfaceMuted,
+          borderWidth: 1,
+          borderColor: colors.border,
+          minWidth: layout === 'horizontal' ? 80 : undefined,
+          justifyContent: 'center',
+        },
+        buttonActive: {
+          backgroundColor: colors.primary,
+          borderColor: colors.primaryDark,
+        },
+        buttonHover: {
+          backgroundColor: colors.surfaceElevated,
+        },
+        label: {
+          fontSize: 14,
+          fontWeight: '500',
+          color: colors.text,
+        },
+        labelActive: {
+          color: colors.textOnPrimary,
+        },
+        iconWrapper: {
+          width: 20,
+          height: 20,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+      }),
+    [colors, compact, layout]
+  );
+
+  const themeOptions: Array<{ value: Theme; icon: string; label: string }> = [
+    { value: 'light', icon: 'white-balance-sunny', label: 'Светлая' },
+    { value: 'dark', icon: 'moon-waning-crescent', label: 'Темная' },
+    { value: 'auto', icon: 'theme-light-dark', label: 'Авто' },
+  ];
+
+  return (
+    <View style={styles.container}>
+      {themeOptions.map((option) => {
+        const isActive = theme === option.value;
+
+        return (
+          <Pressable
+            key={option.value}
+            onPress={() => setTheme(option.value)}
+            style={({ hovered }) => [
+              styles.button,
+              isActive && styles.buttonActive,
+              (hovered && !isActive) && styles.buttonHover,
+            ]}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: isActive }}
+            accessibilityLabel={`Выбрать тему: ${option.label}`}
+            testID={`theme-toggle-${option.value}`}
+            {...(Platform.OS === 'web'
+              ? {
+                  // @ts-ignore
+                  'aria-label': `Выбрать тему: ${option.label}`,
+                  // @ts-ignore
+                  'aria-checked': isActive,
+                }
+              : {})}
+          >
+            <View style={styles.iconWrapper}>
+              <Icon
+                name={option.icon}
+                size={20}
+                color={isActive ? colors.textOnPrimary : colors.text}
+              />
+            </View>
+            {showLabels && (
+              <Text style={[styles.label, isActive && styles.labelActive]}>
+                {option.label}
+              </Text>
+            )}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+

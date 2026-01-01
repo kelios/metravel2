@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, FlatList, TextInput, Modal, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface SimpleMultiSelectProps {
   data: any[];
@@ -28,6 +29,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   style,
   disabled = false,
 }) => {
+  const colors = useThemedColors(); // ✅ УЛУЧШЕНИЕ: Поддержка темной темы
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -43,7 +45,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
     );
   }, [data, searchQuery, labelField]);
 
-  const handleToggleItem = useCallback((item: any) => {
+  const handleToggleItem = (item: any) => {
     const itemValue = item[valueField];
     const isSelected = value.includes(itemValue);
     
@@ -52,27 +54,28 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
     } else {
       onChange([...value, itemValue]);
     }
-  }, [value, onChange, valueField]);
+  };
 
-  const handleRemoveItem = useCallback((itemValue: any) => {
+  const handleRemoveItem = (itemValue: any) => {
     onChange(value.filter(v => v !== itemValue));
-  }, [value, onChange]);
+  };
 
-  const handleOpen = useCallback(() => {
+  const handleOpen = () => {
     if (!disabled) {
       setIsOpen(true);
       setSearchQuery('');
     }
-  }, [disabled]);
+  };
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     setIsOpen(false);
     setSearchQuery('');
-  }, []);
+  };
 
-  const renderSelectedChip = useCallback(({ item }: { item: any }) => (
-    <View style={styles.chip}>
-      <Text style={styles.chipText} numberOfLines={1}>
+  // ✅ Убираем useCallback для рендер-функций, которые используют colors
+  const renderSelectedChip = ({ item }: { item: any }) => (
+    <View style={[styles.chip, { backgroundColor: colors.primary }]}>
+      <Text style={[styles.chipText, { color: colors.textOnPrimary }]} numberOfLines={1}>
         {item[labelField]}
       </Text>
       <Pressable
@@ -80,34 +83,35 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
         hitSlop={8}
         style={styles.chipRemove}
       >
-        <Feather name="x" size={14} color={DESIGN_TOKENS.colors.textInverse} />
+        <Feather name="x" size={14} color={colors.textOnPrimary} />
       </Pressable>
     </View>
-  ), [labelField, valueField, handleRemoveItem]);
+  );
 
-  const renderItem = useCallback(({ item }: { item: any }) => {
+  const renderItem = ({ item }: { item: any }) => {
     const isSelected = value.includes(item[valueField]);
     
     return (
       <Pressable
         style={({ pressed }) => [
           styles.listItem,
-          isSelected && styles.listItemSelected,
-          pressed && styles.listItemPressed,
+          { backgroundColor: colors.surface },
+          isSelected && { backgroundColor: colors.primarySoft },
+          pressed && { backgroundColor: colors.primaryLight },
         ]}
         onPress={() => handleToggleItem(item)}
       >
-        <View style={styles.checkbox}>
+        <View style={[styles.checkbox, { borderColor: colors.border }]}>
           {isSelected && (
-            <Feather name="check" size={16} color={DESIGN_TOKENS.colors.primary} />
+            <Feather name="check" size={16} color={colors.primary} />
           )}
         </View>
-        <Text style={[styles.listItemText, isSelected && styles.listItemTextSelected]}>
+        <Text style={[styles.listItemText, { color: colors.text }, isSelected && { color: colors.primary, fontWeight: '600' as any }]}>
           {item[labelField]}
         </Text>
       </Pressable>
     );
-  }, [value, valueField, labelField, handleToggleItem]);
+  };
 
   return (
     <>
@@ -144,30 +148,30 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
         onRequestClose={handleClose}
       >
         <Pressable style={styles.modalOverlay} onPress={handleClose}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
+          <Pressable style={[styles.modalContent, { backgroundColor: colors.surface }]} onPress={(e) => e.stopPropagation()}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
                 Выбрано: {selectedItems.length}
               </Text>
               <Pressable onPress={handleClose} hitSlop={8}>
-                <Feather name="x" size={24} color={DESIGN_TOKENS.colors.text} />
+                <Feather name="x" size={24} color={colors.text} />
               </Pressable>
             </View>
 
             {search && (
-              <View style={styles.searchContainer}>
-                <Feather name="search" size={18} color={DESIGN_TOKENS.colors.textMuted} />
+              <View style={[styles.searchContainer, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+                <Feather name="search" size={18} color={colors.textMuted} />
                 <TextInput
-                  style={styles.searchInput}
+                  style={[styles.searchInput, { color: colors.text }]}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   placeholder={searchPlaceholder}
-                  placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                  placeholderTextColor={colors.textMuted}
                   autoFocus
                 />
                 {searchQuery.length > 0 && (
                   <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
-                    <Feather name="x-circle" size={18} color={DESIGN_TOKENS.colors.textMuted} />
+                    <Feather name="x-circle" size={18} color={colors.textMuted} />
                   </Pressable>
                 )}
               </View>
@@ -181,16 +185,16 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={true}
               ListEmptyComponent={
-                <Text style={styles.emptyText}>Ничего не найдено</Text>
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>Ничего не найдено</Text>
               }
             />
 
-            <View style={styles.modalFooter}>
+            <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
               <Pressable
-                style={styles.doneButton}
+                style={[styles.doneButton, { backgroundColor: colors.primary }]}
                 onPress={handleClose}
               >
-                <Text style={styles.doneButtonText}>Готово</Text>
+                <Text style={[styles.doneButtonText, { color: colors.textOnPrimary }]}>Готово</Text>
               </Pressable>
             </View>
           </Pressable>

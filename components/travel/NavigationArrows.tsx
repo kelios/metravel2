@@ -14,6 +14,7 @@ import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 
 interface NavigationArrowsProps {
   currentTravel: Travel;
@@ -29,6 +30,7 @@ export default function NavigationArrows({
   const router = useRouter();
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
+  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 
   // Находим текущее путешествие в списке похожих
   const currentIndex = useMemo(() => {
@@ -89,6 +91,80 @@ export default function NavigationArrows({
     }) || versionedUrl;
   }, []);
 
+  // ✅ РЕДИЗАЙН: Стили с поддержкой темной темы
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      gap: DESIGN_TOKENS.spacing.lg,
+      marginTop: 4,
+      marginBottom: DESIGN_TOKENS.spacing.lg,
+      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    },
+    containerMobile: {
+      flexDirection: 'column',
+      gap: DESIGN_TOKENS.spacing.md,
+      paddingHorizontal: 12,
+    },
+    navCard: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      padding: DESIGN_TOKENS.spacing.lg,
+      shadowColor: colors.text,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+      minHeight: 80,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          ':hover': {
+            borderColor: colors.primary,
+            shadowOpacity: 0.1,
+            shadowRadius: 12,
+            transform: 'translateY(-2px)',
+          } as any,
+          ':active': {
+            transform: 'translateY(0)',
+          } as any,
+        },
+      }),
+    },
+    prevCard: {},
+    nextCard: {},
+    navContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+    navInfo: {
+      flex: 1,
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    navLabel: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      color: colors.textMuted,
+      fontWeight: '500',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    navTitle: {
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      color: colors.text,
+      fontWeight: '600',
+      fontFamily: 'Georgia',
+    },
+    navImageWrap: {
+      width: 60,
+      height: 60,
+      borderRadius: 8,
+      overflow: 'hidden',
+      backgroundColor: colors.background,
+    },
+  }), [colors]);
+
   // Если нет соседних путешествий, не показываем компонент
   if (!prevTravel && !nextTravel) {
     return null;
@@ -107,7 +183,7 @@ export default function NavigationArrows({
         >
           <View style={styles.navContent}>
             {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
-            <MaterialIcons name="chevron-left" size={24} color={DESIGN_TOKENS.colors.primary} />
+            <MaterialIcons name="chevron-left" size={24} color={colors.primary} />
             <View style={styles.navInfo}>
               <Text style={styles.navLabel} numberOfLines={1}>
                 Предыдущее
@@ -169,7 +245,7 @@ export default function NavigationArrows({
               </Text>
             </View>
             {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
-            <MaterialIcons name="chevron-right" size={24} color={DESIGN_TOKENS.colors.primary} />
+            <MaterialIcons name="chevron-right" size={24} color={colors.primary} />
           </View>
         </Pressable>
       ) : (
@@ -179,76 +255,3 @@ export default function NavigationArrows({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.lg,
-    marginTop: 4,
-    marginBottom: DESIGN_TOKENS.spacing.lg,
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-  },
-  containerMobile: {
-    flexDirection: 'column',
-    gap: DESIGN_TOKENS.spacing.md,
-    paddingHorizontal: 12,
-  },
-  navCard: {
-    flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    padding: DESIGN_TOKENS.spacing.lg,
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-    shadowColor: '#1f1f1f',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    minHeight: 80, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        ':hover': {
-          borderColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
-          shadowOpacity: 0.1,
-          shadowRadius: 12,
-          transform: 'translateY(-2px)',
-        } as any,
-        ':active': {
-          transform: 'translateY(0)',
-        } as any,
-      },
-    }),
-  },
-  prevCard: {},
-  nextCard: {},
-  navContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.md,
-  },
-  navInfo: {
-    flex: 1,
-    gap: DESIGN_TOKENS.spacing.xs,
-  },
-  navLabel: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    color: '#6b7280',
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  navTitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: '#1f2937',
-    fontWeight: '600',
-    fontFamily: 'Georgia',
-  },
-  navImageWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#f3f4f6',
-  },
-});

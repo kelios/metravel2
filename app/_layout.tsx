@@ -379,7 +379,7 @@ function ThemedPaperProvider({ children }: { children: React.ReactNode }) {
                 secondary: colors.primaryDark,
                 background: colors.background,
                 surface: colors.surface,
-                error: colors.error,
+                error: colors.danger,
                 outline: colors.border,
                 onPrimary: colors.textOnPrimary,
                 onSecondary: colors.text,

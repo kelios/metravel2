@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ResponsiveContainer } from '@/components/layout';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type FaqItem = {
   q: string;
@@ -10,6 +11,8 @@ type FaqItem = {
 };
 
 function HomeFAQSection() {
+  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+
   const items = useMemo<FaqItem[]>(
     () => [
       {
@@ -47,6 +50,84 @@ function HomeFAQSection() {
     setOpenIndex((prev) => (prev === idx ? null : idx));
   }, []);
 
+  const styles = useMemo(() => StyleSheet.create({
+    band: {
+      width: '100%',
+      alignSelf: 'stretch',
+      paddingVertical: 64,
+      backgroundColor: colors.background,
+    },
+    header: {
+      alignItems: 'center',
+      marginBottom: 32,
+      gap: 10,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -0.3,
+    },
+    subtitle: {
+      fontSize: 16,
+      lineHeight: 22,
+      color: colors.textMuted,
+      textAlign: 'center',
+      maxWidth: 560,
+    },
+    list: {
+      gap: 12,
+    },
+    item: {
+      width: '100%',
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.card,
+        },
+      }),
+    },
+    itemOpen: {
+      borderColor: colors.border,
+    },
+    itemHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+      gap: 16,
+      ...Platform.select({
+        web: {
+          transition: 'background-color 0.2s ease',
+          cursor: 'pointer',
+        },
+      }),
+    },
+    itemHeaderHover: {
+      backgroundColor: colors.primaryLight,
+    },
+    question: {
+      flex: 1,
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    answerWrap: {
+      paddingHorizontal: 16,
+      paddingBottom: 16,
+    },
+    answer: {
+      fontSize: 15,
+      lineHeight: 22,
+      color: colors.textMuted,
+    },
+  }), [colors]);
+
   return (
     <View style={styles.band} testID="home-faq">
       <ResponsiveContainer maxWidth="xl" padding>
@@ -73,7 +154,7 @@ function HomeFAQSection() {
                   <Feather
                     name={isOpen ? 'chevron-up' : 'chevron-down'}
                     size={18}
-                    color={DESIGN_TOKENS.colors.textMuted}
+                    color={colors.textMuted}
                   />
                 </Pressable>
 
@@ -90,83 +171,5 @@ function HomeFAQSection() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  band: {
-    width: '100%',
-    alignSelf: 'stretch',
-    paddingVertical: 64,
-    backgroundColor: DESIGN_TOKENS.colors.background,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
-    gap: 10,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: DESIGN_TOKENS.colors.text,
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: 16,
-    lineHeight: 22,
-    color: DESIGN_TOKENS.colors.textMuted,
-    textAlign: 'center',
-    maxWidth: 560,
-  },
-  list: {
-    gap: 12,
-  },
-  item: {
-    width: '100%',
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
-    overflow: 'hidden',
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.card,
-      },
-    }),
-  },
-  itemOpen: {
-    borderColor: DESIGN_TOKENS.colors.border,
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    gap: 16,
-    ...Platform.select({
-      web: {
-        transition: 'background-color 0.2s ease',
-        cursor: 'pointer',
-      },
-    }),
-  },
-  itemHeaderHover: {
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
-  },
-  question: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
-  },
-  answerWrap: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  answer: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: DESIGN_TOKENS.colors.textMuted,
-  },
-});
 
 export default memo(HomeFAQSection);

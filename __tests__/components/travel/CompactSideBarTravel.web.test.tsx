@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 
 jest.mock('@/components/WeatherWidget', () => ({
@@ -21,34 +21,49 @@ const mockTravel = {
   userName: 'Юлия',
   countryName: 'Беларусь',
   monthName: 'Октябрь',
-  year: 2022,
+  year: '2022',
   number_days: 1,
-  countUnicIpView: 100,
+  countUnicIpView: '100',
+  // Добавленные обязательные поля
+  travel_image_thumb_url: 'https://example.com/thumb.jpg',
+  travel_image_thumb_small_url: 'https://example.com/thumb-small.jpg',
+  url: '/travels/test-travel',
+  youtube_link: '',
+  description: 'Описание тестового путешествия',
+  recommendation: '',
+  plus: '',
+  minus: '',
+  cityName: 'Минск',
+  countryCode: 'BY',
+  companions: [],
   travelAddress: [
     {
+      id: 1,
+      name: 'Храм',
       coord: '53.9045, 27.5615',
-      categoryName: 'Храм',
+      categoryName: 'Религия',
     },
-  ],
+  ] as any,
   gallery: [
     {
       url: 'https://example.com/image.jpg',
-      id: '1',
+      id: 1,
       updated_at: '2022-10-01',
     },
-  ],
+  ] as any,
   user: {
-    id: 'user-1',
+    id: 1,
+    name: 'user-1',
     avatar: 'https://example.com/avatar.jpg',
   },
-  userId: 'user-1',
+  userIds: 'user-1',
   updated_at: '2022-10-01',
-};
+} as any;
 
 const mockRefs = {
-  hero: React.createRef<View>(),
-  gallery: React.createRef<View>(),
-  description: React.createRef<View>(),
+  hero: { current: null } as React.RefObject<any>,
+  gallery: { current: null } as React.RefObject<any>,
+  description: { current: null } as React.RefObject<any>,
 };
 
 const mockLinks = [

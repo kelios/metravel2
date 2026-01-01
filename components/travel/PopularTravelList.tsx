@@ -21,6 +21,7 @@ import { fetchTravelsPopular } from "@/src/api/map";
 import type { TravelsMap } from "@/src/types/types";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import {
   FLATLIST_CONFIG,
   FLATLIST_CONFIG_MOBILE,
@@ -50,6 +51,7 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
     const { width } = useResponsive();
+    const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const mountedRef = useRef(true);
     const listConfig = Platform.OS === 'web' ? FLATLIST_CONFIG : FLATLIST_CONFIG_MOBILE;
@@ -109,6 +111,133 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
       return filtered.slice(0, Platform.OS === 'web' ? 8 : filtered.length);
     }, [travelsPopular]);
 
+    // ✅ РЕДИЗАЙН: Стили с поддержкой темной темы
+    const styles = useMemo(() => StyleSheet.create({
+      section: {
+        marginTop: 32,
+        marginBottom: 48,
+        paddingHorizontal: Platform.select({
+          web: 24,
+          default: 16,
+        }),
+        paddingVertical: Platform.select({
+          web: 32,
+          default: 24,
+        }),
+        backgroundColor: colors.surface,
+        borderRadius: 24,
+        width: "100%",
+        shadowColor: colors.text,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 16,
+        elevation: 3,
+        borderWidth: 1,
+        borderColor: colors.border,
+        minHeight: 200,
+        ...Platform.select({
+          web: {
+            transition: 'all 0.3s ease',
+          },
+        }),
+      },
+      embeddedSection: {
+        marginTop: 0,
+        marginBottom: 0,
+        paddingHorizontal: 0,
+        paddingVertical: 0,
+        backgroundColor: 'transparent',
+        borderRadius: 0,
+        width: '100%',
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
+        borderWidth: 0,
+        borderColor: 'transparent',
+        minHeight: 0,
+      },
+      loadingContainer: {
+        justifyContent: "center",
+        alignItems: "center",
+        padding: DESIGN_TOKENS.spacing.xs,
+        minHeight: 300,
+      },
+      loadingText: {
+        marginTop: DESIGN_TOKENS.spacing.lg,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        color: colors.textMuted,
+        textAlign: "center",
+        fontWeight: "500",
+      },
+      errorText: {
+        marginTop: DESIGN_TOKENS.spacing.lg,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        color: colors.danger,
+        textAlign: "center",
+        fontWeight: "500",
+      },
+      title: {
+        fontSize: Platform.select({
+          web: 28,
+          default: 24,
+        }),
+        fontWeight: "800",
+        color: colors.text,
+        marginBottom: DESIGN_TOKENS.spacing.xxs,
+        textAlign: "center",
+        letterSpacing: -0.5,
+        ...Platform.select({
+          web: {
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+          },
+        }),
+      },
+      flatListContent: {
+        paddingBottom: DESIGN_TOKENS.spacing.xxs,
+        ...Platform.select({
+          web: {
+            paddingHorizontal: 0,
+          },
+          default: {},
+        }),
+      },
+      webGrid: {
+        ...Platform.select({
+          web: {
+            display: 'grid' as any,
+            gap: 'clamp(12px, 1.6vw, 16px)' as any,
+          } as any,
+          default: {},
+        }),
+      },
+      webScrollContainer: {
+        ...Platform.select({
+          web: {
+            overflowX: 'auto' as any,
+            overflowY: 'hidden' as any,
+            WebkitOverflowScrolling: 'touch' as any,
+            paddingBottom: DESIGN_TOKENS.spacing.xxs,
+            scrollSnapType: 'x mandatory' as any,
+            scrollBehavior: 'smooth' as any,
+          } as any,
+          default: {},
+        }),
+      },
+      webGridItem: {
+        flex: 1,
+        minWidth: 0,
+        ...Platform.select({
+          web: {
+            scrollSnapAlign: 'start' as any,
+          } as any,
+          default: {},
+        }),
+      },
+      separator: {
+        height: SEPARATOR_HEIGHT,
+      },
+    }), [colors]);
+
     const webGridStyle: any = useMemo(() => {
       if (Platform.OS !== 'web') return undefined;
 
@@ -131,7 +260,7 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
         alignItems: 'stretch',
         width: '100%',
       };
-    }, [numColumns, width]);
+    }, [numColumns, width, styles.webGrid]);
 
     // Оптимизированный рендер элемента с предотвращением лишних ререндеров
     const renderItem = useCallback(
@@ -188,7 +317,7 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
     // Оптимизированный разделитель
     const ItemSeparatorComponent = useCallback(() =>
         <View style={styles.separator} />,
-      []);
+      [styles.separator]);
 
     if (isLoading) {
       return (
@@ -271,130 +400,3 @@ PopularTravelList.displayName = 'PopularTravelList';
 
 export default PopularTravelList;
 
-const styles = StyleSheet.create({
-  // ✅ УЛУЧШЕНИЕ: Современная секция с улучшенным дизайном
-  section: {
-    marginTop: 32,
-    marginBottom: 48,
-    paddingHorizontal: Platform.select({
-      web: 24,
-      default: 16,
-    }),
-    paddingVertical: Platform.select({
-      web: 32,
-      default: 24,
-    }),
-    backgroundColor: "#fff",
-    borderRadius: 24,
-    width: "100%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-    minHeight: 200,
-    ...Platform.select({
-      web: {
-        transition: 'all 0.3s ease',
-      },
-    }),
-  },
-  embeddedSection: {
-    marginTop: 0,
-    marginBottom: 0,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    backgroundColor: 'transparent',
-    borderRadius: 0,
-    width: '100%',
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-    borderWidth: 0,
-    borderColor: 'transparent',
-    minHeight: 0,
-  },
-  loadingContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-    padding: DESIGN_TOKENS.spacing.xs,
-    minHeight: 300,
-  },
-  loadingText: {
-    marginTop: DESIGN_TOKENS.spacing.lg,
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: "#6b7280",
-    textAlign: "center",
-    fontWeight: "500",
-  },
-  errorText: {
-    marginTop: DESIGN_TOKENS.spacing.lg,
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: "#ef4444",
-    textAlign: "center",
-    fontWeight: "500",
-  },
-  // ✅ УЛУЧШЕНИЕ: Современная типографика заголовка
-  title: {
-    fontSize: Platform.select({
-      web: 28,
-      default: 24,
-    }),
-    fontWeight: "800",
-    color: "#1f2937",
-    marginBottom: DESIGN_TOKENS.spacing.xxs,
-    textAlign: "center",
-    letterSpacing: -0.5,
-    ...Platform.select({
-      web: {
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-      },
-    }),
-  },
-  flatListContent: {
-    paddingBottom: DESIGN_TOKENS.spacing.xxs,
-    ...Platform.select({
-      web: {
-        paddingHorizontal: 0,
-      },
-      default: {},
-    }),
-  },
-  webGrid: {
-    ...Platform.select({
-      web: {
-        display: 'grid' as any,
-        gap: 'clamp(12px, 1.6vw, 16px)' as any,
-      } as any,
-      default: {},
-    }),
-  },
-  webScrollContainer: {
-    ...Platform.select({
-      web: {
-        overflowX: 'auto' as any,
-        overflowY: 'hidden' as any,
-        WebkitOverflowScrolling: 'touch' as any,
-        paddingBottom: DESIGN_TOKENS.spacing.xxs,
-        scrollSnapType: 'x mandatory' as any,
-        scrollBehavior: 'smooth' as any,
-      } as any,
-      default: {},
-    }),
-  },
-  webGridItem: {
-    flex: 1,
-    minWidth: 0,
-    ...Platform.select({
-      web: {
-        scrollSnapAlign: 'start' as any,
-      } as any,
-      default: {},
-    }),
-  },
-  separator: {
-    height: SEPARATOR_HEIGHT,
-  },
-});

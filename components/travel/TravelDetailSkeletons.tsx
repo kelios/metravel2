@@ -7,16 +7,28 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import ReservedSpace from '@/components/ReservedSpace';
 
 /**
  * Skeleton для текстового описания
  */
 export const DescriptionSkeleton: React.FC = () => {
+  const colors = useThemedColors();
   const lineH = 18;
   const lines = 8;
   const gap = 8;
   const reservedH = lines * lineH + Math.max(0, lines - 1) * gap;
+
+  const styles = StyleSheet.create({
+    descriptionContainer: {
+      padding: DESIGN_TOKENS.spacing.lg,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      width: '100%',
+    },
+  });
+
   return (
     <View style={styles.descriptionContainer}>
       <ReservedSpace testID="travel-details-description-reserved" height={reservedH} />
@@ -29,7 +41,7 @@ export const DescriptionSkeleton: React.FC = () => {
  */
 export const MapSkeleton: React.FC = () => {
   return (
-    <View style={styles.mapContainer}>
+    <View style={{ width: '100%', marginBottom: DESIGN_TOKENS.spacing.lg }}>
       <SkeletonLoader width="100%" height={400} borderRadius={12} />
     </View>
   );
@@ -39,6 +51,31 @@ export const MapSkeleton: React.FC = () => {
  * Skeleton для списка точек маршрута
  */
 export const PointListSkeleton: React.FC = () => {
+  const colors = useThemedColors();
+
+  const styles = StyleSheet.create({
+    pointListContainer: {
+      width: '100%',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+    pointCard: {
+      width: '100%',
+      maxWidth: 400,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: DESIGN_TOKENS.spacing.md,
+      marginBottom: 12,
+    },
+    pointContent: {
+      paddingTop: 8,
+    },
+    marginBottom: {
+      marginBottom: 8,
+    },
+  });
+
   return (
     <View style={styles.pointListContainer}>
       {Array.from({ length: 3 }).map((_, index) => (
@@ -58,6 +95,28 @@ export const PointListSkeleton: React.FC = () => {
  * Skeleton для списка похожих путешествий
  */
 export const TravelListSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) => {
+  const colors = useThemedColors();
+
+  const styles = StyleSheet.create({
+    travelListContainer: {
+      width: '100%',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+    travelCard: {
+      width: '100%',
+      maxWidth: 300,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: DESIGN_TOKENS.spacing.md,
+      marginBottom: 12,
+    },
+    marginBottom: {
+      marginBottom: 8,
+    },
+  });
+
   return (
     <View style={styles.travelListContainer}>
       {Array.from({ length: count }).map((_, index) => (
@@ -76,7 +135,7 @@ export const TravelListSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) 
  */
 export const VideoSkeleton: React.FC = () => {
   return (
-    <View style={styles.videoContainer}>
+    <View style={{ width: '100%', marginBottom: DESIGN_TOKENS.spacing.lg }}>
       <SkeletonLoader width="100%" height={400} borderRadius={12} />
     </View>
   );
@@ -86,9 +145,20 @@ export const VideoSkeleton: React.FC = () => {
  * Универсальный skeleton для секций
  */
 export const SectionSkeleton: React.FC<{ lines?: number }> = ({ lines = 4 }) => {
+  const colors = useThemedColors();
   const lineH = 18;
   const gap = 8;
   const reservedH = lines * lineH + Math.max(0, lines - 1) * gap;
+
+  const styles = StyleSheet.create({
+    sectionContainer: {
+      padding: DESIGN_TOKENS.spacing.lg,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      width: '100%',
+    },
+  });
+
   return (
     <View style={styles.sectionContainer}>
       <ReservedSpace testID="travel-details-section-reserved" height={reservedH} />
@@ -96,59 +166,3 @@ export const SectionSkeleton: React.FC<{ lines?: number }> = ({ lines = 4 }) => 
   );
 };
 
-const styles = StyleSheet.create({
-  descriptionContainer: {
-    padding: DESIGN_TOKENS.spacing.lg,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: 12,
-    width: '100%',
-  },
-  mapContainer: {
-    width: '100%',
-    marginBottom: DESIGN_TOKENS.spacing.lg,
-  },
-  pointListContainer: {
-    width: '100%',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.md,
-  },
-  pointCard: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: 12,
-    padding: DESIGN_TOKENS.spacing.md,
-    marginBottom: 12,
-  },
-  pointContent: {
-    paddingTop: 8,
-  },
-  travelListContainer: {
-    width: '100%',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.md,
-  },
-  travelCard: {
-    width: '100%',
-    maxWidth: 300,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: 12,
-    padding: DESIGN_TOKENS.spacing.md,
-    marginBottom: 12,
-  },
-  videoContainer: {
-    width: '100%',
-    marginBottom: DESIGN_TOKENS.spacing.lg,
-  },
-  sectionContainer: {
-    padding: DESIGN_TOKENS.spacing.lg,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: 12,
-    width: '100%',
-  },
-  marginBottom: {
-    marginBottom: 8,
-  },
-});

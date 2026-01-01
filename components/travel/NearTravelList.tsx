@@ -27,9 +27,7 @@ import MapClientSideComponent from '@/components/Map';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useResponsive } from '@/hooks/useResponsive';
-
-const brandOrange = '#ff8c49'; // Оставляем для обратной совместимости, но используем DESIGN_TOKENS где возможно
-const backgroundGray = '#f8f9fa';
+import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 
 type Segment = 'list' | 'map';
 
@@ -44,10 +42,67 @@ type NearTravelListProps = {
 const SegmentSwitch = ({
                          value,
                          onChange,
+                         colors,
                        }: {
   value: Segment;
   onChange: (val: Segment) => void;
-}) => (
+  colors: ReturnType<typeof useThemedColors>;
+}) => {
+  // ✅ РЕДИЗАЙН: Стили с поддержкой темной темы
+  const segmentStyles = useMemo(() => StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      backgroundColor: colors.surface,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      padding: 4,
+      gap: 4,
+      shadowColor: colors.text,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    button: {
+      flex: 1,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 44,
+      ...Platform.select({
+        web: {
+          transition: 'all 0.2s ease',
+          cursor: 'pointer',
+        },
+      }),
+    },
+    activeButton: {
+      backgroundColor: colors.primary,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    pressedButton: {
+      opacity: 0.8,
+      transform: [{ scale: 0.98 }],
+    },
+    text: {
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    activeText: {
+      color: colors.surface,
+      fontWeight: '700',
+    },
+  }), [colors]);
+
+  return (
   <View style={segmentStyles.container}>
     <Pressable
       onPress={() => onChange('list')}
@@ -82,9 +137,53 @@ const SegmentSwitch = ({
       </Text>
     </Pressable>
   </View>
-);
+  );
+};
 
-const TravelCardSkeleton = () => (
+const TravelCardSkeleton = ({ colors }: { colors: ReturnType<typeof useThemedColors> }) => {
+  // ✅ РЕДИЗАЙН: Стили скелетона с поддержкой темной темы
+  const skeletonStyles = useMemo(() => StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      overflow: 'hidden',
+      marginBottom: DESIGN_TOKENS.spacing.md,
+      shadowColor: colors.text,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    image: {
+      width: '100%',
+      height: 180,
+      backgroundColor: colors.backgroundSecondary,
+    },
+    content: {
+      padding: DESIGN_TOKENS.spacing.md,
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    title: {
+      height: 20,
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      width: '70%',
+    },
+    description: {
+      height: 16,
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      width: '90%',
+    },
+    meta: {
+      height: 14,
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      width: '50%',
+    },
+  }), [colors]);
+
+  return (
   <View style={skeletonStyles.card}>
     <View style={skeletonStyles.image} />
     <View style={skeletonStyles.content}>
@@ -93,7 +192,8 @@ const TravelCardSkeleton = () => (
       <View style={skeletonStyles.meta} />
     </View>
   </View>
-);
+  );
+};
 
 // Новый компонент для карты с ограниченной высотой
 const MapContainer = memo(({
@@ -101,21 +201,83 @@ const MapContainer = memo(({
                              height = 400,
                              showRoute = true,
                              isLoading = false,
+                             colors,
                            }: {
   points: any[];
   height?: number;
   showRoute?: boolean;
   isLoading?: boolean;
+  colors: ReturnType<typeof useThemedColors>;
 }) => {
   const canRenderMap = useMemo(
     () => typeof window !== 'undefined' && points.length > 0,
     [points.length]
   );
 
+  // ✅ РЕДИЗАЙН: Стили карты с поддержкой темной темы
+  const mapStyles = useMemo(() => StyleSheet.create({
+    mapPlaceholder: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderStyle: 'dashed',
+    },
+    placeholderText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      color: colors.textMuted,
+      textAlign: 'center',
+    },
+    mapContainer: {
+      backgroundColor: colors.surface,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: colors.text,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    mapHeader: {
+      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+      paddingVertical: DESIGN_TOKENS.spacing.md,
+      backgroundColor: colors.surfaceElevated,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    mapTitle: {
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    mapWrapper: {
+      flex: 1,
+      minHeight: 300,
+    },
+    mapFooter: {
+      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+      paddingVertical: DESIGN_TOKENS.spacing.xs,
+      backgroundColor: colors.backgroundSecondary,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    mapHint: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      color: colors.textMuted,
+      textAlign: 'center',
+      fontStyle: 'italic',
+    },
+  }), [colors]);
+
   if (!canRenderMap) {
     return (
-      <View style={[styles.mapPlaceholder, { height }]}> 
-        <Text style={styles.placeholderText}>
+      <View style={[mapStyles.mapPlaceholder, { height }]}>
+        <Text style={mapStyles.placeholderText}>
           {isLoading ? 'Загрузка карты...' : 'Нет точек для карты'}
         </Text>
       </View>
@@ -124,24 +286,24 @@ const MapContainer = memo(({
 
   return (
     <View 
-      style={[styles.mapContainer, { height }]}
+      style={[mapStyles.mapContainer, { height }]}
     >
-      <View style={styles.mapHeader}>
-        <Text style={styles.mapTitle}>
+      <View style={mapStyles.mapHeader}>
+        <Text style={mapStyles.mapTitle}>
           {points.length} {points.length === 1 ? 'точка' :
           points.length < 5 ? 'точки' : 'точек'} на карте
         </Text>
       </View>
 
-      <View style={styles.mapWrapper}>
+      <View style={mapStyles.mapWrapper}>
         <MapClientSideComponent
           showRoute={showRoute}
           travel={{ data: points }}
         />
       </View>
 
-      <View style={styles.mapFooter}>
-        <Text style={styles.mapHint}>
+      <View style={mapStyles.mapFooter}>
+        <Text style={mapStyles.mapHint}>
           Приближайте и перемещайтесь для детального просмотра
         </Text>
       </View>
@@ -163,6 +325,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     const [viewMode, setViewMode] = useState<Segment>('list');
     const [visibleCount, setVisibleCount] = useState(6);
     const { isPhone, isLargePhone, isTablet } = useResponsive();
+    const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const scrollViewRef = useRef<ScrollView>(null);
 
     const isMobile = isPhone || isLargePhone;
@@ -332,6 +495,238 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       }
     }, [visibleCount, travelsNear.length, loadMoreCount]);
 
+
+    // ✅ РЕДИЗАЙН: Стили с поддержкой темной темы
+    const styles = useMemo(() => StyleSheet.create({
+      section: {
+        marginTop: DESIGN_TOKENS.spacing.md,
+        marginBottom: 40,
+        paddingHorizontal: 16,
+        paddingVertical: DESIGN_TOKENS.spacing.md,
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: 20,
+        width: '100%',
+        maxWidth: 1400,
+        alignSelf: 'center',
+        shadowColor: colors.text,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 4,
+      },
+      embeddedSection: {
+        marginTop: 0,
+        marginBottom: 0,
+        paddingHorizontal: 0,
+        paddingVertical: 0,
+        backgroundColor: 'transparent',
+        borderRadius: 0,
+        width: '100%',
+        maxWidth: '100%',
+        alignSelf: 'stretch',
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
+      },
+      header: {
+        alignItems: 'center',
+        marginBottom: DESIGN_TOKENS.spacing.md,
+        paddingHorizontal: 8,
+      },
+      title: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xl,
+        fontWeight: '700',
+        color: colors.text,
+        marginBottom: 8,
+        textAlign: 'center',
+        fontFamily: 'System',
+        letterSpacing: -0.5,
+      },
+      subtitle: {
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        color: colors.textSecondary,
+        textAlign: 'center',
+        fontWeight: '500',
+      },
+      desktopContainer: {
+        flexDirection: 'row',
+        gap: DESIGN_TOKENS.spacing.md,
+        minHeight: 600,
+      },
+      listColumn: {
+        flex: 1.2,
+        minHeight: 500,
+      },
+      mapColumn: {
+        flex: 1,
+        minHeight: 500,
+      },
+      mobileMapColumn: {
+        width: '100%',
+        minHeight: 300,
+      },
+      scrollView: {
+        flex: 1,
+      },
+      scrollContent: {
+        paddingBottom: DESIGN_TOKENS.spacing.lg,
+      },
+      travelsGrid: {
+        gap: DESIGN_TOKENS.spacing.md,
+        paddingHorizontal: 8,
+      },
+      travelItem: {
+        marginBottom: DESIGN_TOKENS.spacing.md,
+      },
+      travelItemOdd: {},
+      mobileListContent: {
+        paddingBottom: DESIGN_TOKENS.spacing.lg,
+      },
+      mapContainer: {
+        backgroundColor: colors.surface,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: colors.border,
+        shadowColor: colors.text,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 3,
+      },
+      mapHeader: {
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+        paddingVertical: DESIGN_TOKENS.spacing.md,
+        backgroundColor: colors.surfaceElevated,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+      },
+      mapTitle: {
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+        color: colors.textSecondary,
+        textAlign: 'center',
+      },
+      mapWrapper: {
+        flex: 1,
+        minHeight: 300,
+      },
+      mapFooter: {
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+        paddingVertical: DESIGN_TOKENS.spacing.xs,
+        backgroundColor: colors.backgroundSecondary,
+        borderTopWidth: 1,
+        borderTopColor: colors.border,
+      },
+      mapHint: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.textMuted,
+        textAlign: 'center',
+        fontStyle: 'italic',
+      },
+      mapPlaceholder: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderWidth: 2,
+        borderColor: colors.border,
+        borderStyle: 'dashed',
+      },
+      placeholderText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: colors.textMuted,
+        textAlign: 'center',
+      },
+      loadMoreContainer: {
+        padding: DESIGN_TOKENS.spacing.lg,
+        alignItems: 'center',
+      },
+      loadMoreButton: {
+        backgroundColor: colors.surface,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingVertical: 12,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderWidth: 2,
+        borderColor: colors.primary,
+        shadowColor: colors.text,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+        minHeight: 44,
+        ...Platform.select({
+          web: {
+            transition: 'all 0.2s ease',
+            cursor: 'pointer',
+          },
+        }),
+      },
+      loadMoreButtonText: {
+        color: colors.primary,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        fontWeight: '600',
+      },
+      loadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: colors.backgroundSecondary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 20,
+      },
+      loadingContent: {
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.lg,
+      },
+      loadingText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        color: colors.textSecondary,
+        fontWeight: '500',
+      },
+      errorContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: DESIGN_TOKENS.spacing.xs,
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: 20,
+        marginHorizontal: DESIGN_TOKENS.spacing.lg,
+      },
+      errorText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        color: colors.danger,
+        textAlign: 'center',
+        marginBottom: DESIGN_TOKENS.spacing.xs,
+        lineHeight: 22,
+      },
+      retryButton: {
+        backgroundColor: colors.primary,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingVertical: 12,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        shadowColor: colors.text,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+        minHeight: 44,
+        ...Platform.select({
+          web: {
+            transition: 'all 0.2s ease',
+            cursor: 'pointer',
+          },
+        }),
+      },
+      retryButtonText: {
+        color: colors.surface,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        fontWeight: '600',
+      },
+      skeletonContainer: {
+        gap: DESIGN_TOKENS.spacing.lg,
+        paddingHorizontal: 8,
+      },
+    }), [colors]);
+
     const renderTravelItem = useCallback(({ item, index }: { item: Travel; index: number }) => (
       <View style={[
         styles.travelItem,
@@ -341,7 +736,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           travel={item}
         />
       </View>
-    ), []);
+    ), [styles.travelItem, styles.travelItemOdd]);
 
     const keyExtractor = useCallback((item: Travel) => `travel-${item.id}`, []);
 
@@ -373,7 +768,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
 
         {!isMobile ? (
           <>
-            <SegmentSwitch value={viewMode} onChange={setViewMode} />
+            <SegmentSwitch value={viewMode} onChange={setViewMode} colors={colors} />
 
             {viewMode === 'map' ? (
               <View style={styles.mobileMapColumn}>
@@ -382,6 +777,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                   height={mapHeight}
                   showRoute={true}
                   isLoading={isLoading}
+                  colors={colors}
                 />
               </View>
             ) : (
@@ -420,7 +816,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           </>
         ) : (
           <>
-            <SegmentSwitch value={viewMode} onChange={setViewMode} />
+            <SegmentSwitch value={viewMode} onChange={setViewMode} colors={colors} />
 
             {viewMode === 'list' ? (
               <FlatList
@@ -451,7 +847,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                   ) : isLoading ? (
                     <View style={styles.skeletonContainer}>
                       {[1, 2].map((i) => (
-                        <TravelCardSkeleton key={i} />
+                        <TravelCardSkeleton key={i} colors={colors} />
                       ))}
                     </View>
                   ) : null
@@ -464,6 +860,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                   height={mapHeight}
                   showRoute={true}
                   isLoading={isLoading}
+                  colors={colors}
                 />
               </View>
             )}
@@ -474,7 +871,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         {isLoading && travelsNear.length === 0 && (
           <View style={styles.loadingOverlay}>
             <View style={styles.loadingContent}>
-              <ActivityIndicator size="large" color={brandOrange} />
+              <ActivityIndicator size="large" color={colors.primary} />
               <Text style={styles.loadingText}>Ищем интересные места рядом...</Text>
             </View>
           </View>
@@ -486,345 +883,3 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
 
 export default NearTravelList;
 
-/* ========================= Styles ========================= */
-
-const styles = StyleSheet.create({
-  section: {
-    marginTop: DESIGN_TOKENS.spacing.md,
-    marginBottom: 40,
-    paddingHorizontal: 16,
-    paddingVertical: DESIGN_TOKENS.spacing.md,
-    backgroundColor: backgroundGray,
-    borderRadius: 20,
-    width: '100%',
-    maxWidth: 1400,
-    alignSelf: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  embeddedSection: {
-    marginTop: 0,
-    marginBottom: 0,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    backgroundColor: 'transparent',
-    borderRadius: 0,
-    width: '100%',
-    maxWidth: '100%',
-    alignSelf: 'stretch',
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: DESIGN_TOKENS.spacing.md,
-    paddingHorizontal: 8,
-  },
-  title: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xl,
-    fontWeight: '700',
-    color: '#2d3748',
-    marginBottom: 8,
-    textAlign: 'center',
-    fontFamily: 'System',
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: '#718096',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  desktopContainer: {
-    flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.md,
-    minHeight: 600,
-  },
-  listColumn: {
-    flex: 1.2,
-    minHeight: 500,
-  },
-  mapColumn: {
-    flex: 1,
-    minWidth: 300,
-  },
-  mobileMapColumn: {
-    width: '100%',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: DESIGN_TOKENS.spacing.lg,
-  },
-  travelsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.lg,
-  },
-  travelItem: {
-    flex: 1,
-    minWidth: 280,
-    maxWidth: '100%',
-    marginBottom: DESIGN_TOKENS.spacing.lg,
-  },
-  travelItemOdd: {
-    opacity: 0.95,
-  },
-  mobileListContent: {
-    paddingBottom: DESIGN_TOKENS.spacing.lg,
-  },
-
-  // Стили для контейнера карты
-  mapContainer: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    overflow: 'hidden',
-    ...DESIGN_TOKENS.shadowsNative.medium,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
-  },
-  mapHeader: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    borderBottomWidth: 1,
-    borderBottomColor: DESIGN_TOKENS.colors.borderLight,
-  },
-  mapTitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    color: DESIGN_TOKENS.colors.textSubtle,
-    textAlign: 'center',
-  },
-  mapWrapper: {
-    flex: 1,
-    minHeight: 300,
-  },
-  mapFooter: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    borderTopWidth: 1,
-    borderTopColor: DESIGN_TOKENS.colors.borderLight,
-  },
-  mapHint: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    color: DESIGN_TOKENS.colors.textMuted,
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-
-  mapPlaceholder: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    borderWidth: 2,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
-    borderStyle: 'dashed',
-  },
-  placeholderText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.textMuted,
-    textAlign: 'center',
-  },
-
-  loadMoreContainer: {
-    padding: DESIGN_TOKENS.spacing.lg,
-    alignItems: 'center',
-  },
-  loadMoreButton: {
-    backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingVertical: 12,
-    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    borderWidth: 2,
-    borderColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
-    ...Platform.select({
-      web: {
-        transition: 'all 0.2s ease',
-        cursor: 'pointer',
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-          transform: 'translateY(-1px)',
-        },
-      },
-    }),
-  },
-  loadMoreButtonText: {
-    color: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: '600',
-  },
-
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(248, 249, 250, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 20,
-  },
-  loadingContent: {
-    alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.lg,
-  },
-  loadingText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: '#4a5568',
-    fontWeight: '500',
-  },
-
-  errorContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: DESIGN_TOKENS.spacing.xs,
-    backgroundColor: backgroundGray,
-    borderRadius: 20,
-    marginHorizontal: DESIGN_TOKENS.spacing.lg,
-  },
-  errorText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: '#e53e3e',
-    textAlign: 'center',
-    marginBottom: DESIGN_TOKENS.spacing.xs,
-    lineHeight: 22,
-  },
-  retryButton: {
-    backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingVertical: 12,
-    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
-    ...Platform.select({
-      web: {
-        transition: 'all 0.2s ease',
-        cursor: 'pointer',
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: '#3a7a7a', // Темнее primary для hover
-          transform: 'translateY(-1px)',
-        },
-      },
-    }),
-  },
-  retryButtonText: {
-    color: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: '600',
-  },
-
-  skeletonContainer: {
-    gap: DESIGN_TOKENS.spacing.lg,
-    paddingHorizontal: 8,
-  },
-});
-
-const segmentStyles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    borderRadius: DESIGN_TOKENS.radii.lg, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    padding: DESIGN_TOKENS.spacing.xs,
-    marginBottom: DESIGN_TOKENS.spacing.xs,
-    alignSelf: 'center',
-    maxWidth: 300,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
-    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
-    ...Platform.select({
-      web: {
-        transition: 'all 0.2s ease',
-        cursor: 'pointer',
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-        },
-      },
-    }),
-  },
-  activeButton: {
-    backgroundColor: DESIGN_TOKENS.colors.surface, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  pressedButton: {
-    transform: [{ scale: 0.98 }],
-  },
-  text: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textMuted, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-  },
-  activeText: {
-    color: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
-  },
-});
-
-const skeletonStyles = StyleSheet.create({
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: DESIGN_TOKENS.spacing.md,
-    marginBottom: DESIGN_TOKENS.spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  image: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  content: {
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  title: {
-    height: 16,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 4,
-    width: '80%',
-  },
-  description: {
-    height: 12,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 4,
-    width: '60%',
-  },
-  meta: {
-    height: 12,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 4,
-    width: '40%',
-  },
-});

@@ -80,11 +80,11 @@ const createMockTravel = (overrides: Partial<Travel> = {}): Travel => ({
 } as any);
 
 const createMockRefs = () => ({
-  gallery: { current: document.createElement('div') },
-  description: { current: document.createElement('div') },
-  map: { current: document.createElement('div') },
-  points: { current: document.createElement('div') },
-  excursions: { current: document.createElement('div') },
+  gallery: { current: null } as React.RefObject<any>,
+  description: { current: null } as React.RefObject<any>,
+  map: { current: null } as React.RefObject<any>,
+  points: { current: null } as React.RefObject<any>,
+  excursions: { current: null } as React.RefObject<any>,
 });
 
 describe('CompactSideBarTravel - Web Version', () => {
@@ -165,7 +165,7 @@ describe('CompactSideBarTravel - Web Version', () => {
 
     it('должен применять hover стили к кнопкам действий', () => {
       const travelWithEditRights = createMockTravel({
-        userId: '123',
+        userIds: '123',
       });
 
       const { UNSAFE_getAllByProps } = render(

@@ -1,8 +1,9 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import { Dialog, Portal } from 'react-native-paper';
 import { Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useResponsive } from '@/hooks/useResponsive';
 
@@ -30,6 +31,11 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     const cancelButtonRef = useRef<HTMLElement>(null);
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
+    const colors = useThemedColors();
+
+    // ✅ УЛУЧШЕНИЕ: Динамические стили в зависимости от темы
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     // ✅ УЛУЧШЕНИЕ: Focus trap для модального окна
     useFocusTrap(dialogRef, {
         enabled: visible && Platform.OS === 'web',
@@ -141,10 +147,10 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
 export default ConfirmDialog;
 
-const styles: any = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     dialog: {
         alignSelf: 'center',
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: DESIGN_TOKENS.radii.lg,
         ...DESIGN_TOKENS.shadowsNative.medium,
         // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
@@ -157,12 +163,12 @@ const styles: any = StyleSheet.create({
     dialogTitle: {
         fontWeight: '600',
         fontSize: 18,
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         marginBottom: 8,
     },
     dialogText: {
         fontSize: 16,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         marginBottom: 20,
     },
     actionContainer: {
@@ -191,7 +197,7 @@ const styles: any = StyleSheet.create({
                 cursor: 'pointer',
                 // @ts-ignore
                 ':hover': {
-                    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
+                    backgroundColor: colors.primaryLight,
                 },
             },
         }),
@@ -199,12 +205,12 @@ const styles: any = StyleSheet.create({
     cancelButton: {
         fontSize: 14,
         fontWeight: '500',
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
     deleteButtonContainer: {
-        backgroundColor: DESIGN_TOKENS.colors.danger,
+        backgroundColor: colors.danger,
         borderRadius: DESIGN_TOKENS.radii.md,
         paddingVertical: 8,
         paddingHorizontal: 16,
@@ -220,7 +226,7 @@ const styles: any = StyleSheet.create({
                 boxShadow: DESIGN_TOKENS.shadows.light,
                 // @ts-ignore
                 ':hover': {
-                    backgroundColor: DESIGN_TOKENS.colors.dangerDark,
+                    backgroundColor: colors.dangerDark,
                     transform: 'translateY(-1px)',
                     boxShadow: DESIGN_TOKENS.shadows.medium,
                 },
@@ -230,7 +236,7 @@ const styles: any = StyleSheet.create({
     deleteButton: {
         fontSize: 14,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.textOnPrimary,
+        color: colors.textOnPrimary,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },

@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { Platform, ActivityIndicator, Pressable, View, Text } from 'react-native';
 import * as ImagePicker from 'react-native-image-picker';
 import { useDropzone } from 'react-dropzone';
 import { uploadImage } from '@/src/api/misc';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 interface PhotoUploadWithPreviewProps {
@@ -88,6 +89,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     placeholder = 'Перетащите сюда изображение',
     maxSizeMB = 10,
 }) => {
+    const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const [imageUri, setImageUri] = useState<string | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);

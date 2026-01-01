@@ -12,6 +12,7 @@ import { MaterialIcons } from "@expo/vector-icons"
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
+import { useThemedColors } from '@/hooks/useTheme' // ✅ РЕДИЗАЙН: Темная тема
 
 interface TravelSectionTabsProps {
   links: TravelSectionLink[]
@@ -28,6 +29,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
 }) => {
   const { isPhone, isLargePhone } = useResponsive()
   const isMobile = isPhone || isLargePhone
+  const colors = useThemedColors() // ✅ РЕДИЗАЙН: Темная тема
   const [moreOpen, setMoreOpen] = useState(false)
 
   const { visibleLinks, overflowLinks } = useMemo(() => {
@@ -47,6 +49,120 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
     },
     [onNavigate]
   )
+
+  // ✅ РЕДИЗАЙН: Стили с поддержкой темной темы
+  const styles = useMemo(() => StyleSheet.create({
+    wrapper: {
+      width: "100%",
+      paddingVertical: Platform.select({
+        default: 6,
+        web: 8,
+      }),
+    },
+    tabsContent: {
+      paddingHorizontal: Platform.select({
+        default: 6,
+        web: 8,
+      }),
+      paddingBottom: 4,
+    },
+    tab: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: Platform.select({
+        default: 10,
+        web: 14,
+      }),
+      paddingVertical: Platform.select({
+        default: 6,
+        web: 10,
+      }),
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      borderWidth: 0.5,
+      borderColor: colors.border,
+      shadowColor: colors.text,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.02,
+      shadowRadius: 4,
+      elevation: 1,
+      marginRight: 6,
+    },
+    tabActive: {
+      borderColor: colors.text,
+      backgroundColor: colors.surfaceElevated,
+      shadowColor: colors.text,
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+    },
+    tabPressed: {
+      transform: [{ scale: 0.97 }],
+      opacity: 0.9,
+    },
+    tabLabel: {
+      fontSize: Platform.select({
+        default: 12,
+        web: 13,
+      }),
+      fontWeight: "600",
+      color: colors.textSecondary,
+    },
+    tabLabelActive: {
+      color: colors.text,
+      fontWeight: "700",
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.28)",
+      justifyContent: "flex-end",
+    },
+    modalSheet: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      padding: 12,
+      maxHeight: "70%" as any,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 4,
+      paddingBottom: 8,
+    },
+    modalTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    modalCloseBtn: {
+      padding: 8,
+      borderRadius: 999,
+    },
+    modalItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      paddingVertical: 12,
+      paddingHorizontal: 10,
+      borderRadius: 12,
+    },
+    modalItemActive: {
+      backgroundColor: colors.surfaceElevated,
+    },
+    modalItemPressed: {
+      opacity: 0.9,
+    },
+    modalItemText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textSecondary,
+      flex: 1,
+    },
+    modalItemTextActive: {
+      color: colors.text,
+    },
+  }), [colors])
 
   const stickyStyles =
     Platform.OS === "web" && typeof stickyOffset === "number"
@@ -80,10 +196,10 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
               <MaterialIcons
                 name={icon as any}
                 size={Platform.select({
-                  default: 16, // Мобильные
-                  web: 18, // Десктоп
+                  default: 16,
+                  web: 18,
                 })}
-                color={isActive ? "#1f2937" : "#2f332e"}
+                color={isActive ? colors.text : colors.textSecondary}
               />
               <Text
                 style={[styles.tabLabel, isActive && styles.tabLabelActive]}
@@ -106,7 +222,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
             <MaterialIcons
               name={"more-horiz" as any}
               size={Platform.select({ default: 16, web: 18 })}
-              color="#2f332e"
+              color={colors.textSecondary}
             />
             <Text style={styles.tabLabel} numberOfLines={1}>
               Еще
@@ -132,7 +248,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
                   accessibilityLabel="Закрыть"
                   style={styles.modalCloseBtn}
                 >
-                  <MaterialIcons name={"close" as any} size={20} color="#1f2937" />
+                  <MaterialIcons name={"close" as any} size={20} color={colors.text} />
                 </Pressable>
               </View>
               {overflowLinks.map(({ key, icon, label }) => {
@@ -153,7 +269,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
                     <MaterialIcons
                       name={icon as any}
                       size={18}
-                      color={isActive ? "#1f2937" : "#2f332e"}
+                      color={isActive ? colors.text : colors.textSecondary}
                     />
                     <Text style={[styles.modalItemText, isActive && styles.modalItemTextActive]} numberOfLines={1}>
                       {label}
@@ -171,116 +287,3 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
 
 export default TravelSectionTabs
 
-const styles = StyleSheet.create({
-  wrapper: {
-    width: "100%",
-    paddingVertical: Platform.select({
-      default: 6, // Мобильные
-      web: 8, // Десктоп
-    }),
-  },
-  tabsContent: {
-    paddingHorizontal: Platform.select({
-      default: 6, // Мобильные
-      web: 8, // Десктоп
-    }),
-    paddingBottom: 4,
-  },
-  tab: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: Platform.select({
-      default: 10, // Мобильные - уменьшено
-      web: 14, // Десктоп
-    }),
-    paddingVertical: Platform.select({
-      default: 6, // Мобильные - уменьшено
-      web: 10, // Десктоп
-    }),
-    borderRadius: 16,
-    backgroundColor: "#fff",
-    borderWidth: 0.5,
-    borderColor: "rgba(0, 0, 0, 0.06)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 1,
-    marginRight: 6,
-  },
-  tabActive: {
-    borderColor: "#1f2937", // ✅ УЛУЧШЕНИЕ: Нейтральный темно-серый
-    backgroundColor: "rgba(0, 0, 0, 0.07)", // Более заметный фон для активного таба
-    shadowColor: "#000",
-    shadowOpacity: 0.05, // Чуть более заметная тень
-    shadowRadius: 4,
-  },
-  tabPressed: {
-    transform: [{ scale: 0.97 }],
-    opacity: 0.9,
-  },
-  tabLabel: {
-    fontSize: Platform.select({
-      default: 12, // Мобильные
-      web: 13, // Десктоп
-    }),
-    fontWeight: "600",
-    color: "#2f332e",
-  },
-  tabLabelActive: {
-    color: "#1f2937", // ✅ УЛУЧШЕНИЕ: Нейтральный темно-серый
-    fontWeight: "700",
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.28)",
-    justifyContent: "flex-end",
-  },
-  modalSheet: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 12,
-    maxHeight: "70%" as any,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 4,
-    paddingBottom: 8,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1f2937",
-  },
-  modalCloseBtn: {
-    padding: 8,
-    borderRadius: 999,
-  },
-  modalItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-  },
-  modalItemActive: {
-    backgroundColor: "rgba(0, 0, 0, 0.06)",
-  },
-  modalItemPressed: {
-    opacity: 0.9,
-  },
-  modalItemText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#2f332e",
-    flex: 1,
-  },
-  modalItemTextActive: {
-    color: "#1f2937",
-  },
-})

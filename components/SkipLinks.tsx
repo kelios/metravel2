@@ -1,9 +1,11 @@
 // components/SkipLinks.tsx
 // ✅ УЛУЧШЕНИЕ: Skip links для улучшения доступности навигации с клавиатуры
+// ✅ МИГРАЦИЯ: Полная миграция на DESIGN_TOKENS и useThemedColors
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface SkipLink {
   id: string;
@@ -21,9 +23,8 @@ const DEFAULT_LINKS: SkipLink[] = [
   { id: 'skip-search', label: 'Перейти к поиску', targetId: 'search-input' },
 ];
 
-const palette = DESIGN_TOKENS.colors;
-
 export default function SkipLinks({ links = DEFAULT_LINKS }: SkipLinksProps) {
+  const colors = useThemedColors();
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
   useEffect(() => {
@@ -61,8 +62,8 @@ export default function SkipLinks({ links = DEFAULT_LINKS }: SkipLinksProps) {
         <Pressable
           key={link.id}
           style={[
-            styles.link,
-            focusedIndex === index && styles.linkFocused,
+            createLinkStyle(colors),
+            focusedIndex === index && createLinkFocusedStyle(colors),
           ]}
           onPress={() => handleSkip(link.targetId)}
           onFocus={() => setFocusedIndex(index)}
@@ -83,7 +84,7 @@ export default function SkipLinks({ links = DEFAULT_LINKS }: SkipLinksProps) {
             },
           })}
         >
-          <Text style={styles.linkText}>{link.label}</Text>
+          <Text style={createLinkTextStyle(colors)}>{link.label}</Text>
         </Pressable>
       ))}
     </View>
@@ -97,38 +98,41 @@ const styles = StyleSheet.create({
     left: 0,
     zIndex: 10000,
     flexDirection: 'column',
-    gap: 8,
-    padding: 8,
+    gap: DESIGN_TOKENS.spacing.sm,
+    padding: DESIGN_TOKENS.spacing.sm,
   },
-  link: {
-    backgroundColor: palette.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.medium,
-        transition: 'all 0.2s ease',
-        cursor: 'pointer',
-        // @ts-ignore
-        ':focus': {
-          outline: `3px solid ${palette.primary}`,
-          outlineOffset: 2,
-        },
+});
+
+const createLinkStyle = (colors: ThemedColors) => ({
+  backgroundColor: colors.primary,
+  paddingVertical: DESIGN_TOKENS.spacing.sm,
+  paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+  borderRadius: DESIGN_TOKENS.radii.md,
+  minHeight: DESIGN_TOKENS.minTouchTarget,
+  justifyContent: 'center' as const,
+  alignItems: 'center' as const,
+  ...Platform.select({
+    web: {
+      boxShadow: DESIGN_TOKENS.shadows.medium,
+      transition: 'all 0.2s ease',
+      cursor: 'pointer',
+      // @ts-ignore
+      ':focus': {
+        outline: `3px solid ${colors.primary}`,
+        outlineOffset: 2,
       },
-    }),
-  },
-  linkFocused: {
-    backgroundColor: palette.primary,
-    opacity: 0.9,
-    transform: [{ scale: 1.05 }],
-  },
-  linkText: {
-    color: palette.textOnPrimary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
+    },
+  }),
+});
+
+const createLinkFocusedStyle = (colors: ThemedColors) => ({
+  backgroundColor: colors.primary,
+  opacity: 0.9,
+  transform: [{ scale: 1.05 }],
+});
+
+const createLinkTextStyle = (colors: ThemedColors) => ({
+  color: colors.textOnPrimary,
+  fontSize: 14,
+  fontWeight: '600' as const,
 });

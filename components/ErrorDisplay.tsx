@@ -1,10 +1,12 @@
 // components/ErrorDisplay.tsx
 // ✅ УЛУЧШЕНИЕ: Компонент для отображения понятных ошибок пользователю
+// ✅ МИГРАЦИЯ: Полная поддержка динамических цветов через useThemedColors
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface ErrorDisplayProps {
   title?: string;
@@ -16,8 +18,6 @@ interface ErrorDisplayProps {
   variant?: 'error' | 'warning' | 'info';
 }
 
-const palette = DESIGN_TOKENS.colors;
-
 export default function ErrorDisplay({
   title = 'Что-то пошло не так',
   message,
@@ -27,16 +27,114 @@ export default function ErrorDisplay({
   showContact = true,
   variant = 'error',
 }: ErrorDisplayProps) {
-  const iconName = variant === 'warning' ? 'alert-triangle' : 
+  const colors = useThemedColors();
+
+  const iconName = variant === 'warning' ? 'alert-triangle' :
                    variant === 'info' ? 'info' : 'alert-circle';
   
-  const iconColor = variant === 'warning' ? palette.warning :
-                    variant === 'info' ? palette.info :
-                    palette.danger;
+  const iconColor = variant === 'warning' ? colors.warning :
+                    variant === 'info' ? colors.info :
+                    colors.danger;
 
-  const backgroundColor = variant === 'warning' ? palette.warningLight :
-                          variant === 'info' ? palette.infoLight :
-                          palette.dangerLight;
+  const backgroundColor = variant === 'warning' ? colors.warningLight :
+                          variant === 'info' ? colors.infoLight :
+                          colors.dangerLight;
+
+  // ✅ Динамические стили на основе текущей темы
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      borderRadius: 12,
+      padding: 16,
+      margin: 16,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.card,
+        },
+        default: {
+          ...DESIGN_TOKENS.shadowsNative.medium,
+        },
+      }),
+    },
+    content: {
+      flexDirection: 'column',
+    },
+    iconContainer: {
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    textContainer: {
+      marginBottom: 16,
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    message: {
+      fontSize: 14,
+      color: colors.textMuted,
+      lineHeight: 20,
+      textAlign: 'center',
+    },
+    detailsContainer: {
+      marginTop: 12,
+      padding: 12,
+      backgroundColor: colors.mutedBackground,
+      borderRadius: 8,
+    },
+    detailsLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textMuted,
+      marginBottom: 4,
+    },
+    details: {
+      fontSize: 11,
+      color: colors.textMuted,
+      fontFamily: Platform.select({ web: 'monospace', default: undefined }),
+    },
+    actions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: 8,
+      alignItems: 'center',
+    },
+    button: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 8,
+      gap: 8,
+      minHeight: 44,
+    },
+    primaryButton: {
+      backgroundColor: colors.primary,
+    },
+    secondaryButton: {
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    buttonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textOnPrimary,
+    },
+    secondaryButtonText: {
+      color: colors.primary,
+    },
+    dismissButton: {
+      padding: 8,
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  }), [colors]);
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
@@ -76,7 +174,7 @@ export default function ErrorDisplay({
                 },
               })}
             >
-              <Feather name="refresh-cw" size={16} color={palette.textOnPrimary} />
+              <Feather name="refresh-cw" size={16} color={colors.textOnPrimary} />
               <Text style={styles.buttonText}>Попробовать снова</Text>
             </Pressable>
           )}
@@ -102,7 +200,7 @@ export default function ErrorDisplay({
                 },
               })}
             >
-              <Feather name="mail" size={16} color={palette.primary} />
+              <Feather name="mail" size={16} color={colors.primary} />
               <Text style={[styles.buttonText, styles.secondaryButtonText]}>
                 Связаться с поддержкой
               </Text>
@@ -123,7 +221,7 @@ export default function ErrorDisplay({
                 },
               })}
             >
-              <Feather name="x" size={20} color={palette.textMuted} />
+              <Feather name="x" size={20} color={colors.textMuted} />
             </Pressable>
           )}
         </View>
@@ -132,97 +230,3 @@ export default function ErrorDisplay({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: 12,
-    padding: 16,
-    margin: 16,
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.card,
-      },
-      default: {
-        ...DESIGN_TOKENS.shadowsNative.medium,
-      },
-    }),
-  },
-  content: {
-    flexDirection: 'column',
-  },
-  iconContainer: {
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  textContainer: {
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: palette.text,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  message: {
-    fontSize: 14,
-    color: palette.textMuted,
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  detailsContainer: {
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: palette.mutedBackground,
-    borderRadius: 8,
-  },
-  detailsLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: palette.textMuted,
-    marginBottom: 4,
-  },
-  details: {
-    fontSize: 11,
-    color: palette.textMuted,
-    fontFamily: Platform.select({ web: 'monospace', default: undefined }),
-  },
-  actions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 8,
-    alignItems: 'center',
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    gap: 8,
-    minHeight: 44, // Минимальный размер для touch-целей
-  },
-  primaryButton: {
-    backgroundColor: palette.primary,
-  },
-  secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: palette.primary,
-  },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: palette.textOnPrimary,
-  },
-  secondaryButtonText: {
-    color: palette.primary,
-  },
-  dismissButton: {
-    padding: 8,
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

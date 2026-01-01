@@ -1,10 +1,11 @@
 // components/CollapsibleBlock.tsx
 // ✅ РЕДИЗАЙН: Универсальный компонент для сворачиваемых блоков
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Animated, LayoutAnimation } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface CollapsibleBlockProps {
   id: string;
@@ -25,7 +26,6 @@ interface CollapsibleBlockProps {
   minHeight?: number;
 }
 
-const palette = DESIGN_TOKENS.colors;
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
 
@@ -47,6 +47,8 @@ export default function CollapsibleBlock({
   compactMode = false,
   minHeight = 0,
 }: CollapsibleBlockProps) {
+  const colors = useThemedColors();
+
   // ✅ ИСПРАВЛЕНИЕ: Используем контролируемое состояние если передано, иначе внутреннее
   const isControlled = controlledExpanded !== undefined || controlledHidden !== undefined;
   const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
@@ -106,6 +108,143 @@ export default function CollapsibleBlock({
     }
   };
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      backgroundColor: colors.surface,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: spacing.md,
+      overflow: 'hidden',
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.light,
+          transition: 'all 0.2s ease',
+        },
+        default: {
+          ...DESIGN_TOKENS.shadowsNative.light,
+        },
+      }),
+    },
+    containerCompact: {
+      marginBottom: spacing.sm,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      minHeight: 48,
+    },
+    headerCompact: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      minHeight: 40,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      gap: spacing.sm,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.xs,
+      borderRadius: radii.sm,
+      ...Platform.select({
+        web: {
+          transition: 'background-color 0.2s ease',
+          ':hover': {
+            backgroundColor: colors.primarySoft,
+          },
+        } as any,
+      }),
+    },
+    iconWrapper: {
+      width: 32,
+      height: 32,
+      borderRadius: radii.sm,
+      backgroundColor: colors.primarySoft,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerIcon: {},
+    headerText: {
+      flex: 1,
+    },
+    title: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 2,
+    },
+    titleCompact: {
+      fontSize: 14,
+    },
+    description: {
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    expandHint: {
+      fontSize: 11,
+      color: colors.textMuted,
+      fontStyle: 'italic',
+      marginTop: 2,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    actionButton: {
+      width: 32,
+      height: 32,
+      borderRadius: radii.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
+      minWidth: 32,
+      minHeight: 32,
+      ...Platform.select({
+        web: {
+          transition: 'background-color 0.2s ease',
+        },
+      }),
+    },
+    content: {},
+    contentInner: {
+      padding: spacing.md,
+    },
+    hiddenBlock: {
+      marginBottom: spacing.xs,
+      paddingHorizontal: spacing.sm,
+    },
+    showHiddenButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.sm,
+      backgroundColor: colors.primarySoft,
+      minHeight: 32,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          transition: 'background-color 0.2s ease',
+          ':hover': {
+            backgroundColor: colors.primarySoft,
+          },
+        } as any,
+      }),
+    },
+    showHiddenText: {
+      fontSize: 12,
+      color: colors.primary,
+      fontWeight: '500',
+    },
+  }), [colors]);
+
   if (isHidden) {
     return (
       <View style={styles.hiddenBlock}>
@@ -114,7 +253,7 @@ export default function CollapsibleBlock({
           style={styles.showHiddenButton}
           accessibilityLabel={`Показать блок: ${title}`}
         >
-          <Feather name="eye-off" size={14} color={palette.textMuted} />
+          <Feather name="eye-off" size={14} color={colors.textMuted} />
           <Text style={styles.showHiddenText}>Показать: {title}</Text>
         </Pressable>
       </View>
@@ -157,7 +296,7 @@ export default function CollapsibleBlock({
               <Feather 
                 name={icon as any} 
                 size={compactMode ? 16 : 18} 
-                color={palette.primary} 
+                color={colors.primary}
                 style={styles.headerIcon}
               />
             </View>
@@ -188,17 +327,16 @@ export default function CollapsibleBlock({
               {...Platform.select({
                 web: {
                   cursor: 'pointer',
-                  // @ts-ignore
                   ':hover': {
-                    backgroundColor: palette.primarySoft,
+                    backgroundColor: colors.primarySoft,
                   },
-                },
+                } as any,
               })}
             >
               <Feather 
                 name={isExpanded ? 'chevron-up' : 'chevron-down'} 
                 size={16} 
-                color={palette.textMuted} 
+                color={colors.textMuted}
               />
             </Pressable>
           )}
@@ -212,14 +350,13 @@ export default function CollapsibleBlock({
               {...Platform.select({
                 web: {
                   cursor: 'pointer',
-                  // @ts-ignore
                   ':hover': {
-                    backgroundColor: palette.primarySoft,
+                    backgroundColor: colors.primarySoft,
                   },
-                },
+                } as any,
               })}
             >
-              <Feather name="x" size={16} color={palette.textMuted} />
+              <Feather name="x" size={16} color={colors.textMuted} />
             </Pressable>
           )}
         </View>
@@ -230,7 +367,7 @@ export default function CollapsibleBlock({
         style={[
           styles.content,
           {
-            maxHeight: Platform.OS === 'web' ? (isExpanded ? 'none' : 0) : heightInterpolated,
+            maxHeight: Platform.OS === 'web' ? (isExpanded ? 10000 : 0) : heightInterpolated,
             overflow: Platform.OS === 'web' ? (isExpanded ? 'visible' : 'hidden') : 'hidden',
           },
         ]}
@@ -244,149 +381,3 @@ export default function CollapsibleBlock({
   );
 }
 
-const styles: any = StyleSheet.create({
-  container: {
-    backgroundColor: palette.surface,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: palette.border,
-    marginBottom: spacing.md,
-    overflow: 'hidden',
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.light,
-        transition: 'all 0.2s ease',
-      },
-      default: {
-        ...DESIGN_TOKENS.shadowsNative.light,
-      },
-    }),
-  },
-  containerCompact: {
-    marginBottom: spacing.sm,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.border,
-    minHeight: 48,
-  },
-  headerCompact: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    minHeight: 40,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radii.sm,
-    ...Platform.select({
-      web: {
-        transition: 'background-color 0.2s ease',
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: palette.primarySoft,
-        },
-      },
-    }),
-  },
-  iconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: radii.sm,
-    backgroundColor: palette.primarySoft,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerIcon: {
-    // Иконка теперь внутри wrapper
-  },
-  headerText: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: palette.text,
-    marginBottom: 2,
-  },
-  titleCompact: {
-    fontSize: 14,
-  },
-  description: {
-    fontSize: 12,
-    color: palette.textMuted,
-  },
-  expandHint: {
-    fontSize: 11,
-    color: palette.textSubtle,
-    fontStyle: 'italic',
-    marginTop: 2,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  actionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: radii.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 32,
-    minHeight: 32,
-    ...Platform.select({
-      web: {
-        transition: 'background-color 0.2s ease',
-      },
-    }),
-  },
-  content: {
-    ...Platform.select({
-      web: {
-        transition: 'max-height 0.3s ease',
-      },
-    }),
-  },
-  contentInner: {
-    padding: spacing.md,
-  },
-  hiddenBlock: {
-    marginBottom: spacing.xs,
-    paddingHorizontal: spacing.sm,
-  },
-  showHiddenButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.sm,
-    backgroundColor: palette.primarySoft,
-    minHeight: 32,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-        transition: 'background-color 0.2s ease',
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: palette.primarySoft,
-        },
-      },
-    }),
-  },
-  showHiddenText: {
-    fontSize: 12,
-    color: palette.primary,
-    fontWeight: '500',
-  },
-} as any);

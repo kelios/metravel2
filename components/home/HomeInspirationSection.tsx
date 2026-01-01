@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive, useResponsiveColumns } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { fetchTravelsPopular, fetchTravelsOfMonth } from '@/src/api/map';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
@@ -31,6 +32,7 @@ function HomeInspirationSection({
   centerRowsOnWebDesktop = false,
 }: HomeSectionProps) {
   const router = useRouter();
+  const colors = useThemedColors();
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
 
@@ -71,6 +73,134 @@ function HomeInspirationSection({
     sendAnalyticsEvent('HomeClick_ViewMore', { section: title });
     router.push('/search' as any);
   }, [title, router]);
+
+  const styles = useMemo(() => StyleSheet.create({
+    section: {
+      gap: 32,
+    },
+    sectionMobile: {
+      gap: 24,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: 16,
+      marginBottom: 8,
+    },
+    headerMobile: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: 20,
+    },
+    titleContainer: {
+      flex: 1,
+      gap: 8,
+      minWidth: 0,
+    },
+    title: {
+      fontSize: 36,
+      fontWeight: '800',
+      color: colors.text,
+      lineHeight: 44,
+      letterSpacing: -0.5,
+    },
+    titleMobile: {
+      fontSize: 24,
+      lineHeight: 32,
+      letterSpacing: -0.3,
+    },
+    subtitle: {
+      fontSize: 16,
+      color: colors.textMuted,
+      lineHeight: 24,
+    },
+    subtitleMobile: {
+      fontSize: 14,
+      lineHeight: 20,
+    },
+    viewMoreButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+      ...Platform.select({
+        web: {
+          transition: 'all 0.2s ease',
+        },
+      }),
+    },
+    viewMoreButtonMobile: {
+      width: '100%',
+    },
+    viewMoreButtonHover: {
+      backgroundColor: colors.primaryLight,
+      borderColor: colors.primary,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.light,
+        },
+      }),
+    },
+    viewMoreText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    grid: {
+      width: '100%',
+      gap: 20,
+    },
+    separator: {
+      height: 20,
+    },
+    row: {
+      gap: 20,
+      justifyContent: 'flex-start',
+      width: '100%',
+      ...Platform.select({
+        web: {
+          justifyContent: 'flex-start',
+        },
+      }),
+    },
+    rowWebCentered: {
+      justifyContent: 'center',
+    },
+    cardWrapper: {
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: 0,
+      minWidth: 0,
+      minHeight: 360,
+      ...Platform.select({
+        web: {
+          width: TRAVEL_CARD_MAX_WIDTH,
+          flexGrow: 0,
+          flexShrink: 0,
+          flexBasis: 'auto',
+        } as any,
+      }),
+    },
+    cardWrapperSingleColumn: {
+      width: '100%',
+      flexGrow: 0,
+      flexShrink: 0,
+      flexBasis: 'auto',
+      alignSelf: 'stretch',
+    },
+    cardWrapperMobile: {
+      width: '100%',
+      minWidth: 150,
+      minHeight: 320,
+    },
+  }), [colors]);
 
   if (isLoading) {
     return (
@@ -114,7 +244,7 @@ function HomeInspirationSection({
           accessibilityLabel={`Смотреть все ${title}`}
         >
           <Text style={styles.viewMoreText}>Найти ещё маршруты</Text>
-          <Feather name="arrow-right" size={16} color={DESIGN_TOKENS.colors.text} />
+          <Feather name="arrow-right" size={16} color={colors.text} />
         </Pressable>
       </View>
 
@@ -150,13 +280,37 @@ function HomeInspirationSection({
   );
 }
 
+const separatorStyles = StyleSheet.create({
+  separator: {
+    height: 20,
+  },
+});
+
 function Separator() {
-  return <View style={styles.separator} />;
+  return <View style={separatorStyles.separator} />;
 }
 
 function HomeInspirationSections() {
   const { isPhone, isLargePhone } = useResponsive();
+  const colors = useThemedColors();
   const isMobile = isPhone || isLargePhone;
+
+  const styles = useMemo(() => StyleSheet.create({
+    band: {
+      paddingVertical: 72,
+      backgroundColor: colors.backgroundSecondary,
+      width: '100%',
+      alignSelf: 'stretch',
+    },
+    bandMobile: {
+      paddingVertical: 56,
+    },
+    container: {
+      gap: 72,
+      width: '100%',
+      alignSelf: 'stretch',
+    },
+  }), [colors]);
 
   return (
     <View style={[styles.band, isMobile && styles.bandMobile]}>
@@ -184,146 +338,3 @@ function HomeInspirationSections() {
 
 export default memo(HomeInspirationSections);
 
-const styles = StyleSheet.create({
-  band: {
-    paddingVertical: 72,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    width: '100%',
-    alignSelf: 'stretch',
-  },
-  bandMobile: {
-    paddingVertical: 56,
-  },
-  container: {
-    gap: 72,
-    width: '100%',
-    alignSelf: 'stretch',
-  },
-  section: {
-    gap: 32,
-  },
-  sectionMobile: {
-    gap: 24,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 16,
-    marginBottom: 8,
-  },
-  headerMobile: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    gap: 20,
-  },
-  titleContainer: {
-    flex: 1,
-    gap: 8,
-    minWidth: 0,
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: DESIGN_TOKENS.colors.text,
-    lineHeight: 44,
-    letterSpacing: -0.5,
-  },
-  titleMobile: {
-    fontSize: 24,
-    lineHeight: 32,
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: DESIGN_TOKENS.colors.textMuted,
-    lineHeight: 24,
-  },
-  subtitleMobile: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  viewMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderWidth: 2,
-    borderColor: DESIGN_TOKENS.colors.border,
-    ...Platform.select({
-      web: {
-        transition: 'all 0.2s ease',
-      },
-    }),
-  },
-  viewMoreButtonMobile: {
-    width: '100%',
-  },
-  viewMoreButtonHover: {
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
-    borderColor: DESIGN_TOKENS.colors.primary,
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.light,
-      },
-    }),
-  },
-  viewMoreText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
-  },
-  grid: {
-    width: '100%',
-    gap: 20,
-  },
-  separator: {
-    height: 20,
-  },
-  row: {
-    gap: 20,
-    justifyContent: 'flex-start',
-    width: '100%',
-    ...Platform.select({
-      web: {
-        justifyContent: 'flex-start',
-      },
-    }),
-  },
-  rowWebCentered: {
-    justifyContent: 'center',
-  },
-  cardWrapper: {
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 0,
-    minWidth: 0,
-    minHeight: 360,
-    ...Platform.select({
-      web: {
-        // На web desktop фиксируем ширину карточки, чтобы неполный ряд
-        // (например 2 карточки при numColumns=3) не растягивался с огромными пустотами.
-        width: TRAVEL_CARD_MAX_WIDTH,
-        flexGrow: 0,
-        flexShrink: 0,
-        flexBasis: 'auto',
-      } as any,
-    }),
-  },
-  cardWrapperSingleColumn: {
-    width: '100%',
-    flexGrow: 0,
-    flexShrink: 0,
-    flexBasis: 'auto',
-    alignSelf: 'stretch',
-  },
-  cardWrapperMobile: {
-    width: '100%',
-    minWidth: 150,
-    minHeight: 320,
-  },
-});

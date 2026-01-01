@@ -1,6 +1,7 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useMemo } from 'react';
 import { Image, View, StyleSheet, Platform, ImageProps } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface OptimizedImageProps extends Omit<ImageProps, 'source'> {
   source: any;
@@ -21,6 +22,55 @@ function OptimizedImage({
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      overflow: 'hidden',
+      backgroundColor: colors.backgroundSecondary,
+    },
+    image: {
+      ...(Platform.OS === 'web'
+        ? ({
+            transitionProperty: 'opacity',
+            transitionDuration: '300ms',
+            transitionTimingFunction: 'ease-in-out',
+          } as any)
+        : {}),
+    },
+    placeholder: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.backgroundSecondary,
+      ...(Platform.OS === 'web'
+        ? ({
+            animationKeyframes: [
+              {
+                '0%': { opacity: 1 },
+                '50%': { opacity: 0.6 },
+                '100%': { opacity: 1 },
+              },
+            ],
+            animationDuration: '1500ms',
+            animationTimingFunction: 'ease-in-out',
+            animationIterationCount: 'infinite',
+          } as any)
+        : {}),
+    },
+    errorPlaceholder: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.surfaceMuted,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+  }), [colors]);
 
   return (
     <View style={[styles.container, { width, height, borderRadius }]}>
@@ -54,54 +104,6 @@ function OptimizedImage({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    overflow: 'hidden',
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-  },
-  image: {
-    ...(Platform.OS === 'web'
-      ? ({
-          transitionProperty: 'opacity',
-          transitionDuration: '300ms',
-          transitionTimingFunction: 'ease-in-out',
-        } as any)
-      : {}),
-  },
-  placeholder: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    ...(Platform.OS === 'web'
-      ? ({
-          animationKeyframes: [
-            {
-              '0%': { opacity: 1 },
-              '50%': { opacity: 0.6 },
-              '100%': { opacity: 1 },
-            },
-          ],
-          animationDuration: '1500ms',
-          animationTimingFunction: 'ease-in-out',
-          animationIterationCount: 'infinite',
-        } as any)
-      : {}),
-  },
-  errorPlaceholder: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
 
 export default memo(OptimizedImage);
 

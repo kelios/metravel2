@@ -1,4 +1,4 @@
-import React, { memo, useState, useCallback } from 'react';
+import React, { memo, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,12 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface QuickTravelFormProps {
   onSubmit?: (data: QuickTravelData) => Promise<void>;
@@ -27,7 +27,206 @@ export interface QuickTravelData {
   photos?: string[];
 }
 
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
+    padding: DESIGN_TOKENS.spacing.lg,
+    paddingBottom: DESIGN_TOKENS.spacing.xl * 2,
+  },
+  header: {
+    marginBottom: DESIGN_TOKENS.spacing.lg,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
+  },
+  title: {
+    fontSize: DESIGN_TOKENS.typography.sizes.xl,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  subtitle: {
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    color: colors.textMuted,
+  },
+  progressContainer: {
+    marginBottom: DESIGN_TOKENS.spacing.lg,
+    padding: DESIGN_TOKENS.spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: colors.mutedBackground,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    overflow: 'hidden',
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+  },
+  progressText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  fieldContainer: {
+    marginBottom: DESIGN_TOKENS.spacing.lg,
+  },
+  label: {
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+  },
+  required: {
+    color: colors.danger,
+  },
+  input: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    padding: DESIGN_TOKENS.spacing.md,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    color: colors.text,
+    minHeight: 48,
+  },
+  inputError: {
+    borderColor: colors.danger,
+    borderWidth: 2,
+    backgroundColor: colors.dangerLight,
+  },
+  textarea: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    padding: DESIGN_TOKENS.spacing.md,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    color: colors.text,
+    minHeight: 150,
+    textAlignVertical: 'top',
+  },
+  charCounter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: DESIGN_TOKENS.spacing.xs,
+  },
+  charCounterText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    color: colors.textMuted,
+  },
+  charCounterHint: {
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    color: colors.warning,
+    fontWeight: '600',
+  },
+  errorText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.danger,
+    marginTop: DESIGN_TOKENS.spacing.xs,
+  },
+  hint: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.textMuted,
+    marginTop: DESIGN_TOKENS.spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    gap: DESIGN_TOKENS.spacing.md,
+  },
+  dateField: {
+    flex: 1,
+  },
+  dateLabel: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.text,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
+  },
+  uploadButton: {
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.primaryLight,
+    borderStyle: 'dashed',
+    borderRadius: DESIGN_TOKENS.radii.md,
+    padding: DESIGN_TOKENS.spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  uploadText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  uploadHint: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.textMuted,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: DESIGN_TOKENS.spacing.md,
+    marginTop: DESIGN_TOKENS.spacing.lg,
+  },
+  button: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: DESIGN_TOKENS.spacing.md,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    minHeight: 48,
+  },
+  buttonPrimary: {
+    backgroundColor: colors.primary,
+  },
+  buttonSecondary: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonTextPrimary: {
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontWeight: '600',
+    color: colors.textOnPrimary,
+  },
+  buttonTextSecondary: {
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  footerHint: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: DESIGN_TOKENS.spacing.lg,
+    lineHeight: 20,
+  },
+});
+
 const QuickTravelForm = ({ onSubmit, onSaveDraft }: QuickTravelFormProps) => {
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [formData, setFormData] = useState<QuickTravelData>({
     name: '',
     description: '',
@@ -116,7 +315,7 @@ const QuickTravelForm = ({ onSubmit, onSaveDraft }: QuickTravelFormProps) => {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Feather name="zap" size={24} color={DESIGN_TOKENS.colors.primary} />
+          <Feather name="zap" size={24} color={colors.primary} />
           <Text style={styles.title}>Быстрая история</Text>
         </View>
         <Text style={styles.subtitle}>Это займёт всего 3-5 минут</Text>
@@ -142,12 +341,12 @@ const QuickTravelForm = ({ onSubmit, onSaveDraft }: QuickTravelFormProps) => {
           value={formData.name}
           onChangeText={(text) => updateField('name', text)}
           placeholder='Например: "Неделя в горах Грузии" или "Выходные в Минске"'
-          placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+          placeholderTextColor={colors.textMuted}
           maxLength={100}
         />
         {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
         <Text style={styles.hint}>
-          <Feather name="info" size={12} color={DESIGN_TOKENS.colors.textMuted} /> Краткое и
+          <Feather name="info" size={12} color={colors.textMuted} /> Краткое и
           понятное название вашего путешествия
         </Text>
       </View>
@@ -162,7 +361,7 @@ const QuickTravelForm = ({ onSubmit, onSaveDraft }: QuickTravelFormProps) => {
           value={formData.description}
           onChangeText={(text) => updateField('description', text)}
           placeholder="Расскажи, что тебя вдохновило, что понравилось, какие были впечатления..."
-          placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+          placeholderTextColor={colors.textMuted}
           multiline
           numberOfLines={6}
           maxLength={2000}
@@ -177,7 +376,7 @@ const QuickTravelForm = ({ onSubmit, onSaveDraft }: QuickTravelFormProps) => {
         </View>
         {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
         <Text style={styles.hint}>
-          <Feather name="info" size={12} color={DESIGN_TOKENS.colors.textMuted} /> Поделись своими
+          <Feather name="info" size={12} color={colors.textMuted} /> Поделись своими
           впечатлениями и советами
         </Text>
       </View>
@@ -190,10 +389,10 @@ const QuickTravelForm = ({ onSubmit, onSaveDraft }: QuickTravelFormProps) => {
           value={formData.country}
           onChangeText={(text) => updateField('country', text)}
           placeholder="Например: Грузия, Беларусь, Италия"
-          placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+          placeholderTextColor={colors.textMuted}
         />
         <Text style={styles.hint}>
-          <Feather name="info" size={12} color={DESIGN_TOKENS.colors.textMuted} /> Можно добавить
+          <Feather name="info" size={12} color={colors.textMuted} /> Можно добавить
           позже
         </Text>
       </View>
@@ -209,7 +408,7 @@ const QuickTravelForm = ({ onSubmit, onSaveDraft }: QuickTravelFormProps) => {
               value={formData.startDate}
               onChangeText={(text) => updateField('startDate', text)}
               placeholder="ДД.ММ.ГГГГ"
-              placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
             />
           </View>
           <View style={styles.dateField}>
@@ -219,12 +418,12 @@ const QuickTravelForm = ({ onSubmit, onSaveDraft }: QuickTravelFormProps) => {
               value={formData.endDate}
               onChangeText={(text) => updateField('endDate', text)}
               placeholder="ДД.ММ.ГГГГ"
-              placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+              placeholderTextColor={colors.textMuted}
             />
           </View>
         </View>
         <Text style={styles.hint}>
-          <Feather name="info" size={12} color={DESIGN_TOKENS.colors.textMuted} /> Опционально,
+          <Feather name="info" size={12} color={colors.textMuted} /> Опционально,
           можно добавить позже
         </Text>
       </View>
@@ -233,7 +432,7 @@ const QuickTravelForm = ({ onSubmit, onSaveDraft }: QuickTravelFormProps) => {
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>Фотографии</Text>
         <Pressable style={styles.uploadButton}>
-          <Feather name="image" size={24} color={DESIGN_TOKENS.colors.primary} />
+          <Feather name="image" size={24} color={colors.primary} />
           <Text style={styles.uploadText}>Добавить фото</Text>
           <Text style={styles.uploadHint}>1-3 фотографии (можно добавить позже)</Text>
         </Pressable>
@@ -246,7 +445,7 @@ const QuickTravelForm = ({ onSubmit, onSaveDraft }: QuickTravelFormProps) => {
           onPress={handleSaveDraft}
           disabled={isSubmitting}
         >
-          <Feather name="save" size={18} color={DESIGN_TOKENS.colors.text} />
+          <Feather name="save" size={18} color={colors.text} />
           <Text style={styles.buttonTextSecondary}>Сохранить черновик</Text>
         </Pressable>
 
@@ -273,194 +472,5 @@ const QuickTravelForm = ({ onSubmit, onSaveDraft }: QuickTravelFormProps) => {
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.background,
-  },
-  content: {
-    padding: 20,
-    maxWidth: 600,
-    ...Platform.select({
-      web: {
-        marginLeft: 'auto',
-        marginRight: 'auto',
-        width: '100%',
-      },
-    }),
-  },
-  header: {
-    marginBottom: 24,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
-  },
-  progressContainer: {
-    marginBottom: 24,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-  },
-  progressText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textMuted,
-  },
-  fieldContainer: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
-    marginBottom: 8,
-  },
-  required: {
-    color: DESIGN_TOKENS.colors.danger,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    padding: 12,
-    fontSize: 15,
-    color: DESIGN_TOKENS.colors.text,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-  },
-  inputError: {
-    borderColor: DESIGN_TOKENS.colors.danger,
-  },
-  textarea: {
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    padding: 12,
-    fontSize: 15,
-    color: DESIGN_TOKENS.colors.text,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    minHeight: 120,
-    textAlignVertical: 'top',
-  },
-  charCounter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  charCounterText: {
-    fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
-  },
-  charCounterHint: {
-    fontSize: 12,
-    color: DESIGN_TOKENS.colors.danger,
-  },
-  errorText: {
-    fontSize: 12,
-    color: DESIGN_TOKENS.colors.danger,
-    marginTop: 4,
-  },
-  hint: {
-    fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
-    marginTop: 4,
-    lineHeight: 16,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  dateField: {
-    flex: 1,
-  },
-  dateLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: DESIGN_TOKENS.colors.textMuted,
-    marginBottom: 6,
-  },
-  uploadButton: {
-    borderWidth: 2,
-    borderColor: DESIGN_TOKENS.colors.border,
-    borderStyle: 'dashed',
-    borderRadius: DESIGN_TOKENS.radii.md,
-    padding: 24,
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
-  },
-  uploadText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.primary,
-  },
-  uploadHint: {
-    fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 32,
-  },
-  button: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 16,
-    borderRadius: DESIGN_TOKENS.radii.md,
-  },
-  buttonPrimary: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-  },
-  buttonSecondary: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonTextPrimary: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  buttonTextSecondary: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
-  },
-  footerHint: {
-    fontSize: 13,
-    color: DESIGN_TOKENS.colors.textMuted,
-    textAlign: 'center',
-    marginTop: 24,
-    lineHeight: 20,
-  },
-});
 
 export default memo(QuickTravelForm);
