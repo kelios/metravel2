@@ -129,8 +129,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  */
 type MattePalette = Record<keyof typeof MODERN_MATTE_PALETTE, string>;
 
-export function useThemedColors() {
-  const { isDark } = useTheme();
+export function getThemedColors(isDark: boolean) {
   const raw = isDark ? MODERN_MATTE_PALETTE_DARK : MODERN_MATTE_PALETTE;
   // Normalize to a simple string map to avoid literal-type conflicts.
   const palette: MattePalette = { ...(MODERN_MATTE_PALETTE as any), ...(raw as any) };
@@ -210,6 +209,11 @@ export function useThemedColors() {
     // Градиенты
     gradients,
   };
+}
+
+export function useThemedColors() {
+  const { isDark } = useTheme();
+  return getThemedColors(isDark);
 }
 
 // Экспорт типа возвращаемого значения useThemedColors для использования в компонентах

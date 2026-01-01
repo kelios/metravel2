@@ -2,6 +2,8 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Dimensions, LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Snackbar } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
+import { useRouter } from 'expo-router';
 
 import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
 import { TravelFormData } from '@/src/types/types';
@@ -68,6 +70,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     onStepSelect,
 }) => {
     const colors = useThemedColors();
+    const router = useRouter();
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
     const [footerHeight, setFooterHeight] = useState(0);
@@ -92,6 +95,43 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     const handleFieldChange = useCallback((field: keyof TravelFormData, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     }, [setFormData]);
+
+    // ✅ НОВОЕ: Handler для быстрого черновика
+    const handleQuickDraft = useCallback(async () => {
+        // Проверяем минимальную валидацию (только название)
+        const hasName = formData.name && formData.name.trim().length >= 3;
+
+        if (!hasName) {
+            Toast.show({
+                type: 'error',
+                text1: 'Заполните название',
+                text2: 'Минимум 3 символа для сохранения черновика',
+            });
+            return;
+        }
+
+        try {
+            // Сохраняем черновик
+            await onManualSave();
+
+            Toast.show({
+                type: 'success',
+                text1: '💾 Черновик сохранен',
+                text2: 'Вы можете вернуться к нему позже',
+            });
+
+            // Переходим в список путешествий
+            setTimeout(() => {
+                router.push('/metravel');
+            }, 500);
+        } catch (_error) {
+            Toast.show({
+                type: 'error',
+                text1: 'Ошибка сохранения',
+                text2: 'Попробуйте еще раз',
+            });
+        }
+    }, [formData, onManualSave, router]);
 
     return (
         <SafeAreaView style={styles.safeContainer}>
@@ -156,6 +196,8 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                     onPrimary={onGoNext}
                     primaryLabel={stepMeta?.nextLabel ?? 'Далее'}
                     onSave={onManualSave}
+                    onQuickDraft={handleQuickDraft}
+                    quickDraftLabel="Быстрый черновик"
                     onLayout={handleFooterLayout}
                     currentStep={currentStep}
                     totalSteps={totalSteps}

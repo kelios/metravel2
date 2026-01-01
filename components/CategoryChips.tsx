@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Chip from '@/components/ui/Chip';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface Category {
   id: string | number;
@@ -41,6 +42,8 @@ export default function CategoryChips({
   maxVisible = 10,
   showIcons = true, // ✅ УЛУЧШЕНИЕ: По умолчанию показываем иконки
 }: CategoryChipsProps) {
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const visibleCategories = useMemo(
     () => categories.slice(0, maxVisible),
     [categories, maxVisible]
@@ -61,9 +64,9 @@ export default function CategoryChips({
         const iconName = category.icon || CATEGORY_ICONS[category.name];
         const shouldShowIcon = showIcons && iconName && !isSelected;
         const icon = isSelected ? (
-          <Feather name="x" size={14} color={DESIGN_TOKENS.colors.textOnPrimary} />
+          <Feather name="x" size={14} color={colors.textOnPrimary} />
         ) : shouldShowIcon ? (
-          <Feather name={iconName as any} size={14} color={DESIGN_TOKENS.colors.primary} />
+          <Feather name={iconName as any} size={14} color={colors.primary} />
         ) : undefined;
 
         return (
@@ -86,7 +89,7 @@ export default function CategoryChips({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   scrollView: {
     marginBottom: 0, // ✅ ДИЗАЙН: Убран margin (управляется извне)
   },
@@ -103,13 +106,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+    backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
   },
   moreText: {
     fontSize: 13,
     fontWeight: '500',
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
 });

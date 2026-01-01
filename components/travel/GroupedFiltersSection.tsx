@@ -7,7 +7,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 interface FilterGroup {
     id: string;
     title: string;
-    icon: string;
+    iconName: keyof typeof Feather.glyphMap;
     description?: string;
     defaultExpanded?: boolean;
 }
@@ -60,7 +60,7 @@ const GroupedFiltersSection: React.FC<GroupedFiltersSectionProps> = ({
             >
                 <View style={styles.headerLeft}>
                     <View style={styles.iconWrapper}>
-                        <Text style={styles.iconEmoji}>{group.icon}</Text>
+                        <Feather name={group.iconName} size={18} color={colors.primary} />
                     </View>
                     <View style={styles.headerTextColumn}>
                         <View style={styles.titleRow}>
@@ -134,9 +134,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.primarySoft,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    iconEmoji: {
-        fontSize: 18,
     },
     headerTextColumn: {
         flex: 1,

@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 export type SortOption = 'date' | 'popularity' | 'distance' | 'name';
 
@@ -21,6 +21,8 @@ const SORT_OPTIONS: { value: SortOption; label: string; icon: string }[] = [
 export default function SortSelector({ value, onChange, showDistance = false }: SortSelectorProps) {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
   const options = showDistance
     ? [...SORT_OPTIONS, { value: 'distance' as SortOption, label: 'По расстоянию', icon: 'map-pin' }]
@@ -44,7 +46,7 @@ export default function SortSelector({ value, onChange, showDistance = false }: 
               <Feather
                 name={option.icon as any}
                 size={14}
-                color={isActive ? DESIGN_TOKENS.colors.primary : DESIGN_TOKENS.colors.textMuted}
+                color={isActive ? colors.primary : colors.textMuted}
               />
               <Text style={[styles.optionText, isActive && styles.optionTextActive]}>
                 {option.label}
@@ -57,16 +59,16 @@ export default function SortSelector({ value, onChange, showDistance = false }: 
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: DESIGN_TOKENS.colors.border,
+    borderBottomColor: colors.border,
   },
   containerMobile: {
     flexDirection: 'column',
@@ -76,7 +78,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontWeight: '500',
   },
   optionsContainer: {
@@ -91,21 +93,21 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     gap: 6,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
   },
   optionActive: {
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-    borderColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
   },
   optionText: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontWeight: '500',
   },
   optionTextActive: {
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontWeight: '600',
   },
 });

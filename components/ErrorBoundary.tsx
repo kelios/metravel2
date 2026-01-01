@@ -2,6 +2,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { ThemeContext, getThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface Props {
   children: ReactNode;
@@ -15,6 +16,9 @@ interface State {
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
+  static contextType = ThemeContext;
+  declare context: React.ContextType<typeof ThemeContext>;
+
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -40,6 +44,8 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      const colors = getThemedColors(this.context?.isDark ?? false);
+      const styles = getStyles(colors);
       if (this.props.fallback) {
         return this.props.fallback;
       }
@@ -73,13 +79,13 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: DESIGN_TOKENS.colors.background,
+    backgroundColor: colors.background,
   },
   content: {
     maxWidth: 400,
@@ -89,26 +95,26 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   message: {
     fontSize: 16,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     marginBottom: 24,
     textAlign: 'center',
     lineHeight: 24,
   },
   button: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: DESIGN_TOKENS.radii.md,
     marginBottom: 12,
     minWidth: 200,
     minHeight: 44,
-    shadowColor: DESIGN_TOKENS.colors.text,
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
@@ -117,18 +123,18 @@ const styles = StyleSheet.create({
       web: {
         cursor: 'pointer',
         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: DESIGN_TOKENS.shadows.light,
+        boxShadow: colors.boxShadows.light,
         // @ts-ignore
         ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.primaryDark,
+          backgroundColor: colors.primaryDark,
           transform: 'translateY(-1px)',
-          boxShadow: DESIGN_TOKENS.shadows.medium,
+          boxShadow: colors.boxShadows.medium,
         },
       },
     }),
   },
   buttonText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
@@ -142,12 +148,12 @@ const styles = StyleSheet.create({
         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         // @ts-ignore
         ':hover': {
-          backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+          backgroundColor: colors.primarySoft,
         },
       },
     }),
   },
   secondaryButtonText: {
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
   },
 });
