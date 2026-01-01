@@ -116,7 +116,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
 
             Toast.show({
                 type: 'success',
-                text1: '💾 Черновик сохранен',
+                text1: 'Черновик сохранен',
                 text2: 'Вы можете вернуться к нему позже',
             });
 

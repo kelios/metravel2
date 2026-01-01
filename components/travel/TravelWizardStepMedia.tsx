@@ -218,7 +218,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                             {/* ✅ УЛУЧШЕНИЕ: Рекомендации по загрузке обложки */}
                             <View style={styles.tipsCard}>
                                 <View style={styles.tipIconWrapper}>
-                                    <Text style={styles.tipIcon}>💡</Text>
+                                    <Feather name="info" size={18} color={colors.primary} />
                                 </View>
                                 <View style={styles.tipContent}>
                                     <Text style={styles.tipTitle}>Совет по обложке</Text>
@@ -228,7 +228,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                                         • Используйте качественные фотографии с хорошим освещением
                                     </Text>
                                     <Text style={styles.tipStats}>
-                                        📊 Путешествия с обложкой получают в 3 раза больше просмотров
+                                        Путешествия с обложкой получают в 3 раза больше просмотров
                                     </Text>
                                 </View>
                             </View>
