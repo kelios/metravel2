@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Platform, View, Text, StyleSheet } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type LiveRegionRole = 'polite' | 'assertive' | 'alert';
 type LiveRegionAtomic = 'true' | 'false';
@@ -33,6 +33,7 @@ export const LiveRegion: React.FC<LiveRegionProps> = ({
   visible = true,
   testID,
 }) => {
+  const colors = useThemedColors();
   const liveRegionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,7 +60,7 @@ export const LiveRegion: React.FC<LiveRegionProps> = ({
         accessibilityLiveRegion={role === 'assertive' ? 'assertive' : 'polite'}
         accessibilityLabel={message}
       >
-        <Text style={styles.text}>{message}</Text>
+        <Text style={[styles.text, { color: colors.text }]}>{message}</Text>
       </View>
     );
   }
@@ -194,7 +195,6 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.text,
   },
   webRegion: {
     position: 'absolute',

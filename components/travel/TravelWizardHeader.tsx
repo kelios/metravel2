@@ -3,6 +3,8 @@ import { View, StyleSheet, Text, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
+import { globalFocusStyles } from '@/styles/globalFocus';
 
 type TravelWizardHeaderProps = {
     canGoBack?: boolean;
@@ -27,25 +29,34 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     tipTitle,
     tipBody,
 }) => {
+    const colors = useThemedColors();
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
     const clamped = Math.min(Math.max(progressPercent, 0), 100);
     
-    // Определяем цвет прогресс-бара на основе процента
+    // ✅ УЛУЧШЕНИЕ: Динамический цвет прогресс-бара на основе процента
     const progressColor = useMemo(() => {
-        if (clamped < 33) return DESIGN_TOKENS.colors.dangerLight;
-        if (clamped < 67) return '#FFD93D'; // warning yellow
-        return DESIGN_TOKENS.colors.successDark;
-    }, [clamped]);
+        if (clamped < 33) return colors.danger;
+        if (clamped < 67) return colors.warning;
+        return colors.success;
+    }, [clamped, colors]);
 
     const [isTipOpen, setIsTipOpen] = useState(false);
     const hasTip = !!tipBody && tipBody.trim().length > 0;
     const resolvedTipTitle = useMemo(() => tipTitle ?? 'Совет', [tipTitle]);
 
+    // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с использованием динамических цветов
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     const TipTrigger = hasTip ? (
         <Pressable
             onPress={() => setIsTipOpen(v => !v)}
-            style={[styles.tipToggleButton, isTipOpen && styles.tipToggleButtonActive]}
+            style={({ pressed }) => [
+                styles.tipToggleButton,
+                isTipOpen && styles.tipToggleButtonActive,
+                globalFocusStyles.focusable,
+                pressed && { opacity: 0.8 }
+            ]}
             accessibilityRole="button"
             accessibilityLabel={isTipOpen ? 'Скрыть совет' : 'Показать совет'}
             {...Platform.select({ web: { cursor: 'pointer' } })}
@@ -53,7 +64,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
             <Feather
                 name="help-circle"
                 size={isMobile ? 14 : 16}
-                color={isTipOpen ? DESIGN_TOKENS.colors.primary : DESIGN_TOKENS.colors.textSubtle}
+                color={isTipOpen ? colors.primary : colors.textMuted}
             />
             {!isMobile && (
                 <Text style={[styles.tipToggleText, isTipOpen && styles.tipToggleTextActive]} numberOfLines={1}>
@@ -66,13 +77,17 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     const BackButton = canGoBack ? (
         <Pressable
             onPress={onBack}
-            style={styles.backButton}
+            style={({ pressed }) => [
+                styles.backButton,
+                globalFocusStyles.focusable,
+                pressed && { opacity: 0.8 }
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Назад"
             disabled={!onBack}
             {...Platform.select({ web: { cursor: 'pointer' } })}
         >
-            <Feather name="arrow-left" size={16} color={DESIGN_TOKENS.colors.text} />
+            <Feather name="arrow-left" size={16} color={colors.text} />
             <Text style={styles.backButtonText}>Назад</Text>
         </Pressable>
     ) : null;
@@ -124,14 +139,15 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     headerWrapper: {
         paddingHorizontal: DESIGN_TOKENS.spacing.md,
         paddingTop: DESIGN_TOKENS.spacing.sm,
         paddingBottom: DESIGN_TOKENS.spacing.sm,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: DESIGN_TOKENS.colors.borderLight,
+        borderBottomColor: colors.border,
     },
     headerWrapperMobile: {
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
@@ -158,16 +174,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 6,
         height: 34,
+        minHeight: 44, // ✅ ДОСТУПНОСТЬ: Минимальная высота touch target
         paddingHorizontal: 10,
         borderRadius: DESIGN_TOKENS.radii.pill,
-        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+        backgroundColor: colors.surfaceMuted,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
+        borderColor: colors.border,
     },
     backButtonText: {
         fontSize: 12,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     titleColumn: {
         flex: 1,
@@ -176,29 +193,29 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 17,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         marginBottom: 2,
     },
     headerTitleMobile: {
         fontSize: 16,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         marginBottom: 2,
     },
     headerSubtitle: {
         fontSize: 13,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         fontWeight: '500',
     },
     headerSubtitleMobile: {
         fontSize: 12,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
     },
     autosaveBadge: {
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
         paddingVertical: DESIGN_TOKENS.spacing.xxs,
         borderRadius: DESIGN_TOKENS.radii.pill,
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        backgroundColor: colors.primarySoft,
     },
     mobileMetaRow: {
         marginTop: 0,
@@ -209,7 +226,7 @@ const styles = StyleSheet.create({
     },
     autosaveBadgeText: {
         fontSize: 11,
-        color: DESIGN_TOKENS.colors.primaryDark,
+        color: colors.primary,
         fontWeight: '600',
     },
     tipToggleButton: {
@@ -218,29 +235,30 @@ const styles = StyleSheet.create({
         gap: 6,
         paddingHorizontal: 10,
         height: 32,
+        minHeight: 44, // ✅ ДОСТУПНОСТЬ: Минимальная высота touch target
         borderRadius: DESIGN_TOKENS.radii.pill,
-        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+        backgroundColor: colors.surfaceMuted,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
+        borderColor: colors.border,
     },
     tipToggleButtonActive: {
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-        borderColor: DESIGN_TOKENS.colors.primary,
+        backgroundColor: colors.primarySoft,
+        borderColor: colors.primary,
     },
     tipToggleText: {
         fontSize: 12,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.textSubtle,
+        color: colors.textMuted,
     },
     tipToggleTextActive: {
-        color: DESIGN_TOKENS.colors.primary,
+        color: colors.primary,
     },
     progressBarTrack: {
         marginTop: DESIGN_TOKENS.spacing.xs,
         width: '100%',
         height: 6,
         borderRadius: DESIGN_TOKENS.radii.pill,
-        backgroundColor: DESIGN_TOKENS.colors.borderLight,
+        backgroundColor: colors.border,
         overflow: 'hidden',
     },
     progressBarFill: {
@@ -251,19 +269,19 @@ const styles = StyleSheet.create({
         marginTop: DESIGN_TOKENS.spacing.sm,
         padding: DESIGN_TOKENS.spacing.sm,
         borderRadius: DESIGN_TOKENS.radii.md,
-        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+        backgroundColor: colors.surfaceMuted,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
+        borderColor: colors.border,
     },
     tipPanelTitle: {
         fontSize: 12,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         marginBottom: 4,
     },
     tipPanelBody: {
         fontSize: 12,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         lineHeight: 16,
     },
 });

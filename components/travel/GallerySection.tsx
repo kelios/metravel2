@@ -12,7 +12,7 @@ interface GallerySectionProps {
 }
 
 const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) => {
-    const themedColors = useThemedColors();
+    const colors = useThemedColors();
     const gallerySource = formData?.gallery;
 
     const normalizedImages = useMemo(() => {
@@ -30,11 +30,14 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) =
             .filter(Boolean) as { id: string; url: string }[];
     }, [gallerySource]);
 
+    // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     if (!formData) {
         return (
-            <View style={[styles.galleryContainer, { backgroundColor: themedColors.surface }]}>
-                <ActivityIndicator size="large" color={themedColors.primary} />
-                <Text style={[styles.loadingText, { color: themedColors.textMuted }]}>
+            <View style={styles.galleryContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={styles.loadingText}>
                     Загрузка данных...
                 </Text>
             </View>
@@ -44,8 +47,8 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) =
     // Без ID нельзя загрузить файлы (нужен travelId на бэке)
     if (!formData.id) {
         return (
-            <View style={[styles.galleryContainer, { backgroundColor: themedColors.surface }]}>
-                <Text style={[styles.infoText, { color: themedColors.textMuted }]}>
+            <View style={styles.galleryContainer}>
+                <Text style={styles.infoText}>
                     Галерея станет доступна после сохранения путешествия.
                 </Text>
             </View>
@@ -54,7 +57,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) =
 
     // Для web используем галерею с дропзоной, для native — платформенный файл
     return (
-        <View style={[styles.galleryContainer, { backgroundColor: themedColors.surface }]}>
+        <View style={styles.galleryContainer}>
             <ImageGalleryComponent
                 // Бэкенд коллекция галереи
                 collection="gallery"
@@ -64,7 +67,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) =
                 onChange={onChange}
             />
             {Platform.OS !== 'web' && normalizedImages.length === 0 && (
-                <Text style={[styles.infoText, { color: themedColors.textMuted }]}>
+                <Text style={styles.infoText}>
                     Нет загруженных изображений
                 </Text>
             )}
@@ -72,22 +75,39 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) =
     );
 };
 
-const styles = StyleSheet.create({
+// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     galleryContainer: {
         marginTop: DESIGN_TOKENS.spacing.xxs,
         padding: 15,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: 10,
-        shadowColor: '#000',
+        shadowColor: colors.text,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
         alignItems: 'center',
     },
-    loadingText: { marginTop: DESIGN_TOKENS.spacing.sm, fontSize: DESIGN_TOKENS.typography.sizes.md, textAlign: 'center' },
-    infoText: { fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '500', textAlign: 'center' },
-    emptyText: { fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '500', textAlign: 'center', marginBottom: 8 },
+    loadingText: {
+        marginTop: DESIGN_TOKENS.spacing.sm,
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        textAlign: 'center',
+        color: colors.textMuted,
+    },
+    infoText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        fontWeight: '500',
+        textAlign: 'center',
+        color: colors.textMuted,
+    },
+    emptyText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        fontWeight: '500',
+        textAlign: 'center',
+        marginBottom: 8,
+        color: colors.textMuted,
+    },
 });
 
 export default React.memo(GallerySection);

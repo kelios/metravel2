@@ -3,8 +3,8 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, Platform, View, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 import { TAB_CARD_TEMPLATE, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
 
@@ -33,6 +33,8 @@ type Props = {
 };
 
 function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizontal', contentMinHeight }: Props) {
+  // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
+  const colors = useThemedColors();
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
 
@@ -46,21 +48,25 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
     return (
       <View
         testID={testID ? `${testID}-content` : `tab-travel-card-content-${String(item?.id ?? 'unknown')}`}
-        style={[styles.content, typeof contentMinHeight === 'number' ? { minHeight: contentMinHeight } : null]}
+        style={[
+          styles.content,
+          { backgroundColor: colors.surface },
+          typeof contentMinHeight === 'number' ? { minHeight: contentMinHeight } : null
+        ]}
       >
-        <Text style={styles.title} numberOfLines={2}>
+        <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
           {title}
         </Text>
 
         <View style={styles.locationRow}>
-          <MaterialIcons name="place" size={12} color={DESIGN_TOKENS.colors.textMuted} style={{ marginRight: 4 }} />
-          <Text style={styles.locationText} numberOfLines={1}>
+          <MaterialIcons name="place" size={12} color={colors.textMuted} style={{ marginRight: 4 }} />
+          <Text style={[styles.locationText, { color: colors.textMuted }]} numberOfLines={1}>
             {location || ' '}
           </Text>
         </View>
       </View>
     );
-  }, [contentMinHeight, item?.id, location, testID, title]);
+  }, [colors, contentMinHeight, item?.id, location, testID, title]);
 
   return (
     <UnifiedTravelCard
@@ -111,7 +117,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
     gap: 8,
     minHeight: 64,
   },
@@ -119,7 +124,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
     lineHeight: 18,
     letterSpacing: -0.2,
     minHeight: 36,
@@ -134,7 +138,6 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 12,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textMuted,
     flex: 1,
   },
 

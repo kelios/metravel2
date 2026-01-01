@@ -65,7 +65,7 @@ export const saveFormData = async (data: TravelFormData): Promise<TravelFormData
     }
 
     // Генерируем уникальный slug для новых путешествий, чтобы избежать конфликтов unique constraint
-    const payload: TravelFormData = { ...data };
+    const payload: TravelFormData = sanitizeForJson({ ...data }) as TravelFormData;
     if (!payload.id) {
       const existing = (payload.slug || '').trim();
       payload.slug = existing || makeUniqueSlug(payload.name || 'travel');
@@ -79,6 +79,60 @@ export const saveFormData = async (data: TravelFormData): Promise<TravelFormData
     throw error;
   }
 };
+
+/**
+ * Удаляет из объекта несериализуемые сущности (DOM-узлы, функции, React элементы)
+ * и разрывает возможные циклические ссылки перед JSON.stringify.
+ */
+function sanitizeForJson<T>(value: T, seen = new WeakSet()): T {
+  if (value === null || typeof value !== 'object') {
+    return value;
+  }
+
+  // Пропускаем повторно встреченные объекты, чтобы разорвать циклы
+  if (seen.has(value as any)) {
+    return undefined as any;
+  }
+  seen.add(value as any);
+
+  // Фильтруем DOM-узлы и React-элементы
+  if (typeof HTMLElement !== 'undefined' && value instanceof HTMLElement) {
+    return undefined as any;
+  }
+  if (typeof Node !== 'undefined' && value instanceof Node) {
+    return undefined as any;
+  }
+
+  // Фильтруем события/функции/символы/бигинты
+  if (
+    typeof value === 'function' ||
+    value instanceof Event ||
+    typeof (value as any) === 'symbol' ||
+    typeof (value as any) === 'bigint'
+  ) {
+    return undefined as any;
+  }
+
+  // Даты сериализуем в строку
+  if (value instanceof Date) {
+    return value.toISOString() as any;
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map(item => sanitizeForJson(item, seen))
+      .filter(item => item !== undefined) as any;
+  }
+
+  const result: Record<string, any> = {};
+  Object.entries(value as Record<string, any>).forEach(([key, val]) => {
+    const sanitized = sanitizeForJson(val, seen);
+    if (sanitized !== undefined) {
+      result[key] = sanitized;
+    }
+  });
+  return result as any;
+}
 
 export const deleteTravelMainImage = async (travelId: string | number) => {
   const token = await getSecureItem('userToken');

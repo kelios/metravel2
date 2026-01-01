@@ -12,6 +12,7 @@ import MultiSelectField from '@/components/MultiSelectField';
 import { matchCountryId, buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const WebMapComponent = Platform.OS === 'web'
     ? React.lazy(() => import('@/components/travel/WebMapComponent'))
@@ -72,10 +73,14 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     onAnchorHandled,
     onStepSelect,
 }) => {
+    const colors = useThemedColors();
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
 
     const [footerHeight, setFooterHeight] = useState(0);
+
+    // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
         const next = Math.ceil(event.nativeEvent.layout.height);
@@ -510,10 +515,11 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     safeContainer: {
         flex: 1,
-        backgroundColor: DESIGN_TOKENS.colors.background,
+        backgroundColor: colors.background,
         ...(Platform.OS === 'web' ? ({ minHeight: '100vh' } as any) : null),
     },
     keyboardAvoid: { flex: 1 },

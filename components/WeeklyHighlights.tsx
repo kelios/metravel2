@@ -7,7 +7,7 @@ import { fetchTravelsOfMonth } from '@/src/api/map';
 import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
 
@@ -21,7 +21,8 @@ interface WeeklyHighlightsProps {
 function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true, enabled = true }: WeeklyHighlightsProps) {
     const router = useRouter();
     const { viewHistory } = useFavorites();
-    
+    const colors = useThemedColors();
+
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
 
@@ -142,14 +143,14 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
         // Если forceVisible не установлен, используем локальное состояние isCollapsed
         if (isInitialized && isCollapsed) {
             return (
-                <View style={styles.collapsedContainer}>
-                    <Pressable 
+                <View style={[styles.collapsedContainer, { backgroundColor: colors.backgroundSecondary, borderColor: colors.borderLight }]}>
+                    <Pressable
                         onPress={handleExpand}
                         style={styles.expandButton}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                        <MaterialIcons name="expand-more" size={20} color={DESIGN_TOKENS.colors.primary} />
-                        <Text style={styles.expandButtonText}>Подборка месяца</Text>
+                        <MaterialIcons name="expand-more" size={20} color={colors.primary} />
+                        <Text style={[styles.expandButtonText, { color: colors.primary }]}>Подборка месяца</Text>
                     </Pressable>
                 </View>
             );
@@ -161,17 +162,17 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
             {showHeader && (
                 <>
                     <View style={styles.header}>
-                        <View style={[styles.iconContainer, { backgroundColor: DESIGN_TOKENS.colors.primaryLight }]}>
-                            <MaterialIcons name="auto-awesome" size={20} color={DESIGN_TOKENS.colors.primary} />
+                        <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
+                            <MaterialIcons name="auto-awesome" size={20} color={colors.primary} />
                         </View>
                         <View style={styles.titleContainer}>
-                            <Text style={styles.title}>Подборка месяца</Text>
-                            <View style={styles.badgeContainer}>
-                                <Text style={styles.badgeText}>Выбор месяца</Text>
+                            <Text style={[styles.title, { color: colors.text }]}>Подборка месяца</Text>
+                            <View style={[styles.badgeContainer, { backgroundColor: colors.primarySoft }]}>
+                                <Text style={[styles.badgeText, { color: colors.primary }]}>Выбор месяца</Text>
                             </View>
                         </View>
                     </View>
-                    <Text style={styles.subtitle}>Самые популярные маршруты этого месяца</Text>
+                    <Text style={[styles.subtitle, { color: colors.textMuted }]}>Самые популярные маршруты этого месяца</Text>
                 </>
             )}
             <ScrollView
@@ -204,8 +205,8 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                         }}
                         badge={{
                             icon: 'trending-up',
-                            backgroundColor: DESIGN_TOKENS.colors.surface,
-                            iconColor: DESIGN_TOKENS.colors.primary,
+                            backgroundColor: colors.surface,
+                            iconColor: colors.primary,
                         }}
                         onPress={() => handleItemPress(item.url)}
                     />
@@ -240,10 +241,8 @@ const styles = StyleSheet.create({
         width: 28,
         height: 28,
         borderRadius: 8,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: DESIGN_TOKENS.colors.text,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.06,
         shadowRadius: 2,
@@ -259,11 +258,9 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 15, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше размер
         fontWeight: '600', // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Меньше жирность
-        color: DESIGN_TOKENS.colors.text,
         letterSpacing: -0.1,
     },
     badgeContainer: {
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Прозрачный фон
         borderRadius: 8,
         paddingHorizontal: 8,
         paddingVertical: 3,
@@ -271,12 +268,10 @@ const styles = StyleSheet.create({
     badgeText: {
         fontSize: 11,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.primary, // ✅ МИНИМАЛИСТИЧНЫЙ ДИЗАЙН: Цвет текста вместо белого
         letterSpacing: 0.1,
     },
     subtitle: {
         fontSize: 13,
-        color: DESIGN_TOKENS.colors.textMuted,
         paddingHorizontal: 12,
         marginLeft: 0,
         marginBottom: 12,
@@ -299,10 +294,8 @@ const styles = StyleSheet.create({
         marginHorizontal: 4,
         paddingVertical: 8,
         paddingHorizontal: 12,
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.borderLight,
     },
     expandButton: {
         flexDirection: 'row',
@@ -318,7 +311,6 @@ const styles = StyleSheet.create({
     expandButtonText: {
         fontSize: 14,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.primary,
         marginLeft: 6,
     },
     scrollContent: {

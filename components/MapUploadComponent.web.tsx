@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native
 import { useDropzone } from 'react-dropzone';
 import { uploadImage } from "@/src/api/misc";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 // Условный импорт для DocumentPicker, только если платформа не является вебом
 let DocumentPicker: any;
@@ -16,6 +17,9 @@ interface MapUploadComponentProps {
 }
 
 const MapUploadComponent: React.FC<MapUploadComponentProps> = ({ collection, idTravel }) => {
+    // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
+    const colors = useThemedColors();
+
     const [fileUri, setFileUri] = useState<string | null>(null);
     const [fileName, setFileName] = useState<string | null>(null);
     const [uploadMessage, setUploadMessage] = useState<string | null>(null);
@@ -95,29 +99,33 @@ const MapUploadComponent: React.FC<MapUploadComponentProps> = ({ collection, idT
     return (
         <View style={styles.container}>
             {Platform.OS === 'web' ? (
-                <div {...getRootProps({ className: 'dropzone' })} style={styles.dropzone}>
+                <div {...getRootProps({ className: 'dropzone' })} style={{
+                    ...styles.dropzone,
+                    backgroundColor: colors.primary,
+                    borderColor: colors.primaryDark,
+                }}>
                     <input {...getInputProps()} />
                     {fileUri ? (
-                        <Text style={styles.fileName}>{fileName}</Text>
+                        <Text style={[styles.fileName, { color: colors.textInverse }]}>{fileName}</Text>
                     ) : (
-                        <Text style={styles.placeholderText}>
+                        <Text style={[styles.placeholderText, { color: colors.textInverse }]}>
                             Перетащите сюда файл карты (.gpx, .kml, .kmz, .geojson) или нажмите для выбора
                         </Text>
                     )}
                 </div>
             ) : (
                 <>
-                    <TouchableOpacity style={styles.uploadButton} onPress={pickFile}>
-                        <Text style={styles.buttonText}>Выбрать файл карты</Text>
+                    <TouchableOpacity style={[styles.uploadButton, { backgroundColor: colors.primary }]} onPress={pickFile}>
+                        <Text style={[styles.buttonText, { color: colors.textInverse }]}>Выбрать файл карты</Text>
                     </TouchableOpacity>
                     {fileUri ? (
-                        <Text style={styles.fileName}>{fileName}</Text>
+                        <Text style={[styles.fileName, { color: colors.text }]}>{fileName}</Text>
                     ) : (
-                        <Text style={styles.placeholderText}>Загрузите файл карты (.gpx, .kml, .kmz, .geojson)</Text>
+                        <Text style={[styles.placeholderText, { color: colors.textMuted }]}>Загрузите файл карты (.gpx, .kml, .kmz, .geojson)</Text>
                     )}
                 </>
             )}
-            {uploadMessage && <Text style={styles.uploadMessage}>{uploadMessage}</Text>}
+            {uploadMessage && <Text style={[styles.uploadMessage, { color: colors.primary }]}>{uploadMessage}</Text>}
         </View>
     );
 };
@@ -127,19 +135,17 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
+        padding: DESIGN_TOKENS.spacing.xl,
     },
     dropzone: {
         width: 300,
         height: 200,
         borderWidth: 2,
-        backgroundColor: DESIGN_TOKENS.colors.primary,
-        borderRadius: 10,
+        borderRadius: DESIGN_TOKENS.radii.lg,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        // Web-специфичные стили выносим отдельно и приводим к any, чтобы не мешать типам RN
+        paddingVertical: DESIGN_TOKENS.spacing.md,
+        paddingHorizontal: DESIGN_TOKENS.spacing.xl,
         ...(Platform.select({
             web: {
                 display: 'flex',
@@ -150,34 +156,29 @@ const styles = StyleSheet.create({
         }) as any),
     },
     fileName: {
-        color: DESIGN_TOKENS.colors.textOnPrimary,
-        fontSize: 16,
+        fontSize: DESIGN_TOKENS.typography.sizes.lg,
         textAlign: 'center',
-        marginVertical: 20,
+        marginVertical: DESIGN_TOKENS.spacing.xl,
     },
     placeholderText: {
-        color: DESIGN_TOKENS.colors.textOnPrimary,
-        fontSize: 16,
+        fontSize: DESIGN_TOKENS.typography.sizes.lg,
         textAlign: 'center',
-        marginTop: 20,
+        marginTop: DESIGN_TOKENS.spacing.xl,
     },
     buttonText: {
-        color: DESIGN_TOKENS.colors.textOnPrimary,
-        fontSize: 16,
+        fontSize: DESIGN_TOKENS.typography.sizes.lg,
         textAlign: 'center',
     },
     uploadButton: {
-        backgroundColor: DESIGN_TOKENS.colors.primary,
-        paddingVertical: 15,
-        paddingHorizontal: 30,
-        borderRadius: 25,
+        paddingVertical: DESIGN_TOKENS.spacing.lg,
+        paddingHorizontal: DESIGN_TOKENS.spacing.xxl,
+        borderRadius: DESIGN_TOKENS.radii.pill,
         ...DESIGN_TOKENS.shadowsNative.medium,
     },
     uploadMessage: {
-        color: DESIGN_TOKENS.colors.primary,
-        fontSize: 14,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         textAlign: 'center',
-        marginTop: 10,
+        marginTop: DESIGN_TOKENS.spacing.md,
     },
 });
 

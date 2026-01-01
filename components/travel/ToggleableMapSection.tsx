@@ -23,8 +23,12 @@ const ToggleableMapSection = ({
     const [showMap, setShowMap] = useState(initiallyOpen);
     const [hasOpened, setHasOpened] = useState(initiallyOpen);
     const { isPhone } = useResponsive();
-    const themedColors = useThemedColors();
+    const colors = useThemedColors();
     const isMobile = isPhone;
+
+    // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     const hintText = useMemo(
         () => (showMap && isLoading ? loadingLabel : showMap ? 'Скрыть карту' : 'Показать карту'),
         [isLoading, loadingLabel, showMap],
@@ -48,15 +52,14 @@ const ToggleableMapSection = ({
                 onPress={handleToggle}
                 style={({ pressed }) => [
                     styles.toggleButton,
-                    { backgroundColor: themedColors.surface },
-                    pressed && { backgroundColor: themedColors.surfaceLight },
+                    pressed && styles.toggleButtonPressed,
                 ]}
             >
-                <Feather name="map-pin" size={18} color={themedColors.text} style={{ marginRight: DESIGN_TOKENS.spacing.xs }} />
-                <Text style={[styles.toggleText, { color: themedColors.text }, isMobile && styles.toggleTextMobile]}>
+                <Feather name="map-pin" size={18} color={colors.text} style={{ marginRight: DESIGN_TOKENS.spacing.xs }} />
+                <Text style={[styles.toggleText, isMobile && styles.toggleTextMobile]}>
                     {hintText}
                 </Text>
-                <Feather name={showMap ? 'chevron-up' : 'chevron-down'} size={18} color={themedColors.text} />
+                <Feather name={showMap ? 'chevron-up' : 'chevron-down'} size={18} color={colors.text} />
             </Pressable>
 
             {shouldRenderContainer && (
@@ -64,7 +67,6 @@ const ToggleableMapSection = ({
                     style={[
                         styles.mapContainer,
                         isMobile && styles.mapContainerMobile,
-                        { backgroundColor: themedColors.surface },
                         !showMap && keepMounted ? { height: 0, minHeight: 0, marginTop: 0 } : null,
                     ]}
                 >
@@ -72,16 +74,11 @@ const ToggleableMapSection = ({
                         isLoading ? (
                             <View style={styles.loadingState}>
                                 {Platform.OS === 'web' ? (
-                                    <View
-                                        style={[
-                                            styles.loadingSkeleton,
-                                            { backgroundColor: themedColors.surfaceLight, borderColor: themedColors.border },
-                                        ]}
-                                    />
+                                    <View style={styles.loadingSkeleton} />
                                 ) : (
-                                    <ActivityIndicator color={themedColors.primary} />
+                                    <ActivityIndicator color={colors.primary} />
                                 )}
-                                <Text style={[styles.loadingText, { color: themedColors.textMuted }]}>{loadingLabel}</Text>
+                                <Text style={styles.loadingText}>{loadingLabel}</Text>
                             </View>
                         ) : (
                             children
@@ -97,7 +94,8 @@ const ToggleableMapSection = ({
 
 export default ToggleableMapSection;
 
-const styles = StyleSheet.create({
+// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     wrapper: {
         width: '100%',
     },
@@ -109,6 +107,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: DESIGN_TOKENS.spacing.lg,
         borderRadius: 16,
         gap: DESIGN_TOKENS.spacing.sm,
+        backgroundColor: colors.surface,
         ...Platform.select({
           web: {
             boxShadow: DESIGN_TOKENS.shadows.light,
@@ -121,9 +120,13 @@ const styles = StyleSheet.create({
           },
         }),
     },
+    toggleButtonPressed: {
+        backgroundColor: colors.surfaceLight,
+    },
     toggleText: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '600',
+        color: colors.text,
     },
     toggleTextMobile: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -134,6 +137,7 @@ const styles = StyleSheet.create({
         minHeight: 400,
         borderRadius: 16,
         overflow: 'hidden',
+        backgroundColor: colors.surface,
         ...Platform.select({
           web: {
             boxShadow: DESIGN_TOKENS.shadows.light,
@@ -158,11 +162,14 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: colors.textMuted,
     },
     loadingSkeleton: {
         width: 52,
         height: 52,
         borderRadius: 14,
         borderWidth: 1,
+        backgroundColor: colors.surfaceLight,
+        borderColor: colors.border,
     },
 });

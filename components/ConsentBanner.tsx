@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LAYOUT } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const CONSENT_KEY = 'metravel_consent_v1';
 
@@ -44,6 +45,7 @@ function writeConsent(consent: ConsentState) {
 }
 
 export default function ConsentBanner() {
+  const colors = useThemedColors();
   const [visible, setVisible] = useState(false);
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
@@ -99,30 +101,30 @@ export default function ConsentBanner() {
         { pointerEvents: 'box-none' } as any,
       ]}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.surface }]}>
         <View style={styles.textBlock}>
-          <Text style={styles.title}>Мы ценим вашу приватность</Text>
-          <Text style={styles.text}>
+          <Text style={[styles.title, { color: colors.text }]}>Мы ценим вашу приватность</Text>
+          <Text style={[styles.text, { color: colors.textMuted }]}>
             Мы используем технические файлы и, с вашего согласия, аналитические инструменты (Яндекс.Метрика,
             Google Analytics) для улучшения сервиса. Вы можете выбрать только необходимые или принять всё.
           </Text>
-          <Text style={styles.linkHint}>
+          <Text style={[styles.linkHint, { color: colors.textMuted }]}>
             Подробнее читайте в нашей Политике конфиденциальности и на странице настроек cookies.
           </Text>
         </View>
         <View style={styles.buttonsRow}>
-          <TouchableOpacity style={[styles.button, styles.secondary]} onPress={handleNecessaryOnly}>
-            <Text style={styles.secondaryText}>Только необходимые</Text>
+          <TouchableOpacity style={[styles.button, styles.secondary, { borderColor: colors.border }]} onPress={handleNecessaryOnly}>
+            <Text style={[styles.secondaryText, { color: colors.text }]}>Только необходимые</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.button, styles.primary]} onPress={handleAcceptAll}>
-            <Text style={styles.primaryText}>Принять всё</Text>
+          <TouchableOpacity style={[styles.button, styles.primary, { backgroundColor: colors.primary }]} onPress={handleAcceptAll}>
+            <Text style={[styles.primaryText, { color: colors.textOnPrimary }]}>Принять всё</Text>
           </TouchableOpacity>
         </View>
       </View>
       {isWeb && (
         <View style={styles.bottomLinkRow}>
           <Link href="/cookies" style={styles.manageLink}>
-            <Text style={styles.manageLinkText}>Изменить настройки cookies</Text>
+            <Text style={[styles.manageLinkText, { color: colors.textMuted }]}>Изменить настройки cookies</Text>
           </Link>
         </View>
       )}
@@ -151,7 +153,6 @@ const styles = StyleSheet.create({
   },
   manageLinkText: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
     textDecorationLine: 'underline',
   },
   container: {
@@ -160,13 +161,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
     ...Platform.select({
       web: {
         boxShadow: DESIGN_TOKENS.shadows.modal,
       },
       ios: {
-        shadowColor: DESIGN_TOKENS.colors.text,
         shadowOpacity: 0.2,
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 4 },
@@ -180,19 +179,16 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: {
-    color: DESIGN_TOKENS.colors.text,
     fontSize: 15,
     fontWeight: '600',
     marginBottom: 4,
   },
   text: {
-    color: DESIGN_TOKENS.colors.textMuted,
     fontSize: 13,
     lineHeight: 18,
   },
   linkHint: {
     marginTop: 4,
-    color: DESIGN_TOKENS.colors.textSubtle,
     fontSize: 12,
   },
   buttonsRow: {
@@ -211,20 +207,18 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   primary: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    // backgroundColor перемещен в inline стили
   },
   primaryText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
     fontSize: 13,
     fontWeight: '600',
   },
   secondary: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    // borderColor перемещен в inline стили
   },
   secondaryText: {
-    color: DESIGN_TOKENS.colors.text,
     fontSize: 13,
     fontWeight: '500',
   },

@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  useColorScheme,
   Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -14,6 +13,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { uploadImage, deleteImage } from '@/src/api/misc';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const API_BASE_URL: string =
   process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
@@ -60,6 +60,9 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   initialImages,
   maxImages = 10,
 }) => {
+  // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
+  const colors = useThemedColors();
+
   const [images, setImages] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState<boolean[]>([]);
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -67,8 +70,6 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   const [dialogVisible, setDialogVisible] = useState(false);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
 
-  const theme = useColorScheme();
-  const isDarkMode = theme === 'dark';
 
   useEffect(() => {
     if (initialImages?.length) {
@@ -222,11 +223,11 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   };
 
   return (
-    <View style={[styles.container, isDarkMode && styles.darkContainer]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.headerContainer}>
-        <Text style={[styles.galleryTitle, isDarkMode && styles.darkText]}>📷 Галерея</Text>
-        <Text style={[styles.imageCount, isDarkMode && styles.darkText]}>
-          Загружено <Text style={styles.highlight}>{images.length}</Text> из {maxImages}
+        <Text style={[styles.galleryTitle, { color: colors.text }]}>📷 Галерея</Text>
+        <Text style={[styles.imageCount, { color: colors.textMuted }]}>
+          Загружено <Text style={[styles.highlight, { color: colors.primary }]}>{images.length}</Text> из {maxImages}
         </Text>
       </View>
 
@@ -235,22 +236,22 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             onPress={handlePickImages}
-            style={[styles.addButton, isDarkMode && styles.darkButton]}
+            style={[styles.addButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
             disabled={isUploading}
           >
             <Text style={styles.addButtonIcon}>🖼️</Text>
-            <Text style={[styles.addButtonText, isDarkMode && styles.darkText]}>
+            <Text style={[styles.addButtonText, { color: colors.textInverse }]}>
               Выбрать из галереи
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleTakePhoto}
-            style={[styles.addButton, isDarkMode && styles.darkButton]}
+            style={[styles.addButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
             disabled={isUploading}
           >
             <Text style={styles.addButtonIcon}>📷</Text>
-            <Text style={[styles.addButtonText, isDarkMode && styles.darkText]}>
+            <Text style={[styles.addButtonText, { color: colors.textInverse }]}>
               Сделать фото
             </Text>
           </TouchableOpacity>
@@ -258,13 +259,13 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       )}
 
       {isInitialLoading ? (
-        <ActivityIndicator size="large" color="#4b7c6f" style={styles.loader} />
+        <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
       ) : images.length > 0 ? (
         <View style={styles.galleryGrid}>
           {images.map((image, index) => (
             <View key={image.id} style={styles.imageWrapper}>
               {loading[index] ? (
-                <ActivityIndicator size="large" color="#ffffff" />
+                <ActivityIndicator size="large" color={colors.textInverse} />
               ) : (
                 <>
                   <ImageCardMedia
@@ -287,15 +288,15 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
           ))}
         </View>
       ) : (
-        <Text style={[styles.noImagesText, isDarkMode && styles.darkText]}>
+        <Text style={[styles.noImagesText, { color: colors.textMuted }]}>
           Нет загруженных изображений
         </Text>
       )}
 
       {isUploading && (
         <View style={styles.uploadingOverlay}>
-          <ActivityIndicator size="large" color="#ffffff" />
-          <Text style={styles.uploadingText}>Загружаются изображения...</Text>
+          <ActivityIndicator size="large" color={colors.textInverse} />
+          <Text style={[styles.uploadingText, { color: colors.textInverse }]}>Загружаются изображения...</Text>
         </View>
       )}
 
@@ -319,9 +320,6 @@ const styles = StyleSheet.create({
     padding: DESIGN_TOKENS.spacing.xl,
     width: '100%',
   },
-  darkContainer: {
-    backgroundColor: '#222',
-  },
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -329,20 +327,16 @@ const styles = StyleSheet.create({
     marginBottom: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
   },
   galleryTitle: {
     fontSize: DESIGN_TOKENS.typography.sizes.xl,
     fontWeight: 'bold',
-    color: '#333',
   },
   imageCount: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: '#666',
   },
   highlight: {
     fontWeight: 'bold',
-    color: '#4b7c6f',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -355,15 +349,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: DESIGN_TOKENS.spacing.md,
-    backgroundColor: '#f5f5f5',
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#4b7c6f',
     borderStyle: 'dashed',
-  },
-  darkButton: {
-    backgroundColor: '#333',
-    borderColor: '#4b7c6f',
   },
   addButtonIcon: {
     fontSize: 24,
@@ -372,7 +360,6 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
-    color: '#4b7c6f',
   },
   galleryGrid: {
     flexDirection: 'row',
@@ -412,12 +399,8 @@ const styles = StyleSheet.create({
   },
   noImagesText: {
     textAlign: 'center',
-    color: '#999',
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     marginTop: DESIGN_TOKENS.spacing.xl,
-  },
-  darkText: {
-    color: '#e0e0e0',
   },
   loader: {
     marginTop: DESIGN_TOKENS.spacing.xl,
@@ -434,7 +417,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   uploadingText: {
-    color: '#fff',
     marginTop: DESIGN_TOKENS.spacing.md,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
   },

@@ -54,43 +54,145 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     });
   }, []);
 
+  const DRAFT_PLACEHOLDER_PREFIX = '__draft_placeholder__';
+
+  const ensureRequiredDraftFields = useCallback((payload: TravelFormData) => {
+    const normalized: TravelFormData = { ...payload };
+    const draftPlaceholder = `${DRAFT_PLACEHOLDER_PREFIX}${normalized.id ?? 'new'}`;
+    const arrayFields: Array<keyof TravelFormData> = [
+      'categories',
+      'transports',
+      'month',
+      'complexity',
+      'companions',
+      'over_nights_stay',
+      'countries',
+      'thumbs200ForCollectionArr',
+      'travelImageThumbUrlArr',
+      'travelImageAddress',
+    ];
+    const stringFields: Array<keyof TravelFormData> = [
+      'minus',
+      'plus',
+      'recommendation',
+      'description',
+      'youtube_link',
+    ];
+    const booleanFields: Array<keyof TravelFormData> = ['publish', 'visa', 'moderation'];
+
+    arrayFields.forEach(field => {
+      if (!Array.isArray(normalized[field])) {
+        (normalized as any)[field] = [];
+      }
+    });
+
+    booleanFields.forEach(field => {
+      const value = normalized[field];
+      if (typeof value !== 'boolean') {
+        if (value === 'false' || value === '0' || value === 0) {
+          (normalized as any)[field] = false;
+        } else if (value === 'true' || value === '1' || value === 1) {
+          (normalized as any)[field] = true;
+        } else {
+          (normalized as any)[field] = Boolean(value);
+        }
+      }
+    });
+
+    const isDraft = !normalized.publish && !normalized.moderation;
+
+    stringFields.forEach(field => {
+      const value = normalized[field];
+      const isBlank =
+        value == null ||
+        (typeof value === 'string' && value.trim().length === 0);
+      if (isBlank) {
+        (normalized as any)[field] = isDraft ? draftPlaceholder : '';
+      }
+    });
+
+    return normalized;
+  }, []);
+
+  const normalizeDraftPlaceholders = useCallback((payload: TravelFormData) => {
+    const normalized: TravelFormData = { ...payload };
+    const stringFields: Array<keyof TravelFormData> = [
+      'minus',
+      'plus',
+      'recommendation',
+      'description',
+      'youtube_link',
+    ];
+
+    stringFields.forEach(field => {
+      const value = normalized[field];
+      if (typeof value === 'string' && value.startsWith(DRAFT_PLACEHOLDER_PREFIX)) {
+        (normalized as any)[field] = '';
+        return;
+      }
+      if (typeof value === 'string' && value.trim().length === 0) {
+        (normalized as any)[field] = '';
+      }
+    });
+
+    return normalized;
+  }, []);
+
   const cleanAndSave = useCallback(async (data: TravelFormData) => {
-    const normalizedMarkers = Array.isArray((data as any).coordsMeTravel)
-      ? (data as any).coordsMeTravel.map((m: any) => ({
-          ...m,
-          categories: Array.isArray(m?.categories)
+    const baseFormData = getEmptyFormData(data?.id ? String(data.id) : null);
+    const mergedData = {
+      ...baseFormData,
+      ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)),
+    } as TravelFormData;
+
+    const normalizedMarkers = Array.isArray((mergedData as any).coordsMeTravel)
+      ? (mergedData as any).coordsMeTravel.map((m: any) => {
+          const { image, ...rest } = m ?? {};
+          const imageValue = typeof image === 'string' ? image.trim() : image;
+          const categories = Array.isArray(m?.categories)
             ? m.categories
                 .map((c: any) => Number(c))
                 .filter((n: number) => Number.isFinite(n))
-            : [],
-        }))
+            : [];
+
+          return {
+            ...rest,
+            categories,
+            ...(imageValue ? { image: imageValue } : {}),
+          };
+        })
       : [];
 
     const cleanedData = cleanEmptyFields({
-      ...data,
-      id: normalizeTravelId(data.id),
+      ...mergedData,
+      id: normalizeTravelId(mergedData.id),
       coordsMeTravel: normalizedMarkers,
     });
 
-    return await saveFormData(cleanedData);
-  }, []);
+    const payload = ensureRequiredDraftFields(cleanedData as TravelFormData);
+
+    return await saveFormData(payload);
+  }, [ensureRequiredDraftFields]);
 
   const applySavedData = useCallback(
     (savedData: TravelFormData) => {
-      const markersFromResponse = Array.isArray(savedData.coordsMeTravel) ? (savedData.coordsMeTravel as any) : [];
+      const normalizedSavedData = normalizeDraftPlaceholders(savedData);
+      const markersFromResponse = Array.isArray(normalizedSavedData.coordsMeTravel)
+        ? (normalizedSavedData.coordsMeTravel as any)
+        : [];
       const currentMarkers = Array.isArray(formState.data.coordsMeTravel) ? (formState.data.coordsMeTravel as any) : [];
       // Если бэкенд не вернул точки (например, черновик без coords в ответе), сохраняем локальные маркеры.
       const effectiveMarkers = markersFromResponse.length > 0 ? markersFromResponse : currentMarkers;
-      const syncedCountries = syncCountriesFromMarkers(effectiveMarkers, savedData.countries || []);
+      const syncedCountries = syncCountriesFromMarkers(effectiveMarkers, normalizedSavedData.countries || []);
 
       formState.updateFields({
-        ...savedData,
+        ...normalizedSavedData,
         countries: syncedCountries,
         coordsMeTravel: effectiveMarkers,
       });
       setMarkers(effectiveMarkers);
     },
-    [formState]
+    [formState, normalizeDraftPlaceholders]
   );
 
   const handleSaveSuccess = useCallback(
@@ -125,8 +227,9 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       const toSave = (dataOverride ?? (formState.data as TravelFormData)) as TravelFormData;
       // Если пришли извне готовые данные — сохраняем напрямую, минуя отложенный стейт.
       const savedData = await cleanAndSave(toSave);
-      applySavedData(savedData);
-      autosave?.updateBaseline?.(savedData);
+      const normalizedSavedData = normalizeDraftPlaceholders(savedData);
+      applySavedData(normalizedSavedData);
+      autosave?.updateBaseline?.(normalizedSavedData);
       autosave?.cancelPending?.();
       showToast('Сохранено');
       return savedData;
@@ -173,7 +276,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
           setHasAccess(true);
         }
 
-        const transformed = transformTravelToFormData(travelData);
+        const transformed = normalizeDraftPlaceholders(transformTravelToFormData(travelData));
         const markersFromData = (transformed.coordsMeTravel as any) || [];
         const syncedCountries = syncCountriesFromMarkers(markersFromData, transformed.countries || []);
 

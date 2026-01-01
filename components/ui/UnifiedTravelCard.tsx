@@ -99,78 +99,84 @@ function UnifiedTravelCard({
       testID={testID}
       {...Platform.select({ web: { cursor: 'pointer' } as any })}
     >
-      <View style={[styles.imageContainer, typeof imageHeight === 'number' ? { height: imageHeight } : null]}>
-        {imageUrl ? (
-          <ImageCardMedia
-            src={imageUrl}
-            alt={title}
-            fit={mediaFit}
-            blurBackground={mediaProps?.blurBackground ?? true}
-            blurRadius={mediaProps?.blurRadius ?? 16}
-            placeholderBlurhash={mediaProps?.placeholderBlurhash}
-            style={StyleSheet.absoluteFill}
-            loading={mediaProps?.loading ?? (Platform.OS === 'web' ? 'lazy' : 'lazy')}
-            priority={mediaProps?.priority ?? (Platform.OS === 'web' ? 'low' : 'normal')}
-            prefetch={mediaProps?.prefetch ?? false}
-          />
-        ) : (
-          <View style={styles.imagePlaceholder} testID="image-stub">
-            <View style={styles.placeholderContent}>
-              <MaterialIcons name="image" size={26} color={DESIGN_TOKENS.colors.textMuted} style={{ opacity: 0.55 }} />
-              <Text style={styles.placeholderText}>Нет фото</Text>
+      {[
+        <View
+          key="media"
+          style={[styles.imageContainer, typeof imageHeight === 'number' ? { height: imageHeight } : null]}
+        >
+          {imageUrl ? (
+            <ImageCardMedia
+              src={imageUrl}
+              alt={title}
+              fit={mediaFit}
+              blurBackground={mediaProps?.blurBackground ?? true}
+              blurRadius={mediaProps?.blurRadius ?? 16}
+              placeholderBlurhash={mediaProps?.placeholderBlurhash}
+              style={StyleSheet.absoluteFill}
+              loading={mediaProps?.loading ?? (Platform.OS === 'web' ? 'lazy' : 'lazy')}
+              priority={mediaProps?.priority ?? (Platform.OS === 'web' ? 'low' : 'normal')}
+              prefetch={mediaProps?.prefetch ?? false}
+            />
+          ) : (
+            <View style={styles.imagePlaceholder} testID="image-stub">
+              <View style={styles.placeholderContent}>
+                <MaterialIcons name="image" size={26} color={DESIGN_TOKENS.colors.textMuted} style={{ opacity: 0.55 }} />
+                <Text style={styles.placeholderText}>Нет фото</Text>
+              </View>
             </View>
-          </View>
-        )}
+          )}
 
-        {heroTitleOverlay ? (
-          <View style={StyleSheet.absoluteFillObject}>
-            <View style={styles.imageVignetteOverlay} />
-            <View style={styles.imageTitleOverlay}>
-              <View style={styles.imageTitleOverlayBg} />
-              <Text style={styles.imageTitleOverlayText} numberOfLines={heroTitleMaxLines}>
+          {heroTitleOverlay ? (
+            <View style={StyleSheet.absoluteFillObject}>
+              <View style={styles.imageVignetteOverlay} />
+              <View style={styles.imageTitleOverlay}>
+                <View style={styles.imageTitleOverlayBg} />
+                <Text style={styles.imageTitleOverlayText} numberOfLines={heroTitleMaxLines}>
+                  {title}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          {containerOverlaySlot ? (
+            <View
+              style={[
+                StyleSheet.absoluteFillObject,
+                Platform.OS === 'web' ? ({ pointerEvents: 'none' } as any) : ({ pointerEvents: 'box-none' } as any),
+              ]}
+            >
+              {containerOverlaySlot}
+            </View>
+          ) : null}
+          {leftTopSlot ? <View style={styles.leftTopSlot}>{leftTopSlot}</View> : null}
+          {rightTopSlot ? <View style={styles.rightTopSlot}>{rightTopSlot}</View> : null}
+          {badge ? (
+            <View style={[styles.badge, { backgroundColor: badge.backgroundColor }]}>
+              <MaterialIcons name={badge.icon as any} size={14} color={badge.iconColor} />
+            </View>
+          ) : null}
+          {bottomLeftSlot ? <View style={styles.bottomLeftSlot}>{bottomLeftSlot}</View> : null}
+        </View>,
+        contentSlot !== null ? (
+          <View key="content" style={[styles.content, contentContainerStyle]}>
+            {contentSlot}
+          </View>
+        ) : (
+          <View key="content-default" style={styles.content}>
+            {!heroTitleOverlay && (
+              <Text style={styles.title} numberOfLines={2}>
                 {title}
+              </Text>
+            )}
+            <View style={styles.metaRow}>
+              <MaterialIcons name="place" size={12} color={DESIGN_TOKENS.colors.textMuted} style={{ marginRight: 4 }} />
+              <Text style={styles.metaText} numberOfLines={1}>
+                {metaText || ' '}
               </Text>
             </View>
           </View>
-        ) : null}
-
-        {containerOverlaySlot ? (
-          <View
-            style={[
-              StyleSheet.absoluteFillObject,
-              Platform.OS === 'web' ? ({ pointerEvents: 'none' } as any) : ({ pointerEvents: 'box-none' } as any),
-            ]}
-          >
-            {containerOverlaySlot}
-          </View>
-        ) : null}
-        {leftTopSlot ? <View style={styles.leftTopSlot}>{leftTopSlot}</View> : null}
-        {rightTopSlot ? <View style={styles.rightTopSlot}>{rightTopSlot}</View> : null}
-        {badge ? (
-          <View style={[styles.badge, { backgroundColor: badge.backgroundColor }]}> 
-            <MaterialIcons name={badge.icon as any} size={14} color={badge.iconColor} />
-          </View>
-        ) : null}
-        {bottomLeftSlot ? <View style={styles.bottomLeftSlot}>{bottomLeftSlot}</View> : null}
-      </View>
-
-      {contentSlot !== null ? (
-        <View style={[styles.content, contentContainerStyle]}>{contentSlot}</View>
-      ) : (
-        <View style={styles.content}>
-          {!heroTitleOverlay && (
-            <Text style={styles.title} numberOfLines={2}>
-              {title}
-            </Text>
-          )}
-          <View style={styles.metaRow}>
-            <MaterialIcons name="place" size={12} color={DESIGN_TOKENS.colors.textMuted} style={{ marginRight: 4 }} />
-            <Text style={styles.metaText} numberOfLines={1}>
-              {metaText || ' '}
-            </Text>
-          </View>
-        </View>
-      )}
+        ),
+      ]}
     </ContainerComponent>
   );
 }

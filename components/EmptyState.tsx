@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 // ✅ ДИЗАЙН: Импорт максимально легкой и воздушной палитры
 import { AIRY_COLORS } from '@/constants/airyColors';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 interface EmptyStateProps {
@@ -38,24 +39,26 @@ export default function EmptyState({
   suggestions = [],
   examples = [],
 }: EmptyStateProps) {
+  const colors = useThemedColors();
+
   // ✅ УЛУЧШЕНИЕ: Разные цвета для разных вариантов
   const variantColors = {
-    default: { icon: DESIGN_TOKENS.colors.primary, bg: DESIGN_TOKENS.colors.primaryLight },
-    search: { icon: DESIGN_TOKENS.colors.textMuted, bg: DESIGN_TOKENS.colors.backgroundSecondary },
-    error: { icon: DESIGN_TOKENS.colors.danger, bg: DESIGN_TOKENS.colors.dangerLight },
-    empty: { icon: DESIGN_TOKENS.colors.textSubtle, bg: DESIGN_TOKENS.colors.mutedBackground },
-    inspire: { icon: DESIGN_TOKENS.colors.primary, bg: DESIGN_TOKENS.colors.primaryLight },
+    default: { icon: colors.primary, bg: colors.primaryLight },
+    search: { icon: colors.textMuted, bg: colors.backgroundSecondary },
+    error: { icon: colors.danger, bg: colors.dangerLight },
+    empty: { icon: colors.textMuted, bg: colors.mutedBackground },
+    inspire: { icon: colors.primary, bg: colors.primaryLight },
   };
 
-  const colors = variantColors[variant] || variantColors.default;
-  const finalIconColor = iconColor || colors.icon;
+  const variantColorScheme = variantColors[variant] || variantColors.default;
+  const finalIconColor = iconColor || variantColorScheme.icon;
   return (
     <View style={styles.container}>
-      <View style={[styles.iconContainer, { backgroundColor: colors.bg }]}>
+      <View style={[styles.iconContainer, { backgroundColor: variantColorScheme.bg }]}>
         <Feather name={icon as any} size={iconSize} color={finalIconColor} />
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+      <Text style={[styles.description, { color: colors.textMuted }]}>{description}</Text>
 
       {/* ✅ UX УЛУЧШЕНИЕ: Предложения для поиска */}
       {suggestions.length > 0 && (
@@ -91,7 +94,7 @@ export default function EmptyState({
           <View style={styles.examplesList}>
             {examples.slice(0, 3).map((example, index) => (
               <View key={index} style={styles.exampleCard}>
-                <Feather name="map-pin" size={16} color={DESIGN_TOKENS.colors.primary} />
+                <Feather name="map-pin" size={16} color={colors.primary} />
                 <Text style={styles.exampleTitle} numberOfLines={1}>
                   {example.title}
                 </Text>
@@ -130,7 +133,7 @@ export default function EmptyState({
         )}
         {secondaryAction && (
           <Pressable
-            style={[styles.secondaryActionButton, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+            style={[styles.secondaryActionButton, globalFocusStyles.focusable, { backgroundColor: colors.primarySoft }]} // ✅ Динамический фон
             onPress={secondaryAction.onPress}
             accessibilityRole="button"
             accessibilityLabel={secondaryAction.label}
@@ -138,10 +141,6 @@ export default function EmptyState({
               web: { 
                 cursor: 'pointer',
                 transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                // @ts-ignore
-                ':hover': {
-                  backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-                },
               },
             })}
           >
@@ -188,7 +187,6 @@ const styles = StyleSheet.create({
     }),
     fontWeight: '700',
     fontFamily: Platform.select({ web: 'Georgia, serif', default: undefined }), // ✅ ДИЗАЙН: Georgia для заголовков
-    color: DESIGN_TOKENS.colors.text, // ✅ ДИЗАЙН: Единый цвет
     marginTop: 8, // ✅ ДИЗАЙН: Уменьшен отступ
     marginBottom: 12, // ✅ ДИЗАЙН: Увеличен отступ
     textAlign: 'center',
@@ -199,7 +197,6 @@ const styles = StyleSheet.create({
       default: 15, // Mobile: 15px
       web: 16, // Desktop: 16px
     }),
-    color: DESIGN_TOKENS.colors.textMuted, // ✅ ДИЗАЙН: Вторичный цвет
     textAlign: 'center',
     lineHeight: Platform.select({
       default: 22, // Mobile: 22px

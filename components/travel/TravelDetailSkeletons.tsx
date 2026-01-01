@@ -3,7 +3,7 @@
  * Улучшают воспринимаемую производительность вместо пустых экранов
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -165,4 +165,3 @@ export const SectionSkeleton: React.FC<{ lines?: number }> = ({ lines = 4 }) => 
     </View>
   );
 };
-

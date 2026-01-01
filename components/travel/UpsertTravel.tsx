@@ -20,12 +20,14 @@ import TravelWizardStepDetails from '@/components/travel/TravelWizardStepDetails
 import TravelWizardStepExtras from '@/components/travel/TravelWizardStepExtras';
 import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 
 export { initFilters, normalizeCategoryTravelAddress, normalizeTravelCategories };
 
 export default function UpsertTravel() {
   const { id } = useLocalSearchParams();
   const { userId, isAuthenticated, isSuperuser, authReady } = useAuth();
+  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
   const isSuperAdmin = isSuperuser;
   const isNew = !id;
 
@@ -78,11 +80,14 @@ export default function UpsertTravel() {
     return wizard.stepConfig.find(s => s.id === wizard.currentStep);
   }, [wizard.currentStep, wizard.stepConfig]);
 
+  // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   if (isInitialLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Загрузка...</Text>
         </View>
       </SafeAreaView>
@@ -234,10 +239,11 @@ export default function UpsertTravel() {
   );
 }
 
-const styles = StyleSheet.create({
+// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.background,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -248,7 +254,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: DESIGN_TOKENS.spacing.md,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   errorContainer: {
     flex: 1,
@@ -258,7 +264,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
-    color: DESIGN_TOKENS.colors.danger,
+    color: colors.danger,
     textAlign: 'center',
   },
 });

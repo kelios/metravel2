@@ -155,18 +155,11 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
               // noop
             }
 
-            // If scrollTop didn't change, RNW/webview polyfills may require numeric signature
+            // If scrollTop didn't change, RNW/webview polyfills may expect x/y/animated object signature
             try {
               const afterObj = Number(node.scrollTop ?? 0);
               if (typeof node.scrollTo === 'function' && (!didCall || Math.abs(afterObj - before) < 1)) {
-                // DOM elements may support numeric signature scrollTo(x, y).
-                // React Native ScrollView on web logs a deprecation warning for numeric args,
-                // so prefer the object form when this is not a DOM node.
-                if (typeof (node as any).scrollTop !== 'undefined') {
-                  node.scrollTo(0, top);
-                } else {
-                  node.scrollTo({ x: 0, y: top, animated: true });
-                }
+                node.scrollTo({ x: 0, y: top, animated: true });
                 didCall = true;
               }
             } catch {

@@ -12,6 +12,7 @@ import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { deleteTravelMainImage } from '@/src/api/misc';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const GallerySectionLazy = Platform.OS === 'web'
     ? React.lazy(() => import('@/components/travel/GallerySection'))
@@ -60,10 +61,14 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     onAnchorHandled,
     onStepSelect,
 }) => {
+    const colors = useThemedColors();
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
     const [footerHeight, setFooterHeight] = useState(0);
     const [isDeleteCoverDialogVisible, setIsDeleteCoverDialogVisible] = useState(false);
+
+    // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
         const next = Math.ceil(event.nativeEvent.layout.height);
@@ -294,9 +299,15 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    safeContainer: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
-    keyboardAvoid: { flex: 1 },
+// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+    safeContainer: {
+        flex: 1,
+        backgroundColor: colors.background
+    },
+    keyboardAvoid: {
+        flex: 1
+    },
     validationSummaryWrapper: {
         paddingHorizontal: DESIGN_TOKENS.spacing.md,
         paddingVertical: DESIGN_TOKENS.spacing.sm,
@@ -317,10 +328,10 @@ const styles = StyleSheet.create({
     section: {
         marginTop: DESIGN_TOKENS.spacing.lg,
         padding: DESIGN_TOKENS.spacing.lg,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
         ...(Platform.OS === 'web'
             ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
             : (DESIGN_TOKENS.shadowsNative.light as any)),
@@ -329,26 +340,26 @@ const styles = StyleSheet.create({
         marginTop: 8,
         padding: DESIGN_TOKENS.spacing.md,
         borderRadius: DESIGN_TOKENS.radii.md,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
         alignItems: 'center',
         justifyContent: 'center',
     },
     lazyFallbackText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         fontWeight: '600',
     },
     sectionTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         marginBottom: 4,
     },
     sectionHint: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         marginBottom: 8,
     },
     coverWrapper: {
@@ -362,8 +373,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
     },
     deleteCoverButtonPressed: {
         opacity: 0.85,
@@ -373,13 +384,13 @@ const styles = StyleSheet.create({
     },
     deleteCoverButtonText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.danger,
+        color: colors.danger,
         fontWeight: '600',
     },
     infoText: {
         marginTop: 8,
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
     },
 });
 

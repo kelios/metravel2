@@ -1,17 +1,22 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import type { Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface TelegramDiscussionSectionProps {
   travel: Travel;
 }
 
 export default function TelegramDiscussionSection({ travel }: TelegramDiscussionSectionProps) {
+  const colors = useThemedColors();
   const baseUrl = process.env.EXPO_PUBLIC_TELEGRAM_DISCUSSION_URL || '';
   const travelName = travel?.name;
+
+  // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const handleOpen = useCallback(() => {
     if (!baseUrl) return;
@@ -67,13 +72,14 @@ export default function TelegramDiscussionSection({ travel }: TelegramDiscussion
   );
 }
 
-const styles = StyleSheet.create({
+// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     width: '100%',
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: DESIGN_TOKENS.spacing.xl,
-    shadowColor: DESIGN_TOKENS.colors.text,
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 10,
@@ -82,12 +88,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   subtitle: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     lineHeight: 20,
     marginBottom: 14,
   },
@@ -99,7 +105,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: DESIGN_TOKENS.spacing.xl,
     borderRadius: 999,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     minHeight: 44,
   },
   buttonPressed: {
@@ -107,16 +113,16 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   buttonDisabled: {
-    backgroundColor: DESIGN_TOKENS.colors.disabled,
+    backgroundColor: colors.disabled,
   },
   buttonText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
   },
   helperText: {
     marginTop: DESIGN_TOKENS.spacing.sm,
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    color: DESIGN_TOKENS.colors.textSubtle,
+    color: colors.textMuted,
   },
 });

@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, Pressable, Text, Platform } from 'react-native';
 import { Button, IconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
+import { globalFocusStyles } from '@/styles/globalFocus';
 
 interface TravelWizardFooterProps {
     canGoBack?: boolean;
@@ -20,6 +22,152 @@ interface TravelWizardFooterProps {
     onStepSelect?: (step: number) => void;
 }
 
+// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+    footer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        paddingVertical: DESIGN_TOKENS.spacing.xs,
+        borderTopWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+        zIndex: DESIGN_TOKENS.zIndex.sticky,
+        ...(Platform.OS === 'web'
+            ? ({ boxShadow: '0 -2px 8px rgba(0,0,0,0.06)' } as any)
+            : {}),
+    },
+    footerWeb: {
+        position: 'sticky' as any,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    footerMobileNative: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    footerMobileWeb: {
+        position: 'sticky' as any,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    leftSection: {
+        flex: 1,
+        alignItems: 'flex-start',
+    },
+    centerSection: {
+        flex: 2,
+        alignItems: 'center',
+        gap: 6,
+    },
+    rightSection: {
+        flex: 1,
+        alignItems: 'flex-end',
+    },
+    backButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        minHeight: 44, // ✅ ДОСТУПНОСТЬ: Минимальная высота touch target
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        backgroundColor: colors.surfaceMuted,
+    },
+    backButtonText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: '600',
+        color: colors.text,
+    },
+    backButtonMobile: {
+        width: 44, // ✅ ДОСТУПНОСТЬ: Минимальный размер touch target
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.surfaceMuted,
+    },
+    primaryButton: {
+        minWidth: 170,
+    },
+    primaryButtonMobile: {
+        flex: 1,
+        marginHorizontal: DESIGN_TOKENS.spacing.xs,
+    },
+    primaryButtonContent: {
+        flexDirection: 'row-reverse',
+    },
+    saveButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        minHeight: 44, // ✅ ДОСТУПНОСТЬ: Минимальная высота touch target
+        borderRadius: DESIGN_TOKENS.radii.pill,
+    },
+    saveButtonText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: '600',
+        color: colors.textMuted,
+    },
+    saveIconButton: {
+        margin: 0,
+        backgroundColor: colors.surfaceMuted,
+    },
+    mobileMainRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+        gap: DESIGN_TOKENS.spacing.xs,
+    },
+    stepsRowMobile: {
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: DESIGN_TOKENS.spacing.xs,
+        width: '100%',
+    },
+    stepsRow: {
+        flexDirection: 'row',
+        gap: 6,
+        justifyContent: 'space-evenly',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    stepBadge: {
+        minWidth: 28,
+        height: 28,
+        borderRadius: 14,
+        paddingHorizontal: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surfaceMuted,
+    },
+    stepBadgeActive: {
+        borderColor: colors.primary,
+        backgroundColor: colors.primarySoft,
+    },
+    stepBadgeInactive: {},
+    stepBadgeText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        fontWeight: '700',
+        color: colors.textMuted,
+    },
+    stepBadgeTextActive: {
+        color: colors.primary,
+    },
+    stepBadgeTextInactive: {},
+});
+
 const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
     canGoBack = true,
     onBack,
@@ -33,10 +181,14 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
     totalSteps,
     onStepSelect,
 }) => {
+    const colors = useThemedColors();
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
     const isWeb = Platform.OS === 'web';
     const insets = useSafeAreaInsets();
+
+    // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const steps = totalSteps && currentStep
         ? Array.from({ length: totalSteps }, (_, i) => i + 1)
@@ -58,10 +210,16 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                         {canGoBack && onBack ? (
                             <Pressable
                                 onPress={onBack}
-                                style={styles.backButtonMobile}
+                                style={({ pressed }) => [
+                                    styles.backButtonMobile,
+                                    globalFocusStyles.focusable,
+                                    pressed && { opacity: 0.8 }
+                                ]}
+                                accessibilityRole="button"
+                                accessibilityLabel="Назад"
                                 {...Platform.select({ web: { cursor: 'pointer' } })}
                             >
-                                <Feather name="arrow-left" size={18} color={DESIGN_TOKENS.colors.text} />
+                                <Feather name="arrow-left" size={18} color={colors.text} />
                             </Pressable>
                         ) : null}
 
@@ -117,10 +275,16 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                         {canGoBack && onBack ? (
                             <Pressable
                                 onPress={onBack}
-                                style={styles.backButton}
+                                style={({ pressed }) => [
+                                    styles.backButton,
+                                    globalFocusStyles.focusable,
+                                    pressed && { opacity: 0.8 }
+                                ]}
+                                accessibilityRole="button"
+                                accessibilityLabel="Назад"
                                 {...Platform.select({ web: { cursor: 'pointer' } })}
                             >
-                                <Feather name="arrow-left" size={16} color={DESIGN_TOKENS.colors.text} />
+                                <Feather name="arrow-left" size={16} color={colors.text} />
                                 <Text style={styles.backButtonText}>Назад</Text>
                             </Pressable>
                         ) : null}
@@ -168,10 +332,16 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                         {onSave ? (
                             <Pressable
                                 onPress={onSave}
-                                style={styles.saveButton}
+                                style={({ pressed }) => [
+                                    styles.saveButton,
+                                    globalFocusStyles.focusable,
+                                    pressed && { opacity: 0.8 }
+                                ]}
+                                accessibilityRole="button"
+                                accessibilityLabel={saveLabel}
                                 {...Platform.select({ web: { cursor: 'pointer' } })}
                             >
-                                <Feather name="save" size={16} color={DESIGN_TOKENS.colors.textMuted} />
+                                <Feather name="save" size={16} color={colors.textMuted} />
                                 <Text style={styles.saveButtonText}>{saveLabel}</Text>
                             </Pressable>
                         ) : null}
@@ -182,147 +352,5 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    footer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-        paddingVertical: DESIGN_TOKENS.spacing.xs,
-        borderTopWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        zIndex: DESIGN_TOKENS.zIndex.sticky,
-        ...(Platform.OS === 'web'
-            ? ({ boxShadow: '0 -2px 8px rgba(0,0,0,0.06)' } as any)
-            : {}),
-    },
-    footerWeb: {
-        position: 'sticky' as any,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    footerMobileNative: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    footerMobileWeb: {
-        position: 'sticky' as any,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    leftSection: {
-        flex: 1,
-        alignItems: 'flex-start',
-    },
-    centerSection: {
-        flex: 2,
-        alignItems: 'center',
-        gap: 6,
-    },
-    rightSection: {
-        flex: 1,
-        alignItems: 'flex-end',
-    },
-    backButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: DESIGN_TOKENS.radii.pill,
-        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
-    },
-    backButtonText: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
-    },
-    backButtonMobile: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
-    },
-    primaryButton: {
-        minWidth: 170,
-    },
-    primaryButtonMobile: {
-        flex: 1,
-        marginHorizontal: DESIGN_TOKENS.spacing.xs,
-    },
-    primaryButtonContent: {
-        flexDirection: 'row-reverse',
-    },
-    saveButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: DESIGN_TOKENS.radii.pill,
-    },
-    saveButtonText: {
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        fontWeight: '600',
-        color: DESIGN_TOKENS.colors.textMuted,
-    },
-    saveIconButton: {
-        margin: 0,
-        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
-    },
-    mobileMainRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        width: '100%',
-        gap: DESIGN_TOKENS.spacing.xs,
-    },
-    stepsRowMobile: {
-        flexDirection: 'row',
-        gap: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: DESIGN_TOKENS.spacing.xs,
-        width: '100%',
-    },
-    stepsRow: {
-        flexDirection: 'row',
-        gap: 6,
-        justifyContent: 'space-evenly',
-        alignItems: 'center',
-        marginBottom: 4,
-    },
-    stepBadge: {
-        minWidth: 28,
-        height: 28,
-        borderRadius: 14,
-        paddingHorizontal: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
-        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
-    },
-    stepBadgeActive: {
-        borderColor: DESIGN_TOKENS.colors.primary,
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-    },
-    stepBadgeInactive: {},
-    stepBadgeText: {
-        fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        fontWeight: '700',
-        color: DESIGN_TOKENS.colors.textMuted,
-    },
-    stepBadgeTextActive: {
-        color: DESIGN_TOKENS.colors.primaryDark,
-    },
-    stepBadgeTextInactive: {},
-});
 
 export default TravelWizardFooter;

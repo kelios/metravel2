@@ -13,6 +13,7 @@ import { getModerationIssues, type ModerationIssue } from '@/utils/formValidatio
 import { getQualityScore } from '@/utils/travelWizardValidation';
 import { trackWizardEvent } from '@/src/utils/analytics';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface TravelWizardStepPublishProps {
     currentStep: number;
@@ -51,11 +52,15 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     progress = currentStep / totalSteps,
     autosaveBadge,
 }) => {
+    const colors = useThemedColors();
     const router = useRouter();
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
     const [footerHeight, setFooterHeight] = useState(0);
     const actionPendingRef = useRef(false);
+
+    // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const startAction = useCallback(() => {
         if (actionPendingRef.current) return false;
@@ -561,9 +566,15 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    safeContainer: { flex: 1, backgroundColor: DESIGN_TOKENS.colors.background },
-    keyboardAvoid: { flex: 1 },
+// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+    safeContainer: {
+        flex: 1,
+        backgroundColor: colors.background
+    },
+    keyboardAvoid: {
+        flex: 1
+    },
     content: {
         flex: 1,
         paddingHorizontal: 8,
@@ -580,10 +591,10 @@ const styles = StyleSheet.create({
     card: {
         marginTop: DESIGN_TOKENS.spacing.lg,
         padding: DESIGN_TOKENS.spacing.lg,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
         ...(Platform.OS === 'web'
             ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
             : (DESIGN_TOKENS.shadowsNative.light as any)),
@@ -591,7 +602,7 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         marginBottom: DESIGN_TOKENS.spacing.sm,
     },
     statusCard: {},

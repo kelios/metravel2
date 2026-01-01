@@ -32,6 +32,9 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
   const isMobile = isPhone || isLargePhone;
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 
+  // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const normalizeMediaUrl = useCallback((raw: string) => {
     const value = String(raw ?? '').trim();
     if (!value) return '';
@@ -302,11 +305,12 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
   );
 }
 
-const styles = StyleSheet.create({
+// ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   // ✅ РЕДИЗАЙН: Компактная карточка (-25% padding)
   container: {
     width: '100%',
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
     padding: Platform.select({
       default: 24, // было 32px (-25%)

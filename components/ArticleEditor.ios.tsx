@@ -8,6 +8,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { uploadImage } from '@/src/api/misc';
 import { useAuth } from '@/context/AuthContext';
 import { sanitizeRichText } from '@/src/utils/sanitizeRichText';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 export interface ArticleEditorProps {
   label?: string;
@@ -31,6 +33,9 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   idTravel,
   variant = 'default',
 }) => {
+  // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
+  const colors = useThemedColors();
+
   const sanitizeForEditor = useCallback((value: string) => {
     return sanitizeRichText(value);
   }, []);
@@ -317,41 +322,41 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {/* Заголовок и дополнительные кнопки */}
-      <View style={styles.header}>
-        <Text style={styles.label}>{label}</Text>
+      <View style={[styles.header, { backgroundColor: colors.backgroundSecondary, borderBottomColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
         <View style={styles.headerButtons}>
           <TouchableOpacity
             onPress={handleUndo}
-            style={styles.headerButton}
+            style={[styles.headerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
             disabled={!isReady}
             accessibilityRole="button"
             accessibilityLabel="Отменить"
           >
-            <MaterialIcons name="undo" size={20} color={isReady ? "#555" : "#ccc"} />
+            <MaterialIcons name="undo" size={20} color={isReady ? colors.text : colors.textMuted} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleRedo}
-            style={styles.headerButton}
+            style={[styles.headerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
             disabled={!isReady}
             accessibilityRole="button"
             accessibilityLabel="Повторить"
           >
-            <MaterialIcons name="redo" size={20} color={isReady ? "#555" : "#ccc"} />
+            <MaterialIcons name="redo" size={20} color={isReady ? colors.text : colors.textMuted} />
           </TouchableOpacity>
           {variant === 'default' && (
             <TouchableOpacity
               onPress={handleImagePick}
-              style={styles.headerButton}
+              style={[styles.headerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
               disabled={!isReady || isUploading}
               accessibilityRole="button"
               accessibilityLabel="Добавить изображение"
             >
               {isUploading ? (
-                <ActivityIndicator size="small" color="#555" />
+                <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <MaterialIcons name="add-photo-alternate" size={20} color={isReady ? "#555" : "#ccc"} />
+                <MaterialIcons name="add-photo-alternate" size={20} color={isReady ? colors.text : colors.textMuted} />
               )}
             </TouchableOpacity>
           )}
@@ -364,7 +369,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
           ref={webViewRef}
           source={{ html: quillHTML }}
           onMessage={handleMessage}
-          style={styles.webView}
+          style={[styles.webView, { backgroundColor: colors.surface }]}
           scrollEnabled={true}
           bounces={false}
           showsVerticalScrollIndicator={true}
@@ -373,9 +378,9 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
           domStorageEnabled={true}
           startInLoadingState={true}
           renderLoading={() => (
-            <View style={styles.loading}>
-              <ActivityIndicator size="large" color="#ff9f5a" />
-              <Text style={styles.loadingText}>Загрузка редактора...</Text>
+            <View style={[styles.loading, { backgroundColor: colors.surface }]}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={[styles.loadingText, { color: colors.textMuted }]}>Загрузка редактора...</Text>
             </View>
           )}
         />
@@ -387,43 +392,35 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    borderRadius: DESIGN_TOKENS.radii.md,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#ddd',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#f9f9f9',
+    padding: DESIGN_TOKENS.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
   },
   label: {
-    fontSize: 16,
+    fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: '600',
-    color: '#333',
   },
   headerButtons: {
     flexDirection: 'row',
-    gap: 8,
+    gap: DESIGN_TOKENS.spacing.xs,
   },
   headerButton: {
-    padding: 8,
-    borderRadius: 4,
-    backgroundColor: '#fff',
+    padding: DESIGN_TOKENS.spacing.xs,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     borderWidth: 1,
-    borderColor: '#ddd',
   },
   editorContainer: {
     flex: 1,
   },
   webView: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   loading: {
     position: 'absolute',
@@ -433,12 +430,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#666',
+    marginTop: DESIGN_TOKENS.spacing.md,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
   },
 });
 

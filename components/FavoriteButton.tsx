@@ -7,6 +7,7 @@ import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 import { devLog } from '@/src/utils/logger';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 type FavoriteButtonProps = {
@@ -34,6 +35,7 @@ export default function FavoriteButton({
     color,
     style,
 }: FavoriteButtonProps) {
+    const colors = useThemedColors();
     const router = useRouter();
     const { isAuthenticated } = useAuth();
     const { isFavorite, addFavorite, removeFavorite } = useFavorites();
@@ -183,7 +185,7 @@ export default function FavoriteButton({
             <MaterialIcons
                 name={isFav ? 'favorite' : 'favorite-border'}
                 size={size}
-                color={color || (isFav ? DESIGN_TOKENS.colors.danger : DESIGN_TOKENS.colors.textMuted)}
+                color={color || (isFav ? colors.danger : colors.textMuted)}
             />
         </ButtonComponent>
     );
@@ -201,10 +203,7 @@ const styles = StyleSheet.create({
             web: {
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                // @ts-ignore
-                ':hover': {
-                    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
-                },
+                // @ts-ignore - hover будет применен через inline стили
             },
         }),
     },

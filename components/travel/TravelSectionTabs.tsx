@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react"
+import React, { useMemo, useState, useCallback, useEffect, useRef } from "react"
 import {
   ScrollView,
   StyleSheet,
@@ -31,6 +31,8 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
   const isMobile = isPhone || isLargePhone
   const colors = useThemedColors() // ✅ РЕДИЗАЙН: Темная тема
   const [moreOpen, setMoreOpen] = useState(false)
+  const moreButtonRef = useRef<any>(null)
+  const modalCloseRef = useRef<any>(null)
 
   const { visibleLinks, overflowLinks } = useMemo(() => {
     if (!isMobile) return { visibleLinks: links, overflowLinks: [] as TravelSectionLink[] }
@@ -49,6 +51,20 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
     },
     [onNavigate]
   )
+
+  // ✅ A11y: Переносим фокус внутрь модального листа на web, чтобы избежать фокуса внутри aria-hidden контейнера
+  useEffect(() => {
+    if (Platform.OS !== "web") return
+    if (moreOpen) {
+      requestAnimationFrame(() => {
+        modalCloseRef.current?.focus?.()
+      })
+    } else {
+      requestAnimationFrame(() => {
+        moreButtonRef.current?.focus?.()
+      })
+    }
+  }, [moreOpen])
 
   // ✅ РЕДИЗАЙН: Стили с поддержкой темной темы
   const styles = useMemo(() => StyleSheet.create({
@@ -214,6 +230,9 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
         {overflowLinks.length > 0 && (
           <Pressable
             key="more"
+            ref={(node) => {
+              moreButtonRef.current = node
+            }}
             onPress={() => setMoreOpen(true)}
             style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
             accessibilityRole="button"
@@ -247,6 +266,9 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
                   accessibilityRole="button"
                   accessibilityLabel="Закрыть"
                   style={styles.modalCloseBtn}
+                  ref={(node) => {
+                    modalCloseRef.current = node
+                  }}
                 >
                   <MaterialIcons name={"close" as any} size={20} color={colors.text} />
                 </Pressable>

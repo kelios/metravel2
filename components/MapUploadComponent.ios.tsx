@@ -5,6 +5,7 @@ import DocumentPicker from 'react-native-document-picker';
 import { uploadImage } from '@/src/api/misc';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface MapUploadComponentProps {
   collection: string;
@@ -12,6 +13,9 @@ interface MapUploadComponentProps {
 }
 
 const MapUploadComponentIOS: React.FC<MapUploadComponentProps> = ({ collection, idTravel }) => {
+  // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
+  const colors = useThemedColors();
+
   const [fileName, setFileName] = useState<string | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -110,30 +114,34 @@ const MapUploadComponentIOS: React.FC<MapUploadComponentProps> = ({ collection, 
 
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.surface }]}>
         {/* Заголовок */}
         <View style={styles.header}>
-          <Feather name="map" size={24} color={DESIGN_TOKENS.colors.primary} />
-          <Text style={styles.title}>Загрузка файла карты</Text>
+          <Feather name="map" size={24} color={colors.primary} />
+          <Text style={[styles.title, { color: colors.text }]}>Загрузка файла карты</Text>
         </View>
 
         {/* Описание */}
-        <Text style={styles.description}>
+        <Text style={[styles.description, { color: colors.textMuted }]}>
           Поддерживаемые форматы: {supportedFormats.join(', ')}
         </Text>
 
         {/* Кнопка выбора файла */}
         <TouchableOpacity
-          style={[styles.uploadButton, loading && styles.uploadButtonDisabled]}
+          style={[
+            styles.uploadButton,
+            { backgroundColor: colors.primary },
+            loading && { backgroundColor: colors.disabled }
+          ]}
           onPress={pickFile}
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color={DESIGN_TOKENS.colors.textOnPrimary} />
+            <ActivityIndicator color={colors.textInverse} />
           ) : (
             <>
-              <Feather name="upload-cloud" size={20} color={DESIGN_TOKENS.colors.textOnPrimary} />
-              <Text style={styles.uploadButtonText}>
+              <Feather name="upload-cloud" size={20} color={colors.textInverse} />
+              <Text style={[styles.uploadButtonText, { color: colors.textInverse }]}>
                 {fileName ? 'Выбрать другой файл' : 'Выбрать файл карты'}
               </Text>
             </>
@@ -142,9 +150,12 @@ const MapUploadComponentIOS: React.FC<MapUploadComponentProps> = ({ collection, 
 
         {/* Отображение выбранного файла */}
         {fileName && !loading && (
-          <View style={styles.fileInfo}>
-            <Feather name="file" size={16} color={DESIGN_TOKENS.colors.primary} />
-            <Text style={styles.fileName} numberOfLines={1}>
+          <View style={[styles.fileInfo, {
+            backgroundColor: colors.infoSoft,
+            borderColor: colors.info
+          }]}>
+            <Feather name="file" size={16} color={colors.primary} />
+            <Text style={[styles.fileName, { color: colors.infoDark }]} numberOfLines={1}>
               {fileName}
             </Text>
           </View>
@@ -152,24 +163,33 @@ const MapUploadComponentIOS: React.FC<MapUploadComponentProps> = ({ collection, 
 
         {/* Сообщение об успехе */}
         {uploadMessage && !error && (
-          <View style={styles.successContainer}>
-            <Feather name="check-circle" size={16} color={DESIGN_TOKENS.colors.success} />
-            <Text style={styles.successText}>{uploadMessage}</Text>
+          <View style={[styles.successContainer, {
+            backgroundColor: colors.successSoft,
+            borderColor: colors.success
+          }]}>
+            <Feather name="check-circle" size={16} color={colors.success} />
+            <Text style={[styles.successText, { color: colors.successDark }]}>{uploadMessage}</Text>
           </View>
         )}
 
         {/* Сообщение об ошибке */}
         {error && (
-          <View style={styles.errorContainer}>
-            <Feather name="alert-circle" size={16} color={DESIGN_TOKENS.colors.danger} />
-            <Text style={styles.errorText}>{error}</Text>
+          <View style={[styles.errorContainer, {
+            backgroundColor: colors.dangerSoft,
+            borderColor: colors.danger
+          }]}>
+            <Feather name="alert-circle" size={16} color={colors.danger} />
+            <Text style={[styles.errorText, { color: colors.dangerDark }]}>{error}</Text>
           </View>
         )}
 
         {/* Инструкция */}
         {!fileName && !loading && (
-          <View style={styles.instructionContainer}>
-            <Text style={styles.instructionText}>
+          <View style={[styles.instructionContainer, {
+            backgroundColor: colors.backgroundSecondary,
+            borderColor: colors.border
+          }]}>
+            <Text style={[styles.instructionText, { color: colors.textMuted }]}>
               Нажмите кнопку выше, чтобы выбрать файл карты из хранилища вашего устройства
             </Text>
           </View>
@@ -182,113 +202,92 @@ const MapUploadComponentIOS: React.FC<MapUploadComponentProps> = ({ collection, 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    padding: DESIGN_TOKENS.spacing.lg,
   },
   card: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: DESIGN_TOKENS.radii.xl,
+    padding: DESIGN_TOKENS.spacing.xl,
     ...DESIGN_TOKENS.shadowsNative.medium,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
+    gap: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.md,
   },
   title: {
-    fontSize: 18,
+    fontSize: DESIGN_TOKENS.typography.sizes.xl,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
   },
   description: {
-    fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
-    marginBottom: 20,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    marginBottom: DESIGN_TOKENS.spacing.xl,
     lineHeight: 20,
   },
   uploadButton: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+    paddingVertical: DESIGN_TOKENS.spacing.md,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    borderRadius: DESIGN_TOKENS.radii.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: DESIGN_TOKENS.spacing.sm,
     ...DESIGN_TOKENS.shadowsNative.medium,
   },
-  uploadButtonDisabled: {
-    backgroundColor: DESIGN_TOKENS.colors.disabled,
-    shadowOpacity: 0.1,
-  },
   uploadButtonText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
-    fontSize: 16,
+    fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: '600',
   },
   fileInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: DESIGN_TOKENS.colors.infoLight,
-    borderRadius: 8,
+    gap: DESIGN_TOKENS.spacing.xs,
+    marginTop: DESIGN_TOKENS.spacing.lg,
+    padding: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.info,
   },
   fileName: {
-    fontSize: 14,
-    color: DESIGN_TOKENS.colors.infoDark,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     flex: 1,
     fontWeight: '500',
   },
   successContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: DESIGN_TOKENS.colors.successLight,
-    borderRadius: 8,
+    gap: DESIGN_TOKENS.spacing.xs,
+    marginTop: DESIGN_TOKENS.spacing.lg,
+    padding: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.success,
   },
   successText: {
-    fontSize: 13,
-    color: DESIGN_TOKENS.colors.successDark,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     flex: 1,
     lineHeight: 18,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: DESIGN_TOKENS.colors.dangerLight,
-    borderRadius: 8,
+    gap: DESIGN_TOKENS.spacing.xs,
+    marginTop: DESIGN_TOKENS.spacing.lg,
+    padding: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.danger,
   },
   errorText: {
-    fontSize: 13,
-    color: DESIGN_TOKENS.colors.dangerDark,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     flex: 1,
     lineHeight: 18,
   },
   instructionContainer: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: DESIGN_TOKENS.colors.cardMuted,
-    borderRadius: 8,
+    marginTop: DESIGN_TOKENS.spacing.lg,
+    padding: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
   },
   instructionText: {
-    fontSize: 13,
-    color: DESIGN_TOKENS.colors.textMuted,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     lineHeight: 18,
     textAlign: 'center',
   },

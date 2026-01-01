@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Animated, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 interface ScrollToTopButtonProps {
@@ -20,6 +21,7 @@ export default function ScrollToTopButton({
   threshold = 300,
   forceVisible,
 }: ScrollToTopButtonProps) {
+  const colors = useThemedColors();
   const [isVisible, setIsVisible] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -96,7 +98,7 @@ export default function ScrollToTopButton({
       ]}
     >
       <Pressable
-        style={[styles.button, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+        style={[styles.button, globalFocusStyles.focusable, { backgroundColor: colors.primary }]} // ✅ Динамический цвет
         onPress={scrollToTop}
         accessibilityRole="button"
         accessibilityLabel="Прокрутить наверх"
@@ -112,7 +114,7 @@ export default function ScrollToTopButton({
         })}
         testID="scroll-to-top-button"
       >
-        <Feather name="arrow-up" size={20} color={DESIGN_TOKENS.colors.textOnPrimary} />
+        <Feather name="arrow-up" size={20} color={colors.textOnPrimary} />
       </Pressable>
     </Animated.View>
   );
@@ -131,7 +133,6 @@ const styles = StyleSheet.create({
     minWidth: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная ширина для touch-целей
     minHeight: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
     borderRadius: DESIGN_TOKENS.radii.pill, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    backgroundColor: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
     justifyContent: 'center',
     alignItems: 'center',
     ...Platform.select({

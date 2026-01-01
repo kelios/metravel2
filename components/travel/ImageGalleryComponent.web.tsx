@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Platform,
-    useColorScheme,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
@@ -14,6 +13,7 @@ import { useDropzone } from 'react-dropzone';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { uploadImage, deleteImage } from '@/src/api/misc';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const API_BASE_URL: string =
     process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
@@ -107,6 +107,9 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     maxImages = 10,
     onChange,
 }) => {
+    // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
+    const colors = useThemedColors();
+
     const [images, setImages] = useState<GalleryItem[]>([]);
     const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
     const [dialogVisible, setDialogVisible] = useState(false);
@@ -115,9 +118,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     
     const blobUrlsRef = useRef<Set<string>>(new Set());
     const retryRef = useRef<Set<string>>(new Set());
-    const theme = useColorScheme();
-    const isDarkMode = theme === 'dark';
-    
+
     const hasErrors = useMemo(() => images.some(img => img.error), [images]);
 
     useEffect(() => {
@@ -353,18 +354,18 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     };
 
     return (
-        <View style={[styles.container, isDarkMode && styles.darkContainer]}>
-            <View style={styles.headerContainer}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <View style={[styles.headerContainer, { borderBottomColor: colors.borderLight }]}>
                 <View style={styles.titleRow}>
                     <MaterialIcons
                         name="photo-camera"
                         size={20}
-                        color={isDarkMode ? DESIGN_TOKENS.colors.textInverse : DESIGN_TOKENS.colors.text}
+                        color={colors.text}
                     />
-                    <Text style={[styles.galleryTitle, isDarkMode && styles.darkText]}>Галерея</Text>
+                    <Text style={[styles.galleryTitle, { color: colors.text }]}>Галерея</Text>
                 </View>
-                <Text style={[styles.imageCount, isDarkMode && styles.darkText]}>
-                    Загружено <Text style={styles.highlight}>{images.length}</Text> из {maxImages}
+                <Text style={[styles.imageCount, { color: colors.textMuted }]}>
+                    Загружено <Text style={[styles.highlight, { color: colors.primary }]}>{images.length}</Text> из {maxImages}
                 </Text>
             </View>
 
@@ -378,11 +379,14 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                     style={[
                         styles.dropzone,
                         isDragActive && styles.activeDropzone,
-                        isDarkMode && styles.darkDropzone,
+                        {
+                            backgroundColor: colors.backgroundSecondary,
+                            borderColor: colors.primary
+                        },
                     ]}
                 >
                     <input {...getInputProps()} />
-                    <Text style={[styles.dropzoneText, isDarkMode && styles.darkText]}>
+                    <Text style={[styles.dropzoneText, { color: colors.textMuted }]}>
                         {isDragActive ? 'Отпустите файлы...' : 'Перетащите сюда изображения'}
                     </Text>
                 </View>
@@ -391,16 +395,22 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
             )}
 
             {batchUploadProgress && (
-                <View style={styles.batchProgressContainer}>
-                    <View style={styles.batchProgressBar}>
-                        <View 
+                <View style={[styles.batchProgressContainer, {
+                    backgroundColor: colors.infoSoft,
+                    borderColor: colors.infoLight
+                }]}>
+                    <View style={[styles.batchProgressBar, { backgroundColor: colors.infoLight }]}>
+                        <View
                             style={[
                                 styles.batchProgressFill, 
-                                { width: `${(batchUploadProgress.current / batchUploadProgress.total) * 100}%` }
-                            ]} 
+                                {
+                                    width: `${(batchUploadProgress.current / batchUploadProgress.total) * 100}%`,
+                                    backgroundColor: colors.info
+                                }
+                            ]}
                         />
                     </View>
-                    <Text style={[styles.batchProgressText, isDarkMode && styles.darkText]}>
+                    <Text style={[styles.batchProgressText, { color: colors.infoDark }]}>
                         Загрузка {batchUploadProgress.current} из {batchUploadProgress.total}
                     </Text>
                 </View>
@@ -410,7 +420,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                 <View style={styles.galleryGrid}>
                     {[...Array(3)].map((_, i) => (
                         <View key={`skeleton-${i}`} style={styles.imageWrapper}>
-                            <View style={[styles.skeleton, isDarkMode && styles.skeletonDark]} />
+                            <View style={[styles.skeleton, { backgroundColor: colors.surfaceMuted }]} />
                         </View>
                     ))}
                 </View>
@@ -431,15 +441,15 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         onLoad={() => handleImageLoad(image.id)}
                                     />
                                     <View style={styles.uploadingOverlayImage}>
-                                        <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.textInverse} />
-                                        <Text style={styles.uploadingImageText}>Загрузка...</Text>
+                                        <ActivityIndicator size="large" color={colors.textInverse} />
+                                        <Text style={[styles.uploadingImageText, { color: colors.textInverse }]}>Загрузка...</Text>
                                     </View>
                                     <TouchableOpacity
                                         onPress={() => handleDeleteImage(image.id)}
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
-                                        <MaterialIcons name="close" size={18} color={DESIGN_TOKENS.colors.textInverse} />
+                                        <MaterialIcons name="close" size={18} color={colors.textInverse} />
                                     </TouchableOpacity>
                                 </View>
                             ) : image.error ? (
@@ -455,14 +465,14 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         onLoad={() => handleImageLoad(image.id)}
                                     />
                                     <View style={styles.errorOverlay}>
-                                        <MaterialIcons name="warning-amber" size={24} color={DESIGN_TOKENS.colors.warningDark} />
-                                        <Text style={styles.errorOverlaySubtext}>{image.error}</Text>
+                                        <MaterialIcons name="warning-amber" size={24} color={colors.warningDark} />
+                                        <Text style={[styles.errorOverlaySubtext, { color: colors.warningDark }]}>{image.error}</Text>
                                         <TouchableOpacity
                                             onPress={() => handleDeleteImage(image.id)}
-                                            style={styles.errorActionButton}
+                                            style={[styles.errorActionButton, { backgroundColor: colors.primary }]}
                                             testID="delete-image-button"
                                         >
-                                            <Text style={styles.errorActionText}>Удалить</Text>
+                                            <Text style={[styles.errorActionText, { color: colors.textInverse }]}>Удалить</Text>
                                         </TouchableOpacity>
                                     </View>
                                     <TouchableOpacity
@@ -470,7 +480,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
-                                        <MaterialIcons name="close" size={18} color={DESIGN_TOKENS.colors.textInverse} />
+                                        <MaterialIcons name="close" size={18} color={colors.textInverse} />
                                     </TouchableOpacity>
                                 </View>
                             ) : (
@@ -490,7 +500,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
-                                        <MaterialIcons name="close" size={18} color={DESIGN_TOKENS.colors.textInverse} />
+                                        <MaterialIcons name="close" size={18} color={colors.textInverse} />
                                     </TouchableOpacity>
                                 </>
                             )}
@@ -498,15 +508,18 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                     ))}
                 </View>
             ) : (
-                <Text style={[styles.noImagesText, isDarkMode && styles.darkText]}>
+                <Text style={[styles.noImagesText, { color: colors.textMuted }]}>
                     Нет загруженных изображений
                 </Text>
             )}
 
             {hasErrors && (
-                <View style={styles.errorBanner}>
-                    <MaterialIcons name="warning-amber" size={18} color={DESIGN_TOKENS.colors.warningDark} />
-                    <Text style={styles.errorBannerText}>
+                <View style={[styles.errorBanner, {
+                    backgroundColor: colors.warningSoft,
+                    borderColor: colors.warningLight
+                }]}>
+                    <MaterialIcons name="warning-amber" size={18} color={colors.warningDark} />
+                    <Text style={[styles.errorBannerText, { color: colors.warningDark }]}>
                         Некоторые изображения не удалось загрузить. Удалите их и попробуйте снова.
                     </Text>
                 </View>
@@ -532,9 +545,6 @@ const styles = StyleSheet.create({
         padding: DESIGN_TOKENS.spacing.xl,
         width: '100%',
     },
-    darkContainer: {
-        backgroundColor: DESIGN_TOKENS.colors.background,
-    },
     headerContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -542,7 +552,6 @@ const styles = StyleSheet.create({
         marginBottom: DESIGN_TOKENS.spacing.sm,
         paddingVertical: 8,
         borderBottomWidth: 1,
-        borderBottomColor: DESIGN_TOKENS.colors.borderLight,
     },
     titleRow: {
         flexDirection: 'row',
@@ -552,15 +561,12 @@ const styles = StyleSheet.create({
     galleryTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.xl,
         fontWeight: 'bold',
-        color: DESIGN_TOKENS.colors.text,
     },
     imageCount: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.textMuted,
     },
     highlight: {
         fontWeight: 'bold',
-        color: DESIGN_TOKENS.colors.primary,
     },
     galleryGrid: {
         flexDirection: 'row',
@@ -604,8 +610,6 @@ const styles = StyleSheet.create({
         padding: DESIGN_TOKENS.spacing.lg,
         borderWidth: 2,
         borderRadius: DESIGN_TOKENS.radii.md,
-        borderColor: DESIGN_TOKENS.colors.primary,
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
         alignItems: 'center',
         marginBottom: DESIGN_TOKENS.spacing.xl,
     },
@@ -613,21 +617,12 @@ const styles = StyleSheet.create({
         borderColor: DESIGN_TOKENS.colors.primaryDark,
         backgroundColor: DESIGN_TOKENS.colors.primarySoft,
     },
-    darkDropzone: {
-        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
-        borderColor: DESIGN_TOKENS.colors.border,
-    },
     dropzoneText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.textMuted,
-    },
-    darkText: {
-        color: DESIGN_TOKENS.colors.textInverse,
     },
     noImagesText: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         textAlign: 'center',
-        color: DESIGN_TOKENS.colors.textMuted,
         marginTop: DESIGN_TOKENS.spacing.xl,
     },
     loader: {
@@ -636,10 +631,6 @@ const styles = StyleSheet.create({
     skeleton: {
         width: '100%',
         height: '100%',
-        backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    },
-    skeletonDark: {
-        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
     },
     uploadingImageContainer: {
         width: '100%',
@@ -657,7 +648,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     uploadingImageText: {
-        color: DESIGN_TOKENS.colors.textInverse,
         marginTop: DESIGN_TOKENS.spacing.xs,
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '600',
@@ -684,61 +674,50 @@ const styles = StyleSheet.create({
     errorOverlaySubtext: {
         fontSize: 13,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.warningDark,
         textAlign: 'center',
     },
     errorActionButton: {
         marginTop: DESIGN_TOKENS.spacing.xs,
-        backgroundColor: DESIGN_TOKENS.colors.primary,
         paddingVertical: DESIGN_TOKENS.spacing.xs,
         paddingHorizontal: DESIGN_TOKENS.spacing.md,
         borderRadius: DESIGN_TOKENS.radii.sm,
         shadowColor: 'transparent',
     },
     errorActionText: {
-        color: DESIGN_TOKENS.colors.textInverse,
         fontWeight: '700',
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
     },
     batchProgressContainer: {
         marginBottom: DESIGN_TOKENS.spacing.lg,
         padding: DESIGN_TOKENS.spacing.md,
-        backgroundColor: DESIGN_TOKENS.colors.infoSoft,
         borderRadius: DESIGN_TOKENS.radii.sm,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.infoLight,
     },
     batchProgressBar: {
         width: '100%',
         height: 8,
-        backgroundColor: DESIGN_TOKENS.colors.infoLight,
         borderRadius: DESIGN_TOKENS.radii.sm,
         overflow: 'hidden',
         marginBottom: DESIGN_TOKENS.spacing.xs,
     },
     batchProgressFill: {
         height: '100%',
-        backgroundColor: DESIGN_TOKENS.colors.info,
     },
     batchProgressText: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: DESIGN_TOKENS.colors.infoDark,
         fontWeight: '600',
         textAlign: 'center',
     },
     errorBanner: {
         marginTop: DESIGN_TOKENS.spacing.md,
         padding: DESIGN_TOKENS.spacing.sm,
-        backgroundColor: DESIGN_TOKENS.colors.warningSoft,
         borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.warningLight,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
     },
     errorBannerText: {
-        color: DESIGN_TOKENS.colors.warningDark,
         fontSize: 13,
         textAlign: 'left',
     },
