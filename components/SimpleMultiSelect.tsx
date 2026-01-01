@@ -279,10 +279,10 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     overflow: 'hidden',
     ...Platform.select({
       web: {
-        boxShadow: colors.boxShadows.modal,
+        boxShadow: colors.boxShadows?.modal ?? '0 8px 24px rgba(0,0,0,0.12)',
       },
       default: {
-        ...colors.shadows.heavy,
+        ...(colors.shadows?.heavy ?? {}),
       },
     }),
   },

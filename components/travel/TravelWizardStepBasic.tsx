@@ -78,7 +78,10 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     const [footerHeight, setFooterHeight] = useState(0);
 
     // ✅ ФАЗА 2: Hook для управления превью
-    const { isPreviewVisible, showPreview, hidePreview } = useTravelPreview();
+    const previewState = useTravelPreview();
+    const isPreviewVisible = previewState?.isPreviewVisible ?? false;
+    const showPreview = previewState?.showPreview ?? (() => {});
+    const hidePreview = previewState?.hidePreview ?? (() => {});
 
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
