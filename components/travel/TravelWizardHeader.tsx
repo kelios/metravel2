@@ -19,6 +19,7 @@ type TravelWizardHeaderProps = {
     currentStep?: number;
     totalSteps?: number;
     onStepSelect?: (step: number) => void;
+    onPreview?: () => void; // ✅ ФАЗА 2: Кнопка превью
 };
 
 const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
@@ -279,6 +280,24 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         paddingVertical: DESIGN_TOKENS.spacing.xxs,
         borderRadius: DESIGN_TOKENS.radii.pill,
         backgroundColor: colors.primarySoft,
+    },
+    // ✅ ФАЗА 2: Стили для кнопки превью
+    previewButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.xs,
+        paddingVertical: DESIGN_TOKENS.spacing.xs,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        backgroundColor: colors.primarySoft,
+        borderWidth: 1,
+        borderColor: colors.primary + '40',
+        minHeight: 32,
+    },
+    previewButtonText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        fontWeight: '700',
+        color: colors.primary,
     },
     mobileMetaRow: {
         marginTop: 0,
