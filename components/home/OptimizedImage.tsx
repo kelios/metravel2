@@ -1,6 +1,5 @@
 import React, { memo, useState, useMemo } from 'react';
 import { Image, View, StyleSheet, Platform, ImageProps } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface OptimizedImageProps extends Omit<ImageProps, 'source'> {

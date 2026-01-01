@@ -245,7 +245,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     } finally {
       setIsManualSaveInFlight(false);
     }
-  }, [applySavedData, autosave, cleanAndSave, formState.data, showToast]);
+  }, [applySavedData, autosave, cleanAndSave, formState.data, normalizeDraftPlaceholders, showToast]);
 
   const loadTravelData = useCallback(
     async (id: string) => {
@@ -307,7 +307,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         setIsInitialLoading(false);
       }
     },
-    [autosave, formState, isNew, router, userId, isSuperAdmin]
+    [autosave, formState, isNew, normalizeDraftPlaceholders, router, userId, isSuperAdmin]
   );
 
   const initialLoadKeyRef = useRef<string | null>(null);

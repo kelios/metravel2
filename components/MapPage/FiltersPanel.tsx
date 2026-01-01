@@ -169,7 +169,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       </Pressable>
     ));
      
-  }, [styles]); // зависимость — локальные styles
+  }, [styles, colors.primary, colors.textOnPrimary]); // зависимости: локальные styles и цвета
 
   // ——— Aggregations
   const travelCategoriesCount = useMemo(() => {

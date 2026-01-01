@@ -166,6 +166,17 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
               // noop
             }
 
+            // Numeric signature fallback: scrollTo(x, y)
+            try {
+              const afterObj = Number(node.scrollTop ?? 0);
+              if (typeof node.scrollTo === 'function' && (!didCall || Math.abs(afterObj - before) < 1)) {
+                node.scrollTo(0, top);
+                didCall = true;
+              }
+            } catch {
+              // noop
+            }
+
             // Final fallback: assign scrollTop
             try {
               const afterNum = Number(node.scrollTop ?? 0);
@@ -355,4 +366,3 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
     scrollRef,
   };
 }
-

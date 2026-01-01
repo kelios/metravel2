@@ -23,6 +23,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { openExternalUrl } from '@/src/utils/externalLinks';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface UserStats {
   travelsCount: number;
@@ -35,6 +36,7 @@ export default function ProfileScreen() {
   const { isAuthenticated, logout, userId, setUserAvatar, triggerProfileRefresh: _triggerProfileRefresh } = useAuth();
   const favoritesContext = useFavorites();
   const { favorites = [], viewHistory = [] } = favoritesContext ?? { favorites: [], viewHistory: [] };
+  const colors = useThemedColors();
   const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({ name: '', email: '' });
   const [profile, setProfile] = useState<UserProfileDto | null>(null);
   const [stats, setStats] = useState<UserStats>({
@@ -173,6 +175,188 @@ export default function ProfileScreen() {
     }
   }, [logout, router]);
 
+  // Создаём стили до всех условных return
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollView: { flex: 1 },
+    content: { padding: 16, paddingBottom: 32 },
+    dashboardSections: { marginBottom: 16, gap: 12 },
+    dashboardSectionCard: {
+      backgroundColor: colors.surface,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...Platform.select({
+        web: { boxShadow: colors.boxShadows.light } as any,
+        default: {},
+      }),
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 10,
+      paddingHorizontal: 4,
+    },
+    header: {
+      paddingTop: 8,
+      paddingBottom: 16,
+      marginBottom: 12,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+      marginBottom: 16,
+    },
+    avatar: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: colors.primaryLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarImage: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+    },
+    avatarPlaceholder: {
+      fontSize: 28,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    headerTextBlock: {
+      flex: 1,
+    },
+    userName: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    userEmail: {
+      fontSize: 13,
+      color: colors.textMuted,
+    },
+    logoutButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.dangerSoft,
+      borderWidth: 1,
+      borderColor: colors.danger,
+    },
+    logoutButtonText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.danger,
+    },
+    quickNav: {
+      flexDirection: 'row',
+      gap: 8,
+      marginBottom: 16,
+      paddingHorizontal: 2,
+    },
+    quickNavButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    quickNavButtonActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    quickNavButtonText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    quickNavButtonTextActive: {
+      color: colors.textOnPrimary,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 16,
+    },
+    statCard: {
+      flex: 1,
+      padding: 14,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    statValue: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: colors.primary,
+      marginBottom: 4,
+    },
+    statLabel: {
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    socialLinks: {
+      flexDirection: 'row',
+      gap: 10,
+      marginBottom: 8,
+    },
+    socialButton: {
+      padding: 10,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 14,
+    },
+    gridItem: {
+      width: '48%',
+      minWidth: 160,
+    },
+    emptyText: {
+      fontSize: 13,
+      color: colors.textMuted,
+      textAlign: 'center',
+      paddingVertical: 24,
+      fontStyle: 'italic',
+    },
+    linkButton: {
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      backgroundColor: colors.surface,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 8,
+    },
+    linkButtonContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    linkButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+  }), [colors]);
+
   if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.container}>
@@ -219,27 +403,31 @@ export default function ProfileScreen() {
       label: 'Избранное',
       count: stats.favoritesCount,
       onPress: () => router.push('/favorites'),
-      color: '#ef5350',
+      color: colors.danger,
+      bg: colors.dangerSoft,
     },
     {
       icon: 'map',
       label: 'Мои путешествия',
       count: stats.travelsCount,
       onPress: () => router.push('/metravel'),
-      color: '#4a8c8c',
+      color: colors.primary,
+      bg: colors.primarySoft,
     },
     {
       icon: 'eye',
       label: 'История просмотров',
       count: stats.viewsCount,
       onPress: () => router.push('/history'),
-      color: DESIGN_TOKENS.colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
+      color: colors.primary,
+      bg: colors.primarySoft,
     },
     {
       icon: 'settings',
       label: 'Настройки',
       onPress: () => router.push('/settings'),
-      color: '#667085',
+      color: colors.textMuted,
+      bg: colors.surfaceMuted,
     },
   ];
 

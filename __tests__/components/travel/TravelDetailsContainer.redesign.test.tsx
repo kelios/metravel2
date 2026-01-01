@@ -8,10 +8,7 @@
  * - Использование DESIGN_TOKENS
  */
 
-import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ThemeProvider } from '@/hooks/useTheme';
 import { COMPACT_SPACING, COMPACT_TYPOGRAPHY } from '@/components/travel/details/TravelDetailsStyles';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 

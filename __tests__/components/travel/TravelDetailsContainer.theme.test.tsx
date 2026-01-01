@@ -17,8 +17,8 @@ import {
   MODERN_MATTE_PALETTE_DARK
 } from '@/constants/modernMattePalette';
 
-// Тестовый компонент для проверки темизации
-function ThemedTestComponent() {
+// Тестовый компонент для проверки темизации (не используется, но оставлен для будущих тестов)
+function TestableThemedComponent() {
   const colors = useThemedColors();
   return (
     <div
@@ -34,6 +34,9 @@ function ThemedTestComponent() {
     </div>
   );
 }
+
+// Экспортируем для возможного использования в будущем
+export { TestableThemedComponent };
 
 describe('Темная тема - Travel Details', () => {
   describe('Палитры', () => {

@@ -16,9 +16,11 @@ import InstantSEO from '@/components/seo/InstantSEO';
 import { haversineKm } from '@/utils/geo';
 import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 // ---- типы данных для ленивой загрузки ----
 type City = { id: string; name: string; country: 'PL' | 'BY' };
+type NearbyCity = City & { isNearby: true };
 type QuestMeta = {
     id: string;
     title: string;
@@ -44,24 +46,113 @@ const STORAGE_NEARBY_RADIUS = 'quests_nearby_radius_km';
 const DEFAULT_NEARBY_RADIUS_KM = 15;
 const NEARBY_ID = '__nearby__';
 
-const UI = {
-    primary: '#f59e0b',
-    primaryDark: '#d97706',
-    bg: '#f7fafc',
-    surface: '#ffffff',
-    cardAlt: '#f8fafc',
-    text: '#0f172a',
-    textLight: '#64748b',
-    textMuted: '#94a3b8',
-    border: '#e5e7eb',
-    divider: '#e5e7eb',
-    shadow: 'rgba(15, 23, 42, 0.06)',
-};
-
 const sx = (...args: Array<object | false | null | undefined>) =>
     StyleSheet.flatten(args.filter(Boolean));
 
-type NearbyCity = { id: string; name: string; country: 'PL' | 'BY'; isNearby: true };
+type UiTheme = {
+    primary: string;
+    primaryDark: string;
+    bg: string;
+    surface: string;
+    cardAlt: string;
+    text: string;
+    textLight: string;
+    textMuted: string;
+    border: string;
+    divider: string;
+    shadow: string;
+};
+
+function getStyles(colors: ThemedColors, ui: UiTheme) {
+    return StyleSheet.create({
+        page: { flex: 1, backgroundColor: colors.background },
+        scrollContent: { flexGrow: 1, paddingBottom: 60 },
+
+        wrap: { width: '100%', maxWidth: 1100, alignSelf: 'center', padding: 16 },
+        wrapMobile: { padding: 12 },
+
+        hero: {
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: colors.surface, borderRadius: 12, padding: 16,
+            borderWidth: 1, borderColor: colors.border, marginBottom: 16,
+            ...Platform.select({ web: { boxShadow: ui.shadow } as any }),
+        },
+        heroMobile: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 12 },
+        heroIconWrap: {
+            width: 36, height: 36, borderRadius: 10, backgroundColor: ui.cardAlt,
+            alignItems: 'center', justifyContent: 'center',
+        },
+        title: { color: colors.text, fontSize: 22, fontWeight: '800' },
+        titleMobile: { fontSize: 18 },
+        subtitle: { color: colors.textMuted, fontSize: 14, marginTop: 2 },
+        subtitleMobile: { fontSize: 12 },
+        mapBtn: { flexDirection: 'row', gap: 6, backgroundColor: ui.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
+        mapBtnMobile: { paddingHorizontal: 10, paddingVertical: 6 },
+        mapBtnTxt: { color: '#fff', fontWeight: '800', fontSize: 14 },
+
+        citiesContainer: { gap: 8 },
+        citiesRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-start' },
+        cityCard: { flex: 1, minWidth: 100, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+        cityCardMobile: { minWidth: 80, padding: 10, borderRadius: 10 },
+        cityCardActive: { borderColor: ui.primary, backgroundColor: ui.cardAlt },
+        cityName: { color: colors.text, fontSize: 15, fontWeight: '800' },
+        cityNameMobile: { fontSize: 13 },
+        cityCountry: { color: colors.textMuted, fontSize: 12, marginBottom: 8 },
+        cityCountryMobile: { fontSize: 11, marginBottom: 6 },
+        questsCount: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
+        questsCountMobile: { fontSize: 11 },
+
+        divider: { height: 1, backgroundColor: colors.borderLight, marginVertical: 16 },
+
+        filtersRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 8 },
+        filtersRowMobile: { gap: 4, marginBottom: 6 },
+        filtersLabel: { color: colors.textMuted, fontSize: 13 },
+        filtersLabelMobile: { fontSize: 12 },
+        chip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+        chipMobile: { paddingHorizontal: 6, paddingVertical: 3 },
+        chipActive: { borderColor: ui.primary, backgroundColor: ui.cardAlt },
+        chipText: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
+        chipTextMobile: { fontSize: 11 },
+        chipTextActive: { color: colors.text },
+
+        questsContainer: { gap: 12 },
+        questsRow: { flexDirection: 'row', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-start' },
+
+        emptyState: {
+            flexDirection: 'row', alignItems: 'center', gap: 6,
+            paddingVertical: 8, paddingHorizontal: 12, backgroundColor: colors.surface,
+            borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginBottom: 8,
+        },
+        emptyText: { color: colors.textMuted, fontSize: 12 },
+
+        questCard: {
+            flex: 1, minWidth: 280, borderRadius: 16, overflow: 'hidden',
+            borderWidth: 1, borderColor: colors.border,
+            ...Platform.select({
+                web: { boxShadow: ui.shadow } as any,
+                android: { elevation: 2 },
+                default: {},
+            }),
+        },
+        questCardMobile: { minWidth: '100%', borderRadius: 14 },
+
+        coverWrap: { width: '100%', aspectRatio: 16 / 9, position: 'relative' },
+        coverWrapMobile: { aspectRatio: 16 / 9 },
+
+        questCover: { width: '100%', height: '100%' },
+        coverOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12, backgroundColor: 'rgba(0,0,0,0.45)' },
+        coverOverlayMobile: { padding: 10 },
+        questTitle: { color: colors.textOnDark, fontSize: 16, fontWeight: '800', marginBottom: 4 },
+        questTitleMobile: { fontSize: 14, marginBottom: 3 },
+        questMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+        questMetaRowMobile: { gap: 8 },
+        metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+        metaText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+        metaTextMobile: { fontSize: 11 },
+    });
+}
+
+type QuestStyles = ReturnType<typeof getStyles>;
 
 export default function QuestsScreen() {
     const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
@@ -73,8 +164,26 @@ export default function QuestsScreen() {
     const [ALL_QUESTS, setALL_QUESTS] = useState<QuestMeta[]>([]);
 
     const isFocused = useIsFocused();
+    const colors = useThemedColors();
     const { width, isPhone } = useResponsive();
     const isMobile = isPhone;
+    const ui = useMemo<UiTheme>(
+        () => ({
+            primary: colors.warning ?? colors.accent,
+            primaryDark: colors.warningDark ?? colors.accentDark ?? colors.primaryDark,
+            bg: colors.background,
+            surface: colors.surface,
+            cardAlt: colors.surfaceMuted ?? colors.backgroundSecondary,
+            text: colors.text,
+            textLight: colors.textMuted,
+            textMuted: colors.textMuted,
+            border: colors.border,
+            divider: colors.borderLight,
+            shadow: (colors.boxShadows as any)?.small ?? '0 2px 8px rgba(0,0,0,0.06)',
+        }),
+        [colors],
+    );
+    const s = useMemo(() => getStyles(colors, ui), [colors, ui]);
 
     // колонки
     const cityColumns = isMobile ? 2 : width >= 1200 ? 5 : width >= 900 ? 4 : 3;
@@ -223,7 +332,6 @@ export default function QuestsScreen() {
             {isFocused && (
                 <InstantSEO headKey="quests-index" title={titleText} description={descText} ogType="website" />
             )}
-
             <ScrollView style={s.page} contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 <View style={sx(s.wrap, isMobile && s.wrapMobile)}>
                     {/* Hero */}
@@ -231,7 +339,7 @@ export default function QuestsScreen() {
                         <View style={s.heroIconWrap}>
                             <Suspense fallback={null}>
                                 {/* @ts-ignore */}
-                                <Ion name="compass" size={isMobile ? 20 : 26} color={UI.primary} />
+                                <Ion name="compass" size={isMobile ? 20 : 26} color={ui.primary} />
                             </Suspense>
                         </View>
                         <View style={{ flex: 1 }}>
@@ -255,7 +363,7 @@ export default function QuestsScreen() {
                     {/* Города */}
                     <View style={s.citiesContainer}>
                         {!dataLoaded ? (
-                            <Text style={{ color: UI.textLight, padding: 8 }}>Загрузка городов…</Text>
+                            <Text style={{ color: colors.textMuted, padding: 8 }}>Загрузка городов…</Text>
                         ) : (
                             chunkedCities.map((row, rowIndex) => (
                                 <View key={`row-${rowIndex}`} style={s.citiesRow}>
@@ -324,16 +432,16 @@ export default function QuestsScreen() {
                                 <View style={s.emptyState}>
                                     <Suspense fallback={null}>
                                         {/* @ts-ignore */}
-                                        <Ion name="alert-circle" size={16} color={UI.textMuted} />
+                                        <Ion name="alert-circle" size={16} color={colors.textMuted} />
                                     </Suspense>
                                     <Text style={s.emptyText}>Рядом ничего не найдено. Попробуйте увеличить радиус.</Text>
                                 </View>
                             ) : null}
 
                             {!dataLoaded ? (
-                                <Text style={{ color: UI.textLight, padding: 8 }}>Загрузка квестов…</Text>
+                                <Text style={{ color: colors.textMuted, padding: 8 }}>Загрузка квестов…</Text>
                             ) : (
-                                chunkedQuests.map((row, rowIndex) => (
+                                                        chunkedQuests.map((row, rowIndex) => (
                                     <View key={`quest-row-${rowIndex}`} style={s.questsRow}>
                                         {row.map((quest) => (
                                             <QuestCardLink
@@ -342,6 +450,7 @@ export default function QuestsScreen() {
                                                 quest={quest}
                                                 nearby={selectedCityId === NEARBY_ID}
                                                 isMobile={isMobile}
+                                                s={s}
                                             />
                                         ))}
                                     </View>
@@ -356,12 +465,13 @@ export default function QuestsScreen() {
 }
 
 function QuestCardLink({
-                           cityId, quest, nearby, isMobile,
+                           cityId, quest, nearby, isMobile, s,
                        }: {
     cityId: string;
     quest: QuestMeta & { _distanceKm?: number };
     nearby?: boolean;
     isMobile?: boolean;
+    s: QuestStyles;
 }) {
     const durationText = quest.durationMin ? `${Math.round((quest.durationMin ?? 60) / 5) * 5} мин` : '1–2 часа';
 
@@ -412,85 +522,3 @@ function QuestCardLink({
     );
 }
 
-
-const s = StyleSheet.create({
-    page: { flex: 1, backgroundColor: UI.bg },
-    scrollContent: { flexGrow: 1, paddingBottom: 60 },
-
-    wrap: { width: '100%', maxWidth: 1100, alignSelf: 'center', padding: 16 },
-    wrapMobile: { padding: 12 },
-
-    hero: {
-        flexDirection: 'row', alignItems: 'center', gap: 12,
-        backgroundColor: UI.surface, borderRadius: 12, padding: 16,
-        borderWidth: 1, borderColor: UI.border, marginBottom: 16,
-    },
-    heroMobile: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 12 },
-    heroIconWrap: {
-        width: 36, height: 36, borderRadius: 10, backgroundColor: UI.cardAlt,
-        alignItems: 'center', justifyContent: 'center',
-    },
-    title: { color: UI.text, fontSize: 22, fontWeight: '800' },
-    titleMobile: { fontSize: 18 },
-    subtitle: { color: UI.textLight, fontSize: 14, marginTop: 2 },
-    subtitleMobile: { fontSize: 12 },
-    mapBtn: { flexDirection: 'row', gap: 6, backgroundColor: UI.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
-    mapBtnMobile: { paddingHorizontal: 10, paddingVertical: 6 },
-    mapBtnTxt: { color: '#fff', fontWeight: '800', fontSize: 14 },
-
-    citiesContainer: { gap: 8 },
-    citiesRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-start' },
-    cityCard: { flex: 1, minWidth: 100, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: UI.border, backgroundColor: UI.surface },
-    cityCardMobile: { minWidth: 80, padding: 10, borderRadius: 10 },
-    cityCardActive: { borderColor: UI.primary, backgroundColor: UI.cardAlt },
-    cityName: { color: UI.text, fontSize: 15, fontWeight: '800' },
-    cityNameMobile: { fontSize: 13 },
-    cityCountry: { color: UI.textLight, fontSize: 12, marginBottom: 8 },
-    cityCountryMobile: { fontSize: 11, marginBottom: 6 },
-    questsCount: { color: UI.textLight, fontSize: 12, fontWeight: '700' },
-    questsCountMobile: { fontSize: 11 },
-
-    divider: { height: 1, backgroundColor: UI.divider, marginVertical: 16 },
-
-    filtersRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 8 },
-    filtersRowMobile: { gap: 4, marginBottom: 6 },
-    filtersLabel: { color: UI.textLight, fontSize: 13 },
-    filtersLabelMobile: { fontSize: 12 },
-    chip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: UI.border, backgroundColor: UI.surface },
-    chipMobile: { paddingHorizontal: 6, paddingVertical: 3 },
-    chipActive: { borderColor: UI.primary, backgroundColor: UI.cardAlt },
-    chipText: { color: UI.textLight, fontSize: 12, fontWeight: '700' },
-    chipTextMobile: { fontSize: 11 },
-    chipTextActive: { color: UI.text },
-
-    questsContainer: { gap: 12 },
-    questsRow: { flexDirection: 'row', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-start' },
-
-    emptyState: {
-        flexDirection: 'row', alignItems: 'center', gap: 6,
-        paddingVertical: 8, paddingHorizontal: 12, backgroundColor: '#fff',
-        borderRadius: 10, borderWidth: 1, borderColor: UI.border, marginBottom: 8,
-    },
-    emptyText: { color: UI.textMuted, fontSize: 12 },
-
-    questCard: {
-        flex: 1, minWidth: 280, borderRadius: 16, overflow: 'hidden',
-        shadowColor: UI.shadow, shadowOpacity: 1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 },
-        borderWidth: 1, borderColor: UI.border, ...Platform.select({ android: { elevation: 2 } }),
-    },
-    questCardMobile: { minWidth: '100%', borderRadius: 14 },
-
-    coverWrap: { width: '100%', aspectRatio: 16 / 9, position: 'relative' },
-    coverWrapMobile: { aspectRatio: 16 / 9 },
-
-    questCover: { width: '100%', height: '100%' },
-    coverOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12, backgroundColor: 'rgba(0,0,0,0.45)' },
-    coverOverlayMobile: { padding: 10 },
-    questTitle: { color: '#fff', fontSize: 16, fontWeight: '800', marginBottom: 4 },
-    questTitleMobile: { fontSize: 14, marginBottom: 3 },
-    questMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    questMetaRowMobile: { gap: 8 },
-    metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    metaText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-    metaTextMobile: { fontSize: 11 },
-});
