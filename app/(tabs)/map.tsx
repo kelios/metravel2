@@ -111,6 +111,16 @@ export default function MapScreen() {
         window.dispatchEvent(new Event('resize'));
     }, [rightPanelVisible, isMobile]);
 
+    // A11y: when screen loses focus on web, drop focus to avoid staying inside aria-hidden tree
+    useEffect(() => {
+        if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+        if (isFocused) return;
+        const active = document.activeElement as HTMLElement | null;
+        if (active && typeof active.blur === 'function') {
+            active.blur();
+        }
+    }, [isFocused]);
+
     // Scroll lock for mobile overlay on web
     useEffect(() => {
         if (Platform.OS !== 'web' || typeof document === 'undefined') return;

@@ -9,12 +9,14 @@ import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
 import { TravelFormData } from '@/src/types/types';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
+import TravelPreviewModal from '@/components/travel/TravelPreviewModal';
 import { ValidatedTextInput } from '@/components/travel/ValidatedTextInput';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useTravelPreview } from '@/hooks/useTravelPreview';
 
 const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
 const isMobileDefault = windowWidth <= METRICS.breakpoints.tablet;
@@ -74,6 +76,9 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
     const [footerHeight, setFooterHeight] = useState(0);
+
+    // ✅ ФАЗА 2: Hook для управления превью
+    const { isPreviewVisible, showPreview, hidePreview } = useTravelPreview();
 
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -150,6 +155,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                     currentStep={currentStep}
                     totalSteps={totalSteps}
                     onStepSelect={onStepSelect}
+                    onPreview={showPreview}
                 />
                 {validation.errors.length > 0 && (
                     <View style={styles.validationSummaryWrapper}>
@@ -206,6 +212,13 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                 <Snackbar visible={snackbarVisible} onDismiss={onDismissSnackbar}>
                     {snackbarMessage}
                 </Snackbar>
+
+                {/* ✅ ФАЗА 2: Превью карточки */}
+                <TravelPreviewModal
+                    visible={isPreviewVisible}
+                    onClose={hidePreview}
+                    formData={formData}
+                />
             </KeyboardAvoidingView>
         </SafeAreaView>
     );

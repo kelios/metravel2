@@ -41,22 +41,24 @@ jest.mock('@/hooks/useTheme', () => {
   }
 
   const ThemeContext = React.createContext(defaultTheme)
+  const baseColors = {
+    ...MODERN_MATTE_PALETTE,
+    surfaceLight: MODERN_MATTE_PALETTE.backgroundTertiary,
+    mutedBackground: MODERN_MATTE_PALETTE.mutedBackground ?? MODERN_MATTE_PALETTE.backgroundSecondary,
+    error: MODERN_MATTE_PALETTE.danger,
+    errorDark: MODERN_MATTE_PALETTE.dangerDark,
+    errorLight: MODERN_MATTE_PALETTE.dangerLight,
+    errorSoft: MODERN_MATTE_PALETTE.dangerSoft,
+    shadows: MODERN_MATTE_SHADOWS,
+    boxShadows: MODERN_MATTE_BOX_SHADOWS,
+    gradients: MODERN_MATTE_GRADIENTS,
+  }
 
   return {
     ThemeContext,
     useTheme: () => defaultTheme,
-    useThemedColors: () => ({
-      ...MODERN_MATTE_PALETTE,
-      surfaceLight: MODERN_MATTE_PALETTE.backgroundTertiary,
-      mutedBackground: MODERN_MATTE_PALETTE.mutedBackground ?? MODERN_MATTE_PALETTE.backgroundSecondary,
-      error: MODERN_MATTE_PALETTE.danger,
-      errorDark: MODERN_MATTE_PALETTE.dangerDark,
-      errorLight: MODERN_MATTE_PALETTE.dangerLight,
-      errorSoft: MODERN_MATTE_PALETTE.dangerSoft,
-      shadows: MODERN_MATTE_SHADOWS,
-      boxShadows: MODERN_MATTE_BOX_SHADOWS,
-      gradients: MODERN_MATTE_GRADIENTS,
-    }),
+    useThemedColors: () => baseColors,
+    getThemedColors: () => baseColors,
     ThemeProvider: ({ children }: { children: any }) =>
       React.createElement(ThemeContext.Provider, { value: defaultTheme }, children),
   }

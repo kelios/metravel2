@@ -245,7 +245,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         gap: DESIGN_TOKENS.spacing.xs,
         marginTop: DESIGN_TOKENS.spacing.xs,
         padding: DESIGN_TOKENS.spacing.sm,
-        backgroundColor: colors.dangerSoft,
+        backgroundColor: colors.dangerSoft ?? colors.danger,
         borderRadius: DESIGN_TOKENS.radii.sm,
     },
     errorText: {
@@ -261,7 +261,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderWidth: 1,
         borderColor: colors.border,
         ...(Platform.OS === 'web'
-            ? ({ boxShadow: colors.boxShadows.medium } as any)
+            ? ({ boxShadow: colors.boxShadows?.medium ?? '0 2px 6px rgba(0,0,0,0.08)' } as any)
             : {}),
     },
     resultItem: {

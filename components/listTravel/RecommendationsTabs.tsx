@@ -80,7 +80,7 @@ const AuthGate = ({
 
 /* ---------------- Skeletons ---------------- */
 
-const CardSkeleton = () => {
+const CardSkeleton = ({ styles }: { styles: ReturnType<typeof createStyles> }) => {
   const imageHeight = (TAB_CARD_TEMPLATE.imageContainer as any)?.height ?? 136;
   const contentPaddingV = (TAB_CARD_TEMPLATE.content as any)?.paddingVertical ?? 12;
   const contentPaddingH = (TAB_CARD_TEMPLATE.content as any)?.paddingHorizontal ?? 12;
@@ -99,12 +99,12 @@ const CardSkeleton = () => {
   );
 };
 
-const RecommendationsPlaceholder = () => (
+const RecommendationsPlaceholder = ({ styles }: { styles: ReturnType<typeof createStyles> }) => (
   <View style={styles.placeholderContainer}>
     <SkeletonLoader width={160} height={20} borderRadius={8} style={{ marginBottom: 12 }} />
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
       {[1, 2, 3, 4].map((i) => (
-        <CardSkeleton key={i} />
+        <CardSkeleton key={i} styles={styles} />
       ))}
     </ScrollView>
   </View>
@@ -265,13 +265,13 @@ const RecommendationsTabs = memo(
       switch (activeTab) {
         case 'highlights':
           return renderTabPane(
-            <Suspense fallback={<RecommendationsPlaceholder />}>
+            <Suspense fallback={<RecommendationsPlaceholder styles={styles} />}>
               <WeeklyHighlights showHeader={false} enabled={isTabsVisible && activeTab === 'highlights'} />
             </Suspense>
           );
         case 'recommendations':
           return renderTabPane(
-            <Suspense fallback={<RecommendationsPlaceholder />}>
+            <Suspense fallback={<RecommendationsPlaceholder styles={styles} />}>
               <PersonalizedRecommendations showHeader={!isAuthenticated} onlyRecommendations={true} />
             </Suspense>
           );

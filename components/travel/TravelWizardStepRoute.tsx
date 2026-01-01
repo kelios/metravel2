@@ -635,8 +635,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderWidth: 1,
         borderColor: colors.border,
         ...(Platform.OS === 'web'
-            ? ({ boxShadow: colors.boxShadows.card } as any)
-            : (colors.shadows.light as any)),
+            ? ({ boxShadow: colors.boxShadows?.card ?? '0 2px 8px rgba(0,0,0,0.08)' } as any)
+            : ((colors.shadows?.light ?? {}) as any)),
         overflow: 'hidden',
     },
     mapHeader: {

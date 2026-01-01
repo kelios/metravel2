@@ -211,6 +211,13 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (typeof window === 'undefined') return;
+    // Some embeds disallow the `unload`/`beforeunload` permission. Avoid attaching the listener to
+    // prevent "Permissions policy violation: unload is not allowed in this document".
+    const isTopWindow = window.self === window.top;
+    const permissionsPolicy = (document as any).permissionsPolicy || (document as any).featurePolicy;
+    const unloadAllowed =
+      !permissionsPolicy?.allowsFeature ? true : permissionsPolicy.allowsFeature('unload');
+    if (!isTopWindow || !unloadAllowed) return;
 
     const handler = (e: BeforeUnloadEvent) => {
       if (!hasUnsavedChanges) return;
