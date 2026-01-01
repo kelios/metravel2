@@ -7,18 +7,87 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/src/utils/confirmAction';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 export default function HistoryScreen() {
     const router = useRouter();
     const { width } = useResponsive();
     const { isAuthenticated } = useAuth();
     const { viewHistory, clearHistory } = useFavorites() as any;
+    const colors = useThemedColors();
     const [isLoading, setIsLoading] = useState(true);
+
+    const styles = useMemo(() => StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        header: {
+            paddingHorizontal: 16,
+            paddingTop: 12,
+            paddingBottom: 8,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+        },
+        headerTitleBlock: {
+            flex: 1,
+        },
+        title: {
+            fontSize: 20,
+            fontWeight: '700',
+            color: colors.text,
+        },
+        subtitle: {
+            marginTop: 4,
+            fontSize: 13,
+            color: colors.textMuted,
+        },
+        clearButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            borderRadius: DESIGN_TOKENS.radii.md,
+            borderWidth: 1,
+            borderColor: colors.danger,
+            backgroundColor: colors.surface,
+            minHeight: 40,
+        },
+        clearButtonText: {
+            fontSize: 14,
+            fontWeight: '600',
+            color: colors.danger,
+        },
+        gridContent: {
+            paddingHorizontal: 16,
+            paddingBottom: 24,
+            paddingTop: 6,
+        },
+        gridRow: {
+            justifyContent: 'flex-start',
+            gap: 14,
+            paddingTop: 12,
+        },
+        gridItem: {
+            flex: 1,
+            paddingTop: 12,
+        },
+        card: {
+            marginRight: 0,
+            width: '100%',
+            minWidth: 320,
+            maxWidth: 360,
+            alignSelf: 'center',
+        },
+    }), [colors]);
 
     useEffect(() => {
         const timer = setTimeout(() => setIsLoading(false), 300);
@@ -144,7 +213,7 @@ export default function HistoryScreen() {
                     accessibilityLabel="Очистить историю просмотров"
                     {...Platform.select({ web: { cursor: 'pointer' } })}
                 >
-                    <Feather name="trash-2" size={16} color={DESIGN_TOKENS.colors.danger} />
+                    <Feather name="trash-2" size={16} color={colors.danger} />
                     <Text style={styles.clearButtonText}>Очистить</Text>
                 </Pressable>
             </View>
@@ -168,8 +237,8 @@ export default function HistoryScreen() {
                             }}
                             badge={{
                                 icon: 'history',
-                                backgroundColor: DESIGN_TOKENS.colors.overlay,
-                                iconColor: DESIGN_TOKENS.colors.textOnDark,
+                                backgroundColor: colors.overlay,
+                                iconColor: colors.textOnDark,
                             }}
                             onPress={() => handleOpen(item.url)}
                             layout="grid"

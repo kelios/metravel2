@@ -1,6 +1,7 @@
 import React from 'react';
 import renderer from 'react-test-renderer';
 import SelectComponent from '@/components/SelectComponent';
+import { Platform } from 'react-native';
 
 const options = [
   { value: '1', label: 'Belarus' },
@@ -19,6 +20,19 @@ const renderComponent = (props = {}) =>
   );
 
 describe('SelectComponent (web)', () => {
+  const originalPlatform = Platform.OS;
+  const originalSelect = Platform.select;
+
+  beforeAll(() => {
+    Platform.OS = 'web';
+    Platform.select = (obj: any) => obj.web ?? obj.default;
+  });
+
+  afterAll(() => {
+    Platform.OS = originalPlatform;
+    Platform.select = originalSelect;
+  });
+
   it('renders label and placeholder', () => {
     const tree = renderComponent().root;
     const labelNode = tree.find((node: any) => node.type === 'label');
@@ -50,4 +64,3 @@ describe('SelectComponent (web)', () => {
     expect(select.props.value).toBe('2');
   });
 });
-

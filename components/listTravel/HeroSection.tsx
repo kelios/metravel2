@@ -13,6 +13,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { AIRY_GRADIENTS, AIRY_COLORS } from '@/constants/airyColors';
 import { useThemedColors } from '@/hooks/useTheme';
+import { globalFocusStyles } from '@/styles/globalFocus';
 
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;

@@ -322,8 +322,13 @@ const ExportBar = memo(function ExportBar({
     progress?: number;
     settingsSummary: string;
     hasSelection: boolean;
-    styles: ReturnType<typeof createStyles>;
+    styles?: ReturnType<typeof createStyles>;
 }) {
+    const colors = useThemedColors();
+    const resolvedStyles = useMemo(
+      () => styles ?? createStyles(colors),
+      [colors, styles]
+    );
     const selectionText = selectedCount
       ? `Выбрано ${selectedCount} ${pluralizeTravels(selectedCount)}`
       : 'Выберите путешествия для экспорта';
@@ -331,36 +336,36 @@ const ExportBar = memo(function ExportBar({
   return (
       <View
         style={[
-          styles.exportBar,
-          isMobile && styles.exportBarMobile,
-          Platform.OS === 'web' && isMobile && styles.exportBarMobileWeb,
+          resolvedStyles.exportBar,
+          isMobile && resolvedStyles.exportBarMobile,
+          Platform.OS === 'web' && isMobile && resolvedStyles.exportBarMobileWeb,
         ]}
       >
-          <View style={styles.exportBarInfo}>
-            <Text style={styles.exportBarInfoTitle as any}>{selectionText}</Text>
-            <Text style={styles.exportBarInfoSubtitle as any}>
+          <View style={resolvedStyles.exportBarInfo}>
+            <Text style={resolvedStyles.exportBarInfoTitle as any}>{selectionText}</Text>
+            <Text style={resolvedStyles.exportBarInfoSubtitle as any}>
               {hasSelection ? `Настройки: ${settingsSummary}` : 'Выберите хотя бы одно путешествие, чтобы включить кнопки'}
             </Text>
-            <View style={styles.exportBarInfoActions}>
+            <View style={resolvedStyles.exportBarInfoActions}>
               <Pressable onPress={onToggleSelectAll} accessibilityRole="button">
-                <Text style={styles.linkButton as any}>
+                <Text style={resolvedStyles.linkButton as any}>
                   {selectedCount === allCount && allCount > 0 ? "Снять выделение" : "Выбрать все"}
                 </Text>
               </Pressable>
               {hasSelection && (
                 <Pressable onPress={onClearSelection} accessibilityRole="button">
-                  <Text style={styles.linkButton as any}>Очистить выбор</Text>
+                  <Text style={resolvedStyles.linkButton as any}>Очистить выбор</Text>
                 </Pressable>
               )}
               {hasSelection && (
                 <Pressable onPress={onSettings} accessibilityRole="button">
-                  <Text style={styles.linkButton as any}>Настройки</Text>
+                  <Text style={resolvedStyles.linkButton as any}>Настройки</Text>
                 </Pressable>
               )}
             </View>
           </View>
 
-          <View style={[styles.exportBarButtons, isMobile && styles.exportBarButtonsMobile]}>
+          <View style={[resolvedStyles.exportBarButtons, isMobile && resolvedStyles.exportBarButtonsMobile]}>
             <UIButton
               label={isGenerating ? `Генерация... ${progress || 0}%` : (isMobile ? "Сохранить PDF" : "Сохранить PDF")}
               onPress={onSave}
@@ -369,7 +374,7 @@ const ExportBar = memo(function ExportBar({
           </View>
 
           {isGenerating && Platform.OS === "web" && (
-            <View style={styles.progressWrapper}>
+            <View style={resolvedStyles.progressWrapper}>
               <ProgressIndicator
                 progress={progress ?? 0}
                 stage={(progress ?? 0) < 30 ? 'Подготовка данных...' : 

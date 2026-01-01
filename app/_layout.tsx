@@ -128,6 +128,7 @@ export default function RootLayout() {
 function RootLayoutNav() {
     const pathname = usePathname();
     const { width } = useResponsive();
+    const colors = useThemedColors();
     const [clientWidth, setClientWidth] = useState<number | null>(null);
 
     useEffect(() => {
@@ -274,10 +275,12 @@ function RootLayoutNav() {
       }
     }, [fontError]);
 
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     if (!fontsLoaded && !isWeb) {
       return (
         <View style={styles.fontLoader}>
-          <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.primary} />
+          <ActivityIndicator size="small" color={colors.primary} />
         </View>
       );
     }
@@ -391,13 +394,13 @@ function ThemedPaperProvider({ children }: { children: React.ReactNode }) {
     return <PaperProvider theme={paperTheme}>{children}</PaperProvider>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {
         flex: 1,
         position: 'relative',
         flexDirection: 'column',
-        // Белый корневой фон: отключаем просвечивание фоновой карты
-        backgroundColor: DESIGN_TOKENS.colors.background,
+        // Динамический фон для поддержки тем
+        backgroundColor: colors.background,
         ...(Platform.OS === 'web'
           ? ({
               height: '100vh',
@@ -436,13 +439,13 @@ const styles = StyleSheet.create({
         padding: 12,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: DESIGN_TOKENS.colors.backgroundTertiary,
+        backgroundColor: colors.backgroundTertiary,
     },
     fontLoader: {
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        // Оставляем мягкий светлый фон для экрана загрузки шрифтов
-        backgroundColor: DESIGN_TOKENS.colors.background,
+        // Динамический фон для экрана загрузки шрифтов
+        backgroundColor: colors.background,
     },
 });

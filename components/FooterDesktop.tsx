@@ -4,6 +4,7 @@ import { ResponsiveContainer } from "@/components/layout";
 import { useRouter, type Href } from "expo-router";
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { useThemedColors } from "@/hooks/useTheme";
+import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { PRIMARY_HEADER_NAV_ITEMS } from "@/constants/headerNavigation";
 import { globalFocusStyles } from "@/styles/globalFocus";
 
@@ -33,7 +34,7 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
 
   const styles = useMemo(() => StyleSheet.create({
     base: {
-      backgroundColor: colors.surface,
+      backgroundColor: colors.background,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.border,
       marginTop: -1,
@@ -47,10 +48,18 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
       paddingVertical: 4,
       backgroundColor: colors.surface,
       borderRadius: 12,
-      shadowColor: "#1f1f1f",
-      shadowOpacity: 0.08,
-      shadowRadius: 18,
-      shadowOffset: { width: 0, height: 8 },
+      ...Platform.select({
+        web: {
+          boxShadow: (colors.boxShadows as any)?.medium ?? "0 12px 32px rgba(0,0,0,0.18)",
+        } as any,
+        ios: {
+          ...DESIGN_TOKENS.shadowsNative.light,
+        },
+        android: {
+          ...DESIGN_TOKENS.shadowsNative.light,
+        },
+        default: {},
+      }),
       ...Platform.select({
         web: {
           flexWrap: "nowrap",

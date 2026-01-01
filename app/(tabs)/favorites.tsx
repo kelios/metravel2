@@ -12,13 +12,102 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/src/utils/confirmAction';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useThemedColors } from '@/hooks/useTheme';
 
 export default function FavoritesScreen() {
     const router = useRouter();
     const { width } = useResponsive();
     const { isAuthenticated } = useAuth();
     const { favorites, removeFavorite, clearFavorites } = useFavorites() as any;
+    const colors = useThemedColors();
     const [isLoading, setIsLoading] = useState(true);
+
+    const styles = useMemo(() => StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        header: {
+            paddingHorizontal: 16,
+            paddingTop: 12,
+            paddingBottom: 8,
+        },
+        headerRow: {
+            flexDirection: 'row',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            gap: 12,
+        },
+        headerTitleBlock: {
+            flex: 1,
+        },
+        title: {
+            fontSize: 20,
+            fontWeight: '700',
+            color: colors.text,
+        },
+        subtitle: {
+            marginTop: 4,
+            fontSize: 13,
+            color: colors.textMuted,
+        },
+        clearButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            borderRadius: DESIGN_TOKENS.radii.md,
+            borderWidth: 1,
+            borderColor: colors.danger,
+            backgroundColor: colors.surface,
+            minHeight: 40,
+        },
+        clearButtonText: {
+            fontSize: 14,
+            fontWeight: '600',
+            color: colors.danger,
+        },
+        listContent: {
+            paddingHorizontal: 16,
+            paddingBottom: 24,
+            paddingTop: 12,
+            rowGap: 14,
+        },
+        gridRow: {
+            justifyContent: 'space-between',
+            gap: 14,
+        },
+        gridItem: {
+            flex: 1,
+            minWidth: 0,
+            paddingTop: 12,
+            position: 'relative',
+        },
+        card: {
+            width: '100%',
+            minWidth: 0,
+            maxWidth: '100%',
+            marginRight: 0,
+        },
+        cardWrap: {
+            marginBottom: 14,
+        },
+        removeButton: {
+            position: 'absolute',
+            top: 10,
+            left: 10,
+            width: 32,
+            height: 32,
+            borderRadius: 999,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.danger,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+        },
+    }), [colors]);
 
     useEffect(() => {
         const timer = setTimeout(() => setIsLoading(false), 300);
@@ -152,7 +241,7 @@ export default function FavoritesScreen() {
                             accessibilityLabel="Очистить избранное"
                             {...Platform.select({ web: { cursor: 'pointer' } })}
                         >
-                            <Feather name="trash-2" size={16} color={DESIGN_TOKENS.colors.danger} />
+                            <Feather name="trash-2" size={16} color={colors.danger} />
                             <Text style={styles.clearButtonText}>Очистить</Text>
                         </Pressable>
                     )}
@@ -178,8 +267,8 @@ export default function FavoritesScreen() {
                             }}
                             badge={{
                                 icon: 'favorite',
-                                backgroundColor: DESIGN_TOKENS.colors.danger,
-                                iconColor: DESIGN_TOKENS.colors.textOnDark,
+                                backgroundColor: colors.danger,
+                                iconColor: colors.textOnDark,
                             }}
                             onPress={() => handleOpen(item.url)}
                             layout="grid"
@@ -193,7 +282,7 @@ export default function FavoritesScreen() {
                             accessibilityLabel="Удалить из избранного"
                             {...Platform.select({ web: { cursor: 'pointer' } })}
                         >
-                            <Feather name="trash-2" size={16} color={DESIGN_TOKENS.colors.textOnDark} />
+                            <Feather name="trash-2" size={16} color={colors.textOnPrimary} />
                         </Pressable>
                     </View>
                 )}
@@ -201,90 +290,3 @@ export default function FavoritesScreen() {
         </SafeAreaView>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
-    },
-    header: {
-        paddingHorizontal: 16,
-        paddingTop: 12,
-        paddingBottom: 8,
-    },
-    headerRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        gap: 12,
-    },
-    headerTitleBlock: {
-        flex: 1,
-    },
-    title: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: DESIGN_TOKENS.colors.text,
-    },
-    subtitle: {
-        marginTop: 4,
-        fontSize: 13,
-        color: DESIGN_TOKENS.colors.textMuted,
-    },
-    clearButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        borderRadius: DESIGN_TOKENS.radii.md,
-        borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.danger,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        minHeight: 40,
-    },
-    clearButtonText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: DESIGN_TOKENS.colors.danger,
-    },
-    listContent: {
-        paddingHorizontal: 16,
-        paddingBottom: 24,
-        paddingTop: 12,
-        rowGap: 14,
-    },
-    gridRow: {
-        justifyContent: 'space-between',
-        gap: 14,
-    },
-    gridItem: {
-        flex: 1,
-        minWidth: 0,
-        paddingTop: 12,
-        position: 'relative',
-    },
-    card: {
-        width: '100%',
-        minWidth: 0,
-        maxWidth: '100%',
-        marginRight: 0,
-    },
-    cardWrap: {
-        marginBottom: 14,
-    },
-    removeButton: {
-        position: 'absolute',
-        top: 10,
-        left: 10,
-        width: 32,
-        height: 32,
-        borderRadius: 999,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(239, 68, 68, 0.95)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.65)',
-    },
-});

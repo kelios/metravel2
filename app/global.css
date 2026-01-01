@@ -138,12 +138,14 @@ body {
   min-height: 100%;
   margin: 0;
   overflow: hidden;
+  background-color: var(--color-background);
 }
 
 #root,
 #__next {
   height: 100%;
   min-height: 100%;
+  background-color: var(--color-background);
 }
 
 * {

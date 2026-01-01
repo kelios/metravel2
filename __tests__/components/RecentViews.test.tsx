@@ -33,6 +33,15 @@ jest.mock('@/constants/designSystem', () => ({
       sm: 8,
       md: 16,
     },
+    radii: {
+      sm: 12,
+    },
+    typography: {
+      sizes: {
+        xs: 12,
+        sm: 14,
+      },
+    },
   },
 }));
 

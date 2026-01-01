@@ -56,20 +56,20 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
 // ✅ МИГРАЦИЯ: Вынесена функция создания стилей для мемоизации
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
-    marginVertical: DESIGN_TOKENS.spacing.medium,
+    marginVertical: DESIGN_TOKENS.spacing.md,
     width: '100%',
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.borderRadius.medium,
+    borderRadius: DESIGN_TOKENS.radii.md,
     elevation: 2,
     padding: wp(1.5),
     marginHorizontal: wp(1.5),
     maxWidth: 500,
   },
   imageWrapper: {
-    borderTopLeftRadius: DESIGN_TOKENS.borderRadius.medium,
-    borderTopRightRadius: DESIGN_TOKENS.borderRadius.medium,
+    borderTopLeftRadius: DESIGN_TOKENS.radii.md,
+    borderTopRightRadius: DESIGN_TOKENS.radii.md,
     overflow: 'hidden',
     alignItems: 'center',
   },
@@ -79,7 +79,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     height: width < 600 ? 340 : 500,
   },
   htmlText: {
-    fontSize: DESIGN_TOKENS.typography.fontSize.small,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: colors.textSecondary, // ✅ МИГРАЦИЯ: Заменен hardcoded #444
   },
   textOrange: {

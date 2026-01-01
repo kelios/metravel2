@@ -137,7 +137,7 @@ describe('CompactSideBarTravel - Web', () => {
     it('должен показывать категории', () => {
       render(<CompactSideBarTravel {...defaultProps} />);
 
-      expect(screen.getByText('Храм')).toBeTruthy();
+      expect(screen.getByText('Религия')).toBeTruthy();
     });
   });
 

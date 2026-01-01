@@ -167,6 +167,26 @@ export default function Root({ children }: { children: React.ReactNode }) {
         dangerouslySetInnerHTML={{ __html: `window.__EXPO_ROUTER_INSPECTOR=false;` }}
       />
 
+      {/* Синхронизация темы из localStorage перед первым рендером */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+(function() {
+  try {
+    var theme = localStorage.getItem('theme');
+    if (theme === 'dark' || theme === 'light') {
+      document.documentElement.setAttribute('data-theme', theme);
+    } else if (theme === 'auto') {
+      // Для auto режима используем системную тему
+      var isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    }
+  } catch (e) {}
+})();
+`,
+        }}
+      />
+
       {/* Suppress known react-native-svg console errors */}
       <script
         dangerouslySetInnerHTML={{

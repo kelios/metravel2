@@ -233,7 +233,6 @@ function AccountMenu() {
         {
           backgroundColor: colors.surface,
           borderColor: colors.borderLight,
-          shadowColor: colors.shadows?.shadowColor ?? '#000',
         },
       ]}
       anchor={
@@ -255,7 +254,6 @@ function AccountMenu() {
               {
                 backgroundColor: colors.surfaceMuted,
                 borderColor: colors.border,
-                shadowColor: colors.shadows?.shadowColor ?? '#000',
               },
             ],
           ]}
@@ -461,141 +459,5 @@ function AccountMenu() {
     </Menu>
   );
 }
-
-const styles = StyleSheet.create({
-  anchor: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FBFAF8',
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    maxWidth: 220,
-    minHeight: 44,
-    // Keep a sane touch target, but do not force a wide pill on web.
-    minWidth: 44,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(17, 24, 39, 0.12)',
-    ...(Platform.OS === 'web'
-      ? ({
-          // @ts-ignore
-          cursor: 'pointer',
-          // @ts-ignore
-          transition: 'background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease' as any,
-        } as any)
-      : null),
-  },
-  anchorHover: {
-    backgroundColor: 'rgba(93, 140, 124, 0.10)',
-    borderColor: 'rgba(93, 140, 124, 0.28)',
-    ...(Platform.OS === 'web'
-      ? ({
-          // @ts-ignore
-          boxShadow: '0 8px 16px rgba(17, 24, 39, 0.08)' as any,
-        } as any)
-      : null),
-  },
-  avatarSlot: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  avatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(17, 24, 39, 0.10)',
-  },
-  anchorText: {
-    fontSize: 16,
-    color: '#333',
-    flexShrink: 1,
-  },
-  chevronSlot: {
-    width: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  menuContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    paddingVertical: 8,
-    minWidth: 280,
-    borderColor: 'rgba(17, 24, 39, 0.10)',
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.12,
-    shadowRadius: 22,
-    elevation: 8,
-    ...(Platform.OS === 'web'
-      ? ({
-          marginTop: 4,
-          // @ts-ignore
-          boxShadow: '0 18px 40px rgba(17, 24, 39, 0.16), 0 6px 14px rgba(17, 24, 39, 0.10)' as any,
-        } as any)
-      : null),
-  },
-  sectionTitle: {
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 6,
-    fontSize: 12,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    color: '#667085',
-    fontWeight: '600',
-  },
-  sectionDivider: {
-    height: 1,
-    backgroundColor: 'rgba(17, 24, 39, 0.08)',
-    marginVertical: 6,
-    marginHorizontal: 12,
-  },
-  themeSection: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  menuItem: {
-    borderRadius: 12,
-    marginHorizontal: 8,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  menuItemPrimary: {
-    borderRadius: 12,
-    marginHorizontal: 8,
-    minHeight: 44,
-    justifyContent: 'center',
-    backgroundColor: 'rgba(93, 140, 124, 0.14)',
-  },
-  menuItemTitle: {
-    fontSize: 16,
-    color: '#101828',
-    fontWeight: '500',
-  },
-  menuItemTitleStrong: {
-    fontSize: 16,
-    color: '#101828',
-    fontWeight: '600',
-  },
-  menuItemTitlePrimary: {
-    fontSize: 16,
-    color: '#2f5e50',
-    fontWeight: '700',
-  },
-  iconMuted: {
-    color: '#667085',
-  },
-  iconPrimary: {
-    color: '#2f5e50',
-  },
-});
 
 export default React.memo(AccountMenu);
