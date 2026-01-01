@@ -29,28 +29,7 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import type { RoutePoint } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
 import { RouteValidator } from '@/utils/routeValidator';
-
-// ✅ ИСПРАВЛЕНИЕ: Используем единую палитру DESIGN_TOKENS вместо локальной COLORS
-const COLORS = {
-  bg: DESIGN_TOKENS.colors.surface,
-  card: DESIGN_TOKENS.colors.mutedBackground,
-  cardMuted: DESIGN_TOKENS.colors.cardMuted,
-  surfaceMuted: DESIGN_TOKENS.colors.surfaceMuted,
-  text: DESIGN_TOKENS.colors.text,
-  textMuted: DESIGN_TOKENS.colors.textMuted,
-  textSubtle: DESIGN_TOKENS.colors.textSubtle,
-  textOnPrimary: DESIGN_TOKENS.colors.textOnPrimary,
-  textOnDark: DESIGN_TOKENS.colors.textOnDark,
-  primary: DESIGN_TOKENS.colors.primary,
-  primarySoft: DESIGN_TOKENS.colors.primarySoft,
-  border: DESIGN_TOKENS.colors.border,
-  danger: DESIGN_TOKENS.colors.danger,
-  dangerLight: DESIGN_TOKENS.colors.dangerLight,
-  success: DESIGN_TOKENS.colors.success,
-  warning: DESIGN_TOKENS.colors.warning,
-  info: DESIGN_TOKENS.colors.info,
-  shadow: DESIGN_TOKENS.shadowsNative.light.shadowColor,
-};
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 const SEARCH_MODES = [
   { key: 'radius' as const, icon: 'my-location', label: 'Найти в радиусе', subtitle: 'Поиск мест вокруг точки' },
@@ -133,7 +112,11 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                                      onBuildRoute,
 }) => {
   const windowWidth = Dimensions.get('window').width;
-  const styles = useMemo(() => getStyles(isMobile, windowWidth), [isMobile, windowWidth]);
+  const colors = useThemedColors();
+  const styles = useMemo(
+    () => getStyles(colors, isMobile, windowWidth),
+    [colors, isMobile, windowWidth],
+  );
   const [legendOpen, setLegendOpen] = useState(false);
   const [hideNoPointsToast, setHideNoPointsToast] = useState(false);
   const increaseRadius = useCallback(() => {
@@ -157,7 +140,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                          onPress,
                          icon,
                          title,
-                         color = COLORS.primary,
+                         color = colors.primary,
                          compact = false,
                          accessibilityLabel,
                        }: {
@@ -181,7 +164,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         ]}
         hitSlop={8}
       >
-        <Icon name={icon} size={compact ? 16 : 18} color={COLORS.textOnPrimary} />
+        <Icon name={icon} size={compact ? 16 : 18} color={colors.textOnPrimary} />
         {title ? <Text style={styles.compactButtonText}>{title}</Text> : null}
       </Pressable>
     ));
@@ -320,7 +303,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   accessibilityRole="button"
                   accessibilityLabel="Закрыть панель"
                 >
-                  <Icon name="close" size={16} color={COLORS.text} />
+                  <Icon name="close" size={16} color={colors.text} />
                   <Text style={styles.headerActionText}>Закрыть</Text>
                 </Pressable>
               ) : null}
@@ -357,7 +340,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   accessibilityRole="tab"
                   accessibilityState={{ selected: active }}
                 >
-                  <Icon name={icon} size={18} color={active ? COLORS.textOnPrimary : COLORS.textMuted} />
+                  <Icon name={icon} size={18} color={active ? colors.textOnPrimary : colors.textMuted} />
                   <View style={styles.modeTabTextCol}>
                     <Text style={[styles.modeTabText, active && styles.modeTabTextActive]}>
                       {label}
@@ -443,7 +426,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                             accessibilityLabel="Удалить категорию"
                           >
                             {/* ✅ ИСПРАВЛЕНИЕ: Увеличен размер иконки */}
-                            <Icon name="close" size={16} color={COLORS.primary} />
+                            <Icon name="close" size={16} color={colors.primary} />
                           </Pressable>
                         </View>
                       );
@@ -568,7 +551,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                           <Icon
                             name={icon}
                             size={18}
-                            color={active ? COLORS.textOnPrimary : COLORS.textMuted}
+                            color={active ? colors.textOnPrimary : colors.textMuted}
                             style={styles.transportIcon}
                           />
                           <Text
@@ -599,7 +582,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                       accessibilityRole="button"
                       accessibilityLabel="Сбросить маршрут"
                     >
-                      <Icon name="delete-outline" size={18} color={COLORS.text} />
+                      <Icon name="delete-outline" size={18} color={colors.text} />
                       <Text style={styles.actionGhostText}>Сбросить маршрут</Text>
                     </Pressable>
                   )}
@@ -610,7 +593,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                       accessibilityRole="button"
                       accessibilityLabel="Поменять старт и финиш местами"
                     >
-                      <Icon name="swap-horiz" size={18} color={COLORS.text} />
+                      <Icon name="swap-horiz" size={18} color={colors.text} />
                       <Text style={styles.actionGhostText}>S ↔ F</Text>
                     </Pressable>
                   )}
@@ -722,7 +705,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           accessibilityState={{ expanded: legendOpen }}
         >
           <Text style={styles.accordionTitle}>Легенда карты</Text>
-          <Icon name={legendOpen ? 'expand-less' : 'expand-more'} size={20} color={COLORS.textMuted} />
+          <Icon name={legendOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.textMuted} />
         </Pressable>
         {legendOpen && <MapLegend showRouteMode={mode === 'route'} />}
       </ScrollView>
@@ -779,18 +762,18 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
 };
 
 // ——— Styles
-const getStyles = (isMobile: boolean, windowWidth: number) => {
+const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number) => {
   const panelWidth = isMobile ? Math.max(Math.min(windowWidth - 24, 480), 280) : '100%';
 
   return StyleSheet.create({
     card: {
-      backgroundColor: COLORS.bg,
+      backgroundColor: colors.surface,
       borderRadius: 14,
       padding: 12,
       width: panelWidth,
       maxWidth: '100%',
       flex: 1,
-      shadowColor: COLORS.shadow,
+      shadowColor: (colors.shadows as any)?.shadowColor ?? DESIGN_TOKENS.shadowsNative.light.shadowColor,
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.07,
       shadowRadius: 12,
@@ -809,7 +792,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
             position: 'sticky',
             top: 0,
             zIndex: 5,
-            backgroundColor: COLORS.bg,
+            backgroundColor: colors.surface,
             paddingTop: 4,
           } as any)
         : null),
@@ -823,7 +806,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     title: {
       fontSize: 16,
       fontWeight: '700',
-      color: COLORS.text,
+      color: colors.text,
     },
     headerActions: {
       flexDirection: 'row',
@@ -837,8 +820,8 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       paddingVertical: 8,
       borderRadius: DESIGN_TOKENS.radii.sm,
       borderWidth: 1,
-      borderColor: COLORS.border,
-      backgroundColor: COLORS.card,
+      borderColor: colors.border,
+      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
       minHeight: 36,
       ...Platform.select({
         web: {
@@ -850,11 +833,11 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     headerActionText: {
       fontSize: 12,
       fontWeight: '700',
-      color: COLORS.text,
+      color: colors.text,
     },
     modeTabs: {
       flexDirection: 'row',
-      backgroundColor: COLORS.surfaceMuted,
+      backgroundColor: colors.surfaceMuted,
       borderRadius: 10,
       padding: 4,
       marginBottom: 12,
@@ -876,13 +859,13 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
           cursor: 'pointer',
           // @ts-ignore
           ':hover': {
-            backgroundColor: COLORS.primarySoft,
+            backgroundColor: colors.primarySoft,
           },
         },
       }),
     },
     modeTabActive: {
-      backgroundColor: COLORS.primary,
+      backgroundColor: colors.primary,
     },
     modeTabTextCol: {
       marginLeft: 6,
@@ -891,18 +874,18 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     modeTabText: {
       fontSize: 13,
       fontWeight: '600',
-      color: COLORS.textMuted,
+      color: colors.textMuted,
     },
     modeTabTextActive: {
-      color: COLORS.textOnPrimary,
+      color: colors.textOnPrimary,
     },
     modeTabHint: {
       fontSize: 11,
-      color: COLORS.textMuted,
+      color: colors.textMuted,
       marginTop: 2,
     },
     modeTabHintActive: {
-      color: COLORS.textOnPrimary,
+      color: colors.textOnPrimary,
     },
     counterRow: {
       flexDirection: 'row',
@@ -917,22 +900,22 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       paddingHorizontal: 10,
       paddingVertical: 6,
       borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: COLORS.card,
+      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
     },
     counterLabel: {
       fontSize: 13,
-      color: COLORS.textMuted,
+      color: colors.textMuted,
       fontWeight: '600',
     },
     counterHint: {
       fontSize: 12,
-      color: COLORS.textMuted,
+      color: colors.textMuted,
       fontWeight: '600',
     },
     counterValue: {
       fontSize: 14,
       fontWeight: '700',
-      color: COLORS.primary,
+      color: colors.primary,
     },
     modeHelper: {
       flexDirection: 'row',
@@ -943,7 +926,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     },
     modeHelperText: {
       fontSize: 12,
-      color: COLORS.textMuted,
+      color: colors.textMuted,
       flex: 1,
     },
     content: {
@@ -958,7 +941,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       marginBottom: 12,
     },
     sectionCard: {
-      backgroundColor: COLORS.card,
+      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
       borderRadius: 12,
       padding: 12,
       marginBottom: 12,
@@ -972,7 +955,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     },
     separator: {
       width: 1,
-      backgroundColor: COLORS.border,
+      backgroundColor: colors.border,
     },
     transportSection: {
       marginTop: 4,
@@ -983,12 +966,12 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     sectionLabel: {
       fontSize: 13,
       fontWeight: '700',
-      color: COLORS.text,
+      color: colors.text,
       marginBottom: 6,
     },
     sectionHint: {
       fontSize: 12,
-      color: COLORS.textMuted,
+      color: colors.textMuted,
       marginBottom: 6,
     },
     input: {
@@ -997,7 +980,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       borderRadius: 10,
       paddingHorizontal: 12,
       fontSize: 14,
-      backgroundColor: COLORS.card,
+      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
       ...DESIGN_TOKENS.shadowsNative.light,
     },
     chipsContainer: {
@@ -1010,7 +993,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     categoryChip: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: COLORS.primarySoft,
+      backgroundColor: colors.primarySoft,
       paddingHorizontal: 10,
       paddingVertical: 6,
       borderRadius: 14,
@@ -1021,12 +1004,12 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     categoryChipText: {
       fontSize: 12,
       fontWeight: '700',
-      color: COLORS.primary,
+      color: colors.primary,
       flexShrink: 1,
       marginRight: 4,
     },
     moreChip: {
-      backgroundColor: COLORS.primarySoft,
+      backgroundColor: colors.primarySoft,
       paddingHorizontal: 10,
       paddingVertical: 6,
       borderRadius: 14,
@@ -1035,7 +1018,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     moreChipText: {
       fontSize: 12,
       fontWeight: '700',
-      color: COLORS.primary,
+      color: colors.primary,
     },
     radiusQuickOptions: {
       flexDirection: 'row',
@@ -1048,7 +1031,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       paddingVertical: 8, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
       borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
       // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
-      backgroundColor: COLORS.card,
+      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
       minHeight: 36, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
       ...Platform.select({
         web: {
@@ -1056,23 +1039,23 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
           cursor: 'pointer',
           // @ts-ignore
           ':hover': {
-            backgroundColor: COLORS.primarySoft,
+            backgroundColor: colors.primarySoft,
           },
         },
       }),
     },
     radiusChipActive: {
-      backgroundColor: COLORS.primarySoft,
+      backgroundColor: colors.primarySoft,
       // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
     },
     radiusChipText: {
       fontSize: 12,
       fontWeight: '700',
-      color: COLORS.text,
+      color: colors.text,
     },
     transportTabs: {
       flexDirection: 'row',
-      backgroundColor: COLORS.surfaceMuted,
+      backgroundColor: colors.surfaceMuted,
       borderRadius: 10,
       padding: 2,
       // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
@@ -1094,13 +1077,13 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
           cursor: 'pointer',
           // @ts-ignore
           ':hover': {
-            backgroundColor: COLORS.primarySoft,
+            backgroundColor: colors.primarySoft,
           },
         },
       }),
     },
     transportTabActive: {
-      backgroundColor: COLORS.primary,
+      backgroundColor: colors.primary,
     },
     transportIcon: {
       marginBottom: 4,
@@ -1108,13 +1091,13 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     transportTabText: {
       fontSize: 13,
       fontWeight: '600',
-      color: COLORS.textMuted,
+      color: colors.textMuted,
     },
     transportTabTextActive: {
-      color: COLORS.textOnPrimary,
+      color: colors.textOnPrimary,
     },
     routeInfo: {
-      backgroundColor: COLORS.card,
+      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
       borderRadius: 10,
       padding: 12,
       // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
@@ -1131,25 +1114,25 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       paddingVertical: 8,
       paddingHorizontal: 10,
       borderRadius: 10,
-      backgroundColor: COLORS.bg,
+      backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: COLORS.border,
+      borderColor: colors.border,
     },
     routePillLabel: {
       fontSize: 12,
       fontWeight: '700',
-      color: COLORS.textMuted,
+      color: colors.textMuted,
       marginBottom: 4,
     },
     routePillValue: {
       fontSize: 13,
       fontWeight: '700',
-      color: COLORS.text,
+      color: colors.text,
     },
     routePillDivider: {
       width: 1,
       alignSelf: 'stretch',
-      backgroundColor: COLORS.border,
+      backgroundColor: colors.border,
     },
     routeDistanceRow: {
       flexDirection: 'row',
@@ -1166,13 +1149,13 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     routeLabel: {
       fontSize: 13,
       fontWeight: '600',
-      color: COLORS.textMuted,
+      color: colors.textMuted,
       flex: 1,
     },
     routeValue: {
       fontSize: 13,
       fontWeight: '700',
-      color: COLORS.text,
+      color: colors.text,
       flex: 2,
       textAlign: 'right',
       marginLeft: 8,
@@ -1180,7 +1163,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     routeDistance: {
       fontSize: 13,
       fontWeight: '800',
-      color: COLORS.primary,
+      color: colors.primary,
     },
     compactButton: {
       flexDirection: 'row',
@@ -1234,23 +1217,23 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     },
     infoText: {
       fontSize: 13,
-      color: COLORS.text,
-      flex: 1,
+      color: colors.text,
+      fontWeight: '700',
     },
     infoTitle: {
       fontSize: 14,
       fontWeight: '700',
-      color: COLORS.text,
+      color: colors.text,
       marginBottom: 6,
     },
     infoItem: {
       fontSize: 12,
-      color: COLORS.textMuted,
+      color: colors.textMuted,
       marginBottom: 2,
     },
     infoBold: {
       fontWeight: '700',
-      color: COLORS.primary,
+      color: colors.primary,
     },
     routeHintContainer: {
       marginTop: 12,
@@ -1271,13 +1254,13 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       gap: 10,
       padding: 10,
       borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: COLORS.card,
+      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
       borderWidth: 1,
-      borderColor: COLORS.border,
+      borderColor: colors.border,
     },
     stepItemDone: {
-      borderColor: COLORS.primary,
-      backgroundColor: COLORS.primarySoft,
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySoft,
     },
     stepBadge: {
       width: 28,
@@ -1287,16 +1270,16 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       justifyContent: 'center',
     },
     stepBadgeStart: {
-      backgroundColor: COLORS.success,
+      backgroundColor: colors.success,
     },
     stepBadgeEnd: {
-      backgroundColor: COLORS.danger,
+      backgroundColor: colors.danger,
     },
     stepBadgeTransport: {
-      backgroundColor: COLORS.primary,
+      backgroundColor: colors.primary,
     },
     stepBadgeText: {
-      color: COLORS.textOnPrimary,
+      color: colors.textOnPrimary,
       fontWeight: '800',
       fontSize: 12,
     },
@@ -1307,48 +1290,48 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     stepTitle: {
       fontSize: 13,
       fontWeight: '700',
-      color: COLORS.text,
+      color: colors.text,
     },
     stepSubtitle: {
       fontSize: 12,
-      color: COLORS.textMuted,
+      color: colors.textMuted,
     },
     routeBuilt: {
       marginTop: 6,
       padding: 12,
       borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: COLORS.primarySoft,
+      backgroundColor: colors.primarySoft,
       borderWidth: 1,
-      borderColor: COLORS.primary,
+      borderColor: colors.primary,
     },
     routeBuiltTitle: {
       fontSize: 14,
       fontWeight: '800',
-      color: COLORS.primary,
+      color: colors.primary,
       marginBottom: 4,
     },
     routeBuiltMeta: {
       fontSize: 13,
-      color: COLORS.text,
+      color: colors.text,
       fontWeight: '600',
     },
     noPointsToast: {
       marginTop: 12,
       padding: 12,
       borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: COLORS.card,
+      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
       borderWidth: 1,
-      borderColor: COLORS.border,
+      borderColor: colors.border,
       gap: 8,
     },
     noPointsTitle: {
       fontSize: 14,
       fontWeight: '800',
-      color: COLORS.text,
+      color: colors.text,
     },
     noPointsSubtitle: {
       fontSize: 12,
-      color: COLORS.textMuted,
+      color: colors.textMuted,
       lineHeight: 18,
     },
     noPointsActions: {
@@ -1359,9 +1342,9 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     stepBlock: {
       padding: 12,
       borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: COLORS.card,
+      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
       borderWidth: 1,
-      borderColor: COLORS.border,
+      borderColor: colors.border,
       marginBottom: 12,
       gap: 8,
     },
@@ -1373,11 +1356,11 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     stepBlockTitle: {
       fontSize: 14,
       fontWeight: '800',
-      color: COLORS.text,
+      color: colors.text,
     },
     stepInlineHint: {
       fontSize: 12,
-      color: COLORS.primary,
+      color: colors.primary,
       fontWeight: '700',
     },
     addressToggle: {
@@ -1385,13 +1368,13 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       paddingHorizontal: 12,
       paddingVertical: 8,
       borderRadius: DESIGN_TOKENS.radii.sm,
-      backgroundColor: COLORS.primarySoft,
+      backgroundColor: colors.primarySoft,
       borderWidth: 1,
-      borderColor: COLORS.primary,
+      borderColor: colors.primary,
       marginTop: 4,
     },
     addressToggleText: {
-      color: COLORS.primary,
+      color: colors.primary,
       fontWeight: '700',
       fontSize: 13,
     },
@@ -1402,7 +1385,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       opacity: 0.5,
     },
     transportTabTextDisabled: {
-      color: COLORS.textMuted,
+      color: colors.textMuted,
     },
     actionRow: {
       flexDirection: 'row',
@@ -1419,8 +1402,8 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       paddingVertical: 10,
       borderRadius: DESIGN_TOKENS.radii.sm,
       borderWidth: 1,
-      borderColor: COLORS.border,
-      backgroundColor: COLORS.card,
+      borderColor: colors.border,
+      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
       minHeight: 40,
       ...Platform.select({
         web: {
@@ -1432,10 +1415,10 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     actionGhostText: {
       fontSize: 13,
       fontWeight: '700',
-      color: COLORS.text,
+      color: colors.text,
     },
     statusCard: {
-      backgroundColor: COLORS.card,
+      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
       borderRadius: 10,
       padding: 10,
       ...DESIGN_TOKENS.shadowsNative.light,
@@ -1449,10 +1432,10 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
       paddingHorizontal: 10,
       paddingVertical: 8,
       borderRadius: 10,
-      backgroundColor: COLORS.primarySoft,
+      backgroundColor: colors.primarySoft,
     },
     swapButtonText: {
-      color: COLORS.primary,
+      color: colors.primary,
       fontWeight: '700',
       fontSize: 13,
     },
@@ -1467,14 +1450,14 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     accordionTitle: {
       fontSize: 14,
       fontWeight: '700',
-      color: COLORS.text,
+      color: colors.text,
     },
     stickyFooter: {
       ...(Platform.OS === 'web'
         ? ({
             position: 'sticky',
             bottom: 0,
-            backgroundColor: COLORS.bg,
+            backgroundColor: colors.surface,
             paddingTop: 8,
             paddingBottom: 4,
           } as any)
@@ -1500,19 +1483,19 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     },
     ctaOutline: {
       borderWidth: 1,
-      borderColor: COLORS.primary,
+      borderColor: colors.primary,
       backgroundColor: 'transparent',
     },
     ctaOutlineText: {
-      color: COLORS.primary,
+      color: colors.primary,
       fontWeight: '700',
       fontSize: 14,
     },
     ctaPrimary: {
-      backgroundColor: COLORS.primary,
+      backgroundColor: colors.primary,
     },
     ctaPrimaryText: {
-      color: COLORS.textOnPrimary,
+      color: colors.textOnPrimary,
       fontWeight: '700',
       fontSize: 14,
     },
@@ -1521,7 +1504,7 @@ const getStyles = (isMobile: boolean, windowWidth: number) => {
     },
     helperText: {
       fontSize: 12,
-      color: COLORS.textMuted,
+      color: colors.textMuted,
       marginBottom: 6,
     },
   });

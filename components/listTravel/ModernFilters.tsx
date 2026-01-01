@@ -186,7 +186,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               accessibilityRole="button"
               accessibilityLabel="Закрыть фильтры"
             >
-              <Feather name="x" size={18} color={colors.neutral[600]} />
+              <Feather name="x" size={18} color={colors.textSecondary} />
             </Pressable>
           )}
         </View>
@@ -201,7 +201,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
           accessibilityLabel="Очистить все фильтры"
           hitSlop={8}
         >
-          <Feather name="x-circle" size={16} color={colors.brand.primary} />
+          <Feather name="x-circle" size={16} color={colors.primary} />
           <Text style={styles.clearAllMobileButtonText}>Очистить все фильтры</Text>
         </Pressable>
       )}
@@ -222,7 +222,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             const animated = animatedValues[key];
             Animated.timing(animated, {
               toValue: allExpanded ? 0 : 1,
-              duration: DESIGN_TOKENS.animations.duration.base,
+              duration: DESIGN_TOKENS.animations.duration.normal,
               useNativeDriver: false,
             }).start();
 
@@ -244,7 +244,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             <Feather
               name={areAllGroupsExpanded ? 'chevrons-up' : 'chevrons-down'}
               size={16}
-              color={colors.neutral[600]}
+              color={colors.textSecondary}
             />
           </View>
           <Text style={styles.toggleAllButtonText}>
@@ -285,7 +285,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
       {/* Results Count Badge */}
       {showResultsBadge && (
         <View style={styles.resultsBadge}>
-          <Feather name="search" size={14} color={colors.neutral[500]} />
+          <Feather name="search" size={14} color={colors.textMuted} />
           <Text style={styles.resultsBadgeText}>
             {resultsText}
           </Text>
@@ -323,7 +323,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                       <Feather
                         name={group.icon as any}
                         size={16}
-                        color={colors.neutral[600]}
+                        color={colors.textMuted}
                       />
                     </View>
                   )}
@@ -338,7 +338,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   <Feather
                     name={isExpanded ? "chevron-up" : "chevron-down"}
                     size={18}
-                    color={colors.neutral[400]}
+                    color={colors.textMuted}
                   />
                 </View>
               </Pressable>
@@ -406,7 +406,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 <Feather
                   name="calendar"
                   size={16}
-                  color={colors.neutral[600]}
+                  color={colors.textSecondary}
                 />
                 <Text style={styles.yearLabel}>Год</Text>
               </View>
@@ -448,20 +448,20 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 ModernFilters.displayName = 'ModernFilters';
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
-  const { spacing, typography, radii, shadows } = DESIGN_TOKENS;
+  const { spacing, typography, radii } = DESIGN_TOKENS;
 
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.surface.default,
+      backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: colors.border.subtle,
-      borderRadius: radii['2xl'],
+      borderColor: colors.border,
+      borderRadius: radii.lg,
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.sm,
       ...Platform.select({
         web: {
-          ...shadows.sm,
+          boxShadow: colors.boxShadows.card,
           width: 280,
           position: 'sticky' as any,
           top: spacing.lg,
@@ -476,7 +476,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       paddingHorizontal: spacing.md,
       paddingTop: spacing.md,
       paddingBottom: spacing.lg,
-      backgroundColor: colors.surface.default,
+      backgroundColor: colors.surface,
       shadowColor: 'transparent',
       shadowOpacity: 0,
       shadowRadius: 0,
@@ -507,9 +507,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       marginBottom: spacing.sm,
     },
     headerTitle: {
-      fontSize: typography.fontSize.lg,
-      fontWeight: typography.fontWeight.semibold as any,
-      color: colors.text.primary,
+      fontSize: typography.sizes.lg,
+      fontWeight: typography.weights.semibold as any,
+      color: colors.text,
     },
     headerLeft: {
       flexDirection: 'row',
@@ -541,7 +541,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
     },
     toggleAllButton: {
       marginBottom: spacing.xs,
-      backgroundColor: colors.surface.subtle,
+      backgroundColor: colors.surfaceMuted,
       borderRadius: radii.pill,
       paddingVertical: 8,
       paddingHorizontal: spacing.sm,
@@ -557,20 +557,20 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       gap: spacing.xs,
     },
     toggleAllButtonText: {
-      fontSize: typography.fontSize.xs,
-      color: colors.text.secondary,
-      fontWeight: typography.fontWeight.medium as any,
+      fontSize: typography.sizes.xs,
+      color: colors.textSecondary,
+      fontWeight: typography.weights.medium as any,
     },
     clearButton: {
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.xs,
       borderRadius: radii.pill,
-      backgroundColor: colors.neutral[100],
+      backgroundColor: colors.primarySoft,
     },
     clearButtonText: {
-      fontSize: typography.fontSize.xs,
-      fontWeight: typography.fontWeight.medium as any,
-      color: colors.brand.primary,
+      fontSize: typography.sizes.xs,
+      fontWeight: typography.weights.medium as any,
+      color: colors.primary,
     },
     clearAllMobileButton: {
       flexDirection: 'row',
@@ -580,9 +580,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       paddingVertical: 10,
       paddingHorizontal: spacing.sm,
       borderRadius: radii.pill,
-      backgroundColor: colors.surface.subtle,
+      backgroundColor: colors.surfaceMuted,
       borderWidth: 1,
-      borderColor: colors.border.subtle,
+      borderColor: colors.border,
       marginBottom: spacing.xs,
       ...Platform.select({
         web: {
@@ -591,24 +591,24 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       }),
     },
     clearAllMobileButtonText: {
-      fontSize: typography.fontSize.sm,
-      fontWeight: typography.fontWeight.medium as any,
-      color: colors.text.secondary,
+      fontSize: typography.sizes.sm,
+      fontWeight: typography.weights.medium as any,
+      color: colors.textSecondary,
     },
     resultsBadge: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
-      backgroundColor: colors.surface.subtle,
+      backgroundColor: colors.surfaceMuted,
       paddingHorizontal: spacing.sm,
       paddingVertical: 6,
       borderRadius: radii.pill,
       marginBottom: spacing.xs,
     },
     resultsBadgeText: {
-      fontSize: typography.fontSize.sm,
-      fontWeight: typography.fontWeight.medium as any,
-      color: colors.text.secondary,
+      fontSize: typography.sizes.sm,
+      fontWeight: typography.weights.medium as any,
+      color: colors.textSecondary,
     },
     extraFilters: {
       marginBottom: spacing.xs,
@@ -616,7 +616,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
     },
     yearGroup: {
       borderTopWidth: 1,
-      borderTopColor: colors.border.subtle,
+      borderTopColor: colors.border,
       borderBottomWidth: 0,
       marginTop: spacing.md,
       marginBottom: 0,
@@ -646,9 +646,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       gap: spacing.xs,
     },
     yearLabel: {
-      fontSize: typography.fontSize.sm,
-      color: colors.text.secondary,
-      fontWeight: typography.fontWeight.semibold as any,
+      fontSize: typography.sizes.sm,
+      color: colors.textSecondary,
+      fontWeight: typography.weights.semibold as any,
     },
     yearInput: {
       flexBasis: 96,
@@ -657,9 +657,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       paddingVertical: 6,
       borderRadius: radii.pill,
       borderWidth: 1,
-      borderColor: colors.border.subtle,
-      backgroundColor: colors.surface.subtle,
-      fontSize: typography.fontSize.sm,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceMuted,
+      fontSize: typography.sizes.sm,
       textAlign: 'center',
       alignSelf: 'flex-start',
       minHeight: 32,
@@ -683,15 +683,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       }),
     },
     moderationRowSelected: {
-      backgroundColor: colors.brand.primarySoft,
+      backgroundColor: colors.primarySoft,
     },
     moderationLabel: {
-      fontSize: typography.fontSize.sm,
-      color: colors.text.secondary,
+      fontSize: typography.sizes.sm,
+      color: colors.textSecondary,
     },
     moderationLabelSelected: {
-      color: colors.brand.primaryDark,
-      fontWeight: typography.fontWeight.medium as any,
+      color: colors.primaryDark,
+      fontWeight: typography.weights.medium as any,
     },
     scrollView: {
       flex: 1,
@@ -704,7 +704,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       marginBottom: spacing.sm,
       paddingBottom: spacing.sm,
       borderBottomWidth: 1,
-      borderBottomColor: colors.border.subtle,
+      borderBottomColor: colors.border,
     },
     filterGroupLast: {
       borderBottomWidth: 0,
@@ -729,14 +729,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       flex: 1,
     },
     groupTitle: {
-      fontSize: typography.fontSize.sm,
-      fontWeight: typography.fontWeight.semibold as any,
-      color: colors.text.secondary,
+      fontSize: typography.sizes.sm,
+      fontWeight: typography.weights.semibold as any,
+      color: colors.textSecondary,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
     },
     selectedBadge: {
-      backgroundColor: colors.brand.primary,
+      backgroundColor: colors.primary,
       paddingHorizontal: spacing.xs,
       paddingVertical: 2,
       borderRadius: radii.pill,
@@ -744,9 +744,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       alignItems: 'center',
     },
     selectedBadgeText: {
-      fontSize: typography.fontSize.xs,
-      fontWeight: typography.fontWeight.semibold as any,
-      color: '#fff',
+      fontSize: typography.sizes.xs,
+      fontWeight: typography.weights.semibold as any,
+      color: colors.textOnPrimary,
     },
     groupContent: {
       marginTop: spacing.xs,
@@ -762,27 +762,27 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       ...Platform.select({
         web: {
           cursor: 'pointer',
-          transition: `all ${DESIGN_TOKENS.animations.duration.fast}ms ${DESIGN_TOKENS.animations.easing.ease}`,
+          transition: `all ${DESIGN_TOKENS.animations.duration.fast}ms ${DESIGN_TOKENS.animations.easing.default}`,
         },
       }),
     },
     filterOptionSelected: {
-      backgroundColor: colors.brand.primarySoft,
+      backgroundColor: colors.primarySoft,
     },
     filterOptionText: {
       flex: 1,
-      fontSize: typography.fontSize.sm,
-      color: colors.neutral[600],
+      fontSize: typography.sizes.sm,
+      color: colors.textSecondary,
       marginLeft: spacing.sm,
     },
     filterOptionTextSelected: {
-      color: colors.brand.primaryDark,
-      fontWeight: typography.fontWeight.medium as any,
+      color: colors.primaryDark,
+      fontWeight: typography.weights.medium as any,
     },
     filterOptionCount: {
-      fontSize: typography.fontSize.xs,
-      color: colors.neutral[400],
-      backgroundColor: colors.neutral[100],
+      fontSize: typography.sizes.xs,
+      color: colors.textMuted,
+      backgroundColor: colors.surfaceMuted,
       paddingHorizontal: spacing.xs,
       paddingVertical: 2,
       borderRadius: radii.pill,
@@ -792,50 +792,50 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       height: 18,
       borderRadius: radii.sm,
       borderWidth: 2,
-      borderColor: colors.neutral[300],
+      borderColor: colors.borderLight,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#fff',
+      backgroundColor: colors.surface,
     },
     checkboxChecked: {
-      backgroundColor: colors.brand.primary,
-      borderColor: colors.brand.primary,
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
     },
     radio: {
       width: 18,
       height: 18,
       borderRadius: 9,
       borderWidth: 2,
-      borderColor: colors.neutral[300],
+      borderColor: colors.borderLight,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#fff',
+      backgroundColor: colors.surface,
     },
     radioChecked: {
-      borderColor: colors.brand.primary,
+      borderColor: colors.primary,
     },
     radioDot: {
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: colors.brand.primary,
+      backgroundColor: colors.primary,
     },
     applyButtonContainer: {
       marginTop: spacing.lg,
       paddingTop: spacing.lg,
       borderTopWidth: 1,
-      borderTopColor: colors.neutral[100],
+      borderTopColor: colors.borderLight,
     },
     applyButton: {
-      backgroundColor: colors.brand.primary,
+      backgroundColor: colors.primary,
       paddingVertical: spacing.md,
       borderRadius: radii.pill,
       alignItems: 'center',
     },
     applyButtonText: {
-      fontSize: typography.fontSize.base,
-      fontWeight: typography.fontWeight.semibold as any,
-      color: '#fff',
+      fontSize: typography.sizes.md,
+      fontWeight: typography.weights.semibold as any,
+      color: colors.textOnPrimary,
     },
   });
 };
