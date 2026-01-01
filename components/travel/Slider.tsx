@@ -889,7 +889,7 @@ const styles = StyleSheet.create<Record<string, any>>({
   },
   flatBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
   },
   imageCardWrapper: {
     flex: 1,
@@ -933,7 +933,7 @@ const styles = StyleSheet.create<Record<string, any>>({
     width: "100%",
     height: "100%",
     borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.85)",
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: DESIGN_TOKENS.spacing.xs,
@@ -943,26 +943,26 @@ const styles = StyleSheet.create<Record<string, any>>({
     width: "100%",
     height: "100%",
     borderRadius: 12,
-    backgroundColor: "rgba(0,0,0,0.04)",
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: DESIGN_TOKENS.colors.borderLight,
     ...Platform.select({
       web: {
         backgroundImage:
-          "linear-gradient(180deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.02) 100%)",
+          `linear-gradient(180deg, ${DESIGN_TOKENS.colors.backgroundSecondary} 0%, ${DESIGN_TOKENS.colors.backgroundTertiary} 100%)`,
         boxSizing: "border-box",
       },
     }),
   },
   placeholderTitle: {
-    color: "#0f172a",
+    color: DESIGN_TOKENS.colors.text,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: "600",
     marginTop: 12,
     textAlign: "center",
   },
   placeholderSubtitle: {
-    color: "#475569",
+    color: DESIGN_TOKENS.colors.textMuted,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     marginTop: 4,
     textAlign: "center",
@@ -972,7 +972,7 @@ const styles = StyleSheet.create<Record<string, any>>({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: "#0f172a",
+    backgroundColor: DESIGN_TOKENS.colors.primary,
     ...Platform.select({
       web: {
         cursor: "pointer",
@@ -980,7 +980,7 @@ const styles = StyleSheet.create<Record<string, any>>({
     }),
   },
   retryBtnText: {
-    color: "#ffffff",
+    color: DESIGN_TOKENS.colors.textOnPrimary,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
   },
@@ -992,15 +992,15 @@ const styles = StyleSheet.create<Record<string, any>>({
     bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.45)",
+    backgroundColor: DESIGN_TOKENS.colors.overlay,
   },
   navBtn: {
     position: "absolute",
     top: "50%",
     marginTop: -24,
-    backgroundColor: "rgba(255,255,255,0.35)",
+    backgroundColor: DESIGN_TOKENS.colors.overlayLight,
     borderWidth: 1,
-    borderColor: GLASS_BORDER,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -1011,7 +1011,7 @@ const styles = StyleSheet.create<Record<string, any>>({
       web: {
         cursor: "pointer",
         transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-        boxShadow: "0 12px 24px rgba(15,23,42,0.15)",
+        boxShadow: DESIGN_TOKENS.shadows.medium,
         backdropFilter: "blur(16px)",
       },
       android: {
@@ -1027,13 +1027,13 @@ const styles = StyleSheet.create<Record<string, any>>({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.4)",
+    backgroundColor: DESIGN_TOKENS.colors.overlayLight,
   },
   navBtnHover: {
-    backgroundColor: "rgba(255,255,255,0.85)",
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     ...Platform.select({
       web: {
-        boxShadow: "0 16px 42px rgba(15,23,42,0.25)",
+        boxShadow: DESIGN_TOKENS.shadows.hover,
       },
     }),
   },
@@ -1058,12 +1058,12 @@ const styles = StyleSheet.create<Record<string, any>>({
   dotsContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.65)",
+    backgroundColor: DESIGN_TOKENS.colors.overlayLight,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: GLASS_BORDER,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
     ...Platform.select({
       web: {
         backdropFilter: "blur(8px)",
@@ -1075,7 +1075,7 @@ const styles = StyleSheet.create<Record<string, any>>({
     paddingVertical: DESIGN_TOKENS.spacing.xs,
   },
   dot: {
-    backgroundColor: "rgba(15,23,42,0.6)",
+    backgroundColor: DESIGN_TOKENS.colors.textMuted,
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
     ...Platform.select({
@@ -1102,12 +1102,12 @@ const styles = StyleSheet.create<Record<string, any>>({
     right: 12,
   },
   counterContainer: {
-    backgroundColor: "rgba(255,255,255,0.75)",
+    backgroundColor: DESIGN_TOKENS.colors.overlayLight,
     paddingHorizontal: 12,
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: GLASS_BORDER,
+    borderColor: DESIGN_TOKENS.colors.borderLight,
     ...Platform.select({
       web: {
         backdropFilter: "blur(8px)",
@@ -1115,7 +1115,7 @@ const styles = StyleSheet.create<Record<string, any>>({
     }),
   },
   counterText: {
-    color: "#0f172a",
+    color: DESIGN_TOKENS.colors.text,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
     fontFamily: Platform.OS === "web" ? "system-ui, -apple-system" : undefined,
@@ -1134,12 +1134,12 @@ const styles = StyleSheet.create<Record<string, any>>({
   swipeHint: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: DESIGN_TOKENS.colors.overlayLight,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     borderWidth: 1,
-    borderColor: "rgba(148,163,184,0.35)",
+    borderColor: DESIGN_TOKENS.colors.borderLight,
   },
   swipeHintMobile: {
     marginTop: 8,
@@ -1147,7 +1147,7 @@ const styles = StyleSheet.create<Record<string, any>>({
   swipeHintText: {
     marginLeft: 8,
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    color: "#0f172a",
+    color: DESIGN_TOKENS.colors.text,
     fontWeight: "500",
   },
 });

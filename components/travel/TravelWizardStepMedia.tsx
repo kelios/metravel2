@@ -188,6 +188,9 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                     autosaveBadge={autosaveBadge}
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
+                    currentStep={currentStep}
+                    totalSteps={totalSteps}
+                    onStepSelect={onStepSelect}
                 />
 
                 {validation.warnings.length > 0 && (
@@ -211,6 +214,25 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                             <Text style={styles.sectionHint}>
                                 Обложка маршрута, которая будет показываться в списках и на странице путешествия.
                             </Text>
+
+                            {/* ✅ УЛУЧШЕНИЕ: Рекомендации по загрузке обложки */}
+                            <View style={styles.tipsCard}>
+                                <View style={styles.tipIconWrapper}>
+                                    <Text style={styles.tipIcon}>💡</Text>
+                                </View>
+                                <View style={styles.tipContent}>
+                                    <Text style={styles.tipTitle}>Совет по обложке</Text>
+                                    <Text style={styles.tipBody}>
+                                        • Лучший формат: горизонтальный 16:9 (минимум 1200×675px){'\n'}
+                                        • Избегайте коллажей и текста на изображении{'\n'}
+                                        • Используйте качественные фотографии с хорошим освещением
+                                    </Text>
+                                    <Text style={styles.tipStats}>
+                                        📊 Путешествия с обложкой получают в 3 раза больше просмотров
+                                    </Text>
+                                </View>
+                            </View>
+
                             <View style={styles.coverWrapper}>
                                 <PhotoUploadWithPreview
                                     collection="travelMainImage"
@@ -391,6 +413,48 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginTop: 8,
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: colors.textMuted,
+    },
+    // ✅ УЛУЧШЕНИЕ: Стили для карточки с советами
+    tipsCard: {
+        flexDirection: 'row',
+        marginBottom: DESIGN_TOKENS.spacing.md,
+        padding: DESIGN_TOKENS.spacing.md,
+        backgroundColor: colors.primarySoft,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderWidth: 1,
+        borderColor: colors.primary + '20',
+        gap: DESIGN_TOKENS.spacing.sm,
+    },
+    tipIconWrapper: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: colors.background,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    tipIcon: {
+        fontSize: 20,
+    },
+    tipContent: {
+        flex: 1,
+    },
+    tipTitle: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: '700',
+        color: colors.text,
+        marginBottom: 4,
+    },
+    tipBody: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.text,
+        lineHeight: 18,
+        marginBottom: 6,
+    },
+    tipStats: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.primary,
+        fontWeight: '600',
     },
 });
 

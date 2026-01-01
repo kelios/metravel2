@@ -278,7 +278,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                 web: 48,
                 default: 32
             }),
-            backgroundColor: "transparent",
+            backgroundColor: colors.surface,
         },
 
         wrapperNoBoxMobile: {

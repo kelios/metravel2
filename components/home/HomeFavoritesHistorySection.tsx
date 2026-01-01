@@ -6,7 +6,6 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ResponsiveContainer } from '@/components/layout';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
@@ -40,11 +39,15 @@ function SectionHeader({
   count,
   onSeeAll,
   testID,
+  styles,
+  colors,
 }: {
   title: string;
   count: number;
   onSeeAll: () => void;
   testID: string;
+  styles: ReturnType<typeof createStyles>;
+  colors: ReturnType<typeof useThemedColors>;
 }) {
   return (
     <View style={styles.sectionHeaderRow} testID={testID}>
@@ -65,7 +68,7 @@ function SectionHeader({
         {...Platform.select({ web: { cursor: 'pointer' } })}
       >
         <Text style={styles.seeAllButtonText}>Смотреть все</Text>
-        <Feather name="chevron-right" size={16} color={DESIGN_TOKENS.colors.primary} />
+        <Feather name="chevron-right" size={16} color={colors.primary} />
       </Pressable>
     </View>
   );
@@ -76,21 +79,24 @@ function HorizontalCards({
   badge,
   onPressItem,
   testID,
+  colors,
+  styles,
 }: {
   data: TravelLikeItem[];
   badge?: { icon: 'history' | 'favorite' };
   onPressItem: (url: string) => void;
   testID: string;
+  colors: ReturnType<typeof useThemedColors>;
+  styles: ReturnType<typeof createStyles>;
 }) {
   const { isDark } = useTheme();
-  const themedColors = useThemedColors();
   const scrollRef = useRef<any>(null);
   const historyBadge =
     badge?.icon === 'history'
       ? {
           icon: 'history' as const,
-          backgroundColor: DESIGN_TOKENS.colors.overlay,
-          iconColor: isDark ? themedColors.text : themedColors.textInverse,
+          backgroundColor: colors.overlay,
+          iconColor: isDark ? colors.text : colors.textOnDark,
         }
       : undefined;
 
@@ -181,6 +187,8 @@ export default function HomeFavoritesHistorySection() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const { favorites, viewHistory, ensureServerData } = useFavorites() as any;
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -248,11 +256,15 @@ export default function HomeFavoritesHistorySection() {
                 count={favoritesData.length}
                 onSeeAll={() => router.push('/favorites' as any)}
                 testID="home-favorites-header"
+                styles={styles}
+                colors={colors}
               />
               <HorizontalCards
                 data={favoritesData}
                 onPressItem={openUrl}
                 testID="home-favorites-list"
+                colors={colors}
+                styles={styles}
               />
             </View>
           )}
@@ -264,12 +276,16 @@ export default function HomeFavoritesHistorySection() {
                 count={historyData.length}
                 onSeeAll={() => router.push('/history' as any)}
                 testID="home-history-header"
+                styles={styles}
+                colors={colors}
               />
               <HorizontalCards
                 data={historyData}
                 badge={{ icon: 'history' }}
                 onPressItem={openUrl}
                 testID="home-history-list"
+                colors={colors}
+                styles={styles}
               />
             </View>
           )}
@@ -279,83 +295,84 @@ export default function HomeFavoritesHistorySection() {
   );
 }
 
-const styles = StyleSheet.create({
-  band: {
-    paddingVertical: 56,
-    backgroundColor: DESIGN_TOKENS.colors.background,
-    width: '100%',
-    alignSelf: 'stretch',
-  },
-  container: {
-    gap: 48,
-    width: '100%',
-  },
-  section: {
-    gap: 16,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  headerTitleBlock: {
-    flex: 1,
-    minWidth: 0,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: DESIGN_TOKENS.colors.text,
-    lineHeight: 30,
-  },
-  sectionSubtitle: {
-    marginTop: 4,
-    fontSize: 14,
-    fontWeight: '500',
-    color: DESIGN_TOKENS.colors.textMuted,
-  },
-  seeAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
-  },
-  seeAllButtonHover: {
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
-    borderColor: DESIGN_TOKENS.colors.primary,
-  },
-  seeAllButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
-  },
-  horizontalList: {
-    width: '100%',
-    ...Platform.select({
-      web: {
-        overflowX: 'auto',
-        overflowY: 'hidden',
-        overscrollBehaviorX: 'contain',
-        WebkitOverflowScrolling: 'touch',
-      } as any,
-      default: {},
-    }),
-  },
-  horizontalListContent: {
-    paddingTop: 8,
-    paddingBottom: 4,
-    flexDirection: 'row',
-    ...Platform.select({
-      web: {
-        minWidth: 'max-content',
-      } as any,
-      default: {},
-    }),
-  },
-});
+const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
+  StyleSheet.create({
+    band: {
+      paddingVertical: 56,
+      backgroundColor: colors.background,
+      width: '100%',
+      alignSelf: 'stretch',
+    },
+    container: {
+      gap: 48,
+      width: '100%',
+    },
+    section: {
+      gap: 16,
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    headerTitleBlock: {
+      flex: 1,
+      minWidth: 0,
+    },
+    sectionTitle: {
+      fontSize: 24,
+      fontWeight: '800',
+      color: colors.text,
+      lineHeight: 30,
+    },
+    sectionSubtitle: {
+      marginTop: 4,
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textMuted,
+    },
+    seeAllButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    seeAllButtonHover: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
+    },
+    seeAllButtonText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    horizontalList: {
+      width: '100%',
+      ...Platform.select({
+        web: {
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          overscrollBehaviorX: 'contain',
+          WebkitOverflowScrolling: 'touch',
+        } as any,
+        default: {},
+      }),
+    },
+    horizontalListContent: {
+      paddingTop: 8,
+      paddingBottom: 4,
+      flexDirection: 'row',
+      ...Platform.select({
+        web: {
+          minWidth: 'max-content',
+        } as any,
+        default: {},
+      }),
+    },
+  });

@@ -175,7 +175,7 @@ export const VideoSection: React.FC<VideoSectionProps> = memo(({
             {/* Оверлей с кнопкой play */}
             <View style={styles.playOverlay}>
               <View style={[styles.playButton, { backgroundColor: colors.primary }]}>
-                <Feather name="play" size={32} color="#ffffff" style={styles.playIcon} />
+                <Feather name="play" size={32} color={colors.textOnPrimary} style={styles.playIcon} />
               </View>
               <Text style={[styles.playHint, { color: colors.text }]}>
                 Видео запустится автоматически

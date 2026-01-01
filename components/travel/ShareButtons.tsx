@@ -16,6 +16,7 @@ import { ExportStage } from '@/src/types/pdf-export';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
 
@@ -186,20 +187,31 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
     [handleOpenPrintBookWithSettings]
   );
 
+  const palette = useMemo(
+    () => ({
+      neutral: colors.textMuted,
+      export: colors.warning ?? colors.accent,
+      telegram: colors.accent ?? colors.primary,
+      vk: colors.info ?? colors.accentDark ?? colors.primaryDark,
+      whatsapp: colors.success ?? colors.primary,
+    }),
+    [colors],
+  );
+
   const shareButtons = [
     {
       key: 'copy',
       label: 'Копировать ссылку',
       icon: 'content-copy',
       onPress: handleCopyLink,
-      color: '#667085',
+      color: palette.neutral,
     },
     {
       key: 'copyPost',
       label: 'Текст для поста',
       icon: 'article',
       onPress: handleCopyPostText,
-      color: '#667085',
+      color: palette.neutral,
     },
     // Экспорт в PDF доступен только в веб-версии
     ...(Platform.OS === 'web'
@@ -208,7 +220,7 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
           label: isGenerating ? `Создание книги... ${progress}%` : 'Книга / PDF',
           icon: 'file-pdf-box' as const,
           onPress: () => setShowExportModal(true),
-          color: '#ff9f5a',
+          color: palette.export,
           disabled: isGenerating,
         }]
       : []),
@@ -217,21 +229,21 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
       label: 'Telegram',
       icon: 'send',
       onPress: handleShareTelegram,
-      color: '#0088cc',
+      color: palette.telegram,
     },
     {
       key: 'vk',
       label: 'VK',
       icon: 'share',
       onPress: handleShareVK,
-      color: '#0077ff',
+      color: palette.vk,
     },
     {
       key: 'whatsapp',
       label: 'WhatsApp',
       icon: 'chat',
       onPress: handleShareWhatsApp,
-      color: '#25D366',
+      color: palette.whatsapp,
     },
   ];
 
@@ -242,7 +254,7 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
       label: 'Поделиться',
       icon: 'share',
       onPress: handleNativeShare,
-      color: '#ff9f5a',
+      color: palette.export,
     });
   }
 
@@ -268,6 +280,140 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
     );
   }
 
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        // ✅ РЕДИЗАЙН: Современная карточка с glassmorphism
+        container: {
+          paddingVertical: 20,
+          paddingHorizontal: 24,
+          backgroundColor: colors.surface,
+          borderColor: colors.borderLight,
+          borderWidth: 1,
+          ...Platform.select({
+            web: {
+              backdropFilter: 'blur(20px)' as any,
+              WebkitBackdropFilter: 'blur(20px)' as any,
+              boxShadow: (colors.boxShadows as any)?.medium ?? DESIGN_TOKENS.shadows.card,
+            },
+            default: colors.shadows?.light ? (colors.shadows.light as any) : {},
+          }),
+          borderRadius: 20,
+          marginBottom: 20,
+        },
+        containerMobile: {
+          paddingVertical: 16,
+          paddingHorizontal: 16,
+          borderRadius: 16,
+        },
+        containerSticky: {
+          position: 'relative',
+          zIndex: 10,
+          marginBottom: 12,
+        },
+        header: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 12,
+        },
+        title: {
+          fontSize: 16,
+          fontWeight: '700',
+        },
+        collapseButton: {
+          width: 40,
+          height: 40,
+          borderRadius: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+        },
+        collapseButtonPressed: { opacity: 0.8 },
+        buttonsContainer: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 10,
+        },
+        buttonsContainerMobile: {
+          gap: 8,
+        },
+        buttonsContainerSticky: {
+          justifyContent: 'space-between',
+        },
+        button: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          paddingVertical: 10,
+          paddingHorizontal: 14,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+          backgroundColor: colors.backgroundSecondary,
+        },
+        buttonSticky: {
+          flex: 1,
+          justifyContent: 'center',
+        },
+        buttonPressed: { opacity: 0.9 },
+        buttonCopied: {
+          borderColor: colors.success,
+        },
+        buttonDisabled: {
+          opacity: 0.6,
+        },
+        buttonText: {
+          fontSize: 14,
+          fontWeight: '600',
+        },
+        copiedText: {
+          color: colors.success,
+          fontWeight: '800',
+        },
+        progressContainer: {
+          marginTop: 14,
+          backgroundColor: colors.surfaceMuted ?? colors.backgroundSecondary,
+          borderRadius: 8,
+          overflow: 'hidden',
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+        },
+        progressBar: {
+          height: 6,
+          backgroundColor: colors.primary,
+        },
+        progressText: {
+          paddingVertical: 8,
+          paddingHorizontal: 10,
+          fontSize: 12,
+          color: colors.textMuted,
+        },
+        containerMobileIndicator: {},
+        collapsedIndicator: {
+          alignSelf: 'flex-end',
+          borderRadius: 12,
+          padding: 10,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+        },
+        collapsedIndicatorSticky: {
+          position: 'absolute',
+          right: 12,
+          top: -10,
+          zIndex: 2,
+        },
+        collapsedIndicatorPressed: { opacity: 0.9 },
+        closeButton: {
+          position: 'absolute',
+          right: 8,
+          top: 8,
+        },
+      }),
+    [colors],
+  );
+
   return (
     <>
       <View
@@ -275,10 +421,6 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
           styles.container,
           isMobile && styles.containerMobile,
           isSticky && styles.containerSticky,
-          {
-            backgroundColor: colors.surface,
-            borderColor: colors.borderLight,
-          }
         ]}
       >
         {!isSticky && (
@@ -290,7 +432,6 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
                 style={({ pressed }) => [
                   styles.collapseButton,
                   pressed && styles.collapseButtonPressed,
-                  { backgroundColor: colors.backgroundSecondary }
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel={isCollapsed ? 'Показать панель действий' : 'Скрыть панель действий'}
@@ -341,11 +482,10 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
                     button.key === 'copy' && copied && styles.buttonCopied,
                     button.disabled && styles.buttonDisabled,
                     globalFocusStyles.focusable,
-                    { backgroundColor: colors.backgroundSecondary }
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel={button.label}
-                  android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
+                  android_ripple={{ color: colors.overlayLight }}
                 >
                   {button.key === 'export' ? (
                     <MaterialCommunityIcons name={button.icon as any} size={20} color={button.color} />

@@ -107,6 +107,9 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                     autosaveBadge={autosaveBadge}
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
+                    currentStep={currentStep}
+                    totalSteps={totalSteps}
+                    onStepSelect={onStepSelect}
                 />
                 {validation.errors.length > 0 && (
                     <View style={styles.validationSummaryWrapper}>

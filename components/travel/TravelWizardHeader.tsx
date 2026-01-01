@@ -16,6 +16,9 @@ type TravelWizardHeaderProps = {
     extraBelowProgress?: React.ReactNode;
     tipTitle?: string;
     tipBody?: string;
+    currentStep?: number;
+    totalSteps?: number;
+    onStepSelect?: (step: number) => void;
 };
 
 const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
@@ -28,6 +31,9 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     extraBelowProgress,
     tipTitle,
     tipBody,
+    currentStep,
+    totalSteps,
+    onStepSelect,
 }) => {
     const colors = useThemedColors();
     const { isPhone, isLargePhone } = useResponsive();
@@ -122,6 +128,43 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                     {autosaveBadge ? <Text style={styles.autosaveBadge}>{autosaveBadge}</Text> : null}
                 </View>
             </View>
+
+            {/* ✅ УЛУЧШЕНИЕ: Милестоны над прогресс-баром */}
+            {!isMobile && totalSteps && currentStep && totalSteps > 1 && (
+                <View style={styles.milestonesWrapper}>
+                    {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
+                        <Pressable
+                            key={step}
+                            onPress={() => onStepSelect?.(step)}
+                            style={({ pressed }) => [
+                                styles.milestone,
+                                step <= currentStep && styles.milestoneActive,
+                                pressed && { opacity: 0.7 }
+                            ]}
+                            disabled={!onStepSelect}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Перейти к шагу ${step}`}
+                            {...Platform.select({ web: { cursor: onStepSelect ? 'pointer' : 'default' } })}
+                        >
+                            <View style={[
+                                styles.milestoneCircle,
+                                step <= currentStep && styles.milestoneCircleActive
+                            ]}>
+                                {step < currentStep ? (
+                                    <Feather name="check" size={10} color={colors.primary} />
+                                ) : (
+                                    <Text style={[
+                                        styles.milestoneNumber,
+                                        step === currentStep && styles.milestoneNumberActive
+                                    ]}>
+                                        {step}
+                                    </Text>
+                                )}
+                            </View>
+                        </Pressable>
+                    ))}
+                </View>
+            )}
 
             <View style={styles.progressBarTrack}>
                 <View style={[styles.progressBarFill, { width: `${clamped}%`, backgroundColor: progressColor }]} />
@@ -283,6 +326,46 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: 12,
         color: colors.textMuted,
         lineHeight: 16,
+    },
+    // ✅ УЛУЧШЕНИЕ: Стили для милестонов
+    milestonesWrapper: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: DESIGN_TOKENS.spacing.sm,
+        marginBottom: DESIGN_TOKENS.spacing.xs,
+        paddingHorizontal: 4,
+    },
+    milestone: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 28,
+        minHeight: 28,
+    },
+    milestoneActive: {
+        // активные милестоны
+    },
+    milestoneCircle: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    milestoneCircleActive: {
+        borderColor: colors.primary,
+        backgroundColor: colors.primarySoft,
+    },
+    milestoneNumber: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.textMuted,
+    },
+    milestoneNumberActive: {
+        color: colors.primary,
     },
 });
 

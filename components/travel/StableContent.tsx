@@ -3,6 +3,7 @@ import React, { memo, Suspense, useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Linking, Platform, Text, Pressable } from "react-native";
 import type { TDefaultRendererProps } from "react-native-render-html";
 import { sanitizeRichText } from '@/src/utils/sanitizeRichText';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type LazyInstagramProps = { url: string };
 
@@ -175,7 +176,7 @@ const WEB_RICH_TEXT_STYLES = `
   font-family: "Georgia", "Times New Roman", serif;
   font-size: 17px;
   line-height: 1.7;
-  color: #1a1a1a;
+  color: ${DESIGN_TOKENS.colors.text};
   text-align: justify;
   hyphens: auto;
   width: 100%;
@@ -189,7 +190,7 @@ const WEB_RICH_TEXT_STYLES = `
 .${WEB_RICH_TEXT_CLASS} h1,
 .${WEB_RICH_TEXT_CLASS} h2,
 .${WEB_RICH_TEXT_CLASS} h3 {
-  color: #111a2b;
+  color: ${DESIGN_TOKENS.colors.text};
   line-height: 1.3;
   margin: 1.6em 0 0.7em;
 }
@@ -210,9 +211,9 @@ const WEB_RICH_TEXT_STYLES = `
   object-fit: cover;
   border-radius: 22px;
   margin: DESIGN_TOKENS.spacing.xxs2px 0 26px;
-  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.16);
-  border: 6px solid rgba(255, 255, 255, 0.14);
-  background: #fafafa;
+  box-shadow: ${DESIGN_TOKENS.shadows.card};
+  border: 6px solid ${DESIGN_TOKENS.colors.borderLight};
+  background: ${DESIGN_TOKENS.colors.surfaceMuted};
 }
 .${WEB_RICH_TEXT_CLASS} img + img,
 .${WEB_RICH_TEXT_CLASS} figure + figure {
@@ -249,7 +250,7 @@ const WEB_RICH_TEXT_STYLES = `
 .${WEB_RICH_TEXT_CLASS} figcaption {
   text-align: center;
   font-size: 0.9rem;
-  color: rgba(15, 23, 42, 0.8);
+  color: ${DESIGN_TOKENS.colors.textMuted};
   margin-top: 8px;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -259,9 +260,10 @@ const WEB_RICH_TEXT_STYLES = `
   display: block;
   max-width: 100%;
   border-radius: 18px;
+  padding: 0;
   overflow: hidden;
   margin: DESIGN_TOKENS.spacing.xxs4px 0;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  box-shadow: ${DESIGN_TOKENS.shadows.card};
 }
 .${WEB_RICH_TEXT_CLASS}::after {
   content: "";
@@ -277,7 +279,7 @@ const WEB_RICH_TEXT_STYLES = `
   margin: DESIGN_TOKENS.spacing.xxs4px auto !important;
   border-radius: 18px !important;
   overflow: hidden !important;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  box-shadow: ${DESIGN_TOKENS.shadows.card};
   position: relative;
   display: block;
 }
@@ -338,7 +340,7 @@ const WEB_RICH_TEXT_STYLES = `
 /* Стили для подписей Instagram */
 .${WEB_RICH_TEXT_CLASS} .instagram-caption {
   font-size: 14px;
-  color: #6b7280;
+  color: ${DESIGN_TOKENS.colors.textMuted};
   line-height: 1.5;
   margin-top: 8px;
   margin-bottom: 20px;
@@ -350,6 +352,7 @@ const WEB_RICH_TEXT_STYLES = `
 `;
 
 const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }) => {
+  const colors = useThemedColors();
   const [iframeModel, setIframeModel] = useState<IframeModelType | null>(null);
   const prepared = useMemo(() => prepareHtml(html), [html]);
 
@@ -476,11 +479,11 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
   // ВНИМАНИЕ: lineHeight задаём через baseStyle (px). В tagsStyles не переопределяем.
   const baseStyle = useMemo(
     () => ({
-      color: "#1a1a1a",
+      color: colors.text,
       fontSize: BASE_FONT_SIZE,
       lineHeight: BASE_LINE_HEIGHT,
     }),
-    [BASE_FONT_SIZE, BASE_LINE_HEIGHT]
+    [BASE_FONT_SIZE, BASE_LINE_HEIGHT, colors.text]
   );
 
   const tagsStyles = useMemo(
@@ -492,7 +495,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         lineHeight: Math.round(BASE_FONT_SIZE * 1.6), // Межстрочный интервал 1.6
       },
       strong: { fontWeight: "700" }, // ✅ Более жирный для выделения
-      em: { fontStyle: "italic", color: "#4a5568" }, // ✅ Немного другой цвет для курсива
+      em: { fontStyle: "italic", color: colors.textMuted }, // ✅ Немного другой цвет для курсива
 
       // ✅ УЛУЧШЕНИЕ: Заголовки с улучшенной иерархией
       h1: { 
@@ -501,7 +504,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         fontWeight: "700", 
         marginTop: DESIGN_TOKENS.spacing.md,
         marginBottom: DESIGN_TOKENS.spacing.lg,
-        color: "#1a202c", // ✅ Более темный цвет
+        color: colors.text, // ✅ Более темный цвет
       },
       h2: { 
         fontSize: BASE_FONT_SIZE + 8, // ~24-25px
@@ -509,7 +512,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         fontWeight: "700", 
         marginTop: DESIGN_TOKENS.spacing.xs,
         marginBottom: 12,
-        color: "#1a202c",
+        color: colors.text,
       },
       h3: { 
         fontSize: BASE_FONT_SIZE + 4, // ~20-21px
@@ -517,7 +520,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         fontWeight: "700", 
         marginTop: 18,
         marginBottom: DESIGN_TOKENS.spacing.sm,
-        color: "#2d3748",
+        color: colors.text,
       },
 
       // ✅ УЛУЧШЕНИЕ: Улучшенные списки
@@ -558,7 +561,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         marginVertical: 12,
         display: "block",
         alignSelf: "stretch",
-        boxShadow: Platform.OS === "web" ? "0 2px 8px rgba(0,0,0,0.05)" : undefined,
+        boxShadow: Platform.OS === "web" ? DESIGN_TOKENS.shadows.light : undefined,
       },
 
       iframe: {
@@ -570,7 +573,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         marginVertical: 14,
       },
     }),
-    [BASE_FONT_SIZE, contentWidth]
+    [BASE_FONT_SIZE, contentWidth, colors.text, colors.textMuted]
   );
 
   const customHTMLElementModels = useMemo(

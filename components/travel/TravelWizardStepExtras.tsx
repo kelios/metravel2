@@ -131,6 +131,9 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                     autosaveBadge={autosaveBadge}
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
+                    currentStep={currentStep}
+                    totalSteps={totalSteps}
+                    onStepSelect={onStepSelect}
                 />
                 {validation.warnings.length > 0 && (
                     <View style={styles.validationSummaryWrapper}>
@@ -206,6 +209,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     contentInner: {
         width: '100%',
         maxWidth: 980,
+    },
+    groupHint: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: colors.textMuted,
+        marginBottom: DESIGN_TOKENS.spacing.md,
+        lineHeight: 20,
     },
 });
 
