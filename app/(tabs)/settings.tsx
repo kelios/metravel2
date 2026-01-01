@@ -13,7 +13,7 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/src/utils/confirmAction';
 import { fetchUserProfile, updateUserProfile, uploadUserProfileAvatarFile, type UpdateUserProfilePayload, type UploadUserProfileAvatarFile, type UserProfileDto } from '@/src/api/user';
 import { ApiError } from '@/src/api/client';
-import { Theme, useTheme } from '@/hooks/useTheme';
+import { Theme, useTheme, useThemedColors } from '@/hooks/useTheme';
 
 export default function SettingsScreen() {
     const router = useRouter();
@@ -21,6 +21,8 @@ export default function SettingsScreen() {
     const isWeb = Platform.OS === 'web';
     const favoritesContext = useFavorites();
     const { theme, setTheme } = useTheme();
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const {
         clearHistory = async () => {},
         clearFavorites = async () => {},
@@ -302,7 +304,7 @@ export default function SettingsScreen() {
                                 {profile?.avatar ? (
                                     <Image source={{ uri: profile.avatar }} style={styles.profileAvatarImage} />
                                 ) : (
-                                    <Feather name="user" size={18} color={DESIGN_TOKENS.colors.primary} />
+                                    <Feather name="user" size={18} color={colors.primary} />
                                 )}
                             </View>
                             <View style={styles.cardText}>
@@ -319,9 +321,9 @@ export default function SettingsScreen() {
                                     {...Platform.select({ web: { cursor: 'pointer' } })}
                                 >
                                     {profileLoading ? (
-                                        <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.primary} />
+                                        <ActivityIndicator size="small" color={colors.primary} />
                                     ) : (
-                                        <Feather name="refresh-cw" size={16} color={DESIGN_TOKENS.colors.primary} />
+                                        <Feather name="refresh-cw" size={16} color={colors.primary} />
                                     )}
                                 </Pressable>
                             </View>
@@ -335,7 +337,7 @@ export default function SettingsScreen() {
                                     onChangeText={setFirstName}
                                     style={styles.input}
                                     placeholder="Введите имя"
-                                    placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                    placeholderTextColor={colors.textMuted}
                                 />
                             </View>
                             <View style={[styles.field, styles.fieldHalf]}>
@@ -345,7 +347,7 @@ export default function SettingsScreen() {
                                     onChangeText={setLastName}
                                     style={styles.input}
                                     placeholder={username || 'Введите фамилию'}
-                                    placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                    placeholderTextColor={colors.textMuted}
                                 />
                             </View>
                             <View style={[styles.field, styles.fieldHalf]}>
@@ -355,7 +357,7 @@ export default function SettingsScreen() {
                                     onChangeText={setYoutube}
                                     style={styles.input}
                                     placeholder="Ссылка"
-                                    placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                    placeholderTextColor={colors.textMuted}
                                     autoCapitalize="none"
                                 />
                             </View>
@@ -366,7 +368,7 @@ export default function SettingsScreen() {
                                     onChangeText={setInstagram}
                                     style={styles.input}
                                     placeholder="Ссылка"
-                                    placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                    placeholderTextColor={colors.textMuted}
                                     autoCapitalize="none"
                                 />
                             </View>
@@ -377,7 +379,7 @@ export default function SettingsScreen() {
                                     onChangeText={setTwitter}
                                     style={styles.input}
                                     placeholder="Ссылка"
-                                    placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                    placeholderTextColor={colors.textMuted}
                                     autoCapitalize="none"
                                 />
                             </View>
@@ -388,7 +390,7 @@ export default function SettingsScreen() {
                                     onChangeText={setVk}
                                     style={styles.input}
                                     placeholder="Ссылка"
-                                    placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                    placeholderTextColor={colors.textMuted}
                                     autoCapitalize="none"
                                 />
                             </View>
@@ -413,7 +415,7 @@ export default function SettingsScreen() {
                                         {avatarPreviewUrl ? (
                                             <Image source={{ uri: avatarPreviewUrl }} style={styles.avatarPreviewImage} />
                                         ) : (
-                                            <Feather name="image" size={18} color={DESIGN_TOKENS.colors.textMuted} />
+                                            <Feather name="image" size={18} color={colors.textMuted} />
                                         )}
                                     </View>
                                     <View style={styles.avatarPickerButtons}>
@@ -459,7 +461,7 @@ export default function SettingsScreen() {
                     <View style={styles.card}>
                         <View style={styles.cardRow}>
                             <View style={styles.cardIcon}>
-                                <Feather name="sun" size={18} color={DESIGN_TOKENS.colors.primary} />
+                                <Feather name="sun" size={18} color={colors.primary} />
                             </View>
                             <View style={styles.cardText}>
                                 <Text style={styles.cardTitle}>Тема оформления</Text>
@@ -489,14 +491,14 @@ export default function SettingsScreen() {
                                         {...Platform.select({ web: { cursor: 'pointer' } })}
                                     >
                                         <View style={[styles.themeOptionIcon, isSelected && styles.themeOptionIconActive]}>
-                                            <Feather name={option.icon} size={16} color={DESIGN_TOKENS.colors.primary} />
+                                            <Feather name={option.icon} size={16} color={colors.primary} />
                                         </View>
                                         <View style={styles.themeOptionText}>
                                             <Text style={styles.themeOptionTitle}>{option.label}</Text>
                                             <Text style={styles.themeOptionDescription}>{option.description}</Text>
                                         </View>
                                         {isSelected ? (
-                                            <Feather name="check" size={16} color={DESIGN_TOKENS.colors.primary} />
+                                            <Feather name="check" size={16} color={colors.primary} />
                                         ) : null}
                                     </Pressable>
                                 );
@@ -509,7 +511,7 @@ export default function SettingsScreen() {
                     <View style={styles.card}>
                         <View style={styles.cardRow}>
                             <View style={styles.cardIcon}>
-                                <Feather name="user" size={18} color={DESIGN_TOKENS.colors.primary} />
+                                <Feather name="user" size={18} color={colors.primary} />
                             </View>
                             <View style={styles.cardText}>
                                 <Text style={styles.cardTitle}>{username || 'Пользователь'}</Text>
@@ -524,7 +526,7 @@ export default function SettingsScreen() {
                             accessibilityLabel="Выйти из аккаунта"
                             {...Platform.select({ web: { cursor: 'pointer' } })}
                         >
-                            <Feather name="log-out" size={18} color={DESIGN_TOKENS.colors.danger} />
+                            <Feather name="log-out" size={18} color={colors.danger} />
                             <Text style={styles.dangerButtonText}>Выйти</Text>
                         </Pressable>
                     </View>
@@ -534,7 +536,7 @@ export default function SettingsScreen() {
                     <View style={styles.card}>
                         <View style={styles.cardRow}>
                             <View style={styles.cardIcon}>
-                                <Feather name="heart" size={18} color={DESIGN_TOKENS.colors.primary} />
+                                <Feather name="heart" size={18} color={colors.primary} />
                             </View>
                             <View style={styles.cardText}>
                                 <Text style={styles.cardTitle}>Избранное</Text>
@@ -549,7 +551,7 @@ export default function SettingsScreen() {
                             accessibilityLabel="Очистить избранное"
                             {...Platform.select({ web: { cursor: 'pointer' } })}
                         >
-                            <Feather name="trash-2" size={18} color={DESIGN_TOKENS.colors.danger} />
+                            <Feather name="trash-2" size={18} color={colors.danger} />
                             <Text style={styles.dangerButtonText}>Очистить избранное</Text>
                         </Pressable>
                     </View>
@@ -557,7 +559,7 @@ export default function SettingsScreen() {
                     <View style={styles.card}>
                         <View style={styles.cardRow}>
                             <View style={styles.cardIcon}>
-                                <Feather name="clock" size={18} color={DESIGN_TOKENS.colors.primary} />
+                                <Feather name="clock" size={18} color={colors.primary} />
                             </View>
                             <View style={styles.cardText}>
                                 <Text style={styles.cardTitle}>История просмотров</Text>
@@ -572,7 +574,7 @@ export default function SettingsScreen() {
                             accessibilityLabel="Очистить историю просмотров"
                             {...Platform.select({ web: { cursor: 'pointer' } })}
                         >
-                            <Feather name="trash-2" size={18} color={DESIGN_TOKENS.colors.danger} />
+                            <Feather name="trash-2" size={18} color={colors.danger} />
                             <Text style={styles.dangerButtonText}>Очистить историю</Text>
                         </Pressable>
                     </View>
@@ -583,10 +585,10 @@ export default function SettingsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
+        backgroundColor: colors.mutedBackground,
     },
     scrollContent: {
         paddingBottom: 24,
@@ -610,12 +612,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 20,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     subtitle: {
         marginTop: 4,
         fontSize: 13,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
     },
     section: {
         paddingTop: 6,
@@ -625,13 +627,13 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     card: {
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: DESIGN_TOKENS.radii.lg,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
         padding: 14,
         gap: 12,
         ...Platform.select({
@@ -669,7 +671,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        backgroundColor: colors.primarySoft,
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
@@ -684,8 +686,8 @@ const styles = StyleSheet.create({
         height: 36,
         borderRadius: 18,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
         ...Platform.select({
@@ -698,7 +700,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        backgroundColor: colors.primarySoft,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -708,12 +710,12 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: 15,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     cardMeta: {
         marginTop: 2,
         fontSize: 12,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
     },
     themeOptions: {
         gap: 10,
@@ -725,12 +727,12 @@ const styles = StyleSheet.create({
         padding: 12,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
     },
     themeOptionActive: {
-        borderColor: DESIGN_TOKENS.colors.primary,
-        backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+        borderColor: colors.primary,
+        backgroundColor: colors.primarySoft,
     },
     themeOptionPressed: {
         opacity: 0.9,
@@ -739,12 +741,12 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+        backgroundColor: colors.surfaceMuted,
         alignItems: 'center',
         justifyContent: 'center',
     },
     themeOptionIconActive: {
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
     },
     themeOptionText: {
         flex: 1,
@@ -752,12 +754,12 @@ const styles = StyleSheet.create({
     themeOptionTitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     themeOptionDescription: {
         marginTop: 2,
         fontSize: 12,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
     },
     formGrid: {
         gap: 12,
@@ -785,21 +787,21 @@ const styles = StyleSheet.create({
     fieldLabel: {
         fontSize: 12,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     input: {
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
         borderRadius: 12,
         paddingHorizontal: 12,
         paddingVertical: 10,
         fontSize: 14,
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     divider: {
         height: 1,
-        backgroundColor: DESIGN_TOKENS.colors.border,
+        backgroundColor: colors.border,
         marginVertical: 8,
     },
     avatarRow: {
@@ -827,8 +829,8 @@ const styles = StyleSheet.create({
         height: 64,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
@@ -866,12 +868,12 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.danger,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        borderColor: colors.danger,
+        backgroundColor: colors.surface,
     },
     dangerButtonText: {
         fontSize: 14,
         fontWeight: '700',
-        color: DESIGN_TOKENS.colors.danger,
+        color: colors.danger,
     },
 });

@@ -245,7 +245,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         gap: DESIGN_TOKENS.spacing.xs,
         marginTop: DESIGN_TOKENS.spacing.xs,
         padding: DESIGN_TOKENS.spacing.sm,
-        backgroundColor: DESIGN_TOKENS.colors.dangerSoft,
+        backgroundColor: colors.dangerSoft,
         borderRadius: DESIGN_TOKENS.radii.sm,
     },
     errorText: {
@@ -261,7 +261,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderWidth: 1,
         borderColor: colors.border,
         ...(Platform.OS === 'web'
-            ? ({ boxShadow: DESIGN_TOKENS.shadows.medium } as any)
+            ? ({ boxShadow: colors.boxShadows.medium } as any)
             : {}),
     },
     resultItem: {
@@ -314,4 +314,3 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 });
 
 export default React.memo(LocationSearchInput);
-

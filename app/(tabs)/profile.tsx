@@ -776,7 +776,7 @@ export default function ProfileScreen() {
                       {...Platform.select({ web: { cursor: 'pointer' } })}
                     >
                       <Text style={styles.sectionActionText}>Смотреть все</Text>
-                      <Feather name="chevron-right" size={16} color={DESIGN_TOKENS.colors.primary} />
+                      <Feather name="chevron-right" size={16} color={colors.primary} />
                     </Pressable>
                   </View>
 

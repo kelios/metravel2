@@ -27,7 +27,8 @@ export const getStyles = (
     border: string;
   },
 ) => {
-  const effectiveHeaderOffset = Platform.OS === 'web' ? 0 : headerOffset;
+  // Учитываем высоту web-хедера, иначе карта “подпрыгивает” под него и шапка пропадает
+  const effectiveHeaderOffset = headerOffset;
   const panelSlideDistance = Math.max(windowWidth, PANEL_WIDTH_TABLET);
   return StyleSheet.create({
     // На web шапка уже занимает поток, поэтому смещение не требуется

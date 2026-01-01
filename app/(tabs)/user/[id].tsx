@@ -6,10 +6,13 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { openExternalUrl } from '@/src/utils/externalLinks';
 import { useUserProfileCached } from '@/src/hooks/useUserProfileCached';
+import { useThemedColors } from '@/hooks/useTheme';
 
 export default function PublicUserProfileScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const userId = useMemo(() => {
     const raw = params?.id;
@@ -44,7 +47,7 @@ export default function PublicUserProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loader}>
-          <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -63,7 +66,7 @@ export default function PublicUserProfileScreen() {
             accessibilityLabel="Назад"
             {...Platform.select({ web: { cursor: 'pointer' } })}
           >
-            <Feather name="arrow-left" size={16} color={DESIGN_TOKENS.colors.primary} />
+            <Feather name="arrow-left" size={16} color={colors.primary} />
             <Text style={styles.backButtonText}>Назад</Text>
           </Pressable>
         </View>
@@ -80,7 +83,7 @@ export default function PublicUserProfileScreen() {
               {profile.avatar ? (
                 <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
               ) : (
-                <Feather name="user" size={28} color={DESIGN_TOKENS.colors.primary} />
+                <Feather name="user" size={28} color={colors.primary} />
               )}
             </View>
             <View style={styles.headerTextBlock}>
@@ -114,7 +117,7 @@ export default function PublicUserProfileScreen() {
               accessibilityLabel="Смотреть путешествия автора"
               {...Platform.select({ web: { cursor: 'pointer' } })}
             >
-              <Feather name="map" size={16} color={DESIGN_TOKENS.colors.textOnPrimary} />
+              <Feather name="map" size={16} color={colors.textOnPrimary} />
               <Text style={styles.primaryButtonText}>Путешествия автора</Text>
             </Pressable>
             <Pressable
@@ -124,7 +127,7 @@ export default function PublicUserProfileScreen() {
               accessibilityLabel="Назад"
               {...Platform.select({ web: { cursor: 'pointer' } })}
             >
-              <Feather name="arrow-left" size={16} color={DESIGN_TOKENS.colors.primary} />
+              <Feather name="arrow-left" size={16} color={colors.primary} />
               <Text style={styles.secondaryButtonText}>Назад</Text>
             </Pressable>
           </View>
@@ -134,10 +137,10 @@ export default function PublicUserProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
+    backgroundColor: colors.mutedBackground,
   },
   scrollView: {
     flex: 1,
@@ -154,16 +157,16 @@ const styles = StyleSheet.create({
   headerCard: {
     paddingVertical: 18,
     paddingHorizontal: 14,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.card,
+        boxShadow: colors.boxShadows.card,
       },
       ios: {
-        ...DESIGN_TOKENS.shadowsNative.light,
+        ...colors.shadows.light,
       },
       android: {
         elevation: 2,
@@ -180,11 +183,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: DESIGN_TOKENS.colors.primary,
+    borderColor: colors.primary,
     overflow: 'hidden',
   },
   avatarImage: {
@@ -198,12 +201,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 20,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 4,
   },
   userSub: {
     fontSize: 13,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   socialsRow: {
     flexDirection: 'row',
@@ -215,10 +218,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
   },
   socialChipText: {
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -233,11 +236,11 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: 12,
   },
   primaryButtonText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -247,11 +250,11 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
     borderRadius: 12,
   },
   secondaryButtonText: {
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -265,11 +268,11 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   errorText: {
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
   },
   backButton: {
@@ -280,11 +283,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
   },
   backButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
   },
 });

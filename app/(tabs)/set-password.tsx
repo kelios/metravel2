@@ -142,7 +142,7 @@ export default function SetPassword() {
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     card: {
         width: '50%', // Изменено для лучшей адаптации
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        backgroundColor: colors.surface,
         alignItems: 'center',
         marginTop: -400, // Поднять карточку, чтобы перекрыть часть изображения
         borderRadius: 8, // Добавлено для скругления углов
@@ -181,19 +181,20 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     text: {
         padding: 10,
         fontSize: 16,
+        color: colors.text,
     },
     link: {
-        color: '#4b7c6f',
+        color: colors.primary,
         fontSize: 16,
     },
     container: {
         flex: 1,
         alignItems: 'center',
         width: '100%',
-        backgroundColor: 'white',
+        backgroundColor: colors.background,
     },
     applyButton: {
-        backgroundColor: '#6aaaaa'
+        backgroundColor: colors.primary
     },
     applyButtonContent: {
         paddingVertical: 10
