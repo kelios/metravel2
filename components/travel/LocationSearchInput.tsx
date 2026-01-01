@@ -245,7 +245,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         gap: DESIGN_TOKENS.spacing.xs,
         marginTop: DESIGN_TOKENS.spacing.xs,
         padding: DESIGN_TOKENS.spacing.sm,
-        backgroundColor: colors.errorSoft,
+        backgroundColor: DESIGN_TOKENS.colors.dangerSoft,
         borderRadius: DESIGN_TOKENS.radii.sm,
     },
     errorText: {
