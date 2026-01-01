@@ -21,7 +21,7 @@ describe('GroupedFiltersSection', () => {
     const mockGroup = {
         id: 'test-group',
         title: 'Test Group',
-        iconName: 'star' as const,
+        iconName: 'sliders' as const,
         description: 'Test description',
         defaultExpanded: false,
     };

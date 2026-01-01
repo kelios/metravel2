@@ -87,9 +87,11 @@ describe('TravelWizardFooter - Quick Draft', () => {
                 onPrimary={jest.fn()}
                 primaryLabel="Далее"
                 onQuickDraft={jest.fn()}
+                quickDraftLabel="Быстрый черновик"
             />
         );
 
+        // When quickDraftLabel is explicitly provided
         expect(getByText('Быстрый черновик')).toBeTruthy();
     });
 

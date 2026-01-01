@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView, Platform, View, StyleSheet, ScrollView, findNodeHandle, UIManager, LayoutChangeEvent, Text } from 'react-native';
+import { KeyboardAvoidingView, Platform, View, StyleSheet, ScrollView, findNodeHandle, UIManager, LayoutChangeEvent } from 'react-native';
 
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import GroupedFiltersSection from '@/components/travel/GroupedFiltersSection';
@@ -116,24 +116,37 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
         return validateStep(5, formData);
     }, [formData]);
 
-    // ✅ УЛУЧШЕНИЕ: Подсчет заполненных полей для каждой группы
+    // ✅ УЛУЧШЕНИЕ: Подсчет заполненных полей
     const groupsFilledCounts = useMemo(() => {
         const hasCategories = Array.isArray((formData as any).categories) && ((formData as any).categories as any[]).length > 0;
         const hasTransports = Array.isArray((formData as any).transports) && ((formData as any).transports as any[]).length > 0;
-
-        const hasMonths = Array.isArray((formData as any).month) && ((formData as any).month as any[]).length > 0;
         const hasComplexity = Array.isArray((formData as any).complexity) && ((formData as any).complexity as any[]).length > 0;
-
         const hasCompanions = Array.isArray((formData as any).companions) && ((formData as any).companions as any[]).length > 0;
         const hasNightStay = Array.isArray((formData as any).over_nights_stay) && ((formData as any).over_nights_stay as any[]).length > 0;
-
+        const hasMonths = Array.isArray((formData as any).month) && ((formData as any).month as any[]).length > 0;
+        const hasYear = (formData as any).year !== undefined && (formData as any).year !== null && (formData as any).year !== '';
         const hasVisa = (formData as any).visa !== undefined && (formData as any).visa !== null;
+        const hasBudget = (formData as any).budget !== undefined && (formData as any).budget !== null && (formData as any).budget !== '';
+        const hasNumberPeoples = (formData as any).number_peoples !== undefined && (formData as any).number_peoples !== null && (formData as any).number_peoples !== '';
+        const hasNumberDays = (formData as any).number_days !== undefined && (formData as any).number_days !== null && (formData as any).number_days !== '';
+
+        // Все поля в одной группе (showAdditionalFields показывает все)
+        const allFields = [
+            hasCategories,
+            hasTransports,
+            hasComplexity,
+            hasCompanions,
+            hasNightStay,
+            hasMonths,
+            hasYear,
+            hasVisa,
+            hasBudget,
+            hasNumberPeoples,
+            hasNumberDays,
+        ].filter(Boolean).length;
 
         return {
-            main: [hasCategories, hasTransports].filter(Boolean).length,
-            timeComplexity: [hasMonths, hasComplexity].filter(Boolean).length,
-            style: [hasCompanions, hasNightStay].filter(Boolean).length,
-            practical: [hasVisa].filter(Boolean).length,
+            main: allFields,
         };
     }, [formData]);
 
@@ -176,17 +189,17 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
 
                         {/* ✅ УЛУЧШЕНИЕ: Группировка параметров с аккордеонами */}
 
-                        {/* Группа 1: Основное */}
+                        {/* Группа 1: Категории и транспорт */}
                         <GroupedFiltersSection
                             group={{
                                 id: 'main',
-                                title: 'Основное',
-                                iconName: 'star',
-                                description: 'Категории и виды транспорта — помогают пользователям найти ваш маршрут',
+                                title: 'Дополнительные параметры',
+                                iconName: 'sliders',
+                                description: 'Категории, транспорт, сложность, время путешествия и другие детали',
                                 defaultExpanded: true,
                             }}
                             filledCount={groupsFilledCounts.main}
-                            totalCount={2}
+                            totalCount={11}
                         >
                             <FiltersUpsertComponent
                                 filters={filters}
@@ -201,74 +214,8 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                                 showCountries={false}
                                 showCategories={true}
                                 showCoverImage={false}
-                                showAdditionalFields={false}
-                            />
-                        </GroupedFiltersSection>
-
-                        {/* Группа 2: Время и сложность */}
-                        <GroupedFiltersSection
-                            group={{
-                                id: 'timeComplexity',
-                                title: 'Время и сложность',
-                                iconName: 'calendar',
-                                description: 'Лучшие месяцы для поездки и уровень сложности маршрута',
-                                defaultExpanded: false,
-                            }}
-                            filledCount={groupsFilledCounts.timeComplexity}
-                            totalCount={2}
-                        >
-                            <Text style={styles.groupHint}>
-                                Помогите путешественникам понять, когда лучше ехать и насколько сложен маршрут
-                            </Text>
-                            <FiltersUpsertComponent
-                                filters={filters}
-                                formData={formData}
-                                setFormData={setFormData}
-                                travelDataOld={travelDataOld}
-                                isSuperAdmin={isSuperAdmin}
-                                onSave={onManualSave}
-                                showSaveButton={false}
-                                showPreviewButton={false}
-                                showPublishControls={false}
-                                showCountries={false}
-                                showCategories={false}
-                                showCoverImage={false}
                                 showAdditionalFields={true}
                             />
-                        </GroupedFiltersSection>
-
-                        {/* Группа 3: Стиль путешествия */}
-                        <GroupedFiltersSection
-                            group={{
-                                id: 'style',
-                                title: 'Стиль путешествия',
-                                iconName: 'users',
-                                description: 'С кем ехать и где останавливаться',
-                                defaultExpanded: false,
-                            }}
-                            filledCount={groupsFilledCounts.style}
-                            totalCount={2}
-                        >
-                            <Text style={styles.groupHint}>
-                                Информация о компаньонах и типах ночлега
-                            </Text>
-                        </GroupedFiltersSection>
-
-                        {/* Группа 4: Практическая информация */}
-                        <GroupedFiltersSection
-                            group={{
-                                id: 'practical',
-                                title: 'Практическая информация',
-                                iconName: 'file-text',
-                                description: 'Виза, бюджет и другие важные детали',
-                                defaultExpanded: false,
-                            }}
-                            filledCount={groupsFilledCounts.practical}
-                            totalCount={1}
-                        >
-                            <Text style={styles.groupHint}>
-                                Дополнительные практические детали для путешественников
-                            </Text>
                         </GroupedFiltersSection>
                     </View>
                 </ScrollView>

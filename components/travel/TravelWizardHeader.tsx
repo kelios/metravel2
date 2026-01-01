@@ -34,6 +34,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     currentStep,
     totalSteps,
     onStepSelect,
+    onPreview, // ✅ ФАЗА 2: Handler превью
 }) => {
     const colors = useThemedColors();
     const { isPhone, isLargePhone } = useResponsive();
@@ -124,6 +125,25 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                     )}
                 </View>
                 <View style={styles.headerRightRow}>
+                    {/* ✅ ФАЗА 2: Кнопка превью */}
+                    {onPreview && (
+                        <Pressable
+                            onPress={onPreview}
+                            style={({ pressed }) => [
+                                styles.previewButton,
+                                globalFocusStyles.focusable,
+                                pressed && { opacity: 0.8 }
+                            ]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Показать превью"
+                            {...Platform.select({ web: { cursor: 'pointer' } })}
+                        >
+                            <Feather name="eye" size={16} color={colors.primary} />
+                            {!isMobile && (
+                                <Text style={styles.previewButtonText}>Превью</Text>
+                            )}
+                        </Pressable>
+                    )}
                     {TipTrigger}
                     {autosaveBadge ? <Text style={styles.autosaveBadge}>{autosaveBadge}</Text> : null}
                 </View>
