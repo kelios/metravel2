@@ -1,6 +1,7 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView, findNodeHandle, UIManager, LayoutChangeEvent } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
 import YoutubeLinkComponent from '@/components/YoutubeLinkComponent';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
@@ -432,9 +433,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.background,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    tipIcon: {
-        fontSize: 20,
     },
     tipContent: {
         flex: 1,

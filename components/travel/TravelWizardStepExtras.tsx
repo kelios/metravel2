@@ -151,21 +151,103 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                 >
                     <View style={styles.contentInner}>
                         <View ref={categoriesAnchorRef} nativeID="travelwizard-extras-categories" />
-                        <FiltersUpsertComponent
-                            filters={filters}
-                            formData={formData}
-                            setFormData={setFormData}
-                            travelDataOld={travelDataOld}
-                            isSuperAdmin={isSuperAdmin}
-                            onSave={onManualSave}
-                            showSaveButton={false}
-                            showPreviewButton={false}
-                            showPublishControls={false}
-                            showCountries={false}
-                            showCategories={true}
-                            showCoverImage={false}
-                            showAdditionalFields={true}
-                        />
+
+                        {/* ✅ УЛУЧШЕНИЕ: Группировка параметров с аккордеонами */}
+
+                        {/* Группа 1: Основное */}
+                        <GroupedFiltersSection
+                            group={{
+                                id: 'main',
+                                title: 'Основное',
+                                iconName: 'star',
+                                description: 'Категории и виды транспорта — помогают пользователям найти ваш маршрут',
+                                defaultExpanded: true,
+                            }}
+                            filledCount={groupsFilledCounts.main}
+                            totalCount={2}
+                        >
+                            <FiltersUpsertComponent
+                                filters={filters}
+                                formData={formData}
+                                setFormData={setFormData}
+                                travelDataOld={travelDataOld}
+                                isSuperAdmin={isSuperAdmin}
+                                onSave={onManualSave}
+                                showSaveButton={false}
+                                showPreviewButton={false}
+                                showPublishControls={false}
+                                showCountries={false}
+                                showCategories={true}
+                                showCoverImage={false}
+                                showAdditionalFields={false}
+                            />
+                        </GroupedFiltersSection>
+
+                        {/* Группа 2: Время и сложность */}
+                        <GroupedFiltersSection
+                            group={{
+                                id: 'timeComplexity',
+                                title: 'Время и сложность',
+                                iconName: 'calendar',
+                                description: 'Лучшие месяцы для поездки и уровень сложности маршрута',
+                                defaultExpanded: false,
+                            }}
+                            filledCount={groupsFilledCounts.timeComplexity}
+                            totalCount={2}
+                        >
+                            <Text style={styles.groupHint}>
+                                Помогите путешественникам понять, когда лучше ехать и насколько сложен маршрут
+                            </Text>
+                            <FiltersUpsertComponent
+                                filters={filters}
+                                formData={formData}
+                                setFormData={setFormData}
+                                travelDataOld={travelDataOld}
+                                isSuperAdmin={isSuperAdmin}
+                                onSave={onManualSave}
+                                showSaveButton={false}
+                                showPreviewButton={false}
+                                showPublishControls={false}
+                                showCountries={false}
+                                showCategories={false}
+                                showCoverImage={false}
+                                showAdditionalFields={true}
+                            />
+                        </GroupedFiltersSection>
+
+                        {/* Группа 3: Стиль путешествия */}
+                        <GroupedFiltersSection
+                            group={{
+                                id: 'style',
+                                title: 'Стиль путешествия',
+                                iconName: 'users',
+                                description: 'С кем ехать и где останавливаться',
+                                defaultExpanded: false,
+                            }}
+                            filledCount={groupsFilledCounts.style}
+                            totalCount={2}
+                        >
+                            <Text style={styles.groupHint}>
+                                Информация о компаньонах и типах ночлега
+                            </Text>
+                        </GroupedFiltersSection>
+
+                        {/* Группа 4: Практическая информация */}
+                        <GroupedFiltersSection
+                            group={{
+                                id: 'practical',
+                                title: 'Практическая информация',
+                                iconName: 'file-text',
+                                description: 'Виза, бюджет и другие важные детали',
+                                defaultExpanded: false,
+                            }}
+                            filledCount={groupsFilledCounts.practical}
+                            totalCount={1}
+                        >
+                            <Text style={styles.groupHint}>
+                                Дополнительные практические детали для путешественников
+                            </Text>
+                        </GroupedFiltersSection>
                     </View>
                 </ScrollView>
 

@@ -17,7 +17,7 @@ interface State {
 
 export default class ErrorBoundary extends Component<Props, State> {
   static contextType = ThemeContext;
-  declare context: React.ContextType<typeof ThemeContext>;
+  override context: React.ContextType<typeof ThemeContext> | null = null;
 
   constructor(props: Props) {
     super(props);

@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, View, Text, TouchableOpacity, StyleSheet, LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from 'react-native-paper';
+import { Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { useRouter } from 'expo-router';
 
@@ -484,7 +485,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         {/* ✅ УЛУЧШЕНИЕ: Обязательные пункты */}
                         <View style={styles.checklistSection}>
                             <View style={styles.sectionHeaderRow}>
-                                <Text style={styles.sectionHeaderIcon}>✅</Text>
+                                <Feather name="check-circle" size={16} color={colors.success} />
                                 <Text style={styles.sectionHeaderText}>Обязательно для публикации</Text>
                             </View>
                             {requiredChecklist.map(item => {
@@ -550,7 +551,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         {/* ✅ УЛУЧШЕНИЕ: Рекомендуемые пункты */}
                         <View style={[styles.checklistSection, styles.checklistSectionRecommended]}>
                             <View style={styles.sectionHeaderRow}>
-                                <Text style={styles.sectionHeaderIcon}>💡</Text>
+                                <Feather name="info" size={16} color={colors.primary} />
                                 <Text style={styles.sectionHeaderText}>Рекомендуем заполнить</Text>
                             </View>
                             {recommendedChecklist.map(item => {
@@ -599,7 +600,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                             <Text style={styles.checklistDetail}>{item.detail}</Text>
                                             {!item.ok && item.benefit && (
                                                 <View style={styles.benefitRow}>
-                                                    <Text style={styles.benefitIcon}>📊</Text>
+                                                    <Feather name="trending-up" size={12} color={colors.primary} />
                                                     <Text style={styles.benefitText}>{item.benefit}</Text>
                                                 </View>
                                             )}
