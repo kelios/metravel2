@@ -144,7 +144,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 
   const FilterCheckbox = ({ checked }: { checked: boolean }) => (
     <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
-      {checked && <Feather name="check" size={12} color="#fff" />}
+      {checked && <Feather name="check" size={12} color={colors.textOnPrimary} />}
     </View>
   );
 

@@ -55,7 +55,7 @@ export const CharacterCounter: React.FC<CharacterCounterProps> = ({
       case 'error':
         return colors.danger;
       case 'warning':
-        return '#FF9800';
+        return colors.warning;
       case 'success':
         return colors.textMuted;
     }
@@ -137,9 +137,9 @@ export const FieldValidationMessage: React.FC<FieldValidationMessageProps> = ({
       borderColor: colors.dangerLight,
     },
     warningContainer: {
-      backgroundColor: '#FFF3E0',
+      backgroundColor: colors.warningSoft,
       borderWidth: 1,
-      borderColor: '#FFE0B2',
+      borderColor: colors.warningLight,
     },
     messageIcon: {
       marginRight: 6,
@@ -153,7 +153,7 @@ export const FieldValidationMessage: React.FC<FieldValidationMessageProps> = ({
       color: colors.danger,
     },
     warningText: {
-      color: '#F57C00',
+      color: colors.warningDark,
     },
   }), [colors]);
 
@@ -169,7 +169,7 @@ export const FieldValidationMessage: React.FC<FieldValidationMessageProps> = ({
       <Feather
         name={isError ? 'alert-circle' : 'info'}
         size={14}
-        color={isError ? colors.danger : '#FF9800'}
+        color={isError ? colors.danger : colors.warning}
         style={messageStyles.messageIcon}
       />
       <Text style={[messageStyles.messageText, isError ? messageStyles.errorText : messageStyles.warningText]}>
@@ -201,17 +201,17 @@ export const QualityIndicator: React.FC<QualityIndicatorProps> = ({ level, score
         };
       case 'good':
         return {
-          color: '#4CAF50',
+          color: colors.success,
           icon: 'thumbs-up' as const,
           label: 'Хорошо',
-          bgColor: '#E8F5E9',
+          bgColor: colors.successSoft,
         };
       case 'fair':
         return {
-          color: '#FF9800',
+          color: colors.warning,
           icon: 'alert-triangle' as const,
           label: 'Удовлетворительно',
-          bgColor: '#FFF3E0',
+          bgColor: colors.warningSoft,
         };
       case 'poor':
         return {
@@ -309,7 +309,7 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
     },
     warningSummaryText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      color: '#F57C00',
+      color: colors.warning,
       fontWeight: '600',
     },
   }), [colors]);
@@ -335,7 +335,7 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
       )}
       {warningCount > 0 && (
         <View style={summaryStyles.summaryItem}>
-          <Feather name="info" size={16} color="#FF9800" />
+          <Feather name="info" size={16} color={colors.warning} />
           <Text style={summaryStyles.warningSummaryText}>
             {warningCount} {warningCount === 1 ? 'предупреждение' : 'предупреждения'}
           </Text>
@@ -344,4 +344,3 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
     </View>
   );
 };
-

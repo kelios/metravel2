@@ -1,22 +1,28 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useTipAnimation } from '@/hooks/useStepTransition';
 import { ContextualTip } from '@/utils/contextualTips';
 
 interface ContextualTipCardProps {
   tip: ContextualTip;
   onActionPress?: () => void;
+  delay?: number;
 }
 
 /**
  * ✅ ФАЗА 2: Компонент для отображения контекстной подсказки
  * Показывает умные советы в зависимости от состояния формы
+ * С анимацией появления
  */
-const ContextualTipCard: React.FC<ContextualTipCardProps> = ({ tip, onActionPress }) => {
+const ContextualTipCard: React.FC<ContextualTipCardProps> = ({ tip, onActionPress, delay = 0 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  // ✅ ФАЗА 2: Анимация появления подсказки
+  const { animatedStyle } = useTipAnimation(true, delay);
 
   const getIconName = (): keyof typeof Feather.glyphMap => {
     switch (tip.type) {
@@ -61,7 +67,7 @@ const ContextualTipCard: React.FC<ContextualTipCardProps> = ({ tip, onActionPres
   const colorScheme = getColorScheme();
 
   return (
-    <View style={[styles.card, { backgroundColor: colorScheme.background, borderColor: colorScheme.border }]}>
+    <Animated.View style={[styles.card, { backgroundColor: colorScheme.background, borderColor: colorScheme.border }, animatedStyle]}>
       <View style={styles.iconWrapper}>
         <Feather name={getIconName()} size={20} color={colorScheme.icon} />
       </View>
@@ -87,7 +93,7 @@ const ContextualTipCard: React.FC<ContextualTipCardProps> = ({ tip, onActionPres
           </Pressable>
         )}
       </View>
-    </View>
+    </Animated.View>
   );
 };
 

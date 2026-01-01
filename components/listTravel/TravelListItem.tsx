@@ -449,7 +449,7 @@ const selectableOverlay = selectable ? (
         : ({ onPress: handlePress } as any))}
     >
       <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
-        {isSelected && <Feather name="check" size={14} color="#fff" />}
+        {isSelected && <Feather name="check" size={14} color={colors.textOnPrimary} />}
       </View>
     </InlineWebButton>
   </View>
@@ -563,7 +563,7 @@ const contentSlotWithoutTitle = hasContentInfo ? (
               <Feather
                 name="user"
                 size={Platform.select({ default: 10, web: 11 })}
-                color={Platform.OS === 'web' ? '#334155' : '#64748b'}
+                color={colors.textMuted}
                 style={{ marginRight: 4 }}
               />
               {Platform.OS === 'web' ? (
@@ -606,7 +606,7 @@ const contentSlotWithoutTitle = hasContentInfo ? (
               <Feather
                 name="eye"
                 size={Platform.select({ default: 10, web: 11 })}
-                color={Platform.OS === 'web' ? '#334155' : '#64748b'}
+                color={colors.textMuted}
               />
               <Text style={styles.metaTxtViews} numberOfLines={1}>
                 {viewsFormatted}

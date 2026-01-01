@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Dimensions, LayoutChangeEvent } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Dimensions, LayoutChangeEvent, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Snackbar } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
@@ -15,6 +15,7 @@ import { ValidatedTextInput } from '@/components/travel/ValidatedTextInput';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { getContextualTips } from '@/utils/contextualTips';
+import { useStepTransition, createStaggeredAnimation } from '@/hooks/useStepTransition';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -85,6 +86,13 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     const showPreview = previewState?.showPreview ?? (() => {});
     const hidePreview = previewState?.hidePreview ?? (() => {});
 
+    // ✅ ФАЗА 2: Анимация переходов
+    const { animatedStyle: stepAnimatedStyle } = useStepTransition({
+        duration: 350,
+        fadeIn: true,
+        slideIn: true,
+    });
+
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -106,6 +114,11 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     const contextualTips = useMemo(() => {
         return getContextualTips(1, formData);
     }, [formData]);
+
+    // ✅ ФАЗА 2: Задержки для каскадной анимации подсказок
+    const tipDelays = useMemo(() => {
+        return createStaggeredAnimation(contextualTips, 100, 150);
+    }, [contextualTips]);
 
     const handleFieldChange = useCallback((field: keyof TravelFormData, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -181,7 +194,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                         contentContainerStyle={[styles.contentContainer, { paddingBottom: contentPaddingBottom }]}
                         keyboardShouldPersistTaps="handled"
                     >
-                        <View style={styles.contentInner}>
+                        <Animated.View style={[styles.contentInner, stepAnimatedStyle]}>
                             <ValidatedTextInput
                                 label="Название путешествия"
                                 value={formData.name || ''}
@@ -205,13 +218,14 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                                 showProgress={false}
                             />
 
-                            {/* ✅ ФАЗА 2: Контекстные подсказки */}
+                            {/* ✅ ФАЗА 2: Контекстные подсказки с каскадной анимацией */}
                             {contextualTips.length > 0 && (
                                 <View style={styles.tipsContainer}>
-                                    {contextualTips.map((tip) => (
+                                    {contextualTips.map((tip, index) => (
                                         <ContextualTipCard
                                             key={tip.id}
                                             tip={tip}
+                                            delay={tipDelays[index]}
                                             onActionPress={tip.action ? () => {
                                                 if (onStepSelect && tip.action) {
                                                     onStepSelect(tip.action.step);
@@ -221,7 +235,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                                     ))}
                                 </View>
                             )}
-                        </View>
+                        </Animated.View>
                     </ScrollView>
                 </View>
                 <TravelWizardFooter

@@ -126,15 +126,15 @@ function UnifiedTravelCard({
           ...StyleSheet.absoluteFillObject,
           ...(Platform.OS === 'web'
             ? ({
-                backgroundImage: 'linear-gradient(to top, rgba(15, 23, 42, 0.82), rgba(15, 23, 42, 0.0))',
+                backgroundImage: `linear-gradient(to top, ${colors.overlay} 0%, rgba(0, 0, 0, 0) 100%)`,
               } as any)
-            : ({ backgroundColor: 'rgba(15, 23, 42, 0.55)' } as any)),
+            : ({ backgroundColor: colors.overlay } as any)),
         },
         imageTitleOverlayText: {
           fontSize: Platform.OS === 'web' ? 16 : 14,
           fontWeight: '800',
           lineHeight: Platform.OS === 'web' ? 20 : 18,
-          color: '#ffffff',
+          color: colors.textOnDark,
           letterSpacing: -0.2,
           textAlign: 'center',
           ...(Platform.OS === 'web'
@@ -150,7 +150,7 @@ function UnifiedTravelCard({
           ...(Platform.OS === 'web'
             ? ({
                 backgroundImage:
-                  'radial-gradient(ellipse at center, rgba(15, 23, 42, 0.0) 45%, rgba(15, 23, 42, 0.34) 100%)',
+                  `radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 45%, ${colors.overlayLight} 100%)`,
                 opacity: 1,
                 borderRadius: 14,
               } as any)

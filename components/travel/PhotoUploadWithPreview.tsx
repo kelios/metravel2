@@ -459,7 +459,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                     onPress={handleRemovePress}
                                     accessibilityLabel="Удалить изображение"
                                 >
-                                    <Feather name="x" size={18} color="#fff" />
+                                    <Feather name="x" size={18} color={colors.textOnPrimary} />
                                 </Pressable>
                             )}
                         </View>
@@ -477,14 +477,14 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
 
                 {error && !currentDisplayUrl && (
                     <View style={styles.errorContainer}>
-                        <Feather name="alert-circle" size={14} color="#ef4444" />
+                        <Feather name="alert-circle" size={14} color={colors.danger} />
                         <Text style={styles.errorText}>{error}</Text>
                     </View>
                 )}
 
                 {uploadMessage && !error && (
                     <View style={styles.successContainer}>
-                        <Feather name="check-circle" size={14} color="#10b981" />
+                        <Feather name="check-circle" size={14} color={colors.success} />
                         <Text style={styles.successText}>{uploadMessage}</Text>
                     </View>
                 )}
@@ -501,10 +501,10 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                 disabled={loading || disabled}
             >
                 {loading ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={colors.textOnPrimary} />
                 ) : (
                     <>
-                        <FontAwesome name="cloud-upload" size={16} color="#fff" />
+                        <FontAwesome name="cloud-upload" size={16} color={colors.textOnPrimary} />
                         <Text style={styles.uploadButtonText}>
                             {currentDisplayUrl ? 'Заменить фото' : 'Загрузить фото'}
                         </Text>

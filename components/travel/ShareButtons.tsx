@@ -197,6 +197,7 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
     }),
     [colors],
   );
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const shareButtons = [
     {
@@ -533,19 +534,19 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   // ✅ РЕДИЗАЙН: Современная карточка с glassmorphism
   container: {
     paddingVertical: 20, // ✅ UX: Увеличено для лучшей читаемости
     paddingHorizontal: 24,
-    backgroundColor: Platform.OS === 'web' ? 'rgba(255, 255, 255, 0.9)' : '#fff',
+    backgroundColor: colors.surface,
     ...(Platform.OS === 'web' ? {
       backdropFilter: 'blur(20px)' as any,
       WebkitBackdropFilter: 'blur(20px)' as any,
     } : {}),
     borderRadius: 20,
     marginBottom: 20,
-    shadowColor: '#1f1f1f',
+    shadowColor: (colors.shadows as any)?.medium?.shadowColor ?? '#1f1f1f',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
@@ -578,7 +579,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20, // ✅ UX: Увеличено для лучшей иерархии
     fontWeight: '700',
-    color: '#1a202c',
+    color: colors.text,
     marginBottom: 0,
     fontFamily: 'Georgia',
     letterSpacing: -0.3,
@@ -586,7 +587,7 @@ const styles = StyleSheet.create({
   collapseButton: {
     padding: 4,
     borderRadius: 8,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.backgroundSecondary,
     minHeight: 32,
     minWidth: 32,
     alignItems: 'center',
@@ -599,23 +600,23 @@ const styles = StyleSheet.create({
     }),
   },
   collapseButtonPressed: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.backgroundTertiary,
     transform: [{ scale: 0.95 }],
   },
   closeButton: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.backgroundSecondary,
   },
   collapsedIndicator: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: Platform.OS === 'web' ? 'rgba(255, 255, 255, 0.9)' : '#fff',
+    backgroundColor: colors.surface,
     ...(Platform.OS === 'web' ? {
       backdropFilter: 'blur(20px)' as any,
       WebkitBackdropFilter: 'blur(20px)' as any,
     } : {}),
     borderRadius: 16,
     marginBottom: 20,
-    shadowColor: '#1f1f1f',
+    shadowColor: (colors.shadows as any)?.medium?.shadowColor ?? '#1f1f1f',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
@@ -642,7 +643,7 @@ const styles = StyleSheet.create({
     minWidth: 40,
   },
   collapsedIndicatorPressed: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.backgroundTertiary,
     transform: [{ scale: 0.98 }],
   },
   buttonsContainer: {
@@ -669,7 +670,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.backgroundSecondary,
     minHeight: 44,
     minWidth: 44,
     justifyContent: 'center',
@@ -688,22 +689,22 @@ const styles = StyleSheet.create({
     minWidth: 40,
   },
   buttonPressed: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.backgroundTertiary,
     transform: [{ scale: 0.98 }],
   },
   buttonCopied: {
-    backgroundColor: '#d1fae5',
+    backgroundColor: colors.successSoft,
   },
   buttonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.text,
     letterSpacing: -0.1,
   },
   copiedText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#16a34a',
+    color: colors.success,
     marginLeft: 4,
   },
   buttonDisabled: {
@@ -712,19 +713,19 @@ const styles = StyleSheet.create({
   progressContainer: {
     marginTop: 16,
     height: 4,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 2,
     overflow: 'hidden',
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#ff9f5a',
+    backgroundColor: colors.primary,
     borderRadius: 2,
   },
   progressText: {
     marginTop: 8,
     fontSize: 14,
-    color: '#6b7280',
+    color: colors.textMuted,
     textAlign: 'center',
   },
 });
