@@ -1,10 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, Pressable } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import InstantSEO from '@/components/seo/InstantSEO';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-
-const palette = DESIGN_TOKENS.colors;
+import { useThemedColors } from '@/hooks/useTheme';
 const CONSENT_KEY = 'metravel_consent_v1';
 
 interface ConsentState {
@@ -47,6 +45,8 @@ export default function CookieSettingsScreen() {
   const router = useRouter();
   const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
   const canonical = `${SITE}${pathname || '/cookies'}`;
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [analyticsAllowed, setAnalyticsAllowed] = useState<boolean | null>(null);
   const [saved, setSaved] = useState(false);
@@ -166,10 +166,10 @@ export default function CookieSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: palette.background,
+    backgroundColor: colors.background,
   },
   container: {
     paddingHorizontal: 16,
@@ -180,20 +180,20 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 24,
     fontWeight: '700',
-    color: palette.text,
+    color: colors.text,
     marginBottom: 16,
   },
   subheading: {
     fontSize: 18,
     fontWeight: '600',
-    color: palette.text,
+    color: colors.text,
     marginTop: 20,
     marginBottom: 8,
   },
   paragraph: {
     fontSize: 14,
     lineHeight: 20,
-    color: palette.textMuted,
+    color: colors.textMuted,
     marginBottom: 8,
   },
   block: {
@@ -210,8 +210,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.surface,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     ...Platform.select({
       web: {
         cursor: 'pointer',
@@ -220,15 +220,15 @@ const styles = StyleSheet.create({
     }),
   },
   optionSelected: {
-    borderColor: palette.primary,
-    backgroundColor: palette.primarySoft,
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
   },
   radioOuter: {
     width: 18,
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: palette.primary,
+    borderColor: colors.primary,
     marginTop: 2,
     marginRight: 10,
     justifyContent: 'center',
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: palette.primary,
+    backgroundColor: colors.primary,
   },
   optionTextWrap: {
     flex: 1,
@@ -246,37 +246,37 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: palette.text,
+    color: colors.text,
     marginBottom: 2,
   },
   optionDescription: {
     fontSize: 13,
-    color: palette.textMuted,
+    color: colors.textMuted,
   },
   saveButton: {
     marginTop: 20,
     alignSelf: 'flex-start',
-    backgroundColor: palette.primary,
+    backgroundColor: colors.primary,
     borderRadius: 9999,
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
   saveButtonText: {
-    color: palette.surface,
+    color: colors.textOnPrimary,
     fontSize: 14,
     fontWeight: '600',
   },
   savedText: {
     marginTop: 8,
     fontSize: 13,
-    color: palette.success,
+    color: colors.success,
   },
   link: {
     marginTop: 16,
   },
   linkText: {
     fontSize: 13,
-    color: palette.primary,
+    color: colors.primary,
     textDecorationLine: 'underline',
   },
 });
