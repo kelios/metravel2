@@ -301,7 +301,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         paddingHorizontal: 16,
     },
     card: {
-        backgroundColor: 'rgba(255,255,255,0.96)',
+        backgroundColor: colors.surface,
         borderRadius: DESIGN_TOKENS.radii.xl,
         padding: 24,
         ...Platform.select({
@@ -359,7 +359,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginTop: 20,
         paddingTop: 20,
         borderTopWidth: 1,
-        borderTopColor: '#e0e0e0',
+        borderTopColor: colors.border,
     },
     registerText: {
         fontSize: 14,

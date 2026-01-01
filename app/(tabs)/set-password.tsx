@@ -1,4 +1,4 @@
-import React, {useState} from 'react'
+import React, { useMemo, useState } from 'react'
 import {Image, StyleSheet, TextInput, View, Text, Platform} from 'react-native'
 import {Button, Card} from 'react-native-paper'
 import {useNavigation} from '@react-navigation/native'
@@ -9,6 +9,7 @@ import {setNewPasswordSchema} from '@/utils/validation';
 import FormFieldWithValidation from '@/components/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { useThemedColors } from '@/hooks/useTheme';
 
 
 interface SetPasswordFormValues {
@@ -21,6 +22,8 @@ export default function SetPassword() {
     const route = useRoute();
     const { setNewPassword } = useAuth();
     const [msg, setMsg] = useState<{ text: string; error: boolean }>({ text: '', error: false });
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const routeParams = route.params as { password_reset_token?: string } || {};
     const { password_reset_token } = routeParams;
@@ -88,7 +91,7 @@ export default function SetPassword() {
                                             globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                                         ]}
                                         placeholder="Новый пароль"
-                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                        placeholderTextColor={colors.textMuted}
                                         secureTextEntry
                                         value={values.password}
                                         onChangeText={handleChange('password')}
@@ -109,7 +112,7 @@ export default function SetPassword() {
                                             globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                                         ]}
                                         placeholder="Подтвердите пароль"
-                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                        placeholderTextColor={colors.textMuted}
                                         secureTextEntry
                                         value={values.confirmPassword}
                                         onChangeText={handleChange('confirmPassword')}
@@ -136,7 +139,7 @@ export default function SetPassword() {
     )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     card: {
         width: '50%', // Изменено для лучшей адаптации
         backgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -160,14 +163,14 @@ const styles = StyleSheet.create({
     input: {
         marginBottom: 0, // ✅ ИСПРАВЛЕНИЕ: Отступ управляется FormFieldWithValidation
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
         borderRadius: DESIGN_TOKENS.radii.sm,
         padding: 12,
         width: '100%',
         maxWidth: 500,
         fontSize: 16,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        color: DESIGN_TOKENS.colors.text,
+        backgroundColor: colors.surface,
+        color: colors.text,
         minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
         ...Platform.select({
             web: {
@@ -204,25 +207,25 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     err: {
-        color: DESIGN_TOKENS.colors.danger,
+        color: colors.danger,
         backgroundColor: 'rgba(239, 68, 68, 0.1)',
         borderLeftWidth: 3,
-        borderLeftColor: DESIGN_TOKENS.colors.danger,
+        borderLeftColor: colors.danger,
     },
     ok: {
-        color: DESIGN_TOKENS.colors.success,
+        color: colors.success,
         backgroundColor: 'rgba(34, 197, 94, 0.1)',
         borderLeftWidth: 3,
-        borderLeftColor: DESIGN_TOKENS.colors.success,
+        borderLeftColor: colors.success,
     },
     inputError: {
-        borderColor: DESIGN_TOKENS.colors.danger,
+        borderColor: colors.danger,
         borderWidth: 2,
         backgroundColor: 'rgba(239, 68, 68, 0.05)', // ✅ ИСПРАВЛЕНИЕ: Светло-красный фон для ошибок
     },
     // ✅ ИСПРАВЛЕНИЕ: Стиль больше не используется (ошибки показываются через FormFieldWithValidation)
     errorText: {
-        color: DESIGN_TOKENS.colors.danger,
+        color: colors.danger,
         fontSize: 12,
         marginTop: -10,
         marginBottom: 10,
