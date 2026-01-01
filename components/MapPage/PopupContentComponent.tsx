@@ -4,7 +4,7 @@ import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface Travel {
   address: string;
@@ -28,6 +28,7 @@ const parseLatLng = (coord: string): { lat: number; lng: number } | null => {
 };
 
 const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose }) => {
+  const colors = useThemedColors();
   const { address, coord, travelImageThumbUrl, updated_at, categoryName, description, articleUrl, urlTravel } = travel;
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -150,7 +151,7 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
                 fit="contain"
                 blurBackground
                 blurRadius={18}
-                overlayColor={DESIGN_TOKENS.colors.overlayLight}
+                overlayColor={colors.overlayLight}
                 loading="lazy"
                 priority="low"
                 style={{ position: 'absolute', inset: 0 } as any}

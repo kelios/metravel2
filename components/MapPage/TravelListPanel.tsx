@@ -63,7 +63,7 @@ const TravelListPanel: React.FC<Props> = ({
       return <Text style={styles.endText}>Это всё поблизости ✨</Text>;
     }
     return null;
-  }, [isLoading, hasMore, themeColors.primary]);
+  }, [hasMore, isLoading, styles.endText, styles.loader, themeColors.primary]);
 
   return (
     <FlatList

@@ -129,12 +129,20 @@ describe('useTravelFormData - нормализация coordsMeTravel', () => {
         lat: 50.45,
         lng: 30.52,
         image: '',
-        categories: ['abc', null, undefined, NaN, 1, '2'],
+        categories: ['abc', null, undefined, NaN, 1, '2', Infinity],
       };
 
       const normalized = normalizeMarkers([marker]);
 
-      expect(normalized[0].categories).toEqual([1, 2]);
+      // Number.isFinite() отфильтрует NaN, Infinity, но пропустит валидные числа
+      // Number('abc') = NaN - отфильтруется
+      // Number(null) = 0 - пропустится (это валидное число)
+      // Number(undefined) = NaN - отфильтруется
+      // Number(NaN) = NaN - отфильтруется
+      // Number(1) = 1 - пропустится
+      // Number('2') = 2 - пропустится
+      // Number(Infinity) = Infinity - отфильтруется (isFinite(Infinity) = false)
+      expect(normalized[0].categories).toEqual([0, 1, 2]);
     });
 
     it('должно обрабатывать пустой массив маркеров', () => {

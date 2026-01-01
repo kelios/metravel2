@@ -1,7 +1,7 @@
 // app/Map.tsx (бывш. MapClientSideComponent) — ультралёгкая web-карта
 import React, { lazy, Suspense, useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 
@@ -49,6 +49,8 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
                                                                 travel = { data: [] },
                                                                 coordinates = { latitude: 53.8828449, longitude: 27.7273595 },
                                                               }) => {
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
   const [L, setL] = useState<LeafletNS | null>(null);
   const [rl, setRl] = useState<RL | null>(null);
@@ -342,19 +344,19 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
 
 export default React.memo(MapClientSideComponent);
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   mapContainer: {
     flex: 1,
     width: '100%',
     borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: 400,
   },
   placeholderText: {
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontSize: 16,
     textAlign: 'center',
     padding: 20,
