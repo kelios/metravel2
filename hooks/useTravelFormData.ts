@@ -152,7 +152,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     const normalizedMarkers = Array.isArray((mergedData as any).coordsMeTravel)
       ? (mergedData as any).coordsMeTravel.map((m: any) => {
           const { image, ...rest } = m ?? {};
-          const imageValue = typeof image === 'string' ? image.trim() : image;
+          // ✅ ИСПРАВЛЕНИЕ: Всегда отправляем image как строку (бэкенд требует это поле)
+          const imageValue = typeof image === 'string' ? image.trim() : (image || '');
           const categories = Array.isArray(m?.categories)
             ? m.categories
                 .map((c: any) => Number(c))
@@ -162,7 +163,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
           return {
             ...rest,
             categories,
-            ...(imageValue ? { image: imageValue } : {}),
+            image: imageValue, // Всегда включаем поле image, даже если пустая строка
           };
         })
       : [];

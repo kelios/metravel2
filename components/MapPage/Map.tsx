@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, Platform, Text, View } from 'react-native'
-import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useThemedColors } from '@/hooks/useTheme'
 
 type AnyComponent = React.ComponentType<any>
 
 export default function Map(props: any) {
   const isWeb = Platform.OS === 'web' && typeof window !== 'undefined'
   const [Component, setComponent] = useState<AnyComponent | null>(null)
+  const colors = useThemedColors()
 
   useEffect(() => {
     let mounted = true
@@ -38,15 +39,15 @@ export default function Map(props: any) {
               width: 52,
               height: 52,
               borderRadius: 14,
-              backgroundColor: DESIGN_TOKENS.colors.cardMuted,
+              backgroundColor: colors.backgroundSecondary,
               borderWidth: 1,
-              borderColor: DESIGN_TOKENS.colors.border,
+              borderColor: colors.border,
             }}
           />
         ) : (
           <ActivityIndicator size="large" />
         )}
-        <Text style={{ marginTop: 12, color: DESIGN_TOKENS.colors.textMuted }}>Загружаем карту…</Text>
+        <Text style={{ marginTop: 12, color: colors.textMuted }}>Загружаем карту…</Text>
       </View>
     )
   }

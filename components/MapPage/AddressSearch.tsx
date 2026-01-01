@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   TextInput,
@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { LatLng } from '@/types/coordinates';
 
 interface AddressSearchProps {
@@ -41,6 +41,8 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   const [showResults, setShowResults] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout>();
   const abortControllerRef = useRef<AbortController>();
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
   const searchAddress = useCallback(async (searchQuery: string) => {
     if (!searchQuery || searchQuery.length < 3) {
@@ -161,14 +163,14 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
       {label && <Text style={styles.label}>{label}</Text>}
       
       <View style={styles.inputContainer}>
-        <Icon name="search" size={20} color={DESIGN_TOKENS.colors.textMuted} style={styles.searchIcon} />
+        <Icon name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
         
         <TextInput
           style={styles.input}
           value={query}
           onChangeText={handleQueryChange}
           placeholder={placeholder}
-          placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+          placeholderTextColor={colors.textMuted}
           onFocus={() => {
             if (results.length > 0) {
               setShowResults(true);
@@ -178,12 +180,12 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
         />
 
         {loading && (
-          <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.primary} style={styles.loader} />
+          <ActivityIndicator size="small" color={colors.primary} style={styles.loader} />
         )}
 
         {query.length > 0 && !loading && (
           <Pressable onPress={handleClear} hitSlop={8} style={styles.clearButton}>
-            <Icon name="close" size={20} color={DESIGN_TOKENS.colors.textMuted} />
+            <Icon name="close" size={20} color={colors.textMuted} />
           </Pressable>
         )}
       </View>
@@ -201,7 +203,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
                 ]}
                 onPress={() => handleSelectResult(item)}
               >
-                <Icon name="place" size={18} color={DESIGN_TOKENS.colors.primary} />
+                <Icon name="place" size={18} color={colors.primary} />
                 <Text style={styles.resultText} numberOfLines={2}>
                   {item.display_name}
                 </Text>
@@ -216,7 +218,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
     width: '100%',
     position: 'relative',
@@ -225,16 +227,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     paddingHorizontal: 12,
     height: 44,
   },
@@ -244,7 +246,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     paddingVertical: 0,
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}),
   },
@@ -261,12 +263,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     marginTop: 4,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     maxHeight: 200,
-    ...DESIGN_TOKENS.shadowsNative.medium,
+    ...colors.shadows.medium,
     zIndex: 1000,
   },
   resultsList: {
@@ -278,15 +280,15 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: DESIGN_TOKENS.colors.border,
+    borderBottomColor: colors.border,
   },
   resultItemPressed: {
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
+    backgroundColor: colors.mutedBackground,
   },
   resultText: {
     flex: 1,
     fontSize: 13,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
 });
 

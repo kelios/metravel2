@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useThemedColors } from '@/hooks/useTheme';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface RoutingStatusProps {
   isLoading: boolean;
@@ -50,12 +49,13 @@ export default function RoutingStatus({
   distance,
   transportMode,
 }: RoutingStatusProps) {
-  const themeColors = useThemedColors();
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   if (isLoading) {
     return (
       <View style={styles.container}>
         <View style={styles.loadingContent}>
-          <ActivityIndicator size="small" color={themeColors.info} />
+          <ActivityIndicator size="small" color={colors.info} />
           <Text style={styles.loadingText}>Построение маршрута…</Text>
         </View>
       </View>
@@ -66,7 +66,7 @@ export default function RoutingStatus({
     return (
       <View style={[styles.container, styles.errorContainer]}>
         <View style={styles.errorContent}>
-          <Feather name="alert-circle" size={16} color={DESIGN_TOKENS.colors.danger} />
+          <Feather name="alert-circle" size={16} color={colors.danger} />
           <View style={styles.errorTextContainer}>
             <Text style={styles.errorTitle}>Ошибка маршрутизации</Text>
             <Text style={styles.errorMessage}>{error}</Text>
@@ -80,7 +80,7 @@ export default function RoutingStatus({
     return (
       <View style={[styles.container, styles.warningContainer]}>
         <View style={styles.warningContent}>
-          <Feather name="info" size={16} color={DESIGN_TOKENS.colors.warning} />
+          <Feather name="info" size={16} color={colors.warning} />
           <View style={styles.warningTextContainer}>
             <Text style={styles.warningTitle}>Прямая линия</Text>
             <Text style={styles.warningMessage}>
@@ -97,7 +97,7 @@ export default function RoutingStatus({
     return (
       <View style={[styles.container, styles.successContainer]}>
         <View style={styles.successHeader}>
-          <Feather name={getModeIcon(transportMode)} size={16} color={DESIGN_TOKENS.colors.success} />
+          <Feather name={getModeIcon(transportMode)} size={16} color={colors.success} />
           <Text style={styles.successTitle}>Маршрут построен</Text>
         </View>
         <View style={styles.successStats}>
@@ -121,15 +121,15 @@ export default function RoutingStatus({
   return null;
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
-    ...DESIGN_TOKENS.shadowsNative.light,
+    borderColor: colors.border,
+    ...colors.shadows.light,
   },
   loadingContent: {
     flexDirection: 'row',
@@ -139,11 +139,11 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 13,
     fontWeight: '500',
-    color: DESIGN_TOKENS.colors.info,
+    color: colors.info,
   },
   errorContainer: {
-    borderColor: DESIGN_TOKENS.colors.danger,
-    backgroundColor: DESIGN_TOKENS.colors.dangerLight,
+    borderColor: colors.danger,
+    backgroundColor: colors.dangerLight,
   },
   errorContent: {
     flexDirection: 'row',
@@ -155,17 +155,17 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.danger,
+    color: colors.danger,
     marginBottom: 2,
   },
   errorMessage: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.dangerDark,
+    color: colors.dangerDark,
     lineHeight: 16,
   },
   warningContainer: {
-    borderColor: DESIGN_TOKENS.colors.warning,
-    backgroundColor: DESIGN_TOKENS.colors.warningLight,
+    borderColor: colors.warning,
+    backgroundColor: colors.warningLight,
   },
   warningContent: {
     flexDirection: 'row',
@@ -177,17 +177,17 @@ const styles = StyleSheet.create({
   warningTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.warning,
+    color: colors.warning,
     marginBottom: 2,
   },
   warningMessage: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.warningDark,
+    color: colors.warningDark,
     lineHeight: 16,
   },
   successContainer: {
-    borderColor: DESIGN_TOKENS.colors.success,
-    backgroundColor: DESIGN_TOKENS.colors.successLight,
+    borderColor: colors.success,
+    backgroundColor: colors.successLight,
   },
   successHeader: {
     flexDirection: 'row',
@@ -196,12 +196,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: DESIGN_TOKENS.colors.successLight,
+    borderBottomColor: colors.successLight,
   },
   successTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.success,
+    color: colors.success,
   },
   successStats: {
     gap: 8,
@@ -213,12 +213,12 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontWeight: '500',
   },
   statValue: {
     fontSize: 13,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
 });

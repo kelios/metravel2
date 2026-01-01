@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface MapLegendProps {
   showRouteMode?: boolean;
@@ -11,53 +11,59 @@ interface MapLegendProps {
 export default function MapLegend({ showRouteMode = false }: MapLegendProps) {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
-  const legendItems = [
-    {
-      icon: 'map-pin',
-      color: DESIGN_TOKENS.colors.warning,
-      background: DESIGN_TOKENS.colors.warningLight,
-      label: 'Путешествия',
-      description: 'Места для посещения',
-    },
-    {
-      icon: 'map-pin',
-      color: DESIGN_TOKENS.colors.success,
-      background: DESIGN_TOKENS.colors.successLight,
-      label: 'Старт',
-      description: 'Начало маршрута',
-    },
-    {
-      icon: 'map-pin',
-      color: DESIGN_TOKENS.colors.danger,
-      background: DESIGN_TOKENS.colors.dangerLight,
-      label: 'Финиш',
-      description: 'Конец маршрута',
-    },
-    {
-      icon: 'navigation',
-      color: DESIGN_TOKENS.colors.info,
-      background: DESIGN_TOKENS.colors.infoLight,
-      label: 'Ваше местоположение',
-      description: 'Текущая позиция',
-    },
-  ];
+  const legendItems = useMemo(() => {
+    const items = [
+      {
+        icon: 'map-pin',
+        color: colors.warning,
+        background: colors.warningLight,
+        label: 'Путешествия',
+        description: 'Места для посещения',
+      },
+      {
+        icon: 'map-pin',
+        color: colors.success,
+        background: colors.successLight,
+        label: 'Старт',
+        description: 'Начало маршрута',
+      },
+      {
+        icon: 'map-pin',
+        color: colors.danger,
+        background: colors.dangerLight,
+        label: 'Финиш',
+        description: 'Конец маршрута',
+      },
+      {
+        icon: 'navigation',
+        color: colors.info,
+        background: colors.infoLight,
+        label: 'Ваше местоположение',
+        description: 'Текущая позиция',
+      },
+    ];
 
-  if (showRouteMode) {
-    legendItems.push({
-      // Feather не имеет иконки "route" — используем "trending-up" как аналог направления
-      icon: 'trending-up',
-      color: DESIGN_TOKENS.colors.accent,
-      background: DESIGN_TOKENS.colors.accentLight,
-      label: 'Маршрут',
-      description: 'Построенный путь',
-    });
-  }
+    if (showRouteMode) {
+      items.push({
+        // Feather не имеет иконки "route" — используем "trending-up" как аналог направления
+        icon: 'trending-up',
+        color: colors.accent,
+        background: colors.accentLight,
+        label: 'Маршрут',
+        description: 'Построенный путь',
+      });
+    }
+
+    return items;
+  }, [colors, showRouteMode]);
 
   return (
     <View style={[styles.container, isMobile && styles.containerMobile]}>
       <View style={styles.header}>
-        <Feather name="info" size={16} color={DESIGN_TOKENS.colors.textMuted} />
+        <Feather name="info" size={16} color={colors.textMuted} />
         <Text style={styles.title}>Легенда карты</Text>
       </View>
       <View style={styles.items}>
@@ -79,14 +85,14 @@ export default function MapLegend({ showRouteMode = false }: MapLegendProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
   },
   containerMobile: {
     padding: 10,
@@ -98,12 +104,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingBottom: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: DESIGN_TOKENS.colors.border,
+    borderBottomColor: colors.border,
   },
   title: {
     fontSize: 13,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   items: {
     gap: 8,
@@ -126,11 +132,11 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: '500',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   description: {
     fontSize: 11,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     marginTop: 2,
   },
 });

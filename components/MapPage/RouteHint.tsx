@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface RouteHintProps {
   onDismiss: () => void;
@@ -12,13 +12,15 @@ interface RouteHintProps {
 export default function RouteHint({ onDismiss, routePointsCount }: RouteHintProps) {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
   if (routePointsCount >= 2) return null; // Скрываем, если маршрут уже построен
 
   return (
     <View style={[styles.container, isMobile && styles.containerMobile]}>
       <View style={styles.content}>
-        <Feather name="info" size={18} color={DESIGN_TOKENS.colors.info} />
+        <Feather name="info" size={18} color={colors.info} />
         <View style={styles.textContainer}>
           <Text style={styles.title}>Как построить маршрут</Text>
           <Text style={styles.description}>
@@ -32,21 +34,21 @@ export default function RouteHint({ onDismiss, routePointsCount }: RouteHintProp
         accessibilityRole="button"
         accessibilityLabel="Закрыть подсказку"
       >
-        <Feather name="x" size={16} color={DESIGN_TOKENS.colors.textMuted} />
+        <Feather name="x" size={16} color={colors.textMuted} />
       </Pressable>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     borderLeftWidth: 4,
-    borderLeftColor: DESIGN_TOKENS.colors.info,
+    borderLeftColor: colors.info,
     marginBottom: 12,
   },
   containerMobile: {
@@ -64,12 +66,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 4,
   },
   description: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     lineHeight: 18,
   },
   closeButton: {

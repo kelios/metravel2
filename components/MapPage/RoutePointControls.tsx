@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks/useResponsive';
 import type { RoutePoint } from '@/types/route';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface RoutePointControlsProps {
   routePoints: RoutePoint[];
@@ -19,6 +19,8 @@ export default function RoutePointControls({
 }: RoutePointControlsProps) {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
   if (routePoints.length === 0) return null;
 
@@ -33,7 +35,7 @@ export default function RoutePointControls({
             accessibilityRole="button"
             accessibilityLabel="Очистить маршрут"
           >
-            <Feather name="x" size={14} color={DESIGN_TOKENS.colors.danger} />
+            <Feather name="x" size={14} color={colors.danger} />
             <Text style={styles.clearText}>Очистить</Text>
           </Pressable>
         )}
@@ -78,7 +80,7 @@ export default function RoutePointControls({
                 accessibilityRole="button"
                 accessibilityLabel={`Удалить ${getPointLabel()}`}
               >
-                <Feather name="x-circle" size={18} color={DESIGN_TOKENS.colors.danger} />
+                <Feather name="x-circle" size={18} color={colors.danger} />
               </Pressable>
             </View>
           );
@@ -88,15 +90,15 @@ export default function RoutePointControls({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
-    ...DESIGN_TOKENS.shadowsNative.medium,
+    ...colors.shadows.medium,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
   },
   containerMobile: {
     marginHorizontal: 12,
@@ -110,7 +112,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 13,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   clearButton: {
     flexDirection: 'row',
@@ -119,11 +121,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: DESIGN_TOKENS.colors.dangerLight,
+    backgroundColor: colors.dangerLight,
   },
   clearText: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.danger,
+    color: colors.danger,
     fontWeight: '600',
   },
   pointsList: {
@@ -135,7 +137,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 8,
     paddingHorizontal: 8,
-    backgroundColor: DESIGN_TOKENS.colors.cardMuted,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 8,
   },
   pointMarker: {
@@ -146,16 +148,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pointMarkerStart: {
-    backgroundColor: DESIGN_TOKENS.colors.success,
+    backgroundColor: colors.success,
   },
   pointMarkerEnd: {
-    backgroundColor: DESIGN_TOKENS.colors.danger,
+    backgroundColor: colors.danger,
   },
   pointMarkerWaypoint: {
-    backgroundColor: DESIGN_TOKENS.colors.info,
+    backgroundColor: colors.info,
   },
   pointNumber: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -165,12 +167,12 @@ const styles = StyleSheet.create({
   pointLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 2,
   },
   pointCoords: {
     fontSize: 11,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   removeButton: {
     padding: 4,

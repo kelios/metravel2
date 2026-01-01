@@ -10,8 +10,7 @@ import {
     ActivityIndicator,
     FlatList,
 } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useThemedColors } from '@/hooks/useTheme';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface Option {
     id: number | string;
@@ -57,6 +56,7 @@ const RadiusSelect: React.FC<RadiusSelectProps> = ({
                                                    }) => {
     const [visible, setVisible] = useState(false);
     const themeColors = useThemedColors();
+    const styles = useMemo(() => getStyles(themeColors), [themeColors]);
 
     const selectedOption = useMemo(
         () => options.find((opt) => String(opt.id) === String(value)),
@@ -196,7 +196,7 @@ const RadiusSelect: React.FC<RadiusSelectProps> = ({
     return Platform.OS === 'web' ? renderWebSelect() : renderMobileSelect();
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
     container: {
         width: '100%',
         marginBottom: 12,
@@ -205,26 +205,26 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         marginBottom: 6,
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     selector: {
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: DESIGN_TOKENS.colors.border,
+        borderColor: colors.border,
         borderRadius: 8,
         paddingHorizontal: 12,
         height: 44,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         width: '100%',
-        ...DESIGN_TOKENS.shadowsNative.light,
+        ...colors.shadows.light,
     },
     selectorDisabled: {
-        backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
+        backgroundColor: colors.mutedBackground,
     },
     selectorText: {
         fontSize: 15,
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         flexShrink: 1,
         paddingVertical: 2,
     },
@@ -236,14 +236,14 @@ const styles = StyleSheet.create({
     selectorSuffix: {
         fontSize: 13,
         marginLeft: 4,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
     },
     placeholderText: {
-        color: DESIGN_TOKENS.colors.textSubtle,
+        color: colors.textTertiary,
         fontStyle: 'italic',
     },
     textDisabled: {
-        color: DESIGN_TOKENS.colors.disabledText,
+        color: colors.disabledText,
     },
     leftIcon: {
         justifyContent: 'center',
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     },
     clearIcon: {
         fontSize: 18,
-        color: DESIGN_TOKENS.colors.textSubtle,
+        color: colors.textTertiary,
     },
     chevronContainer: {
         marginLeft: 8,
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     },
     chevron: {
         fontSize: 16,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
         textAlign: 'right',
     },
     loader: {
@@ -272,13 +272,13 @@ const styles = StyleSheet.create({
     },
     overlay: {
         flex: 1,
-        backgroundColor: DESIGN_TOKENS.colors.overlay,
+        backgroundColor: colors.overlay,
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 24,
     },
     modalContent: {
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: 12,
         maxHeight: '70%',
         width: '100%',
@@ -296,12 +296,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     optionPressed: {
-        backgroundColor: DESIGN_TOKENS.colors.cardMuted,
+        backgroundColor: colors.backgroundSecondary,
     },
     optionSelected: {
-        backgroundColor: DESIGN_TOKENS.colors.infoLight,
+        backgroundColor: colors.infoLight,
         borderLeftWidth: 4,
-        borderLeftColor: DESIGN_TOKENS.colors.info,
+        borderLeftColor: colors.info,
     },
     optionLabel: {
         flexDirection: 'row',
@@ -310,20 +310,20 @@ const styles = StyleSheet.create({
     },
     optionNumber: {
         fontSize: 15,
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
     },
     optionSuffix: {
         fontSize: 13,
-        color: DESIGN_TOKENS.colors.textMuted,
+        color: colors.textMuted,
     },
     checkmark: {
-        color: DESIGN_TOKENS.colors.info,
+        color: colors.info,
         fontSize: 16,
         fontWeight: 'bold',
     },
     separator: {
         height: 1,
-        backgroundColor: DESIGN_TOKENS.colors.borderLight,
+        backgroundColor: colors.borderLight,
         marginHorizontal: 16,
     },
     webSelect: {
@@ -332,8 +332,8 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         paddingLeft: 10,
         fontSize: 15,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
-        color: DESIGN_TOKENS.colors.text,
+        backgroundColor: colors.surface,
+        color: colors.text,
     } as any,
     webOverlay: {
         position: 'absolute',

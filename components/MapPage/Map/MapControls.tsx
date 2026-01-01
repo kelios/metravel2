@@ -1,7 +1,7 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import type { LatLng } from '@/types/coordinates';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface MapControlsProps {
   userLocation: LatLng | null;
@@ -12,6 +12,7 @@ const MapControls: React.FC<MapControlsProps> = ({
   userLocation,
   onCenterUserLocation,
 }) => {
+  const colors = useThemedColors();
   if (!userLocation || Platform.OS !== 'web') return null;
 
   return (
@@ -29,23 +30,23 @@ const MapControls: React.FC<MapControlsProps> = ({
           width: '44px',
           height: '44px',
           borderRadius: '50%',
-          backgroundColor: DESIGN_TOKENS.colors.surface,
-          border: `2px solid ${DESIGN_TOKENS.colors.borderStrong}`,
-          boxShadow: DESIGN_TOKENS.shadows.card,
+          backgroundColor: colors.surface,
+          border: `2px solid ${colors.borderStrong}`,
+          boxShadow: colors.boxShadows.card,
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           padding: 0,
           transition: 'all 0.2s ease',
-          color: DESIGN_TOKENS.colors.info,
+          color: colors.info,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = DESIGN_TOKENS.colors.infoLight;
+          e.currentTarget.style.backgroundColor = colors.infoLight;
           e.currentTarget.style.transform = 'scale(1.05)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = DESIGN_TOKENS.colors.surface;
+          e.currentTarget.style.backgroundColor = colors.surface;
           e.currentTarget.style.transform = 'scale(1)';
         }}
         title="Мое местоположение"

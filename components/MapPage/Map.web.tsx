@@ -7,7 +7,7 @@ import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 import RoutingMachine from './RoutingMachine';
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 // MapLegend is currently unused in the web map
 
 type ReactLeafletNS = typeof import('react-leaflet');
@@ -162,6 +162,7 @@ const ClusterLayer: React.FC<{
   grid,
   expandClusters,
 }) => {
+  const colors = useThemedColors();
   const clusters = useMemo(() => {
     const byCell: Record<string, { items: Point[]; minLat: number; maxLat: number; minLng: number; maxLng: number }> = {};
     points.forEach((p) => {
@@ -330,7 +331,7 @@ const ClusterLayer: React.FC<{
             <Popup>
               <View style={{ gap: 6, maxWidth: 260 }}>
                 <Text style={{ fontWeight: '800' }}>{cluster.count} мест поблизости</Text>
-                <Text style={{ color: DESIGN_TOKENS.colors.textMuted, fontSize: 12 }}>
+                <Text style={{ color: colors.textMuted, fontSize: 12 }}>
                   Нажмите, чтобы приблизить и раскрыть маркеры
                 </Text>
                 {cluster.items.slice(0, 6).map((p, i) => (
@@ -339,7 +340,7 @@ const ClusterLayer: React.FC<{
                   </Text>
                 ))}
                 {cluster.items.length > 6 && (
-                  <Text style={{ fontSize: 12, color: DESIGN_TOKENS.colors.textMuted }}>
+                  <Text style={{ fontSize: 12, color: colors.textMuted }}>
                     …и ещё {cluster.items.length - 6}
                   </Text>
                 )}
@@ -378,6 +379,17 @@ const MapPageComponent: React.FC<Props> = ({
   const [mapZoom, setMapZoom] = useState<number>(11);
   const [isNarrow, setIsNarrow] = useState(
     typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false
+  );
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
+  const renderLoader = useCallback(
+    (message: string) => (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text>{message}</Text>
+      </View>
+    ),
+    [colors.primary, styles.loader]
   );
   const travelData = useMemo(
     () => (Array.isArray(travel?.data) ? travel.data : []),
@@ -852,10 +864,10 @@ const MapPageComponent: React.FC<Props> = ({
     return travelData.length === 0;
   }, [mode, routePoints, travelData.length]);
 
-  if (loading) return <Loader message="Loading map..." />;
+  if (loading) return renderLoader('Loading map...');
 
   if (!L || !rl) {
-    return <Loader message={errors.loadingModules ? 'Loading map modules failed' : 'Loading map...'} />;
+    return renderLoader(errors.loadingModules ? 'Loading map modules failed' : 'Loading map...');
   }
 
   return (
@@ -890,16 +902,16 @@ const MapPageComponent: React.FC<Props> = ({
               width: '44px',
               height: '44px',
               borderRadius: '50%',
-              backgroundColor: DESIGN_TOKENS.colors.surface,
-              border: `2px solid ${DESIGN_TOKENS.colors.borderStrong}`,
-              boxShadow: DESIGN_TOKENS.shadows.card,
+              backgroundColor: colors.surface,
+              border: `2px solid ${colors.borderStrong}`,
+              boxShadow: colors.boxShadows.card,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               padding: 0,
               transition: 'all 0.2s ease',
-              color: DESIGN_TOKENS.colors.info,
+              color: colors.info,
             }}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -941,8 +953,8 @@ const MapPageComponent: React.FC<Props> = ({
             center={[coordinates.latitude, coordinates.longitude]}
             radius={radiusInMeters}
             pathOptions={{
-              color: DESIGN_TOKENS.colors.primary,
-              fillColor: DESIGN_TOKENS.colors.primary,
+              color: colors.primary,
+              fillColor: colors.primary,
               fillOpacity: 0.08,
               weight: 2,
               dashArray: '6 6',
@@ -1044,26 +1056,19 @@ const MapPageComponent: React.FC<Props> = ({
   );
 };
 
-const Loader: React.FC<{ message: string }> = ({ message }) => (
-  <View style={styles.loader}>
-    <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} />
-    <Text>{message}</Text>
-  </View>
-);
-
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
 wrapper: {
 flex: 1,
 width: '100%',
 height: '100%',
 borderRadius: 16,
 overflow: 'hidden',
-backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+backgroundColor: colors.backgroundSecondary,
 position: 'relative',
 },
 map: { flex: 1, width: '100%', height: '100%', minHeight: 300 },
 loader: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-errorText: { color: DESIGN_TOKENS.colors.danger, textAlign: 'center' },
+errorText: { color: colors.danger, textAlign: 'center' },
 myLocationButton: {
 position: 'absolute',
 top: 10,
@@ -1078,16 +1083,16 @@ myLocationButtonInner: {
 width: '44px',
 height: '44px',
 borderRadius: '50%',
-backgroundColor: DESIGN_TOKENS.colors.info,
-border: `2px solid ${DESIGN_TOKENS.colors.borderStrong}`,
-boxShadow: DESIGN_TOKENS.shadows.card,
+backgroundColor: colors.info,
+border: `2px solid ${colors.borderStrong}`,
+boxShadow: colors.boxShadows.card,
 cursor: 'pointer',
 display: 'flex',
 alignItems: 'center',
 justifyContent: 'center',
 padding: 0,
 transition: 'all 0.2s ease',
-color: DESIGN_TOKENS.colors.textOnPrimary,
+color: colors.textOnPrimary,
 }),
 } as any,
 routingProgress: {
@@ -1095,7 +1100,7 @@ position: 'absolute',
 top: 60,
 left: '10%',
 right: '10%',
-backgroundColor: DESIGN_TOKENS.colors.info,
+backgroundColor: colors.info,
 padding: 10,
 borderRadius: 8,
 zIndex: 1000,
@@ -1103,24 +1108,24 @@ flexDirection: 'row',
 alignItems: 'center',
 justifyContent: 'center',
 },
-routingProgressText: { color: DESIGN_TOKENS.colors.textOnPrimary, marginLeft: 8 },
+routingProgressText: { color: colors.textOnPrimary, marginLeft: 8 },
 routingError: {
 position: 'absolute',
 top: 20,
 left: '10%',
 right: '10%',
-backgroundColor: DESIGN_TOKENS.colors.danger,
+backgroundColor: colors.danger,
 padding: 10,
 borderRadius: 8,
 zIndex: 1000,
 alignItems: 'center',
 },
-routingErrorText: { color: DESIGN_TOKENS.colors.textOnPrimary, fontWeight: '600' },
+routingErrorText: { color: colors.textOnPrimary, fontWeight: '600' },
 mobileRouteHint: {
 display: 'flex',
 gap: 10,
-backgroundColor: DESIGN_TOKENS.colors.infoDark,
-color: DESIGN_TOKENS.colors.textOnDark,
+backgroundColor: colors.infoDark,
+color: colors.textOnDark,
 position: 'absolute',
 left: 12,
 right: 12,
@@ -1133,8 +1138,8 @@ mobileRouteHintIcon: {
 width: 40,
 height: 40,
 borderRadius: 12,
-backgroundColor: DESIGN_TOKENS.colors.overlayLight,
-color: DESIGN_TOKENS.colors.textOnDark,
+backgroundColor: colors.overlayLight,
+color: colors.textOnDark,
 display: 'flex',
 alignItems: 'center',
 justifyContent: 'center',
@@ -1144,14 +1149,14 @@ fontWeight: '700',
 mobileRouteHintTitle: {
 fontSize: 14,
 fontWeight: '700',
-color: DESIGN_TOKENS.colors.textOnDark,
+color: colors.textOnDark,
 marginBottom: 2,
 },
 mobileRouteHintText: {
 fontSize: 14,
 fontWeight: '600',
 marginBottom: 4,
-color: DESIGN_TOKENS.colors.textOnDark,
+color: colors.textOnDark,
 },
 });
 
