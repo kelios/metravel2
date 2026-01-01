@@ -5,7 +5,6 @@
  */
 
 import { StyleSheet, Platform } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 export const globalFocusStyles = StyleSheet.create({
   /**
@@ -57,21 +56,21 @@ const addFocusStyles = () => {
       }
       
       .focusable:focus {
-        outline-color: ${DESIGN_TOKENS.colors.primary};
+        outline-color: var(--color-primary);
       }
       
       .focusableStrong {
         outline-width: 3px;
-        outline-color: ${DESIGN_TOKENS.colors.primary};
+        outline-color: var(--color-primary);
         outline-style: solid;
         outline-offset: 3px;
         transition: outline 0.2s ease;
-        box-shadow: 0 0 0 1px ${DESIGN_TOKENS.colors.primary};
+        box-shadow: 0 0 0 1px var(--color-primary);
       }
       
       .focusableSubtle {
         outline-width: 1px;
-        outline-color: ${DESIGN_TOKENS.colors.focus};
+        outline-color: var(--color-focus);
         outline-style: dashed;
         outline-offset: 1px;
         transition: outline 0.2s ease;

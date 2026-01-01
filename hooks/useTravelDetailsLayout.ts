@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Platform } from 'react-native'
 
 import {
-  styles,
+  useTravelDetailsStyles,
   HEADER_OFFSET_DESKTOP,
   HEADER_OFFSET_MOBILE,
 } from '@/components/travel/details/TravelDetailsStyles'
@@ -22,6 +22,8 @@ export function useTravelDetailsLayout({
   isMobile,
   screenWidth,
 }: UseTravelDetailsLayoutArgs): UseTravelDetailsLayoutReturn {
+  const styles = useTravelDetailsStyles()
+
   const headerOffset = useMemo(
     () => (isMobile ? HEADER_OFFSET_MOBILE : HEADER_OFFSET_DESKTOP),
     [isMobile]
@@ -42,7 +44,7 @@ export function useTravelDetailsLayout({
       return isMobile ? styles.sideMenuWebMobile : styles.sideMenuWebDesktop
     }
     return styles.sideMenuNative
-  }, [isMobile])
+  }, [isMobile, styles])
 
   return {
     headerOffset,

@@ -20,6 +20,7 @@ import * as Clipboard from 'expo-clipboard';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
 import BelkrajWidget from "@/components/belkraj/BelkrajWidget";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 const QuestFullMap = lazy(() => import("@/components/quests/QuestFullMap"));
@@ -38,19 +39,13 @@ export type QuestWizardProps = {
 };
 
 // ===================== ТЕМА =====================
-const COLORS = {
-    background: 'transparent',
-    surface: 'rgba(255,255,255,0.75)',
-    primary: '#FB923C',
-    primaryDark: '#F97316',
-    success: '#6aaaaa',
-    error: '#EF4444',
-    text: '#111827',
-    textSecondary: '#6B7280',
-    border: 'rgba(17,24,39,0.08)',
-    chip: 'rgba(249,115,22,0.10)',
-};
 const SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
+
+const useQuestWizardTheme = () => {
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+    return { colors, styles };
+};
 
 // ======== helpers ========
 const notify = (msg: string) => {
@@ -71,6 +66,7 @@ const resolveUri = (src: any | undefined): string | undefined => {
 };
 // ===================== ЗУМ КАРТИНОК =====================
 const ImageZoomModal = ({ image, visible, onClose }: { image: any; visible: boolean; onClose: () => void; }) => {
+    const { styles } = useQuestWizardTheme();
     const scale = useRef(new Animated.Value(1)).current;
     // @ts-ignore
     const onPinchEvent = Animated.event([{ nativeEvent: { scale } }], { useNativeDriver: true });
@@ -104,6 +100,7 @@ type StepCardProps = {
 
 const StepCard = memo((props: StepCardProps) => {
     const { step, index, attempts, hintVisible, savedAnswer, onSubmit, onWrongAttempt, onToggleHint, onSkip, showMap, onToggleMap } = props;
+    const { colors, styles } = useQuestWizardTheme();
 
     const [value, setValue] = useState(''); const [error, setError] = useState('');
     const [imageModalVisible, setImageModalVisible] = useState(false);
@@ -211,7 +208,7 @@ const StepCard = memo((props: StepCardProps) => {
                                             globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
                                         ]}
                                         placeholder="Ваш ответ..."
-                                        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                                        placeholderTextColor={colors.textMuted}
                                         value={value}
                                         onChangeText={setValue}
                                         onSubmitEditing={handleCheck}
@@ -324,6 +321,7 @@ const StepCard = memo((props: StepCardProps) => {
 
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
 export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city }: QuestWizardProps) {
+    const { colors, styles } = useQuestWizardTheme();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -448,14 +446,14 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const FinalePill = ({ active }: { active: boolean }) => (
         <Pressable onPress={() => setShowFinaleOnly(true)}
                    style={[styles.stepPill, active ? styles.stepPillActive : styles.stepPillUnlocked]} hitSlop={6}>
-            <Text style={[styles.stepPillIndex, active && { color: '#FFF' }]}></Text>
-            <Text style={[styles.stepPillTitle, active && { color: '#FFF' }]} numberOfLines={1}>Финал</Text>
+            <Text style={[styles.stepPillIndex, active && { color: colors.textOnPrimary }]}></Text>
+            <Text style={[styles.stepPillTitle, active && { color: colors.textOnPrimary }]} numberOfLines={1}>Финал</Text>
         </Pressable>
     );
     const FinaleDot = ({ active }: { active: boolean }) => (
         <Pressable onPress={() => setShowFinaleOnly(true)}
                    style={[styles.stepDotMini, active ? styles.stepDotMiniActive : styles.stepDotMiniUnlocked]} hitSlop={6}>
-            <Text style={[styles.stepDotMiniText, active && { color: '#FFF' }]}>🏁</Text>
+            <Text style={[styles.stepDotMiniText, active && { color: colors.textOnPrimary }]}>🏁</Text>
         </Pressable>
     );
 
@@ -518,8 +516,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                         <Pressable key={s.id} onPress={() => { if (isUnlocked) goToStep(i); }}
                                                    style={[styles.stepPill, styles.stepPillUnlocked, isActive && styles.stepPillActive, isDone && styles.stepPillDone, !isUnlocked && styles.stepPillLocked]}
                                                    hitSlop={6}>
-                                            <Text style={[styles.stepPillIndex, (isActive || isDone) && { color: '#FFF' }]}>{s.id === 'intro' ? '' : i}</Text>
-                                            <Text style={[styles.stepPillTitle, (isActive || isDone) && { color: '#FFF' }]} numberOfLines={1}>
+                                            <Text style={[styles.stepPillIndex, (isActive || isDone) && { color: colors.textOnPrimary }]}>{s.id === 'intro' ? '' : i}</Text>
+                                            <Text style={[styles.stepPillTitle, (isActive || isDone) && { color: colors.textOnPrimary }]} numberOfLines={1}>
                                                 {s.id === 'intro' ? 'Старт' : s.title}
                                             </Text>
                                         </Pressable>
@@ -539,7 +537,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                             <Pressable key={s.id} onPress={() => { if (isUnlocked) goToStep(i); }}
                                                        style={[styles.stepDotMini, isUnlocked && styles.stepDotMiniUnlocked, isActive && styles.stepDotMiniActive, isDone && styles.stepDotMiniDone, !isUnlocked && styles.stepDotMiniLocked]}
                                                        hitSlop={6}>
-                                                <Text style={[styles.stepDotMiniText, (isActive || isDone) && { color: '#FFF' }]}>{s.id === 'intro' ? '🎯' : i}</Text>
+                                                <Text style={[styles.stepDotMiniText, (isActive || isDone) && { color: colors.textOnPrimary }]}>{s.id === 'intro' ? '🎯' : i}</Text>
                                             </Pressable>
                                         );
                                     }
@@ -548,8 +546,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                         <Pressable key={s.id} onPress={() => { if (isUnlocked) goToStep(i); }}
                                                    style={[styles.stepPill, styles.stepPillUnlocked, styles.stepPillNarrow, isActive && styles.stepPillActive, isDone && styles.stepPillDone, !isUnlocked && styles.stepPillLocked]}
                                                    hitSlop={6}>
-                                            <Text style={[styles.stepPillIndex, (isActive || isDone) && { color: '#FFF' }]}>{s.id === 'intro' ? '' : i}</Text>
-                                            <Text style={[styles.stepPillTitle, (isActive || isDone) && { color: '#FFF' }]} numberOfLines={1}>
+                                            <Text style={[styles.stepPillIndex, (isActive || isDone) && { color: colors.textOnPrimary }]}>{s.id === 'intro' ? '' : i}</Text>
+                                            <Text style={[styles.stepPillTitle, (isActive || isDone) && { color: colors.textOnPrimary }]} numberOfLines={1}>
                                                 {s.id === 'intro' ? 'Старт' : s.title}
                                             </Text>
                                         </Pressable>
@@ -678,25 +676,25 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 }
 
 // ===================== СТИЛИ =====================
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COLORS.background },
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
 
     header: {
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         padding: SPACING.md,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
+        borderBottomColor: colors.border,
     },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
-    title: { fontSize: 20, fontWeight: '700', color: COLORS.text, flex: 1 },
+    title: { fontSize: 20, fontWeight: '700', color: colors.text, flex: 1 },
     resetButton: { padding: SPACING.xs },
-    resetText: { color: COLORS.error, fontWeight: '600', fontSize: 14 },
-    toggleText: { color: COLORS.primaryDark, fontWeight: '600', fontSize: 14 },
+    resetText: { color: colors.error, fontWeight: '600', fontSize: 14 },
+    toggleText: { color: colors.primaryDark, fontWeight: '600', fontSize: 14 },
 
     progressContainer: { marginBottom: SPACING.sm },
-    progressBar: { height: 6, backgroundColor: COLORS.border, borderRadius: 3, overflow: 'hidden', marginBottom: SPACING.xs },
-    progressFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 3 },
-    progressText: { fontSize: 12, color: COLORS.textSecondary, textAlign: 'center' },
+    progressBar: { height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden', marginBottom: SPACING.xs },
+    progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 3 },
+    progressText: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
 
     stepsNavigation: { flexDirection: 'row', marginTop: 6 },
     stepsGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
@@ -713,11 +711,11 @@ const styles = StyleSheet.create({
     },
     stepPillNarrow: { maxWidth: 140, paddingHorizontal: 8, paddingVertical: 6 },
     stepPillUnlocked: { backgroundColor: '#FFF' },
-    stepPillActive: { backgroundColor: COLORS.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
-    stepPillDone: { backgroundColor: COLORS.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
+    stepPillActive: { backgroundColor: colors.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
+    stepPillDone: { backgroundColor: colors.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
     stepPillLocked: { opacity: 0.5 },
-    stepPillIndex: { fontSize: 12, fontWeight: '700', color: COLORS.primary, marginRight: 6 },
-    stepPillTitle: { fontSize: 12, fontWeight: '600', color: COLORS.text },
+    stepPillIndex: { fontSize: 12, fontWeight: '700', color: colors.primary, marginRight: 6 },
+    stepPillTitle: { fontSize: 12, fontWeight: '600', color: colors.text },
 
     stepDotMini: {
         width: 32, height: 32, borderRadius: 16, marginRight: 6,
@@ -731,18 +729,18 @@ const styles = StyleSheet.create({
         elevation: 1,
     },
     stepDotMiniUnlocked: { opacity: 1 },
-    stepDotMiniActive: { backgroundColor: COLORS.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
-    stepDotMiniDone: { backgroundColor: COLORS.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
+    stepDotMiniActive: { backgroundColor: colors.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
+    stepDotMiniDone: { backgroundColor: colors.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
     stepDotMiniLocked: { opacity: 0.45 },
-    stepDotMiniText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
+    stepDotMiniText: { fontSize: 12, fontWeight: '700', color: colors.primary },
 
-    navActiveTitle: { marginTop: 6, fontSize: 12, fontWeight: '600', color: COLORS.text, opacity: 0.9 },
-    navHint: { fontSize: 11, color: COLORS.textSecondary, marginTop: 6 },
+    navActiveTitle: { marginTop: 6, fontSize: 12, fontWeight: '600', color: colors.text, opacity: 0.9 },
+    navHint: { fontSize: 11, color: colors.textSecondary, marginTop: 6 },
 
     content: { flex: 1, padding: SPACING.md },
 
     card: {
-        backgroundColor: COLORS.surface, borderRadius: 12, padding: SPACING.lg, marginBottom: SPACING.md,
+        backgroundColor: colors.surface, borderRadius: 12, padding: SPACING.lg, marginBottom: SPACING.md,
         shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 1,
         backfaceVisibility: 'hidden',
     },
@@ -753,26 +751,26 @@ const styles = StyleSheet.create({
         marginRight: SPACING.md
     },
     stepNumberCompleted: { backgroundColor: 'rgba(34,197,94,0.20)' },
-    stepNumberText: { fontSize: 16, fontWeight: '700', color: COLORS.primary },
+    stepNumberText: { fontSize: 16, fontWeight: '700', color: colors.primary },
     headerContent: { flex: 1 },
-    stepTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 2 },
-    location: { fontSize: 14, color: COLORS.primary, fontWeight: '500' },
-    completedBadge: { backgroundColor: COLORS.success, borderRadius: 12, padding: 4, width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+    stepTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 2 },
+    location: { fontSize: 14, color: colors.primary, fontWeight: '500' },
+    completedBadge: { backgroundColor: colors.success, borderRadius: 12, padding: 4, width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
     completedText: { color: '#FFF', fontWeight: 'bold', fontSize: 12 },
 
     section: { marginBottom: SPACING.lg },
-    sectionTitle: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary, marginBottom: SPACING.sm, textTransform: 'uppercase', letterSpacing: 0.5 },
-    storyText: { fontSize: 14, lineHeight: 20, color: COLORS.text },
+    sectionTitle: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: SPACING.sm, textTransform: 'uppercase', letterSpacing: 0.5 },
+    storyText: { fontSize: 14, lineHeight: 20, color: colors.text },
 
-    taskText: { fontSize: 16, fontWeight: '600', color: COLORS.text, marginBottom: SPACING.md, lineHeight: 22 },
+    taskText: { fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: SPACING.md, lineHeight: 22 },
     input: { 
-        backgroundColor: DESIGN_TOKENS.colors.surface, 
+        backgroundColor: colors.surface, 
         // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
         borderRadius: DESIGN_TOKENS.radii.sm, 
         padding: SPACING.md, 
         fontSize: 16, 
         marginBottom: SPACING.sm,
-        color: DESIGN_TOKENS.colors.text,
+        color: colors.text,
         minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
         shadowColor: '#1f1f1f',
         shadowOffset: { width: 0, height: 1 },
@@ -807,7 +805,7 @@ const styles = StyleSheet.create({
         // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
     },
     errorText: { 
-        color: DESIGN_TOKENS.colors.danger, 
+        color: colors.danger, 
         fontSize: 13, // ✅ ИСПРАВЛЕНИЕ: Увеличен размер для читаемости
         fontWeight: '500', // ✅ ИСПРАВЛЕНИЕ: Добавлен font-weight
         flex: 1,
@@ -815,7 +813,7 @@ const styles = StyleSheet.create({
 
     actions: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.sm, gap: 8 },
     primaryButton: { 
-        backgroundColor: DESIGN_TOKENS.colors.primary, 
+        backgroundColor: colors.primary, 
         paddingHorizontal: SPACING.lg, 
         paddingVertical: 12, 
         borderRadius: DESIGN_TOKENS.radii.md, 
@@ -846,7 +844,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: SPACING.lg, 
         paddingVertical: 12, 
         borderRadius: DESIGN_TOKENS.radii.md, 
-        backgroundColor: DESIGN_TOKENS.colors.surface, 
+        backgroundColor: colors.surface, 
         flex: 1, 
         minWidth: '45%',
         minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
@@ -865,12 +863,12 @@ const styles = StyleSheet.create({
                 boxShadow: DESIGN_TOKENS.shadows.light,
                 // @ts-ignore
                 ':hover': {
-                    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+                    backgroundColor: colors.primarySoft,
                 },
             },
         }),
     },
-    secondaryButtonText: { color: DESIGN_TOKENS.colors.text, fontWeight: '600', textAlign: 'center', fontSize: 14 },
+    secondaryButtonText: { color: colors.text, fontWeight: '600', textAlign: 'center', fontSize: 14 },
     ghostButton: { 
         paddingHorizontal: SPACING.lg, 
         paddingVertical: 12, 
@@ -887,46 +885,46 @@ const styles = StyleSheet.create({
                 cursor: 'pointer',
                 // @ts-ignore
                 ':hover': {
-                    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+                    backgroundColor: colors.primarySoft,
                 },
             },
         }),
     },
-    ghostButtonText: { color: DESIGN_TOKENS.colors.textMuted, fontWeight: '600', textAlign: 'center', fontSize: 14 },
+    ghostButtonText: { color: colors.textMuted, fontWeight: '600', textAlign: 'center', fontSize: 14 },
 
-    hintPrompt: { fontSize: 12, color: COLORS.textSecondary, textAlign: 'center', marginTop: SPACING.xs },
+    hintPrompt: { fontSize: 12, color: colors.textSecondary, textAlign: 'center', marginTop: SPACING.xs },
     hintContainer: { backgroundColor: 'rgba(34,197,94,0.10)', padding: SPACING.md, borderRadius: 8, marginTop: SPACING.md },
-    hintText: { color: COLORS.text, fontSize: 14, lineHeight: 20 },
+    hintText: { color: colors.text, fontSize: 14, lineHeight: 20 },
     answerContainer: { backgroundColor: 'rgba(34,197,94,0.12)', padding: SPACING.md, borderRadius: 8, marginTop: SPACING.md },
-    answerLabel: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 4 },
-    answerValue: { fontSize: 16, fontWeight: '600', color: COLORS.text },
+    answerLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 4 },
+    answerValue: { fontSize: 16, fontWeight: '600', color: colors.text },
 
     mapActions: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.md },
     mapButton: { backgroundColor: '#FFF', // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
         paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, minWidth: 110, marginRight: 6, marginBottom: 6,
         shadowColor: '#1f1f1f', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
-    mapButtonText: { color: COLORS.text, fontSize: 12, fontWeight: '500', textAlign: 'center' },
+    mapButtonText: { color: colors.text, fontSize: 12, fontWeight: '500', textAlign: 'center' },
 
     mapPhotoButton: { // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
-        backgroundColor: COLORS.chip, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 999,
-        shadowColor: COLORS.primaryDark, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
-    mapPhotoButtonText: { color: COLORS.primaryDark, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+        backgroundColor: colors.chip, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 999,
+        shadowColor: colors.primaryDark, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
+    mapPhotoButtonText: { color: colors.primaryDark, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
-    photoHint: { fontSize: 12, color: COLORS.textSecondary, marginBottom: SPACING.xs },
+    photoHint: { fontSize: 12, color: colors.textSecondary, marginBottom: SPACING.xs },
 
     imagePreview: { height: 120, borderRadius: 8, overflow: 'hidden', position: 'relative' },
     previewImage: { width: '100%', height: '100%' },
     imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.7)', padding: 6, alignItems: 'center' },
     overlayText: { color: '#FFF', fontSize: 12, fontWeight: '500' },
 
-    startButton: { backgroundColor: COLORS.primary, padding: SPACING.lg, borderRadius: 10, alignItems: 'center' },
+    startButton: { backgroundColor: colors.primary, padding: SPACING.lg, borderRadius: 10, alignItems: 'center' },
     startButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
 
-    fullMapSection: { backgroundColor: COLORS.surface, borderRadius: 12, padding: SPACING.md, marginBottom: SPACING.md },
+    fullMapSection: { backgroundColor: colors.surface, borderRadius: 12, padding: SPACING.md, marginBottom: SPACING.md },
 
-    completionScreen: { backgroundColor: COLORS.surface, borderRadius: 12, padding: SPACING.lg, alignItems: 'center', marginTop: SPACING.md },
-    completionTitle: { fontSize: 20, fontWeight: '700', color: COLORS.success, marginBottom: SPACING.md, textAlign: 'center' },
-    completionText: { paddingTop: 5, fontSize: 16, color: COLORS.text, textAlign: 'center', lineHeight: 22, marginBottom: SPACING.lg },
+    completionScreen: { backgroundColor: colors.surface, borderRadius: 12, padding: SPACING.lg, alignItems: 'center', marginTop: SPACING.md },
+    completionTitle: { fontSize: 20, fontWeight: '700', color: colors.success, marginBottom: SPACING.md, textAlign: 'center' },
+    completionText: { paddingTop: 5, fontSize: 16, color: colors.text, textAlign: 'center', lineHeight: 22, marginBottom: SPACING.lg },
 
     // Видео рамка (адаптив 16:9)
     videoFrame: {

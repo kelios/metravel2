@@ -37,6 +37,7 @@ import Animated, {
 import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl, getPreferredImageFormat } from "@/utils/imageOptimization";
 import { Feather } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 
 /* -------------------------------------------------------------------------- */
@@ -91,6 +92,7 @@ const Arrow = memo(function Arrow({
   insets: { left: number; right: number };
   dismissSwipeHint: () => void;
 }) {
+  const { colors, styles } = useSliderTheme();
   const arrowOpacity = useSharedValue(1);
   const arrowScale = useSharedValue(1);
 
@@ -160,7 +162,7 @@ const Arrow = memo(function Arrow({
           <Feather
             name={dir === "left" ? "chevron-left" : "chevron-right"}
             size={iconSize}
-            color="#ffffff"
+            color={colors.text}
             style={styles.arrowIcon}
           />
         </View>
@@ -178,6 +180,12 @@ const NAV_BTN_OFFSET = 16;
 // Мобильная высота: 60% высоты экрана (фиксировано)
 const MOBILE_HEIGHT_PERCENT = 0.6;
 const GLASS_BORDER = "rgba(255,255,255,0.35)";
+
+const useSliderTheme = () => {
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return { colors, styles };
+};
 
 const appendCacheBust = (uri: string, token: number) => {
   if (!token) return uri;
@@ -217,13 +225,14 @@ const Dot = memo(function Dot({
                                 containerW,
                                 total,
                                 reduceMotion,
-                              }: {
+}: {
   i: number;
   x: Animated.SharedValue<number>;
   containerW: number;
   total: number;
   reduceMotion: boolean;
 }) {
+  const { styles } = useSliderTheme();
   const style = useAnimatedStyle(() => {
     const scrollPosition = x.value;
     const currentIndex = scrollPosition / (containerW || 1);
@@ -261,6 +270,7 @@ const Dot = memo(function Dot({
 
 // NOTE: avoid TS generics in forwardRef to prevent runtime parsing issues if the file is consumed untranspiled
 const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
+  const { styles } = useSliderTheme();
   const {
     images,
     showArrows = true,
@@ -846,7 +856,8 @@ export default memo(Slider);
 
 /* --------------------------------- Styles ---------------------------------- */
 
-const styles = StyleSheet.create<Record<string, any>>({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
+  StyleSheet.create<Record<string, any>>({
   sliderStack: {
     width: "100%",
   },
@@ -859,11 +870,12 @@ const styles = StyleSheet.create<Record<string, any>>({
     borderColor: "transparent",
     ...Platform.select({
       web: {
-        boxShadow: "0 14px 34px rgba(15,23,42,0.10)",
+        boxShadow: colors.boxShadows.heavy,
       },
       android: {
         elevation: 8,
       },
+      default: colors.shadows.medium,
     }),
   },
   wrapperMobile: {
@@ -889,7 +901,7 @@ const styles = StyleSheet.create<Record<string, any>>({
   },
   flatBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+    backgroundColor: colors.surfaceMuted,
   },
   imageCardWrapper: {
     flex: 1,
@@ -905,11 +917,12 @@ const styles = StyleSheet.create<Record<string, any>>({
   imageCardWrapperElevated: {
     ...Platform.select({
       web: {
-        boxShadow: "0 18px 42px rgba(15,23,42,0.12)",
+        boxShadow: colors.boxShadows.heavy,
       },
       android: {
         elevation: 10,
       },
+      default: colors.shadows.medium,
     }),
   },
   imageCardSurface: {
@@ -933,7 +946,7 @@ const styles = StyleSheet.create<Record<string, any>>({
     width: "100%",
     height: "100%",
     borderRadius: 24,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: DESIGN_TOKENS.spacing.xs,
@@ -943,26 +956,26 @@ const styles = StyleSheet.create<Record<string, any>>({
     width: "100%",
     height: "100%",
     borderRadius: 12,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
         backgroundImage:
-          `linear-gradient(180deg, ${DESIGN_TOKENS.colors.backgroundSecondary} 0%, ${DESIGN_TOKENS.colors.backgroundTertiary} 100%)`,
+          `linear-gradient(180deg, ${colors.backgroundSecondary} 0%, ${colors.backgroundTertiary} 100%)`,
         boxSizing: "border-box",
       },
     }),
   },
   placeholderTitle: {
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: "600",
     marginTop: 12,
     textAlign: "center",
   },
   placeholderSubtitle: {
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     marginTop: 4,
     textAlign: "center",
@@ -972,7 +985,7 @@ const styles = StyleSheet.create<Record<string, any>>({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     ...Platform.select({
       web: {
         cursor: "pointer",
@@ -980,7 +993,7 @@ const styles = StyleSheet.create<Record<string, any>>({
     }),
   },
   retryBtnText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
   },
@@ -992,15 +1005,15 @@ const styles = StyleSheet.create<Record<string, any>>({
     bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: DESIGN_TOKENS.colors.overlay,
+    backgroundColor: colors.overlay,
   },
   navBtn: {
     position: "absolute",
     top: "50%",
     marginTop: -24,
-    backgroundColor: DESIGN_TOKENS.colors.overlayLight,
+    backgroundColor: colors.overlayLight,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -1011,12 +1024,13 @@ const styles = StyleSheet.create<Record<string, any>>({
       web: {
         cursor: "pointer",
         transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-        boxShadow: DESIGN_TOKENS.shadows.medium,
+        boxShadow: colors.boxShadows.medium,
         backdropFilter: "blur(16px)",
       },
       android: {
         elevation: 6,
       },
+      default: colors.shadows.medium,
     }),
   },
   navBtnDesktop: {
@@ -1027,14 +1041,15 @@ const styles = StyleSheet.create<Record<string, any>>({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: DESIGN_TOKENS.colors.overlayLight,
+    backgroundColor: colors.overlayLight,
   },
   navBtnHover: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.hover,
+        boxShadow: colors.boxShadows.hover,
       },
+      default: colors.shadows.hover,
     }),
   },
   arrowIconContainer: {
@@ -1058,12 +1073,12 @@ const styles = StyleSheet.create<Record<string, any>>({
   dotsContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: DESIGN_TOKENS.colors.overlayLight,
+    backgroundColor: colors.overlayLight,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
         backdropFilter: "blur(8px)",
@@ -1075,7 +1090,7 @@ const styles = StyleSheet.create<Record<string, any>>({
     paddingVertical: DESIGN_TOKENS.spacing.xs,
   },
   dot: {
-    backgroundColor: DESIGN_TOKENS.colors.textMuted,
+    backgroundColor: colors.textMuted,
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
     ...Platform.select({
@@ -1102,12 +1117,12 @@ const styles = StyleSheet.create<Record<string, any>>({
     right: 12,
   },
   counterContainer: {
-    backgroundColor: DESIGN_TOKENS.colors.overlayLight,
+    backgroundColor: colors.overlayLight,
     paddingHorizontal: 12,
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
         backdropFilter: "blur(8px)",
@@ -1115,7 +1130,7 @@ const styles = StyleSheet.create<Record<string, any>>({
     }),
   },
   counterText: {
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
     fontFamily: Platform.OS === "web" ? "system-ui, -apple-system" : undefined,
@@ -1134,12 +1149,12 @@ const styles = StyleSheet.create<Record<string, any>>({
   swipeHint: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: DESIGN_TOKENS.colors.overlayLight,
+    backgroundColor: colors.overlayLight,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
   },
   swipeHintMobile: {
     marginTop: 8,
@@ -1147,7 +1162,7 @@ const styles = StyleSheet.create<Record<string, any>>({
   swipeHintText: {
     marginLeft: 8,
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontWeight: "500",
   },
 });

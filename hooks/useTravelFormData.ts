@@ -152,19 +152,26 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     const normalizedMarkers = Array.isArray((mergedData as any).coordsMeTravel)
       ? (mergedData as any).coordsMeTravel.map((m: any) => {
           const { image, ...rest } = m ?? {};
-          // ✅ ИСПРАВЛЕНИЕ: Всегда отправляем image как строку (бэкенд требует это поле)
-          const imageValue = typeof image === 'string' ? image.trim() : (image || '');
+          // ✅ ИСПРАВЛЕНИЕ: Отправляем image только если есть валидное значение
+          // Бэкенд не принимает пустую строку "" - выдает ошибку "This field may not be blank."
+          const imageValue = typeof image === 'string' ? image.trim() : '';
           const categories = Array.isArray(m?.categories)
             ? m.categories
                 .map((c: any) => Number(c))
                 .filter((n: number) => Number.isFinite(n))
             : [];
 
-          return {
+          const marker = {
             ...rest,
             categories,
-            image: imageValue, // Всегда включаем поле image, даже если пустая строка
           };
+
+          // Добавляем image только если есть непустое значение
+          if (imageValue && imageValue.length > 0) {
+            (marker as any).image = imageValue;
+          }
+
+          return marker;
         })
       : [];
 

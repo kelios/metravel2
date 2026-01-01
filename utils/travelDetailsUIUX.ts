@@ -5,6 +5,7 @@
 
 import { Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { getThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 /**
  * Get responsive spacing based on screen width
@@ -273,18 +274,24 @@ export function getSkeletonDimensions(elementType: 'text' | 'image' | 'card'): {
   }
 }
 
+const resolveIsDark = () => {
+  if (typeof document === 'undefined') return false;
+  return document.documentElement.getAttribute('data-theme') === 'dark';
+};
+
 /**
  * Create accessible focus styles
  */
-export function getAccessibleFocusStyles(): {
+export function getAccessibleFocusStyles(
+  colors: ThemedColors = getThemedColors(resolveIsDark())
+): {
   outlineWidth: number;
   outlineColor: string;
   outlineOffset: number;
 } {
   return {
     outlineWidth: 3,
-    outlineColor: DESIGN_TOKENS.colors.primary,
+    outlineColor: colors.primary,
     outlineOffset: 2,
   };
 }
-

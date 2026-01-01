@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { MaterialIcons } from "@expo/vector-icons"
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
-import { DESIGN_TOKENS } from "@/constants/designSystem"
 import { useThemedColors } from "@/hooks/useTheme" // ✅ РЕДИЗАЙН: Темная тема
 
 type Props = {
@@ -258,7 +257,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
                 ref={closeRef}
                 style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
               >
-                <MaterialIcons name={"close" as any} size={20} color={DESIGN_TOKENS.colors.text} />
+                <MaterialIcons name={"close" as any} size={20} color={colors.text} />
               </Pressable>
             </View>
 
@@ -287,7 +286,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
                         <MaterialIcons
                           name={icon as any}
                           size={18}
-                          color={isActive ? DESIGN_TOKENS.colors.text : DESIGN_TOKENS.colors.textMuted}
+                          color={isActive ? colors.text : colors.textMuted}
                         />
                         <Text style={[styles.itemText, isActive && styles.itemTextActive]} numberOfLines={1}>
                           {label}

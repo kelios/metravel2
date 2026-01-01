@@ -1,13 +1,11 @@
 import { Platform, StyleSheet } from 'react-native';
 
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import type { ThemedColors } from '@/hooks/useTheme';
 
-export const palette = DESIGN_TOKENS.colors;
-
-export const styles = StyleSheet.create({
+export const createStyles = (colors: ThemedColors) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: palette.background,
+    backgroundColor: colors.background,
   },
   rootBackgroundImage: {
     ...StyleSheet.absoluteFillObject,
@@ -31,9 +29,9 @@ export const styles = StyleSheet.create({
   sidebar: {
     width: 320,
     maxWidth: 360,
-    backgroundColor: 'rgba(252,248,240,0.96)',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(148,128,94,0.22)',
+    borderColor: colors.borderLight,
     borderRadius: 18,
     padding: 8,
   },
@@ -41,8 +39,8 @@ export const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 18,
     backgroundColor: Platform.select({
-      web: 'rgba(255, 255, 255, 0.75)',
-      default: 'rgba(255, 255, 255, 0.9)',
+      web: colors.surfaceMuted,
+      default: colors.surface,
     }) as string,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -75,12 +73,12 @@ export const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: palette.text,
+    color: colors.text,
     marginBottom: 4,
   },
   heroSubtitle: {
     fontSize: 14,
-    color: palette.textMuted,
+    color: colors.textMuted,
   },
   heroButtonBlock: {
     minWidth: 200,
@@ -115,9 +113,9 @@ export const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(148,128,94,0.35)',
+    borderColor: colors.border,
   },
   mobileFiltersHeaderRow: {
     flexDirection: 'row',
@@ -128,7 +126,7 @@ export const styles = StyleSheet.create({
   mobileFiltersLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: palette.text,
+    color: colors.text,
   },
   mobileFiltersResetButton: {
     flexDirection: 'row',
@@ -153,7 +151,7 @@ export const styles = StyleSheet.create({
   },
   loaderText: {
     marginTop: 12,
-    color: palette.textMuted,
+    color: colors.textMuted,
     fontSize: 14,
   },
   emptyBox: {
@@ -163,12 +161,12 @@ export const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: palette.text,
+    color: colors.text,
     marginBottom: 6,
   },
   emptyText: {
     fontSize: 14,
-    color: palette.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
     maxWidth: 360,
   },
@@ -179,12 +177,12 @@ export const styles = StyleSheet.create({
   hintTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: palette.text,
+    color: colors.text,
     marginBottom: 8,
   },
   hintText: {
     fontSize: 14,
-    color: palette.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
     maxWidth: 380,
   },
@@ -216,7 +214,7 @@ export const styles = StyleSheet.create({
     borderRadius: 260,
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(148,128,94,0.35)',
+    borderColor: colors.borderLight,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 18 },
     shadowOpacity: 0.08,
@@ -250,8 +248,8 @@ export const styles = StyleSheet.create({
     height: 190,
     borderRadius: 95,
     borderWidth: 2,
-    borderColor: 'rgba(148,128,94,0.45)',
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
@@ -264,13 +262,13 @@ export const styles = StyleSheet.create({
   rouletteCenterTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1f2933',
+    color: colors.text,
     textAlign: 'center',
     marginBottom: 4,
   },
   rouletteCenterSubtitle: {
     fontSize: 12,
-    color: '#6b7280',
+    color: colors.textMuted,
     textAlign: 'center',
   },
   rouletteCompassImage: {
@@ -292,7 +290,7 @@ export const styles = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(248,248,248,0.45)',
+    backgroundColor: colors.overlayLight,
     zIndex: 1,
   },
   spinnerCircle: {
@@ -300,7 +298,7 @@ export const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: colors.surface,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -312,6 +310,6 @@ export const styles = StyleSheet.create({
   },
   spinnerText: {
     fontSize: 14,
-    color: palette.textMuted,
+    color: colors.textMuted,
   },
 });

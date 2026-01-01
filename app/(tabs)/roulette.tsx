@@ -11,13 +11,16 @@ import UIButton from '@/components/ui/Button';
 
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRouletteLogic } from '@/components/roulette/useRoulette';
-import { palette, styles } from '@/components/roulette/styles';
+import { createStyles } from '@/components/roulette/styles';
+import { useThemedColors } from '@/hooks/useTheme';
 
 export default function RouletteScreen() {
   const pathname = usePathname();
   const isFocused = useIsFocused();
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const {
     filter,
@@ -113,7 +116,7 @@ export default function RouletteScreen() {
                     onPress={() => setShowFilters((prev) => !prev)}
                   >
                     <View style={styles.mobileFiltersHeaderRow}>
-                      <Feather name="filter" size={14} color={palette.primary} />
+                      <Feather name="filter" size={14} color={colors.primary} />
                       <Text style={styles.mobileFiltersLabel} numberOfLines={1}>
                         {`Фильтры: ${filtersSummary}`}
                       </Text>
@@ -125,7 +128,7 @@ export default function RouletteScreen() {
                       style={styles.mobileFiltersResetButton}
                       onPress={handleClearAll}
                     >
-                      <Feather name="x-circle" size={16} color={palette.primary} />
+                      <Feather name="x-circle" size={16} color={colors.primary} />
                     </Pressable>
                   )}
                 </View>

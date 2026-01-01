@@ -1,8 +1,8 @@
 /**
  * Тесты для проверки нормализации coordsMeTravel перед автосохранением
  *
- * ✅ ИСПРАВЛЕНИЕ: Поле image всегда должно присутствовать (строка)
- * Бэкенд требует обязательное поле image в каждом маркере
+ * ✅ ИСПРАВЛЕНИЕ: Поле image отправляется только если непустое
+ * Бэкенд не принимает пустую строку "" - выдает ошибку "This field may not be blank."
  */
 
 describe('useTravelFormData - нормализация coordsMeTravel', () => {
@@ -12,22 +12,28 @@ describe('useTravelFormData - нормализация coordsMeTravel', () => {
     const normalizeMarkers = (markers: any[]) => {
       return markers.map((m: any) => {
         const { image, ...rest } = m ?? {};
-        const imageValue = typeof image === 'string' ? image.trim() : (image || '');
+        const imageValue = typeof image === 'string' ? image.trim() : '';
         const categories = Array.isArray(m?.categories)
           ? m.categories
               .map((c: any) => Number(c))
               .filter((n: number) => Number.isFinite(n))
           : [];
 
-        return {
+        const marker = {
           ...rest,
           categories,
-          image: imageValue,
         };
+
+        // Добавляем image только если есть непустое значение
+        if (imageValue && imageValue.length > 0) {
+          (marker as any).image = imageValue;
+        }
+
+        return marker;
       });
     };
 
-    it('должно всегда включать поле image, даже если пустое', () => {
+    it('НЕ должно включать поле image если оно пустое', () => {
       const marker = {
         id: null,
         lat: 50.45,
@@ -40,11 +46,12 @@ describe('useTravelFormData - нормализация coordsMeTravel', () => {
 
       const normalized = normalizeMarkers([marker]);
 
-      expect(normalized[0]).toHaveProperty('image');
-      expect(normalized[0].image).toBe('');
+      expect(normalized[0]).not.toHaveProperty('image');
+      expect(normalized[0].lat).toBe(50.45);
+      expect(normalized[0].categories).toEqual([1, 2]);
     });
 
-    it('должно сохранять непустой image правильно', () => {
+    it('должно включать поле image если оно непустое', () => {
       const marker = {
         lat: 50.45,
         lng: 30.52,
@@ -54,6 +61,7 @@ describe('useTravelFormData - нормализация coordsMeTravel', () => {
 
       const normalized = normalizeMarkers([marker]);
 
+      expect(normalized[0]).toHaveProperty('image');
       expect(normalized[0].image).toBe('https://example.com/image.jpg');
     });
 
@@ -70,7 +78,7 @@ describe('useTravelFormData - нормализация coordsMeTravel', () => {
       expect(normalized[0].image).toBe('https://example.com/image.jpg');
     });
 
-    it('должно преобразовать null в пустую строку', () => {
+    it('НЕ должно включать image если null', () => {
       const marker = {
         lat: 50.45,
         lng: 30.52,
@@ -80,10 +88,10 @@ describe('useTravelFormData - нормализация coordsMeTravel', () => {
 
       const normalized = normalizeMarkers([marker]);
 
-      expect(normalized[0].image).toBe('');
+      expect(normalized[0]).not.toHaveProperty('image');
     });
 
-    it('должно преобразовать undefined в пустую строку', () => {
+    it('НЕ должно включать image если undefined', () => {
       const marker = {
         lat: 50.45,
         lng: 30.52,
@@ -93,7 +101,7 @@ describe('useTravelFormData - нормализация coordsMeTravel', () => {
 
       const normalized = normalizeMarkers([marker]);
 
-      expect(normalized[0].image).toBe('');
+      expect(normalized[0]).not.toHaveProperty('image');
     });
 
     it('должно корректно обрабатывать несколько маркеров', () => {
@@ -106,9 +114,10 @@ describe('useTravelFormData - нормализация coordsMeTravel', () => {
       const normalized = normalizeMarkers(markers);
 
       expect(normalized).toHaveLength(3);
-      expect(normalized[0].image).toBe('');
+      expect(normalized[0]).not.toHaveProperty('image');
+      expect(normalized[1]).toHaveProperty('image');
       expect(normalized[1].image).toBe('https://example.com/lviv.jpg');
-      expect(normalized[2].image).toBe('');
+      expect(normalized[2]).not.toHaveProperty('image');
     });
 
     it('должно нормализовать categories в числа', () => {

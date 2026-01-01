@@ -28,9 +28,9 @@ import ShareButtons from '@/components/travel/ShareButtons'
 import TelegramDiscussionSection from '@/components/travel/TelegramDiscussionSection'
 import CTASection from '@/components/travel/CTASection'
 import { METRICS } from '@/constants/layout'
-import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useLazyMap } from '@/hooks/useLazyMap'
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
+import { useThemedColors } from '@/hooks/useTheme'
 import { getAccessibilityLabel } from '@/utils/a11y'
 import { safeGetYoutubeId } from '@/utils/travelDetailsSecure'
 import {
@@ -42,7 +42,7 @@ import {
 import type { Travel } from '@/src/types/types'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
-import { styles } from './TravelDetailsStyles'
+import { useTravelDetailsStyles } from './TravelDetailsStyles'
 import { withLazy } from './TravelDetailsLazy'
 import { Icon } from './TravelDetailsIcons'
 
@@ -130,35 +130,50 @@ const ExcursionsLazySection: React.FC<{ children: React.ReactNode }> = ({ childr
   )
 }
 
-const Fallback = () => (
-  <View style={styles.fallback}>
-    <ActivityIndicator size="small" />
-  </View>
-)
+const Fallback = () => {
+  const styles = useTravelDetailsStyles()
+  return (
+    <View style={styles.fallback}>
+      <ActivityIndicator size="small" />
+    </View>
+  )
+}
 
-const DescriptionFallback = () => (
-  <View style={styles.fallback}>
-    <DescriptionSkeleton />
-  </View>
-)
+const DescriptionFallback = () => {
+  const styles = useTravelDetailsStyles()
+  return (
+    <View style={styles.fallback}>
+      <DescriptionSkeleton />
+    </View>
+  )
+}
 
-const MapFallback = () => (
-  <View style={styles.fallback}>
-    <MapSkeleton />
-  </View>
-)
+const MapFallback = () => {
+  const styles = useTravelDetailsStyles()
+  return (
+    <View style={styles.fallback}>
+      <MapSkeleton />
+    </View>
+  )
+}
 
-const PointListFallback = () => (
-  <View style={styles.fallback}>
-    <PointListSkeleton />
-  </View>
-)
+const PointListFallback = () => {
+  const styles = useTravelDetailsStyles()
+  return (
+    <View style={styles.fallback}>
+      <PointListSkeleton />
+    </View>
+  )
+}
 
-const TravelListFallback = () => (
-  <View style={styles.travelListFallback}>
-    <TravelListSkeleton count={3} />
-  </View>
-)
+const TravelListFallback = () => {
+  const styles = useTravelDetailsStyles()
+  return (
+    <View style={styles.travelListFallback}>
+      <TravelListSkeleton count={3} />
+    </View>
+  )
+}
 
 const getYoutubeId = safeGetYoutubeId
 
@@ -193,6 +208,8 @@ const CollapsibleSection: React.FC<{
     onToggle,
     children,
   }) => {
+    const styles = useTravelDetailsStyles()
+    const colors = useThemedColors()
     const isControlled = typeof controlledOpen === 'boolean'
     const [internalOpen, setInternalOpen] = useState(initiallyOpen)
     const open = isControlled ? (controlledOpen as boolean) : internalOpen
@@ -234,7 +251,7 @@ const CollapsibleSection: React.FC<{
           <View style={styles.sectionHeaderTitleWrap}>
             {iconName && (
               <View style={styles.sectionHeaderIcon}>
-                <Icon name={iconName} size={18} color={DESIGN_TOKENS.colors.primary} />
+                <Icon name={iconName} size={18} color={colors.primary} />
               </View>
             )}
             <Text style={styles.sectionHeaderText}>{title}</Text>
@@ -252,6 +269,8 @@ const CollapsibleSection: React.FC<{
 
 /* -------------------- Lazy YouTube -------------------- */
 const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
+  const styles = useTravelDetailsStyles()
+  const colors = useThemedColors()
   const id = useMemo(() => getYoutubeId(url), [url])
   const [mounted, setMounted] = useState(false)
   const [shouldAutoplay, setShouldAutoplay] = useState(false)
@@ -292,7 +311,7 @@ const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
           borderRadius={DESIGN_TOKENS.radii.md}
         />
         <View style={styles.playOverlay}>
-          <Icon name="play-circle-fill" size={64} color={DESIGN_TOKENS.colors.surface} />
+          <Icon name="play-circle-fill" size={64} color={colors.textOnDark} />
           <Text style={styles.videoHintText}>Видео запустится автоматически</Text>
         </View>
       </Pressable>
@@ -306,7 +325,7 @@ const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
         aspectRatio: '16 / 9',
         borderRadius: 12,
         overflow: 'hidden',
-        backgroundColor: DESIGN_TOKENS.colors.text,
+        backgroundColor: colors.text,
         contain: 'layout style paint' as any,
       }}
     >
@@ -357,6 +376,7 @@ export const TravelDeferredSections: React.FC<{
   viewportHeight,
   scrollRef,
 }) => {
+  const styles = useTravelDetailsStyles()
   const [canRenderHeavy, setCanRenderHeavy] = useState(false)
 
   useEffect(() => {
@@ -407,6 +427,8 @@ const TravelContentSections: React.FC<{
   forceOpenKey: string | null
   scrollRef: any
 }> = ({ travel, isMobile, anchors, forceOpenKey, scrollRef }) => {
+  const styles = useTravelDetailsStyles()
+  const colors = useThemedColors()
   type InsightKey = 'recommendation' | 'plus' | 'minus'
 
   const stripHtml = useCallback((value?: string | null) => {
@@ -657,7 +679,7 @@ const TravelContentSections: React.FC<{
                             <MaterialIcons
                               name="lightbulb-outline"
                               size={14}
-                              color={DESIGN_TOKENS.colors.textMuted}
+                              color={colors.textMuted}
                               style={styles.decisionSummaryBulletIcon}
                               accessibilityElementsHidden
                             />
@@ -668,7 +690,7 @@ const TravelContentSections: React.FC<{
                             <MaterialIcons
                               name="circle"
                               size={6}
-                              color={DESIGN_TOKENS.colors.textMuted}
+                              color={colors.textMuted}
                               style={styles.decisionSummarySubBulletIcon}
                               accessibilityElementsHidden
                             />
@@ -895,6 +917,7 @@ const TravelVisualSections: React.FC<{
   anchors: AnchorsMap
   canRenderHeavy: boolean
 }> = ({ travel, anchors, canRenderHeavy }) => {
+  const styles = useTravelDetailsStyles()
   const { width } = useWindowDimensions()
   const hasMapData = (travel.coordsMeTravel?.length ?? 0) > 0
   const { shouldLoad: shouldLoadMap, setElementRef } = useLazyMap({ enabled: Platform.OS === 'web' })
@@ -1012,6 +1035,7 @@ const TravelRelatedContent: React.FC<{
   scrollY: Animated.Value
   viewportHeight: number
 }> = ({ travel, anchors, relatedTravels, setRelatedTravels, scrollY, viewportHeight }) => {
+  const styles = useTravelDetailsStyles()
   const isWeb = Platform.OS === 'web'
   const preloadMargin = 200
 
@@ -1232,35 +1256,39 @@ const TravelRelatedContent: React.FC<{
 export const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boolean }> = ({
   travel,
   isMobile,
-}) => (
-  <>
-    <View
-      testID="travel-details-telegram"
-      accessibilityRole="region"
-      accessibilityLabel="Обсуждение в Telegram"
-      style={[styles.sectionContainer, styles.authorCardContainer]}
-    >
-      <TelegramDiscussionSection travel={travel} />
-    </View>
+}) => {
+  const styles = useTravelDetailsStyles()
 
-    {!isMobile && (
+  return (
+    <>
       <View
-        testID="travel-details-share"
+        testID="travel-details-telegram"
         accessibilityRole="region"
-        accessibilityLabel="Поделиться маршрутом"
-        style={[styles.sectionContainer, styles.shareButtonsContainer]}
+        accessibilityLabel="Обсуждение в Telegram"
+        style={[styles.sectionContainer, styles.authorCardContainer]}
       >
-        <ShareButtons travel={travel} />
+        <TelegramDiscussionSection travel={travel} />
       </View>
-    )}
 
-    <View
-      testID="travel-details-cta"
-      accessibilityRole="region"
-      accessibilityLabel="Призыв к действию"
-      style={[styles.sectionContainer, styles.ctaContainer]}
-    >
-      <CTASection travel={travel} />
-    </View>
-  </>
-)
+      {!isMobile && (
+        <View
+          testID="travel-details-share"
+          accessibilityRole="region"
+          accessibilityLabel="Поделиться маршрутом"
+          style={[styles.sectionContainer, styles.shareButtonsContainer]}
+        >
+          <ShareButtons travel={travel} />
+        </View>
+      )}
+
+      <View
+        testID="travel-details-cta"
+        accessibilityRole="region"
+        accessibilityLabel="Призыв к действию"
+        style={[styles.sectionContainer, styles.ctaContainer]}
+      >
+        <CTASection travel={travel} />
+      </View>
+    </>
+  )
+}
