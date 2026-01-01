@@ -1,4 +1,4 @@
-// ModernFilters.tsx - Современный компонент фильтров
+// ✅ УЛУЧШЕНИЕ: ModernFilters - мигрирован на DESIGN_TOKENS и useThemedColors
 import React, { memo, useState, useCallback, useMemo } from 'react';
 import {
   View,
@@ -12,23 +12,9 @@ import {
   Dimensions,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { MODERN_DESIGN_TOKENS } from '@/styles/modernRedesign';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
-import { designTokens } from '@/constants/designTokens';
-
-const { colors, spacing, radii, typography, shadows, animations } = MODERN_DESIGN_TOKENS;
-
-const BRAND_PRIMARY = DESIGN_TOKENS.colors.primary;
-const BRAND_PRIMARY_DARK = DESIGN_TOKENS.colors.primaryDark;
-const BRAND_PRIMARY_SOFT = DESIGN_TOKENS.colors.primarySoft;
-const BRAND_ORANGE = designTokens.colors.semantic.warning;
-
-const SURFACE = DESIGN_TOKENS.colors.surfaceElevated;
-const SURFACE_SUBTLE = DESIGN_TOKENS.colors.backgroundSecondary;
-const BORDER_SUBTLE = DESIGN_TOKENS.colors.borderLight;
-const TEXT_MAIN = DESIGN_TOKENS.colors.text;
-const TEXT_SUBTLE = DESIGN_TOKENS.colors.textSubtle;
+import { useThemedColors } from '@/hooks/useTheme';
 
 export interface FilterOption {
   id: string;

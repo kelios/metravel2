@@ -1,3 +1,4 @@
+// ✅ УЛУЧШЕНИЕ: мигрирован на DESIGN_TOKENS и useThemedColors для поддержки тем
 import React, {
     useCallback,
     useEffect,
@@ -6,6 +7,7 @@ import React, {
     Suspense,
     forwardRef,
     type Ref,
+    useMemo,
 } from 'react';
 import {
     View,
@@ -21,6 +23,8 @@ import {
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { uploadImage } from '@/src/api/misc';
 import { useAuth } from '@/context/AuthContext';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const isWeb = Platform.OS === 'web';
 const win = isWeb && typeof window !== 'undefined' ? window : undefined;
@@ -110,6 +114,7 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
                                                      editorRef,
                                                      variant = 'default',
                                                  }) => {
+    const colors = useThemedColors();
     const [html, setHtml] = useState(content);
     const [fullscreen, setFullscreen] = useState(false);
     const [showHtml, setShowHtml] = useState(false);
@@ -117,6 +122,69 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
     const quillRef = useRef<any>(null);
     const tmpStoredRange = useRef<{ index: number; length: number } | null>(null);
     const { isAuthenticated } = useAuth();
+
+    // Динамические стили на основе темы
+    const dynamicStyles = useMemo(() => StyleSheet.create({
+        wrap: {
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: DESIGN_TOKENS.radii.md,
+            marginVertical: DESIGN_TOKENS.spacing.sm,
+            backgroundColor: colors.surface,
+            width: '100%',
+            maxWidth: '100%',
+            overflow: 'hidden',
+        },
+        bar: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: DESIGN_TOKENS.spacing.md,
+            paddingVertical: DESIGN_TOKENS.spacing.sm,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+            backgroundColor: colors.surfaceElevated,
+        },
+        label: {
+            fontSize: DESIGN_TOKENS.typography.sizes.md,
+            fontWeight: '600' as const,
+            color: colors.text,
+        },
+        row: { flexDirection: 'row' },
+        btn: {
+            marginLeft: DESIGN_TOKENS.spacing.md,
+            padding: DESIGN_TOKENS.spacing.xs,
+            minWidth: 44,
+            minHeight: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        editorArea: {
+            flex: 1,
+            minHeight: 0,
+        },
+        editor: { minHeight: 200, flex: 1 },
+        html: {
+            minHeight: 200,
+            flex: 1,
+            padding: DESIGN_TOKENS.spacing.md,
+            fontSize: DESIGN_TOKENS.typography.sizes.sm,
+            color: colors.text,
+            backgroundColor: colors.surface,
+        },
+        loadBox: {
+            padding: DESIGN_TOKENS.spacing.lg,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        loadTxt: { color: colors.textSecondary },
+        fullWrap: {
+            flex: 1,
+            height: '100%',
+            width: '100%',
+            backgroundColor: colors.background,
+        },
+    }), [colors]);
 
     useEffect(() => {
         if (!editorRef) return;
@@ -147,25 +215,25 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
     useEffect(() => {
         if (!win) return;
         const style = win.document.createElement('style');
+        // ✅ ДИЗАЙН: CSS-переменные синхронизированы с DESIGN_TOKENS
         style.innerHTML = `
-      :root{--bg:#fff;--fg:#333;--bar:#f5f5f5}
-      @media(prefers-color-scheme:dark){:root{--bg:#1e1e1e;--fg:#e0e0e0;--bar:#2a2a2a}}
+      :root{--bg:${colors.surface};--fg:${colors.text};--bar:${colors.surfaceElevated};--border:${colors.border}}
       .quill{display:flex;flex-direction:column;height:100%}
       .ql-editor{background:var(--bg);color:var(--fg)}
-      .ql-toolbar{background:var(--bar);position:sticky;top:0;z-index:10;max-width:100%}
+      .ql-toolbar{background:var(--bar);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;max-width:100%}
       .ql-toolbar.ql-snow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
       .ql-toolbar.ql-snow .ql-formats{display:flex;flex-wrap:wrap;gap:4px;margin-right:6px}
       .ql-toolbar.ql-snow .ql-picker{max-width:100%}
       .ql-toolbar.ql-snow button{flex:0 0 auto}
-      .ql-container{max-width:100%}
+      .ql-container{max-width:100%;border:none}
       .ql-editor{max-width:100%;overflow-wrap:anywhere}
-      .ql-container.ql-snow{display:flex;flex:1;flex-direction:column;height:100%;min-height:0}
+      .ql-container.ql-snow{display:flex;flex:1;flex-direction:column;height:100%;min-height:0;border:none}
       .ql-container.ql-snow .ql-editor{flex:1;min-height:0;overflow-y:auto}
       .ql-editor img{max-width:100%;height:auto;max-height:60vh;display:block;margin:12px auto;object-fit:contain}
     `;
         win.document.head.appendChild(style);
         return () => { win.document.head.removeChild(style); };
-    }, []);
+    }, [colors]);
 
     useEffect(() => {
         if (!onAutosave) return;
@@ -234,19 +302,19 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
         return (
             <TouchableOpacity
                 onPress={onPress}
-                style={styles.btn}
+                style={dynamicStyles.btn}
                 accessibilityRole="button"
                 accessibilityLabel={label}
             >
-                <MaterialIcons name={name} size={20} color="#555" />
+                <MaterialIcons name={name} size={20} color={colors.textSecondary} />
             </TouchableOpacity>
         );
     });
 
     const Toolbar = () => (
-        <View style={styles.bar}>
-            <Text style={styles.label}>{label}</Text>
-            <View style={styles.row}>
+        <View style={dynamicStyles.bar}>
+            <Text style={dynamicStyles.label}>{label}</Text>
+            <View style={dynamicStyles.row}>
                 <IconButton
                     name="undo"
                     onPress={() => quillRef.current?.getEditor().history.undo()}
@@ -310,8 +378,8 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
     }, [fullscreen, showHtml]);
 
     const Loader = () => (
-        <View style={styles.loadBox}>
-            <Text style={styles.loadTxt}>Загрузка…</Text>
+        <View style={dynamicStyles.loadBox}>
+            <Text style={dynamicStyles.loadTxt}>Загрузка…</Text>
         </View>
     );
 
@@ -321,12 +389,12 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
 
     const editorArea = showHtml ? (
         <TextInput
-            style={styles.html}
+            style={dynamicStyles.html}
             multiline
             value={html}
             onChangeText={text => fireChange(text)}
             placeholder={placeholder}
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textSecondary}
         />
     ) : (
         <Suspense fallback={<Loader />}>
@@ -337,7 +405,7 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
                 onChange={(val: string) => fireChange(val)}
                 modules={modules}
                 placeholder={placeholder}
-                style={styles.editor}
+                style={dynamicStyles.editor}
             />
         </Suspense>
     );
@@ -345,16 +413,16 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
     const body = (
         <>
             <Toolbar />
-            <View style={styles.editorArea}>{editorArea}</View>
+            <View style={dynamicStyles.editorArea}>{editorArea}</View>
         </>
     );
 
     return fullscreen ? (
         <Modal visible animationType="slide">
-            <SafeAreaView style={styles.fullWrap}>{body}</SafeAreaView>
+            <SafeAreaView style={dynamicStyles.fullWrap}>{body}</SafeAreaView>
         </Modal>
     ) : (
-        <View style={styles.wrap}>{body}</View>
+        <View style={dynamicStyles.wrap}>{body}</View>
     );
 };
 
@@ -366,8 +434,36 @@ const NativeEditor: React.FC<ArticleEditorProps> = ({
                                                         onAutosave,
                                                         autosaveDelay = 5000,
                                                     }) => {
+    const colors = useThemedColors();
     const [text, setText] = useState(content);
     const debouncedParentChange = useDebounce(onChange, 250);
+
+    const dynamicStyles = useMemo(() => StyleSheet.create({
+        wrap: {
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: DESIGN_TOKENS.radii.md,
+            marginVertical: DESIGN_TOKENS.spacing.sm,
+            backgroundColor: colors.surface,
+            width: '100%',
+            maxWidth: '100%',
+            overflow: 'hidden',
+        },
+        label: {
+            fontSize: DESIGN_TOKENS.typography.sizes.md,
+            fontWeight: '600' as const,
+            color: colors.text,
+            padding: DESIGN_TOKENS.spacing.sm,
+        },
+        html: {
+            minHeight: 200,
+            flex: 1,
+            padding: DESIGN_TOKENS.spacing.md,
+            fontSize: DESIGN_TOKENS.typography.sizes.sm,
+            color: colors.text,
+            backgroundColor: colors.surface,
+        },
+    }), [colors]);
 
     useEffect(() => {
         if (content !== text) setText(content);
@@ -385,15 +481,15 @@ const NativeEditor: React.FC<ArticleEditorProps> = ({
     };
 
     return (
-        <View style={styles.wrap}>
-            <Text style={[styles.label, { padding: 8 }]}>{label}</Text>
+        <View style={dynamicStyles.wrap}>
+            <Text style={dynamicStyles.label}>{label}</Text>
             <TextInput
                 multiline
                 value={text}
                 onChangeText={onEdit}
                 placeholder={placeholder}
-                placeholderTextColor="#999"
-                style={styles.html}
+                placeholderTextColor={colors.textSecondary}
+                style={dynamicStyles.html}
                 textAlignVertical="top"
             />
         </View>
@@ -406,52 +502,3 @@ const ArticleEditor = forwardRef<any, ArticleEditorProps>((props, ref) => {
 
 export default React.memo(ArticleEditor);
 
-const styles = StyleSheet.create({
-    wrap: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 6,
-        marginVertical: 8,
-        backgroundColor: Platform.OS === 'web' ? ('var(--bg)' as any) : '#fff',
-        width: '100%',
-        maxWidth: '100%',
-        overflow: 'hidden',
-    },
-    bar: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#ddd',
-        backgroundColor: Platform.OS === 'web' ? ('var(--bar)' as any) : '#f5f5f5',
-    },
-    label: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: Platform.OS === 'web' ? ('var(--fg)' as any) : '#333',
-    },
-    row: { flexDirection: 'row' },
-    btn: { marginLeft: 12, padding: 4 },
-    editorArea: {
-        flex: 1,
-        minHeight: 0,
-    },
-    editor: { minHeight: 200, flex: 1 },
-    html: {
-        minHeight: 200,
-        flex: 1,
-        padding: 12,
-        fontSize: 14,
-        color: Platform.OS === 'web' ? ('var(--fg)' as any) : '#333',
-    },
-    loadBox: { padding: 20, alignItems: 'center', justifyContent: 'center' },
-    loadTxt: { color: '#999' },
-    fullWrap: {
-        flex: 1,
-        height: '100%',
-        width: '100%',
-        backgroundColor: Platform.OS === 'web' ? ('var(--bg)' as any) : '#fff',
-    },
-});

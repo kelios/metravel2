@@ -59,7 +59,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   const safePlaceholder = useMemo(() => safeJsonString(placeholder), [placeholder, safeJsonString]);
   const safeInitialContent = useMemo(() => safeJsonString(initialSanitizedContent), [initialSanitizedContent, safeJsonString]);
 
-  // Quill HTML template
+  // Quill HTML template with dynamic theme colors
   const quillHTML = `
 <!DOCTYPE html>
 <html>
@@ -72,7 +72,8 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       padding: 0;
       margin: 0;
-      background: #fff;
+      background: ${colors.surface};
+      color: ${colors.text};
     }
     #editor-container {
       height: 100vh;
@@ -80,8 +81,8 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       flex-direction: column;
     }
     #toolbar {
-      background: #f5f5f5;
-      border-bottom: 1px solid #ddd;
+      background: ${colors.surfaceElevated};
+      border-bottom: 1px solid ${colors.border};
       padding: 8px;
       flex-shrink: 0;
     }
@@ -90,10 +91,12 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       font-size: 16px;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
+      border: none;
     }
     .ql-editor {
       padding: 16px;
       min-height: 100%;
+      color: ${colors.text};
     }
     .ql-editor img {
       max-width: 100%;
@@ -102,7 +105,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       margin: 12px auto;
     }
     .ql-editor.ql-blank::before {
-      color: #999;
+      color: ${colors.textSecondary};
       font-style: normal;
     }
     ${variant === 'compact' ? `

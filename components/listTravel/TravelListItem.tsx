@@ -37,7 +37,12 @@ const isLikelyWatermarked = (url: string | null | undefined): boolean => {
   return WATERMARK_DOMAINS.some((domain) => lower.includes(domain));
 };
 
-const CountriesList = memo(function CountriesList({ countries }: { countries: string[] }) {
+type CountriesListProps = {
+  countries: string[];
+  styles: ReturnType<typeof createStyles>;
+};
+
+const CountriesList = memo(function CountriesList({ countries, styles }: CountriesListProps) {
   if (!countries.length) return null;
   return (
     <View style={styles.tags}>
@@ -494,7 +499,7 @@ const leftTopSlot = canEdit ? (
           } as any)
         : {})}
     >
-      <Feather name="edit-2" size={14} color={TOKENS.colors.text} />
+      <Feather name="edit-2" size={14} color={DESIGN_TOKENS.colors.text} />
     </InlineWebButton>
     <View style={styles.adminDivider} />
     <InlineWebButton
@@ -518,7 +523,7 @@ const leftTopSlot = canEdit ? (
           } as any)
         : {})}
     >
-      <Feather name="trash-2" size={14} color={TOKENS.colors.danger} />
+      <Feather name="trash-2" size={14} color={DESIGN_TOKENS.colors.danger} />
     </InlineWebButton>
   </View>
 ) : null;
@@ -537,7 +542,7 @@ const hasContentInfo = useMemo(() => {
 const contentSlotWithoutTitle = hasContentInfo ? (
   <>
     <View style={styles.countrySlot}>
-      {countries.length > 0 ? <CountriesList countries={countries} /> : null}
+      {countries.length > 0 ? <CountriesList countries={countries} styles={styles} /> : null}
     </View>
 
     <View
@@ -611,13 +616,13 @@ const contentSlotWithoutTitle = hasContentInfo ? (
       <View style={styles.metaBadgesRow}>
         {popularityFlags.isPopular && (
           <View style={[styles.statusBadge, styles.statusBadgePopular]}>
-            <Feather name="trending-up" size={Platform.select({ default: 10, web: 12 })} color={TOKENS.colors.accent} />
+            <Feather name="trending-up" size={Platform.select({ default: 10, web: 12 })} color={DESIGN_TOKENS.colors.accent} />
             <Text style={[styles.statusBadgeText, styles.statusBadgeTextPopular]}>Популярное</Text>
           </View>
         )}
         {popularityFlags.isNew && (
           <View style={[styles.statusBadge, styles.statusBadgeNew]}>
-            <Feather name="star" size={Platform.select({ default: 10, web: 12 })} color={TOKENS.colors.success} />
+            <Feather name="star" size={Platform.select({ default: 10, web: 12 })} color={DESIGN_TOKENS.colors.success} />
             <Text style={[styles.statusBadgeText, styles.statusBadgeTextNew]}>Новое</Text>
           </View>
         )}
