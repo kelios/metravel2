@@ -10,9 +10,11 @@ import { TravelFormData } from '@/src/types/types';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import TravelPreviewModal from '@/components/travel/TravelPreviewModal';
+import ContextualTipCard from '@/components/travel/ContextualTipCard';
 import { ValidatedTextInput } from '@/components/travel/ValidatedTextInput';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
+import { getContextualTips } from '@/utils/contextualTips';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -98,6 +100,11 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     // Валидация шага 1
     const validation = useMemo(() => {
         return validateStep(1, formData);
+    }, [formData]);
+
+    // ✅ ФАЗА 2: Контекстные подсказки
+    const contextualTips = useMemo(() => {
+        return getContextualTips(1, formData);
     }, [formData]);
 
     const handleFieldChange = useCallback((field: keyof TravelFormData, value: any) => {
@@ -197,6 +204,23 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                                 visibleFields={['description']}
                                 showProgress={false}
                             />
+
+                            {/* ✅ ФАЗА 2: Контекстные подсказки */}
+                            {contextualTips.length > 0 && (
+                                <View style={styles.tipsContainer}>
+                                    {contextualTips.map((tip) => (
+                                        <ContextualTipCard
+                                            key={tip.id}
+                                            tip={tip}
+                                            onActionPress={tip.action ? () => {
+                                                if (onStepSelect && tip.action) {
+                                                    onStepSelect(tip.action.step);
+                                                }
+                                            } : undefined}
+                                        />
+                                    ))}
+                                </View>
+                            )}
                         </View>
                     </ScrollView>
                 </View>
@@ -264,6 +288,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     validationSummaryWrapper: {
         paddingHorizontal: DESIGN_TOKENS.spacing.md,
         paddingVertical: DESIGN_TOKENS.spacing.sm,
+    },
+    tipsContainer: {
+        marginTop: DESIGN_TOKENS.spacing.md,
+        marginBottom: DESIGN_TOKENS.spacing.sm,
     },
 });
 
