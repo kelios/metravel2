@@ -12,7 +12,7 @@ import { SocialSection } from '@/components/about/SocialSection';
 import { sendFeedback } from '@/src/api/misc';
 import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
-import { aboutStyles } from '@/components/about/aboutStyles';
+import { useAboutStyles } from '@/components/about/aboutStyles';
 
 const EMAIL = 'metraveldev@gmail.com';
 const MAIL_SUBJECT = 'Info metravel.by';
@@ -26,6 +26,7 @@ const SOCIAL_LINKS = {
 };
 
 function AboutAndContactScreen() {
+  const styles = useAboutStyles();
   const { width } = useResponsive();
   const isWide = width >= 900;
 
@@ -225,6 +226,5 @@ function AboutAndContactScreen() {
   );
 }
 
-const styles = aboutStyles;
 
 export default memo(AboutAndContactScreen);

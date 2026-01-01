@@ -1,8 +1,9 @@
-import React, { memo, useState, useCallback, useEffect } from 'react';
+import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface ReactionButtonsProps {
   travelId: string;
@@ -29,6 +30,8 @@ const ReactionButtons = ({ travelId, compact = false, showViews = true }: Reacti
   const [reactions, setReactions] = useState<Reactions>({ like: 0, love: 0, fire: 0 });
   const [userReaction, setUserReaction] = useState<'like' | 'love' | 'fire' | null>(null);
   const [views, setViews] = useState<number>(0);
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
   const loadData = useCallback(async () => {
     try {
@@ -137,7 +140,7 @@ const ReactionButtons = ({ travelId, compact = false, showViews = true }: Reacti
     <View style={[styles.container, compact && styles.containerCompact]}>
       {showViews && (
         <View style={styles.viewsContainer}>
-          <Feather name="eye" size={compact ? 14 : 16} color={DESIGN_TOKENS.colors.textMuted} />
+          <Feather name="eye" size={compact ? 14 : 16} color={colors.textMuted} />
           <Text style={[styles.viewsText, compact && styles.textCompact]}>
             {formatNumber(views)}
           </Text>
@@ -212,7 +215,7 @@ const ReactionButtons = ({ travelId, compact = false, showViews = true }: Reacti
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -228,7 +231,7 @@ const styles = StyleSheet.create({
   },
   viewsText: {
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontWeight: '500',
   },
   reactionsContainer: {
@@ -243,7 +246,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: DESIGN_TOKENS.radii.pill,
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
+    backgroundColor: colors.mutedBackground,
     borderWidth: 1,
     borderColor: 'transparent',
     minHeight: 32,
@@ -260,8 +263,8 @@ const styles = StyleSheet.create({
     minHeight: 28,
   },
   reactionButtonActive: {
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
-    borderColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
   },
   reactionButtonPressed: {
     transform: [{ scale: 0.95 }],
@@ -276,7 +279,7 @@ const styles = StyleSheet.create({
   reactionCount: {
     fontSize: 13,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   textCompact: {
     fontSize: 12,

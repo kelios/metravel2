@@ -3,10 +3,15 @@ import { View, Text, StyleSheet, FlatList, Pressable, Platform, Animated } from 
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useThemedColors } from '@/hooks/useTheme';
+import { getThemedColors, useThemedColors } from '@/hooks/useTheme';
 
 const STORAGE_KEY_NOTIFICATIONS = 'user_notifications';
 const STORAGE_KEY_LAST_CHECK = 'notifications_last_check';
+
+const resolveIsDark = () => {
+  if (typeof document === 'undefined') return false;
+  return document.documentElement.getAttribute('data-theme') === 'dark';
+};
 
 export type NotificationType = 
   | 'badge_earned'
@@ -341,6 +346,7 @@ export const createNotification = async (notification: Omit<Notification, 'id' |
 // Утилита для проверки незавершенных черновиков
 export const checkDraftReminders = async () => {
   try {
+    const colors = getThemedColors(resolveIsDark());
     const lastCheckData = await AsyncStorage.getItem(STORAGE_KEY_LAST_CHECK);
     const now = new Date();
     
@@ -359,7 +365,7 @@ export const checkDraftReminders = async () => {
       title: 'У вас есть незавершенная статья',
       message: 'Продолжите работу над статьей "Путешествие в горы"',
       icon: '📝',
-      color: DESIGN_TOKENS.colors.primaryLight,
+      color: colors.primaryLight,
     });
 
     await AsyncStorage.setItem(STORAGE_KEY_LAST_CHECK, now.toISOString());

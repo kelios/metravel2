@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import {
   Pressable,
   Text,
@@ -9,6 +9,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 export interface FloatingActionButtonProps {
   label: string;
@@ -29,6 +30,8 @@ const FloatingActionButton = ({
   testID,
   style,
 }: FloatingActionButtonProps) => {
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   return (
     <Pressable
       accessibilityRole="button"
@@ -49,20 +52,20 @@ const FloatingActionButton = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   fab: {
     position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: DESIGN_TOKENS.spacing.xs,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     paddingVertical: DESIGN_TOKENS.spacing.md,
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
     borderRadius: DESIGN_TOKENS.radii.pill,
     minHeight: DESIGN_TOKENS.touchTarget.minHeight,
     minWidth: DESIGN_TOKENS.touchTarget.minWidth,
-    shadowColor: DESIGN_TOKENS.colors.text,
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -76,7 +79,7 @@ const styles = StyleSheet.create({
     }),
   },
   fabHovered: {
-    backgroundColor: DESIGN_TOKENS.colors.primaryDark,
+    backgroundColor: colors.primaryDark,
     ...Platform.select({
       web: {
         // @ts-ignore
@@ -98,13 +101,13 @@ const styles = StyleSheet.create({
   icon: {
     fontSize: DESIGN_TOKENS.typography.sizes.xl,
     fontWeight: 'bold',
-    color: DESIGN_TOKENS.colors.surface,
+    color: colors.textOnPrimary,
     lineHeight: 24,
   },
   label: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.surface,
+    color: colors.textOnPrimary,
     letterSpacing: 0.5,
   },
 });

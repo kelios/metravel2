@@ -1,9 +1,10 @@
-import React, { memo, useState, useEffect, useCallback } from 'react';
+import React, { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Platform, RefreshControl } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 const STORAGE_KEY_ACTIVITIES = 'user_activities';
 
@@ -45,6 +46,8 @@ const ActivityFeed = ({ userId, limit = 20, showHeader = true }: ActivityFeedPro
   const [activities, setActivities] = useState<Activity[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
   const loadActivities = useCallback(async () => {
     try {
@@ -74,9 +77,12 @@ const ActivityFeed = ({ userId, limit = 20, showHeader = true }: ActivityFeedPro
     loadActivities();
   }, [loadActivities]);
 
-  const renderActivity = useCallback(({ item }: { item: Activity }) => {
-    return <ActivityItem activity={item} />;
-  }, []);
+  const renderActivity = useCallback(
+    ({ item }: { item: Activity }) => (
+      <ActivityItem activity={item} colors={colors} styles={styles} />
+    ),
+    [colors, styles]
+  );
 
   if (loading) {
     return (
@@ -89,7 +95,7 @@ const ActivityFeed = ({ userId, limit = 20, showHeader = true }: ActivityFeedPro
   if (activities.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Feather name="activity" size={48} color={DESIGN_TOKENS.colors.textMuted} />
+        <Feather name="activity" size={48} color={colors.textMuted} />
         <Text style={styles.emptyTitle}>Пока нет активности</Text>
         <Text style={styles.emptyText}>
           Создавай статьи, получай бейджи и взаимодействуй с сообществом
@@ -102,7 +108,7 @@ const ActivityFeed = ({ userId, limit = 20, showHeader = true }: ActivityFeedPro
     <View style={styles.container}>
       {showHeader && (
         <View style={styles.header}>
-          <Feather name="activity" size={20} color={DESIGN_TOKENS.colors.primary} />
+          <Feather name="activity" size={20} color={colors.primary} />
           <Text style={styles.headerTitle}>Активность</Text>
         </View>
       )}
@@ -123,9 +129,11 @@ const ActivityFeed = ({ userId, limit = 20, showHeader = true }: ActivityFeedPro
 
 interface ActivityItemProps {
   activity: Activity;
+  colors: ThemedColors;
+  styles: ReturnType<typeof getStyles>;
 }
 
-const ActivityItem = memo(({ activity }: ActivityItemProps) => {
+const ActivityItem = memo(({ activity, colors, styles }: ActivityItemProps) => {
   const { type, userName, timestamp, data } = activity;
 
   const getActivityIcon = (): string => {
@@ -204,13 +212,13 @@ const ActivityItem = memo(({ activity }: ActivityItemProps) => {
       </View>
 
       {isClickable && (
-        <Feather name="chevron-right" size={16} color={DESIGN_TOKENS.colors.textMuted} />
+        <Feather name="chevron-right" size={16} color={colors.textMuted} />
       )}
     </Pressable>
   );
 });
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -221,12 +229,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: DESIGN_TOKENS.colors.border,
+    borderBottomColor: colors.border,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   list: {
     paddingVertical: 8,
@@ -238,7 +246,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: DESIGN_TOKENS.colors.border,
+    borderBottomColor: colors.border,
   },
   activityItemClickable: {
     ...Platform.select({
@@ -252,7 +260,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -265,16 +273,16 @@ const styles = StyleSheet.create({
   },
   activityText: {
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     lineHeight: 20,
   },
   activityUserName: {
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
   },
   activityTime: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   loadingContainer: {
     flex: 1,
@@ -284,7 +292,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   emptyContainer: {
     flex: 1,
@@ -296,11 +304,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   emptyText: {
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 20,
   },

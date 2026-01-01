@@ -1,7 +1,8 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable, Platform, Modal } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface FormFieldWithHintProps {
   label: string;
@@ -36,6 +37,8 @@ const FormFieldWithHint = ({
 }: FormFieldWithHintProps) => {
   const [showHelp, setShowHelp] = useState(false);
   const [showExamples, setShowExamples] = useState(false);
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
   return (
     <View style={styles.container}>
@@ -52,7 +55,7 @@ const FormFieldWithHint = ({
             onPress={() => setShowHelp(true)}
             accessibilityLabel="Показать подсказку"
           >
-            <Feather name="help-circle" size={16} color={DESIGN_TOKENS.colors.primary} />
+            <Feather name="help-circle" size={16} color={colors.primary} />
           </Pressable>
         )}
       </View>
@@ -66,7 +69,7 @@ const FormFieldWithHint = ({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+        placeholderTextColor={colors.textMuted}
         multiline={multiline}
         numberOfLines={numberOfLines}
         maxLength={maxLength}
@@ -82,7 +85,7 @@ const FormFieldWithHint = ({
       {/* Ошибка */}
       {error && (
         <View style={styles.errorContainer}>
-          <Feather name="alert-circle" size={14} color={DESIGN_TOKENS.colors.danger} />
+          <Feather name="alert-circle" size={14} color={colors.danger} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
@@ -90,7 +93,7 @@ const FormFieldWithHint = ({
       {/* Подсказка */}
       {hint && (
         <View style={styles.hintContainer}>
-          <Feather name="info" size={12} color={DESIGN_TOKENS.colors.textMuted} />
+          <Feather name="info" size={12} color={colors.textMuted} />
           <Text style={styles.hintText}>{hint}</Text>
         </View>
       )}
@@ -105,7 +108,7 @@ const FormFieldWithHint = ({
             <Feather
               name={showExamples ? 'chevron-up' : 'chevron-down'}
               size={14}
-              color={DESIGN_TOKENS.colors.primary}
+              color={colors.primary}
             />
             <Text style={styles.examplesToggleText}>
               {showExamples ? 'Скрыть примеры' : 'Показать примеры'}
@@ -120,7 +123,7 @@ const FormFieldWithHint = ({
                   style={styles.exampleItem}
                   onPress={() => onChangeText(example)}
                 >
-                  <Feather name="corner-down-right" size={12} color={DESIGN_TOKENS.colors.textMuted} />
+                  <Feather name="corner-down-right" size={12} color={colors.textMuted} />
                   <Text style={styles.exampleText}>{example}</Text>
                 </Pressable>
               ))}
@@ -145,7 +148,7 @@ const FormFieldWithHint = ({
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>{helpTitle || label}</Text>
                 <Pressable onPress={() => setShowHelp(false)}>
-                  <Feather name="x" size={20} color={DESIGN_TOKENS.colors.text} />
+                  <Feather name="x" size={20} color={colors.text} />
                 </Pressable>
               </View>
               <Text style={styles.modalText}>{helpContent}</Text>
@@ -163,7 +166,7 @@ const FormFieldWithHint = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
     marginBottom: 20,
   },
@@ -176,10 +179,10 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 15,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   required: {
-    color: DESIGN_TOKENS.colors.danger,
+    color: colors.danger,
   },
   helpButton: {
     padding: 4,
@@ -191,30 +194,30 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     borderRadius: DESIGN_TOKENS.radii.md,
     padding: 12,
     fontSize: 15,
-    color: DESIGN_TOKENS.colors.text,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    color: colors.text,
+    backgroundColor: colors.surface,
   },
   textarea: {
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     borderRadius: DESIGN_TOKENS.radii.md,
     padding: 12,
     fontSize: 15,
-    color: DESIGN_TOKENS.colors.text,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    color: colors.text,
+    backgroundColor: colors.surface,
     minHeight: 100,
     textAlignVertical: 'top',
   },
   inputError: {
-    borderColor: DESIGN_TOKENS.colors.danger,
+    borderColor: colors.danger,
   },
   charCounter: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     textAlign: 'right',
     marginTop: 4,
   },
@@ -226,7 +229,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 13,
-    color: DESIGN_TOKENS.colors.danger,
+    color: colors.danger,
   },
   hintContainer: {
     flexDirection: 'row',
@@ -237,7 +240,7 @@ const styles = StyleSheet.create({
   hintText: {
     flex: 1,
     fontSize: 13,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     lineHeight: 18,
   },
   examplesContainer: {
@@ -252,7 +255,7 @@ const styles = StyleSheet.create({
   examplesToggleText: {
     fontSize: 13,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
   },
   examplesList: {
     marginTop: 8,
@@ -263,10 +266,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 8,
     padding: 10,
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
+    backgroundColor: colors.mutedBackground,
     borderRadius: DESIGN_TOKENS.radii.sm,
     borderLeftWidth: 3,
-    borderLeftColor: DESIGN_TOKENS.colors.primary,
+    borderLeftColor: colors.primary,
     ...Platform.select({
       web: {
         cursor: 'pointer',
@@ -277,7 +280,7 @@ const styles = StyleSheet.create({
   exampleText: {
     flex: 1,
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     lineHeight: 20,
   },
   modalOverlay: {
@@ -288,7 +291,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
     padding: 24,
     maxWidth: 500,
@@ -315,16 +318,16 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   modalText: {
     fontSize: 15,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     lineHeight: 22,
     marginBottom: 20,
   },
   modalButton: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: DESIGN_TOKENS.radii.md,
@@ -333,7 +336,7 @@ const styles = StyleSheet.create({
   modalButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.textOnPrimary,
   },
 });
 

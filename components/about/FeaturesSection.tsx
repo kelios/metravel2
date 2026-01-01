@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { aboutStyles } from './aboutStyles';
+import { useAboutStyles } from './aboutStyles';
 
 type Props = {
   isWide: boolean;
@@ -30,43 +30,46 @@ const roadmapFeatures = [
   'Многопользовательские маршруты и совместное планирование',
 ];
 
-export const FeaturesSection: React.FC<Props> = ({ isWide }) => (
-  <View style={aboutStyles.featuresSection}>
-    <View style={aboutStyles.sectionHeader}>
-      <Text style={aboutStyles.featuresTitle}>Функции и возможности</Text>
-      <Text style={aboutStyles.sectionSubtitle}>Всё, что доступно на платформе MeTravel.by</Text>
-    </View>
-
-    <View style={isWide ? aboutStyles.twoColumns : aboutStyles.oneColumn}>
-      <View style={[isWide ? aboutStyles.column : null, aboutStyles.featureCard]}>
-        <View style={aboutStyles.featureCardHeader}>
-          <Text style={aboutStyles.featureCardIcon}>✨</Text>
-          <Text style={aboutStyles.featureCardTitle}>Доступно сейчас</Text>
-        </View>
-        <View style={aboutStyles.featureList}>
-          {currentFeatures.map((item) => (
-            <View key={item} style={aboutStyles.featureItem}>
-              <Text style={aboutStyles.featureCheck}>✓</Text>
-              <Text style={aboutStyles.featureText}>{item}</Text>
-            </View>
-          ))}
-        </View>
+export const FeaturesSection: React.FC<Props> = ({ isWide }) => {
+  const styles = useAboutStyles();
+  return (
+    <View style={styles.featuresSection}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.featuresTitle}>Функции и возможности</Text>
+        <Text style={styles.sectionSubtitle}>Всё, что доступно на платформе MeTravel.by</Text>
       </View>
 
-      <View style={[isWide ? aboutStyles.column : null, aboutStyles.featureCard]}>
-        <View style={aboutStyles.featureCardHeader}>
-          <Text style={aboutStyles.featureCardIcon}>🚀</Text>
-          <Text style={aboutStyles.featureCardTitle}>В разработке</Text>
+      <View style={isWide ? styles.twoColumns : styles.oneColumn}>
+        <View style={[isWide ? styles.column : null, styles.featureCard]}>
+          <View style={styles.featureCardHeader}>
+            <Text style={styles.featureCardIcon}>✨</Text>
+            <Text style={styles.featureCardTitle}>Доступно сейчас</Text>
+          </View>
+          <View style={styles.featureList}>
+            {currentFeatures.map((item) => (
+              <View key={item} style={styles.featureItem}>
+                <Text style={styles.featureCheck}>✓</Text>
+                <Text style={styles.featureText}>{item}</Text>
+              </View>
+            ))}
+          </View>
         </View>
-        <View style={aboutStyles.featureList}>
-          {roadmapFeatures.map((item) => (
-            <View key={item} style={aboutStyles.featureItem}>
-              <Text style={aboutStyles.featureComing}>→</Text>
-              <Text style={aboutStyles.featureText}>{item}</Text>
-            </View>
-          ))}
+
+        <View style={[isWide ? styles.column : null, styles.featureCard]}>
+          <View style={styles.featureCardHeader}>
+            <Text style={styles.featureCardIcon}>🚀</Text>
+            <Text style={styles.featureCardTitle}>В разработке</Text>
+          </View>
+          <View style={styles.featureList}>
+            {roadmapFeatures.map((item) => (
+              <View key={item} style={styles.featureItem}>
+                <Text style={styles.featureComing}>→</Text>
+                <Text style={styles.featureText}>{item}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       </View>
     </View>
-  </View>
-);
+  );
+};

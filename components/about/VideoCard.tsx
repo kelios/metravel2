@@ -1,54 +1,57 @@
 import React from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import { aboutStyles } from './aboutStyles';
+import { useAboutStyles } from './aboutStyles';
 
 type Props = {
   youtubeThumb: string;
   onOpenYoutube: () => void;
 };
 
-export const VideoCard: React.FC<Props> = ({ youtubeThumb, onOpenYoutube }) => (
-  <View style={aboutStyles.videoCard}>
-    <View style={aboutStyles.videoCardHeader}>
-      <Text style={aboutStyles.videoCardTitle}>Видео-инструкция</Text>
-      <Text style={aboutStyles.videoCardSubtitle}>Как пользоваться платформой</Text>
-    </View>
-    <Pressable
-      onPress={onOpenYoutube}
-      style={({ pressed }) => [aboutStyles.videoThumbWrap, pressed && aboutStyles.videoCardPressed]}
-      accessibilityRole="button"
-      accessibilityLabel="Смотреть инструкцию на YouTube"
-    >
-      {Platform.OS === 'web' ? (
-        // @ts-ignore
-        <img
-          src={youtubeThumb}
-          alt="YouTube видео о MeTravel"
-          style={aboutStyles.videoThumbWeb}
-          loading="lazy"
-          decoding="async"
-        />
-      ) : (
-        <ImageCardMedia
-          src={youtubeThumb}
-          fit="cover"
-          blurBackground={false}
-          transition={200}
-          cachePolicy="memory-disk"
-          priority="low"
-          placeholderBlurhash="L6PZfSi_.AyE_3t7t7R**0o#DgRj"
-          style={aboutStyles.videoThumb}
-        />
-      )}
-      <View style={aboutStyles.playBadge}>
-        <View style={aboutStyles.playIconContainer}>
-          <Text style={aboutStyles.playIcon}>▶</Text>
-        </View>
+export const VideoCard: React.FC<Props> = ({ youtubeThumb, onOpenYoutube }) => {
+  const styles = useAboutStyles();
+  return (
+    <View style={styles.videoCard}>
+      <View style={styles.videoCardHeader}>
+        <Text style={styles.videoCardTitle}>Видео-инструкция</Text>
+        <Text style={styles.videoCardSubtitle}>Как пользоваться платформой</Text>
       </View>
-    </Pressable>
-    <View style={aboutStyles.videoCardFooter}>
-      <Text style={aboutStyles.videoCardFooterText}>METRAVEL O METRAVEL.BY</Text>
+      <Pressable
+        onPress={onOpenYoutube}
+        style={({ pressed }) => [styles.videoThumbWrap, pressed && styles.videoCardPressed]}
+        accessibilityRole="button"
+        accessibilityLabel="Смотреть инструкцию на YouTube"
+      >
+        {Platform.OS === 'web' ? (
+          // @ts-ignore
+          <img
+            src={youtubeThumb}
+            alt="YouTube видео о MeTravel"
+            style={styles.videoThumbWeb}
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <ImageCardMedia
+            src={youtubeThumb}
+            fit="cover"
+            blurBackground={false}
+            transition={200}
+            cachePolicy="memory-disk"
+            priority="low"
+            placeholderBlurhash="L6PZfSi_.AyE_3t7t7R**0o#DgRj"
+            style={styles.videoThumb}
+          />
+        )}
+        <View style={styles.playBadge}>
+          <View style={styles.playIconContainer}>
+            <Text style={styles.playIcon}>▶</Text>
+          </View>
+        </View>
+      </Pressable>
+      <View style={styles.videoCardFooter}>
+        <Text style={styles.videoCardFooterText}>METRAVEL O METRAVEL.BY</Text>
+      </View>
     </View>
-  </View>
-);
+  );
+};

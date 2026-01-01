@@ -1,11 +1,11 @@
 // Оптимизированный FavoriteButton для списков
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { StyleSheet, Platform, Pressable, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 type OptimizedFavoriteButtonProps = {
     id: string | number;
@@ -34,6 +34,8 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
     const { isAuthenticated } = useAuth();
     const { isFavorite, addFavorite, removeFavorite } = useFavorites();
     const serverIsFav = isFavorite(id, type);
+    const colors = useThemedColors();
+    const styles = useMemo(() => getStyles(colors), [colors]);
 
     const WebView: any = View;
 
@@ -85,7 +87,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                 <MaterialIcons
                     name={serverIsFav ? 'favorite' : 'favorite-border'}
                     size={size}
-                    color={serverIsFav ? DESIGN_TOKENS.colors.danger : DESIGN_TOKENS.colors.textMuted}
+                    color={serverIsFav ? colors.danger : colors.textMuted}
                 />
             </WebView>
         );
@@ -101,17 +103,17 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
             <MaterialIcons
                 name={serverIsFav ? 'favorite' : 'favorite-border'}
                 size={size}
-                color={serverIsFav ? DESIGN_TOKENS.colors.danger : DESIGN_TOKENS.colors.textMuted}
+                color={serverIsFav ? colors.danger : colors.textMuted}
             />
         </Pressable>
     );
 });
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
     favoriteButton: {
         padding: 4,
         borderRadius: 4,
-        backgroundColor: DESIGN_TOKENS.colors.surface,
+        backgroundColor: colors.surface,
     },
 });
 

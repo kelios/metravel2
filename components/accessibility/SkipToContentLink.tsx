@@ -5,9 +5,10 @@
  * Видна только при фокусе (с помощью Tab)
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface SkipToContentLinkProps {
   targetId?: string;
@@ -21,6 +22,28 @@ export const SkipToContentLink: React.FC<SkipToContentLinkProps> = ({
   if (Platform.OS !== 'web') {
     return null; // Не требуется для React Native
   }
+
+  const colors = useThemedColors();
+  const linkStyle = useMemo(
+    () => ({
+      position: 'absolute',
+      top: '-40px',
+      left: 0,
+      background: colors.primary,
+      color: colors.textInverse,
+      padding: `${DESIGN_TOKENS.spacing.xs}px ${DESIGN_TOKENS.spacing.sm}px`,
+      textDecoration: 'none',
+      zIndex: DESIGN_TOKENS.zIndex.fixed,
+      borderRadius: `0 0 ${DESIGN_TOKENS.radii.sm}px ${DESIGN_TOKENS.radii.sm}px`,
+      fontSize: `${DESIGN_TOKENS.typography.sizes.sm}px`,
+      fontWeight: DESIGN_TOKENS.typography.weights.semibold,
+      transition: `top ${DESIGN_TOKENS.animations.duration.normal}ms ${DESIGN_TOKENS.animations.easing.default}`,
+    }),
+    [
+      colors.primary,
+      colors.textInverse,
+    ]
+  );
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -36,20 +59,7 @@ export const SkipToContentLink: React.FC<SkipToContentLinkProps> = ({
       href={`#${targetId}`}
       onClick={handleClick}
       className="skip-to-content"
-      style={{
-        position: 'absolute',
-        top: '-40px',
-        left: 0,
-        background: DESIGN_TOKENS.colors.primary,
-        color: DESIGN_TOKENS.colors.textInverse,
-        padding: `${DESIGN_TOKENS.spacing.xs}px ${DESIGN_TOKENS.spacing.sm}px`,
-        textDecoration: 'none',
-        zIndex: DESIGN_TOKENS.zIndex.fixed,
-        borderRadius: `0 0 ${DESIGN_TOKENS.radii.sm}px ${DESIGN_TOKENS.radii.sm}px`,
-        fontSize: `${DESIGN_TOKENS.typography.sizes.sm}px`,
-        fontWeight: DESIGN_TOKENS.typography.weights.semibold,
-        transition: `top ${DESIGN_TOKENS.animations.duration.normal}ms ${DESIGN_TOKENS.animations.easing.default}`,
-      } as React.CSSProperties}
+      style={linkStyle as React.CSSProperties}
       onFocus={(e) => {
         (e.target as HTMLAnchorElement).style.top = '0';
       }}
@@ -63,4 +73,3 @@ export const SkipToContentLink: React.FC<SkipToContentLinkProps> = ({
 };
 
 export default SkipToContentLink;
-

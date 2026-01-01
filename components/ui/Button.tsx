@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -11,6 +11,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'outline';
@@ -30,7 +31,6 @@ export interface ButtonProps {
   style?: StyleProp<ViewStyle>;
 }
 
-const palette = DESIGN_TOKENS.colors;
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
 
@@ -47,6 +47,11 @@ const ButtonComponent = ({
   testID,
   style,
 }: ButtonProps) => {
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
+  const variantStyles = useMemo(() => getVariantStyles(colors), [colors]);
+  const variantHoverStyles = useMemo(() => getVariantHoverStyles(colors), [colors]);
+  const variantPressedStyles = useMemo(() => getVariantPressedStyles(colors), [colors]);
   const isDisabled = disabled || loading;
 
   return (
@@ -75,8 +80,8 @@ const ButtonComponent = ({
             size="small"
             color={
               variant === 'secondary' || variant === 'ghost' || variant === 'outline'
-                ? palette.primary
-                : palette.textOnPrimary
+                ? colors.primary
+                : colors.textOnPrimary
             }
             style={styles.icon}
           />
@@ -97,7 +102,7 @@ const ButtonComponent = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   base: {
     borderRadius: radii.md,
     borderWidth: 1,
@@ -130,13 +135,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   labelPrimary: {
-    color: palette.textOnPrimary,
+    color: colors.textOnPrimary,
   },
   labelSecondary: {
-    color: palette.text,
+    color: colors.text,
   },
   labelDanger: {
-    color: palette.textOnPrimary,
+    color: colors.textOnPrimary,
   },
   disabled: {
     opacity: 0.5,
@@ -160,15 +165,15 @@ const sizeStyles: Record<ButtonSize, ViewStyle> = {
   },
 };
 
-const variantStyles: Record<ButtonVariant, ViewStyle> = {
+const getVariantStyles = (colors: ThemedColors): Record<ButtonVariant, ViewStyle> => ({
   primary: {
-    backgroundColor: palette.primary,
+    backgroundColor: colors.primary,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.medium,
+        boxShadow: colors.boxShadows.medium,
       },
       default: {
-        shadowColor: palette.text,
+        shadowColor: colors.text,
         shadowOpacity: 0.12,
         shadowOffset: { width: 0, height: 2 },
         shadowRadius: 8,
@@ -177,13 +182,13 @@ const variantStyles: Record<ButtonVariant, ViewStyle> = {
     }),
   },
   secondary: {
-    backgroundColor: palette.surface,
+    backgroundColor: colors.surface,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.light,
+        boxShadow: colors.boxShadows.light,
       },
       default: {
-        shadowColor: palette.text,
+        shadowColor: colors.text,
         shadowOpacity: 0.08,
         shadowOffset: { width: 0, height: 2 },
         shadowRadius: 6,
@@ -196,13 +201,13 @@ const variantStyles: Record<ButtonVariant, ViewStyle> = {
     borderColor: 'transparent',
   },
   danger: {
-    backgroundColor: palette.danger,
+    backgroundColor: colors.danger,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.medium,
+        boxShadow: colors.boxShadows.medium,
       },
       default: {
-        shadowColor: palette.text,
+        shadowColor: colors.text,
         shadowOpacity: 0.12,
         shadowOffset: { width: 0, height: 2 },
         shadowRadius: 8,
@@ -212,60 +217,58 @@ const variantStyles: Record<ButtonVariant, ViewStyle> = {
   },
   outline: {
     backgroundColor: 'transparent',
-    borderColor: palette.primary,
+    borderColor: colors.primary,
     borderWidth: 2,
   },
-};
+});
 
-const variantHoverStyles: Record<ButtonVariant, ViewStyle> = {
+const getVariantHoverStyles = (colors: ThemedColors): Record<ButtonVariant, ViewStyle> => ({
   primary: {
-    backgroundColor: palette.primaryDark,
+    backgroundColor: colors.primaryDark,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.heavy,
+        boxShadow: colors.boxShadows.heavy,
       },
     }),
   },
   secondary: {
-    backgroundColor: palette.primaryLight,
+    backgroundColor: colors.primaryLight,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.hover,
+        boxShadow: colors.boxShadows.hover,
       },
     }),
   },
   ghost: {
-    backgroundColor: palette.primarySoft,
+    backgroundColor: colors.primarySoft,
     ...Platform.select({
-      web: {
-      },
+      web: {},
     }),
   },
   danger: {
-    backgroundColor: palette.dangerDark,
+    backgroundColor: colors.dangerDark,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.heavy,
+        boxShadow: colors.boxShadows.heavy,
       },
     }),
   },
   outline: {
-    backgroundColor: palette.primarySoft,
+    backgroundColor: colors.primarySoft,
     ...Platform.select({
-      web: {
-      },
+      web: {},
     }),
   },
-};
+});
 
-const variantPressedStyles: Record<ButtonVariant, ViewStyle> = {
+const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, ViewStyle> => ({
   primary: {
     transform: [{ scale: 0.99 }],
     ...Platform.select({
       web: {
         // @ts-ignore
         transform: 'translateY(0)',
-        boxShadow: DESIGN_TOKENS.shadows.light,
+        boxShadow: colors.boxShadows.light,
       },
     }),
   },
@@ -293,7 +296,7 @@ const variantPressedStyles: Record<ButtonVariant, ViewStyle> = {
       web: {
         // @ts-ignore
         transform: 'translateY(0)',
-        boxShadow: DESIGN_TOKENS.shadows.light,
+        boxShadow: colors.boxShadows.light,
       },
     }),
   },
@@ -306,6 +309,6 @@ const variantPressedStyles: Record<ButtonVariant, ViewStyle> = {
       },
     }),
   },
-};
+});
 
 export default memo(ButtonComponent);

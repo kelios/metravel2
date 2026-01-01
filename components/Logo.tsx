@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { router } from 'expo-router';
 import { useResponsive } from '@/hooks/useResponsive';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 export default React.memo(function Logo({ variant: _variant = 'default' }: any) {
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
+    const colors = useThemedColors();
+    const styles = useMemo(() => getStyles(colors), [colors]);
 
     return (
         <TouchableOpacity
@@ -30,7 +32,7 @@ export default React.memo(function Logo({ variant: _variant = 'default' }: any) 
     );
 });
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
     logoContainer: { 
         flexDirection: 'row', 
         alignItems: 'center',
@@ -44,12 +46,12 @@ const styles = StyleSheet.create({
         height: 26,
     },
     logoTextMe: { 
-        color: DESIGN_TOKENS.colors.primary,
+        color: colors.primary,
         fontSize: 18,
         fontWeight: '600',
     },
     logoTextTravel: { 
-        color: DESIGN_TOKENS.colors.success,
+        color: colors.success,
         fontSize: 18,
         fontWeight: '600',
     },

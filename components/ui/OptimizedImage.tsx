@@ -1,8 +1,9 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Platform, Text } from 'react-native';
 import { Image as ExpoImage, ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { MaterialIcons } from '@expo/vector-icons';
 
 const hasValidUriSource = (source: { uri: string } | number): boolean => {
@@ -75,6 +76,8 @@ function OptimizedImage({
   onError,
   style,
 }: OptimizedImageProps) {
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const validSource = hasValidUriSource(source);
   const [isLoading, setIsLoading] = useState(() => validSource);
   const [hasError, setHasError] = useState(false);
@@ -165,7 +168,7 @@ function OptimizedImage({
         <View style={styles.loadingContainer} testID="optimized-image-loading">
           <ActivityIndicator
             size="small"
-            color={DESIGN_TOKENS.colors.primary}
+            color={colors.primary}
           />
         </View>
       )}
@@ -174,7 +177,7 @@ function OptimizedImage({
       {showFallback && (
         <View style={[styles.errorContainer, { borderRadius }]} testID="optimized-image-error">
           <View style={styles.placeholderContent}>
-            <MaterialIcons name="image" size={26} color={DESIGN_TOKENS.colors.textMuted} style={{ opacity: 0.55 }} />
+            <MaterialIcons name="image" size={26} color={colors.textMuted} style={{ opacity: 0.55 }} />
             <Text style={styles.placeholderText}>Нет фото</Text>
           </View>
         </View>
@@ -183,11 +186,11 @@ function OptimizedImage({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
   },
   image: {
     width: '100%',
@@ -197,13 +200,13 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
   },
   errorContainer: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: DESIGN_TOKENS.colors.mutedBackground,
+    backgroundColor: colors.mutedBackground,
   },
   placeholderContent: {
     alignItems: 'center',
@@ -213,7 +216,7 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 12,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     letterSpacing: -0.1,
     opacity: 0.8,
     textAlign: 'center',

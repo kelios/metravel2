@@ -3,9 +3,9 @@
  * Handles focus styles and visible indicators
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Platform } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface FocusableProps {
   children: React.ReactNode;
@@ -31,22 +31,11 @@ export const FocusableButton: React.FC<FocusableProps> = ({
     return <>{children}</>;
   }
 
-  return (
-    <div
-      style={{
-        ...style,
-        ...styles.focusableContainer,
-      } as React.CSSProperties}
-      onFocus={onFocus}
-      onBlur={onBlur}
-      data-testid={testID}
-      aria-label={accessibilityLabel}
-    >
-      {children}
-
-      <style>{`
+  const colors = useThemedColors();
+  const focusStyles = useMemo(
+    () => `
         [data-testid="${testID}"]:focus-visible {
-          outline: 3px solid ${DESIGN_TOKENS.colors.primary};
+          outline: 3px solid ${colors.primary};
           outline-offset: 2px;
           border-radius: 4px;
         }
@@ -60,7 +49,24 @@ export const FocusableButton: React.FC<FocusableProps> = ({
             transition: none;
           }
         }
-      `}</style>
+      `,
+    [colors.primary, testID]
+  );
+
+  return (
+    <div
+      style={{
+        ...style,
+        ...styles.focusableContainer,
+      } as React.CSSProperties}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      data-testid={testID}
+      aria-label={accessibilityLabel}
+    >
+      {children}
+
+      <style>{focusStyles}</style>
     </div>
   );
 };
@@ -73,15 +79,16 @@ export const FocusStyles = () => {
     return null;
   }
 
-  return (
-    <style>{`
+  const colors = useThemedColors();
+  const globalStyles = useMemo(
+    () => `
       /* Видимый focus для всех интерактивных элементов */
       button:focus-visible,
       a:focus-visible,
       input:focus-visible,
       select:focus-visible,
       textarea:focus-visible {
-        outline: 3px solid ${DESIGN_TOKENS.colors.primary};
+        outline: 3px solid ${colors.primary};
         outline-offset: 2px;
       }
 
@@ -96,7 +103,7 @@ export const FocusStyles = () => {
 
       /* Focus styles for buttons */
       button:focus-visible {
-        box-shadow: 0 0 0 3px ${DESIGN_TOKENS.colors.primary};
+        box-shadow: 0 0 0 3px ${colors.primary};
         border-radius: 4px;
       }
 
@@ -130,7 +137,12 @@ export const FocusStyles = () => {
       input:focus:not(:focus-visible) {
         outline: none;
       }
-    `}</style>
+    `,
+    [colors.primary]
+  );
+
+  return (
+    <style>{globalStyles}</style>
   );
 };
 
@@ -192,4 +204,3 @@ const styles = {
 };
 
 export default FocusStyles;
-

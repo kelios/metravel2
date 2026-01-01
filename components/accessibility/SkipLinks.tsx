@@ -3,9 +3,9 @@
  * Accessibility feature - allows keyboard users to skip to main content
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Platform, StyleSheet } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface SkipLinksProps {
   onSkip?: (id: string) => void;
@@ -19,6 +19,41 @@ export const SkipLinks: React.FC<SkipLinksProps> = ({ onSkip }) => {
   if (Platform.OS !== 'web') {
     return null; // Skip links only on web
   }
+
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
+  const css = useMemo(
+    () => `
+        .skip-link {
+          position: absolute;
+          top: -9999px;
+          left: -9999px;
+          z-index: 99999;
+          display: block;
+          padding: 12px 20px;
+          background-color: ${colors.primary};
+          color: white;
+          text-decoration: none;
+          border-radius: 4px;
+          font-weight: 600;
+          font-size: 14px;
+        }
+
+        .skip-link:focus {
+          top: 10px;
+          left: 10px;
+          outline: 3px solid ${colors.text};
+          outline-offset: 2px;
+        }
+
+        @media (prefers-reduced-motion: no-preference) {
+          .skip-link {
+            transition: top 0.2s, left 0.2s;
+          }
+        }
+      `,
+    [colors.primary, colors.text]
+  );
 
   const handleSkipToMain = () => {
     const mainContent = document.getElementById('main-content');
@@ -70,46 +105,18 @@ export const SkipLinks: React.FC<SkipLinksProps> = ({ onSkip }) => {
       </a>
 
       {/* CSS for skip links visibility on focus */}
-      <style>{`
-        .skip-link {
-          position: absolute;
-          top: -9999px;
-          left: -9999px;
-          z-index: 99999;
-          display: block;
-          padding: 12px 20px;
-          background-color: ${DESIGN_TOKENS.colors.primary};
-          color: white;
-          text-decoration: none;
-          border-radius: 4px;
-          font-weight: 600;
-          font-size: 14px;
-        }
-
-        .skip-link:focus {
-          top: 10px;
-          left: 10px;
-          outline: 3px solid ${DESIGN_TOKENS.colors.text};
-          outline-offset: 2px;
-        }
-
-        @media (prefers-reduced-motion: no-preference) {
-          .skip-link {
-            transition: top 0.2s, left 0.2s;
-          }
-        }
-      `}</style>
+      <style>{css}</style>
     </>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   skipLink: {
     position: 'absolute' as any,
     top: -9999,
     left: -9999,
     zIndex: 99999,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     color: '#FFFFFF',
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -118,4 +125,3 @@ const styles = StyleSheet.create({
 });
 
 export default SkipLinks;
-

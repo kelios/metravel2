@@ -1,4 +1,4 @@
-import React, { useState, useRef, memo } from 'react';
+import React, { useState, useRef, memo, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 export interface TooltipProps {
   content: string;
@@ -43,6 +44,9 @@ function Tooltip({
 }: TooltipProps) {
   const [visible, setVisible] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
+  const arrowStyles = useMemo(() => getArrowStyles(colors), [colors]);
 
   const showTooltip = () => {
     if (timeoutRef.current) {
@@ -91,13 +95,13 @@ function Tooltip({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
     position: 'relative',
   },
   tooltip: {
     position: 'absolute',
-    backgroundColor: DESIGN_TOKENS.colors.text,
+    backgroundColor: colors.text,
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     borderRadius: DESIGN_TOKENS.radii.sm,
@@ -105,10 +109,10 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         // @ts-ignore
-        boxShadow: DESIGN_TOKENS.shadows.light,
+        boxShadow: colors.boxShadows.light,
       },
       default: {
-        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowColor: colors.text,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
@@ -117,7 +121,7 @@ const styles = StyleSheet.create({
     }),
   },
   tooltipText: {
-    color: DESIGN_TOKENS.colors.textOnDark,
+    color: colors.textOnDark,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     lineHeight: 20,
   },
@@ -176,7 +180,7 @@ const positionStyles: Record<'top' | 'bottom' | 'left' | 'right', ViewStyle> = {
   },
 };
 
-const arrowStyles: Record<'top' | 'bottom' | 'left' | 'right', ViewStyle> = {
+const getArrowStyles = (colors: ThemedColors): Record<'top' | 'bottom' | 'left' | 'right', ViewStyle> => ({
   top: {
     top: '100%',
     left: '50%',
@@ -186,7 +190,7 @@ const arrowStyles: Record<'top' | 'bottom' | 'left' | 'right', ViewStyle> = {
     borderTopWidth: 4,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: DESIGN_TOKENS.colors.text,
+    borderTopColor: colors.text,
   },
   bottom: {
     bottom: '100%',
@@ -197,7 +201,7 @@ const arrowStyles: Record<'top' | 'bottom' | 'left' | 'right', ViewStyle> = {
     borderBottomWidth: 4,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderBottomColor: DESIGN_TOKENS.colors.text,
+    borderBottomColor: colors.text,
   },
   left: {
     left: '100%',
@@ -208,7 +212,7 @@ const arrowStyles: Record<'top' | 'bottom' | 'left' | 'right', ViewStyle> = {
     borderLeftWidth: 4,
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
-    borderLeftColor: DESIGN_TOKENS.colors.text,
+    borderLeftColor: colors.text,
   },
   right: {
     right: '100%',
@@ -219,8 +223,8 @@ const arrowStyles: Record<'top' | 'bottom' | 'left' | 'right', ViewStyle> = {
     borderRightWidth: 4,
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
-    borderRightColor: DESIGN_TOKENS.colors.text,
+    borderRightColor: colors.text,
   },
-};
+});
 
 export default memo(Tooltip);

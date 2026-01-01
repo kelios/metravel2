@@ -6,7 +6,7 @@ import type { ImageProps as ExpoImageProps } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import OptimizedImage from '@/components/ui/OptimizedImage';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 type Priority = 'low' | 'normal' | 'high';
 
@@ -59,6 +59,8 @@ function ImageCardMedia({
   onLoad,
   onError,
 }: Props) {
+  const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const resolvedSource = useMemo(() => {
     if (source) return source;
     if (src) return { uri: src };
@@ -138,7 +140,7 @@ function ImageCardMedia({
       ) : (
         <View style={[styles.placeholder, { borderRadius }]}>
           <View style={styles.placeholderContent}>
-            <MaterialIcons name="image" size={26} color={DESIGN_TOKENS.colors.textMuted} style={{ opacity: 0.55 }} />
+            <MaterialIcons name="image" size={26} color={colors.textMuted} style={{ opacity: 0.55 }} />
             <View style={styles.placeholderTextWrap}>
               <Text style={styles.placeholderText}>Нет фото</Text>
             </View>
@@ -149,7 +151,7 @@ function ImageCardMedia({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
     overflow: 'hidden',
   },
@@ -157,7 +159,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
   },
   placeholderContent: {
     alignItems: 'center',
@@ -170,7 +172,7 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 12,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     letterSpacing: -0.1,
     opacity: 0.8,
     textAlign: 'center',

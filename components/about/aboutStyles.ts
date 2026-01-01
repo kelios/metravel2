@@ -1,12 +1,14 @@
 import { Platform, StyleSheet } from 'react-native';
+import { useMemo } from 'react';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
-export const aboutStyles = StyleSheet.create({
+export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
   container: { flex: 1, width: '100%' },
-  backgroundImage: { flex: 1, width: '100%', height: '100%', backgroundColor: DESIGN_TOKENS.colors.background },
+  backgroundImage: { flex: 1, width: '100%', height: '100%', backgroundColor: colors.background },
   content: {
     margin: DESIGN_TOKENS.spacing.md,
-    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+    backgroundColor: colors.surfaceMuted,
     borderRadius: DESIGN_TOKENS.radii.lg,
     padding: DESIGN_TOKENS.spacing.xl,
     ...(Platform.OS === 'web' && {
@@ -15,10 +17,10 @@ export const aboutStyles = StyleSheet.create({
     }),
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.modal,
+        boxShadow: colors.boxShadows.modal,
       },
       ios: {
-        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowColor: colors.text,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.12,
         shadowRadius: 24,
@@ -33,7 +35,7 @@ export const aboutStyles = StyleSheet.create({
     marginBottom: 40,
     paddingBottom: 24,
     borderBottomWidth: 2,
-    borderBottomColor: DESIGN_TOKENS.colors.borderAccent,
+    borderBottomColor: colors.borderAccent,
   },
   logoContainer: {
     marginBottom: 16,
@@ -42,10 +44,10 @@ export const aboutStyles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: DESIGN_TOKENS.colors.primary,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -54,26 +56,26 @@ export const aboutStyles = StyleSheet.create({
   logoText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
   },
   title: {
     fontSize: 36,
     fontWeight: '800',
     marginBottom: 12,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 18,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
     fontWeight: '500',
   },
   paragraph: {
     fontSize: 16,
     lineHeight: 26,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 16,
   },
   twoColumns: {
@@ -85,17 +87,17 @@ export const aboutStyles = StyleSheet.create({
   oneColumn: { flexDirection: 'column', gap: 24 },
   column: { flex: 1 },
   infoCard: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 28,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.card,
+        boxShadow: colors.boxShadows.card,
       },
       ios: {
-        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowColor: colors.text,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.08,
         shadowRadius: 16,
@@ -109,23 +111,23 @@ export const aboutStyles = StyleSheet.create({
     marginBottom: 20,
     paddingBottom: 16,
     borderBottomWidth: 2,
-    borderBottomColor: DESIGN_TOKENS.colors.primary,
+    borderBottomColor: colors.primary,
   },
   cardTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     letterSpacing: -0.3,
   },
   sectionDivider: {
     height: 1,
-    backgroundColor: DESIGN_TOKENS.colors.border,
+    backgroundColor: colors.border,
     marginVertical: 24,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 20,
     letterSpacing: -0.2,
   },
@@ -142,15 +144,15 @@ export const aboutStyles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.medium,
+        boxShadow: colors.boxShadows.medium,
       },
       ios: {
-        shadowColor: DESIGN_TOKENS.colors.primary,
+        shadowColor: colors.primary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -161,7 +163,7 @@ export const aboutStyles = StyleSheet.create({
     }),
   },
   stepNumberText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -169,7 +171,7 @@ export const aboutStyles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     lineHeight: 24,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontWeight: '500',
   },
   footerInfo: {
@@ -179,13 +181,13 @@ export const aboutStyles = StyleSheet.create({
   footerText: {
     fontSize: 14,
     lineHeight: 22,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
   contactLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginTop: 8,
   },
   emailButton: {
@@ -194,10 +196,10 @@ export const aboutStyles = StyleSheet.create({
     gap: 12,
     marginTop: 8,
     padding: 12,
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderAccent,
+    borderColor: colors.borderAccent,
   },
   emailButtonPressed: {
     opacity: 0.7,
@@ -208,14 +210,14 @@ export const aboutStyles = StyleSheet.create({
   },
   emailText: {
     fontSize: 16,
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontWeight: '600',
   },
   helperText: {
     marginTop: 4,
     fontSize: 12,
     lineHeight: 18,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
   linksBlock: {
     marginTop: 12,
@@ -232,9 +234,9 @@ export const aboutStyles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderAccent,
+    borderColor: colors.borderAccent,
   },
   iconLinkPressed: {
     opacity: 0.75,
@@ -250,29 +252,29 @@ export const aboutStyles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 10,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
   },
   textLinkPressed: {
     opacity: 0.75,
   },
   textLinkLabel: {
     fontSize: 13,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontWeight: '600',
   },
   videoCard: {
     borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     marginBottom: 16,
     width: '100%',
     maxWidth: 720,
     alignSelf: 'center',
-    shadowColor: DESIGN_TOKENS.colors.text,
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 16,
@@ -281,32 +283,32 @@ export const aboutStyles = StyleSheet.create({
   videoCardHeader: {
     padding: 20,
     paddingBottom: 16,
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
     borderBottomWidth: 1,
-    borderBottomColor: DESIGN_TOKENS.colors.border,
+    borderBottomColor: colors.border,
   },
   videoCardTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 4,
     letterSpacing: -0.3,
   },
   videoCardSubtitle: {
     fontSize: 14,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontWeight: '500',
   },
   videoThumbWrap: {
     width: '100%',
     position: 'relative',
     aspectRatio: 16 / 9,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundTertiary,
+    backgroundColor: colors.backgroundTertiary,
   },
   videoThumb: {
     width: '100%',
     height: '100%',
-    backgroundColor: DESIGN_TOKENS.colors.backgroundTertiary,
+    backgroundColor: colors.backgroundTertiary,
   },
   videoThumbWeb: {
     width: '100%',
@@ -319,7 +321,7 @@ export const aboutStyles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',
@@ -327,7 +329,7 @@ export const aboutStyles = StyleSheet.create({
     left: '50%',
     marginTop: -40,
     marginLeft: -40,
-    shadowColor: DESIGN_TOKENS.colors.text,
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -336,17 +338,17 @@ export const aboutStyles = StyleSheet.create({
   playIconContainer: {
     marginLeft: 4,
   },
-  playIcon: { color: DESIGN_TOKENS.colors.textOnPrimary, fontSize: 32, fontWeight: 'bold' },
+  playIcon: { color: colors.textOnPrimary, fontSize: 32, fontWeight: 'bold' },
   videoColumnMobile: { marginTop: 24, width: '100%', alignSelf: 'stretch' },
   videoCardFooter: {
     padding: 16,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderTopWidth: 1,
-    borderTopColor: DESIGN_TOKENS.colors.border,
+    borderTopColor: colors.border,
   },
   videoCardFooterText: {
     fontSize: 12,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
     fontWeight: '500',
     letterSpacing: 1,
@@ -355,7 +357,7 @@ export const aboutStyles = StyleSheet.create({
     marginTop: 48,
     paddingTop: 32,
     borderTopWidth: 2,
-    borderTopColor: DESIGN_TOKENS.colors.borderAccent,
+    borderTopColor: colors.borderAccent,
   },
   contactHeader: {
     marginBottom: 28,
@@ -364,27 +366,27 @@ export const aboutStyles = StyleSheet.create({
   contactTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 8,
     letterSpacing: -0.4,
   },
   contactSubtitle: {
     fontSize: 16,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
   },
   form: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 28,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.light,
+        boxShadow: colors.boxShadows.light,
       },
       ios: {
-        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowColor: colors.text,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
         shadowRadius: 6,
@@ -398,11 +400,11 @@ export const aboutStyles = StyleSheet.create({
     padding: 16,
     marginVertical: 8,
     borderWidth: 2,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
     borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     fontSize: 16,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     minHeight: 44,
     ...(Platform.OS === 'web' && {
       outlineStyle: 'none',
@@ -410,14 +412,14 @@ export const aboutStyles = StyleSheet.create({
     }),
   },
   inputFocused: {
-    borderColor: DESIGN_TOKENS.colors.primary,
+    borderColor: colors.primary,
     ...(Platform.OS === 'web' && {
-      boxShadow: `0 0 0 3px ${DESIGN_TOKENS.colors.focus}`,
+      boxShadow: `0 0 0 3px ${colors.focus}`,
     }),
   },
   inputErr: {
-    borderColor: DESIGN_TOKENS.colors.danger,
-    backgroundColor: DESIGN_TOKENS.colors.dangerLight,
+    borderColor: colors.danger,
+    backgroundColor: colors.dangerLight,
     borderWidth: 1.5,
   },
   message: {
@@ -439,28 +441,28 @@ export const aboutStyles = StyleSheet.create({
     gap: 6,
     marginTop: 6,
     padding: 10,
-    backgroundColor: DESIGN_TOKENS.colors.dangerLight,
+    backgroundColor: colors.dangerLight,
     borderRadius: 8,
     borderLeftWidth: 3,
-    borderLeftColor: DESIGN_TOKENS.colors.danger,
+    borderLeftColor: colors.danger,
   },
   fieldErr: {
-    color: DESIGN_TOKENS.colors.danger,
+    color: colors.danger,
     fontSize: 13,
     fontWeight: '500',
     flex: 1,
   },
   err: {
-    color: DESIGN_TOKENS.colors.dangerDark,
-    backgroundColor: DESIGN_TOKENS.colors.dangerLight,
+    color: colors.dangerDark,
+    backgroundColor: colors.dangerLight,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.danger,
+    borderColor: colors.danger,
   },
   ok: {
-    color: DESIGN_TOKENS.colors.successDark,
-    backgroundColor: DESIGN_TOKENS.colors.successLight,
+    color: colors.successDark,
+    backgroundColor: colors.successLight,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.success,
+    borderColor: colors.success,
   },
   agreeRow: {
     flexDirection: 'row',
@@ -468,7 +470,7 @@ export const aboutStyles = StyleSheet.create({
     gap: 12,
     marginVertical: 12,
     padding: 12,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
   },
   checkbox: {
@@ -476,44 +478,44 @@ export const aboutStyles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: DESIGN_TOKENS.colors.primary,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     marginTop: 2,
   },
   checkboxChecked: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
-    borderColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   checkboxMark: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
     fontSize: 16,
     lineHeight: 18,
     fontWeight: 'bold',
   },
   agreeLabel: {
     flex: 1,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontSize: 14,
     lineHeight: 20,
   },
   agreeRowPressed: {
     opacity: 0.7,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundTertiary,
+    backgroundColor: colors.backgroundTertiary,
   },
   honeypot: { height: 0, opacity: 0, padding: 0, margin: 0 },
   socialSection: {
     marginTop: 40,
     paddingTop: 32,
     borderTopWidth: 2,
-    borderTopColor: DESIGN_TOKENS.colors.borderAccent,
+    borderTopColor: colors.borderAccent,
     alignItems: 'center',
   },
   socialTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 20,
     letterSpacing: -0.3,
   },
@@ -522,28 +524,28 @@ export const aboutStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 16,
-    backgroundColor: DESIGN_TOKENS.colors.primarySoft,
+    backgroundColor: colors.primarySoft,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderAccent,
+    borderColor: colors.borderAccent,
     minWidth: 200,
     justifyContent: 'center',
   },
   socialButtonPressed: {
     opacity: 0.7,
     transform: [{ scale: 0.98 }],
-    backgroundColor: DESIGN_TOKENS.colors.primaryLight,
+    backgroundColor: colors.primaryLight,
   },
   socialIcon: {
     fontSize: 24,
   },
   socialText: {
     fontSize: 16,
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontWeight: '600',
   },
   submitButton: {
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
@@ -553,10 +555,10 @@ export const aboutStyles = StyleSheet.create({
     minHeight: 52,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.medium,
+        boxShadow: colors.boxShadows.medium,
       },
       ios: {
-        shadowColor: DESIGN_TOKENS.colors.primary,
+        shadowColor: colors.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -567,7 +569,7 @@ export const aboutStyles = StyleSheet.create({
     }),
   },
   submitButtonDisabled: {
-    backgroundColor: DESIGN_TOKENS.colors.disabled,
+    backgroundColor: colors.disabled,
     shadowOpacity: 0,
     elevation: 0,
     opacity: 0.6,
@@ -582,7 +584,7 @@ export const aboutStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   submitButtonText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
+    color: colors.textOnPrimary,
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -591,7 +593,7 @@ export const aboutStyles = StyleSheet.create({
     marginTop: 48,
     paddingTop: 32,
     borderTopWidth: 2,
-    borderTopColor: DESIGN_TOKENS.colors.borderAccent,
+    borderTopColor: colors.borderAccent,
   },
   sectionHeader: {
     marginBottom: 32,
@@ -600,28 +602,28 @@ export const aboutStyles = StyleSheet.create({
   featuresTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     marginBottom: 8,
     letterSpacing: -0.4,
     textAlign: 'center',
   },
   sectionSubtitle: {
     fontSize: 16,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
   },
   featureCard: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 28,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.borderLight,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.card,
+        boxShadow: colors.boxShadows.card,
       },
       ios: {
-        shadowColor: DESIGN_TOKENS.colors.text,
+        shadowColor: colors.text,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.08,
         shadowRadius: 16,
@@ -638,7 +640,7 @@ export const aboutStyles = StyleSheet.create({
     marginBottom: 24,
     paddingBottom: 16,
     borderBottomWidth: 2,
-    borderBottomColor: DESIGN_TOKENS.colors.primary,
+    borderBottomColor: colors.primary,
   },
   featureCardIcon: {
     fontSize: 28,
@@ -646,7 +648,7 @@ export const aboutStyles = StyleSheet.create({
   featureCardTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     letterSpacing: -0.3,
   },
   featureList: {
@@ -660,14 +662,14 @@ export const aboutStyles = StyleSheet.create({
   },
   featureCheck: {
     fontSize: 20,
-    color: DESIGN_TOKENS.colors.success,
+    color: colors.success,
     fontWeight: 'bold',
     marginTop: 2,
     minWidth: 24,
   },
   featureComing: {
     fontSize: 20,
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontWeight: 'bold',
     marginTop: 2,
     minWidth: 24,
@@ -676,9 +678,14 @@ export const aboutStyles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     lineHeight: 24,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     fontWeight: '500',
   },
 });
 
-export type AboutStyles = typeof aboutStyles;
+export const useAboutStyles = () => {
+  const colors = useThemedColors();
+  return useMemo(() => getAboutStyles(colors), [colors]);
+};
+
+export type AboutStyles = ReturnType<typeof getAboutStyles>;

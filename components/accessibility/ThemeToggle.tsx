@@ -3,11 +3,10 @@
  * Allows users to switch between light and dark mode
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface ThemeToggleProps {
   size?: 'small' | 'medium' | 'large';
@@ -23,6 +22,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
 }) => {
   const { theme, isDark, setTheme, toggleTheme } = useTheme();
   const colors = useThemedColors();
+  const styles = useMemo(() => getStyles(colors), [colors]);
 
   const sizeMap = {
     small: 20,
@@ -137,16 +137,16 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           display: flex;
           align-items: center;
           gap: 8px;
-          color: ${DESIGN_TOKENS.colors.text};
+          color: ${colors.text};
           transition: background-color 0.2s ease;
         }
 
         .theme-toggle-button:hover {
-          background-color: ${DESIGN_TOKENS.colors.surfaceMuted};
+          background-color: ${colors.surfaceMuted};
         }
 
         .theme-toggle-button:focus-visible {
-          outline: 3px solid ${DESIGN_TOKENS.colors.primary};
+          outline: 3px solid ${colors.primary};
           outline-offset: 2px;
         }
 
@@ -155,8 +155,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           top: 100%;
           right: 0;
           margin-top: 8px;
-          background-color: ${DESIGN_TOKENS.colors.surface};
-          border: 1px solid ${DESIGN_TOKENS.colors.border};
+          background-color: ${colors.surface};
+          border: 1px solid ${colors.border};
           border-radius: 8px;
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
           z-index: 1000;
@@ -179,7 +179,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           background: transparent;
           border: none;
           cursor: pointer;
-          color: ${DESIGN_TOKENS.colors.text};
+          color: ${colors.text};
           font-size: 14px;
           text-align: left;
           display: flex;
@@ -189,12 +189,12 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         }
 
         .theme-menu button:hover {
-          background-color: ${DESIGN_TOKENS.colors.surfaceMuted};
+          background-color: ${colors.surfaceMuted};
         }
 
         .theme-menu button[aria-current="true"] {
-          background-color: ${DESIGN_TOKENS.colors.primarySoft};
-          color: ${DESIGN_TOKENS.colors.primary};
+          background-color: ${colors.primarySoft};
+          color: ${colors.primary};
           font-weight: 600;
         }
 
@@ -217,7 +217,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   mobileToggle: {
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -228,12 +228,12 @@ const styles = StyleSheet.create({
   },
   mobileTogglePressed: {
     opacity: 0.7,
-    backgroundColor: DESIGN_TOKENS.colors.surfaceMuted,
+    backgroundColor: colors.surfaceMuted,
   },
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
 });
 

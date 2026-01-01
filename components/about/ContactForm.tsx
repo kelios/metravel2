@@ -1,8 +1,8 @@
 import React from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { aboutStyles } from './aboutStyles';
+import { useAboutStyles } from './aboutStyles';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type ContactFormProps = {
   response: { text: string; error: boolean };
@@ -68,23 +68,26 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   messageRef,
   onSubmitEditingEmail,
   onSubmitEditingMessage,
-}) => (
-  <View style={aboutStyles.contactSection}>
-    <View style={aboutStyles.contactHeader}>
-      <Text style={aboutStyles.contactTitle}>Связаться с нами</Text>
-      <Text style={aboutStyles.contactSubtitle}>Есть вопросы или предложения? Напишите нам!</Text>
+}) => {
+  const styles = useAboutStyles();
+  const colors = useThemedColors();
+  return (
+  <View style={styles.contactSection}>
+    <View style={styles.contactHeader}>
+      <Text style={styles.contactTitle}>Связаться с нами</Text>
+      <Text style={styles.contactSubtitle}>Есть вопросы или предложения? Напишите нам!</Text>
     </View>
 
-    <View style={aboutStyles.form}>
+    <View style={styles.form}>
       {response.text !== '' && (
-        <Text role="alert" aria-live="polite" style={[aboutStyles.response, response.error ? aboutStyles.err : aboutStyles.ok]}>
+        <Text role="alert" aria-live="polite" style={[styles.response, response.error ? styles.err : styles.ok]}>
           {response.text}
         </Text>
       )}
 
       {/* honeypot */}
       <TextInput
-        style={aboutStyles.honeypot}
+        style={styles.honeypot}
         value={hp}
         onChangeText={onChangeHp}
         accessibilityElementsHidden
@@ -94,13 +97,13 @@ export const ContactForm: React.FC<ContactFormProps> = ({
 
       <TextInput
         style={[
-          aboutStyles.input,
-          invalidName && aboutStyles.inputErr,
-          inputFocus.name && aboutStyles.inputFocused,
+          styles.input,
+          invalidName && styles.inputErr,
+          inputFocus.name && styles.inputFocused,
           globalFocusStyles.focusable,
         ]}
         placeholder="Имя"
-        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+        placeholderTextColor={colors.textMuted}
         value={name}
         onChangeText={onChangeName}
         returnKeyType="next"
@@ -109,21 +112,21 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         onSubmitEditing={onSubmitEditingEmail}
       />
       {invalidName && (
-        <View style={aboutStyles.errorContainer}>
-          <Text style={aboutStyles.fieldErr}>Укажите имя</Text>
+        <View style={styles.errorContainer}>
+          <Text style={styles.fieldErr}>Укажите имя</Text>
         </View>
       )}
 
       <TextInput
         ref={emailRef}
         style={[
-          aboutStyles.input,
-          invalidEmail && aboutStyles.inputErr,
-          inputFocus.email && aboutStyles.inputFocused,
+          styles.input,
+          invalidEmail && styles.inputErr,
+          inputFocus.email && styles.inputFocused,
           globalFocusStyles.focusable,
         ]}
         placeholder="Email"
-        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+        placeholderTextColor={colors.textMuted}
         value={email}
         onChangeText={onChangeEmail}
         autoCapitalize="none"
@@ -134,22 +137,22 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         onSubmitEditing={onSubmitEditingMessage}
       />
       {invalidEmail && (
-        <View style={aboutStyles.errorContainer}>
-          <Text style={aboutStyles.fieldErr}>Неверный e-mail</Text>
+        <View style={styles.errorContainer}>
+          <Text style={styles.fieldErr}>Неверный e-mail</Text>
         </View>
       )}
 
       <TextInput
         ref={messageRef}
         style={[
-          aboutStyles.input,
-          aboutStyles.message,
-          invalidMessage && aboutStyles.inputErr,
-          inputFocus.message && aboutStyles.inputFocused,
+          styles.input,
+          styles.message,
+          invalidMessage && styles.inputErr,
+          inputFocus.message && styles.inputFocused,
           globalFocusStyles.focusable,
         ]}
         placeholder="Сообщение"
-        placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+        placeholderTextColor={colors.textMuted}
         value={message}
         onChangeText={onChangeMessage}
         multiline
@@ -159,46 +162,47 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         onBlur={onBlurMessage}
         onSubmitEditing={Platform.OS !== 'web' ? () => onSubmit() : undefined}
       />
-      <Text style={aboutStyles.helperText}>Shift+Enter — новая строка, Enter — отправить (web)</Text>
+      <Text style={styles.helperText}>Shift+Enter — новая строка, Enter — отправить (web)</Text>
       {invalidMessage && (
-        <View style={aboutStyles.errorContainer}>
-          <Text style={aboutStyles.fieldErr}>Напишите сообщение</Text>
+        <View style={styles.errorContainer}>
+          <Text style={styles.fieldErr}>Напишите сообщение</Text>
         </View>
       )}
 
       <Pressable
         onPress={onToggleAgree}
-        style={({ pressed }) => [aboutStyles.agreeRow, pressed && aboutStyles.agreeRowPressed]}
+        style={({ pressed }) => [styles.agreeRow, pressed && styles.agreeRowPressed]}
       >
-        <View style={[aboutStyles.checkbox, agree && aboutStyles.checkboxChecked]}>
-          {agree ? <Text style={aboutStyles.checkboxMark}>✓</Text> : null}
+        <View style={[styles.checkbox, agree && styles.checkboxChecked]}>
+          {agree ? <Text style={styles.checkboxMark}>✓</Text> : null}
         </View>
-        <Text style={[aboutStyles.agreeLabel, invalidAgree && aboutStyles.fieldErr]}>
+        <Text style={[styles.agreeLabel, invalidAgree && styles.fieldErr]}>
           Согласен(на) на обработку персональных данных
         </Text>
       </Pressable>
-      {invalidAgree && <Text style={aboutStyles.fieldErr}>Нужно согласие</Text>}
+      {invalidAgree && <Text style={styles.fieldErr}>Нужно согласие</Text>}
 
       <Pressable
         onPress={onSubmit}
         disabled={isDisabled}
         style={({ pressed }) => [
-          aboutStyles.submitButton,
-          isDisabled && aboutStyles.submitButtonDisabled,
-          pressed && !isDisabled && aboutStyles.submitButtonPressed,
+          styles.submitButton,
+          isDisabled && styles.submitButtonDisabled,
+          pressed && !isDisabled && styles.submitButtonPressed,
         ]}
         accessibilityRole="button"
         accessibilityLabel={sending ? 'Отправка сообщения' : 'Отправить сообщение'}
       >
         {sending ? (
-          <View style={aboutStyles.submitButtonContent}>
-            <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.surface} style={{ marginRight: 8 }} />
-            <Text style={aboutStyles.submitButtonText}>Отправка…</Text>
+          <View style={styles.submitButtonContent}>
+            <ActivityIndicator size="small" color={colors.textOnPrimary} style={{ marginRight: 8 }} />
+            <Text style={styles.submitButtonText}>Отправка…</Text>
           </View>
         ) : (
-          <Text style={aboutStyles.submitButtonText}>Отправить</Text>
+          <Text style={styles.submitButtonText}>Отправить</Text>
         )}
       </Pressable>
     </View>
   </View>
-);
+  );
+};
