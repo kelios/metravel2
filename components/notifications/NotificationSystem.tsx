@@ -119,7 +119,7 @@ const NotificationSystem = ({ onNotificationPress }: NotificationSystemProps) =>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Уведомления</Text>
           {unreadCount > 0 && (
             <View style={[styles.badge, { backgroundColor: colors.danger }]}>
-              <Text style={styles.badgeText}>{unreadCount}</Text>
+              <Text style={[styles.badgeText, { color: colors.textOnPrimary }]}>{unreadCount}</Text>
             </View>
           )}
         </View>

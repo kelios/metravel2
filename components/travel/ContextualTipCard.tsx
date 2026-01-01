@@ -22,7 +22,7 @@ const ContextualTipCard: React.FC<ContextualTipCardProps> = ({ tip, onActionPres
     switch (tip.type) {
       case 'success': return 'check-circle';
       case 'warning': return 'alert-circle';
-      case 'tip': return 'lightbulb';
+      case 'tip': return 'zap';
       case 'info':
       default: return 'info';
     }

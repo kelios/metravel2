@@ -1,5 +1,7 @@
 import { Platform } from 'react-native'
 import type { ViewStyle, ImageStyle, TextStyle } from 'react-native'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+import type { ThemedColors } from '@/hooks/useTheme'
 
 type TabCardTemplate = {
   container: ViewStyle
@@ -11,35 +13,26 @@ type TabCardTemplate = {
   metaText: TextStyle
 }
 
-const baseShadow: ViewStyle =
+const getBaseShadow = (colors: ThemedColors): ViewStyle =>
   Platform.select<ViewStyle>({
     web: {
-      shadowColor: 'rgba(15, 23, 42, 0.18)',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.08,
-      shadowRadius: 12,
+      boxShadow: (colors.boxShadows as any)?.card ?? DESIGN_TOKENS.shadows.card,
     },
-    default: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 6,
-      elevation: 3,
-    },
+    default: (colors.shadows as any)?.light ?? DESIGN_TOKENS.shadowsNative.light,
   }) ?? {}
 
-export const TAB_CARD_TEMPLATE: TabCardTemplate = {
+export const createTabCardTemplate = (colors: ThemedColors): TabCardTemplate => ({
   container: {
     width: 208,
     borderRadius: 14,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     overflow: 'hidden',
-    ...baseShadow,
+    ...getBaseShadow(colors),
   },
   imageContainer: {
     height: 136,
     width: '100%',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.backgroundSecondary,
     position: 'relative',
   },
   image: {
@@ -49,12 +42,12 @@ export const TAB_CARD_TEMPLATE: TabCardTemplate = {
   content: {
     paddingVertical: 12,
     paddingHorizontal: 12,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1f2933',
+    color: colors.text,
     lineHeight: 20,
     letterSpacing: -0.2,
   },
@@ -62,7 +55,7 @@ export const TAB_CARD_TEMPLATE: TabCardTemplate = {
     marginTop: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#eef2ff',
+    backgroundColor: colors.primarySoft,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -71,8 +64,8 @@ export const TAB_CARD_TEMPLATE: TabCardTemplate = {
   metaText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#475569',
+    color: colors.textMuted,
   },
-}
+})
 
 export const MOBILE_CARD_WIDTH = 172

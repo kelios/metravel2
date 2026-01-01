@@ -263,7 +263,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       ) : images.length > 0 ? (
         <View style={styles.galleryGrid}>
           {images.map((image, index) => (
-            <View key={image.id} style={styles.imageWrapper}>
+            <View key={image.id} style={[styles.imageWrapper, { backgroundColor: colors.surfaceMuted }]}>
               {loading[index] ? (
                 <ActivityIndicator size="large" color={colors.textInverse} />
               ) : (
@@ -278,9 +278,9 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
                   />
                   <TouchableOpacity
                     onPress={() => handleDeleteImage(image.id)}
-                    style={styles.deleteButton}
+                    style={[styles.deleteButton, { backgroundColor: colors.danger }]}
                   >
-                    <Text style={styles.deleteButtonText}>✖</Text>
+                    <Text style={[styles.deleteButtonText, { color: colors.textOnPrimary }]}>✖</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -294,7 +294,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       )}
 
       {isUploading && (
-        <View style={styles.uploadingOverlay}>
+        <View style={[styles.uploadingOverlay, { backgroundColor: colors.overlay }]}>
           <ActivityIndicator size="large" color={colors.textInverse} />
           <Text style={[styles.uploadingText, { color: colors.textInverse }]}>Загружаются изображения...</Text>
         </View>

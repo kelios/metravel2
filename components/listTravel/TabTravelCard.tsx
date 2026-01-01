@@ -6,7 +6,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 
-import { TAB_CARD_TEMPLATE, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
+import { createTabCardTemplate, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
 
 export type TabTravelCardBadge = {
   icon: keyof typeof MaterialIcons.glyphMap;
@@ -37,6 +37,8 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
   const colors = useThemedColors();
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
+  const tabCardTemplate = useMemo(() => createTabCardTemplate(colors), [colors]);
+  const styles = useMemo(() => createStyles(tabCardTemplate), [tabCardTemplate]);
 
   const title = item?.title || 'Без названия';
 
@@ -78,7 +80,7 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
       mediaFit={Platform.OS === 'web' ? 'cover' : 'contain'}
       heroTitleOverlay={false}
       contentSlot={contentSlot}
-      width={layout === 'grid' ? undefined : (isMobile ? MOBILE_CARD_WIDTH : (TAB_CARD_TEMPLATE.container as any)?.width)}
+      width={layout === 'grid' ? undefined : (isMobile ? MOBILE_CARD_WIDTH : (tabCardTemplate.container as any)?.width)}
       imageHeight={Platform.OS === 'web' ? 168 : 150}
       testID={testID}
       style={[layout === 'grid' ? styles.containerGrid : styles.container, style]}
@@ -89,9 +91,9 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (template: ReturnType<typeof createTabCardTemplate>) => StyleSheet.create({
   container: {
-    ...TAB_CARD_TEMPLATE.container,
+    ...template.container,
     flexShrink: 0,
     marginRight: 16,
     ...Platform.select({
@@ -103,7 +105,7 @@ const styles = StyleSheet.create({
   },
 
   containerGrid: {
-    ...TAB_CARD_TEMPLATE.container,
+    ...template.container,
     width: '100%',
     marginRight: 0,
     ...Platform.select({

@@ -455,10 +455,10 @@ const QuickTravelForm = ({ onSubmit, onSaveDraft }: QuickTravelFormProps) => {
           disabled={!canPublish || isSubmitting}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.textOnPrimary} />
           ) : (
             <>
-              <Feather name="send" size={18} color="#fff" />
+              <Feather name="send" size={18} color={colors.textOnPrimary} />
               <Text style={styles.buttonTextPrimary}>Опубликовать</Text>
             </>
           )}

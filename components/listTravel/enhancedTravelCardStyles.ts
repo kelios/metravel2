@@ -15,7 +15,7 @@ const webStyles: any = {
     ":hover": {
       transform: "translateY(-4px)",
       boxShadow: '0 12px 24px rgba(0, 0, 0, 0.12)',
-      borderColor: 'rgba(59, 130, 246, 0.2)',
+      borderColor: 'var(--color-borderAccent)',
     },
     ":active": {
       transform: "scale(0.98)",
@@ -25,8 +25,8 @@ const webStyles: any = {
   tag: {
     transition: "all 0.2s ease",
     ":hover": {
-      backgroundColor: "#f1f5f9",
-      borderColor: "#cbd5e1",
+      backgroundColor: "var(--color-backgroundSecondary)",
+      borderColor: "var(--color-border)",
       transform: "scale(1.05)",
     },
   },
@@ -38,7 +38,7 @@ const webStyles: any = {
     transition: "transform 0.2s ease-out, box-shadow 0.2s ease-out",
     ":hover": {
       transform: "scale(1.08)",
-      backgroundColor: "#ffffff",
+      backgroundColor: "var(--color-surface)",
       boxShadow: "0 6px 12px rgba(0, 0, 0, 0.15)",
     },
     ":active": {
@@ -54,14 +54,14 @@ const webStyles: any = {
     transition: "transform 0.2s ease-out",
     ":hover": {
       transform: "scale(1.03)",
-      backgroundColor: '#ffffff',
+      backgroundColor: 'var(--color-surface)',
     },
   },
   adminButton: {
     transition: "all 0.2s ease",
     cursor: 'pointer',
     ":hover": {
-      backgroundColor: 'rgba(0,0,0,0.05)',
+      backgroundColor: 'var(--color-backgroundSecondary)',
     },
   },
   infoBadge: {
@@ -72,7 +72,7 @@ const webStyles: any = {
     transition: "transform 0.2s ease-out",
     ":hover": {
       transform: "scale(1.03)",
-      backgroundColor: "#ffffff",
+      backgroundColor: "var(--color-surface)",
     },
   },
   title: {

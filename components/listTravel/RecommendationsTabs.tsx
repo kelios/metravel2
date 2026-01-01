@@ -24,7 +24,7 @@ import { useRouter } from 'expo-router';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
-import { TAB_CARD_TEMPLATE } from './recommendationsCardTemplate';
+import { createTabCardTemplate } from './recommendationsCardTemplate';
 import TabTravelCard from './TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -80,10 +80,16 @@ const AuthGate = ({
 
 /* ---------------- Skeletons ---------------- */
 
-const CardSkeleton = ({ styles }: { styles: ReturnType<typeof createStyles> }) => {
-  const imageHeight = (TAB_CARD_TEMPLATE.imageContainer as any)?.height ?? 136;
-  const contentPaddingV = (TAB_CARD_TEMPLATE.content as any)?.paddingVertical ?? 12;
-  const contentPaddingH = (TAB_CARD_TEMPLATE.content as any)?.paddingHorizontal ?? 12;
+const CardSkeleton = ({
+  styles,
+  template,
+}: {
+  styles: ReturnType<typeof createStyles>;
+  template: ReturnType<typeof createTabCardTemplate>;
+}) => {
+  const imageHeight = (template.imageContainer as any)?.height ?? 136;
+  const contentPaddingV = (template.content as any)?.paddingVertical ?? 12;
+  const contentPaddingH = (template.content as any)?.paddingHorizontal ?? 12;
 
   return (
     <View style={styles.skeletonCard}>
@@ -99,12 +105,18 @@ const CardSkeleton = ({ styles }: { styles: ReturnType<typeof createStyles> }) =
   );
 };
 
-const RecommendationsPlaceholder = ({ styles }: { styles: ReturnType<typeof createStyles> }) => (
+const RecommendationsPlaceholder = ({
+  styles,
+  template,
+}: {
+  styles: ReturnType<typeof createStyles>;
+  template: ReturnType<typeof createTabCardTemplate>;
+}) => (
   <View style={styles.placeholderContainer}>
     <SkeletonLoader width={160} height={20} borderRadius={8} style={{ marginBottom: 12 }} />
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
       {[1, 2, 3, 4].map((i) => (
-        <CardSkeleton key={i} styles={styles} />
+        <CardSkeleton key={i} styles={styles} template={template} />
       ))}
     </ScrollView>
   </View>
@@ -115,7 +127,8 @@ const RecommendationsPlaceholder = ({ styles }: { styles: ReturnType<typeof crea
 const RecommendationsTabs = memo(
   ({ forceVisible = false, onVisibilityChange }: RecommendationsTabsProps) => {
     const colors = useThemedColors();
-    const styles = useMemo(() => createStyles(colors), [colors]);
+    const tabCardTemplate = useMemo(() => createTabCardTemplate(colors), [colors]);
+    const styles = useMemo(() => createStyles(colors, tabCardTemplate), [colors, tabCardTemplate]);
     const [activeTab, setActiveTab] = useState<TabType>('highlights');
     const [collapsed, setCollapsed] = useState(false);
 
@@ -265,13 +278,13 @@ const RecommendationsTabs = memo(
       switch (activeTab) {
         case 'highlights':
           return renderTabPane(
-            <Suspense fallback={<RecommendationsPlaceholder styles={styles} />}>
+            <Suspense fallback={<RecommendationsPlaceholder styles={styles} template={tabCardTemplate} />}>
               <WeeklyHighlights showHeader={false} enabled={isTabsVisible && activeTab === 'highlights'} />
             </Suspense>
           );
         case 'recommendations':
           return renderTabPane(
-            <Suspense fallback={<RecommendationsPlaceholder styles={styles} />}>
+            <Suspense fallback={<RecommendationsPlaceholder styles={styles} template={tabCardTemplate} />}>
               <PersonalizedRecommendations showHeader={!isAuthenticated} onlyRecommendations={true} />
             </Suspense>
           );
@@ -572,7 +585,10 @@ const EmptyState = ({
 
 /* ---------------- Styles ---------------- */
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+const createStyles = (
+  colors: ReturnType<typeof useThemedColors>,
+  template: ReturnType<typeof createTabCardTemplate>,
+) => StyleSheet.create({
   container: {
     backgroundColor: colors.surface,
     borderRadius: 16,
@@ -789,18 +805,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingHorizontal: 0,
   },
   skeletonCard: {
-    width: TAB_CARD_TEMPLATE.container.width || 208,
+    width: template.container.width || 208,
     marginRight: 16,
     backgroundColor: colors.surface,
-    borderRadius: TAB_CARD_TEMPLATE.container.borderRadius || 12,
+    borderRadius: template.container.borderRadius || 12,
     overflow: 'hidden',
   },
   skeletonImage: {
-    height: (TAB_CARD_TEMPLATE.imageContainer as any).height || 136,
+    height: (template.imageContainer as any).height || 136,
     backgroundColor: colors.backgroundSecondary,
   },
   skeletonContent: {
-    padding: (TAB_CARD_TEMPLATE.content as any).padding || 12,
+    padding: (template.content as any).padding || 12,
   },
   skeletonLine: {
     height: 14,

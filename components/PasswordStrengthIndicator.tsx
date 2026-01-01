@@ -1,9 +1,10 @@
 // components/PasswordStrengthIndicator.tsx
 // ✅ Компонент для отображения силы пароля
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { checkPasswordStrength, getPasswordStrengthLabel, getPasswordStrengthColor } from '@/src/utils/passwordStrength';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface PasswordStrengthIndicatorProps {
   password: string;
@@ -14,6 +15,9 @@ export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps>
   password,
   showFeedback = true,
 }) => {
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   if (!password || password.length === 0) {
     return null;
   }
@@ -31,7 +35,7 @@ export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps>
             style={[
               styles.bar,
               {
-                backgroundColor: index < score ? color : '#e0e0e0',
+                backgroundColor: index < score ? color : colors.borderLight,
                 flex: 1,
                 marginRight: index < 3 ? 4 : 0,
               },
@@ -57,7 +61,7 @@ export const PasswordStrengthIndicator: React.FC<PasswordStrengthIndicatorProps>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     marginTop: 8,
     marginBottom: 8,
@@ -83,8 +87,7 @@ const styles = StyleSheet.create({
   },
   feedback: {
     fontSize: 11,
-    color: '#666',
+    color: colors.textMuted,
     marginBottom: 2,
   },
 });
-

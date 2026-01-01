@@ -205,13 +205,13 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
       minWidth: 12,
       height: 12,
       borderRadius: 6,
-      backgroundColor: "#111827",
+      backgroundColor: colors.primary,
       alignItems: "center",
       justifyContent: "center",
       overflow: "hidden",
     },
     byBadgeText: {
-      color: "#FFFFFF",
+      color: colors.textOnPrimary,
       fontSize: 7,
       lineHeight: 8,
       fontWeight: "700",
@@ -429,4 +429,3 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
     </View>
   );
 }
-

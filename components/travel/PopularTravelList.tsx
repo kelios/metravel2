@@ -322,7 +322,7 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
     if (isLoading) {
       return (
         <View style={styles.loadingContainer} onLayout={onLayout}>
-          <ActivityIndicator size="large" color="#6B4F4F" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Загрузка популярных маршрутов…</Text>
         </View>
       );
@@ -399,4 +399,3 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
 PopularTravelList.displayName = 'PopularTravelList';
 
 export default PopularTravelList;
-

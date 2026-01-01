@@ -49,7 +49,7 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
     title: {
       fontSize: 24,
       fontWeight: '700',
-      color: '#fff',
+      color: colors.textOnPrimary,
       ...Platform.select({
         web: {
           fontFamily: 'Georgia, serif',
@@ -58,8 +58,9 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
     },
     subtitle: {
       fontSize: 15,
-      color: 'rgba(255,255,255,0.9)',
+      color: colors.textOnPrimary,
       lineHeight: 22,
+      opacity: 0.9,
     },
     actions: {
       flexDirection: 'row',
@@ -70,7 +71,7 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
-      backgroundColor: '#fff',
+      backgroundColor: colors.surface,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
       borderRadius: radii.md,
@@ -94,19 +95,19 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
-      backgroundColor: 'rgba(255,255,255,0.2)',
+      backgroundColor: colors.primarySoft,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
       borderRadius: radii.md,
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.3)',
+      borderColor: colors.primaryLight,
       minHeight: 44,
       ...Platform.select({
         web: {
           cursor: 'pointer',
           transition: 'background-color 0.2s ease',
           ':hover': {
-            backgroundColor: 'rgba(255,255,255,0.3)',
+            backgroundColor: colors.primaryLight,
           },
         } as any,
       }),
@@ -114,7 +115,7 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
     secondaryButtonText: {
       fontSize: 15,
       fontWeight: '600',
-      color: '#fff',
+      color: colors.textOnPrimary,
     },
     compactContainer: {
       padding: spacing.md,
@@ -163,7 +164,7 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
                 },
               })}
             >
-              <Feather name="plus" size={18} color="#fff" />
+              <Feather name="plus" size={18} color={colors.primary} />
               <Text style={styles.primaryButtonText}>Создать путешествие</Text>
             </Pressable>
 
@@ -186,4 +187,3 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
     </View>
   );
 }
-

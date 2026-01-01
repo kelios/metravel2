@@ -633,7 +633,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                     onPress={handleApproveModeration}
                                     activeOpacity={0.85}
                                 >
-                                    <Icon source="check-circle" size={20} color="#fff" />
+                                    <Icon source="check-circle" size={20} color={colors.textOnPrimary} />
                                     <Text style={styles.adminButtonText}>Одобрить модерацию</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
@@ -641,7 +641,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                     onPress={handleRejectModeration}
                                     activeOpacity={0.85}
                                 >
-                                    <Icon source="close-circle" size={20} color="#fff" />
+                                    <Icon source="close-circle" size={20} color={colors.textOnPrimary} />
                                     <Text style={styles.adminButtonText}>Отклонить</Text>
                                 </TouchableOpacity>
                             </View>
@@ -830,8 +830,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderWidth: 1,
         borderColor: colors.border,
     },
-    statusChipSuccess: { backgroundColor: '#e9f8ef', borderColor: '#b6e4c6' },
-    statusChipWarning: { backgroundColor: '#fff5e6', borderColor: '#ffd9a8' },
+    statusChipSuccess: { backgroundColor: colors.successSoft, borderColor: colors.successLight },
+    statusChipWarning: { backgroundColor: colors.warningSoft, borderColor: colors.warningLight },
     statusChipMuted: { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
     statusChipText: { fontWeight: '700', color: colors.text },
     statusChipHint: { flex: 1, color: colors.textMuted, fontSize: DESIGN_TOKENS.typography.sizes.sm },
@@ -964,12 +964,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         lineHeight: 16,
     },
     bannerError: {
-        backgroundColor: '#fef2f2',
-        borderColor: '#fecaca',
+        backgroundColor: colors.dangerSoft,
+        borderColor: colors.dangerLight,
     },
     bannerInfo: {
-        backgroundColor: '#f0f9ff',
-        borderColor: '#bae6fd',
+        backgroundColor: colors.infoSoft,
+        borderColor: colors.infoLight,
     },
     bannerTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -983,7 +983,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginBottom: DESIGN_TOKENS.spacing.xs,
     },
     adminCard: {
-        backgroundColor: '#f8fafc',
+        backgroundColor: colors.backgroundSecondary,
         borderColor: colors.border,
     },
     adminHint: {
@@ -1019,7 +1019,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     adminButtonText: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '600',
-        color: '#fff',
+        color: colors.textOnPrimary,
     },
 });
 

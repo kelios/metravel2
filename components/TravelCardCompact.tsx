@@ -42,14 +42,14 @@ function TravelCardCompact({
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      backgroundColor: 'rgba(0,0,0,0.6)',
+      backgroundColor: colors.overlay,
       paddingHorizontal: 6,
       paddingVertical: 3,
       borderRadius: radii.sm,
     },
     viewsText: {
       fontSize: 11,
-      color: '#fff',
+      color: colors.textOnDark,
       fontWeight: '500',
     },
   }), [colors]);
@@ -87,7 +87,7 @@ function TravelCardCompact({
 
   const bottomLeftSlot = Number(countUnicIpView) > 0 ? (
     <View style={styles.viewsBadge}>
-      <Feather name="eye" size={12} color="#fff" />
+      <Feather name="eye" size={12} color={colors.textOnDark} />
       <Text style={styles.viewsText}>{countUnicIpView}</Text>
     </View>
   ) : null;
@@ -107,4 +107,3 @@ function TravelCardCompact({
 }
 
 export default memo(TravelCardCompact);
-

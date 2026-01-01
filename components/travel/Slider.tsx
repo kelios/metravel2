@@ -658,7 +658,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                   />
                 ) : (
                   <View style={styles.placeholder} testID={`slider-placeholder-${index}`}>
-                    <Feather name="image" size={32} color="#94a3b8" />
+                    <Feather name="image" size={32} color={colors.textMuted} />
                     <Text style={styles.placeholderTitle}>Фото не загрузилось</Text>
                     <Text style={styles.placeholderSubtitle}>
                       Проверьте подключение или попробуйте позже
@@ -724,7 +724,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                   ]}
                   testID={`slider-loading-overlay-${index}`}
                 >
-                  <ActivityIndicator color="#0f172a" />
+                  <ActivityIndicator color={colors.textOnDark} />
                 </View>
               )}
             </View>

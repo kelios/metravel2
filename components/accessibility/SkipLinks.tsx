@@ -117,7 +117,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     left: -9999,
     zIndex: 99999,
     backgroundColor: colors.primary,
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 4,
