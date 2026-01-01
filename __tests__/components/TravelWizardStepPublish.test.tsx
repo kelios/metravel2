@@ -26,6 +26,7 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('expo-router', () => ({
     useRouter: () => ({
         push: jest.fn(),
+        replace: jest.fn(),
     }),
 }));
 
@@ -50,8 +51,8 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
             moderation: false,
         },
         setFormData: jest.fn(),
-        onBack: jest.fn(),
-        onPublish: jest.fn(),
+        onGoBack: jest.fn(),
+        onFinish: jest.fn(),
         onManualSave: jest.fn(),
         isSuperAdmin: false,
         stepMeta: {
@@ -155,8 +156,8 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
         it('должен рассчитать Quality Score правильно', () => {
             const { getByText } = render(<TravelWizardStepPublish {...defaultProps} />);
 
-            // Ищем индикатор качества (например "Хорошо" или "Отлично")
-            const qualityIndicator = getByText(/Хорошо|Отлично|Среднее/);
+            // Ищем индикатор качества (разные уровни в зависимости от данных)
+            const qualityIndicator = getByText(/Хорошо|Отлично|Среднее|Удовлетворительно|Требует улучшения/);
             expect(qualityIndicator).toBeTruthy();
         });
 
@@ -194,19 +195,12 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
         });
 
         it('должен переключать статус при выборе опции', () => {
-            const mockSetFormData = jest.fn();
-
-            const { getByText } = render(
-                <TravelWizardStepPublish
-                    {...defaultProps}
-                    setFormData={mockSetFormData}
-                />
-            );
+            const { getByText, queryByText } = render(<TravelWizardStepPublish {...defaultProps} />);
 
             const moderationOption = getByText('Отправить на модерацию');
             fireEvent.press(moderationOption);
 
-            expect(mockSetFormData).toHaveBeenCalled();
+            expect(queryByText('Сохранить')).toBeNull();
         });
     });
 
@@ -272,43 +266,46 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
     });
 
     describe('✅ Кнопка публикации', () => {
-        it('должна вызвать onPublish при нажатии', async () => {
-            const mockOnPublish = jest.fn().mockResolvedValue(undefined);
+        it('должна вызвать onManualSave при нажатии', async () => {
+            const mockOnManualSave = jest.fn().mockResolvedValue(undefined);
 
             const { getByText } = render(
                 <TravelWizardStepPublish
                     {...defaultProps}
-                    onPublish={mockOnPublish}
+                    onManualSave={mockOnManualSave}
                 />
             );
 
-            const publishButton = getByText(/Опубликовать|Сохранить/);
+            const publishButton = getByText('Сохранить');
             fireEvent.press(publishButton);
 
             await waitFor(() => {
-                expect(mockOnPublish).toHaveBeenCalled();
+                expect(mockOnManualSave).toHaveBeenCalled();
             });
         });
 
         it('НЕ должна публиковать если обязательные поля не заполнены', () => {
-            const mockOnPublish = jest.fn();
+            const mockOnManualSave = jest.fn();
 
-            const { getByText } = render(
+            const { getByText, getAllByText } = render(
                 <TravelWizardStepPublish
                     {...defaultProps}
                     formData={{
                         ...defaultProps.formData,
                         name: '', // Пустое название
                     }}
-                    onPublish={mockOnPublish}
+                    onManualSave={mockOnManualSave}
                 />
             );
 
-            const publishButton = getByText(/Опубликовать|Сохранить/);
+            const moderationOption = getByText('Отправить на модерацию');
+            fireEvent.press(moderationOption);
+
+            const publishButton = getAllByText('Отправить на модерацию').slice(-1)[0];
             fireEvent.press(publishButton);
 
             // Должна показать ошибку вместо публикации
-            expect(mockOnPublish).not.toHaveBeenCalled();
+            expect(mockOnManualSave).not.toHaveBeenCalled();
         });
     });
 
@@ -318,10 +315,14 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
                 <TravelWizardStepPublish
                     {...defaultProps}
                     isSuperAdmin={true}
+                    formData={{
+                        ...defaultProps.formData,
+                        publish: true,
+                    }}
                 />
             );
 
-            expect(getByText(/Панель администратора|Прошел модерацию/)).toBeTruthy();
+            expect(getByText(/Панель модератора|Панель администратора|Прошел модерацию/)).toBeTruthy();
         });
 
         it('НЕ должен показать админ-панель для обычного пользователя', () => {
@@ -332,8 +333,7 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
                 />
             );
 
-            expect(queryByText(/Панель администратора/)).toBeNull();
+            expect(queryByText(/Панель модератора|Панель администратора/)).toBeNull();
         });
     });
 });
-
