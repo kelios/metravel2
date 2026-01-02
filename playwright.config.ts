@@ -15,7 +15,7 @@ export default defineConfig({
     : {
         command: `CI=1 npx expo start -c --web --port ${E2E_WEB_PORT}`,
         url: baseURL,
-        reuseExistingServer: true,
+        reuseExistingServer: false,
         timeout: 240_000,
         env: {
           ...process.env,

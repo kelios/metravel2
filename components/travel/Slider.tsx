@@ -598,9 +598,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   const renderItem = useCallback(
     ({ item, index }: { item: SliderImage; index: number }) => {
-      const uri = uriMap[index];
-      const ratio =
-        item.width && item.height ? item.width / item.height : aspectRatio;
+      const uri = uriMap[index] ?? item.url;
+      const ratio = item.width && item.height ? item.width / item.height : aspectRatio;
       const isPortrait = ratio < 0.95;
       const isSquareish = ratio >= 0.95 && ratio <= 1.1;
       // Фон всегда та же фотография, растянутая и заблюренная, если blurBackground включен
@@ -734,6 +733,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [
       uriMap,
       blurBackground,
+      colors.textMuted,
+      colors.textOnDark,
       containerW,
       containerH,
       computeHeight,
@@ -743,6 +744,20 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       images.length,
       loadStatuses,
       aspectRatio,
+      styles.blurBg,
+      styles.flatBackground,
+      styles.imageCardSurface,
+      styles.imageCardWrapper,
+      styles.imageCardWrapperElevated,
+      styles.img,
+      styles.loadingOverlay,
+      styles.neutralPlaceholder,
+      styles.placeholder,
+      styles.placeholderSubtitle,
+      styles.placeholderTitle,
+      styles.retryBtn,
+      styles.retryBtnText,
+      styles.slide,
       updateLoadStatus,
       retryImage,
       prefetchEnabled,

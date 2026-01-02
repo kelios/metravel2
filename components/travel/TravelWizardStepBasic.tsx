@@ -161,7 +161,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                 text2: 'Попробуйте еще раз',
             });
         }
-    }, [formData, onManualSave, router]);
+    }, [formData, onManualSave, redirectDelayMs, router]);
 
     return (
         <SafeAreaView style={styles.safeContainer}>

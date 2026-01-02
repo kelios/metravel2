@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+const tid = (id: string) => `[data-testid="${id}"], [testID="${id}"]`;
+
 async function preacceptCookies(page: any) {
   await page.addInitScript(() => {
     try {
@@ -97,8 +99,8 @@ test.describe('Travel details skeleton transition (no layout shift)', () => {
     await page.goto('/travels/e2e-details-skeleton', { waitUntil: 'domcontentloaded' });
 
     // Loading skeleton can be skipped if the page resolves very quickly.
-    const loading = page.locator('[data-testid="travel-details-loading"]');
-    const pageRoot = page.locator('[data-testid="travel-details-page"]');
+    const loading = page.locator(tid('travel-details-loading'));
+    const pageRoot = page.locator(tid('travel-details-page'));
 
     await Promise.race([
       loading.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null),
@@ -108,12 +110,12 @@ test.describe('Travel details skeleton transition (no layout shift)', () => {
     const skeletonBox = (await loading.isVisible().catch(() => false)) ? await loading.boundingBox() : null;
 
     // Wait for the real page to render.
-    await expect(page.locator('[data-testid="travel-details-page"]')).toBeVisible({ timeout: 45_000 });
-    await expect(page.locator('[data-testid="travel-details-hero"]')).toHaveCount(1);
-    await expect(page.locator('[data-testid="travel-details-quick-facts"]')).toHaveCount(1);
+    await expect(page.locator(tid('travel-details-page'))).toBeVisible({ timeout: 45_000 });
+    await expect(page.locator(tid('travel-details-hero'))).toHaveCount(1);
+    await expect(page.locator(tid('travel-details-quick-facts'))).toHaveCount(1);
 
     // Basic stability check: main wrapper shouldn't drastically change size.
-    const pageBox = await page.locator('[data-testid="travel-details-page"]').boundingBox();
+    const pageBox = await page.locator(tid('travel-details-page')).boundingBox();
     if (skeletonBox && pageBox) {
       const widthDiff = Math.abs(pageBox.width - skeletonBox.width);
       expect(widthDiff, `Width jump too large: ${widthDiff}px`).toBeLessThanOrEqual(60);

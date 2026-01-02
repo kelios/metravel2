@@ -119,7 +119,8 @@ export default function MapScreen() {
     } = routeStore;
     
     const [rightPanelTab, setRightPanelTab] = useState<'filters' | 'travels'>('filters');
-    const [rightPanelVisible, setRightPanelVisible] = useState(true);
+    // ✅ ИСПРАВЛЕНИЕ: На мобильных панель закрыта по умолчанию, на десктопе открыта
+    const [rightPanelVisible, setRightPanelVisible] = useState(!isMobile);
     const filtersTabRef = useRef<any>(null);
     const panelRef = useRef<any>(null);
     const [routeHintDismissed, setRouteHintDismissed] = useState(false);
@@ -733,6 +734,7 @@ export default function MapScreen() {
                     {/* Кнопка для показа/скрытия панели */}
                     {!rightPanelVisible && (
                         <Pressable
+                            testID="map-open-panel-button"
                             style={styles.togglePanelButton}
                             onPress={() => setRightPanelVisible(true)}
                             accessibilityRole="button"

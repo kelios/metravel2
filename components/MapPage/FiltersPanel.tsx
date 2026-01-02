@@ -18,12 +18,14 @@ import {
 } from 'react-native';
 import MultiSelectField from '../MultiSelectField';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import RadiusSelect from '@/components/MapPage/RadiusSelect';
 import RoutePointControls from '@/components/MapPage/RoutePointControls';
 import MapLegend from '@/components/MapPage/MapLegend';
-import AddressSearch from '@/components/MapPage/AddressSearch';
 import ValidationMessage from '@/components/MapPage/ValidationMessage';
 import RoutingStatus from '@/components/MapPage/RoutingStatus';
+import SegmentedControl from '@/components/MapPage/SegmentedControl';
+import QuickActions from '@/components/MapPage/QuickActions';
+import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
+import RouteBuilder from '@/components/MapPage/RouteBuilder';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import type { RoutePoint } from '@/types/route';
@@ -31,10 +33,7 @@ import type { LatLng } from '@/types/coordinates';
 import { RouteValidator } from '@/utils/routeValidator';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
-const SEARCH_MODES = [
-  { key: 'radius' as const, icon: 'my-location', label: 'Найти в радиусе', subtitle: 'Поиск мест вокруг точки' },
-  { key: 'route' as const, icon: 'alt-route', label: 'Маршрут', subtitle: 'Старт → финиш + транспорт' },
-];
+// SEARCH_MODES теперь определены inline в SegmentedControl
 
 const TRANSPORT_MODES = [
   { key: 'car' as const, icon: 'directions-car', label: 'Авто' },
@@ -114,7 +113,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   const windowWidth = Dimensions.get('window').width;
   const colors = useThemedColors();
   const styles = useMemo(
-    () => getStyles(colors, isMobile, windowWidth),
+    () => getStyles(colors, isMobile, windowWidth) as any,
     [colors, isMobile, windowWidth],
   );
   const [legendOpen, setLegendOpen] = useState(false);
@@ -134,42 +133,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     return { valid: true, errors: [], warnings: [] };
   }, [mode, routePoints]);
 
-  // Компактная кнопка теперь внутри компонента — видит styles
-  const _CompactButton = React.useMemo(() => {
-    return React.memo(({
-                         onPress,
-                         icon,
-                         title,
-                         color = colors.primary,
-                         compact = false,
-                         accessibilityLabel,
-                       }: {
-      onPress: () => void;
-      icon: string;
-      title?: string;
-      color?: string;
-      compact?: boolean;
-      accessibilityLabel?: string;
-    }) => (
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel || title || icon}
-        style={({ pressed }) => [
-          styles.compactButton,
-          globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-          { backgroundColor: color },
-          pressed && { opacity: 0.9 },
-          compact && styles.compactButtonSmall,
-        ]}
-        hitSlop={8}
-      >
-        <Icon name={icon} size={compact ? 16 : 18} color={colors.textOnPrimary} />
-        {title ? <Text style={styles.compactButtonText}>{title}</Text> : null}
-      </Pressable>
-    ));
-     
-  }, [styles, colors.primary, colors.textOnPrimary]); // зависимости: локальные styles и цвета
 
   // ——— Aggregations
   const travelCategoriesCount = useMemo(() => {
@@ -271,12 +234,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     endSelected: !!routePoints[1],
   };
 
-  const hintsAllowed = !(routeHintDismissed || routeDistance != null);
-  const showEndHint = hintsAllowed && mode === 'route' && routeStepState.startSelected && !routeStepState.endSelected;
-  const showTransportHint = hintsAllowed && mode === 'route' && routeStepState.startSelected && routeStepState.endSelected;
   const noPointsAlongRoute = mode === 'route' && routeDistance != null && (filteredTravelsData ?? travelsData).length === 0;
-  const startLabel = startAddress ? startAddress : 'Старт выбран на карте';
-  const endLabel = endAddress ? endAddress : 'Финиш выбран на карте';
 
   // Автоскрытие подсказок после первого построенного маршрута
   useEffect(() => {
@@ -286,87 +244,56 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   }, [routeDistance, routeHintDismissed, onRouteHintDismiss]);
 
   return (
-    <View style={styles.card}>
-      {/* Sticky header + status */}
-      <View style={styles.stickyTop}>
-        <View style={styles.headerContainer}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Фильтры</Text>
-            <View style={styles.headerActions}>
-              {isMobile ? (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.headerActionButton,
-                    pressed && { opacity: 0.85 },
-                  ]}
-                  onPress={closeMenu}
-                  accessibilityRole="button"
-                  accessibilityLabel="Закрыть панель"
-                >
-                  <Icon name="close" size={16} color={colors.text} />
-                  <Text style={styles.headerActionText}>Закрыть</Text>
-                </Pressable>
-              ) : null}
-            </View>
+    <View style={styles.card} testID="filters-panel">
+      {/* ✅ УЛУЧШЕНИЕ: Компактный header */}
+      <View style={styles.stickyTop} testID="filters-panel-header">
+        <View style={styles.compactHeader}>
+          <View style={styles.compactTitleRow}>
+            <Icon name="map" size={18} color={colors.primary} />
+            <Text style={styles.compactTitle}>
+              {totalPoints} {mode === 'radius' ? `мест • ${filterValue.radius || '60'} км` : 'мест'}
+            </Text>
           </View>
-
-          <View style={styles.counterRow} accessible accessibilityRole="text">
-            <View style={styles.counterBadge}>
-              <Text style={styles.counterValue}>{totalPoints}</Text>
-              <Text style={styles.counterLabel}>
-                {mode === 'radius'
-                  ? `мест в радиусе ${filterValue.radius || '60'} км`
-                  : 'мест на карте'}
-              </Text>
-            </View>
-            {_hasActiveFilters && mode === 'radius' && (
-              <Text style={styles.counterHint}>Фильтры применены</Text>
-            )}
-          </View>
-
-          {/* Переключение режимов */}
-          <View style={styles.modeTabs} accessibilityRole="tablist">
-            {SEARCH_MODES.map(({ key, icon, label, subtitle }) => {
-              const active = mode === key;
-              return (
-                <Pressable
-                  key={key}
-                  style={[
-                    styles.modeTab, 
-                    active && styles.modeTabActive,
-                    globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                  ]}
-                  onPress={() => handleSetMode(key)}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: active }}
-                >
-                  <Icon name={icon} size={18} color={active ? colors.textOnPrimary : colors.textMuted} />
-                  <View style={styles.modeTabTextCol}>
-                    <Text style={[styles.modeTabText, active && styles.modeTabTextActive]}>
-                      {label}
-                    </Text>
-                    <Text style={[styles.modeTabHint, active && styles.modeTabHintActive]}>
-                      {subtitle}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
+          {isMobile && (
+            <Pressable
+              testID="filters-panel-close-button"
+              style={styles.closeButton}
+              onPress={closeMenu}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть панель"
+            >
+              <Icon name="close" size={20} color={colors.text} />
+            </Pressable>
+          )}
         </View>
 
-        <View style={styles.statusCard}>
-          <RoutingStatus
-            isLoading={!!routingLoading}
-            error={routingError || null}
-            distance={routeDistance}
-            transportMode={transportMode}
-          />
-        </View>
+        {/* ✅ УЛУЧШЕНИЕ: Компактный SegmentedControl вместо больших табов */}
+        <SegmentedControl
+          options={[
+            { key: 'radius', label: 'Радиус', icon: 'my-location' },
+            { key: 'route', label: 'Маршрут', icon: 'alt-route' },
+          ]}
+          value={mode}
+          onChange={(key) => handleSetMode(key as 'radius' | 'route')}
+          accessibilityLabel="Выбор режима поиска"
+        />
+
+        {/* ✅ УЛУЧШЕНИЕ: RoutingStatus только в режиме маршрута и более компактный */}
+        {mode === 'route' && (
+          <View style={styles.statusCard} testID="routing-status">
+            <RoutingStatus
+              isLoading={!!routingLoading}
+              error={routingError || null}
+              distance={routeDistance}
+              transportMode={transportMode}
+            />
+          </View>
+        )}
       </View>
 
       {/* Контент */}
       <ScrollView
+        testID="filters-panel-scroll"
         style={styles.content}
         showsVerticalScrollIndicator={true}
         contentContainerStyle={styles.contentContainer}
@@ -375,10 +302,14 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       >
         {mode === 'radius' ? (
           <>
-            {/* Категории */}
+            {/* ✅ УЛУЧШЕНИЕ Фаза 2: Категории в CollapsibleSection */}
             {categoriesWithCount.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Категории</Text>
+              <CollapsibleSection
+                title="Категории"
+                badge={filterValue.categories.length || undefined}
+                defaultOpen={filterValue.categories.length > 0}
+                icon="category"
+              >
                 <Text style={styles.sectionHint}>Выберите подходящие тематики, чтобы сузить выдачу.</Text>
                 <MultiSelectField
                   items={categoriesWithCount}
@@ -404,8 +335,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     contentContainerStyle={styles.chipsContent}
                   >
                     {filterValue.categories.slice(0, 5).map((cat) => {
-                      // ✅ ИСПРАВЛЕНИЕ: Обрабатываем случай, когда cat может быть объектом с {id, name}
-                      const catValue = typeof cat === 'string' 
+                      const catValue = typeof cat === 'string'
                         ? cat 
                         : (cat && typeof cat === 'object' && 'name' in cat ? cat.name : String(cat || ''));
                       const catKey = typeof cat === 'string' 
@@ -421,11 +351,10 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                           <Pressable 
                             onPress={() => handleCategoryRemove(cat)} 
                             hitSlop={8}
-                            style={globalFocusStyles.focusable} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                            style={globalFocusStyles.focusable}
                             accessibilityRole="button"
                             accessibilityLabel="Удалить категорию"
                           >
-                            {/* ✅ ИСПРАВЛЕНИЕ: Увеличен размер иконки */}
                             <Icon name="close" size={16} color={colors.primary} />
                           </Pressable>
                         </View>
@@ -440,19 +369,17 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     )}
                   </ScrollView>
                 )}
-              </View>
+              </CollapsibleSection>
             )}
 
-            {/* Радиус */}
+            {/* ✅ УЛУЧШЕНИЕ Фаза 2: Радиус в CollapsibleSection */}
             {filters.radius.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Радиус поиска</Text>
-                <RadiusSelect
-                  value={filterValue.radius}
-                  options={filters.radius}
-                  onChange={(v) => onFilterChange('radius', v)}
-                  compact
-                />
+              <CollapsibleSection
+                title="Радиус поиска"
+                badge={`${filterValue.radius || '60'} км`}
+                defaultOpen={true}
+                icon="radio-button-unchecked"
+              >
                 <View style={styles.radiusQuickOptions}>
                   {filters.radius.map((opt) => {
                     const selected = String(opt.id) === String(filterValue.radius);
@@ -463,7 +390,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                         style={[
                           styles.radiusChip,
                           selected && styles.radiusChipActive,
-                          globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+                          globalFocusStyles.focusable,
                         ]}
                         accessibilityRole="button"
                         accessibilityLabel={`Выбрать радиус: ${opt.name}`}
@@ -474,7 +401,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     );
                   })}
                 </View>
-              </View>
+              </CollapsibleSection>
             )}
           </>
         ) : (
@@ -483,51 +410,33 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               <Text style={styles.sectionLabel}>Маршрут</Text>
               <Text style={styles.sectionHint}>Выберите старт и финиш на карте или через поиск, затем укажите транспорт.</Text>
 
-              <View style={styles.sectionCard}>
-                {onAddressSelect && (
-                  <>
-                    <View style={styles.stepBlock}>
-                      <View style={styles.stepHeaderRow}>
-                        <Text style={styles.stepBlockTitle}>Шаг 1. Старт</Text>
-                      </View>
-                      <AddressSearch
-                        label="Старт"
-                        placeholder="Введите адрес старта или выберите на карте"
-                        value={startAddress}
-                        enableCoordinateInput
-                        onAddressSelect={(address, coords) => onAddressSelect(address, coords, true)}
-                      />
-                    </View>
+              {/* ✅ УЛУЧШЕНИЕ Фаза 2: RouteBuilder вместо двух отдельных блоков */}
+              {onAddressSelect && (
+                <RouteBuilder
+                  startAddress={startAddress}
+                  endAddress={endAddress}
+                  onAddressSelect={onAddressSelect}
+                  onSwap={swapStartEnd}
+                  onClear={onClearRoute}
+                  compact={isMobile}
+                />
+              )}
 
-                    <View style={styles.stepBlock}>
-                      <View style={styles.stepHeaderRow}>
-                        <Text style={styles.stepBlockTitle}>Шаг 2. Финиш</Text>
-                      </View>
-                      <AddressSearch
-                        label="Финиш"
-                        placeholder="Выберите точку на карте или введите адрес"
-                        value={endAddress}
-                        enableCoordinateInput
-                        onAddressSelect={(address, coords) => onAddressSelect(address, coords, false)}
-                      />
-                    </View>
-                  </>
-                )}
-
-                <View
-                  style={[
-                    styles.section,
-                    styles.sectionTight,
-                    styles.transportSection,
-                    !(routeStepState.startSelected && routeStepState.endSelected) && styles.sectionDisabled,
-                  ]}
-                >
-                  <Text style={styles.sectionLabel}>Транспорт</Text>
-                  {!routeStepState.startSelected || !routeStepState.endSelected ? (
-                    <Text style={styles.sectionHint}>Доступно после выбора старта и финиша</Text>
-                  ) : null}
-                  <View style={styles.transportTabs}>
-                    {TRANSPORT_MODES.map(({ key, label, icon }) => {
+              {/* Транспорт */}
+              <View
+                style={[
+                  styles.section,
+                  styles.sectionTight,
+                  styles.transportSection,
+                  !(routeStepState.startSelected && routeStepState.endSelected) && styles.sectionDisabled,
+                ]}
+              >
+                <Text style={styles.sectionLabel}>Транспорт</Text>
+                {!routeStepState.startSelected || !routeStepState.endSelected ? (
+                  <Text style={styles.sectionHint}>Доступно после выбора старта и финиша</Text>
+                ) : null}
+                <View style={styles.transportTabs}>
+                  {TRANSPORT_MODES.map(({ key, label, icon }) => {
                       const active = transportMode === key;
                       const disabledTransport = !(routeStepState.startSelected && routeStepState.endSelected);
                       return (
@@ -571,35 +480,8 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     })}
                   </View>
                 </View>
-              </View>
 
-              {(onClearRoute || swapStartEnd) && routePoints.length > 0 && (
-                <View style={styles.actionRow}>
-                  {onClearRoute && routePoints.length > 0 && (
-                    <Pressable
-                      style={styles.actionGhost}
-                      onPress={onClearRoute}
-                      accessibilityRole="button"
-                      accessibilityLabel="Сбросить маршрут"
-                    >
-                      <Icon name="delete-outline" size={18} color={colors.text} />
-                      <Text style={styles.actionGhostText}>Сбросить маршрут</Text>
-                    </Pressable>
-                  )}
-                  {swapStartEnd && routeStepState.startSelected && routeStepState.endSelected && (
-                    <Pressable
-                      style={styles.actionGhost}
-                      onPress={swapStartEnd}
-                      accessibilityRole="button"
-                      accessibilityLabel="Поменять старт и финиш местами"
-                    >
-                      <Icon name="swap-horiz" size={18} color={colors.text} />
-                      <Text style={styles.actionGhostText}>S ↔ F</Text>
-                    </Pressable>
-                  )}
-                </View>
-              )}
-
+              {/* ✅ Validation и warnings */}
               {!validation.valid && <ValidationMessage type="error" messages={validation.errors} />}
               {validation.warnings.length > 0 && <ValidationMessage type="warning" messages={validation.warnings} />}
 
@@ -630,6 +512,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 </View>
               )}
 
+              {/* ✅ RoutePointControls опционально, если нужен дополнительный контроль */}
               {routePoints.length > 0 && onRemoveRoutePoint && onClearRoute && (
                 <RoutePointControls
                   routePoints={routePoints}
@@ -637,65 +520,10 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   onClearRoute={onClearRoute}
                 />
               )}
-
-              <View style={styles.stepper}>
-                <View style={[styles.stepItem, routeStepState.startSelected && styles.stepItemDone]}>
-                  <View style={[styles.stepBadge, styles.stepBadgeStart]}>
-                    <Text style={styles.stepBadgeText}>1</Text>
-                  </View>
-                  <View style={styles.stepContent}>
-                    <Text style={styles.stepTitle}>Шаг 1. Выберите старт</Text>
-                    <Text style={styles.stepSubtitle} numberOfLines={1}>
-                      {routeStepState.startSelected ? startLabel : 'Выберите старт'}
-                    </Text>
-                    {!routeStepState.startSelected && (
-                      <Text style={styles.stepInlineHint}>Кликните на карте</Text>
-                    )}
-                  </View>
-                </View>
-
-                {routeStepState.startSelected && (
-                  <View style={[styles.stepItem, routeStepState.endSelected && styles.stepItemDone]}>
-                    <View style={[styles.stepBadge, styles.stepBadgeEnd]}>
-                      <Text style={styles.stepBadgeText}>2</Text>
-                    </View>
-                    <View style={styles.stepContent}>
-                      <Text style={styles.stepTitle}>Шаг 2. Выберите финиш</Text>
-                      <Text style={styles.stepSubtitle} numberOfLines={1}>
-                        {routeStepState.endSelected ? endLabel : 'Теперь выберите финиш'}
-                      </Text>
-                      {showEndHint && <Text style={styles.stepInlineHint}>Теперь выберите точку финиша</Text>}
-                    </View>
-                  </View>
-                )}
-
-                <View style={[styles.stepItem, routeStepState.endSelected && styles.stepItemDone]}>
-                  <View style={[styles.stepBadge, styles.stepBadgeTransport]}>
-                    <Text style={styles.stepBadgeText}>3</Text>
-                  </View>
-                  <View style={styles.stepContent}>
-                    <Text style={styles.stepTitle}>Шаг 3. Транспорт</Text>
-                    <Text style={styles.stepSubtitle} numberOfLines={1}>
-                      {routeStepState.endSelected ? 'Транспорт выбран' : 'Выберите транспорт'}
-                    </Text>
-                    {showTransportHint && <Text style={styles.stepInlineHint}>Выберите транспорт</Text>}
-                  </View>
-                </View>
-
-                {routeDistance != null && (
-                  <View style={styles.routeBuilt}>
-                    <Text style={styles.routeBuiltTitle}>Маршрут построен</Text>
-                    <Text style={styles.routeBuiltMeta}>
-                      {(routeDistance / 1000).toFixed(1)} км
-                    </Text>
-                  </View>
-                )}
-              </View>
             </View>
           </>
         )}
 
-        {/* ✅ РЕАЛИЗАЦИЯ: Информация о найденных точках - показываем отфильтрованные данные */}
         {/* ✅ Аккордеон легенды */}
         <Pressable
           style={[styles.accordionHeader, globalFocusStyles.focusable]}
@@ -708,10 +536,21 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           <Icon name={legendOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.textMuted} />
         </Pressable>
         {legendOpen && <MapLegend showRouteMode={mode === 'route'} />}
+
+        {/* ✅ УЛУЧШЕНИЕ: QuickActions для быстрого доступа */}
+        <QuickActions
+          onReset={_hasActiveFilters ? resetFilters : undefined}
+          onFitBounds={totalPoints > 0 ? () => {
+            // Callback для fitBounds будет добавлен позже
+            console.info('[FiltersPanel] Fit to bounds requested');
+          } : undefined}
+          totalPoints={totalPoints}
+          hasFilters={_hasActiveFilters}
+        />
       </ScrollView>
 
       {/* Sticky footer CTA */}
-      <View style={styles.stickyFooter}>
+      <View style={styles.stickyFooter} testID="filters-panel-footer">
         {!canBuildRoute && mode === 'route' && (
           <Text style={styles.helperText}>
             Добавьте старт и финиш — кнопка «Построить маршрут» станет активной
@@ -719,6 +558,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         )}
         <View style={styles.footerButtons}>
           <Pressable
+            testID="filters-reset-button"
             style={[
               styles.ctaButton,
               styles.ctaOutline,
@@ -738,6 +578,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
 
           {onBuildRoute && mode === 'route' && (
             <Pressable
+              testID="filters-build-route-button"
               style={[
                 styles.ctaButton,
                 styles.ctaPrimary,
@@ -764,6 +605,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
 // ——— Styles
 const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number) => {
   const panelWidth = isMobile ? Math.max(Math.min(windowWidth - 24, 480), 280) : '100%';
+  const windowHeight = Dimensions.get('window').height;
 
   return StyleSheet.create({
     card: {
@@ -772,7 +614,10 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
       padding: 12,
       width: panelWidth,
       maxWidth: '100%',
-      flex: 1,
+      height: '100%',
+      maxHeight: windowHeight, // RN: maxHeight должен быть числом/DimensionValue, не CSS-строкой
+      display: 'flex',
+      flexDirection: 'column',
       shadowColor: (colors.shadows as any)?.shadowColor ?? DESIGN_TOKENS.shadowsNative.light.shadowColor,
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.07,
@@ -796,6 +641,35 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
             paddingTop: 4,
           } as any)
         : null),
+    },
+    // ✅ УЛУЧШЕНИЕ: Компактный header стили
+    compactHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    compactTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flex: 1,
+    },
+    compactTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    closeButton: {
+      width: 32,
+      height: 32,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      flexShrink: 0,
     },
     header: {
       flexDirection: 'row',
@@ -823,12 +697,6 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
       borderColor: colors.border,
       backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
       minHeight: 36,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer',
-          transition: 'all 0.16s ease',
-        } as any,
-      }),
     },
     headerActionText: {
       fontSize: 12,
@@ -853,16 +721,6 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
       paddingHorizontal: 12, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
       marginHorizontal: 2,
       minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
-      ...Platform.select({
-        web: {
-          transition: 'all 0.2s ease',
-          cursor: 'pointer',
-          // @ts-ignore
-          ':hover': {
-            backgroundColor: colors.primarySoft,
-          },
-        },
-      }),
     },
     modeTabActive: {
       backgroundColor: colors.primary,
@@ -934,7 +792,7 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
       flexGrow: 1,
     },
     contentContainer: {
-      paddingBottom: 8,
+      paddingBottom: 100, // ✅ ИСПРАВЛЕНИЕ: Увеличен отступ снизу для прокрутки до конца
       flexGrow: 1,
     },
     section: {
@@ -1033,16 +891,6 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
       // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
       backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
       minHeight: 36, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
-      ...Platform.select({
-        web: {
-          transition: 'all 0.2s ease',
-          cursor: 'pointer',
-          // @ts-ignore
-          ':hover': {
-            backgroundColor: colors.primarySoft,
-          },
-        },
-      }),
     },
     radiusChipActive: {
       backgroundColor: colors.primarySoft,
@@ -1071,16 +919,6 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
       marginHorizontal: 2,
       gap: 6,
       minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
-      ...Platform.select({
-        web: {
-          transition: 'all 0.2s ease',
-          cursor: 'pointer',
-          // @ts-ignore
-          ':hover': {
-            backgroundColor: colors.primarySoft,
-          },
-        },
-      }),
     },
     transportTabActive: {
       backgroundColor: colors.primary,
@@ -1175,17 +1013,6 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
       borderRadius: DESIGN_TOKENS.radii.sm, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
       minHeight: 40, // ✅ ИСПРАВЛЕНИЕ: Увеличена минимальная высота для touch-целей
       marginLeft: 8,
-      ...Platform.select({
-        web: {
-          transition: 'all 0.2s ease',
-          cursor: 'pointer',
-          // @ts-ignore
-          ':hover': {
-            opacity: 0.9,
-            transform: 'scale(1.05)',
-          },
-        },
-      }),
     },
     compactButtonSmall: {
       paddingHorizontal: 12, // ✅ ИСПРАВЛЕНИЕ: Увеличен padding
@@ -1406,12 +1233,6 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
       borderColor: colors.border,
       backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
       minHeight: 40,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer',
-          transition: 'all 0.16s ease',
-        } as any,
-      }),
     },
     actionGhostText: {
       fontSize: 13,

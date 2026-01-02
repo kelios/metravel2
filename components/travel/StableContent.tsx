@@ -476,7 +476,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         return DefaultRenderer ? <DefaultRenderer {...props} /> : null;
       },
     };
-  }, [contentWidth]);
+  }, [contentWidth, styles.instagramEmbedWrapper, styles.instagramEmbedWrapperWeb, styles.ytStub, styles.ytStubText]);
 
   // ВНИМАНИЕ: lineHeight задаём через baseStyle (px). В tagsStyles не переопределяем.
   const baseStyle = useMemo(

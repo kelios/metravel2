@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+const tid = (id: string) => `[data-testid="${id}"], [testID="${id}"]`;
+
 async function preacceptCookies(page: any) {
   await page.addInitScript(() => {
     try {
@@ -81,6 +83,6 @@ test.describe('Travel details should not flash Home', () => {
     expect(await homeHeroText.isVisible().catch(() => false)).toBe(false);
 
     // Then the travel page should render.
-    await expect(page.locator('[data-testid="travel-details-page"]')).toBeVisible({ timeout: 45_000 });
+    await expect(page.locator(tid('travel-details-page'))).toBeVisible({ timeout: 45_000 });
   });
 });

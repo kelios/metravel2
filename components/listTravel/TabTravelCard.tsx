@@ -68,7 +68,7 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
         </View>
       </View>
     );
-  }, [colors, contentMinHeight, item?.id, location, testID, title]);
+  }, [colors, contentMinHeight, item?.id, location, styles.content, styles.locationRow, styles.locationText, styles.title, testID, title]);
 
   return (
     <UnifiedTravelCard

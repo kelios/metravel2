@@ -118,7 +118,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
                 </Text>
             </View>
         );
-    }, [countryName]);
+    }, [countryName, styles.locationRow, styles.locationText]);
 
     return (
         <View style={styles.container}>

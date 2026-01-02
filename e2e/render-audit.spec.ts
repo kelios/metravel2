@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { getTravelsListPath } from './helpers/routes';
 
+const tid = (id: string) => `[data-testid="${id}"], [testID="${id}"]`;
+
 const VIEWPORTS = [
   { name: 'mobile', width: 375, height: 812 },
   { name: 'tablet', width: 820, height: 1180 },
@@ -180,7 +182,7 @@ test.describe('Render audit: main and travel details (responsive + perf)', () =>
 
       // Either error state or the page shell must render.
       await Promise.race([
-        page.waitForSelector('[data-testid="travel-details-page"]', { timeout: 45_000 }),
+        page.waitForSelector(tid('travel-details-page'), { timeout: 45_000 }),
         page.waitForSelector('text=Не удалось загрузить путешествие', { timeout: 45_000 }),
       ]);
 
@@ -191,12 +193,12 @@ test.describe('Render audit: main and travel details (responsive + perf)', () =>
       }
 
       // Must-have blocks (successful render)
-      await expect(page.locator('[data-testid="travel-details-page"]')).toBeVisible();
-      await expect(page.locator('[data-testid="travel-details-scroll"]')).toBeVisible();
-      await expect(page.locator('[data-testid="travel-details-section-gallery"]')).toHaveCount(1);
-      await expect(page.locator('[data-testid="travel-details-hero"]')).toHaveCount(1);
-      await expect(page.locator('[data-testid="travel-details-quick-facts"]')).toHaveCount(1);
-      await expect(page.locator('[data-testid="travel-details-author"]')).toHaveCount(1);
+      await expect(page.locator(tid('travel-details-page'))).toBeVisible();
+      await expect(page.locator(tid('travel-details-scroll'))).toBeVisible();
+      await expect(page.locator(tid('travel-details-section-gallery'))).toHaveCount(1);
+      await expect(page.locator(tid('travel-details-hero'))).toHaveCount(1);
+      await expect(page.locator(tid('travel-details-quick-facts'))).toHaveCount(1);
+      await expect(page.locator(tid('travel-details-author'))).toHaveCount(1);
 
       // At least one content marker should exist.
       // data-section-key is best-effort on web (setAttribute via refs) and can be flaky during hydration.
@@ -204,7 +206,7 @@ test.describe('Render audit: main and travel details (responsive + perf)', () =>
       await expect(
         page.locator(
           '[data-section-key="description"], [data-section-key="video"], [data-section-key="map"], [data-section-key="points"], ' +
-            '[data-testid="travel-details-map"], [data-testid="travel-details-points"]'
+            `${tid('travel-details-map')}, ${tid('travel-details-points')}`
         )
       ).toHaveCount(1, { timeout: 45_000 });
 
@@ -214,14 +216,14 @@ test.describe('Render audit: main and travel details (responsive + perf)', () =>
       // Trigger deferred sections and assert engagement blocks render.
       await scrollDownToTriggerDeferredSections(page);
       await Promise.race([
-        page.waitForSelector('[data-testid="travel-details-share"]', { timeout: 8_000 }),
-        page.waitForSelector('[data-testid="travel-details-cta"]', { timeout: 8_000 }),
+        page.waitForSelector(tid('travel-details-share'), { timeout: 8_000 }),
+        page.waitForSelector(tid('travel-details-cta'), { timeout: 8_000 }),
       ]);
 
       // Share/CTA blocks should be present on successful page.
       // Telegram block can be environment-dependent (widget availability), so do not hard-fail on it.
-      await expect(page.locator('[data-testid="travel-details-share"]')).toHaveCount(1);
-      await expect(page.locator('[data-testid="travel-details-cta"]')).toHaveCount(1);
+      await expect(page.locator(tid('travel-details-share'))).toHaveCount(1);
+      await expect(page.locator(tid('travel-details-cta'))).toHaveCount(1);
 
       await page.waitForTimeout(1200);
       await startClsAfterRenderPhase(page);
