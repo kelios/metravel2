@@ -280,7 +280,7 @@ test.describe('Группировка параметров (Шаг 5)', () => {
     await expect(page.locator('text=Категории путешествий')).toBeVisible();
   });
 
-  test('должен обновлять счетчик заполненных полей', async ({ page }) => {
+  test('должен показывать счетчик заполненных полей', async ({ page }) => {
     await page.goto('/travel/new');
     await page.fill('[placeholder*="Неделя в Грузии"]', 'Тест счетчика');
 
@@ -292,15 +292,10 @@ test.describe('Группировка параметров (Шаг 5)', () => {
 
     // Проверяем начальный счетчик (может быть 0/11 или больше)
     const initialCounter = await page.locator('text=/\\d+\\/11/').textContent();
-    const _initialCount = parseInt(initialCounter?.match(/\d+/)?.[0] || '0');
+    const initialCount = parseInt(initialCounter?.match(/\d+/)?.[0] || '0');
 
-    // Выбираем категорию (если возможно)
-    const categoryField = page.locator('text=Категории путешествий').first();
-    if (await categoryField.isVisible()) {
-    }
-
-    // Проверяем что счетчик обновился
-    // await expect(page.locator(`text=/${initialCount + 1}\\/11/`)).toBeVisible({ timeout: 5000 });
+    expect(initialCounter ?? '').toMatch(/\d+\/11/);
+    expect(initialCount).toBeGreaterThanOrEqual(0);
   });
 });
 

@@ -94,26 +94,19 @@ export const getStyles = (
       rightPanel: {
         position: isMobile ? 'absolute' : 'relative',
         right: isMobile ? 0 : undefined,
-        top: isMobile ? effectiveHeaderOffset : 0,
+        // ✅ ИСПРАВЛЕНИЕ: Убран effectiveHeaderOffset, так как хедер уже в потоке
+        top: 0,
         bottom: isMobile ? 0 : undefined,
         width: isMobile ? '100%' : PANEL_WIDTH_DESKTOP,
         maxWidth: isMobile ? '100%' : PANEL_WIDTH_DESKTOP + 40,
         backgroundColor: themedColors.surface,
-        ...Platform.select({
-          web: {
-            // @ts-ignore: web-only style
-            boxShadow: themedColors.boxShadows.modal,
-          },
-          ios: {
-            ...shadowHeavy,
-          },
-          android: {
-            elevation: shadowHeavy.elevation,
-          },
-          default: {
-            ...shadowHeavy,
-          },
-        }),
+        ...(Platform.OS === 'web'
+          ? ({
+              boxShadow: themedColors.boxShadows.modal,
+            } as any)
+          : Platform.OS === 'ios'
+          ? shadowHeavy
+          : { elevation: shadowHeavy.elevation }),
         zIndex: 1000,
         ...(Platform.OS === 'web' && !isMobile
           ? ({
@@ -147,7 +140,8 @@ export const getStyles = (
       },
       overlay: {
         position: 'absolute',
-        top: effectiveHeaderOffset,
+        // ✅ ИСПРАВЛЕНИЕ: Убран effectiveHeaderOffset, так как хедер уже в потоке
+        top: 0,
         left: 0,
         right: 0,
         bottom: 0,
@@ -170,7 +164,8 @@ export const getStyles = (
       tabsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingTop: (isMobile ? insetTop + 6 : 8) + effectiveHeaderOffset,
+        // ✅ ИСПРАВЛЕНИЕ: Убран effectiveHeaderOffset из paddingTop
+        paddingTop: isMobile ? insetTop + 6 : 8,
         paddingBottom: 10,
         paddingHorizontal: isMobile ? 12 : 8,
         backgroundColor: themedColors.surface,
