@@ -27,6 +27,7 @@ import NavigationArrows from '@/components/travel/NavigationArrows'
 import ShareButtons from '@/components/travel/ShareButtons'
 import TelegramDiscussionSection from '@/components/travel/TelegramDiscussionSection'
 import CTASection from '@/components/travel/CTASection'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { METRICS } from '@/constants/layout'
 import { useLazyMap } from '@/hooks/useLazyMap'
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
@@ -641,7 +642,6 @@ const TravelContentSections: React.FC<{
           <View
             ref={anchors.description}
             collapsable={false}
-            accessibilityRole="region"
             accessibilityLabel="Описание маршрута"
             {...(Platform.OS === 'web' ? { 'data-section-key': 'description' } : {})}
           >
@@ -785,7 +785,6 @@ const TravelContentSections: React.FC<{
           style={[styles.sectionContainer, styles.contentStable]}
           ref={anchors.video}
           collapsable={false}
-          accessibilityRole="region"
           accessibilityLabel="Видео маршрута"
           {...(Platform.OS === 'web' ? { 'data-section-key': 'video' } : {})}
         >
@@ -799,7 +798,6 @@ const TravelContentSections: React.FC<{
 
       {shouldUseMobileInsights && (
         <View
-          accessibilityRole="region"
           accessibilityLabel="Быстрый доступ к разделам"
           style={[styles.sectionContainer, styles.mobileInsightTabsWrapper]}
         >
@@ -835,7 +833,6 @@ const TravelContentSections: React.FC<{
           <View
             ref={anchors.recommendation}
             collapsable={false}
-            accessibilityRole="region"
             accessibilityLabel="Рекомендации"
             {...(Platform.OS === 'web' ? { 'data-section-key': 'recommendation' } : {})}
           >
@@ -861,7 +858,6 @@ const TravelContentSections: React.FC<{
           <View
             ref={anchors.plus}
             collapsable={false}
-            accessibilityRole="region"
             accessibilityLabel="Плюсы"
             {...(Platform.OS === 'web' ? { 'data-section-key': 'plus' } : {})}
           >
@@ -887,7 +883,6 @@ const TravelContentSections: React.FC<{
           <View
             ref={anchors.minus}
             collapsable={false}
-            accessibilityRole="region"
             accessibilityLabel="Минусы"
             {...(Platform.OS === 'web' ? { 'data-section-key': 'minus' } : {})}
           >
@@ -942,7 +937,6 @@ const TravelVisualSections: React.FC<{
               ref={anchors.excursions}
               style={[styles.sectionContainer, styles.contentStable]}
               collapsable={false}
-              accessibilityRole="region"
               accessibilityLabel="Экскурсии"
               {...(Platform.OS === 'web' ? { 'data-section-key': 'excursions' } : {})}
             >
@@ -966,7 +960,6 @@ const TravelVisualSections: React.FC<{
         testID="travel-details-map"
         style={[styles.sectionContainer, styles.contentStable]}
         collapsable={false}
-        accessibilityRole="region"
         accessibilityLabel="Карта маршрута"
         {...(Platform.OS === 'web' ? { 'data-section-key': 'map', 'data-map-for-pdf': '1' } : {})}
       >
@@ -1009,7 +1002,6 @@ const TravelVisualSections: React.FC<{
         testID="travel-details-points"
         style={[styles.sectionContainer, styles.contentStable]}
         collapsable={false}
-        accessibilityRole="region"
         accessibilityLabel="Координаты мест"
         {...(Platform.OS === 'web' ? { 'data-section-key': 'points' } : {})}
       >
@@ -1147,7 +1139,6 @@ const TravelRelatedContent: React.FC<{
         ref={anchors.near}
         style={[styles.sectionContainer, styles.contentStable]}
         collapsable={false}
-        accessibilityRole="region"
         accessibilityLabel="Рядом можно посмотреть"
         onLayout={
           isWeb
@@ -1197,7 +1188,6 @@ const TravelRelatedContent: React.FC<{
       {relatedTravels.length > 0 && (
         <View
           style={[styles.sectionContainer, styles.navigationArrowsContainer]}
-          accessibilityRole="region"
           accessibilityLabel="Навигация по похожим маршрутам"
         >
           <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
@@ -1208,7 +1198,6 @@ const TravelRelatedContent: React.FC<{
         ref={anchors.popular}
         style={[styles.sectionContainer, styles.contentStable]}
         collapsable={false}
-        accessibilityRole="region"
         accessibilityLabel="Популярные маршруты"
         onLayout={
           isWeb
@@ -1262,7 +1251,6 @@ export const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boole
     <>
       <View
         testID="travel-details-telegram"
-        accessibilityRole="region"
         accessibilityLabel="Обсуждение в Telegram"
         style={[styles.sectionContainer, styles.authorCardContainer]}
       >
@@ -1272,7 +1260,6 @@ export const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boole
       {!isMobile && (
         <View
           testID="travel-details-share"
-          accessibilityRole="region"
           accessibilityLabel="Поделиться маршрутом"
           style={[styles.sectionContainer, styles.shareButtonsContainer]}
         >
@@ -1282,7 +1269,6 @@ export const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boole
 
       <View
         testID="travel-details-cta"
-        accessibilityRole="region"
         accessibilityLabel="Призыв к действию"
         style={[styles.sectionContainer, styles.ctaContainer]}
       >

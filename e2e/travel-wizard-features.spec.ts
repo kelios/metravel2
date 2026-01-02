@@ -44,7 +44,7 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
     await expect(page).toHaveURL(/\/travel\/new/);
   });
 
-  test('должен работать Quick Draft на desktop и mobile', async ({ page, viewport }) => {
+  test('должен работать Quick Draft на desktop и mobile', async ({ page, viewport: _viewport }) => {
     // Desktop
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/travel/new');
@@ -292,7 +292,7 @@ test.describe('Группировка параметров (Шаг 5)', () => {
 
     // Проверяем начальный счетчик (может быть 0/11 или больше)
     const initialCounter = await page.locator('text=/\\d+\\/11/').textContent();
-    const initialCount = parseInt(initialCounter?.match(/\\d+/)?.[0] || '0');
+    const _initialCount = parseInt(initialCounter?.match(/\d+/)?.[0] || '0');
 
     // Выбираем категорию (если возможно)
     const categoryField = page.locator('text=Категории путешествий').first();
@@ -342,7 +342,7 @@ test.describe('Милестоны (Навигация по шагам)', () => {
     await page.click('button:has-text("Далее")');
 
     // Проверяем галочку на шаге 1
-    const step1 = page.locator('[aria-label="Перейти к шагу 1"]');
+    const _step1 = page.locator('[aria-label="Перейти к шагу 1"]');
     // await expect(step1.locator('text=✓')).toBeVisible();
   });
 });

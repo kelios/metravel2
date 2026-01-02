@@ -195,7 +195,7 @@ test.describe('Создание путешествия - Полный flow', () 
     await expect(page.locator('text=Превью карточки')).not.toBeVisible();
   });
 
-  test('должен использовать милестоны для навигации (desktop)', async ({ page, viewport }) => {
+  test('должен использовать милестоны для навигации (desktop)', async ({ page, viewport: _viewport }) => {
     // Устанавливаем desktop размер
     await page.setViewportSize({ width: 1280, height: 720 });
 

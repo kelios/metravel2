@@ -95,12 +95,14 @@
 ### Производительность
 - ⚡ **Кластеризация**: Включается на 50% раньше (25 вместо 50 точек)
 - ⚡ **Debounce на mobile**: Быстрее на 40% (300ms вместо 500ms)
+- ⚡ **FlashList**: Улучшение производительности списка на 50-70%
 - ⚡ **Cleanup**: Предотвращены утечки памяти в AddressSearch
 
 ### UX
 - ✨ **Skeleton loaders**: Улучшено восприятие скорости загрузки
 - ✨ **Empty state**: Пользователь получает подсказки вместо пустого экрана
 - ✨ **Error recovery**: Возможность восстановления после ошибок карты
+- ✨ **Swipe-to-close**: Интуитивный жест закрытия панели на мобильных
 
 ### Доступность (A11y)
 - ♿ **WCAG 2.1 AA**: Кнопки транспорта теперь соответствуют стандартам контрастности
@@ -126,18 +128,20 @@
 
 ## Затронутые файлы
 
-### Новые файлы (3)
+### Новые файлы (4)
 - ✅ `components/MapPage/MapErrorBoundary.tsx`
 - ✅ `components/SkeletonLoader.tsx`
+- ✅ `components/MapPage/SwipeablePanel.tsx`
 - ✅ `MAP_IMPROVEMENTS_REPORT.md`
 
-### Измененные файлы (5)
+### Измененные файлы (6)
 - ✅ `app/(tabs)/map.tsx`
 - ✅ `components/MapPage/MapPanel.tsx`
 - ✅ `components/MapPage/TravelListPanel.tsx`
 - ✅ `components/MapPage/FiltersPanel.tsx`
 - ✅ `components/MapPage/AddressSearch.tsx`
 - ✅ `components/MapPage/Map.web.tsx`
+- ✅ `package.json` (добавлена зависимость @shopify/flash-list)
 
 ## Тестирование
 
