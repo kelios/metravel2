@@ -201,10 +201,7 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
     const isWeb = Platform.OS === 'web';
-    const insets =
-        typeof useSafeAreaInsets === 'function'
-            ? useSafeAreaInsets()
-            : { top: 0, bottom: 0, left: 0, right: 0 };
+    const insets = useSafeAreaInsets();
 
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);

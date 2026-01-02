@@ -72,8 +72,7 @@ const TravelListPanel: React.FC<Props> = ({
       keyExtractor={keyExtractor}
       renderItem={renderItem}
       contentContainerStyle={styles.list}
-      // @ts-expect-error - estimatedItemSize is valid FlashList prop but types may be outdated
-      estimatedItemSize={isMobile ? 100 : 120}
+      {...({ estimatedItemSize: isMobile ? 100 : 120 } as any)}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
         if (hasMore && onLoadMore) onLoadMore();

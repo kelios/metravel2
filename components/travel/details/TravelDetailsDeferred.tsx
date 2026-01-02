@@ -376,7 +376,6 @@ export const TravelDeferredSections: React.FC<{
   viewportHeight,
   scrollRef,
 }) => {
-  const styles = useTravelDetailsStyles()
   const [canRenderHeavy, setCanRenderHeavy] = useState(false)
 
   useEffect(() => {

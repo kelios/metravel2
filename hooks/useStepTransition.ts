@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Platform } from 'react-native';
 
 /**
@@ -78,7 +78,7 @@ export function useStepTransition(config: StepTransitionConfig = {}) {
  * Используется для fade out → fade in эффекта
  */
 export function useStepChangeTransition(currentStep: number, config: StepTransitionConfig = {}) {
-  const mergedConfig = { ...DEFAULT_CONFIG, ...config };
+  const mergedConfig = useMemo(() => ({ ...DEFAULT_CONFIG, ...config }), [config]);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const prevStepRef = useRef(currentStep);
@@ -101,7 +101,7 @@ export function useStepChangeTransition(currentStep: number, config: StepTransit
 
       prevStepRef.current = currentStep;
     }
-  }, [currentStep, fadeAnim, mergedConfig.duration, mergedConfig.useNativeDriver]);
+  }, [currentStep, fadeAnim, mergedConfig]);
 
   return {
     fadeAnim,
@@ -115,7 +115,7 @@ export function useStepChangeTransition(currentStep: number, config: StepTransit
  * Hook для анимации прогресс-бара
  */
 export function useProgressBarAnimation(progress: number, config: StepTransitionConfig = {}) {
-
+  const mergedConfig = useMemo(() => ({ ...DEFAULT_CONFIG, ...config }), [config]);
   const progressAnim = useRef(new Animated.Value(progress)).current;
 
   useEffect(() => {
@@ -125,7 +125,7 @@ export function useProgressBarAnimation(progress: number, config: StepTransition
       tension: 40,
       useNativeDriver: false, // width не поддерживается с native driver
     }).start();
-  }, [progress, progressAnim]);
+  }, [progress, progressAnim, mergedConfig]);
 
   return {
     progressAnim,
@@ -136,7 +136,7 @@ export function useProgressBarAnimation(progress: number, config: StepTransition
  * Hook для анимации милестонов
  */
 export function useMilestoneAnimation(isActive: boolean, isPassed: boolean, config: StepTransitionConfig = {}) {
-  const mergedConfig = { ...DEFAULT_CONFIG, duration: 200, ...config };
+  const mergedConfig = useMemo(() => ({ ...DEFAULT_CONFIG, duration: 200, ...config }), [config]);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(isPassed ? 1 : 0.5)).current;
@@ -163,7 +163,7 @@ export function useMilestoneAnimation(isActive: boolean, isPassed: boolean, conf
       duration: mergedConfig.duration!,
       useNativeDriver: mergedConfig.useNativeDriver!,
     }).start();
-  }, [isActive, isPassed, scaleAnim, opacityAnim, mergedConfig.duration, mergedConfig.useNativeDriver]);
+  }, [isActive, isPassed, scaleAnim, opacityAnim, mergedConfig]);
 
   return {
     scaleAnim,
@@ -179,7 +179,7 @@ export function useMilestoneAnimation(isActive: boolean, isPassed: boolean, conf
  * Hook для анимации появления контекстных подсказок
  */
 export function useTipAnimation(visible: boolean, delay: number = 0, config: StepTransitionConfig = {}) {
-  const mergedConfig = { ...DEFAULT_CONFIG, duration: 250, ...config };
+  const mergedConfig = useMemo(() => ({ ...DEFAULT_CONFIG, duration: 250, ...config }), [config]);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(-10)).current;
