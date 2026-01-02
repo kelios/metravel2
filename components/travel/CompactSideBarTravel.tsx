@@ -22,7 +22,7 @@ import type { BookSettings } from "@/components/export/BookSettingsModal";
 import { useSingleTravelExport } from "@/components/travel/hooks/useSingleTravelExport";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useThemedColors } from '@/hooks/useTheme';
+import { useThemedColors, useTheme } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 // ✅ УЛУЧШЕНИЕ: Импорт CSS для современных стилей (только для web)
@@ -94,10 +94,11 @@ function CompactSideBarTravel({
 }: SideBarProps) {
   const { isTablet } = useResponsive();
   const isWeb = Platform.OS === 'web';
+  const { isDark } = useTheme();
   const themedColors = useThemedColors();
   const styles = useMemo(() => createStyles(themedColors), [themedColors]);
   const textColor = themedColors.text;
-  const mutedText = themedColors.textMuted;
+  const mutedText = isDark ? themedColors.textMuted : themedColors.textSecondary;
   const travelAddress = travel.travelAddress;
   const travelOwnerId = (travel as any).userIds ?? (travel as any).userId ?? (travel as any).user?.id ?? null;
   const avatar = (travel as any).user?.avatar;
@@ -107,6 +108,7 @@ function CompactSideBarTravel({
   const [active, setActive] = useState<string>("");
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
+  const placeholderIconSize = isWeb ? 44 : 60;
   const {
     pdfExport,
     lastSettings,
@@ -378,7 +380,7 @@ function CompactSideBarTravel({
               style={styles.avatar}
             />
           ) : (
-            <MaterialIcons name="image" size={60} color={mutedText} />
+            <MaterialIcons name="image" size={placeholderIconSize} color={mutedText} />
           )}
         </View>
 
@@ -670,6 +672,9 @@ function CompactSideBarTravel({
     </Suspense>,
   ];
   
+  const menuPaddingBottom = isMobile ? 80 : isWeb ? 20 : 32;
+  const menuPaddingHorizontal = 10;
+
   return (
     <View style={[styles.root, { backgroundColor: themedColors.background }]}>
       {isWeb ? (
@@ -677,7 +682,11 @@ function CompactSideBarTravel({
           style={[
             styles.menu,
             isMobile ? { width: '100%' } : { width: '100%', maxWidth: 350 },
-            { paddingBottom: isMobile ? 80 : 32, paddingLeft: 12, paddingRight: 12 },
+            {
+              paddingBottom: menuPaddingBottom,
+              paddingLeft: menuPaddingHorizontal,
+              paddingRight: menuPaddingHorizontal,
+            },
           ]}
           {...(Platform.OS === 'web' ? { 'data-sidebar-menu': true } : {})}
         >
@@ -687,9 +696,9 @@ function CompactSideBarTravel({
         <ScrollView
           style={[styles.menu, { width: '100%' }]}
           contentContainerStyle={{
-            paddingBottom: isMobile ? 80 : 32,
-            paddingLeft: 10,
-            paddingRight: 10,
+            paddingBottom: menuPaddingBottom,
+            paddingLeft: menuPaddingHorizontal,
+            paddingRight: menuPaddingHorizontal,
           }}
           showsHorizontalScrollIndicator={false}
           {...(Platform.OS === 'web' ? { 'data-sidebar-menu': true } : {})}
@@ -751,7 +760,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingTop: Platform.select({
       ios: 16,
       android: 16,
-      web: 20,
+      web: 16,
     }),
     alignSelf: "flex-start",
     ...(Platform.OS === 'web' ? {
@@ -767,11 +776,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderRadius: 14,
     padding: Platform.select({
       default: 12,
-      web: 14,
+      web: 10,
     }),
     marginBottom: Platform.select({
       default: 10,
-      web: 12,
+      web: 8,
     }),
     shadowColor: colors.shadows.medium.shadowColor,
     shadowOffset: { width: 0, height: 2 },
@@ -790,7 +799,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   cardRow: { 
     flexDirection: "row", 
     alignItems: "center",
-    marginBottom: DESIGN_TOKENS.spacing.sm,
+    marginBottom: Platform.select({
+      default: DESIGN_TOKENS.spacing.sm,
+      web: DESIGN_TOKENS.spacing.xs,
+    }),
   },
   avatarWrap: { 
     marginRight: DESIGN_TOKENS.spacing.sm,
@@ -804,15 +816,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   avatar: {
     width: Platform.select({
       default: 50,
-      web: 52,
+      web: 44,
     }),
     height: Platform.select({
       default: 50,
-      web: 52,
+      web: 44,
     }),
     borderRadius: Platform.select({
       default: 25,
-      web: 26,
+      web: 22,
     }),
     borderWidth: 2,
     borderColor: colors.primaryLight,
@@ -827,8 +839,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   
   infoSection: {
-    marginTop: 10,
-    paddingTop: 10,
+    marginTop: Platform.select({ default: 10, web: 6 }),
+    paddingTop: Platform.select({ default: 10, web: 6 }),
     borderTopWidth: 1,
     borderTopColor: colors.borderLight,
   },
@@ -838,10 +850,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: "center",
     paddingVertical: Platform.select({
       default: 5,
-      web: 6,
+      web: 4,
     }),
     paddingHorizontal: 0,
-    marginBottom: 6,
+    marginBottom: Platform.select({ default: 6, web: 4 }),
     backgroundColor: "transparent",
     borderRadius: 0,
     borderWidth: 0,
@@ -861,25 +873,25 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   // ✅ РЕДИЗАЙН: Стильные категории-бейджи
   categoryTagWrapper: {
-    marginRight: 6,
-    marginBottom: 6,
+    marginRight: Platform.select({ default: 6, web: 4 }),
+    marginBottom: Platform.select({ default: 6, web: 4 }),
   },
   categoryTag: {
-    fontSize: 13,
+    fontSize: Platform.select({ default: 13, web: 12 }),
     color: colors.primary,
     backgroundColor: colors.primarySoft,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: Platform.select({ default: 10, web: 8 }),
+    paddingVertical: Platform.select({ default: 4, web: 3 }),
     borderRadius: 999,
     fontFamily: "Georgia",
     fontWeight: "600",
     borderWidth: 1,
     borderColor: colors.primaryLight,
-    maxWidth: 100,
+    maxWidth: Platform.select({ default: 100, web: 92 }),
     overflow: 'hidden',
   },
   categoryMore: {
-    fontSize: 13,
+    fontSize: Platform.select({ default: 13, web: 12 }),
     color: colors.primary,
     fontFamily: "Georgia",
     fontWeight: "600",
@@ -916,9 +928,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignSelf: 'center',
   },
   actionBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: Platform.select({ default: 44, web: 40 }),
+    height: Platform.select({ default: 44, web: 40 }),
+    borderRadius: Platform.select({ default: 12, web: 10 }),
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primarySoft,
@@ -952,13 +964,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   userName: { 
     fontSize: Platform.select({
       default: 15,
-      web: 16,
+      web: 15,
     }),
     fontWeight: "700",
     color: colors.text,
     fontFamily: "Georgia", 
     flexShrink: 1,
-    lineHeight: 20,
+    lineHeight: Platform.select({ default: 20, web: 18 }),
   },
   userNamePrimary: {
     fontWeight: "800",
@@ -988,7 +1000,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: 'center',
     flexWrap: 'nowrap',
     columnGap: 10,
-    marginTop: 6,
+    marginTop: Platform.select({ default: 6, web: 4 }),
   },
   metaItem: {
     flexDirection: 'row',
@@ -998,11 +1010,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     minWidth: 0,
   },
   metaText: {
-    fontSize: 14,
+    fontSize: Platform.select({ default: 14, web: 13 }),
     color: colors.textMuted,
     fontFamily: 'Georgia',
     fontWeight: '600',
-    lineHeight: 20,
+    lineHeight: Platform.select({ default: 20, web: 18 }),
     flexShrink: 1,
   },
   userDays: { 
@@ -1025,18 +1037,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: "center", 
     paddingVertical: Platform.select({
       default: 10,
-      web: 12,
+      web: 8,
     }),
     paddingHorizontal: Platform.select({
       default: 12,
-      web: 14,
+      web: 12,
     }),
     paddingLeft: Platform.select({
       default: 18,
-      web: 20,
+      web: 16,
     }),
     borderRadius: 12,
-    marginBottom: 4,
+    marginBottom: Platform.select({ default: 4, web: 2 }),
     width: '100%',
     maxWidth: '100%',
     justifyContent: "space-between",
@@ -1056,8 +1068,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     position: "absolute",
     left: 0,
     top: '50%',
-    marginTop: -12,
-    height: 24,
+    marginTop: Platform.select({ default: -12, web: -9 }),
+    height: Platform.select({ default: 24, web: 18 }),
     width: 3,
     borderRadius: 999,
     backgroundColor: "transparent",
@@ -1092,13 +1104,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   linkTxt: { 
     marginLeft: Platform.select({
       default: 10,
-      web: 12,
+      web: 10,
     }),
-    fontSize: 15,
+    fontSize: Platform.select({ default: 15, web: 14 }),
     fontFamily: "Georgia",
     color: colors.text,
     fontWeight: "500",
-    lineHeight: 22,
+    lineHeight: Platform.select({ default: 22, web: 20 }),
     ...(Platform.OS === 'web' ? {
       transition: 'all 0.2s ease',
     } as any : {}),
@@ -1108,9 +1120,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontWeight: "700",
   },
   linkMetaPill: {
-    marginLeft: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    marginLeft: Platform.select({ default: 10, web: 8 }),
+    paddingHorizontal: Platform.select({ default: 8, web: 6 }),
+    paddingVertical: Platform.select({ default: 3, web: 2 }),
     borderRadius: 999,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 0,
@@ -1118,16 +1130,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexShrink: 0,
   },
   linkMetaText: {
-    fontSize: 14,
+    fontSize: Platform.select({ default: 14, web: 12 }),
     color: colors.textMuted,
     fontFamily: "Georgia",
     fontWeight: "600",
-    lineHeight: 18,
+    lineHeight: Platform.select({ default: 18, web: 16 }),
   },
   linkDivider: {
     height: 1,
     backgroundColor: colors.borderLight,
-    marginVertical: 16,
+    marginVertical: Platform.select({ default: 16, web: 10 }),
     marginHorizontal: 12,
     ...(Platform.OS === 'web' ? {
       // React Native Web не поддерживает shorthand background

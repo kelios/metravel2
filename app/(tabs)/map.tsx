@@ -569,10 +569,14 @@ export default function MapScreen() {
                         routingLoading={routingLoading}
                         routingError={routingError}
                         onBuildRoute={() => {
-                            // ✅ ИСПРАВЛЕНИЕ: Конвертируем точки из routeStore в формат [lng, lat][]
+                            // ✅ Конвертируем точки из routeStore в формат [lng, lat][]
+                            // Валидация теперь в setRoutePoints
                             if (routeStorePoints.length >= 2) {
-                                const points: [number, number][] = routeStorePoints.map(p => [p.coordinates.lng, p.coordinates.lat]);
+                                const points: [number, number][] = routeStorePoints
+                                    .map(p => [p.coordinates.lng, p.coordinates.lat]);
                                 setRoutePoints(points);
+                            } else {
+                                console.warn('[map] Not enough route points to build route:', routeStorePoints.length);
                             }
                         }}
                         closeMenu={() => setRightPanelVisible(false)}
@@ -647,7 +651,6 @@ export default function MapScreen() {
         routingLoading,
         routingError,
         setRoutePoints,
-        routePoints,
         buildRouteTo,
         mapErrorDetails,
         refetchMapData,

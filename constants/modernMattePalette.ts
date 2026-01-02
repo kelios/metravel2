@@ -31,7 +31,7 @@ export const MODERN_MATTE_PALETTE = {
   text: '#3a3a3a', // Мягкий темно-серый для основного текста
   textSecondary: '#6a6a6a', // Приглушенный серый для вторичного текста
   textTertiary: '#8a8a8a', // Светлый серый для подписей
-  textMuted: '#ababab', // Очень светлый серый для деталей
+  textMuted: '#6a6a6a', // Приглушенный серый для вторичного текста
   textInverse: '#ffffff', // Белый текст на темных фонах
   textOnPrimary: '#111827', // Темный текст для акцентных фонов
   textOnDark: '#ffffff', // Светлый текст для медиа/оверлеев
@@ -202,7 +202,7 @@ export const MODERN_MATTE_PALETTE_DARK = {
   text: '#e8e8e8', // Светлый серый для основного текста
   textSecondary: '#b8b8b8', // Приглушенный светлый для вторичного
   textTertiary: '#888888', // Средний серый для подписей
-  textMuted: '#686868', // Темный серый для деталей
+  textMuted: '#b8b8b8', // Приглушенный светлый для вторичного
   textInverse: '#1a1a1a', // Темный текст на светлых фонах
   textOnPrimary: '#e8e8e8', // Светлый текст для акцентных фонов
   textOnDark: '#ffffff', // Белый текст для медиа/оверлеев
@@ -340,4 +340,3 @@ export const MODERN_MATTE_GRADIENTS_DARK = {
   surface: 'linear-gradient(180deg, #2a2a2a 0%, #252525 100%)',
   overlay: 'linear-gradient(180deg, rgba(26, 26, 26, 0.95) 0%, rgba(26, 26, 26, 0.85) 100%)',
 } as const;
-

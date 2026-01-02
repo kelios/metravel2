@@ -36,15 +36,37 @@ export function useRouteStoreAdapter() {
 
   // Adapter methods
   const setRoutePoints = useCallback((points: [number, number][]) => {
+    // ✅ ИСПРАВЛЕНИЕ: Проверяем, что points - это массив
+    if (!Array.isArray(points) || points.length === 0) {
+      console.warn('[setRoutePoints] Invalid points array:', points);
+      return;
+    }
+
     // Clear existing points
     store.clearRoute();
     
-    // Add new points
-    points.forEach((point) => {
-      const coords: LatLng = { lat: point[1], lng: point[0] };
+    // Add new points с проверкой валидности
+    points.forEach((point, index) => {
+      if (!Array.isArray(point) || point.length < 2) {
+        console.warn('[setRoutePoints] Invalid point format at index', index, point);
+        return;
+      }
+
+      const [lng, lat] = point;
+
+      // Проверяем только NaN, так как TypeScript гарантирует, что это числа
+      if (isNaN(lng) || isNaN(lat)) {
+        console.warn('[setRoutePoints] Invalid coordinates (NaN) at index', index, { lng, lat });
+        return;
+      }
+
+      const coords: LatLng = { lat, lng };
       const address = CoordinateConverter.formatCoordinates(coords);
+      console.info('[setRoutePoints] Adding point', index, coords, address);
       store.addPoint(coords, address);
     });
+
+    console.info('[setRoutePoints] Points added. Total:', store.points.length);
   }, [store]);
 
   const setRouteDistance = useCallback((distance: number) => {

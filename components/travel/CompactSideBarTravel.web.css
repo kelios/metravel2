@@ -51,7 +51,7 @@
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  height: 24px;
+  height: 18px;
   width: 4px;
   background: var(--color-primary);
   border-radius: 0 999px 999px 0;
@@ -203,4 +203,3 @@ html[data-theme="dark"] [data-sidebar-link][data-active="true"] {
     transition-duration: 0.01ms !important;
   }
 }
-

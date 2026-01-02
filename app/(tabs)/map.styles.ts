@@ -11,52 +11,46 @@ const TRANSITION_MS = 180;
 export const getStyles = (
   isMobile: boolean,
   insetTop: number,
-  headerOffset: number,
+  _headerOffset: number, // Префикс _ для неиспользуемого параметра
   windowWidth: number = METRICS.breakpoints.tablet,
   themedColors: ThemedColors,
 ) => {
-  // Учитываем высоту web-хедера, иначе карта “подпрыгивает” под него и шапка пропадает
-  const effectiveHeaderOffset = headerOffset;
   const panelSlideDistance = Math.max(windowWidth, PANEL_WIDTH_TABLET);
   const shadowLight = themedColors.shadows.light;
   const shadowMedium = themedColors.shadows.medium;
   const shadowHeavy = themedColors.shadows.heavy;
+
   return StyleSheet.create({
-    // На web шапка уже занимает поток, поэтому смещение не требуется
-    // На native (если появится) оставляем headerOffset
     container: {
       flex: 1,
-      // Заполняем экран и окрашиваем фон на web, чтобы не просвечивал белый фон body
       ...(Platform.OS === 'web'
         ? ({
             minHeight: '100vh',
           } as any)
         : null),
       backgroundColor: themedColors.background,
-      // ✅ ИСПРАВЛЕНИЕ: Убран paddingTop, так как он создает лишний отступ на web
-      // paddingTop: effectiveHeaderOffset,
     },
       content: {
         flex: 1,
         position: 'relative',
         backgroundColor: themedColors.background,
+        // ✅ ИСПРАВЛЕНИЕ: isolation: isolate создает новый stacking context
+        // Это предотвращает перекрытие хедера картой Leaflet
         ...(Platform.OS === 'web'
           ? ({
               flexDirection: isMobile ? 'column' : 'row',
               columnGap: isMobile ? 0 : PANEL_GAP,
               paddingHorizontal: isMobile ? 0 : METRICS.spacing.l,
+              isolation: 'isolate',
             } as any)
           : null),
       },
       mapArea: {
         flex: 1,
         minHeight: 260,
-        // ✅ ИСПРАВЛЕНИЕ: isolation: isolate создает новый stacking context для Leaflet
-        ...(Platform.OS === 'web'
-          ? ({
-              isolation: 'isolate',
-            } as any)
-          : null),
+        position: 'relative',
+        // ✅ ИСПРАВЛЕНИЕ: zIndex < 2000 (хедер), но > 0 (обычный контент)
+        zIndex: 1,
       },
       togglePanelButton: {
         position: 'absolute',

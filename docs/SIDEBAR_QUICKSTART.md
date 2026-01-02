@@ -128,9 +128,10 @@ color: '#3a3a3a'  // ❌
 
 ### Темная тема:
 ```css
---color-primary: #60a5fa          /* Акценты */
---color-text: #f8fafc             /* Текст */
---color-background: #0f172a       /* Фон */
+--color-primary: #8fb5a5          /* Акценты */
+--color-text: #e8e8e8             /* Текст */
+--color-textMuted: #b8b8b8        /* Второстепенный текст */
+--color-background: #1a1a1a       /* Фон */
 ```
 
 ---
@@ -177,4 +178,3 @@ html[data-theme="dark"] [data-my-element] {
 
 **Дата**: 31 декабря 2025  
 ✅ Готово к использованию!
-
