@@ -8,7 +8,11 @@ import RoutingMachine from './RoutingMachine';
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-// MapLegend is currently unused in the web map
+import { buildGpx, buildKml, downloadTextFileWeb } from '@/src/utils/routeExport';
+import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '@/src/config/mapWebLayers';
+import { createLeafletLayer } from '@/src/utils/mapWebLayers';
+import { attachOsmCampingOverlay } from '@/src/utils/mapWebOverlays/osmCampingOverlay';
+import type { MapUiApi } from '@/src/types/mapUi';
 
 type ReactLeafletNS = typeof import('react-leaflet');
 
@@ -41,6 +45,7 @@ interface Props {
   setRouteDistance: (distance: number) => void;
   setFullRouteCoords: (coords: [number, number][]) => void;
   radius?: string; // Радиус поиска в км
+  onMapUiApiReady?: (api: MapUiApi | null) => void;
 }
 
 const MOBILE_BREAKPOINT = METRICS.breakpoints.tablet || 768;
@@ -227,18 +232,8 @@ const ClusterLayer: React.FC<{
     [2, 5, 10, 20, 50, 100, 200].forEach(count => {
       const icon = (window as any).L.divIcon({
         className: 'custom-cluster-icon',
-        html: `<div style="
-          background:${primary};
-          color:${textOnDark};
-          width:42px;height:42px;
-          border-radius:21px;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-weight:800;
-          box-shadow:${shadow};
-          border:2px solid ${border};
-        ">${count}</div>`,
+        // Важно: держим строку style в одной строке, чтобы анализатор не пытался парсить как CSS-файл
+        html: `<div style="background:${primary};color:${textOnDark};width:42px;height:42px;border-radius:21px;display:flex;align-items:center;justify-content:center;font-weight:800;box-shadow:${shadow};border:2px solid ${border};">${count}</div>`,
         iconSize: [42, 42],
         iconAnchor: [21, 21],
       });
@@ -266,18 +261,7 @@ const ClusterLayer: React.FC<{
 
       return (window as any).L.divIcon({
         className: 'custom-cluster-icon',
-        html: `<div style="
-          background:${primary};
-          color:${textOnDark};
-          width:42px;height:42px;
-          border-radius:21px;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-weight:800;
-          box-shadow:${shadow};
-          border:2px solid ${border};
-        ">${count}</div>`,
+        html: `<div style="background:${primary};color:${textOnDark};width:42px;height:42px;border-radius:21px;display:flex;align-items:center;justify-content:center;font-weight:800;box-shadow:${shadow};border:2px solid ${border};">${count}</div>`,
         iconSize: [42, 42],
         iconAnchor: [21, 21],
       });
@@ -422,17 +406,19 @@ const ClusterLayer: React.FC<{
   );
 };
 
-const MapPageComponent: React.FC<Props> = ({
-                                             travel = { data: [] },
-                                             coordinates,
-                                             routePoints,
-                                             onMapClick,
-                                             mode,
-                                             transportMode,
-                                             setRouteDistance,
-                                             setFullRouteCoords,
-                                             radius,
-                                           }) => {
+const MapPageComponent: React.FC<Props> = (props) => {
+  const {
+    travel = { data: [] },
+    coordinates,
+    routePoints,
+    onMapClick,
+    mode,
+    transportMode,
+    setRouteDistance,
+    setFullRouteCoords,
+    radius,
+  } = props;
+
   const [L, setL] = useState<any>(null);
   const [rl, setRl] = useState<any>(null);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
@@ -659,7 +645,10 @@ const MapPageComponent: React.FC<Props> = ({
       try {
         setLoading(true);
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') throw new globalThis.Error();
+        if (status !== 'granted') {
+          setErrors((prev) => ({ ...prev, location: true }));
+          return;
+        }
         const loc = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.BestForNavigation,
         });
@@ -749,6 +738,96 @@ const MapPageComponent: React.FC<Props> = ({
     mapRef.current.setView([userLocation.latitude, userLocation.longitude], 13, { animate: true });
   }, [userLocation]);
 
+  const [mapInstance, setMapInstance] = useState<any>(null);
+
+  useEffect(() => {
+    if (!props.onMapUiApiReady) return;
+    if (!mapInstance || !L) return;
+
+    const api: MapUiApi = {
+      zoomIn: () => {
+        try {
+          mapInstance.zoomIn();
+        } catch {
+          // noop
+        }
+      },
+      zoomOut: () => {
+        try {
+          mapInstance.zoomOut();
+        } catch {
+          // noop
+        }
+      },
+      centerOnUser: () => centerOnUserLocation(),
+      fitToResults: () => {
+        try {
+          if (!mapInstance || !L) return;
+          if (typeof (L as any).latLngBounds !== 'function' || typeof (L as any).latLng !== 'function') return;
+
+          const coords = (travelData || [])
+            .map((p) => strToLatLng(p.coord))
+            .filter(Boolean) as [number, number][];
+
+          if (coords.length === 0 && userLocation) {
+            coords.push([userLocation.longitude, userLocation.latitude]);
+          }
+
+          if (coords.length === 0) return;
+
+          const bounds = (L as any).latLngBounds(coords.map(([lng, lat]) => (L as any).latLng(lat, lng)));
+          mapInstance.fitBounds(bounds.pad(0.2), { animate: false });
+        } catch {
+          // noop
+        }
+      },
+      exportGpx: () => handleDownloadGpx(),
+      exportKml: () => handleDownloadKml(),
+      setBaseLayer: (id: string) => {
+        try {
+          const def = WEB_MAP_BASE_LAYERS.find((d) => d.id === id);
+          if (!def) return;
+          const newLayer = createLeafletLayer(L, def);
+          if (!newLayer) return;
+
+          const current = leafletBaseLayerRef.current;
+          if (current && mapInstance.hasLayer?.(current)) {
+            mapInstance.removeLayer(current);
+          }
+          leafletBaseLayerRef.current = newLayer;
+          newLayer.addTo(mapInstance);
+        } catch {
+          // noop
+        }
+      },
+      setOverlayEnabled: (id: string, enabled: boolean) => {
+        try {
+          const layer = leafletOverlayLayersRef.current.get(id);
+          if (!layer) return;
+
+          if (enabled) {
+            layer.addTo(mapInstance);
+          } else if (mapInstance.hasLayer?.(layer)) {
+            mapInstance.removeLayer(layer);
+          }
+
+          const overpassController = (leafletControlRef as any).overpassController;
+          if (overpassController?.layer === layer) {
+            if (enabled) overpassController.start?.();
+            else overpassController.stop?.();
+          }
+        } catch {
+          // noop
+        }
+      },
+    };
+
+    props.onMapUiApiReady(api);
+    return () => {
+      props.onMapUiApiReady?.(null);
+    };
+  }, [L, mapInstance, props, centerOnUserLocation, handleDownloadGpx, handleDownloadKml, travelData, userLocation]);
+
   // invalidateSize на resize (полезно для раскрытия/скрытия панели)
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
@@ -811,10 +890,14 @@ const MapPageComponent: React.FC<Props> = ({
     setMapZoom: (z: number) => void;
     setExpandedCluster: (v: { key: string; items: Point[] } | null) => void;
     mapRef: React.MutableRefObject<any>;
+    onMapReady: (map: any) => void;
     savedMapViewRef: React.MutableRefObject<any>;
     hasInitializedRef: React.MutableRefObject<boolean>;
     lastModeRef: React.MutableRefObject<MapMode | null>;
     lastAutoFitKeyRef: React.MutableRefObject<string | null>;
+    leafletBaseLayerRef: React.MutableRefObject<any>;
+    leafletOverlayLayersRef: React.MutableRefObject<Map<string, any>>;
+    leafletControlRef: React.MutableRefObject<any>;
   }> = ({
     mapClickHandler,
     mode,
@@ -826,10 +909,14 @@ const MapPageComponent: React.FC<Props> = ({
     setMapZoom,
     setExpandedCluster,
     mapRef,
+    onMapReady,
     savedMapViewRef,
     hasInitializedRef,
     lastModeRef,
     lastAutoFitKeyRef,
+    leafletBaseLayerRef,
+    leafletOverlayLayersRef,
+    leafletControlRef,
   }) => {
     const map = useMap();
 
@@ -856,12 +943,13 @@ const MapPageComponent: React.FC<Props> = ({
     // Keep map ref for imperative calls (fitBounds, setView)
     useEffect(() => {
       mapRef.current = map;
+      onMapReady(map);
       try {
         setMapZoom(map.getZoom());
       } catch {
         // noop
       }
-    }, [map, mapRef, setMapZoom]);
+    }, [map, mapRef, onMapReady, setMapZoom]);
 
     // ✅ Popup behavior: close reliably on map click or zoom.
     // This must NOT trigger rerenders (no state), only imperative map calls.
@@ -968,6 +1056,101 @@ const MapPageComponent: React.FC<Props> = ({
       }
     }, [map, disableFitBounds, mode, L, travelData, userLocation, lastAutoFitKeyRef]);
 
+    
+    useEffect(() => {
+      if (Platform.OS !== 'web') return;
+      if (!map || !L) return;
+      if (typeof map.addLayer !== 'function') return;
+
+      const overpassControllerRef: any = (leafletControlRef as any);
+
+      try {
+        leafletOverlayLayersRef.current.forEach((layer) => {
+          try {
+            if (map.hasLayer?.(layer)) map.removeLayer(layer);
+          } catch {
+            // noop
+          }
+        });
+        leafletOverlayLayersRef.current.clear();
+      } catch {
+        // noop
+      }
+
+      const baseDef = WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled) || WEB_MAP_BASE_LAYERS[0];
+      if (baseDef) {
+        const baseLayer = createLeafletLayer(L, baseDef);
+        if (baseLayer) {
+          leafletBaseLayerRef.current = baseLayer;
+        }
+      }
+
+      const baseLayers: Record<string, any> = {};
+      if (leafletBaseLayerRef.current) {
+        baseLayers[WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled)?.title || 'Base'] = leafletBaseLayerRef.current;
+      }
+
+      const overlays: Record<string, any> = {};
+
+      const overpassDef = WEB_MAP_OVERLAY_LAYERS.find((d) => d.kind === 'osm-overpass-camping');
+      let overpassController: ReturnType<typeof attachOsmCampingOverlay> | null = null;
+      if (overpassDef) {
+        try {
+          overpassController = attachOsmCampingOverlay(L, map, {
+            maxAreaKm2: 2500,
+            debounceMs: 700,
+          });
+          leafletOverlayLayersRef.current.set(overpassDef.id, overpassController.layer);
+          overlays[overpassDef.title] = overpassController.layer;
+          (overpassControllerRef as any).overpassController = overpassController;
+        } catch {
+          // noop
+        }
+      }
+
+      WEB_MAP_OVERLAY_LAYERS.filter((d) => d.kind !== 'osm-overpass-camping').forEach((def) => {
+        const layer = createLeafletLayer(L, def);
+        if (!layer) return;
+        leafletOverlayLayersRef.current.set(def.id, layer);
+        overlays[def.title] = layer;
+      });
+
+      try {
+        const baseLayer = leafletBaseLayerRef.current;
+        if (baseLayer && !map.hasLayer?.(baseLayer)) {
+          baseLayer.addTo(map);
+        }
+      } catch {
+        // noop
+      }
+
+      WEB_MAP_OVERLAY_LAYERS.filter((d) => d.defaultEnabled).forEach((def) => {
+        const layer = leafletOverlayLayersRef.current.get(def.id);
+        if (layer) {
+          try {
+            layer.addTo(map);
+            if ((overpassControllerRef as any).overpassController?.layer === layer) {
+              (overpassControllerRef as any).overpassController?.start?.();
+            }
+          } catch {
+            // noop
+          }
+        }
+      });
+
+      return () => {
+        try {
+          overpassController?.stop();
+          // Удаляем слой, если он был добавлен
+          if (overpassController?.layer && map.hasLayer?.(overpassController.layer)) {
+            map.removeLayer(overpassController.layer);
+          }
+        } catch {
+          // noop
+        }
+      };
+    }, [map, L, leafletBaseLayerRef, leafletOverlayLayersRef, leafletControlRef]);
+
     return null;
   };
 
@@ -978,11 +1161,75 @@ const MapPageComponent: React.FC<Props> = ({
     return [lat, lng];
   }, [coordinates.latitude, coordinates.longitude]);
 
+  const leafletBaseLayerRef = useRef<any>(null);
+  const leafletOverlayLayersRef = useRef<Map<string, any>>(new Map());
+  const leafletControlRef = useRef<any>(null);
+
   const noPointsAlongRoute = useMemo(() => {
     if (mode !== 'route') return false;
     if (!Array.isArray(routePoints) || routePoints.length < 2) return false;
     return travelData.length === 0;
   }, [mode, routePoints, travelData.length]);
+
+  const canExportRoute = useMemo(() => {
+    // Предпочитаем fullRouteCoords (точный трек), иначе fallback на routePoints.
+    // В этом компоненте fullRouteCoords доступен только через setFullRouteCoords,
+    // но сами coords в Map.web приходят через parent (MapPanel -> MapScreen).
+    // Поэтому ориентируемся на routePoints и режим.
+    if (mode !== 'route') return false;
+    return Array.isArray(routePoints) && routePoints.length >= 2;
+  }, [mode, routePoints]);
+
+  const buildExportInput = useCallback(
+    (kind: 'gpx' | 'kml') => {
+      // Попытаемся экспортировать лучший трек: если parent передаёт fullRouteCoords, он будет в props.
+      // Если нет — используем routePoints как минимальный трек.
+      const anyProps = props as any;
+      const fullRouteCoords = Array.isArray(anyProps.fullRouteCoords) ? (anyProps.fullRouteCoords as [number, number][]) : [];
+
+      const track = fullRouteCoords.length >= 2 ? fullRouteCoords : routePoints;
+
+      const waypoints = routePoints.length >= 1 ? [
+        { name: 'Start', coordinates: routePoints[0] },
+        ...(routePoints.length >= 2 ? [{ name: 'End', coordinates: routePoints[routePoints.length - 1] }] : []),
+      ] : [];
+
+      const name = `Metravel route`;
+      const description =
+        fullRouteCoords.length >= 2
+          ? 'Route track exported from Metravel (full route geometry)'
+          : 'Route track exported from Metravel (waypoints only)';
+
+      return { name, description, track, waypoints, time: new Date().toISOString(), kind };
+    },
+    [props, routePoints]
+  );
+
+  const handleDownloadGpx = useCallback(() => {
+    if (!canExportRoute) return;
+    const input = buildExportInput('gpx');
+    const file = buildGpx({
+      name: input.name,
+      description: input.description,
+      track: input.track,
+      waypoints: input.waypoints,
+      time: input.time,
+    });
+    downloadTextFileWeb(file);
+  }, [buildExportInput, canExportRoute]);
+
+  const handleDownloadKml = useCallback(() => {
+    if (!canExportRoute) return;
+    const input = buildExportInput('kml');
+    const file = buildKml({
+      name: input.name,
+      description: input.description,
+      track: input.track,
+      waypoints: input.waypoints,
+      time: input.time,
+    });
+    downloadTextFileWeb(file);
+  }, [buildExportInput, canExportRoute]);
 
   if (loading) return renderLoader('Loading map...');
 
@@ -1003,53 +1250,16 @@ const MapPageComponent: React.FC<Props> = ({
         </View>
       )}
 
-      {/* Кнопка "Мое местоположение" */}
-      {userLocation && Platform.OS === 'web' && (
-        <div
-          style={{
-            position: 'absolute',
-            top: isNarrow ? undefined : 10,
-            right: isNarrow ? 16 : 10,
-            bottom: isNarrow ? 80 : undefined,
-            zIndex: 1000,
-          }}
-        >
-          <button
-            onClick={centerOnUserLocation}
-            title="Мое местоположение"
-            aria-label="Вернуться к моему местоположению"
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
-              backgroundColor: colors.surface,
-              border: `2px solid ${colors.borderStrong}`,
-              boxShadow: colors.boxShadows.card,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 0,
-              transition: 'all 0.2s ease',
-              color: colors.info,
-            }}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" fill="currentColor" />
-            </svg>
-          </button>
-        </div>
-      )}
-
       <MapContainer
         style={styles.map as any}
         center={safeCenter}
         zoom={initialZoomRef.current}
         key={mapInstanceKeyRef.current}
+        zoomControl={false}
       >
         <TileLayer
-          attribution="&copy; OpenStreetMap contributors"
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution={WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled)?.attribution || '&copy; OpenStreetMap contributors'}
+          url={WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled)?.url || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
         />
 
         <MapLogic
@@ -1063,10 +1273,14 @@ const MapPageComponent: React.FC<Props> = ({
           setMapZoom={setMapZoom}
           setExpandedCluster={setExpandedCluster}
           mapRef={mapRef}
+          onMapReady={setMapInstance}
           savedMapViewRef={savedMapViewRef}
           hasInitializedRef={hasInitializedRef}
           lastModeRef={lastModeRef}
           lastAutoFitKeyRef={lastAutoFitKeyRef}
+          leafletBaseLayerRef={leafletBaseLayerRef}
+          leafletOverlayLayersRef={leafletOverlayLayersRef}
+          leafletControlRef={leafletControlRef}
         />
 
         {mode === 'radius' && radiusInMeters && (

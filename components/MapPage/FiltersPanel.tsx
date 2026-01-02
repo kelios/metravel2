@@ -32,6 +32,8 @@ import type { RoutePoint } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
 import { RouteValidator } from '@/utils/routeValidator';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import type { MapUiApi } from '@/src/types/mapUi';
+import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '@/src/config/mapWebLayers';
 
 // SEARCH_MODES теперь определены inline в SegmentedControl
 
@@ -81,6 +83,7 @@ interface FiltersPanelProps {
   routingLoading?: boolean;
   routingError?: string | boolean | null;
   onBuildRoute?: () => void;
+  mapUiApi?: MapUiApi | null;
 }
 
 const FiltersPanel: React.FC<FiltersPanelProps> = ({
@@ -109,6 +112,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                                      routingLoading,
                                                      routingError,
                                                      onBuildRoute,
+                                                     mapUiApi,
 }) => {
   const windowWidth = Dimensions.get('window').width;
   const colors = useThemedColors();
@@ -118,6 +122,29 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   );
   const [legendOpen, setLegendOpen] = useState(false);
   const [hideNoPointsToast, setHideNoPointsToast] = useState(false);
+
+  const [selectedBaseLayerId, setSelectedBaseLayerId] = useState<string>(
+    WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled)?.id || WEB_MAP_BASE_LAYERS[0]?.id || 'osm'
+  );
+  const [enabledOverlays, setEnabledOverlays] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const o of WEB_MAP_OVERLAY_LAYERS) {
+      initial[o.id] = Boolean(o.defaultEnabled);
+    }
+    return initial;
+  });
+
+  useEffect(() => {
+    if (!mapUiApi) return;
+    try {
+      mapUiApi.setBaseLayer(selectedBaseLayerId);
+      for (const o of WEB_MAP_OVERLAY_LAYERS) {
+        mapUiApi.setOverlayEnabled(o.id, Boolean(enabledOverlays[o.id]));
+      }
+    } catch {
+      // noop
+    }
+  }, [mapUiApi, selectedBaseLayerId, enabledOverlays]);
   const increaseRadius = useCallback(() => {
     const options = filters.radius || [];
     const currentIdx = options.findIndex((opt) => String(opt.id) === String(filterValue.radius));
@@ -537,13 +564,157 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         </Pressable>
         {legendOpen && <MapLegend showRouteMode={mode === 'route'} />}
 
+        <CollapsibleSection title="Карта" icon="layers" defaultOpen={false}>
+          <View style={styles.mapControlsRow}>
+            <Pressable
+              style={[styles.mapControlButton, globalFocusStyles.focusable, !mapUiApi && styles.mapControlDisabled]}
+              onPress={() => mapUiApi?.zoomIn()}
+              disabled={!mapUiApi}
+              accessibilityRole="button"
+              accessibilityLabel="Увеличить масштаб"
+              accessibilityState={{ disabled: !mapUiApi }}
+            >
+              <Icon name="add" size={18} color={colors.text} />
+              <Text style={styles.mapControlText}>Zoom +</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.mapControlButton, globalFocusStyles.focusable, !mapUiApi && styles.mapControlDisabled]}
+              onPress={() => mapUiApi?.zoomOut()}
+              disabled={!mapUiApi}
+              accessibilityRole="button"
+              accessibilityLabel="Уменьшить масштаб"
+              accessibilityState={{ disabled: !mapUiApi }}
+            >
+              <Icon name="remove" size={18} color={colors.text} />
+              <Text style={styles.mapControlText}>Zoom -</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.mapControlButton, globalFocusStyles.focusable, !mapUiApi && styles.mapControlDisabled]}
+              onPress={() => mapUiApi?.centerOnUser()}
+              disabled={!mapUiApi}
+              accessibilityRole="button"
+              accessibilityLabel="Моё местоположение"
+              accessibilityState={{ disabled: !mapUiApi }}
+            >
+              <Icon name="my-location" size={18} color={colors.text} />
+              <Text style={styles.mapControlText}>Я</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.mapControlButton, globalFocusStyles.focusable, !mapUiApi && styles.mapControlDisabled]}
+              onPress={() => mapUiApi?.fitToResults()}
+              disabled={!mapUiApi}
+              accessibilityRole="button"
+              accessibilityLabel="Показать все результаты на карте"
+              accessibilityState={{ disabled: !mapUiApi }}
+            >
+              <Icon name="zoom-out-map" size={18} color={colors.text} />
+              <Text style={styles.mapControlText}>Все</Text>
+            </Pressable>
+          </View>
+
+          {mode === 'route' ? (
+            <View style={styles.mapControlsRow}>
+              <Pressable
+                style={[
+                  styles.mapControlButton,
+                  globalFocusStyles.focusable,
+                  (!mapUiApi || !canBuildRoute) && styles.mapControlDisabled,
+                ]}
+                onPress={() => mapUiApi?.exportGpx()}
+                disabled={!mapUiApi || !canBuildRoute}
+                accessibilityRole="button"
+                accessibilityLabel="Скачать маршрут в формате GPX"
+                accessibilityState={{ disabled: !mapUiApi || !canBuildRoute }}
+              >
+                <Icon name="download" size={18} color={colors.text} />
+                <Text style={styles.mapControlText}>GPX</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.mapControlButton,
+                  globalFocusStyles.focusable,
+                  (!mapUiApi || !canBuildRoute) && styles.mapControlDisabled,
+                ]}
+                onPress={() => mapUiApi?.exportKml()}
+                disabled={!mapUiApi || !canBuildRoute}
+                accessibilityRole="button"
+                accessibilityLabel="Скачать маршрут в формате KML"
+                accessibilityState={{ disabled: !mapUiApi || !canBuildRoute }}
+              >
+                <Icon name="download" size={18} color={colors.text} />
+                <Text style={styles.mapControlText}>KML</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          <View style={styles.mapLayersSection}>
+            <Text style={styles.sectionLabel}>Слой карты</Text>
+            <View style={styles.mapLayersRow}>
+              {WEB_MAP_BASE_LAYERS.map((l) => {
+                const active = selectedBaseLayerId === l.id;
+                return (
+                  <Pressable
+                    key={l.id}
+                    style={[
+                      styles.layerChip,
+                      active && styles.layerChipActive,
+                      globalFocusStyles.focusable,
+                      !mapUiApi && styles.mapControlDisabled,
+                    ]}
+                    onPress={() => {
+                      setSelectedBaseLayerId(l.id);
+                      mapUiApi?.setBaseLayer(l.id);
+                    }}
+                    disabled={!mapUiApi}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Выбрать базовый слой: ${l.title}`}
+                    accessibilityState={{ selected: active, disabled: !mapUiApi }}
+                  >
+                    <Text style={[styles.layerChipText, active && styles.layerChipTextActive]}>{l.title}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.mapLayersSection}>
+            <Text style={styles.sectionLabel}>Оверлеи</Text>
+            <View style={styles.mapLayersRow}>
+              {WEB_MAP_OVERLAY_LAYERS.map((o) => {
+                const enabled = Boolean(enabledOverlays[o.id]);
+                return (
+                  <Pressable
+                    key={o.id}
+                    style={[
+                      styles.layerChip,
+                      enabled && styles.layerChipActive,
+                      globalFocusStyles.focusable,
+                      !mapUiApi && styles.mapControlDisabled,
+                    ]}
+                    onPress={() => {
+                      const next = !enabled;
+                      setEnabledOverlays((prev) => ({ ...prev, [o.id]: next }));
+                      mapUiApi?.setOverlayEnabled(o.id, next);
+                    }}
+                    disabled={!mapUiApi}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${enabled ? 'Выключить' : 'Включить'} оверлей: ${o.title}`}
+                    accessibilityState={{ selected: enabled, disabled: !mapUiApi }}
+                  >
+                    <Text style={[styles.layerChipText, enabled && styles.layerChipTextActive]}>
+                      {o.title}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </CollapsibleSection>
+
         {/* ✅ УЛУЧШЕНИЕ: QuickActions для быстрого доступа */}
         <QuickActions
           onReset={_hasActiveFilters ? resetFilters : undefined}
-          onFitBounds={totalPoints > 0 ? () => {
-            // Callback для fitBounds будет добавлен позже
-            console.info('[FiltersPanel] Fit to bounds requested');
-          } : undefined}
+          onFitBounds={totalPoints > 0 && mapUiApi ? () => mapUiApi.fitToResults() : undefined}
           totalPoints={totalPoints}
           hasFilters={_hasActiveFilters}
         />
@@ -1273,6 +1444,62 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
       fontSize: 14,
       fontWeight: '700',
       color: colors.text,
+    },
+
+    mapControlsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginTop: 8,
+    },
+    mapControlButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    mapControlDisabled: {
+      opacity: 0.45,
+    },
+    mapControlText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    mapLayersSection: {
+      marginTop: 12,
+    },
+    mapLayersRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginTop: 8,
+    },
+    layerChip: {
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      maxWidth: '100%',
+    },
+    layerChipActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    layerChipText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    layerChipTextActive: {
+      color: colors.textOnPrimary,
     },
     stickyFooter: {
       ...(Platform.OS === 'web'

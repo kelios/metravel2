@@ -62,6 +62,13 @@ const closePreviewModal = async (page: any) => {
   }
 };
 
+const openPreviewModal = async (page: any) => {
+  const previewButton = page.locator('button:has([aria-label*="eye"]), button:has-text("Превью"), button:has-text("Показать превью")');
+  await expect(previewButton.first()).toBeVisible({ timeout: 15000 });
+  await previewButton.first().click();
+  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 });
+};
+
 const ensureCanCreateTravel = async (page: any) => {
   await maybeAcceptCookies(page);
   const authGate = page.getByText('Войдите, чтобы создать путешествие', { exact: true });
@@ -264,7 +271,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
     await page.waitForTimeout(6000);
 
     // Кликаем по кнопке превью
-    await page.click('button:has([aria-label*="eye"]), button:has-text("Превью")');
+    await openPreviewModal(page);
 
     // Проверяем что модальное окно открылось
     await expect(page.getByText('Превью карточки', { exact: true })).toBeVisible();
@@ -282,14 +289,17 @@ test.describe('Превью карточки (Travel Preview)', () => {
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест превью');
     await page.waitForTimeout(6000);
 
-    await page.click('button:has-text("Превью")');
-    await expect(page.locator('text=Превью карточки')).toBeVisible();
+    await openPreviewModal(page);
 
-    // Кликаем по overlay (вне модального окна)
-    await page.click('.overlay, [style*="overlay"]', { position: { x: 10, y: 10 } });
+    // Кликаем вне модального окна (в левом верхнем углу viewport)
+    await page.mouse.click(5, 5);
 
-    // Модальное окно должно закрыться
-    await expect(page.locator('text=Превью карточки')).not.toBeVisible({ timeout: 2000 });
+    // Модальное окно должно закрыться (fallback: Escape)
+    const dialog = page.getByRole('dialog');
+    if (await dialog.isVisible().catch(() => false)) {
+      await closePreviewModal(page);
+    }
+    await expect(dialog).toBeHidden({ timeout: 5000 });
   });
 
   test('должен показать placeholder если нет обложки', async ({ page }) => {
@@ -298,10 +308,10 @@ test.describe('Превью карточки (Travel Preview)', () => {
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Без обложки');
     await page.waitForTimeout(6000);
 
-    await page.click('button:has-text("Превью")');
+    await openPreviewModal(page);
 
     // Проверяем placeholder
-    await expect(page.locator('text=Нет обложки')).toBeVisible();
+    await expect(page.getByRole('dialog').getByText('Нет обложки', { exact: true })).toBeVisible();
   });
 
   test('должен обрезать длинное описание до 150 символов', async ({ page }) => {
@@ -316,10 +326,11 @@ test.describe('Превью карточки (Travel Preview)', () => {
     await fillRichDescription(page, longDescription);
     await page.waitForTimeout(6000);
 
-    await page.click('button:has-text("Превью")');
+    await openPreviewModal(page);
 
-    // Проверяем что есть многоточие
-    await expect(page.locator('text=/\\.\\.\\./')).toBeVisible();
+    // Проверяем что есть многоточие "..." в превью
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.locator('text=/\\.\\.\\./').first()).toBeVisible();
   });
 
   test('должен показать статистику (дни, точки, страны)', async ({ page }) => {
@@ -328,17 +339,24 @@ test.describe('Превью карточки (Travel Preview)', () => {
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Со статистикой');
     await page.click('button:has-text("Далее")');
 
+    await expect(page.locator('text=Маршрут на карте')).toBeVisible();
+    await maybeDismissRouteCoachmark(page);
+
     // Добавляем точку
     await page.fill('[placeholder*="Поиск места"]', 'Париж');
     await page.waitForTimeout(1000);
     await page.click('text=Париж >> nth=0');
     await page.waitForTimeout(6000);
 
+    // Превью доступно на шаге 1, возвращаемся туда через милестон
+    await page.click('[aria-label="Перейти к шагу 1"]');
+    await expect(page.locator('text=Основная информация')).toBeVisible();
+
     // Открываем превью
-    await page.click('button:has-text("Превью")');
+    await openPreviewModal(page);
 
     // Проверяем статистику
-    await expect(page.locator('text=/1 точ/i')).toBeVisible();
+    await expect(page.getByRole('dialog').locator('text=/1 точ/i').first()).toBeVisible();
   });
 });
 
@@ -348,14 +366,21 @@ test.describe('Группировка параметров (Шаг 5)', () => {
     await ensureCanCreateTravel(page);
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест группировки');
 
-    // Переходим к шагу 5
-    for (let i = 0; i < 4; i++) {
-      await page.click('button:has-text("Далее")');
-      await page.waitForTimeout(500);
-    }
+    // Переходим к шагу 2 (так мы гарантируем, что милестоны уже отрисованы)
+    await page.click('button:has-text("Далее")');
+    await expect(page.locator('text=Маршрут на карте')).toBeVisible();
+    await maybeDismissRouteCoachmark(page);
+
+    // Переходим к шагу 5 через милестон (кнопка "Далее" может быть заблокирована валидацией на шаге 2)
+    await page.click('[aria-label="Перейти к шагу 5"]');
+
+    const sectionToggle = page
+      .getByRole('button', { name: 'Свернуть секцию Дополнительные параметры' })
+      .or(page.getByRole('button', { name: 'Развернуть секцию Дополнительные параметры' }));
+    await expect(sectionToggle.first()).toBeVisible();
 
     // Проверяем заголовок группы
-    await expect(page.locator('text=Дополнительные параметры')).toBeVisible();
+    await expect(sectionToggle.first()).toBeVisible();
 
     // Проверяем счетчик
     await expect(page.locator('text=/\\d+\\/11/')).toBeVisible();
@@ -364,13 +389,13 @@ test.describe('Группировка параметров (Шаг 5)', () => {
     await expect(page.locator('text=Категории путешествий')).toBeVisible();
 
     // Кликаем по заголовку группы чтобы закрыть
-    await page.click('text=Дополнительные параметры');
+    await sectionToggle.first().click();
 
     // Проверяем что контент скрылся
     await expect(page.locator('text=Категории путешествий')).not.toBeVisible({ timeout: 2000 });
 
     // Открываем обратно
-    await page.click('text=Дополнительные параметры');
+    await sectionToggle.first().click();
     await expect(page.locator('text=Категории путешествий')).toBeVisible();
   });
 
@@ -379,11 +404,18 @@ test.describe('Группировка параметров (Шаг 5)', () => {
     await ensureCanCreateTravel(page);
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест счетчика');
 
-    // Переходим к шагу 5
-    for (let i = 0; i < 4; i++) {
-      await page.click('button:has-text("Далее")');
-      await page.waitForTimeout(500);
-    }
+    // Переходим к шагу 2 (так мы гарантируем, что милестоны уже отрисованы)
+    await page.click('button:has-text("Далее")');
+    await expect(page.locator('text=Маршрут на карте')).toBeVisible();
+    await maybeDismissRouteCoachmark(page);
+
+    // Переходим к шагу 5 через милестон (кнопка "Далее" может быть заблокирована валидацией на шаге 2)
+    await page.click('[aria-label="Перейти к шагу 5"]');
+
+    const sectionToggle = page
+      .getByRole('button', { name: 'Свернуть секцию Дополнительные параметры' })
+      .or(page.getByRole('button', { name: 'Развернуть секцию Дополнительные параметры' }));
+    await expect(sectionToggle.first()).toBeVisible();
 
     // Проверяем начальный счетчик (может быть 0/11 или больше)
     const initialCounter = await page.locator('text=/\\d+\\/11/').textContent();

@@ -68,8 +68,10 @@ describe('FiltersPanel', () => {
     });
 
     it('renders correctly', () => {
-        const { getByText } = renderWithTheme(<FiltersPanel {...defaultProps} />);
-        expect(getByText('Фильтры')).toBeTruthy();
+        const { getByTestId, getByText } = renderWithTheme(<FiltersPanel {...defaultProps} />);
+        expect(getByTestId('filters-panel')).toBeTruthy();
+        expect(getByText('Радиус')).toBeTruthy();
+        expect(getByText('Маршрут')).toBeTruthy();
     });
 
     it('shows reset button when filters are active', () => {
@@ -127,8 +129,7 @@ describe('FiltersPanel', () => {
         ],
       };
       const { getByText } = renderWithTheme(<FiltersPanel {...propsWithData} />);
-      expect(getByText('3')).toBeTruthy();
-      expect(getByText(/мест в радиусе 60 км/i)).toBeTruthy();
+      expect(getByText(/3\s+мест\s+•\s+60\s*км/i)).toBeTruthy();
   });
 
   it('keeps build button disabled until start and finish are set', () => {
@@ -166,10 +167,14 @@ describe('FiltersPanel', () => {
       ...defaultProps,
       mode: 'route' as const,
     };
-    const { getByText, rerender, queryByText } = renderWithTheme(<FiltersPanel {...propsRouteMode} />);
-    expect(getByText(/кликните на карте/i)).toBeTruthy();
+    const { getByText, rerender, getAllByText, queryAllByText } = renderWithTheme(
+      <FiltersPanel {...propsRouteMode} />
+    );
 
-    // After start selected, start hint hides, end hint shows
+    // Текст может встречаться в нескольких местах (CTA + helperText)
+    expect(getAllByText(/добавьте старт и финиш/i).length).toBeGreaterThan(0);
+
+    // After start selected, route is still incomplete => hint remains
     rerender(
       <ThemeProvider>
         <FiltersPanel
@@ -178,8 +183,22 @@ describe('FiltersPanel', () => {
         />
       </ThemeProvider>
     );
-    expect(queryByText(/кликните на карте/i)).toBeNull();
-    expect(getByText(/теперь выберите финиш/i)).toBeTruthy();
+
+    expect(queryAllByText(/добавьте старт и финиш/i).length).toBeGreaterThan(0);
+
+    // After start + finish selected => hint disappears
+    rerender(
+      <ThemeProvider>
+        <FiltersPanel
+          {...propsRouteMode}
+          routePoints={[
+            makePoint('s', 53.9, 27.5, 'start'),
+            makePoint('f', 53.95, 27.6, 'end'),
+          ]}
+        />
+      </ThemeProvider>
+    );
+    expect(queryAllByText(/добавьте старт и финиш/i)).toHaveLength(0);
   });
 
   it('disables transport selection until both points are chosen', () => {

@@ -152,12 +152,30 @@ describe('MapScreen (map tab)', () => {
     })
   })
 
+  const openPanelAndGoToListTab = async (utils: ReturnType<typeof renderWithClient>) => {
+    const { getByLabelText, getByText } = utils
+
+    const openButton = getByLabelText('Показать панель')
+    fireEvent.press(openButton)
+
+    await waitFor(() => {
+      expect(getByText('Список')).toBeTruthy()
+    })
+
+    const listTab = getByText('Список')
+    fireEvent.press(listTab)
+  }
+
   it('toggles right panel visibility using close and open buttons', async () => {
     const { getByText, queryByText, getByLabelText } = renderWithClient()
 
-    // Дождаться появления панели
+    // На mobile панель закрыта по умолчанию — открываем
+    const openButton = getByLabelText('Показать панель')
+    fireEvent.press(openButton)
+
     await waitFor(() => {
       expect(getByText('Фильтры')).toBeTruthy()
+      expect(getByText('Список')).toBeTruthy()
     })
 
     // Закрываем панель кнопкой "Скрыть панель"
@@ -169,8 +187,8 @@ describe('MapScreen (map tab)', () => {
     expect(queryByText('Список')).toBeNull()
 
     // Открываем панель снова кнопкой-гамбургером
-    const openButton = getByLabelText('Показать панель')
-    fireEvent.press(openButton)
+    const openButtonAgain = getByLabelText('Показать панель')
+    fireEvent.press(openButtonAgain)
 
     await waitFor(() => {
       expect(getByText('Фильтры')).toBeTruthy()
@@ -187,16 +205,16 @@ describe('MapScreen (map tab)', () => {
 
     mockFetchTravelsForMap.mockImplementationOnce(() => slowPromise);
 
-    const { getByText } = renderWithClient();
+    const utils = renderWithClient();
+    const { getByText } = utils;
 
     // Запрос на данные карты начинается только после получения геолокации
     await waitFor(() => {
       expect(mockFetchTravelsForMap).toHaveBeenCalled();
     });
 
-    // Переключаемся на вкладку "Список"
-    const listTab = getByText('Список');
-    fireEvent.press(listTab);
+    // Переключаемся на вкладку "Список" (на mobile панель закрыта по умолчанию)
+    await openPanelAndGoToListTab(utils);
 
     // Пока запрос не завершён, должен отображаться лоадер
     expect(getByText('Загрузка...')).toBeTruthy();
@@ -206,16 +224,16 @@ describe('MapScreen (map tab)', () => {
   });
 
   it('shows correct travels count in list tab after data is loaded', async () => {
-    const { getByText, getByTestId } = renderWithClient();
+    const utils = renderWithClient();
+    const { getByText, getByTestId } = utils;
 
     // Запрос на данные карты начинается только после получения геолокации
     await waitFor(() => {
       expect(mockFetchTravelsForMap).toHaveBeenCalled();
     });
 
-    // Переключаемся на вкладку "Список"
-    const listTab = getByText('Список');
-    fireEvent.press(listTab);
+    // Переключаемся на вкладку "Список" (на mobile панель закрыта по умолчанию)
+    await openPanelAndGoToListTab(utils);
 
     // Ждём, пока данные загрузятся и попадут в моки панели списка
     await waitFor(() => {
@@ -230,16 +248,16 @@ describe('MapScreen (map tab)', () => {
   it('shows error display when map data loading fails', async () => {
     mockFetchTravelsForMap.mockRejectedValueOnce(new Error('Network error'));
 
-    const { getByText, getByTestId } = renderWithClient();
+    const utils = renderWithClient();
+    const { getByText, getByTestId } = utils;
 
     // Запрос на данные карты начинается только после получения геолокации
     await waitFor(() => {
       expect(mockFetchTravelsForMap).toHaveBeenCalled();
     });
 
-    // Переключаемся на вкладку "Список"
-    const listTab = getByText('Список');
-    fireEvent.press(listTab);
+    // Переключаемся на вкладку "Список" (на mobile панель закрыта по умолчанию)
+    await openPanelAndGoToListTab(utils);
 
     // Ожидаем отображение компонента ошибки
     await waitFor(() => {

@@ -37,6 +37,7 @@ import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { getStyles } from './map.styles';
 import { useThemedColors } from '@/hooks/useTheme';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
+import type { MapUiApi } from '@/src/types/mapUi';
 
 // Ensure RouteHint is bundled (used inside FiltersPanel)
 import '@/components/MapPage/RouteHint';
@@ -61,6 +62,8 @@ export default function MapScreen() {
     const insets = useSafeAreaInsets();
     const isMobile = isPhone || isLargePhone;
     const queryClient = useQueryClient();
+
+    const [mapUiApi, setMapUiApi] = useState<MapUiApi | null>(null);
 
     // State
     const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
@@ -616,6 +619,7 @@ export default function MapScreen() {
                                 console.warn('[map] Not enough route points to build route:', routeStorePoints.length);
                             }
                         }}
+                        mapUiApi={mapUiApi}
                         closeMenu={() => setRightPanelVisible(false)}
                     />
                 ) : (
@@ -722,6 +726,7 @@ export default function MapScreen() {
                                     setRouteDistance={setRouteDistance}
                                     setFullRouteCoords={handleSetFullRouteCoords}
                                     radius={filterValues.radius}
+                                    onMapUiApiReady={setMapUiApi}
                                 />
                             </Suspense>
                         ) : (

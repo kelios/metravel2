@@ -311,7 +311,7 @@ describe('ListTravel', () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('/api/travels/10'),
+        expect.stringContaining('/api/travels/10/'),
         expect.objectContaining({ method: 'DELETE' }),
       );
     });

@@ -4,6 +4,7 @@ import { useLazyMap } from '@/hooks/useLazyMap';
 import { useThemedColors } from '@/hooks/useTheme';
 import MapErrorBoundary from './MapErrorBoundary';
 import { MapSkeleton } from '@/components/SkeletonLoader';
+import type { MapUiApi } from '@/src/types/mapUi';
 
 type LatLng = { latitude: number; longitude: number };
 
@@ -19,6 +20,7 @@ interface MapPanelProps {
     setRouteDistance: (distance: number) => void;
     setFullRouteCoords: (coords: [number, number][]) => void;
     radius?: string; // Радиус поиска в км
+    onMapUiApiReady?: (api: MapUiApi | null) => void;
 }
 
 /** Плейсхолдер для нативных платформ или во время загрузки карты */
@@ -53,6 +55,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                setRouteDistance,
                                                setFullRouteCoords,
                                                radius,
+                                               onMapUiApiReady,
                                            }) => {
     const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
     const themeColors = useThemedColors();
@@ -125,6 +128,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                     setRouteDistance={setRouteDistance}
                     setFullRouteCoords={setFullRouteCoords}
                     radius={radius}
+                    onMapUiApiReady={onMapUiApiReady}
                 />
             </MapErrorBoundary>
         </View>
