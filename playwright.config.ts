@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { defineConfig, devices } from '@playwright/test';
 
 // Используем отдельный порт для e2e, чтобы не конфликтовать с локальной разработкой.

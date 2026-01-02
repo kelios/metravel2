@@ -1,4 +1,30 @@
 {
   "cookies": [],
-  "origins": []
+  "origins": [
+    {
+      "origin": "http://localhost:8081",
+      "localStorage": [
+        {
+          "name": "isSuperuser",
+          "value": "true"
+        },
+        {
+          "name": "secure_userToken",
+          "value": "CFwXR1JCBltrUF5XEEkWTV9bXj5eVElvQAZcUE1LA0FTXWhcC1JFGg=="
+        },
+        {
+          "name": "userId",
+          "value": "1"
+        },
+        {
+          "name": "userName",
+          "value": "Юлия"
+        },
+        {
+          "name": "userAvatar",
+          "value": "https://metravellocal.s3.amazonaws.com/profile/78/avatar/08880abcb69e45a48f8d25219dc96893.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAJ2XBPKC6ITB3S5RQ%2F20260102%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260102T135820Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=1d49ce1dd9d4287b1ae2549cb75b5bef8d21aad7ac2e80d317542ba275953507"
+        }
+      ]
+    }
+  ]
 }
