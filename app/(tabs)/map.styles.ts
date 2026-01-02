@@ -33,7 +33,8 @@ export const getStyles = (
           } as any)
         : null),
       backgroundColor: themedColors.background,
-      paddingTop: effectiveHeaderOffset,
+      // ✅ ИСПРАВЛЕНИЕ: Убран paddingTop, так как он создает лишний отступ на web
+      // paddingTop: effectiveHeaderOffset,
     },
       content: {
         flex: 1,
@@ -50,6 +51,12 @@ export const getStyles = (
       mapArea: {
         flex: 1,
         minHeight: 260,
+        // ✅ ИСПРАВЛЕНИЕ: isolation: isolate создает новый stacking context для Leaflet
+        ...(Platform.OS === 'web'
+          ? ({
+              isolation: 'isolate',
+            } as any)
+          : null),
       },
       togglePanelButton: {
         position: 'absolute',
@@ -170,21 +177,13 @@ export const getStyles = (
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: themedColors.border,
         columnGap: 8,
-        ...Platform.select({
-          web: {
-            // @ts-ignore: web-only style
-            boxShadow: isMobile ? themedColors.boxShadows.medium : themedColors.boxShadows.light,
-          },
-          ios: {
-            ...(isMobile ? shadowMedium : shadowLight),
-          },
-          android: {
-            elevation: isMobile ? shadowMedium.elevation : shadowLight.elevation,
-          },
-          default: {
-            ...(isMobile ? shadowMedium : shadowLight),
-          },
-        }),
+        ...(Platform.OS === 'web'
+          ? ({
+              boxShadow: isMobile ? themedColors.boxShadows.medium : themedColors.boxShadows.light,
+            } as any)
+          : Platform.OS === 'ios'
+          ? (isMobile ? shadowMedium : shadowLight)
+          : { elevation: isMobile ? shadowMedium.elevation : shadowLight.elevation }),
         zIndex: 1001,
       },
       tabsSegment: {

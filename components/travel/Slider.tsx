@@ -270,7 +270,7 @@ const Dot = memo(function Dot({
 
 // NOTE: avoid TS generics in forwardRef to prevent runtime parsing issues if the file is consumed untranspiled
 const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
-  const { styles } = useSliderTheme();
+  const { colors, styles } = useSliderTheme();
   const {
     images,
     showArrows = true,
@@ -915,14 +915,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     width: "100%",
   },
   imageCardWrapperElevated: {
-    ...Platform.select({
+    ...Platform.select<any>({
       web: {
         boxShadow: colors.boxShadows.heavy,
       },
       android: {
         elevation: 10,
       },
-      default: colors.shadows.medium,
+      ios: colors.shadows.medium,
     }),
   },
   imageCardSurface: {
@@ -1020,7 +1020,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     zIndex: 50,
     justifyContent: "center",
     alignItems: "center",
-    ...Platform.select({
+    ...Platform.select<any>({
       web: {
         cursor: "pointer",
         transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -1030,7 +1030,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       android: {
         elevation: 6,
       },
-      default: colors.shadows.medium,
+      ios: colors.shadows.medium,
     }),
   },
   navBtnDesktop: {
@@ -1045,11 +1045,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   },
   navBtnHover: {
     backgroundColor: colors.surface,
-    ...Platform.select({
+    ...Platform.select<any>({
       web: {
         boxShadow: colors.boxShadows.hover,
       },
-      default: colors.shadows.hover,
+      ios: colors.shadows.hover,
     }),
   },
   arrowIconContainer: {

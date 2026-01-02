@@ -569,8 +569,10 @@ export default function MapScreen() {
                         routingLoading={routingLoading}
                         routingError={routingError}
                         onBuildRoute={() => {
+                            // ✅ ИСПРАВЛЕНИЕ: Конвертируем точки из routeStore в формат [lng, lat][]
                             if (routeStorePoints.length >= 2) {
-                                setRoutePoints(routePoints);
+                                const points: [number, number][] = routeStorePoints.map(p => [p.coordinates.lng, p.coordinates.lat]);
+                                setRoutePoints(points);
                             }
                         }}
                         closeMenu={() => setRightPanelVisible(false)}
