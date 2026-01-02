@@ -607,7 +607,7 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
   const panelWidth = isMobile ? Math.max(Math.min(windowWidth - 24, 480), 280) : '100%';
   const windowHeight = Dimensions.get('window').height;
 
-  return StyleSheet.create({
+  return (StyleSheet.create({
     card: {
       backgroundColor: colors.surface,
       borderRadius: 14,
@@ -1329,7 +1329,7 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
       color: colors.textMuted,
       marginBottom: 6,
     },
-  });
+  }) as any);
 };
 
 export default React.memo(FiltersPanel);

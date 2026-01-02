@@ -5,14 +5,36 @@ const e2eEmail = process.env.E2E_EMAIL;
 const e2ePassword = process.env.E2E_PASSWORD;
 const travelId = process.env.E2E_TRAVEL_ID;
 
+const maybeAcceptCookies = async (page: Page) => {
+  const acceptButton = page.getByText('Принять всё', { exact: true });
+  if (await acceptButton.isVisible().catch(() => false)) {
+    await acceptButton.click();
+  }
+};
+
+const ensureCanCreateTravel = async (page: Page) => {
+  await maybeAcceptCookies(page);
+  const authGate = page.getByText('Войдите, чтобы создать путешествие', { exact: true });
+  if (await authGate.isVisible().catch(() => false)) {
+    const didLogin = await maybeLogin(page);
+    if (!didLogin) {
+      test.skip(true, 'E2E_EMAIL/E2E_PASSWORD are required for travel creation tests');
+    }
+    await page.goto('/travel/new');
+    await maybeAcceptCookies(page);
+  }
+};
+
 const maybeLogin = async (page: Page) => {
   if (!e2eEmail || !e2ePassword) return;
 
   await page.goto('/login');
+  await maybeAcceptCookies(page);
   await page.getByPlaceholder('Email').fill(e2eEmail);
   await page.getByPlaceholder('Пароль').fill(e2ePassword);
   await page.getByRole('button', { name: 'Войти' }).click();
   await page.waitForLoadState('networkidle');
+  return true;
 };
 
 /**
@@ -29,6 +51,7 @@ test.describe('Создание путешествия - Полный flow', () 
   test('должен создать полное путешествие через все шаги', async ({ page }) => {
     // Шаг 0: Переход к созданию
     await page.goto('/travel/new');
+    await ensureCanCreateTravel(page);
     await expect(page).toHaveURL(/\/travel\/new/);
 
     // Шаг 1: Основная информация
@@ -36,7 +59,7 @@ test.describe('Создание путешествия - Полный flow', () 
       await expect(page.locator('text=Основная информация')).toBeVisible();
 
       // Заполняем название
-      await page.fill('[placeholder*="Неделя в Грузии"]', 'Тестовое путешествие по Грузии');
+      await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тестовое путешествие по Грузии');
 
       // Заполняем описание
       await page.fill('[placeholder*="Расскажите"]', 'Это тестовое описание путешествия по красивой Грузии. ' +
@@ -146,12 +169,13 @@ test.describe('Создание путешествия - Полный flow', () 
 
   test('должен создать быстрый черновик (Quick Mode)', async ({ page }) => {
     await page.goto('/travel/new');
+    await ensureCanCreateTravel(page);
 
     // Шаг 1: Только название
     await expect(page.locator('text=Основная информация')).toBeVisible();
 
     // Заполняем только название
-    await page.fill('[placeholder*="Неделя в Грузии"]', 'Быстрый черновик');
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Быстрый черновик');
 
     // Проверяем наличие кнопки Quick Draft
     await expect(page.locator('button:has-text("Быстрый черновик")')).toBeVisible();
@@ -168,6 +192,7 @@ test.describe('Создание путешествия - Полный flow', () 
 
   test('должен показать ошибку при Quick Draft без названия', async ({ page }) => {
     await page.goto('/travel/new');
+    await ensureCanCreateTravel(page);
 
     // Не заполняем название
     await page.click('button:has-text("Быстрый черновик")');
@@ -178,9 +203,10 @@ test.describe('Создание путешествия - Полный flow', () 
 
   test('должен показать превью карточки', async ({ page }) => {
     await page.goto('/travel/new');
+    await ensureCanCreateTravel(page);
 
     // Заполняем название
-    await page.fill('[placeholder*="Неделя в Грузии"]', 'Тестовое путешествие');
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тестовое путешествие');
 
     // Заполняем описание
     await page.fill('[placeholder*="Расскажите"]', 'Описание для превью карточки путешествия');
@@ -210,9 +236,10 @@ test.describe('Создание путешествия - Полный flow', () 
     await page.setViewportSize({ width: 1280, height: 720 });
 
     await page.goto('/travel/new');
+    await ensureCanCreateTravel(page);
 
     // Заполняем название чтобы можно было перейти дальше
-    await page.fill('[placeholder*="Неделя в Грузии"]', 'Тест милестонов');
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест милестонов');
     await page.click('button:has-text("Далее")');
 
     // Ждем шаг 2
@@ -231,9 +258,10 @@ test.describe('Создание путешествия - Полный flow', () 
 
   test('должен автосохранять изменения', async ({ page }) => {
     await page.goto('/travel/new');
+    await ensureCanCreateTravel(page);
 
     // Заполняем название
-    await page.fill('[placeholder*="Неделя в Грузии"]', 'Тест автосохранения');
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест автосохранения');
 
     // Ждем автосохранение (5 секунд)
     await page.waitForSelector('text=Сохранено', { timeout: 10000 });
@@ -242,7 +270,7 @@ test.describe('Создание путешествия - Полный flow', () 
     await page.reload();
 
     // Проверяем что данные сохранились
-    await expect(page.locator('[placeholder*="Неделя в Грузии"]')).toHaveValue('Тест автосохранения');
+    await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toHaveValue('Тест автосохранения');
   });
 });
 
@@ -266,7 +294,7 @@ test.describe('Редактирование путешествия', () => {
 
       // Проверяем что открылся визард редактирования
       await expect(page).toHaveURL(/\/travel\/(edit|new)/);
-      await expect(page.locator('[placeholder*="Неделя в Грузии"]')).not.toBeEmpty();
+      await expect(page.getByPlaceholder('Например: Неделя в Грузии')).not.toBeEmpty();
     }
   });
 
@@ -274,7 +302,7 @@ test.describe('Редактирование путешествия', () => {
     await page.goto(`/travel/edit/${travelId}`);
 
     // Изменяем название
-    const nameInput = page.locator('[placeholder*="Неделя в Грузии"]');
+    const nameInput = page.getByPlaceholder('Например: Неделя в Грузии');
     await nameInput.clear();
     await nameInput.fill('Измененное название путешествия');
 
@@ -317,6 +345,7 @@ test.describe('Редактирование путешествия', () => {
 test.describe('Валидация и ошибки', () => {
   test('должен показать ошибку при попытке сохранить без названия', async ({ page }) => {
     await page.goto('/travel/new');
+    await ensureCanCreateTravel(page);
 
     // Не заполняем название, пытаемся перейти дальше
     await page.click('button:has-text("Далее")');
@@ -330,9 +359,10 @@ test.describe('Валидация и ошибки', () => {
 
   test('должен показать предупреждения на шаге публикации', async ({ page }) => {
     await page.goto('/travel/new');
+    await ensureCanCreateTravel(page);
 
     // Минимально заполняем
-    await page.fill('[placeholder*="Неделя в Грузии"]', 'Тест');
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
 
     // Переходим сразу к публикации (если возможно)
     for (let i = 0; i < 5; i++) {
@@ -346,9 +376,10 @@ test.describe('Валидация и ошибки', () => {
 
   test('должен сохранить точку без фото (автосохранение v2)', async ({ page }) => {
     await page.goto('/travel/new');
+    await ensureCanCreateTravel(page);
 
     // Заполняем название
-    await page.fill('[placeholder*="Неделя в Грузии"]', 'Тест без фото');
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест без фото');
     await page.click('button:has-text("Далее")');
 
     // Добавляем точку без фото через поиск
@@ -370,6 +401,7 @@ test.describe('Адаптивность (Mobile)', () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     await page.goto('/travel/new');
+    await ensureCanCreateTravel(page);
 
     // Проверяем что милестоны скрыты на mobile
     await expect(page.locator('[aria-label="Перейти к шагу 1"]')).not.toBeVisible();
@@ -378,7 +410,7 @@ test.describe('Адаптивность (Mobile)', () => {
     await expect(page.locator('text=Основная информация')).toBeVisible();
 
     // Заполняем название
-    await page.fill('[placeholder*="Неделя в Грузии"]', 'Mobile тест');
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Mobile тест');
 
     // Проверяем что кнопка Quick Draft видна
     await expect(page.locator('button:has-text("Быстрый черновик")')).toBeVisible();
