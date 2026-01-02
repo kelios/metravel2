@@ -297,7 +297,6 @@ test.describe('Группировка параметров (Шаг 5)', () => {
     // Выбираем категорию (если возможно)
     const categoryField = page.locator('text=Категории путешествий').first();
     if (await categoryField.isVisible()) {
-      // TODO: Выбрать категорию из списка
     }
 
     // Проверяем что счетчик обновился
@@ -391,4 +390,3 @@ test.describe('Разделенный чеклист (Шаг 6)', () => {
     await expect(page.locator('text=/\\d+\\/6/')).toBeVisible();
   });
 });
-

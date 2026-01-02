@@ -3,7 +3,6 @@
  * Tests security, performance, accessibility, and cross-platform compatibility
  */
 
-import { Platform } from 'react-native';
 import {
   validateYoutubeId,
   safeGetYoutubeId,
@@ -191,70 +190,3 @@ describe('TravelDetailsContainer - Security & Sanitization', () => {
     });
   });
 });
-
-describe('TravelDetailsContainer - Hooks', () => {
-  describe('useScrollListener', () => {
-    it('should cleanup listener on unmount', () => {
-      // This test would require mocking Animated.Value
-      // TODO: Add mock implementation
-    });
-
-    it('should handle scroll events without memory leaks', () => {
-      // TODO: Add test
-    });
-  });
-});
-
-describe('TravelDetailsContainer - Accessibility', () => {
-  it('should have proper ARIA labels', () => {
-    // TODO: Add ARIA testing with axe-core
-  });
-
-  it('should support keyboard navigation', () => {
-    // TODO: Add keyboard navigation tests
-  });
-
-  it('should have sufficient color contrast', () => {
-    // TODO: Add contrast testing
-  });
-
-  it('should announce dynamic content changes', () => {
-    // TODO: Add live region testing
-  });
-});
-
-describe('TravelDetailsContainer - Cross-Platform', () => {
-  it('should render on web platform', () => {
-    Platform.OS = 'web';
-    // TODO: Add web-specific tests
-  });
-
-  it('should render on iOS platform', () => {
-    Platform.OS = 'ios';
-    // TODO: Add iOS-specific tests
-  });
-
-  it('should render on Android platform', () => {
-    Platform.OS = 'android';
-    // TODO: Add Android-specific tests
-  });
-});
-
-describe('TravelDetailsContainer - Performance', () => {
-  it('should preload LCP image with high priority', () => {
-    // TODO: Check for fetchpriority="high" on img tag
-  });
-
-  it('should lazy-load below-the-fold content', () => {
-    // TODO: Add IntersectionObserver mock test
-  });
-
-  it('should not exceed bundle size limits', () => {
-    // TODO: Add bundle size check
-  });
-
-  it('should have proper memoization', () => {
-    // TODO: Add render count tests
-  });
-});
-

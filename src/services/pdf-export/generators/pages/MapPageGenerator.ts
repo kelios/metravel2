@@ -3,6 +3,7 @@
 
 import type { PdfThemeConfig } from '../../themes/PdfThemeConfig';
 import type { TravelForBook } from '@/src/types/pdf-export';
+import { generateStaticMapUrl } from '@/src/utils/mapImageGenerator';
 
 export interface MapLocation {
   id: string;
@@ -193,25 +194,44 @@ export class MapPageGenerator {
 
   /**
    * Генерирует изображение карты
-   * TODO: Интегрировать Mapbox Static API
    */
   private async generateMapImage(locations: MapLocation[]): Promise<string> {
-    // Временная заглушка - возвращаем placeholder
-    // В будущем здесь будет интеграция с Mapbox Static API
-    
     if (locations.length === 0) {
       return this.generatePlaceholderMap();
     }
 
-    // Вычисляем центр и zoom на основе локаций
+    const points = locations
+      .map((location) => {
+        const [latRaw, lngRaw] = location.coord.split(',').map((value) => value.trim());
+        const lat = Number(latRaw);
+        const lng = Number(lngRaw);
+
+        if (Number.isNaN(lat) || Number.isNaN(lng)) {
+          return null;
+        }
+
+        return {
+          name: location.address,
+          lat,
+          lng,
+        };
+      })
+      .filter((point): point is { name: string; lat: number; lng: number } => Boolean(point));
+
+    if (points.length === 0) {
+      return this.generatePlaceholderMap();
+    }
+
     const bounds = this.calculateBounds(locations);
-    
-    // TODO: Использовать Mapbox Static API
-    // const mapboxToken = process.env.MAPBOX_TOKEN;
-    // const url = `https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/...`;
-    
-    // Пока возвращаем placeholder с информацией о локациях
-    return this.generatePlaceholderMap(bounds);
+    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+    const mapUrl = generateStaticMapUrl(points, {
+      width: 1400,
+      height: 900,
+      zoom: bounds.zoom,
+      apiKey,
+    });
+
+    return mapUrl || this.generatePlaceholderMap(bounds);
   }
 
   private calculateBounds(locations: MapLocation[]): {
@@ -279,7 +299,7 @@ export class MapPageGenerator {
           ${centerText}
         </text>
         <text x="400" y="430" font-family="Arial, sans-serif" font-size="14" fill="#9b9b9b" text-anchor="middle">
-          Карта будет добавлена при интеграции Mapbox
+          Карта недоступна
         </text>
       </svg>
     `)}`;

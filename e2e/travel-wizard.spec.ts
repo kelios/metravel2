@@ -1,4 +1,19 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+const e2eEmail = process.env.E2E_EMAIL;
+const e2ePassword = process.env.E2E_PASSWORD;
+const travelId = process.env.E2E_TRAVEL_ID;
+
+const maybeLogin = async (page: Page) => {
+  if (!e2eEmail || !e2ePassword) return;
+
+  await page.goto('/login');
+  await page.getByPlaceholder('Email').fill(e2eEmail);
+  await page.getByPlaceholder('Пароль').fill(e2ePassword);
+  await page.getByRole('button', { name: 'Войти' }).click();
+  await page.waitForLoadState('networkidle');
+};
 
 /**
  * E2E тесты для создания путешествия
@@ -7,13 +22,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Создание путешествия - Полный flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Авторизация пользователя (если требуется)
+    await maybeLogin(page);
     await page.goto('/');
-    // TODO: Добавить логин если нужно
-    // await page.click('[data-testid="login-button"]');
-    // await page.fill('[data-testid="email"]', 'test@example.com');
-    // await page.fill('[data-testid="password"]', 'password123');
-    // await page.click('[data-testid="submit-login"]');
   });
 
   test('должен создать полное путешествие через все шаги', async ({ page }) => {
@@ -237,8 +247,10 @@ test.describe('Создание путешествия - Полный flow', () 
 });
 
 test.describe('Редактирование путешествия', () => {
+  test.skip(!travelId, 'Set E2E_TRAVEL_ID to run edit tests');
+
   test.beforeEach(async ({ page }) => {
-    // TODO: Создать тестовое путешествие через API или UI
+    await maybeLogin(page);
     await page.goto('/');
   });
 
@@ -259,8 +271,7 @@ test.describe('Редактирование путешествия', () => {
   });
 
   test('должен изменить название и сохранить', async ({ page }) => {
-    // TODO: Открыть существующее путешествие
-    await page.goto('/travel/edit/123'); // Замените на реальный ID
+    await page.goto(`/travel/edit/${travelId}`);
 
     // Изменяем название
     const nameInput = page.locator('[placeholder*="Неделя в Грузии"]');
@@ -281,8 +292,7 @@ test.describe('Редактирование путешествия', () => {
   });
 
   test('должен добавить новую точку к существующему маршруту', async ({ page }) => {
-    // TODO: Открыть существующее путешествие
-    await page.goto('/travel/edit/123');
+    await page.goto(`/travel/edit/${travelId}`);
 
     // Переходим к шагу 2
     await page.click('[aria-label="Перейти к шагу 2"]');
@@ -374,4 +384,3 @@ test.describe('Адаптивность (Mobile)', () => {
     await expect(page.locator('button:has-text("Быстрый черновик")')).toBeVisible();
   });
 });
-

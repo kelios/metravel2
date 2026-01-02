@@ -5,7 +5,6 @@ import type { MapPoint } from '@/src/types/article-pdf';
 
 /**
  * Генерирует URL для статичной карты через Google Static Maps API
- * TODO: Можно заменить на другой сервис (Mapbox, OpenStreetMap и т.д.)
  */
 export function generateStaticMapUrl(
   points: MapPoint[],
