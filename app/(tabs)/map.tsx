@@ -25,6 +25,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
 import TravelListPanel from '@/components/MapPage/TravelListPanel';
+import SwipeablePanel from '@/components/MapPage/SwipeablePanel';
 import { fetchFiltersMap, fetchTravelsForMap, fetchTravelsNearRoute } from '@/src/api/map';
 import InstantSEO from '@/components/seo/InstantSEO';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -448,6 +449,209 @@ export default function MapScreen() {
         </View>
     );
 
+    // Функция рендеринга содержимого панели
+    const renderPanelContent = useCallback(() => (
+        <>
+            {/* Табы для переключения */}
+            {rightPanelVisible && (
+                <View style={styles.tabsContainer}>
+                    <View style={styles.tabsSegment}>
+                        <Pressable
+                            ref={filtersTabRef as any}
+                            style={({ pressed }) => [
+                                styles.tab,
+                                rightPanelTab === 'filters' && styles.tabActive,
+                                pressed && styles.tabPressed,
+                            ]}
+                            onPress={() => setRightPanelTab('filters')}
+                            hitSlop={8}
+                            android_ripple={{ color: themedColors.overlayLight }}
+                            accessibilityRole="tab"
+                            accessibilityState={{ selected: rightPanelTab === 'filters' }}
+                        >
+                            <View style={[styles.tabIconBubble, rightPanelTab === 'filters' && styles.tabIconBubbleActive]}>
+                                <IconMaterial
+                                    name="filter-list"
+                                    size={18}
+                                    color={rightPanelTab === 'filters' ? themedColors.textOnPrimary : themedColors.primary}
+                                />
+                            </View>
+                            <View style={styles.tabLabelColumn}>
+                                <Text style={[styles.tabText, rightPanelTab === 'filters' && styles.tabTextActive]}>
+                                    Фильтры
+                                </Text>
+                                <Text style={[styles.tabHint, rightPanelTab === 'filters' && styles.tabHintActive]}>
+                                    Настрой параметров
+                                </Text>
+                            </View>
+                        </Pressable>
+
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.tab,
+                                rightPanelTab === 'travels' && styles.tabActive,
+                                pressed && styles.tabPressed,
+                            ]}
+                            onPress={() => setRightPanelTab('travels')}
+                            hitSlop={8}
+                            android_ripple={{ color: themedColors.overlayLight }}
+                            accessibilityRole="tab"
+                            accessibilityState={{ selected: rightPanelTab === 'travels' }}
+                        >
+                            <View style={[styles.tabIconBubble, rightPanelTab === 'travels' && styles.tabIconBubbleActive]}>
+                                <IconMaterial
+                                    name="list"
+                                    size={18}
+                                    color={rightPanelTab === 'travels' ? themedColors.textOnPrimary : themedColors.primary}
+                                />
+                            </View>
+                            <View style={styles.tabLabelColumn}>
+                                <Text style={[styles.tabText, rightPanelTab === 'travels' && styles.tabTextActive]}>
+                                    Список
+                                </Text>
+                                <Text style={[styles.tabHint, rightPanelTab === 'travels' && styles.tabHintActive]}>
+                                    {travelsData.length} мест
+                                </Text>
+                            </View>
+                        </Pressable>
+                    </View>
+
+                    <Pressable
+                        style={({ pressed }) => [
+                            styles.closePanelButton,
+                            pressed && { opacity: 0.7 },
+                        ]}
+                        onPress={() => setRightPanelVisible(false)}
+                        hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel="Скрыть панель"
+                    >
+                        <IconMaterial name="chevron-right" size={22} color={themedColors.textMuted} />
+                    </Pressable>
+                </View>
+            )}
+
+            {/* Контент панели */}
+            <View style={styles.panelContent}>
+                {rightPanelTab === 'filters' ? (
+                    <FiltersPanel
+                        filters={{
+                            categories: filters.categories
+                                .filter(c => c && c.name)
+                                .map(c => ({
+                                    id: Number(c.id) || 0,
+                                    name: String(c.name || '').trim()
+                                }))
+                                .filter(c => c.name),
+                            radius: filters.radius.map(r => ({ id: r.id, name: r.name })),
+                            address: filters.address,
+                        }}
+                        filterValue={filterValues}
+                        onFilterChange={handleFilterChange}
+                        resetFilters={resetFilters}
+                        travelsData={allTravelsData}
+                        filteredTravelsData={travelsData}
+                        isMobile={isMobile}
+                        mode={mode}
+                        setMode={setMode}
+                        transportMode={transportMode}
+                        setTransportMode={setTransportMode}
+                        startAddress={startAddress}
+                        endAddress={endAddress}
+                        routeDistance={routeDistance}
+                        routePoints={routeStorePoints}
+                        onRemoveRoutePoint={(id: string) => routeStore.removePoint(id)}
+                        onClearRoute={handleClearRoute}
+                        swapStartEnd={routeStore.swapStartEnd}
+                        routeHintDismissed={routeHintDismissed}
+                        onRouteHintDismiss={() => setRouteHintDismissed(true)}
+                        onAddressSelect={handleAddressSelect}
+                        routingLoading={routingLoading}
+                        routingError={routingError}
+                        onBuildRoute={() => {
+                            if (routeStorePoints.length >= 2) {
+                                setRoutePoints(routePoints);
+                            }
+                        }}
+                        closeMenu={() => setRightPanelVisible(false)}
+                    />
+                ) : (
+                    <View style={styles.travelsListContainer}>
+                        {loading && !isPlaceholderData ? (
+                            <View style={styles.loader}>
+                                <ActivityIndicator size="small" color={themedColors.primary} />
+                                <Text style={styles.loaderText}>Загрузка...</Text>
+                            </View>
+                        ) : mapError ? (
+                            <View style={styles.errorContainer}>
+                                <ErrorDisplay
+                                    message={getUserFriendlyNetworkError(mapErrorDetails)}
+                                    onRetry={() => refetchMapData()}
+                                    variant="error"
+                                />
+                            </View>
+                        ) : (
+                            <>
+                                {isFetching && isPlaceholderData && (
+                                    <View style={styles.updatingIndicator}>
+                                        <ActivityIndicator size="small" color={themedColors.primary} />
+                                        <Text style={styles.updatingText}>Обновление...</Text>
+                                    </View>
+                                )}
+                                <TravelListPanel
+                                    travelsData={travelsData}
+                                    buildRouteTo={buildRouteTo}
+                                    isMobile={isMobile}
+                                    isLoading={loading && !isPlaceholderData}
+                                    onRefresh={() => {
+                                        queryClient.invalidateQueries({ queryKey: ['travelsForMap'] });
+                                    }}
+                                    isRefreshing={isFetching && !isPlaceholderData}
+                                />
+                            </>
+                        )}
+                    </View>
+                )}
+            </View>
+        </>
+    ), [
+        rightPanelVisible,
+        rightPanelTab,
+        travelsData,
+        filters,
+        filterValues,
+        allTravelsData,
+        isMobile,
+        mode,
+        transportMode,
+        startAddress,
+        endAddress,
+        routeDistance,
+        routeStorePoints,
+        routeHintDismissed,
+        loading,
+        isPlaceholderData,
+        mapError,
+        isFetching,
+        themedColors,
+        styles,
+        handleFilterChange,
+        resetFilters,
+        setMode,
+        setTransportMode,
+        routeStore,
+        handleClearRoute,
+        handleAddressSelect,
+        routingLoading,
+        routingError,
+        setRoutePoints,
+        routePoints,
+        buildRouteTo,
+        mapErrorDetails,
+        refetchMapData,
+        queryClient,
+    ]);
+
     return (
         <>
             {isFocused && Platform.OS === 'web' && (
@@ -511,187 +715,43 @@ export default function MapScreen() {
                     )}
 
                     {/* Правая панель с табами */}
-                    <View
-                        style={[
-                            styles.rightPanel,
-                            isMobile
-                                ? rightPanelVisible
+                    {isMobile ? (
+                        <SwipeablePanel
+                            isOpen={rightPanelVisible}
+                            onClose={() => setRightPanelVisible(false)}
+                            swipeDirection="right"
+                            threshold={80}
+                            style={[
+                                styles.rightPanel,
+                                rightPanelVisible
                                     ? styles.rightPanelMobileOpen
-                                    : styles.rightPanelMobileClosed
-                                : null,
-                            !isMobile && !rightPanelVisible ? styles.rightPanelDesktopClosed : null,
-                        ]}
-                        accessibilityLabel="Панель карты"
-                        id="map-panel"
-                        ref={panelRef}
-                        tabIndex={-1}
-                    >
-                        {/* Табы для переключения */}
-                        {rightPanelVisible && (
-                            <View style={styles.tabsContainer}>
-                                    <View style={styles.tabsSegment}>
-                                        <Pressable
-                                            ref={filtersTabRef as any}
-                                            style={({ pressed }) => [
-                                                styles.tab,
-                                                rightPanelTab === 'filters' && styles.tabActive,
-                                                pressed && styles.tabPressed,
-                                            ]}
-                                            onPress={() => setRightPanelTab('filters')}
-                                            hitSlop={8}
-                                            android_ripple={{ color: themedColors.overlayLight }}
-                                            accessibilityRole="tab"
-                                            accessibilityState={{ selected: rightPanelTab === 'filters' }}
-                                        >
-                                            <View style={[styles.tabIconBubble, rightPanelTab === 'filters' && styles.tabIconBubbleActive]}>
-                                                <IconMaterial
-                                                    name="filter-list"
-                                                    size={18}
-                                                    color={rightPanelTab === 'filters' ? themedColors.textOnPrimary : themedColors.primary}
-                                                />
-                                            </View>
-                                            <View style={styles.tabLabelColumn}>
-                                                <Text style={[styles.tabText, rightPanelTab === 'filters' && styles.tabTextActive]}>
-                                                    Фильтры
-                                                </Text>
-                                                <Text style={[styles.tabHint, rightPanelTab === 'filters' && styles.tabHintActive]}>
-                                                    Настрой параметров
-                                                </Text>
-                                            </View>
-                                        </Pressable>
-
-                                        <Pressable
-                                            style={({ pressed }) => [
-                                                styles.tab,
-                                                rightPanelTab === 'travels' && styles.tabActive,
-                                                pressed && styles.tabPressed,
-                                            ]}
-                                            onPress={() => setRightPanelTab('travels')}
-                                            hitSlop={8}
-                                            android_ripple={{ color: themedColors.overlayLight }}
-                                            accessibilityRole="tab"
-                                            accessibilityState={{ selected: rightPanelTab === 'travels' }}
-                                        >
-                                            <View style={[styles.tabIconBubble, rightPanelTab === 'travels' && styles.tabIconBubbleActive]}>
-                                                <IconMaterial
-                                                    name="list"
-                                                    size={18}
-                                                    color={rightPanelTab === 'travels' ? themedColors.textOnPrimary : themedColors.primary}
-                                                />
-                                            </View>
-                                            <View style={styles.tabLabelColumn}>
-                                                <Text style={[styles.tabText, rightPanelTab === 'travels' && styles.tabTextActive]}>
-                                                    Список
-                                                </Text>
-                                                <Text style={[styles.tabHint, rightPanelTab === 'travels' && styles.tabHintActive]}>
-                                                    {travelsData.length} мест
-                                                </Text>
-                                            </View>
-                                        </Pressable>
-                                    </View>
-
-                                    <Pressable
-                                        style={({ pressed }) => [
-                                            styles.closePanelButton,
-                                            pressed && { opacity: 0.7 },
-                                        ]}
-                                        onPress={() => setRightPanelVisible(false)}
-                                        hitSlop={10}
-                                        accessibilityRole="button"
-                                        accessibilityLabel="Скрыть панель"
-                                    >
-                                        <IconMaterial name="chevron-right" size={22} color={themedColors.textMuted} />
-                                    </Pressable>
-                                </View>
-                        )}
-
-                        {/* Контент панели */}
-                        <View style={styles.panelContent}>
-                            {rightPanelTab === 'filters' ? (
-                                <FiltersPanel
-                                    filters={{
-                                        categories: filters.categories
-                                            .filter(c => c && c.name)
-                                            .map(c => ({ 
-                                                id: Number(c.id) || 0, 
-                                                name: String(c.name || '').trim() 
-                                            }))
-                                            .filter(c => c.name),
-                                        radius: filters.radius.map(r => ({ id: r.id, name: r.name })),
-                                        address: filters.address,
-                                    }}
-                                    filterValue={filterValues}
-                                    onFilterChange={handleFilterChange}
-                                    resetFilters={resetFilters}
-                                    // ✅ РЕАЛИЗАЦИЯ: Передаем все данные для подсчета категорий, но отфильтрованные для отображения
-                                    travelsData={allTravelsData} // Все данные для подсчета категорий
-                                    filteredTravelsData={travelsData} // Отфильтрованные данные для отображения количества
-                                    isMobile={isMobile}
-                                    mode={mode}
-                                    setMode={setMode}
-                                    transportMode={transportMode}
-                                    setTransportMode={setTransportMode}
-                                    startAddress={startAddress}
-                                    endAddress={endAddress}
-                                    routeDistance={routeDistance}
-                                    routePoints={routeStorePoints}
-                                    onRemoveRoutePoint={(id: string) => routeStore.removePoint(id)}
-                                    onClearRoute={handleClearRoute}
-                                    swapStartEnd={routeStore.swapStartEnd}
-                                    routeHintDismissed={routeHintDismissed}
-                                    onRouteHintDismiss={() => setRouteHintDismissed(true)}
-                                    onAddressSelect={handleAddressSelect}
-                                    routingLoading={routingLoading}
-                                    routingError={routingError}
-                                    onBuildRoute={() => {
-                                        // Явное построение маршрута: если есть точки – триггернем пересчёт
-                                        if (routeStorePoints.length >= 2) {
-                                            setRoutePoints(routePoints);
-                                        }
-                                    }}
-                                    closeMenu={() => setRightPanelVisible(false)}
-                                />
-                            ) : (
-                                <View style={styles.travelsListContainer}>
-                                    {loading && !isPlaceholderData ? (
-                                        <View style={styles.loader}>
-                                            <ActivityIndicator size="small" color={themedColors.primary} />
-                                            <Text style={styles.loaderText}>Загрузка...</Text>
-                                        </View>
-                                    ) : mapError ? (
-                                        // ✅ ИСПРАВЛЕНИЕ: Отображение ошибки загрузки данных
-                                        <View style={styles.errorContainer}>
-                                            <ErrorDisplay
-                                                message={getUserFriendlyNetworkError(mapErrorDetails)}
-                                                onRetry={() => refetchMapData()}
-                                                variant="error"
-                                            />
-                                        </View>
-                                    ) : (
-                                        <>
-                                            {isFetching && isPlaceholderData && (
-                                                <View style={styles.updatingIndicator}>
-                                                    <ActivityIndicator size="small" color={themedColors.primary} />
-                                                    <Text style={styles.updatingText}>Обновление...</Text>
-                                                </View>
-                                            )}
-                                            <TravelListPanel
-                                                travelsData={travelsData}
-                                                buildRouteTo={buildRouteTo}
-                                                isMobile={isMobile}
-                                                isLoading={loading && !isPlaceholderData}
-                                                onRefresh={() => {
-                                                    // Обновление данных через React Query
-                                                    queryClient.invalidateQueries({ queryKey: ['travelsForMap'] });
-                                                }}
-                                                isRefreshing={isFetching && !isPlaceholderData}
-                                            />
-                                        </>
-                                    )}
-                                </View>
-                            )}
+                                    : styles.rightPanelMobileClosed,
+                            ]}
+                        >
+                            <View
+                                accessibilityLabel="Панель карты"
+                                id="map-panel"
+                                ref={panelRef}
+                                tabIndex={-1}
+                                style={{ flex: 1 }}
+                            >
+                                {renderPanelContent()}
+                            </View>
+                        </SwipeablePanel>
+                    ) : (
+                        <View
+                            style={[
+                                styles.rightPanel,
+                                !rightPanelVisible ? styles.rightPanelDesktopClosed : null,
+                            ]}
+                            accessibilityLabel="Панель карты"
+                            id="map-panel"
+                            ref={panelRef}
+                            tabIndex={-1}
+                        >
+                            {renderPanelContent()}
                         </View>
-                    </View>
+                    )}
                 </View>
             </SafeAreaView>
         </>

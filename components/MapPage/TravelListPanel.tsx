@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, FlatList, StyleSheet, ActivityIndicator, Platform, RefreshControl } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Text } from 'react-native-paper';
 import AddressListItem from './AddressListItem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -66,20 +67,19 @@ const TravelListPanel: React.FC<Props> = ({
   }, [hasMore, isLoading, styles.endText, styles.loader, themeColors.primary]);
 
   return (
-    <FlatList
+    <FlashList
       data={travelsData}
       keyExtractor={keyExtractor}
       renderItem={renderItem}
       contentContainerStyle={styles.list}
+      // @ts-expect-error - estimatedItemSize is valid FlashList prop but types may be outdated
+      estimatedItemSize={isMobile ? 100 : 120}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
         if (hasMore && onLoadMore) onLoadMore();
       }}
       ListFooterComponent={footer}
-      initialNumToRender={isMobile ? 10 : 12}
-      maxToRenderPerBatch={isMobile ? 10 : 12}
-      windowSize={11}
-      removeClippedSubviews={Platform.OS !== 'web'}
+      drawDistance={isMobile ? 500 : 800}
       refreshControl={
         onRefresh ? (
           <RefreshControl
