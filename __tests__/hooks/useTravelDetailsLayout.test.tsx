@@ -5,8 +5,9 @@ import { useTravelDetailsLayout } from '@/hooks/useTravelDetailsLayout'
 import {
   HEADER_OFFSET_DESKTOP,
   HEADER_OFFSET_MOBILE,
-  styles,
+  getTravelDetailsStyles,
 } from '@/components/travel/details/TravelDetailsStyles'
+import { getThemedColors } from '@/hooks/useTheme'
 
 describe('useTravelDetailsLayout', () => {
   const originalOS = Platform.OS
@@ -41,15 +42,16 @@ describe('useTravelDetailsLayout', () => {
   })
 
   it('uses web and native side menu styles', () => {
+    const baseStyles = getTravelDetailsStyles(getThemedColors(false))
     let result = renderHook(() =>
       useTravelDetailsLayout({ isMobile: false, screenWidth: 1200 })
     ).result
-    expect(result.current.sideMenuPlatformStyles).toBe(styles.sideMenuWebDesktop)
+    expect(result.current.sideMenuPlatformStyles).toEqual(baseStyles.sideMenuWebDesktop)
 
     Platform.OS = 'ios'
     result = renderHook(() =>
       useTravelDetailsLayout({ isMobile: false, screenWidth: 1200 })
     ).result
-    expect(result.current.sideMenuPlatformStyles).toBe(styles.sideMenuNative)
+    expect(result.current.sideMenuPlatformStyles).toEqual(baseStyles.sideMenuNative)
   })
 })

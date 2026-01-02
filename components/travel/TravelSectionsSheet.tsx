@@ -3,6 +3,7 @@ import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "
 import { MaterialIcons } from "@expo/vector-icons"
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { useThemedColors } from "@/hooks/useTheme" // ✅ РЕДИЗАЙН: Темная тема
+import { DESIGN_TOKENS } from "@/constants/designSystem"
 
 type Props = {
   links: TravelSectionLink[]

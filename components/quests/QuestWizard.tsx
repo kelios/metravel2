@@ -703,7 +703,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexDirection: 'row', alignItems: 'center', borderRadius: 999,
         paddingVertical: 6, paddingHorizontal: 10, // ✅ УЛУЧШЕНИЕ: Убрана граница
         backgroundColor: colors.surface, maxWidth: 260, marginRight: 6, marginBottom: 6,
-        shadowColor: '#1f1f1f',
+        shadowColor: colors.shadows.light.shadowColor,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.04,
         shadowRadius: 3,
@@ -722,7 +722,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         alignItems: 'center', justifyContent: 'center',
         // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
         backgroundColor: colors.surface,
-        shadowColor: '#1f1f1f',
+        shadowColor: colors.shadows.light.shadowColor,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.04,
         shadowRadius: 3,
@@ -741,16 +741,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     card: {
         backgroundColor: colors.surface, borderRadius: 12, padding: SPACING.lg, marginBottom: SPACING.md,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 1,
+        shadowColor: colors.shadows.medium.shadowColor, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 1,
         backfaceVisibility: 'hidden',
     },
     cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md },
     stepNumber: {
         width: 40, height: 40, borderRadius: 20,
-        backgroundColor: 'rgba(249,115,22,0.12)', alignItems: 'center', justifyContent: 'center',
+        backgroundColor: colors.warningSoft, alignItems: 'center', justifyContent: 'center',
         marginRight: SPACING.md
     },
-    stepNumberCompleted: { backgroundColor: 'rgba(34,197,94,0.20)' },
+    stepNumberCompleted: { backgroundColor: colors.successSoft },
     stepNumberText: { fontSize: 16, fontWeight: '700', color: colors.primary },
     headerContent: { flex: 1 },
     stepTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 2 },
@@ -772,7 +772,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginBottom: SPACING.sm,
         color: colors.text,
         minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
-        shadowColor: '#1f1f1f',
+        shadowColor: colors.shadows.light.shadowColor,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.04,
         shadowRadius: 3,
@@ -850,7 +850,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#1f1f1f',
+        shadowColor: colors.shadows.light.shadowColor,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
         shadowRadius: 4,
@@ -893,16 +893,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ghostButtonText: { color: colors.textMuted, fontWeight: '600', textAlign: 'center', fontSize: 14 },
 
     hintPrompt: { fontSize: 12, color: colors.textSecondary, textAlign: 'center', marginTop: SPACING.xs },
-    hintContainer: { backgroundColor: 'rgba(34,197,94,0.10)', padding: SPACING.md, borderRadius: 8, marginTop: SPACING.md },
+    hintContainer: { backgroundColor: colors.successSoft, padding: SPACING.md, borderRadius: 8, marginTop: SPACING.md },
     hintText: { color: colors.text, fontSize: 14, lineHeight: 20 },
-    answerContainer: { backgroundColor: 'rgba(34,197,94,0.12)', padding: SPACING.md, borderRadius: 8, marginTop: SPACING.md },
+    answerContainer: { backgroundColor: colors.successSoft, padding: SPACING.md, borderRadius: 8, marginTop: SPACING.md },
     answerLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 4 },
     answerValue: { fontSize: 16, fontWeight: '600', color: colors.text },
 
     mapActions: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.md },
     mapButton: { backgroundColor: colors.surface, // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
         paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, minWidth: 110, marginRight: 6, marginBottom: 6,
-        shadowColor: '#1f1f1f', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
+        shadowColor: colors.shadows.light.shadowColor, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
     mapButtonText: { color: colors.text, fontSize: 12, fontWeight: '500', textAlign: 'center' },
 
     mapPhotoButton: { // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
@@ -914,7 +914,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     imagePreview: { height: 120, borderRadius: 8, overflow: 'hidden', position: 'relative' },
     previewImage: { width: '100%', height: '100%' },
-    imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.7)', padding: 6, alignItems: 'center' },
+    imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.overlay, padding: 6, alignItems: 'center' },
     overlayText: { color: colors.textOnDark, fontSize: 12, fontWeight: '500' },
 
     startButton: { backgroundColor: colors.primary, padding: SPACING.lg, borderRadius: 10, alignItems: 'center' },
@@ -929,7 +929,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     // Видео рамка (адаптив 16:9)
     videoFrame: {
         alignSelf: 'center',
-        backgroundColor: '#000',
+        backgroundColor: colors.backgroundTertiary,
         borderRadius: 8,
         overflow: 'hidden',
         marginBottom: SPACING.md,
@@ -941,33 +941,36 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         left: 12,
         paddingVertical: 8,
         paddingHorizontal: 12,
-        backgroundColor: 'rgba(0,0,0,0.7)',
+        backgroundColor: colors.overlay,
         borderRadius: 8,
     },
     openExternText: { color: colors.textOnDark, fontWeight: '700', fontSize: 14 },
 
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
+    modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', alignItems: 'center' },
     gestureContainer: { flex: 1, width: '100%' },
     animatedContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     zoomedImage: { width: Dimensions.get('window').width, height: Dimensions.get('window').height },
-    closeButton: { position: 'absolute', top: 50, right: 20, backgroundColor: 'rgba(0,0,0,0.6)', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+    closeButton: { position: 'absolute', top: 50, right: 20, backgroundColor: colors.overlay, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
     closeButtonText: { color: colors.textOnDark, fontSize: 18, fontWeight: 'bold' },
     zoomHintContainer: { position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center' },
-    zoomHint: { color: colors.textOnDark, fontSize: 14, backgroundColor: 'rgba(0,0,0,0.6)', padding: 8, borderRadius: 6 },
+    zoomHint: { color: colors.textOnDark, fontSize: 14, backgroundColor: colors.overlay, padding: 8, borderRadius: 6 },
 
     // flip badge
     flipBadge: {
         paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999,
-        backgroundColor: 'rgba(34,197,94,0.96)',
-        shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.22, shadowRadius: 16, elevation: 6,
+        backgroundColor: colors.success,
+        shadowColor: colors.shadows.heavy.shadowColor, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.22, shadowRadius: 16, elevation: 6,
     },
     flipText: { color: colors.textOnDark, fontWeight: '800', fontSize: 16 },
 });
 
-const QuestMapSkeleton = () => (
-    <View style={{ height: 300, borderRadius: 16, backgroundColor: '#e2e8f0', overflow: 'hidden' }}>
-        <View style={{ flex: 1, opacity: 0.6, backgroundColor: '#cbd5f5' }} />
-    </View>
-);
+const QuestMapSkeleton = () => {
+    const colors = useThemedColors();
+    return (
+        <View style={{ height: 300, borderRadius: 16, backgroundColor: colors.backgroundSecondary, overflow: 'hidden' }}>
+            <View style={{ flex: 1, opacity: 0.6, backgroundColor: colors.borderLight }} />
+        </View>
+    );
+};
 
 export default QuestWizard;

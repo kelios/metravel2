@@ -12,7 +12,7 @@
  * - Поддержка Web/Native
  */
 
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import {
   View,
   Text,
@@ -51,6 +51,7 @@ export const NearTravelsSection: React.FC<NearTravelsSectionProps> = memo(({
   subtitle,
 }) => {
   const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Подзаголовок по умолчанию
   const defaultSubtitle = `Маршруты в радиусе ~${radiusKm} км`;
@@ -167,7 +168,7 @@ NearTravelsSection.displayName = 'NearTravelsSection';
 
 /* -------------------- Styles -------------------- */
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     borderRadius: DESIGN_TOKENS.radii.lg,
     padding: Platform.select({
@@ -177,14 +178,10 @@ const styles = StyleSheet.create({
     marginBottom: DESIGN_TOKENS.spacing.lg,
     ...Platform.select({
       web: {
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+        boxShadow: colors.boxShadows.light,
       } as any,
       default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-        elevation: 2,
+        ...colors.shadows.light,
       },
     }),
   },
@@ -287,4 +284,3 @@ const styles = StyleSheet.create({
 });
 
 export default NearTravelsSection;
-

@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 type StepPoint = { lat: number; lng: number; title?: string };
 
@@ -29,15 +30,17 @@ type Mods = {
 };
 
 // n теперь может быть числом или строкой "1,2"
-function numberIcon(L: any, n: number | string, active = false) {
-    const bg = active ? '#0ea5e9' : '#f59e0b';
-    const stroke = active ? '#0369a1' : '#b45309';
+function numberIcon(L: any, n: number | string, colors: ThemedColors, active = false) {
+    const bg = active ? colors.primary : colors.warning;
+    const stroke = active ? colors.primaryDark : colors.warningDark;
+    const textColor = active ? colors.textOnPrimary : colors.text;
+    const shadow = colors.boxShadows.light ?? '0 2px 6px rgba(0,0,0,.25)';
     const html = `
     <div style="
       width:28px;height:28px;border-radius:9999px;
       background:${bg};border:2px solid ${stroke};
-      color:#fff;display:flex;align-items:center;justify-content:center;
-      font-weight:800;font-size:12px;line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.25);
+      color:${textColor};display:flex;align-items:center;justify-content:center;
+      font-weight:800;font-size:12px;line-height:1;box-shadow:${shadow};
       padding:0 4px
     ">${String(n)}</div>`;
     return L.divIcon({ className: 'qmark', html, iconSize: [28, 28], iconAnchor: [14, 14] });
@@ -132,6 +135,8 @@ export default function QuestFullMap({
     const [exportMenuVisible, setExportMenuVisible] = useState(false);
     const mapDivRef = useRef<HTMLDivElement | null>(null);
     const insets = useSafeAreaInsets();
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const bounds = useMemo(() => {
         if (!steps?.length) return undefined;
         const coords = steps
@@ -466,7 +471,7 @@ export default function QuestFullMap({
                     {/* Линия по исходным точкам, чтобы сохранить порядок маршрута */}
                     <Polyline
                         positions={points.map(p => [p.lat, p.lng])}
-                        pathOptions={{ color: '#2563eb', weight: 4 }}
+                        pathOptions={{ color: colors.primary, weight: 4 }}
                     />
 
                     {/* Маркеры по сгруппированным координатам */}
@@ -475,7 +480,7 @@ export default function QuestFullMap({
                             <Marker
                                 key={`${gp.lat}-${gp.lng}-${idx}`}
                                 position={[gp.lat, gp.lng]}
-                                icon={numberIcon(L, gp.indexes.join(','), gp.indexes.includes(1))}
+                                icon={numberIcon(L, gp.indexes.join(','), colors, gp.indexes.includes(1))}
                             >
                                 <Popup>
                                     <View style={{ minWidth: 180 }}>
@@ -506,29 +511,29 @@ export default function QuestFullMap({
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemedColors) => StyleSheet.create({
     wrap: {
         width: '100%',
         borderRadius: 16,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: '#e5e7eb',
-        backgroundColor: '#fff',
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
     },
     toolbar: {
         paddingHorizontal: 16,
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#e5e7eb',
+        borderBottomColor: colors.border,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#f8fafc',
+        backgroundColor: colors.backgroundSecondary,
         minHeight: 60,
     },
     toolbarTitle: {
         fontWeight: '800',
-        color: '#0f172a',
+        color: colors.text,
         fontSize: 18,
         flex: 1,
         marginRight: 12,
@@ -542,20 +547,20 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 8,
-        backgroundColor: '#0ea5e9',
+        backgroundColor: colors.primary,
     },
     btnTxt: {
-        color: '#fff',
+        color: colors.textOnPrimary,
         fontWeight: '600',
         fontSize: 12,
     },
     mobileMenuButton: {
         padding: 8,
         borderRadius: 8,
-        backgroundColor: '#0ea5e9',
+        backgroundColor: colors.primary,
     },
     mobileMenuText: {
-        color: '#fff',
+        color: colors.textOnPrimary,
         fontWeight: 'bold',
         fontSize: 18,
     },
@@ -570,15 +575,15 @@ const styles = StyleSheet.create({
     loadingText: {
         textAlign: 'center',
         padding: 20,
-        color: '#64748b',
+        color: colors.textMuted,
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: colors.overlay,
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: 'white',
+        backgroundColor: colors.surface,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         padding: 20,
@@ -589,27 +594,27 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         textAlign: 'center',
         marginBottom: 20,
-        color: '#0f172a',
+        color: colors.text,
     },
     modalOption: {
         padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#e5e7eb',
+        borderBottomColor: colors.border,
     },
     modalOptionText: {
         fontSize: 16,
-        color: '#0f172a',
+        color: colors.text,
         textAlign: 'center',
     },
     cancelOption: {
         marginTop: 10,
-        backgroundColor: '#f1f5f9',
+        backgroundColor: colors.backgroundSecondary,
         borderRadius: 12,
         borderBottomWidth: 0,
     },
     cancelOptionText: {
         fontSize: 16,
-        color: '#64748b',
+        color: colors.textMuted,
         fontWeight: '600',
         textAlign: 'center',
     },
@@ -617,21 +622,21 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 14,
         marginBottom: 4,
-        color: '#0f172a',
+        color: colors.text,
     },
     popupCoords: {
         fontSize: 12,
-        color: '#64748b',
+        color: colors.textMuted,
     },
     touchHints: {
         padding: 12,
-        backgroundColor: '#f8fafc',
+        backgroundColor: colors.backgroundSecondary,
         borderTopWidth: 1,
-        borderTopColor: '#e5e7eb',
+        borderTopColor: colors.border,
     },
     hintText: {
         fontSize: 12,
-        color: '#64748b',
+        color: colors.textMuted,
         textAlign: 'center',
     },
 });

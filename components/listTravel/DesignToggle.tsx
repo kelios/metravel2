@@ -1,5 +1,5 @@
 // DesignToggle.tsx - Переключатель между классическим и современным дизайном
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,9 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { MODERN_DESIGN_TOKENS } from '@/styles/modernRedesign';
+import { useThemedColors } from '@/hooks/useTheme';
 
-const { colors, spacing, radii, typography, shadows } = MODERN_DESIGN_TOKENS;
+const { spacing, radii, typography } = MODERN_DESIGN_TOKENS;
 
 interface DesignToggleProps {
   useModernDesign: boolean;
@@ -25,6 +26,9 @@ const DesignToggle: React.FC<DesignToggleProps> = memo(({
   cardVariant,
   onCardVariantChange,
 }) => {
+  const themeColors = useThemedColors();
+  const styles = useMemo(() => createStyles(themeColors), [themeColors]);
+
   const cardVariants = [
     { value: 'minimal', label: 'Минимал', icon: 'square' },
     { value: 'rich', label: 'Богатый', icon: 'layers' },
@@ -46,7 +50,7 @@ const DesignToggle: React.FC<DesignToggleProps> = memo(({
           <Feather
             name={useModernDesign ? 'zap' : 'clock'}
             size={20}
-            color={useModernDesign ? colors.primary[600] : colors.neutral[600]}
+            color={useModernDesign ? themeColors.primary : themeColors.textMuted}
           />
           <Text style={[
             styles.toggleText,
@@ -83,7 +87,7 @@ const DesignToggle: React.FC<DesignToggleProps> = memo(({
                 <Feather
                   name={variant.icon as any}
                   size={16}
-                  color={cardVariant === variant.value ? '#fff' : colors.neutral[600]}
+                  color={cardVariant === variant.value ? themeColors.textOnPrimary : themeColors.textMuted}
                 />
                 <Text style={[
                   styles.variantButtonText,
@@ -100,20 +104,21 @@ const DesignToggle: React.FC<DesignToggleProps> = memo(({
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (themeColors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     position: 'absolute',
     top: Platform.select({ web: 20, default: 60 }),
     right: 20,
     zIndex: 1000,
-    backgroundColor: colors.surface.overlay,
+    backgroundColor: themeColors.surfaceElevated,
     borderRadius: radii.xl,
     padding: spacing.md,
-    ...shadows.lg,
+    ...themeColors.shadows.medium,
     ...Platform.select({
       web: {
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
+        boxShadow: themeColors.boxShadows.medium,
       },
     }),
   },
@@ -123,7 +128,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.neutral[50],
+    backgroundColor: themeColors.surface,
     borderRadius: radii.pill,
     minWidth: 220,
     ...Platform.select({
@@ -134,7 +139,7 @@ const styles = StyleSheet.create({
     }),
   },
   mainToggleActive: {
-    backgroundColor: colors.primary[50],
+    backgroundColor: themeColors.primarySoft,
   },
   toggleContent: {
     flexDirection: 'row',
@@ -144,16 +149,16 @@ const styles = StyleSheet.create({
   toggleText: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
-    color: colors.neutral[700],
+    color: themeColors.text,
   },
   toggleTextActive: {
-    color: colors.primary[700],
+    color: themeColors.primaryDark,
   },
   switch: {
     width: 44,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.neutral[300],
+    backgroundColor: themeColors.border,
     padding: 2,
     ...Platform.select({
       web: {
@@ -162,14 +167,14 @@ const styles = StyleSheet.create({
     }),
   },
   switchActive: {
-    backgroundColor: colors.primary[500],
+    backgroundColor: themeColors.primary,
   },
   switchThumb: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#fff',
-    ...shadows.sm,
+    backgroundColor: themeColors.surface,
+    ...themeColors.shadows.light,
     ...Platform.select({
       web: {
         transition: 'all 0.3s ease',
@@ -183,12 +188,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.neutral[200],
+    borderTopColor: themeColors.border,
   },
   variantLabel: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.neutral[600],
+    color: themeColors.textMuted,
     marginBottom: spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -205,9 +210,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radii.pill,
-    backgroundColor: colors.neutral[100],
+    backgroundColor: themeColors.surface,
     borderWidth: 1,
-    borderColor: colors.neutral[200],
+    borderColor: themeColors.border,
     ...Platform.select({
       web: {
         cursor: 'pointer',
@@ -216,16 +221,16 @@ const styles = StyleSheet.create({
     }),
   },
   variantButtonActive: {
-    backgroundColor: colors.primary[500],
-    borderColor: colors.primary[600],
+    backgroundColor: themeColors.primary,
+    borderColor: themeColors.primaryDark,
   },
   variantButtonText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.medium,
-    color: colors.neutral[700],
+    color: themeColors.text,
   },
   variantButtonTextActive: {
-    color: '#fff',
+    color: themeColors.textOnPrimary,
   },
 });
 

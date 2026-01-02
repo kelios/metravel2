@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Asset } from 'expo-asset';
 import { ALL_QUESTS_META, getQuestById, QuestMeta } from '@/components/quests/registry';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type Point = {
     id?: number;
@@ -48,6 +49,8 @@ function assetUri(mod: any): string {
 
 export default function QuestsMapScreen() {
     const router = useRouter();
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const [MapPageComponent, setMapPageComponent] = useState<React.ComponentType<any> | null>(null);
     const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
@@ -109,7 +112,7 @@ export default function QuestsMapScreen() {
             <View style={styles.fallback}>
                 <Text style={styles.fallbackText}>Карта доступна в веб-версии</Text>
                 <Pressable onPress={handleBack} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={16} color="#fff" />
+                    <Ionicons name="arrow-back" size={16} color={colors.textOnPrimary} />
                     <Text style={styles.backBtnTxt}>Назад</Text>
                 </Pressable>
             </View>
@@ -137,28 +140,35 @@ export default function QuestsMapScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Назад"
             >
-                <Ionicons name="arrow-back" size={18} color="#111827" />
+                <Ionicons name="arrow-back" size={18} color={colors.text} />
             </Pressable>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     fabBack: {
         position: 'absolute',
         top: 12,
         left: 12,
         paddingHorizontal: 12,
         paddingVertical: 10,
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.surface,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#e5e7eb',
-        shadowColor: 'rgba(0,0,0,0.08)',
-        shadowOpacity: 1,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 3 },
-        ...Platform.select({ android: { elevation: 3 } }),
+        borderColor: colors.border,
+        ...Platform.select({
+            ios: {
+                ...colors.shadows.medium,
+            },
+            android: { elevation: colors.shadows.medium.elevation },
+            web: {
+                boxShadow: colors.boxShadows.light,
+            } as any,
+            default: {
+                ...colors.shadows.medium,
+            },
+        }),
     },
     fallback: {
         flex: 1,
@@ -167,15 +177,15 @@ const styles = StyleSheet.create({
         gap: 12,
         padding: 24,
     },
-    fallbackText: { color: '#374151', fontSize: 16 },
+    fallbackText: { color: colors.textMuted, fontSize: 16 },
     backBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: '#111827',
+        backgroundColor: colors.primary,
         paddingHorizontal: 14,
         paddingVertical: 10,
         borderRadius: 12,
     },
-    backBtnTxt: { color: '#fff', fontWeight: '700' },
+    backBtnTxt: { color: colors.textOnPrimary, fontWeight: '700' },
 });

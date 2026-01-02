@@ -13,20 +13,26 @@ jest.mock('react-native-toast-message', () => ({
     show: jest.fn(),
 }));
 
-jest.mock('@/hooks/useTheme', () => ({
-    useThemedColors: () => ({
-        primary: '#7a9d8f',
-        surface: '#ffffff',
-        background: '#fdfcfb',
-        text: '#3a3a3a',
-        textMuted: '#6a6a6a',
-        border: 'rgba(58, 58, 58, 0.06)',
-        primarySoft: 'rgba(122, 157, 143, 0.06)',
-    }),
-}));
+jest.mock('@/hooks/useTheme', () => {
+    const {
+        MODERN_MATTE_PALETTE,
+        MODERN_MATTE_SHADOWS,
+        MODERN_MATTE_BOX_SHADOWS,
+    } = require('@/constants/modernMattePalette');
+    return {
+        useThemedColors: () => ({
+            ...MODERN_MATTE_PALETTE,
+            surfaceLight: MODERN_MATTE_PALETTE.backgroundTertiary,
+            mutedBackground: MODERN_MATTE_PALETTE.mutedBackground ?? MODERN_MATTE_PALETTE.backgroundSecondary,
+            shadows: MODERN_MATTE_SHADOWS,
+            boxShadows: MODERN_MATTE_BOX_SHADOWS,
+        }),
+    };
+});
 
 jest.mock('react-native-safe-area-context', () => ({
     SafeAreaView: ({ children }: any) => children,
+    useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
 describe('TravelWizardStepBasic (Шаг 1)', () => {
@@ -276,4 +282,3 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
         });
     });
 });
-

@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Image, Dimensions } from 'react-native';
 import { Button, Card } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { confirmAccount } from '@/src/api/auth';
 import { useAuth } from '@/context/AuthContext';
+import { useThemedColors } from '@/hooks/useTheme';
 
 const { height } = Dimensions.get('window');
 
 export default function AccountConfirmation() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const { hash } = useLocalSearchParams(); // ✅ заменили useRoute
     const router = useRouter();              // ✅ заменили useNavigation
@@ -46,7 +49,7 @@ export default function AccountConfirmation() {
             <View style={styles.contentContainer}>
                 <Card style={styles.card}>
                     {loading ? (
-                        <ActivityIndicator size="large" color="#0000ff" />
+                        <ActivityIndicator size="large" color={colors.primary} />
                     ) : error ? (
                         <>
                             <Text style={styles.errorText}>{error}</Text>
@@ -68,7 +71,7 @@ export default function AccountConfirmation() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'center',
@@ -91,26 +94,22 @@ const styles = StyleSheet.create({
         width: '100%',
         padding: 20,
         borderRadius: 8,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 3,
+        backgroundColor: colors.surface,
+        ...colors.shadows.medium,
     },
     errorText: {
-        color: 'red',
+        color: colors.danger,
         marginBottom: 20,
         textAlign: 'center',
     },
     successText: {
-        color: 'green',
+        color: colors.success,
         marginBottom: 20,
         textAlign: 'center',
         fontWeight: 'bold',
     },
     button: {
-        backgroundColor: '#6aaaaa',
+        backgroundColor: colors.primary,
         borderRadius: 5,
     },
     buttonContent: {

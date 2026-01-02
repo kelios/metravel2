@@ -43,7 +43,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     overflow: 'hidden',
     ...Platform.select({
       web: {
-        backgroundColor: AIRY_GRADIENTS.primary.split(' ')[0] || '#6b8e7f',
+        backgroundColor: AIRY_GRADIENTS.primary.split(' ')[0] || colors.primary,
         backgroundImage: AIRY_GRADIENTS.primary,
       } as any,
     }),

@@ -66,6 +66,7 @@ export const VideoSection: React.FC<VideoSectionProps> = memo(({
   subtitle = 'Одно нажатие — и ролик начнёт проигрываться',
 }) => {
   const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Извлечение YouTube ID
@@ -191,7 +192,7 @@ export const VideoSection: React.FC<VideoSectionProps> = memo(({
                 aspectRatio: '16 / 9',
                 borderRadius: 12,
                 overflow: 'hidden',
-                backgroundColor: '#000',
+                backgroundColor: colors.backgroundTertiary,
               }}
             >
               <iframe
@@ -223,7 +224,7 @@ VideoSection.displayName = 'VideoSection';
 
 /* -------------------- Styles -------------------- */
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     borderRadius: DESIGN_TOKENS.radii.lg,
     padding: Platform.select({
@@ -233,14 +234,10 @@ const styles = StyleSheet.create({
     marginBottom: DESIGN_TOKENS.spacing.lg,
     ...Platform.select({
       web: {
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+        boxShadow: colors.boxShadows.light,
       } as any,
       default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-        elevation: 2,
+        ...colors.shadows.light,
       },
     }),
   },
@@ -331,7 +328,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: colors.overlayLight,
     gap: DESIGN_TOKENS.spacing.md,
   },
   playButton: {
@@ -342,10 +339,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Platform.select({
       web: {
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+        boxShadow: colors.boxShadows.medium,
       } as any,
       default: {
-        shadowColor: '#000',
+        shadowColor: colors.shadows.medium.shadowColor,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 6,
@@ -383,4 +380,3 @@ const styles = StyleSheet.create({
 });
 
 export default VideoSection;
-

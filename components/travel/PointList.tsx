@@ -495,7 +495,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderWidth: 1.5,
     borderColor: colors.border, // ✅ ДИЗАЙН: Динамический цвет границы
     marginBottom: DESIGN_TOKENS.spacing.md,
-    shadowColor: '#000',
+    shadowColor: colors.shadows.medium.shadowColor,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 10,
@@ -588,7 +588,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: colors.surface, // ✅ ДИЗАЙН: Динамический цвет фона
     borderRadius: DESIGN_TOKENS.radii.lg,
     overflow: 'hidden',
-    shadowColor: '#1f1f1f',
+    shadowColor: colors.shadows.medium.shadowColor,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,

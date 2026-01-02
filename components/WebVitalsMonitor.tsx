@@ -8,24 +8,25 @@
  * {__DEV__ && <WebVitalsMonitor />}
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, Platform, Pressable } from 'react-native';
 import { getWebVitalsMetrics, onWebVitals, checkMetricsHealth } from '@/utils/webVitalsMonitoring';
 import type { WebVitalsMetrics } from '@/utils/webVitalsMonitoring';
+import { useThemedColors } from '@/hooks/useTheme';
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     position: 'fixed',
     bottom: 10,
     right: 10,
     width: 300,
     maxHeight: 400,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: colors.surfaceElevated,
     borderRadius: 8,
     padding: 12,
     zIndex: 9999,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: colors.border,
   },
   header: {
     flexDirection: 'row',
@@ -34,10 +35,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+    borderBottomColor: colors.border,
   },
   title: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -45,21 +46,21 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   closeText: {
-    color: '#888',
+    color: colors.textMuted,
     fontSize: 16,
   },
   metric: {
     marginBottom: 8,
   },
   metricLabel: {
-    color: '#888',
+    color: colors.textMuted,
     fontSize: 11,
     marginBottom: 2,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   metricValue: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'monospace',
@@ -70,13 +71,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   statusGood: {
-    color: '#4ade80',
+    color: colors.success,
   },
   statusFair: {
-    color: '#facc15',
+    color: colors.warning,
   },
   statusPoor: {
-    color: '#ef4444',
+    color: colors.danger,
   },
   scrollView: {
     maxHeight: 350,
@@ -99,6 +100,8 @@ const MetricRow: React.FC<{
   status: 'good' | 'fair' | 'poor';
   threshold?: { good: number; fair: number };
 }> = ({ label, value, unit, status, threshold }) => {
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   if (value === undefined) {
     return null;
   }
@@ -132,6 +135,8 @@ export const WebVitalsMonitor: React.FC<WebVitalsMonitorProps> = ({
   onClose,
   showThreshold = true,
 }) => {
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [metrics, setMetrics] = useState<WebVitalsMetrics>({});
   const [health, setHealth] = useState(checkMetricsHealth({}));
   const [isVisible, setIsVisible] = useState(controlledVisible ?? true);
@@ -234,4 +239,3 @@ export const WebVitalsMonitor: React.FC<WebVitalsMonitorProps> = ({
 };
 
 export default WebVitalsMonitor;
-

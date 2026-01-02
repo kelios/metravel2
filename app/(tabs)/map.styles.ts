@@ -1,11 +1,11 @@
 import { Platform, StyleSheet } from 'react-native';
 import { METRICS } from '@/constants/layout';
+import type { ThemedColors } from '@/hooks/useTheme';
 
 // ✅ Токенизация: базируемся на 8pt-системе METRICS
 const PANEL_WIDTH_DESKTOP = METRICS.baseUnit * 48; // 384px
 const PANEL_WIDTH_TABLET = METRICS.baseUnit * 42; // 336px
 const PANEL_GAP = METRICS.spacing.m; // 16px
-const OVERLAY_COLOR = 'rgba(0, 0, 0, 0.5)';
 const TRANSITION_MS = 180;
 
 export const getStyles = (
@@ -13,23 +13,14 @@ export const getStyles = (
   insetTop: number,
   headerOffset: number,
   windowWidth: number = METRICS.breakpoints.tablet,
-  themedColors: {
-    primary: string;
-    primaryDark: string;
-    primaryLight: string;
-    primarySoft: string;
-    text: string;
-    textMuted: string;
-    textInverse: string;
-    background: string;
-    surface: string;
-    surfaceLight: string;
-    border: string;
-  },
+  themedColors: ThemedColors,
 ) => {
   // Учитываем высоту web-хедера, иначе карта “подпрыгивает” под него и шапка пропадает
   const effectiveHeaderOffset = headerOffset;
   const panelSlideDistance = Math.max(windowWidth, PANEL_WIDTH_TABLET);
+  const shadowLight = themedColors.shadows.light;
+  const shadowMedium = themedColors.shadows.medium;
+  const shadowHeavy = themedColors.shadows.heavy;
   return StyleSheet.create({
     // На web шапка уже занимает поток, поэтому смещение не требуется
     // На native (если появится) оставляем headerOffset
@@ -79,23 +70,16 @@ export const getStyles = (
         ...Platform.select({
           web: {
             // @ts-ignore: web-only style
-            boxShadow: '0 6px 16px rgba(0, 0, 0, 0.18)',
+            boxShadow: themedColors.boxShadows.medium,
           },
           ios: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
+            ...shadowMedium,
           },
           android: {
-            elevation: 4,
+            elevation: shadowMedium.elevation,
           },
           default: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-            elevation: 4,
+            ...shadowMedium,
           },
         }),
         zIndex: 1001,
@@ -111,23 +95,16 @@ export const getStyles = (
         ...Platform.select({
           web: {
             // @ts-ignore: web-only style
-            boxShadow: '-8px 0 24px rgba(15, 23, 42, 0.12)',
+            boxShadow: themedColors.boxShadows.modal,
           },
           ios: {
-            shadowColor: '#000',
-            shadowOffset: { width: -2, height: 0 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
+            ...shadowHeavy,
           },
           android: {
-            elevation: 8,
+            elevation: shadowHeavy.elevation,
           },
           default: {
-            shadowColor: '#000',
-            shadowOffset: { width: -2, height: 0 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 8,
+            ...shadowHeavy,
           },
         }),
         zIndex: 1000,
@@ -167,7 +144,7 @@ export const getStyles = (
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: OVERLAY_COLOR,
+        backgroundColor: themedColors.overlay,
         zIndex: 999,
         ...(Platform.OS === 'web'
           ? ({
@@ -196,25 +173,16 @@ export const getStyles = (
         ...Platform.select({
           web: {
             // @ts-ignore: web-only style
-            boxShadow: isMobile
-              ? '0 8px 20px rgba(15, 23, 42, 0.10)'
-              : '0 4px 12px rgba(15, 23, 42, 0.08)',
+            boxShadow: isMobile ? themedColors.boxShadows.medium : themedColors.boxShadows.light,
           },
           ios: {
-            shadowColor: '#0f172a',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: isMobile ? 0.08 : 0.05,
-            shadowRadius: 8,
+            ...(isMobile ? shadowMedium : shadowLight),
           },
           android: {
-            elevation: isMobile ? 5 : 2,
+            elevation: isMobile ? shadowMedium.elevation : shadowLight.elevation,
           },
           default: {
-            shadowColor: '#0f172a',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: isMobile ? 0.08 : 0.05,
-            shadowRadius: 8,
-            elevation: isMobile ? 5 : 2,
+            ...(isMobile ? shadowMedium : shadowLight),
           },
         }),
         zIndex: 1001,

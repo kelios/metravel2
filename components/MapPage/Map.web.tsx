@@ -206,10 +206,10 @@ const ClusterLayer: React.FC<{
 
       // Читаем актуальные css-переменные темы, чтобы пузырьки были видимы в тёмной теме
       const root = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
-      const primary = root?.getPropertyValue('--color-primary')?.trim() || '#4a8c8c';
-      const textOnDark = root?.getPropertyValue('--color-textOnDark')?.trim() || '#fff';
-      const shadow = root?.getPropertyValue('--shadow-medium')?.trim() || '0 10px 30px rgba(0,0,0,0.25)';
-      const border = root?.getPropertyValue('--color-border')?.trim() || 'rgba(0,0,0,0.15)';
+      const primary = root?.getPropertyValue('--color-primary')?.trim() || colors.primary;
+      const textOnDark = root?.getPropertyValue('--color-textOnDark')?.trim() || colors.textOnDark;
+      const shadow = root?.getPropertyValue('--shadow-medium')?.trim() || colors.boxShadows.medium;
+      const border = root?.getPropertyValue('--color-border')?.trim() || colors.border;
 
       return (window as any).L.divIcon({
         className: 'custom-cluster-icon',
@@ -229,7 +229,7 @@ const ClusterLayer: React.FC<{
         iconAnchor: [21, 21],
       });
     },
-    []
+    [colors]
   );
 
   return (

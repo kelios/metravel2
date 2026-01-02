@@ -353,7 +353,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.surface,
         ...Platform.select({
             ios: {
-                shadowColor: '#0f172a',
+                shadowColor: colors.shadows.heavy.shadowColor,
                 shadowOffset: { width: 0, height: 14 },
                 shadowOpacity: 0.16,
                 shadowRadius: 24,
@@ -362,8 +362,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
                 elevation: 6,
             },
             web: {
-                boxShadow:
-                    '0 24px 60px rgba(15, 23, 42, 0.14), 0 8px 24px rgba(15, 23, 42, 0.06)',
+                boxShadow: colors.boxShadows.modal,
             },
         }),
     },

@@ -1,6 +1,6 @@
 import {ActivityIndicator, Dimensions, FlatList, SafeAreaView, StyleSheet, View} from 'react-native'
 import ArticleListItem from '@/components/ArticleListItem'
-import React, {useCallback, useEffect, useState} from 'react'
+import React, {useCallback, useEffect, useMemo, useState} from 'react'
 import {Articles} from '@/src/types/types'
 import { SkeletonLoader } from '@/components/SkeletonLoader'
 import {fetchArticles} from '@/src/api/articles'
@@ -8,11 +8,13 @@ import {DataTable} from 'react-native-paper'
 import {useLocalSearchParams} from 'expo-router'
 import ErrorDisplay from '@/components/ErrorDisplay'
 import EmptyState from '@/components/EmptyState'
+import { useThemedColors } from '@/hooks/useTheme'
 
 export default function TabOneScreen() {
   const initialPage = 0
   const windowWidth = Dimensions.get('window').width
-  const styles = getStyles(windowWidth)
+  const colors = useThemedColors()
+  const styles = useMemo(() => getStyles(windowWidth, colors), [windowWidth, colors])
 
   const [articles, setArticles] = useState<Articles | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -123,7 +125,7 @@ export default function TabOneScreen() {
             )}
             {isLoading && (
               <View style={styles.loadingOverlay}>
-                <ActivityIndicator size="small" color="#4a8c8c" />
+                <ActivityIndicator size="small" color={colors.primary} />
               </View>
             )}
             <FlatList
@@ -156,13 +158,13 @@ export default function TabOneScreen() {
   )
 }
 
-const getStyles = (windowWidth: number) => {
+const getStyles = (windowWidth: number, colors: ReturnType<typeof useThemedColors>) => {
   return StyleSheet.create({
     container: {
       flex: 1,
       flexDirection: 'row',
       width: '100%',
-      backgroundColor: 'white',
+      backgroundColor: colors.background,
     },
     content: {
       flex: 1,
@@ -178,13 +180,13 @@ const getStyles = (windowWidth: number) => {
     loadingOverlay: {
       padding: 16,
       alignItems: 'center',
-      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+      backgroundColor: colors.surface,
     },
     containerPaginator: {
       marginTop: 10,
       paddingHorizontal: 10,
-      backgroundColor: 'white',
-      color: 'black',
+      backgroundColor: colors.surface,
+      color: colors.text,
       paddingBottom: windowWidth > 500 ? '7%' : '20%',
     },
   })

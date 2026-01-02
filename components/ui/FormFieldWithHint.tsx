@@ -285,7 +285,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -298,14 +298,10 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     width: '100%',
     ...Platform.select({
       web: {
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)',
+        boxShadow: colors.boxShadows.modal,
       },
       default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 12,
-        elevation: 8,
+        ...colors.shadows.heavy,
       },
     }),
   },

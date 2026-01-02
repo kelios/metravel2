@@ -86,13 +86,13 @@ const replaceYouTubeIframes = (html: string): string =>
     if (!id) return full;
     return `
 <div class="yt-lite" data-yt="${id}"
-     style="position:relative;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;margin:16px 0">
+     style="position:relative;aspect-ratio:16/9;background:var(--color-backgroundTertiary);border-radius:12px;overflow:hidden;margin:16px 0">
   <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg"
        alt="YouTube preview" loading="lazy" decoding="async"
        style="width:100%;height:100%;object-fit:cover;display:block"/>
   <div role="button" tabindex="0" aria-label="Смотреть видео"
     style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:transparent;cursor:pointer">
-    <span style="width:68px;height:48px;background:rgba(0,0,0,.6);clip-path:polygon(20% 10%,20% 90%,85% 50%);"></span>
+    <span style="width:68px;height:48px;background:var(--color-overlay);clip-path:polygon(20% 10%,20% 90%,85% 50%);"></span>
   </div>
 </div>`;
   });
@@ -353,6 +353,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 
 const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }) => {
   const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const webRichTextStyles = useMemo(() => getWebRichTextStyles(colors), [colors]);
   const [iframeModel, setIframeModel] = useState<IframeModelType | null>(null);
   const prepared = useMemo(() => prepareHtml(html), [html]);
@@ -763,7 +764,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
 
 export default StableContent
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   htmlWrapper: {
     flexDirection: 'column',
     width: '100%',
@@ -775,13 +776,13 @@ const styles = StyleSheet.create({
   ytStub: {
     marginVertical: DESIGN_TOKENS.spacing.sm,
     aspectRatio: 16 / 9,
-    backgroundColor: '#eee',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center'
   },
   ytStubText: {
-    color: '#111',
+    color: colors.text,
     fontSize: DESIGN_TOKENS.typography.sizes.sm
   },
   instagramEmbedWrapper: {

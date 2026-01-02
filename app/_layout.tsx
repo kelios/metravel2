@@ -1,6 +1,6 @@
 import "@expo/metro-runtime";
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, Platform, StyleSheet, View, LogBox } from "react-native";
+import { ActivityIndicator, Image, Platform, StyleSheet, View, LogBox, useColorScheme } from "react-native";
 import { MD3DarkTheme, MD3LightTheme as DefaultTheme, PaperProvider } from "react-native-paper";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
@@ -19,7 +19,7 @@ import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { useResponsive } from "@/hooks/useResponsive"; 
 import { createOptimizedQueryClient } from "@/src/utils/reactQueryConfig";
-import { ThemeProvider, useTheme, useThemedColors } from "@/hooks/useTheme";
+import { ThemeProvider, useTheme, useThemedColors, getThemedColors } from "@/hooks/useTheme";
 
 // ✅ ИСПРАВЛЕНИЕ: Глобальный CSS для web (box-sizing fix)
 if (Platform.OS === 'web') {
@@ -127,8 +127,13 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
     const pathname = usePathname();
+    const colorScheme = useColorScheme();
     const { width } = useResponsive();
     const [clientWidth, setClientWidth] = useState<number | null>(null);
+    const loadingColors = useMemo(
+      () => getThemedColors(colorScheme === 'dark'),
+      [colorScheme],
+    );
 
     useEffect(() => {
       if (!isWeb) return;
@@ -253,8 +258,8 @@ function RootLayoutNav() {
 
     if (!fontsLoaded && !isWeb) {
       return (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fdfcfb' }}>
-          <ActivityIndicator size="small" color="#7a9d8f" />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: loadingColors.background }}>
+          <ActivityIndicator size="small" color={loadingColors.primary} />
         </View>
       );
     }

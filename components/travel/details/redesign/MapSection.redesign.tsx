@@ -57,6 +57,7 @@ export const MapSection: React.FC<MapSectionProps> = memo(({
   emptyStateText = 'Маршрут ещё не добавлен',
 }) => {
   const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { isPhone } = useResponsive();
   const [showMap, setShowMap] = useState(initiallyOpen);
   const [hasOpened, setHasOpened] = useState(initiallyOpen);
@@ -219,7 +220,7 @@ MapSection.displayName = 'MapSection';
 
 /* -------------------- Styles -------------------- */
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     borderRadius: DESIGN_TOKENS.radii.lg,
     padding: Platform.select({
@@ -229,14 +230,10 @@ const styles = StyleSheet.create({
     marginBottom: DESIGN_TOKENS.spacing.lg,
     ...Platform.select({
       web: {
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+        boxShadow: colors.boxShadows.light,
       } as any,
       default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-        elevation: 2,
+        ...colors.shadows.light,
       },
     }),
   },
@@ -252,7 +249,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: colors.infoSoft,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -375,4 +372,3 @@ const styles = StyleSheet.create({
 });
 
 export default MapSection;
-

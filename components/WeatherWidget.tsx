@@ -2,7 +2,7 @@
  * Компонент виджета погоды
  * ✅ РЕДИЗАЙН: Поддержка темной темы + компактный дизайн
  */
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Platform, View, Text, StyleSheet, Image } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -26,6 +26,7 @@ export default function WeatherWidget({ points, countryName }: Props) {
     const [showFullTitle, setShowFullTitle] = useState(false);
     const titleRef = useRef<Text>(null);
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     useEffect(() => {
         if (Platform.OS !== 'web' || !points?.length) return;
@@ -138,7 +139,7 @@ function formatDateShort(dateStr: string): string {
     return date.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric' });
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     // ✅ РЕДИЗАЙН: Компактный wrapper
     wrapper: {
         width: '100%',
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
         paddingVertical: 8, // было 10px (-20%)
         paddingHorizontal: 0,
         marginBottom: 0,
-        shadowColor: '#000',
+        shadowColor: colors.shadows.light.shadowColor,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0,
         shadowRadius: 0,
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
         fontSize: 13, // было 14px (-7%)
         fontWeight: '600',
         fontFamily: 'Roboto-Medium',
-        color: '#374151', // будет переопределен через props
+        color: colors.text,
         cursor: 'default',
         width: '100%',
         flexWrap: 'wrap',
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: '100%',
         left: 0,
-        backgroundColor: '#333', // будет переопределен через props
+        backgroundColor: colors.surfaceElevated,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 4,
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     tooltipText: {
-        color: '#fff', // будет переопределен через props
+        color: colors.text,
         fontSize: 13, // было 14px (-7%)
         fontFamily: 'Roboto-Regular',
     },
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
         fontSize: 13, // было 14px (-7%)
         fontWeight: '500',
         fontFamily: 'Roboto-Medium',
-        color: '#9ca3af', // будет переопределен через props
+        color: colors.textMuted,
         marginBottom: 3, // было 4px (-25%)
         textAlign: 'center',
     },
@@ -225,17 +226,17 @@ const styles = StyleSheet.create({
         fontSize: 13, // было 14px (-7%)
         fontWeight: '600',
         fontFamily: 'Roboto-Medium',
-        color: '#374151', // будет переопределен через props
+        color: colors.text,
     },
     tempMin: {
         fontSize: 13, // было 14px (-7%)
         fontWeight: '400',
         fontFamily: 'Roboto-Regular',
-        color: '#9ca3af', // будет переопределен через props
+        color: colors.textMuted,
     },
     desc: {
         fontSize: 13, // было 14px (-7%)
-        color: '#9ca3af', // будет переопределен через props
+        color: colors.textMuted,
         fontFamily: 'Roboto-Regular',
         textAlign: 'center',
         maxWidth: '100%',

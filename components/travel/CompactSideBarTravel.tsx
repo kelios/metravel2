@@ -773,7 +773,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       default: 10,
       web: 12,
     }),
-    shadowColor: '#000',
+    shadowColor: colors.shadows.medium.shadowColor,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -783,7 +783,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     width: '100%',
     maxWidth: '100%',
     ...(Platform.OS === 'web' ? {
-      boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04)',
+      boxShadow: colors.boxShadows.card,
       transition: 'all 0.2s ease',
     } as any : {}),
   },

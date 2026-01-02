@@ -2,6 +2,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { ThemeContext, getThemedColors } from '@/hooks/useTheme';
 
 interface Props {
   children: ReactNode;
@@ -15,6 +16,7 @@ interface State {
 }
 
 class MapErrorBoundary extends Component<Props, State> {
+  static contextType = ThemeContext;
   constructor(props: Props) {
     super(props);
     this.state = {
@@ -50,11 +52,13 @@ class MapErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) {
         return this.props.fallback;
       }
+      const colors = getThemedColors(this.context?.isDark ?? false);
+      const styles = createStyles(colors);
 
       return (
         <View style={styles.container}>
           <View style={styles.content}>
-            <Icon name="error-outline" size={48} color="#ef4444" />
+            <Icon name="error-outline" size={48} color={colors.danger} />
             <Text style={styles.title}>Ошибка загрузки карты</Text>
             <Text style={styles.message}>
               {this.state.error?.message || 'Произошла непредвиденная ошибка'}
@@ -66,7 +70,7 @@ class MapErrorBoundary extends Component<Props, State> {
               ]}
               onPress={this.handleReset}
             >
-              <Icon name="refresh" size={20} color="#fff" />
+              <Icon name="refresh" size={20} color={colors.textOnPrimary} />
               <Text style={styles.buttonText}>Попробовать снова</Text>
             </Pressable>
           </View>
@@ -78,13 +82,13 @@ class MapErrorBoundary extends Component<Props, State> {
   }
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof getThemedColors>) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
   },
   content: {
     alignItems: 'center',
@@ -93,13 +97,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1e293b',
+    color: colors.text,
     marginTop: 16,
     marginBottom: 8,
   },
   message: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
@@ -108,7 +112,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#4a8c8c',
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -119,9 +123,8 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.textOnPrimary,
   },
 });
 
 export default MapErrorBoundary;
-

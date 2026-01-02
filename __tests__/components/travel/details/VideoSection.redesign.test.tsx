@@ -9,17 +9,22 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { VideoSection } from '@/components/travel/details/redesign/VideoSection.redesign';
 
 // Мок для хука темной темы
-jest.mock('@/hooks/useTheme', () => ({
-  useThemedColors: jest.fn(() => ({
-    surface: '#1a1a1a',
-    surfaceElevated: '#2a2a2a',
-    text: '#ffffff',
-    textMuted: '#9ca3af',
-    primary: '#3b82f6',
-    borderLight: '#374151',
-    backgroundSecondary: '#262626',
-  })),
-}));
+jest.mock('@/hooks/useTheme', () => {
+  const { MODERN_MATTE_BOX_SHADOWS, MODERN_MATTE_SHADOWS } = require('@/constants/modernMattePalette');
+  return {
+    useThemedColors: jest.fn(() => ({
+      surface: '#1a1a1a',
+      surfaceElevated: '#2a2a2a',
+      text: '#ffffff',
+      textMuted: '#9ca3af',
+      primary: '#3b82f6',
+      borderLight: '#374151',
+      backgroundSecondary: '#262626',
+      shadows: MODERN_MATTE_SHADOWS,
+      boxShadows: MODERN_MATTE_BOX_SHADOWS,
+    })),
+  };
+});
 
 describe('VideoSection.redesign', () => {
   const validYouTubeUrls = [
@@ -239,4 +244,3 @@ describe('VideoSection.redesign', () => {
     });
   });
 });
-

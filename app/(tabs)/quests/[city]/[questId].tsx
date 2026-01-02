@@ -24,19 +24,13 @@ type QuestBundle = {
 };
 
 import { useIsFocused } from '@react-navigation/native';
-
-const UI = {
-    text: '#0f172a',
-    sub: '#64748b',
-    border: '#e5e7eb',
-    surface: '#ffffff',
-    bg: '#f7fafc',
-    primary: '#f59e0b',
-};
+import { useThemedColors } from '@/hooks/useTheme';
 
 export default function QuestByIdScreen() {
     const { questId } = useLocalSearchParams<{ questId: string; city: string }>();
     const isFocused = useIsFocused();
+    const colors = useThemedColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const [bundle, setBundle] = useState<QuestBundle | null>(null);
     const [loaded, setLoaded] = useState(false);
@@ -96,7 +90,7 @@ export default function QuestByIdScreen() {
                 {isFocused && (
                     <InstantSEO headKey={`quest-loading-${questId}`} title="Загружаем квест…" description="Готовим маршрут и задания." ogType="website" />
                 )}
-                <ActivityIndicator />
+                <ActivityIndicator color={colors.primary} />
             </View>
         );
     }
@@ -111,7 +105,7 @@ export default function QuestByIdScreen() {
                 <View style={styles.notFound}>
                     <Suspense fallback={null}>
                         {/* @ts-ignore */}
-                        <Ion name="alert-circle" size={28} color={UI.sub} />
+                        <Ion name="alert-circle" size={28} color={colors.textMuted} />
                     </Suspense>
                     <Text style={styles.notFoundTitle}>Квест не найден</Text>
                     <Text style={styles.notFoundText}>Проверь адрес или выбери квест из списка.</Text>
@@ -119,7 +113,7 @@ export default function QuestByIdScreen() {
                         <Pressable style={styles.backBtn}>
                             <Suspense fallback={null}>
                                 {/* @ts-ignore */}
-                                <Ion name="arrow-back" size={16} color="#fff" />
+                                <Ion name="arrow-back" size={16} color={colors.textOnPrimary} />
                             </Suspense>
                             <Text style={styles.backBtnTxt}>К списку квестов</Text>
                         </Pressable>
@@ -136,7 +130,7 @@ export default function QuestByIdScreen() {
                 <InstantSEO headKey={headKey} title={title} description={description} ogType={ogType} />
             )}
 
-            <Suspense fallback={<View style={{ padding: 16 }}><ActivityIndicator /></View>}>
+            <Suspense fallback={<View style={{ padding: 16 }}><ActivityIndicator color={colors.primary} /></View>}>
                 <QuestWizardLazy
                     title={bundle.title}
                     steps={bundle.steps}
@@ -152,19 +146,19 @@ export default function QuestByIdScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    page: { flex: 1, backgroundColor: UI.bg },
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+    page: { flex: 1, backgroundColor: colors.background },
     notFound: {
-        backgroundColor: UI.surface,
-        borderWidth: 1, borderColor: UI.border,
+        backgroundColor: colors.surface,
+        borderWidth: 1, borderColor: colors.border,
         padding: 16, borderRadius: 16, gap: 8, width: '90%', maxWidth: 480,
         alignItems: 'center',
     },
-    notFoundTitle: { color: UI.text, fontWeight: '900', fontSize: 16 },
-    notFoundText: { color: UI.sub, textAlign: 'center' },
+    notFoundTitle: { color: colors.text, fontWeight: '900', fontSize: 16 },
+    notFoundText: { color: colors.textMuted, textAlign: 'center' },
     backBtn: {
         marginTop: 8, flexDirection: 'row', gap: 6, alignItems: 'center',
-        backgroundColor: UI.primary, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12,
+        backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12,
     },
-    backBtnTxt: { color: '#fff', fontWeight: '800' },
+    backBtnTxt: { color: colors.textOnPrimary, fontWeight: '800' },
 });

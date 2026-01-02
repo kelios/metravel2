@@ -443,7 +443,7 @@ export default function MapScreen() {
     );
     const mapPanelPlaceholder = (
         <View style={styles.mapPlaceholder}>
-            <ActivityIndicator size="large" color="#4a8c8c" />
+            <ActivityIndicator size="large" color={themedColors.primary} />
             <Text style={styles.mapPlaceholderText}>Загружаем карту…</Text>
         </View>
     );
@@ -493,7 +493,7 @@ export default function MapScreen() {
                             accessibilityRole="button"
                             accessibilityLabel="Показать панель"
                         >
-                            <IconMaterial name="menu" size={24} color="#fff" />
+                            <IconMaterial name="menu" size={24} color={themedColors.textOnPrimary} />
                         </Pressable>
                     )}
 
@@ -539,7 +539,7 @@ export default function MapScreen() {
                                             ]}
                                             onPress={() => setRightPanelTab('filters')}
                                             hitSlop={8}
-                                            android_ripple={{ color: 'rgba(255,255,255,0.15)' }}
+                                            android_ripple={{ color: themedColors.overlayLight }}
                                             accessibilityRole="tab"
                                             accessibilityState={{ selected: rightPanelTab === 'filters' }}
                                         >
@@ -547,7 +547,7 @@ export default function MapScreen() {
                                                 <IconMaterial
                                                     name="filter-list"
                                                     size={18}
-                                                    color={rightPanelTab === 'filters' ? '#fff' : '#4a8c8c'}
+                                                    color={rightPanelTab === 'filters' ? themedColors.textOnPrimary : themedColors.primary}
                                                 />
                                             </View>
                                             <View style={styles.tabLabelColumn}>
@@ -568,7 +568,7 @@ export default function MapScreen() {
                                             ]}
                                             onPress={() => setRightPanelTab('travels')}
                                             hitSlop={8}
-                                            android_ripple={{ color: 'rgba(255,255,255,0.15)' }}
+                                            android_ripple={{ color: themedColors.overlayLight }}
                                             accessibilityRole="tab"
                                             accessibilityState={{ selected: rightPanelTab === 'travels' }}
                                         >
@@ -576,7 +576,7 @@ export default function MapScreen() {
                                                 <IconMaterial
                                                     name="list"
                                                     size={18}
-                                                    color={rightPanelTab === 'travels' ? '#fff' : '#4a8c8c'}
+                                                    color={rightPanelTab === 'travels' ? themedColors.textOnPrimary : themedColors.primary}
                                                 />
                                             </View>
                                             <View style={styles.tabLabelColumn}>
@@ -600,7 +600,7 @@ export default function MapScreen() {
                                         accessibilityRole="button"
                                         accessibilityLabel="Скрыть панель"
                                     >
-                                        <IconMaterial name="chevron-right" size={22} color="#4a5568" />
+                                        <IconMaterial name="chevron-right" size={22} color={themedColors.textMuted} />
                                     </Pressable>
                                 </View>
                         )}
@@ -655,7 +655,7 @@ export default function MapScreen() {
                                 <View style={styles.travelsListContainer}>
                                     {loading && !isPlaceholderData ? (
                                         <View style={styles.loader}>
-                                            <ActivityIndicator size="small" />
+                                            <ActivityIndicator size="small" color={themedColors.primary} />
                                             <Text style={styles.loaderText}>Загрузка...</Text>
                                         </View>
                                     ) : mapError ? (
@@ -671,7 +671,7 @@ export default function MapScreen() {
                                         <>
                                             {isFetching && isPlaceholderData && (
                                                 <View style={styles.updatingIndicator}>
-                                                    <ActivityIndicator size="small" />
+                                                    <ActivityIndicator size="small" color={themedColors.primary} />
                                                     <Text style={styles.updatingText}>Обновление...</Text>
                                                 </View>
                                             )}
