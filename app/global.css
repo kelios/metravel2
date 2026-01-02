@@ -235,3 +235,43 @@ html[data-theme="dark"] .modal-select option {
   background-color: var(--color-surface);
   color: var(--color-text);
 }
+
+/* ✅ КРИТИЧНО: Ограничение z-index для Leaflet карты */
+/* Хедер имеет z-index: 2000, карта должна быть ниже */
+.leaflet-container,
+.leaflet-pane,
+.leaflet-map-pane,
+.leaflet-tile-pane,
+.leaflet-overlay-pane,
+.leaflet-shadow-pane,
+.leaflet-marker-pane,
+.leaflet-tooltip-pane,
+.leaflet-popup-pane {
+  z-index: auto !important;
+  max-height: 100%;
+  position: relative !important;
+}
+
+/* Контейнер карты должен создавать новый stacking context */
+.leaflet-container {
+  isolation: isolate;
+  transform: translateZ(0);
+  contain: layout style paint;
+}
+
+/* Маркеры и попапы должны быть выше карты, но ниже хедера */
+.leaflet-marker-icon,
+.leaflet-popup {
+  z-index: 600 !important;
+}
+
+/* Контролы карты (зум и т.д.) */
+.leaflet-control {
+  z-index: 800 !important;
+}
+
+/* Тултипы */
+.leaflet-tooltip {
+  z-index: 650 !important;
+}
+

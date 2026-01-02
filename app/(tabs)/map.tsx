@@ -65,10 +65,35 @@ export default function MapScreen() {
     // State
     const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
     const [filters, setFilters] = useState<Filters>({ categories: [], radius: [], address: '' });
-    const [filterValues, setFilterValues] = useState<FilterValues>({
-        categories: [],
-        radius: '60', // Радиус по умолчанию 60 км
-        address: '',
+
+    // ✅ УЛУЧШЕНИЕ: Загружаем сохраненные фильтры из localStorage
+    const [filterValues, setFilterValues] = useState<FilterValues>(() => {
+        if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+            try {
+                const saved = localStorage.getItem('map-filters');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    // Валидация: проверяем что это объект с нужными полями
+                    if (parsed && typeof parsed === 'object' &&
+                        Array.isArray(parsed.categories) &&
+                        typeof parsed.radius === 'string') {
+                        return {
+                            categories: parsed.categories,
+                            radius: parsed.radius || '60',
+                            address: parsed.address || '',
+                        };
+                    }
+                }
+            } catch (error) {
+                console.warn('[map] Failed to load saved filters:', error);
+            }
+        }
+        // Значения по умолчанию
+        return {
+            categories: [],
+            radius: '60',
+            address: '',
+        };
     });
     
     // ✅ NEW: Use RouteStore via adapter for route state management
@@ -379,6 +404,17 @@ export default function MapScreen() {
     const handleFilterChange = useCallback((field: string, value: any) => {
         setFilterValues(prev => ({ ...prev, [field]: value }));
     }, []);
+
+    // ✅ УЛУЧШЕНИЕ: Сохраняем фильтры в localStorage при изменении
+    useEffect(() => {
+        if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+            try {
+                localStorage.setItem('map-filters', JSON.stringify(filterValues));
+            } catch (error) {
+                console.warn('[map] Failed to save filters:', error);
+            }
+        }
+    }, [filterValues]);
 
     const resetFilters = useCallback(() => {
         setFilterValues({ categories: [], radius: '60', address: '' });

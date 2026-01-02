@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useMemo, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
@@ -51,12 +51,45 @@ export default function RoutingStatus({
 }: RoutingStatusProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
+
+  // ✅ УЛУЧШЕНИЕ: Анимированный прогресс-бар для лучшего UX
+  const progressAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isLoading) {
+      // Запускаем анимацию прогресс-бара
+      progressAnim.setValue(0);
+      Animated.timing(progressAnim, {
+        toValue: 1,
+        duration: 3000, // 3 секунды для полного заполнения
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [isLoading, progressAnim]);
+
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
+
   if (isLoading) {
     return (
       <View style={styles.container}>
         <View style={styles.loadingContent}>
           <ActivityIndicator size="small" color={colors.info} />
           <Text style={styles.loadingText}>Построение маршрута…</Text>
+        </View>
+        {/* ✅ УЛУЧШЕНИЕ: Прогресс-бар для визуализации процесса */}
+        <View style={styles.progressBarContainer}>
+          <Animated.View
+            style={[
+              styles.progressBar,
+              {
+                width: progressWidth,
+                backgroundColor: colors.info,
+              }
+            ]}
+          />
         </View>
       </View>
     );
@@ -135,11 +168,23 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    marginBottom: 8,
   },
   loadingText: {
     fontSize: 13,
     fontWeight: '500',
     color: colors.info,
+  },
+  // ✅ УЛУЧШЕНИЕ: Стили для прогресс-бара
+  progressBarContainer: {
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 2,
   },
   errorContainer: {
     borderColor: colors.danger,

@@ -27,10 +27,6 @@ export const FocusableButton: React.FC<FocusableProps> = ({
   accessibilityLabel,
   testID,
 }) => {
-  if (Platform.OS !== 'web') {
-    return <>{children}</>;
-  }
-
   const colors = useThemedColors();
   const focusStyles = useMemo(
     () => `
@@ -52,6 +48,10 @@ export const FocusableButton: React.FC<FocusableProps> = ({
       `,
     [colors.primary, testID]
   );
+
+  if (Platform.OS !== 'web') {
+    return <>{children}</>;
+  }
 
   return (
     <div
@@ -75,10 +75,6 @@ export const FocusableButton: React.FC<FocusableProps> = ({
  * CSS для глобальных focus стилей
  */
 export const FocusStyles = () => {
-  if (Platform.OS !== 'web') {
-    return null;
-  }
-
   const colors = useThemedColors();
   const globalStyles = useMemo(
     () => `
@@ -140,6 +136,10 @@ export const FocusStyles = () => {
     `,
     [colors.primary]
   );
+
+  if (Platform.OS !== 'web') {
+    return null;
+  }
 
   return (
     <style>{globalStyles}</style>

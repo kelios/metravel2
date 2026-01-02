@@ -86,48 +86,94 @@ export const useRouting = (
         return false;
     }, []);
 
+    // ✅ УЛУЧШЕНИЕ: Retry с exponential backoff для устойчивости к временным ошибкам
+    const fetchWithRetry = useCallback(async <T,>(
+        fetchFn: () => Promise<T>,
+        maxRetries: number = 3,
+        initialDelay: number = 1000
+    ): Promise<T> => {
+        let lastError: Error | null = null;
+
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                return await fetchFn();
+            } catch (error: any) {
+                lastError = error;
+
+                // Не ретраим 400, 401, 403, 404 - это постоянные ошибки
+                const isPermanentError =
+                    error.message?.includes('400') ||
+                    error.message?.includes('401') ||
+                    error.message?.includes('403') ||
+                    error.message?.includes('404') ||
+                    error.message?.includes('Некорректные координаты') ||
+                    error.message?.includes('Неверный API ключ');
+
+                if (isPermanentError) {
+                    throw error;
+                }
+
+                // Последняя попытка - выбрасываем ошибку
+                if (attempt === maxRetries - 1) {
+                    break;
+                }
+
+                // Exponential backoff: 1s, 2s, 4s
+                const delay = initialDelay * Math.pow(2, attempt);
+                console.info(`[useRouting] Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
+
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+
+        throw lastError || new Error('Fetch failed after retries');
+    }, []);
+
     const fetchORS = useCallback(async (
         points: [number, number][],
         mode: 'car' | 'bike' | 'foot',
         signal: AbortSignal
     ): Promise<RouteResult> => {
-        // ORS API expects coordinates in [lng, lat] format
-        const coordinates = points.map(([lng, lat]) => [lng, lat])
-        
-        const res = await fetch(
-            `https://api.openrouteservice.org/v2/directions/${getORSProfile(mode)}/geojson`,
-            {
-                method: 'POST',
-                headers: {
-                    Authorization: String(ORS_API_KEY),
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ coordinates }),
-                signal,
+        // ✅ УЛУЧШЕНИЕ: Используем retry для устойчивости к временным ошибкам
+        return await fetchWithRetry(async () => {
+            // ORS API expects coordinates in [lng, lat] format
+            const coordinates = points.map(([lng, lat]) => [lng, lat])
+
+            const res = await fetch(
+                `https://api.openrouteservice.org/v2/directions/${getORSProfile(mode)}/geojson`,
+                {
+                    method: 'POST',
+                    headers: {
+                        Authorization: String(ORS_API_KEY),
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ coordinates }),
+                    signal,
+                }
+            )
+
+            if (!res.ok) {
+                const errorText = await res.text().catch(() => '')
+                if (res.status === 429) throw new Error('Превышен лимит запросов. Подождите немного.')
+                if (res.status === 403) throw new Error('Неверный API ключ или доступ запрещен.')
+                if (res.status === 400) throw new Error('Некорректные координаты маршрута.')
+                throw new Error(`Ошибка ORS: ${res.status}${errorText ? ` - ${errorText}` : ''}`)
             }
-        )
-        
-        if (!res.ok) {
-            const errorText = await res.text().catch(() => '')
-            if (res.status === 429) throw new Error('Превышен лимит запросов. Подождите немного.')
-            if (res.status === 403) throw new Error('Неверный API ключ или доступ запрещен.')
-            if (res.status === 400) throw new Error('Некорректные координаты маршрута.')
-            throw new Error(`Ошибка ORS: ${res.status}${errorText ? ` - ${errorText}` : ''}`)
-        }
-        
-        const data = await res.json()
-        const feature = data.features?.[0]
-        const geometry = feature?.geometry
-        const summary = feature?.properties?.summary
-        
-        if (!geometry?.coordinates?.length) throw new Error('Пустой маршрут от ORS')
-        
-        return {
-            coords: geometry.coordinates as [number, number][],
-            distance: summary?.distance || 0,
-            isOptimal: true,
-        }
-    }, [ORS_API_KEY])
+
+            const data = await res.json()
+            const feature = data.features?.[0]
+            const geometry = feature?.geometry
+            const summary = feature?.properties?.summary
+
+            if (!geometry?.coordinates?.length) throw new Error('Пустой маршрут от ORS')
+
+            return {
+                coords: geometry.coordinates as [number, number][],
+                distance: summary?.distance || 0,
+                isOptimal: true,
+            }
+        }, 3, 1000); // 3 попытки с начальной задержкой 1с
+    }, [ORS_API_KEY, fetchWithRetry])
 
     const fetchOSRM = useCallback(async (
         points: [number, number][],

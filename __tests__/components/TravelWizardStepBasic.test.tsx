@@ -9,6 +9,113 @@ jest.mock('expo-router', () => ({
     useRouter: jest.fn(),
 }));
 
+jest.mock('@/hooks/useStepTransition', () => ({
+    useStepTransition: () => ({ animatedStyle: {} }),
+    createStaggeredAnimation: (items: any[]) => items.map(() => 0),
+}));
+
+jest.mock('@/hooks/useTravelPreview', () => ({
+    useTravelPreview: () => ({
+        isPreviewVisible: false,
+        showPreview: jest.fn(),
+        hidePreview: jest.fn(),
+    }),
+}));
+
+jest.mock('@/utils/contextualTips', () => ({
+    getContextualTips: () => [],
+}));
+
+// Lightweight component mocks to avoid animations/timers
+jest.mock('@/components/travel/TravelWizardHeader', () => (props: any) => {
+    const { Text, View, Pressable } = require('react-native');
+    return (
+        <View>
+            <Text>{props.title}</Text>
+            <Text>{props.subtitle} • {props.progressPercent}% готово</Text>
+            {props.autosaveBadge ? <Text>{props.autosaveBadge}</Text> : null}
+            <Pressable onPress={props.onPreview} testID="preview-btn" />
+        </View>
+    );
+});
+
+jest.mock('@/components/travel/TravelWizardFooter', () => (props: any) => {
+    const { View, Text, Pressable } = require('react-native');
+    return (
+        <View>
+            <Pressable onPress={props.onPrimary}>
+                <Text>Далее</Text>
+            </Pressable>
+            <Pressable onPress={props.onQuickDraft}>
+                <Text>Быстрый черновик</Text>
+            </Pressable>
+            <Pressable onPress={props.onSave}>
+                <Text>Сохранить</Text>
+            </Pressable>
+        </View>
+    );
+});
+
+jest.mock('@/components/travel/ContentUpsertSection', () => (_props: any) => {
+    const { View, Text } = require('react-native');
+    return (
+        <View>
+            <Text>ContentUpsertSection</Text>
+        </View>
+    );
+});
+
+jest.mock('@/components/travel/ValidationFeedback', () => ({
+    ValidationSummary: (props: any) => {
+        const { View, Text } = require('react-native');
+        return (
+            <View>
+                <Text>errors:{props.errorCount}</Text>
+                <Text>warnings:{props.warningCount}</Text>
+            </View>
+        );
+    },
+}));
+
+jest.mock('@/components/travel/ValidatedTextInput', () => ({
+    ValidatedTextInput: (props: any) => {
+        const { View, TextInput, Text } = require('react-native');
+        return (
+            <View>
+                <Text>{props.label}</Text>
+                <TextInput
+                    value={props.value}
+                    onChangeText={(v: string) => props.onChange?.(v)}
+                    placeholder={props.placeholder}
+                />
+            </View>
+        );
+    },
+}));
+
+jest.mock('@/components/travel/TravelPreviewModal', () => (props: any) => {
+    const { View, Text } = require('react-native');
+    if (!props.visible) return null;
+    return (
+        <View>
+            <Text>Preview</Text>
+        </View>
+    );
+});
+
+jest.mock('@/components/travel/ContextualTipCard', () => (props: any) => {
+    const { View, Text } = require('react-native');
+    return (
+        <View>
+            <Text>{props.tip?.title ?? 'tip'}</Text>
+        </View>
+    );
+});
+
+jest.mock('react-native-paper', () => ({
+    Snackbar: ({ children }: any) => children,
+}));
+
 jest.mock('react-native-toast-message', () => ({
     show: jest.fn(),
 }));
@@ -35,6 +142,46 @@ jest.mock('react-native-safe-area-context', () => ({
     useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
+const baseFormData = {
+    id: null,
+    slug: undefined,
+    name: '',
+    description: '',
+    countries: [],
+    cities: [],
+    over_nights_stay: [],
+    complexity: [],
+    companions: [],
+    plus: null,
+    minus: null,
+    recommendation: null,
+    youtube_link: null,
+    gallery: [],
+    categories: [],
+    countryIds: [],
+    travelAddressIds: [],
+    travelAddressCity: [],
+    travelAddressCountry: [],
+    travelAddressAdress: [],
+    travelAddressCategory: [],
+    coordsMeTravel: [],
+    thumbs200ForCollectionArr: [],
+    travelImageThumbUrlArr: [],
+    travelImageAddress: [],
+    categoriesIds: [],
+    transports: [],
+    month: [],
+    year: undefined,
+    budget: undefined,
+    number_peoples: undefined,
+    number_days: undefined,
+    visa: false,
+    publish: false,
+    moderation: undefined,
+    travel_image_thumb_url: null,
+    travel_image_thumb_small_url: null,
+};
+
 describe('TravelWizardStepBasic (Шаг 1)', () => {
     const mockRouter = {
         push: jest.fn(),
@@ -43,11 +190,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
     const defaultProps = {
         currentStep: 1,
         totalSteps: 6,
-        formData: {
-            name: '',
-            description: '',
-            id: null,
-        },
+        formData: baseFormData,
         setFormData: jest.fn(),
         isMobile: false,
         onManualSave: jest.fn(),
@@ -105,10 +248,12 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
 
             // Валидация должна показать ошибку при попытке сохранить
             await waitFor(() => {
-                expect(defaultProps.setFormData).toHaveBeenCalledWith(
-                    expect.objectContaining({ name: 'Аб' })
-                );
+                expect(defaultProps.setFormData).toHaveBeenCalled();
             });
+
+            const updateArg = defaultProps.setFormData.mock.calls[0][0];
+            const nextState = typeof updateArg === 'function' ? updateArg(defaultProps.formData) : updateArg;
+            expect(nextState).toEqual(expect.objectContaining({ name: 'Аб' }));
         });
 
         it('должен принимать валидное название', () => {
@@ -117,9 +262,10 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             const nameInput = getByPlaceholderText('Например: Неделя в Грузии');
             fireEvent.changeText(nameInput, 'Путешествие по Грузии');
 
-            expect(defaultProps.setFormData).toHaveBeenCalledWith(
-                expect.objectContaining({ name: 'Путешествие по Грузии' })
-            );
+            expect(defaultProps.setFormData).toHaveBeenCalled();
+            const updateArg = defaultProps.setFormData.mock.calls[0][0];
+            const nextState = typeof updateArg === 'function' ? updateArg(defaultProps.formData) : updateArg;
+            expect(nextState).toEqual(expect.objectContaining({ name: 'Путешествие по Грузии' }));
         });
     });
 
@@ -175,6 +321,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
                     {...defaultProps}
                     formData={{ ...defaultProps.formData, name: 'Грузия 2026' }}
                     onManualSave={mockSave}
+                    redirectDelayMs={0}
                 />
             );
 
@@ -195,7 +342,6 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
         });
 
         it('должен перенаправить в /metravel после сохранения', async () => {
-            jest.useFakeTimers();
             const mockSave = jest.fn().mockResolvedValue(undefined);
 
             const { getByText } = render(
@@ -203,6 +349,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
                     {...defaultProps}
                     formData={{ ...defaultProps.formData, name: 'Грузия 2026' }}
                     onManualSave={mockSave}
+                    redirectDelayMs={0}
                 />
             );
 
@@ -213,14 +360,9 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
                 expect(mockSave).toHaveBeenCalled();
             });
 
-            // Ждем 500ms для редиректа
-            jest.advanceTimersByTime(500);
-
             await waitFor(() => {
                 expect(mockRouter.push).toHaveBeenCalledWith('/metravel');
             });
-
-            jest.useRealTimers();
         });
 
         it('должен показать ошибку при неудачном сохранении', async () => {

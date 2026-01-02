@@ -424,11 +424,40 @@ jest.mock('react-native/Libraries/Linking/Linking', () => ({
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react')
   const insetValue = { top: 0, right: 0, bottom: 0, left: 0 }
-  return {
+  const mod = {
+    __esModule: true,
     SafeAreaProvider: ({ children }: any) => children,
     SafeAreaView: ({ children }: any) => children,
     SafeAreaInsetsContext: React.createContext(insetValue),
     useSafeAreaInsets: () => insetValue,
+  }
+  return {
+    ...mod,
+    default: mod,
+  }
+})
+
+// Mock FlashList to avoid Jest parsing ESM in @shopify/flash-list.
+jest.mock('@shopify/flash-list', () => {
+  const React = require('react')
+  const RN = require('react-native')
+
+  const FlashList = ({ data = [], renderItem, keyExtractor }: any) => {
+    return React.createElement(
+      RN.View,
+      null,
+      (data || []).map((item: any, index: number) => {
+        const key = keyExtractor ? keyExtractor(item, index) : String(item?.id ?? index)
+        const element = renderItem ? renderItem({ item, index }) : null
+        return React.createElement(RN.View, { key }, element)
+      })
+    )
+  }
+
+  return {
+    __esModule: true,
+    FlashList,
+    default: FlashList,
   }
 })
 

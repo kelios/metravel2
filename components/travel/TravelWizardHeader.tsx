@@ -111,7 +111,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                                 {title}
                             </Text>
                             <Text style={styles.headerSubtitleMobile} numberOfLines={1}>
-                                {subtitle}
+                                {subtitle} • {clamped}% готово
                             </Text>
                         </>
                     ) : (

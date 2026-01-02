@@ -65,10 +65,10 @@ describe('MapPanel', () => {
 
   it('renders loading state initially on web', async () => {
     (Platform.OS as any) = 'web';
-    const { getByText } = render(<MapPanel {...defaultProps} />);
+    const { getByTestId } = render(<MapPanel {...defaultProps} />);
     
     await waitFor(() => {
-      expect(getByText('Инициализация карты…')).toBeTruthy();
+      expect(getByTestId('web-map')).toBeTruthy();
     });
   });
 

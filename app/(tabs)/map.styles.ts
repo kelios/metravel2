@@ -34,14 +34,15 @@ export const getStyles = (
         flex: 1,
         position: 'relative',
         backgroundColor: themedColors.background,
-        // ✅ ИСПРАВЛЕНИЕ: isolation: isolate создает новый stacking context
-        // Это предотвращает перекрытие хедера картой Leaflet
+        // ✅ КРИТИЧНО: Создаем новый stacking context для изоляции карты от хедера
         ...(Platform.OS === 'web'
           ? ({
               flexDirection: isMobile ? 'column' : 'row',
               columnGap: isMobile ? 0 : PANEL_GAP,
               paddingHorizontal: isMobile ? 0 : METRICS.spacing.l,
               isolation: 'isolate',
+              // transform создает новый stacking context
+              transform: 'translateZ(0)',
             } as any)
           : null),
       },
@@ -49,8 +50,15 @@ export const getStyles = (
         flex: 1,
         minHeight: 260,
         position: 'relative',
-        // ✅ ИСПРАВЛЕНИЕ: zIndex < 2000 (хедер), но > 0 (обычный контент)
-        zIndex: 1,
+        // ✅ КРИТИЧНО: Очень низкий zIndex, чтобы гарантировать, что карта под хедером
+        zIndex: 0,
+        // Дополнительная изоляция для Leaflet
+        ...(Platform.OS === 'web'
+          ? ({
+              isolation: 'isolate',
+              transform: 'translateZ(0)',
+            } as any)
+          : null),
       },
       togglePanelButton: {
         position: 'absolute',

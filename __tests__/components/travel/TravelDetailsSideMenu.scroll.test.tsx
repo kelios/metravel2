@@ -1,7 +1,10 @@
-import { styles } from '@/components/travel/details/TravelDetailsStyles';
+import { getTravelDetailsStyles } from '@/components/travel/details/TravelDetailsStyles';
+import { getThemedColors } from '@/hooks/useTheme';
 
 describe('TravelDetails side menu (web desktop)', () => {
   it('has overflowY auto and a constrained maxHeight so the menu can scroll', () => {
+    const colors = getThemedColors(false);
+    const styles = getTravelDetailsStyles(colors);
     const desktop = styles.sideMenuWebDesktop as any;
 
     expect(desktop).toBeTruthy();

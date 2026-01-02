@@ -179,7 +179,6 @@ const DOT_ACTIVE_SIZE = 24; // Увеличиваем для современн�
 const NAV_BTN_OFFSET = 16;
 // Мобильная высота: 60% высоты экрана (фиксировано)
 const MOBILE_HEIGHT_PERCENT = 0.6;
-const GLASS_BORDER = "rgba(255,255,255,0.35)";
 
 const useSliderTheme = () => {
   const colors = useThemedColors();

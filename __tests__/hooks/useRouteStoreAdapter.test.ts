@@ -1,7 +1,7 @@
 /**
  * Tests for useRouteStoreAdapter hook
  */
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react-native';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { useRouteStore } from '@/stores/routeStore';
 
@@ -39,7 +39,7 @@ describe('useRouteStoreAdapter', () => {
       swapStartEnd: jest.fn(),
     };
 
-    (useRouteStore as jest.Mock).mockReturnValue(mockStore);
+    ;(useRouteStore as unknown as jest.Mock).mockReturnValue(mockStore);
   });
 
   afterEach(() => {
@@ -147,7 +147,7 @@ describe('useRouteStoreAdapter', () => {
         result.current.setRoutePoints([]);
       });
 
-      expect(mockStore.clearRoute).not.toHaveBeenCalled();
+      expect(mockStore.clearRoute).toHaveBeenCalledTimes(1);
       expect(mockStore.addPoint).not.toHaveBeenCalled();
     });
 

@@ -19,10 +19,6 @@ export const SkipToContentLink: React.FC<SkipToContentLinkProps> = ({
   targetId = 'main-content',
   label = 'Skip to main content',
 }) => {
-  if (Platform.OS !== 'web') {
-    return null; // Не требуется для React Native
-  }
-
   const colors = useThemedColors();
   const linkStyle = useMemo(
     () => ({
@@ -44,6 +40,10 @@ export const SkipToContentLink: React.FC<SkipToContentLinkProps> = ({
       colors.textInverse,
     ]
   );
+
+  if (Platform.OS !== 'web') {
+    return null; // Не требуется для React Native
+  }
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();

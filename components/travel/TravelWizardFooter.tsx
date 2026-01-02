@@ -268,6 +268,7 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                                 icon="content-save"
                                 size={20}
                                 onPress={onSave}
+                                accessibilityLabel={saveLabel}
                                 style={styles.saveIconButton}
                             />
                         ) : null}

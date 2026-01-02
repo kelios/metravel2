@@ -125,7 +125,12 @@ describe('MapPageGenerator', () => {
     it('должен генерировать placeholder карту', async () => {
       const html = await generator.generate(mockTravel, mockLocations, 10);
 
-      expect(html).toContain('data:image/svg+xml');
+      // Without a Google Maps API key in tests, MapPageGenerator falls back to an OSM static map URL.
+      // In some environments it may also use Google Static Maps (if EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is set)
+      // or a data URI placeholder as a last resort.
+      expect(html).toMatch(
+        /(data:image\/svg\+xml|staticmap\.openstreetmap\.fr\/staticmap\.php|maps\.googleapis\.com\/maps\/api\/staticmap)/
+      );
     });
 
     it('должен обрабатывать локации без координат', async () => {

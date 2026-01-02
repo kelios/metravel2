@@ -1,14 +1,17 @@
 /**
  * Integration tests for map route functionality
  */
-import { renderHook, act, waitFor } from '@testing-library/react-hooks';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
-import type { LatLng } from '@/types/coordinates';
+import { useRouteStore } from '@/stores/routeStore';
 
 describe('Map Route Integration Tests', () => {
   beforeEach(() => {
     // Clear any persisted state
     localStorage.clear();
+
+    // Also clear in-memory zustand singleton state between tests
+    useRouteStore.getState().clearRoute();
   });
 
   describe('Building a route from scratch', () => {
@@ -383,7 +386,7 @@ describe('Map Route Integration Tests', () => {
       const routePointsRef1 = result.current.routePoints;
 
       // Rerender without changing points
-      rerender();
+      rerender({});
 
       const routePointsRef2 = result.current.routePoints;
 

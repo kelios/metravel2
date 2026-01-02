@@ -158,7 +158,11 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
                     <ActivityIndicator size="small" color={colors.primary} style={styles.spinner} />
                 )}
                 {query.length > 0 && !isLoading && (
-                    <Pressable onPress={handleClear} style={styles.clearButton}>
+                    <Pressable
+                        testID="location-clear-button"
+                        onPress={handleClear}
+                        style={styles.clearButton}
+                    >
                         <Feather name="x" size={18} color={colors.textMuted} />
                     </Pressable>
                 )}

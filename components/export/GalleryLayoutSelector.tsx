@@ -4,7 +4,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface GalleryLayoutInfo {

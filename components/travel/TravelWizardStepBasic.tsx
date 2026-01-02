@@ -51,6 +51,7 @@ interface TravelWizardStepBasicProps {
     };
     progress?: number;
     onStepSelect?: (step: number) => void;
+    redirectDelayMs?: number;
 }
 
 const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
@@ -73,6 +74,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     stepMeta,
     progress = currentStep / totalSteps,
     onStepSelect,
+    redirectDelayMs = 500,
 }) => {
     const colors = useThemedColors();
     const router = useRouter();
@@ -148,10 +150,10 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                 text2: 'Вы можете вернуться к нему позже',
             });
 
-            // Переходим в список путешествий
+            // Переходим в список путешествий (с небольшой задержкой, как в тестах)
             setTimeout(() => {
                 router.push('/metravel');
-            }, 500);
+            }, redirectDelayMs);
         } catch (_error) {
             Toast.show({
                 type: 'error',

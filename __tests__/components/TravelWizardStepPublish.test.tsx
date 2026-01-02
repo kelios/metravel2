@@ -21,6 +21,7 @@ jest.mock('@/hooks/useTheme', () => ({
 
 jest.mock('react-native-safe-area-context', () => ({
     SafeAreaView: ({ children }: any) => children,
+    useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
 jest.mock('expo-router', () => ({
@@ -49,7 +50,7 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
             categories: ['1', '2'],
             publish: false,
             moderation: false,
-        },
+        } as any,
         setFormData: jest.fn(),
         onGoBack: jest.fn(),
         onFinish: jest.fn(),
@@ -222,8 +223,6 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
                     }}
                 />
             );
-
-            const beforeCount = getByText(/\d+\/\d+/).children[0];
 
             rerender(
                 <TravelWizardStepPublish

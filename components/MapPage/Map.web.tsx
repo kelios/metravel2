@@ -77,9 +77,10 @@ interface TravelMarkersProps {
   Popup: React.ComponentType<any>;
   PopupContent: React.ComponentType<{ point: Point }>; // Передаем компонент попапа как проп
   markerOpacity?: number;
+  renderer?: any; // ✅ УЛУЧШЕНИЕ: Canvas Renderer для производительности
 }
 
-const TravelMarkers: React.FC<TravelMarkersProps> = ({ points, icon, Marker, Popup, PopupContent, markerOpacity = 1 }) => {
+const TravelMarkers: React.FC<TravelMarkersProps> = ({ points, icon, Marker, Popup, PopupContent, markerOpacity = 1, renderer }) => {
   return (
     <>
       {points.map((point, index) => {
@@ -92,12 +93,21 @@ const TravelMarkers: React.FC<TravelMarkersProps> = ({ points, icon, Marker, Pop
           ? `travel-${point.id}` 
           : `travel-${point.coord.replace(/,/g, '-')}-${index}`;
         
+        // ✅ УЛУЧШЕНИЕ: Передаем renderer только если есть много маркеров (>50)
+        const markerOptions: any = {
+          position: [coords[1], coords[0]],
+          icon,
+          opacity: markerOpacity,
+        };
+
+        if (renderer && points.length > 50) {
+          markerOptions.renderer = renderer;
+        }
+
         return (
           <Marker
             key={markerKey}
-            position={[coords[1], coords[0]]}
-            icon={icon}
-            opacity={markerOpacity}
+            {...markerOptions}
           >
             <Popup>
               <PopupContent point={point} />
@@ -116,7 +126,7 @@ const TravelMarkersMemo = React.memo(TravelMarkers, (prev, next) => {
   if (prev.points.length !== next.points.length) return false;
   
   // Сравниваем ссылки на иконки и компоненты (они должны быть стабильными)
-  if (prev.icon !== next.icon || prev.Marker !== next.Marker || prev.Popup !== next.Popup || prev.PopupContent !== next.PopupContent) {
+  if (prev.icon !== next.icon || prev.Marker !== next.Marker || prev.Popup !== next.Popup || prev.PopupContent !== next.PopupContent || prev.renderer !== next.renderer) {
     return false;
   }
   
@@ -150,6 +160,7 @@ const ClusterLayer: React.FC<{
   markerOpacity?: number;
   grid: number;
   expandClusters: boolean;
+  renderer?: any; // ✅ УЛУЧШЕНИЕ: Canvas Renderer для производительности
 }> = ({
   points,
   Marker,
@@ -162,6 +173,7 @@ const ClusterLayer: React.FC<{
   markerOpacity = 1,
   grid,
   expandClusters,
+  renderer,
 }) => {
   const colors = useThemedColors();
   const clusters = useMemo(() => {
@@ -200,11 +212,52 @@ const ClusterLayer: React.FC<{
     });
   }, [points, grid]);
 
+  // ✅ УЛУЧШЕНИЕ: Мемоизированный кеш иконок для популярных значений
+  const clusterIconsCache = useMemo(() => {
+    if (!(window as any)?.L?.divIcon) return new Map();
+
+    const cache = new Map();
+    const root = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
+    const primary = root?.getPropertyValue('--color-primary')?.trim() || colors.primary;
+    const textOnDark = root?.getPropertyValue('--color-textOnDark')?.trim() || colors.textOnDark;
+    const shadow = root?.getPropertyValue('--shadow-medium')?.trim() || colors.boxShadows.medium;
+    const border = root?.getPropertyValue('--color-border')?.trim() || colors.border;
+
+    // Кешируем популярные значения: 2, 5, 10, 20, 50, 100, 200
+    [2, 5, 10, 20, 50, 100, 200].forEach(count => {
+      const icon = (window as any).L.divIcon({
+        className: 'custom-cluster-icon',
+        html: `<div style="
+          background:${primary};
+          color:${textOnDark};
+          width:42px;height:42px;
+          border-radius:21px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-weight:800;
+          box-shadow:${shadow};
+          border:2px solid ${border};
+        ">${count}</div>`,
+        iconSize: [42, 42],
+        iconAnchor: [21, 21],
+      });
+      cache.set(count, icon);
+    });
+
+    return cache;
+  }, [colors]);
+
   const clusterIcon = useCallback(
     (count: number) => {
       if (!(window as any)?.L?.divIcon) return undefined;
 
-      // Читаем актуальные css-переменные темы, чтобы пузырьки были видимы в тёмной теме
+      // ✅ УЛУЧШЕНИЕ: Используем кешированную иконку если есть
+      if (clusterIconsCache.has(count)) {
+        return clusterIconsCache.get(count);
+      }
+
+      // Для нестандартных значений создаем на лету
       const root = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
       const primary = root?.getPropertyValue('--color-primary')?.trim() || colors.primary;
       const textOnDark = root?.getPropertyValue('--color-textOnDark')?.trim() || colors.textOnDark;
@@ -229,7 +282,7 @@ const ClusterLayer: React.FC<{
         iconAnchor: [21, 21],
       });
     },
-    [colors]
+    [colors, clusterIconsCache]
   );
 
   return (
@@ -244,13 +297,18 @@ const ClusterLayer: React.FC<{
                 const markerKey = item.id
                   ? `cluster-auto-expanded-${cluster.key}-${item.id}`
                   : `cluster-auto-expanded-${cluster.key}-${item.coord.replace(/,/g, '-')}-${itemIdx}`;
+
+                // ✅ УЛУЧШЕНИЕ: Используем Canvas Renderer для производительности
+                const markerProps: any = {
+                  key: markerKey,
+                  position: [ll[1], ll[0]],
+                  icon: markerIcon,
+                  opacity: markerOpacity,
+                };
+                if (renderer) markerProps.renderer = renderer;
+
                 return (
-                  <Marker
-                    key={markerKey}
-                    position={[ll[1], ll[0]]}
-                    icon={markerIcon}
-                    opacity={markerOpacity}
-                  >
+                  <Marker {...markerProps}>
                     <Popup>
                       <PopupContent point={item} />
                     </Popup>
@@ -272,13 +330,18 @@ const ClusterLayer: React.FC<{
                 const markerKey = item.id
                   ? `cluster-expanded-${cluster.key}-${item.id}`
                   : `cluster-expanded-${cluster.key}-${item.coord.replace(/,/g, '-')}-${itemIdx}`;
+
+                // ✅ УЛУЧШЕНИЕ: Используем Canvas Renderer для производительности
+                const markerProps: any = {
+                  key: markerKey,
+                  position: [ll[1], ll[0]],
+                  icon: markerIcon,
+                  opacity: markerOpacity,
+                };
+                if (renderer) markerProps.renderer = renderer;
+
                 return (
-                  <Marker
-                    key={markerKey}
-                    position={[ll[1], ll[0]]}
-                    icon={markerIcon}
-                    opacity={markerOpacity}
-                  >
+                  <Marker {...markerProps}>
                     <Popup>
                       <PopupContent point={item} />
                     </Popup>
@@ -294,13 +357,18 @@ const ClusterLayer: React.FC<{
           const item = cluster.items[0];
           const ll = strToLatLng(item.coord);
           if (!ll) return null;
+
+          // ✅ УЛУЧШЕНИЕ: Используем Canvas Renderer для производительности
+          const singleMarkerProps: any = {
+            key: `cluster-single-${idx}`,
+            position: [ll[1], ll[0]],
+            icon: markerIcon,
+            opacity: markerOpacity,
+          };
+          if (renderer) singleMarkerProps.renderer = renderer;
+
           return (
-            <Marker
-              key={`cluster-single-${idx}`}
-              position={[ll[1], ll[0]]}
-              icon={markerIcon}
-              opacity={markerOpacity}
-            >
+            <Marker {...singleMarkerProps}>
               <Popup>
                 <PopupContent point={item} />
               </Popup>
@@ -499,6 +567,17 @@ const MapPageComponent: React.FC<Props> = ({
     };
     return Comp;
   }, [rl]);
+
+  // ✅ УЛУЧШЕНИЕ: Canvas Renderer для лучшей производительности при >50 маркеров
+  const canvasRenderer = useMemo(() => {
+    if (!L || typeof (L as any).canvas !== 'function') return undefined;
+
+    // Создаем Canvas Renderer с оптимальными настройками
+    return (L as any).canvas({
+      padding: 0.5, // Увеличивает viewport для рендеринга за пределами видимой области
+      tolerance: 10, // Увеличивает точность кликов на маркеры
+    });
+  }, [L]);
 
   const customIcons = useMemo(() => {
     // Защита от отсутствия Leaflet в тестовой/серверной среде
@@ -1057,6 +1136,7 @@ const MapPageComponent: React.FC<Props> = ({
             Marker={Marker}
             Popup={Popup}
             PopupContent={PopupWithClose}
+            renderer={canvasRenderer}
             // @ts-ignore
             opacity={travelMarkerOpacity}
           />
@@ -1074,6 +1154,7 @@ const MapPageComponent: React.FC<Props> = ({
             expandClusters={expandClusters}
             expandedClusterKey={expandedCluster?.key}
             expandedClusterItems={expandedCluster?.items}
+            renderer={canvasRenderer}
             onClusterZoom={({ bounds, key, items }) => {
               if (!mapRef.current) return;
               try {

@@ -16,10 +16,6 @@ interface SkipLinksProps {
  * Видим только при Tab фокусе
  */
 export const SkipLinks: React.FC<SkipLinksProps> = ({ onSkip }) => {
-  if (Platform.OS !== 'web') {
-    return null; // Skip links only on web
-  }
-
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const css = useMemo(
@@ -54,6 +50,10 @@ export const SkipLinks: React.FC<SkipLinksProps> = ({ onSkip }) => {
       `,
     [colors.primary, colors.text]
   );
+
+  if (Platform.OS !== 'web') {
+    return null; // Skip links only on web
+  }
 
   const handleSkipToMain = () => {
     const mainContent = document.getElementById('main-content');

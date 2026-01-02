@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import LocationSearchInput from '@/components/travel/LocationSearchInput';
 
 // Mock fetch
@@ -23,13 +23,17 @@ jest.mock('@/hooks/useTheme', () => ({
 }));
 
 describe('LocationSearchInput', () => {
+    const advanceSearchTimers = async (ms = 600) => {
+        await act(async () => {
+            await new Promise(resolve => setTimeout(resolve, ms));
+        });
+    };
+
     beforeEach(() => {
         jest.clearAllMocks();
-        jest.useFakeTimers();
     });
 
     afterEach(() => {
-        jest.useRealTimers();
     });
 
     it('renders correctly', () => {
@@ -59,7 +63,7 @@ describe('LocationSearchInput', () => {
         const input = getByPlaceholderText('Поиск места на карте...');
         fireEvent.changeText(input, 'ab');
 
-        jest.advanceTimersByTime(600);
+        await advanceSearchTimers();
 
         expect(global.fetch).not.toHaveBeenCalled();
     });
@@ -91,7 +95,7 @@ describe('LocationSearchInput', () => {
         const input = getByPlaceholderText('Поиск места на карте...');
         fireEvent.changeText(input, 'Эйфелева башня');
 
-        jest.advanceTimersByTime(600);
+        await advanceSearchTimers();
 
         await waitFor(() => {
             expect(global.fetch).toHaveBeenCalledWith(
@@ -101,7 +105,8 @@ describe('LocationSearchInput', () => {
         });
 
         await waitFor(() => {
-            expect(getByText('Эйфелева башня, Париж, Франция')).toBeTruthy();
+            expect(getByText('Эйфелева башня')).toBeTruthy();
+            expect(getByText('Париж, Франция')).toBeTruthy();
         });
     });
 
@@ -118,7 +123,7 @@ describe('LocationSearchInput', () => {
         const input = getByPlaceholderText('Поиск места на карте...');
         fireEvent.changeText(input, 'abcdefg12345');
 
-        jest.advanceTimersByTime(600);
+        await advanceSearchTimers();
 
         await waitFor(() => {
             expect(getByText('Ничего не найдено')).toBeTruthy();
@@ -135,7 +140,7 @@ describe('LocationSearchInput', () => {
         const input = getByPlaceholderText('Поиск места на карте...');
         fireEvent.changeText(input, 'test query');
 
-        jest.advanceTimersByTime(600);
+        await advanceSearchTimers();
 
         await waitFor(() => {
             expect(getByText('Ошибка поиска. Попробуйте еще раз.')).toBeTruthy();
@@ -170,13 +175,13 @@ describe('LocationSearchInput', () => {
         const input = getByPlaceholderText('Поиск места на карте...');
         fireEvent.changeText(input, 'Эйфелева башня');
 
-        jest.advanceTimersByTime(600);
+        await advanceSearchTimers();
 
         await waitFor(() => {
-            expect(getByText('Эйфелева башня, Париж, Франция')).toBeTruthy();
+            expect(getByText('Эйфелева башня')).toBeTruthy();
         });
 
-        const result = getByText('Эйфелева башня, Париж, Франция');
+        const result = getByText('Эйфелева башня');
         fireEvent.press(result);
 
         expect(mockOnSelect).toHaveBeenCalledWith(mockResults[0]);
@@ -198,36 +203,36 @@ describe('LocationSearchInput', () => {
             json: async () => mockResults,
         });
 
-        const { getByPlaceholderText, queryByText, UNSAFE_getByType } = render(
+        const { getByPlaceholderText, getAllByText, UNSAFE_getAllByType } = render(
             <LocationSearchInput onLocationSelect={jest.fn()} />
         );
 
         const input = getByPlaceholderText('Поиск места на карте...');
         fireEvent.changeText(input, 'test');
 
-        jest.advanceTimersByTime(600);
+        await advanceSearchTimers();
 
         await waitFor(() => {
-            expect(queryByText('Test Location')).toBeTruthy();
+            expect(getAllByText('Test Location').length).toBeGreaterThan(0);
         });
 
         // Find and press clear button (x icon)
-        const pressables = UNSAFE_getByType(require('react-native').Pressable);
-        // Clear button should be the last pressable
-        fireEvent.press(pressables);
+        const pressables = UNSAFE_getAllByType(require('react-native').Pressable);
+        // Clear button should be the last pressable (search icon pressables come first)
+        fireEvent.press(pressables[pressables.length - 1]);
 
-        expect(input.props.value).toBe('');
+        await waitFor(() => {
+            expect(input.props.value).toBe('');
+        });
     });
 
     it('aborts previous request when new query is entered', async () => {
         const abortSpy = jest.spyOn(AbortController.prototype, 'abort');
 
-        (global.fetch as jest.Mock).mockImplementation(() =>
-            new Promise(resolve => setTimeout(() => resolve({
-                ok: true,
-                json: async () => [],
-            }), 1000))
-        );
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: async () => [],
+        });
 
         const { getByPlaceholderText } = render(
             <LocationSearchInput onLocationSelect={jest.fn()} />
@@ -236,10 +241,10 @@ describe('LocationSearchInput', () => {
         const input = getByPlaceholderText('Поиск места на карте...');
 
         fireEvent.changeText(input, 'first query');
-        jest.advanceTimersByTime(600);
+        await advanceSearchTimers();
 
         fireEvent.changeText(input, 'second query');
-        jest.advanceTimersByTime(600);
+        await advanceSearchTimers();
 
         await waitFor(() => {
             expect(abortSpy).toHaveBeenCalled();
@@ -275,7 +280,7 @@ describe('LocationSearchInput', () => {
         const input = getByPlaceholderText('Поиск места на карте...');
         fireEvent.changeText(input, 'Эйфелева башня');
 
-        jest.advanceTimersByTime(600);
+        await advanceSearchTimers();
 
         await waitFor(() => {
             // Should show formatted address: city, state, country

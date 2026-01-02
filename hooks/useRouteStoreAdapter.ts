@@ -37,8 +37,14 @@ export function useRouteStoreAdapter() {
   // Adapter methods
   const setRoutePoints = useCallback((points: [number, number][]) => {
     // ✅ ИСПРАВЛЕНИЕ: Проверяем, что points - это массив
-    if (!Array.isArray(points) || points.length === 0) {
+    if (!Array.isArray(points)) {
       console.warn('[setRoutePoints] Invalid points array:', points);
+      return;
+    }
+
+    // Explicitly clear when empty array is provided
+    if (points.length === 0) {
+      store.clearRoute();
       return;
     }
 
@@ -54,9 +60,9 @@ export function useRouteStoreAdapter() {
 
       const [lng, lat] = point;
 
-      // Проверяем только NaN, так как TypeScript гарантирует, что это числа
-      if (isNaN(lng) || isNaN(lat)) {
-        console.warn('[setRoutePoints] Invalid coordinates (NaN) at index', index, { lng, lat });
+      // Validate coordinates
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
+        console.warn('[setRoutePoints] Invalid coordinates (non-finite) at index', index, { lng, lat });
         return;
       }
 

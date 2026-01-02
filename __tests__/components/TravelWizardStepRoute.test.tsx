@@ -24,6 +24,7 @@ jest.mock('@/hooks/useResponsive', () => ({
 
 jest.mock('react-native-safe-area-context', () => ({
     SafeAreaView: ({ children }: any) => children,
+    useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
 // Mock WebMapComponent
@@ -179,7 +180,7 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
         it('должен автоматически выбрать страну при добавлении точки', async () => {
             const mockOnCountrySelect = jest.fn();
 
-            const { getByPlaceholderText, getByText } = render(
+            render(
                 <TravelWizardStepRoute
                     {...defaultProps}
                     onCountrySelect={mockOnCountrySelect}
@@ -264,8 +265,8 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
     describe('✅ Счетчик точек', () => {
         it('должен показать правильное количество точек', () => {
             const markers = [
-                { id: null, lat: 50, lng: 30, address: 'Киев', categories: [], image: '' },
-                { id: null, lat: 49, lng: 24, address: 'Львов', categories: [], image: '' },
+                { id: null, lat: 50, lng: 30, address: 'Киев', country: 1, categories: [], image: '' },
+                { id: null, lat: 49, lng: 24, address: 'Львов', country: 1, categories: [], image: '' },
             ];
 
             const { getByText } = render(
@@ -288,7 +289,7 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
         it('должен вызвать onCountrySelect при выборе страны', () => {
             const mockOnCountrySelect = jest.fn();
 
-            const { getByText } = render(
+            render(
                 <TravelWizardStepRoute
                     {...defaultProps}
                     onCountrySelect={mockOnCountrySelect}
@@ -314,7 +315,7 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
 
         it('НЕ должен показать подсказку если есть точки', () => {
             const markers = [
-                { id: null, lat: 50, lng: 30, address: 'Киев', categories: [], image: '' },
+                { id: null, lat: 50, lng: 30, address: 'Киев', country: 1, categories: [], image: '' },
             ];
 
             const { queryByText } = render(

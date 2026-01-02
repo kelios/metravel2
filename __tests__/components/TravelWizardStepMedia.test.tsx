@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import TravelWizardStepMedia from '@/components/travel/TravelWizardStepMedia';
 
@@ -22,13 +21,19 @@ jest.mock('@/hooks/useTheme', () => {
 
 jest.mock('react-native-safe-area-context', () => ({
     SafeAreaView: ({ children }: any) => children,
+    useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+}));
+
+jest.mock('@/src/api/misc', () => ({
+    __esModule: true,
+    deleteTravelMainImage: jest.fn(async () => ({})),
 }));
 
 // Mock PhotoUploadWithPreview
 jest.mock('@/components/travel/PhotoUploadWithPreview', () => ({
     __esModule: true,
     default: ({ onUpload, onRequestRemove }: any) => {
-        const React = require('react');
+        require('react');
         const { View, Text, Button } = require('react-native');
         return (
             <View>
@@ -49,7 +54,11 @@ jest.mock('@/components/travel/PhotoUploadWithPreview', () => ({
 // Mock YoutubeLinkComponent
 jest.mock('@/components/YoutubeLinkComponent', () => ({
     __esModule: true,
-    default: () => null,
+    default: ({ label }: any) => {
+        require('react');
+        const { Text } = require('react-native');
+        return <Text>{label}</Text>;
+    },
 }));
 
 describe('TravelWizardStepMedia (Шаг 3)', () => {
@@ -60,7 +69,7 @@ describe('TravelWizardStepMedia (Шаг 3)', () => {
             id: '123',
             name: 'Тестовое путешествие',
             coordsMeTravel: [],
-        },
+        } as any,
         setFormData: jest.fn(),
         travelDataOld: null,
         onBack: jest.fn(),
@@ -163,6 +172,12 @@ describe('TravelWizardStepMedia (Шаг 3)', () => {
             fireEvent.press(removeButton);
 
             await waitFor(() => {
+                expect(getByText('УДАЛИТЬ')).toBeTruthy();
+            });
+
+            fireEvent.press(getByText('УДАЛИТЬ'));
+
+            await waitFor(() => {
                 expect(mockSetFormData).toHaveBeenCalled();
             });
         });
@@ -180,7 +195,7 @@ describe('TravelWizardStepMedia (Шаг 3)', () => {
                 />
             );
 
-            expect(getByText(/Сохраните основную информацию/)).toBeTruthy();
+            expect(getByText(/После сохранения черновика фото загрузится на сервер/)).toBeTruthy();
         });
 
         it('должен отображать галерею если есть точки на маршруте', () => {
@@ -197,20 +212,20 @@ describe('TravelWizardStepMedia (Шаг 3)', () => {
                 />
             );
 
-            expect(getByText(/Изображения точек маршрута/)).toBeTruthy();
+            expect(getByText(/Галерея путешествия/)).toBeTruthy();
         });
     });
 
     describe('✅ YouTube видео', () => {
         it('должен отображать секцию YouTube', () => {
             const { getByText } = render(<TravelWizardStepMedia {...defaultProps} />);
-            expect(getByText(/YouTube видео/)).toBeTruthy();
+            expect(getByText(/Видео о путешествии/)).toBeTruthy();
         });
     });
 
     describe('✅ Валидация', () => {
         it('должен показать предупреждение если нет обложки', () => {
-            const { getByText } = render(
+            render(
                 <TravelWizardStepMedia
                     {...defaultProps}
                     formData={{
@@ -260,14 +275,14 @@ describe('TravelWizardStepMedia (Шаг 3)', () => {
         it('должен вызвать onManualSave при ручном сохранении', async () => {
             const mockOnSave = jest.fn().mockResolvedValue(undefined);
 
-            const { getByText } = render(
+            const { getByLabelText } = render(
                 <TravelWizardStepMedia
                     {...defaultProps}
                     onManualSave={mockOnSave}
                 />
             );
 
-            const saveButton = getByText('Сохранить');
+            const saveButton = getByLabelText('Сохранить');
             fireEvent.press(saveButton);
 
             await waitFor(() => {
