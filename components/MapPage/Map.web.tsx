@@ -432,9 +432,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const [disableFitBounds, setDisableFitBounds] = useState(false);
   const [expandedCluster, setExpandedCluster] = useState<{ key: string; items: Point[] } | null>(null);
   const [mapZoom, setMapZoom] = useState<number>(11);
-  const [isNarrow, setIsNarrow] = useState(
-    typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false
-  );
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const renderLoader = useCallback(
@@ -457,18 +454,23 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const update = () => setIsNarrow(window.innerWidth < MOBILE_BREAKPOINT);
+    const update = () => {
+      /* no-op: responsiveness handled by CSS/layout; keep listener for future use if needed */
+    };
     update();
 
     if (typeof window.matchMedia === 'function') {
       const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
-      const handler = () => setIsNarrow(media.matches);
+      const handler = () => {
+        /* no-op */
+      };
       if (media.addEventListener) {
         media.addEventListener('change', handler);
       } else {
         // @ts-ignore
         media.addListener(handler);
       }
+
       return () => {
         if (media.removeEventListener) {
           media.removeEventListener('change', handler);
@@ -480,9 +482,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     }
 
     window.addEventListener('resize', update);
-    return () => {
-      window.removeEventListener('resize', update);
-    };
+    return () => window.removeEventListener('resize', update);
   }, []);
 
   // Полное удаление экземпляра карты при размонтировании, чтобы Leaflet не ругался на переиспользование контейнера

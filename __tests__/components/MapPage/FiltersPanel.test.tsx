@@ -167,7 +167,7 @@ describe('FiltersPanel', () => {
       ...defaultProps,
       mode: 'route' as const,
     };
-    const { getByText, rerender, getAllByText, queryAllByText } = renderWithTheme(
+    const { rerender, getAllByText, queryAllByText } = renderWithTheme(
       <FiltersPanel {...propsRouteMode} />
     );
 
