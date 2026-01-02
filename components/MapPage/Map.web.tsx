@@ -16,6 +16,8 @@ import type { MapUiApi } from '@/src/types/mapUi';
 
 type ReactLeafletNS = typeof import('react-leaflet');
 
+const LEAFLET_MAP_CONTAINER_ID = 'metravel-leaflet-map';
+
 type Point = {
   id?: number;
   coord: string;
@@ -490,7 +492,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return () => {
       try {
         const map = mapRef.current;
-        const container = map?.getContainer?.();
+        const container =
+          map?.getContainer?.() ||
+          (typeof document !== 'undefined' ? document.getElementById(LEAFLET_MAP_CONTAINER_ID) : null);
         map?.off?.();
         map?.remove?.();
         if (container && (container as any)._leaflet_id) {
@@ -737,6 +741,66 @@ const MapPageComponent: React.FC<Props> = (props) => {
     if (!mapRef.current || !userLocation) return;
     mapRef.current.setView([userLocation.latitude, userLocation.longitude], 13, { animate: true });
   }, [userLocation]);
+
+  const canExportRoute = useMemo(() => {
+    // Предпочитаем fullRouteCoords (точный трек), иначе fallback на routePoints.
+    // В этом компоненте fullRouteCoords доступен только через setFullRouteCoords,
+    // но сами coords в Map.web приходят через parent (MapPanel -> MapScreen).
+    // Поэтому ориентируемся на routePoints и режим.
+    if (mode !== 'route') return false;
+    return Array.isArray(routePoints) && routePoints.length >= 2;
+  }, [mode, routePoints]);
+
+  const buildExportInput = useCallback(
+    (kind: 'gpx' | 'kml') => {
+      // Попытаемся экспортировать лучший трек: если parent передаёт fullRouteCoords, он будет в props.
+      // Если нет — используем routePoints как минимальный трек.
+      const anyProps = props as any;
+      const fullRouteCoords = Array.isArray(anyProps.fullRouteCoords) ? (anyProps.fullRouteCoords as [number, number][]) : [];
+
+      const track = fullRouteCoords.length >= 2 ? fullRouteCoords : routePoints;
+
+      const waypoints = routePoints.length >= 1 ? [
+        { name: 'Start', coordinates: routePoints[0] },
+        ...(routePoints.length >= 2 ? [{ name: 'End', coordinates: routePoints[routePoints.length - 1] }] : []),
+      ] : [];
+
+      const name = `Metravel route`;
+      const description =
+        fullRouteCoords.length >= 2
+          ? 'Route track exported from Metravel (full route geometry)'
+          : 'Route track exported from Metravel (waypoints only)';
+
+      return { name, description, track, waypoints, time: new Date().toISOString(), kind };
+    },
+    [props, routePoints]
+  );
+
+  const handleDownloadGpx = useCallback(() => {
+    if (!canExportRoute) return;
+    const input = buildExportInput('gpx');
+    const file = buildGpx({
+      name: input.name,
+      description: input.description,
+      track: input.track,
+      waypoints: input.waypoints,
+      time: input.time,
+    });
+    downloadTextFileWeb(file);
+  }, [buildExportInput, canExportRoute]);
+
+  const handleDownloadKml = useCallback(() => {
+    if (!canExportRoute) return;
+    const input = buildExportInput('kml');
+    const file = buildKml({
+      name: input.name,
+      description: input.description,
+      track: input.track,
+      waypoints: input.waypoints,
+      time: input.time,
+    });
+    downloadTextFileWeb(file);
+  }, [buildExportInput, canExportRoute]);
 
   const [mapInstance, setMapInstance] = useState<any>(null);
 
@@ -1171,66 +1235,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return travelData.length === 0;
   }, [mode, routePoints, travelData.length]);
 
-  const canExportRoute = useMemo(() => {
-    // Предпочитаем fullRouteCoords (точный трек), иначе fallback на routePoints.
-    // В этом компоненте fullRouteCoords доступен только через setFullRouteCoords,
-    // но сами coords в Map.web приходят через parent (MapPanel -> MapScreen).
-    // Поэтому ориентируемся на routePoints и режим.
-    if (mode !== 'route') return false;
-    return Array.isArray(routePoints) && routePoints.length >= 2;
-  }, [mode, routePoints]);
-
-  const buildExportInput = useCallback(
-    (kind: 'gpx' | 'kml') => {
-      // Попытаемся экспортировать лучший трек: если parent передаёт fullRouteCoords, он будет в props.
-      // Если нет — используем routePoints как минимальный трек.
-      const anyProps = props as any;
-      const fullRouteCoords = Array.isArray(anyProps.fullRouteCoords) ? (anyProps.fullRouteCoords as [number, number][]) : [];
-
-      const track = fullRouteCoords.length >= 2 ? fullRouteCoords : routePoints;
-
-      const waypoints = routePoints.length >= 1 ? [
-        { name: 'Start', coordinates: routePoints[0] },
-        ...(routePoints.length >= 2 ? [{ name: 'End', coordinates: routePoints[routePoints.length - 1] }] : []),
-      ] : [];
-
-      const name = `Metravel route`;
-      const description =
-        fullRouteCoords.length >= 2
-          ? 'Route track exported from Metravel (full route geometry)'
-          : 'Route track exported from Metravel (waypoints only)';
-
-      return { name, description, track, waypoints, time: new Date().toISOString(), kind };
-    },
-    [props, routePoints]
-  );
-
-  const handleDownloadGpx = useCallback(() => {
-    if (!canExportRoute) return;
-    const input = buildExportInput('gpx');
-    const file = buildGpx({
-      name: input.name,
-      description: input.description,
-      track: input.track,
-      waypoints: input.waypoints,
-      time: input.time,
-    });
-    downloadTextFileWeb(file);
-  }, [buildExportInput, canExportRoute]);
-
-  const handleDownloadKml = useCallback(() => {
-    if (!canExportRoute) return;
-    const input = buildExportInput('kml');
-    const file = buildKml({
-      name: input.name,
-      description: input.description,
-      track: input.track,
-      waypoints: input.waypoints,
-      time: input.time,
-    });
-    downloadTextFileWeb(file);
-  }, [buildExportInput, canExportRoute]);
-
   if (loading) return renderLoader('Loading map...');
 
   if (!L || !rl) {
@@ -1252,6 +1256,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
       <MapContainer
         style={styles.map as any}
+        id={LEAFLET_MAP_CONTAINER_ID}
         center={safeCenter}
         zoom={initialZoomRef.current}
         key={mapInstanceKeyRef.current}
