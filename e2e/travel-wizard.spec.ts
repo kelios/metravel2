@@ -37,6 +37,15 @@ const maybeLogin = async (page: Page) => {
   return true;
 };
 
+const fillRichDescription = async (page: Page, text: string) => {
+  const editor = page.locator('.ql-editor').first();
+  await expect(editor).toBeVisible({ timeout: 15000 });
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type(text);
+};
+
 /**
  * E2E тесты для создания путешествия
  * Проверяют полный flow от создания до публикации
@@ -62,7 +71,7 @@ test.describe('Создание путешествия - Полный flow', () 
       await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тестовое путешествие по Грузии');
 
       // Заполняем описание
-      await page.fill('[placeholder*="Расскажите"]', 'Это тестовое описание путешествия по красивой Грузии. ' +
+      await fillRichDescription(page, 'Это тестовое описание путешествия по красивой Грузии. ' +
         'Мы посетим Тбилиси, горы и попробуем вино.');
 
       // Проверяем автосохранение
@@ -209,7 +218,7 @@ test.describe('Создание путешествия - Полный flow', () 
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тестовое путешествие');
 
     // Заполняем описание
-    await page.fill('[placeholder*="Расскажите"]', 'Описание для превью карточки путешествия');
+    await fillRichDescription(page, 'Описание для превью карточки путешествия');
 
     // Ждем автосохранение
     await page.waitForTimeout(6000);

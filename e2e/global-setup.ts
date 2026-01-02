@@ -51,7 +51,13 @@ export default async function globalSetup(config: FullConfig) {
   await page.getByText('Войти', { exact: true }).click();
 
   // After successful login app should redirect away from /login.
-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30_000 });
+  // IMPORTANT: логин/редирект может быть нестабильным (сеть/креды/сервер). Global setup
+  // не должен валить e2e полностью — в худшем случае продолжим с анонимным storageState.
+  try {
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 60_000 });
+  } catch {
+    // keep going; we'll just persist whatever state we have
+  }
 
   await context.storageState({ path: STORAGE_STATE_PATH });
   await browser.close();

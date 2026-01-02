@@ -44,6 +44,24 @@ const maybeDismissRouteCoachmark = async (page: any) => {
   }
 };
 
+const fillRichDescription = async (page: any, text: string) => {
+  const editor = page.locator('.ql-editor').first();
+  await expect(editor).toBeVisible({ timeout: 15000 });
+  await editor.click();
+  // Clear existing content.
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type(text);
+};
+
+const closePreviewModal = async (page: any) => {
+  const dialog = page.getByRole('dialog');
+  if (await dialog.isVisible().catch(() => false)) {
+    // Some builds render an icon-only close control without an accessible name.
+    await page.keyboard.press('Escape');
+  }
+};
+
 const ensureCanCreateTravel = async (page: any) => {
   await maybeAcceptCookies(page);
   const authGate = page.getByText('Войдите, чтобы создать путешествие', { exact: true });
@@ -240,7 +258,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
 
     // Заполняем данные
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Путешествие для превью');
-    await page.fill('[placeholder*="Расскажите"]', 'Описание путешествия для проверки превью карточки');
+    await fillRichDescription(page, 'Описание путешествия для проверки превью карточки');
 
     // Ждем автосохранение
     await page.waitForTimeout(6000);
@@ -249,15 +267,13 @@ test.describe('Превью карточки (Travel Preview)', () => {
     await page.click('button:has([aria-label*="eye"]), button:has-text("Превью")');
 
     // Проверяем что модальное окно открылось
-    await expect(page.locator('text=Превью карточки')).toBeVisible();
-    await expect(page.locator('text=Путешествие для превью')).toBeVisible();
-    await expect(page.locator('text=Описание путешествия')).toBeVisible();
+    await expect(page.getByText('Превью карточки', { exact: true })).toBeVisible();
+    await expect(page.getByText('Путешествие для превью', { exact: true })).toBeVisible();
+    await expect(page.getByText('Описание путешествия для проверки превью карточки', { exact: true })).toBeVisible();
 
-    // Закрываем по кнопке X
-    await page.click('button[aria-label="Закрыть"], button:has-text("×")');
-
-    // Проверяем что модальное окно закрылось
-    await expect(page.locator('text=Превью карточки')).not.toBeVisible();
+    // Закрываем модальное окно
+    await closePreviewModal(page);
+    await expect(page.getByRole('dialog')).toBeHidden();
   });
 
   test('должен закрыть превью по клику вне модального окна', async ({ page }) => {
@@ -297,7 +313,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
       'Мы хотим проверить что оно правильно обрезается в превью карточки и добавляется многоточие в конце текста. ' +
       'Дополнительный текст для увеличения длины.';
 
-    await page.fill('[placeholder*="Расскажите"]', longDescription);
+    await fillRichDescription(page, longDescription);
     await page.waitForTimeout(6000);
 
     await page.click('button:has-text("Превью")');
