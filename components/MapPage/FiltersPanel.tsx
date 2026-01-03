@@ -485,7 +485,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                           }}
                           disabled={disabledTransport}
                           accessibilityRole="button"
-                          accessibilityLabel={`Выбрать транспорт: ${TRANSPORT_MODES.find(m => m.key === key)?.label}`}
+                          accessibilityLabel={`Выбрать транспорт: ${label}`}
                           accessibilityState={{ selected: active, disabled: disabledTransport }}
                         >
                           <Icon
@@ -500,9 +500,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                               active && styles.transportTabTextActive,
                               disabledTransport && styles.transportTabTextDisabled,
                             ]}
-                            accessibilityState={{ disabled: disabledTransport }}
-                            accessibilityRole="text"
-                            disabled={disabledTransport}
                           >
                             {label}
                           </Text>
