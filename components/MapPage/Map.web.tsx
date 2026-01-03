@@ -7,7 +7,6 @@ import RoutingMachine from './RoutingMachine';
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import { WEB_MAP_BASE_LAYERS } from '@/src/config/mapWebLayers';
 import type { MapUiApi } from '@/src/types/mapUi';
 
 // Import modular components and hooks

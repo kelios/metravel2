@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Platform, View } from 'react-native';
 import * as Location from 'expo-location';
 import { useIsFocused } from '@react-navigation/native';
 import { usePathname } from 'expo-router';
@@ -18,6 +18,7 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/src/utils/filterQuery';
 import type { MapUiApi } from '@/src/types/mapUi';
 import type { TravelCoords } from '@/src/types/types';
+import { logError, logMessage } from '@/src/utils/logger';
 import {
   loadMapFilterValues,
   saveMapFilterValues,
@@ -36,7 +37,8 @@ interface Filters {
   address: string;
 }
 
-type PressableRef = React.ElementRef<typeof Pressable>;
+// Pressable forwards its ref to the underlying View.
+type PressableRef = React.ElementRef<typeof View>;
 type ViewRef = React.ElementRef<typeof View>;
 
 const DEFAULT_COORDINATES: Coordinates = { latitude: 53.9006, longitude: 27.559 };
@@ -258,7 +260,7 @@ export function useMapScreenController() {
         });
       } catch (error) {
         if (isMounted) {
-          console.error('Error loading filters:', error);
+          logError(error, { scope: 'map', step: 'loadFilters' });
         }
       }
     };
@@ -320,7 +322,7 @@ export function useMapScreenController() {
           }
         }
       } catch (error) {
-        console.error('[map] Failed to parse filters:', error);
+        logError(error, { scope: 'map', step: 'parseFilters' });
         parsedFilters = {};
       }
 
@@ -348,7 +350,7 @@ export function useMapScreenController() {
 
         return [];
       } catch (error) {
-        console.error('Error fetching travels for map:', error);
+        logError(error, { scope: 'map', step: 'fetchTravelsForMap' });
         throw error;
       }
     },
@@ -386,12 +388,16 @@ export function useMapScreenController() {
         if (Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
           setCoordinates({ latitude: lat, longitude: lng });
         } else {
-          console.warn('[map] Invalid coordinates from location service:', location.coords);
+          logMessage('[map] Invalid coordinates from location service', 'warning', {
+            scope: 'map',
+            step: 'getLocation',
+            coords: location.coords,
+          });
           setCoordinates(DEFAULT_COORDINATES);
         }
       } catch (error) {
         if (!isMounted) return;
-        console.error('Error getting location:', error);
+        logError(error, { scope: 'map', step: 'getLocation' });
         setCoordinates(DEFAULT_COORDINATES);
       }
     };
@@ -405,6 +411,28 @@ export function useMapScreenController() {
   const handleFilterChange = useCallback((field: keyof MapFilterValues, value: MapFilterValues[keyof MapFilterValues]) => {
     setFilterValues((prev) => ({ ...prev, [field]: value }));
   }, []);
+
+  const handleFilterChangeForPanel = useCallback((field: string, value: unknown) => {
+    if (field === 'categories') {
+      if (Array.isArray(value) && value.every((v) => typeof v === 'string')) {
+        handleFilterChange('categories', value);
+      }
+      return;
+    }
+
+    if (field === 'radius') {
+      if (typeof value === 'string') {
+        handleFilterChange('radius', value);
+      }
+      return;
+    }
+
+    if (field === 'address') {
+      if (typeof value === 'string') {
+        handleFilterChange('address', value);
+      }
+    }
+  }, [handleFilterChange]);
 
   useEffect(() => {
     if (!webStorage) return;
@@ -420,7 +448,7 @@ export function useMapScreenController() {
   const handleMapClick = useCallback(
     (lng: number, lat: number) => {
       if (!Number.isFinite(lng) || !Number.isFinite(lat) || lng < -180 || lng > 180 || lat < -90 || lat > 90) {
-        console.warn('[map] Invalid coordinates received:', { lng, lat });
+        logMessage('[map] Invalid coordinates received', 'warning', { scope: 'map', lng, lat });
         return;
       }
 
@@ -445,7 +473,11 @@ export function useMapScreenController() {
       setRoutePoints(points);
       return;
     }
-    console.warn('[map] Not enough route points to build route:', routeStorePoints.length);
+    logMessage('[map] Not enough route points to build route', 'warning', {
+      scope: 'map',
+      step: 'buildRoute',
+      pointsLength: routeStorePoints.length,
+    });
   }, [routeStorePoints, setRoutePoints]);
 
   const travelsData = useMemo(
@@ -517,7 +549,7 @@ export function useMapScreenController() {
         address: filters.address,
       },
       filterValue: filterValues,
-      onFilterChange: handleFilterChange,
+      onFilterChange: handleFilterChangeForPanel,
       resetFilters,
       travelsData: allTravelsData,
       filteredTravelsData: travelsData,
@@ -549,6 +581,7 @@ export function useMapScreenController() {
       filters,
       filterValues,
       handleFilterChange,
+      handleFilterChangeForPanel,
       resetFilters,
       allTravelsData,
       travelsData,

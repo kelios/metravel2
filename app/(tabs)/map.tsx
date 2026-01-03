@@ -66,7 +66,7 @@ export default function MapScreen() {
         <View style={styles.tabsContainer}>
             <View style={styles.tabsSegment}>
                 <Pressable
-                    ref={filtersTabRef as any}
+                    ref={filtersTabRef}
                     testID="map-panel-tab-filters"
                     style={({ pressed }) => [
                         styles.tab,

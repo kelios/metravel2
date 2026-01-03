@@ -7,7 +7,7 @@ import GroupedFiltersSection from '@/components/travel/GroupedFiltersSection';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
-import { TravelFormData, Travel } from '@/src/types/types';
+import { TravelFormData, Travel, type TravelFilters } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 
@@ -16,7 +16,7 @@ interface TravelWizardStepExtrasProps {
     totalSteps: number;
     formData: TravelFormData;
     setFormData: (data: TravelFormData) => void;
-    filters: any;
+    filters: TravelFilters;
     travelDataOld: Travel | null;
     isSuperAdmin: boolean;
     onManualSave: () => Promise<TravelFormData | void>;
@@ -109,17 +109,23 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
 
     // ✅ УЛУЧШЕНИЕ: Подсчет заполненных полей
     const groupsFilledCounts = useMemo(() => {
-        const hasCategories = Array.isArray((formData as any).categories) && ((formData as any).categories as any[]).length > 0;
-        const hasTransports = Array.isArray((formData as any).transports) && ((formData as any).transports as any[]).length > 0;
-        const hasComplexity = Array.isArray((formData as any).complexity) && ((formData as any).complexity as any[]).length > 0;
-        const hasCompanions = Array.isArray((formData as any).companions) && ((formData as any).companions as any[]).length > 0;
-        const hasNightStay = Array.isArray((formData as any).over_nights_stay) && ((formData as any).over_nights_stay as any[]).length > 0;
-        const hasMonths = Array.isArray((formData as any).month) && ((formData as any).month as any[]).length > 0;
-        const hasYear = (formData as any).year !== undefined && (formData as any).year !== null && (formData as any).year !== '';
-        const hasVisa = (formData as any).visa !== undefined && (formData as any).visa !== null;
-        const hasBudget = (formData as any).budget !== undefined && (formData as any).budget !== null && (formData as any).budget !== '';
-        const hasNumberPeoples = (formData as any).number_peoples !== undefined && (formData as any).number_peoples !== null && (formData as any).number_peoples !== '';
-        const hasNumberDays = (formData as any).number_days !== undefined && (formData as any).number_days !== null && (formData as any).number_days !== '';
+        const hasCategories = Array.isArray(formData.categories) && formData.categories.length > 0;
+        const hasTransports = Array.isArray(formData.transports) && formData.transports.length > 0;
+        const hasComplexity = Array.isArray(formData.complexity) && formData.complexity.length > 0;
+        const hasCompanions = Array.isArray(formData.companions) && formData.companions.length > 0;
+        const hasNightStay = Array.isArray(formData.over_nights_stay) && formData.over_nights_stay.length > 0;
+        const hasMonths = Array.isArray(formData.month) && formData.month.length > 0;
+        const hasYear = formData.year !== undefined && formData.year !== null && String(formData.year).trim().length > 0;
+        const hasVisa = formData.visa !== undefined && formData.visa !== null;
+        const hasBudget = formData.budget !== undefined && formData.budget !== null && String(formData.budget).trim().length > 0;
+        const hasNumberPeoples =
+            formData.number_peoples !== undefined &&
+            formData.number_peoples !== null &&
+            String(formData.number_peoples).trim().length > 0;
+        const hasNumberDays =
+            formData.number_days !== undefined &&
+            formData.number_days !== null &&
+            String(formData.number_days).trim().length > 0;
 
         // Все поля в одной группе (showAdditionalFields показывает все)
         const allFields = [
