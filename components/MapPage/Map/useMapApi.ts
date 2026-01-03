@@ -65,10 +65,10 @@ export function useMapApi({
     downloadTextFileWeb(result);
   }, [routePoints]);
 
-  useEffect(() => {
-    if (!map || !L || !onMapUiApiReady) return;
+  const api = useMemo<MapUiApi | null>(() => {
+    if (!map || !L) return null;
 
-    const api: MapUiApi = {
+    return {
       zoomIn: () => {
         try {
           map.zoomIn();
@@ -145,15 +145,9 @@ export function useMapApi({
         canExportRoute,
       },
     };
-
-    onMapUiApiReady(api);
-    return () => {
-      onMapUiApiReady(null);
-    };
   }, [
     L,
     map,
-    onMapUiApiReady,
     centerOnUserLocation,
     handleDownloadGpx,
     handleDownloadKml,
@@ -164,5 +158,17 @@ export function useMapApi({
     leafletOverlayLayersRef,
     leafletControlRef,
   ]);
+
+  useEffect(() => {
+    if (!onMapUiApiReady) return;
+    onMapUiApiReady(api);
+  }, [api, onMapUiApiReady]);
+
+  useEffect(() => {
+    if (!onMapUiApiReady) return;
+    return () => {
+      onMapUiApiReady(null);
+    };
+  }, [onMapUiApiReady]);
 }
 

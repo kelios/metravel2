@@ -1,7 +1,7 @@
 // components/export/BookSettingsModal.tsx
 // ✅ УЛУЧШЕНИЕ: Модальное окно настроек фотоальбома
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Platform } from 'react-native';
 import ThemePreview, { type PdfThemeName } from './ThemePreview';
 import PresetSelector from './PresetSelector';
@@ -9,6 +9,7 @@ import GalleryLayoutSelector from './GalleryLayoutSelector';
 import type { BookPreset } from '@/src/types/pdf-presets';
 import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
 import { METRICS } from '@/constants/layout';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 // ✅ ИСПРАВЛЕНИЕ: Picker не используется в веб-версии модального окна
 // import { Picker } from '@react-native-picker/picker';
 
@@ -157,16 +158,75 @@ export default function BookSettingsModal({
   mode: _mode = 'save',
 }: BookSettingsModalProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const firstFocusableRef = useRef<HTMLButtonElement | null>(null);
+
   const [settings, setSettings] = useState<BookSettings>(() =>
     buildInitialSettings(defaultSettings, userName)
   );
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedPresetId, setSelectedPresetId] = useState<string | undefined>();
+  const [isSaving, setIsSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // ✅ УЛУЧШЕНИЕ: Focus trap для доступности
+  useFocusTrap(dialogRef, {
+    enabled: visible && Platform.OS === 'web',
+    initialFocus: firstFocusableRef,
+  });
 
   useEffect(() => {
-    setSettings(buildInitialSettings(defaultSettings, userName));
+    // ✅ УЛУЧШЕНИЕ: Загружаем сохраненные настройки из localStorage
+    let savedSettings: Partial<BookSettings> | undefined;
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined' && !defaultSettings) {
+      try {
+        const stored = localStorage.getItem('metravel_pdf_settings');
+        if (stored) {
+          savedSettings = JSON.parse(stored) as Partial<BookSettings>;
+        }
+      } catch (e) {
+        console.warn('Failed to load settings from localStorage:', e);
+      }
+    }
+
+    setSettings(buildInitialSettings(savedSettings || defaultSettings, userName));
+    setHasUnsavedChanges(false);
+    setValidationErrors([]);
   }, [defaultSettings, userName]);
 
+  // ✅ УЛУЧШЕНИЕ: Валидация настроек
+  useEffect(() => {
+    const errors: string[] = [];
+
+    if (!settings.title || settings.title.trim().length === 0) {
+      errors.push('Укажите название книги');
+    }
+
+    if (settings.title && settings.title.length > 100) {
+      errors.push('Название книги не должно превышать 100 символов');
+    }
+
+    if (settings.subtitle && settings.subtitle.length > 150) {
+      errors.push('Подзаголовок не должен превышать 150 символов');
+    }
+
+    if (settings.includeChecklists && settings.checklistSections.length === 0) {
+      errors.push('Выберите хотя бы один раздел чек-листа или отключите чек-листы');
+    }
+
+    setValidationErrors(errors);
+  }, [settings]);
+
+  // ✅ УЛУЧШЕНИЕ: Обработчик закрытия с предупреждением о несохраненных изменениях
+  const handleClose = useCallback(() => {
+    if (hasUnsavedChanges && Platform.OS === 'web') {
+      const confirmed = window.confirm('У вас есть несохраненные изменения. Вы уверены, что хотите закрыть настройки?');
+      if (!confirmed) return;
+    }
+    onClose();
+  }, [hasUnsavedChanges, onClose]);
+
+  // ✅ УЛУЧШЕНИЕ: Обработка клавиши Escape
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (!visible) return;
@@ -175,7 +235,7 @@ export default function BookSettingsModal({
     const handleKeydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onClose();
+        handleClose();
       }
     };
 
@@ -183,8 +243,9 @@ export default function BookSettingsModal({
     requestAnimationFrame(() => dialogRef.current?.focus?.());
 
     return () => document.removeEventListener('keydown', handleKeydown);
-  }, [onClose, visible]);
+  }, [visible, handleClose]);
 
+  // ✅ УЛУЧШЕНИЕ: Блокировка скролла body при открытом модале
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (typeof document === 'undefined') return;
@@ -201,18 +262,25 @@ export default function BookSettingsModal({
     };
   }, [visible]);
 
-  const handlePresetSelect = (preset: BookPreset) => {
+  const handlePresetSelect = useCallback((preset: BookPreset) => {
     setSettings({
       ...preset.settings,
       title: settings.title, // Сохраняем пользовательский заголовок
       subtitle: settings.subtitle,
     });
     setSelectedPresetId(preset.id);
-  };
+    setHasUnsavedChanges(true);
+  }, [settings.title, settings.subtitle]);
 
-  const handleThemeSelect = (theme: any) => {
-    setSettings({ ...settings, template: theme });
-  };
+  const handleThemeSelect = useCallback((theme: PdfThemeName) => {
+    setSettings((prev) => ({ ...prev, template: theme }));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleSettingsChange = useCallback((updates: Partial<BookSettings>) => {
+    setSettings((prev) => ({ ...prev, ...updates }));
+    setHasUnsavedChanges(true);
+  }, []);
 
   const checklistSections = settings.checklistSections || [];
 
@@ -229,7 +297,7 @@ export default function BookSettingsModal({
     });
   };
 
-  const handleToggleChecklists = (enabled: boolean) => {
+  const handleToggleChecklists = useCallback((enabled: boolean) => {
     setSettings((prev) => ({
       ...prev,
       includeChecklists: enabled,
@@ -238,19 +306,64 @@ export default function BookSettingsModal({
           ? DEFAULT_CHECKLIST_SELECTION
           : prev.checklistSections,
     }));
-  };
+    setHasUnsavedChanges(true);
+  }, []);
 
-  const handleSave = () => {
-    onSave(settings);
-    onClose();
-  };
-
-  const handlePreview = () => {
-    if (onPreview) {
-      onPreview(settings);
-      onClose();
+  const handleSave = useCallback(async () => {
+    if (validationErrors.length > 0) {
+      if (Platform.OS === 'web') {
+        alert(`Пожалуйста, исправьте ошибки:\n\n${validationErrors.join('\n')}`);
+      }
+      return;
     }
-  };
+
+    setIsSaving(true);
+    try {
+      // Сохраняем в localStorage для будущего использования
+      if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('metravel_pdf_settings', JSON.stringify(settings));
+        } catch (e) {
+          console.warn('Failed to save settings to localStorage:', e);
+        }
+      }
+
+      await onSave(settings);
+      setHasUnsavedChanges(false);
+      onClose();
+    } catch (error) {
+      console.error('Failed to save PDF settings:', error);
+      if (Platform.OS === 'web') {
+        alert('Произошла ошибка при сохранении настроек. Пожалуйста, попробуйте снова.');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  }, [settings, validationErrors, onSave, onClose]);
+
+  const handlePreview = useCallback(async () => {
+    if (!onPreview) return;
+
+    if (validationErrors.length > 0) {
+      if (Platform.OS === 'web') {
+        alert(`Пожалуйста, исправьте ошибки перед просмотром:\n\n${validationErrors.join('\n')}`);
+      }
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await onPreview(settings);
+      onClose();
+    } catch (error) {
+      console.error('Failed to generate preview:', error);
+      if (Platform.OS === 'web') {
+        alert('Произошла ошибка при создании превью. Пожалуйста, попробуйте снова.');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  }, [settings, validationErrors, onPreview, onClose]);
 
   if (Platform.OS !== 'web') {
     return null; // Только для web
@@ -282,7 +395,7 @@ export default function BookSettingsModal({
           transition: 'background-color 0.3s ease',
           isolation: 'isolate',
         }}
-        onClick={onClose}
+        onClick={handleClose}
       >
         <div
           style={{
@@ -397,14 +510,76 @@ export default function BookSettingsModal({
               margin: '0 0 20px 0',
               color: MODAL_COLORS.text,
               letterSpacing: '-0.3px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              flexWrap: 'wrap',
             }}
           >
-            Настройки фотоальбома
+            <span>Настройки фотоальбома</span>
+            {hasUnsavedChanges && (
+              <span
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  backgroundColor: MODAL_COLORS.accentLight,
+                  color: MODAL_COLORS.accent,
+                }}
+                title="У вас есть несохраненные изменения"
+              >
+                • Не сохранено
+              </span>
+            )}
           </h2>
 
-          <div style={{ marginBottom: '20px', color: MODAL_COLORS.textMuted, fontSize: '14px' }}>
-            Выбрано путешествий:&nbsp;
-            <span style={{ fontWeight: 600, color: MODAL_COLORS.text }}>{travelCount}</span>
+          {/* ✅ УЛУЧШЕНИЕ: Показываем ошибки валидации */}
+          {validationErrors.length > 0 && (
+            <div
+              style={{
+                padding: '12px 16px',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                marginBottom: '20px',
+              }}
+              role="alert"
+              aria-live="polite"
+            >
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#dc2626', marginBottom: '6px' }}>
+                ⚠️ Исправьте ошибки:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#991b1b' }}>
+                {validationErrors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div style={{
+            marginBottom: '20px',
+            padding: '12px 16px',
+            borderRadius: '12px',
+            backgroundColor: MODAL_COLORS.primarySoft,
+            border: `1px solid ${MODAL_COLORS.primary}20`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+          }}>
+            <span style={{ fontSize: '18px' }}>📚</span>
+            <div>
+              <div style={{ color: MODAL_COLORS.text, fontSize: '14px', fontWeight: 500 }}>
+                Выбрано путешествий:&nbsp;
+                <span style={{ fontWeight: 700, color: MODAL_COLORS.primary }}>{travelCount}</span>
+              </div>
+              <div style={{ fontSize: '12px', color: MODAL_COLORS.textMuted, marginTop: '2px' }}>
+                {travelCount === 1
+                  ? 'Будет создана книга с одним путешествием'
+                  : `Будет создана книга с ${travelCount} путешествиями`}
+              </div>
+            </div>
           </div>
 
           <div
@@ -448,15 +623,15 @@ export default function BookSettingsModal({
               <>
                 <GalleryLayoutSelector
                   selectedLayout={settings.galleryLayout || 'grid'}
-                  onLayoutSelect={(layout) => setSettings({ ...settings, galleryLayout: layout })}
+                  onLayoutSelect={(layout) => handleSettingsChange({ galleryLayout: layout })}
                   columns={settings.galleryColumns}
-                  onColumnsChange={(cols) => setSettings({ ...settings, galleryColumns: cols })}
+                  onColumnsChange={(cols) => handleSettingsChange({ galleryColumns: cols })}
                   showCaptions={settings.showCaptions}
-                  onShowCaptionsChange={(show) => setSettings({ ...settings, showCaptions: show })}
+                  onShowCaptionsChange={(show) => handleSettingsChange({ showCaptions: show })}
                   captionPosition={settings.captionPosition}
-                  onCaptionPositionChange={(pos) => setSettings({ ...settings, captionPosition: pos })}
+                  onCaptionPositionChange={(pos) => handleSettingsChange({ captionPosition: pos })}
                   spacing={settings.gallerySpacing}
-                  onSpacingChange={(sp) => setSettings({ ...settings, gallerySpacing: sp })}
+                  onSpacingChange={(sp) => handleSettingsChange({ gallerySpacing: sp })}
                 />
 
                 {/* Разделитель */}
@@ -477,6 +652,7 @@ export default function BookSettingsModal({
             >
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
+                title={showAdvanced ? 'Скрыть настройки обложки и заголовков' : 'Показать настройки обложки и заголовков'}
                 style={{
                   padding: '10px 20px',
                   backgroundColor: 'transparent',
@@ -508,15 +684,16 @@ export default function BookSettingsModal({
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
                     Название книги
+                    <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
                   </label>
                   <input
                     type="text"
                     value={settings.title}
-                    onChange={(e) => setSettings({ ...settings, title: e.target.value })}
+                    onChange={(e) => handleSettingsChange({ title: e.target.value })}
                     style={{
                       width: '100%',
                       padding: '12px 14px',
-                      border: `1.5px solid ${MODAL_COLORS.border}`,
+                      border: `1.5px solid ${validationErrors.some(e => e.includes('название')) ? '#dc2626' : MODAL_COLORS.border}`,
                       borderRadius: '12px',
                       fontSize: '15px',
                       minHeight: '44px',
@@ -532,11 +709,17 @@ export default function BookSettingsModal({
                       e.target.style.backgroundColor = MODAL_COLORS.surface;
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = MODAL_COLORS.border;
+                      e.target.style.borderColor = validationErrors.some(err => err.includes('название')) ? '#dc2626' : MODAL_COLORS.border;
                       e.target.style.boxShadow = 'none';
                     }}
                     placeholder="Мои путешествия"
+                    maxLength={100}
+                    aria-required="true"
+                    aria-invalid={validationErrors.some(e => e.includes('название'))}
                   />
+                  <div style={{ fontSize: '11px', color: MODAL_COLORS.textMuted, marginTop: '4px', textAlign: 'right' }}>
+                    {settings.title.length}/100 символов
+                  </div>
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
@@ -546,11 +729,11 @@ export default function BookSettingsModal({
                   <input
                     type="text"
                     value={settings.subtitle || ''}
-                    onChange={(e) => setSettings({ ...settings, subtitle: e.target.value || undefined })}
+                    onChange={(e) => handleSettingsChange({ subtitle: e.target.value || undefined })}
                     style={{
                       width: '100%',
                       padding: '12px 14px',
-                      border: `1.5px solid ${MODAL_COLORS.border}`,
+                      border: `1.5px solid ${validationErrors.some(e => e.includes('Подзаголовок')) ? '#dc2626' : MODAL_COLORS.border}`,
                       borderRadius: '12px',
                       fontSize: '15px',
                       minHeight: '44px',
@@ -566,11 +749,16 @@ export default function BookSettingsModal({
                       e.target.style.backgroundColor = MODAL_COLORS.surface;
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = MODAL_COLORS.border;
+                      e.target.style.borderColor = validationErrors.some(e => e.includes('Подзаголовок')) ? '#dc2626' : MODAL_COLORS.border;
                       e.target.style.boxShadow = 'none';
                     }}
                     placeholder="Воспоминания 2024"
+                    maxLength={150}
+                    aria-invalid={validationErrors.some(e => e.includes('Подзаголовок'))}
                   />
+                  <div style={{ fontSize: '11px', color: MODAL_COLORS.textMuted, marginTop: '4px', textAlign: 'right' }}>
+                    {(settings.subtitle || '').length}/150 символов
+                  </div>
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
@@ -579,7 +767,7 @@ export default function BookSettingsModal({
                   </label>
                   <select
                     value={settings.coverType}
-                    onChange={(e) => setSettings({ ...settings, coverType: e.target.value as any })}
+                    onChange={(e) => handleSettingsChange({ coverType: e.target.value as any })}
                     style={{
                       width: '100%',
                       padding: '12px 14px',
@@ -614,22 +802,28 @@ export default function BookSettingsModal({
             )}
 
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', padding: '12px', borderRadius: '12px', transition: 'background-color 0.2s', backgroundColor: settings.includeToc ? MODAL_COLORS.primarySoft : 'transparent' }}>
                 <input
                   type="checkbox"
                   checked={settings.includeToc}
-                  onChange={(e) => setSettings({ ...settings, includeToc: e.target.checked })}
+                  onChange={(e) => handleSettingsChange({ includeToc: e.target.checked })}
                   style={{
                     width: '20px',
                     height: '20px',
                     minWidth: '20px',
                     minHeight: '20px',
                     cursor: 'pointer',
+                    accentColor: MODAL_COLORS.primary,
                   }}
                 />
-                <span style={{ fontWeight: 500, color: MODAL_COLORS.text, fontSize: '15px' }}>
-                  Включить оглавление
-                </span>
+                <div>
+                  <div style={{ fontWeight: 500, color: MODAL_COLORS.text, fontSize: '15px' }}>
+                    Включить оглавление
+                  </div>
+                  <div style={{ fontSize: '12px', color: MODAL_COLORS.textMuted, marginTop: '2px' }}>
+                    С миниатюрами и номерами страниц
+                  </div>
+                </div>
               </label>
             </div>
 
@@ -731,7 +925,9 @@ export default function BookSettingsModal({
             }}
           >
             <button
-              onClick={onClose}
+              ref={firstFocusableRef}
+              onClick={handleClose}
+              disabled={isSaving}
               style={{
                 padding: '12px 20px',
                 border: `1px solid ${MODAL_COLORS.border}`,
@@ -740,26 +936,31 @@ export default function BookSettingsModal({
                 color: MODAL_COLORS.text,
                 fontSize: '15px',
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: isSaving ? 'not-allowed' : 'pointer',
                 minWidth: '44px',
                 minHeight: '44px',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 outline: 'none',
                 boxShadow: MODAL_SHADOWS.light,
+                opacity: isSaving ? 0.5 : 1,
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = MODAL_COLORS.primary;
-                e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
+                if (!isSaving) {
+                  e.target.style.borderColor = MODAL_COLORS.primary;
+                  e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
+                }
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = MODAL_COLORS.border;
                 e.target.style.boxShadow = MODAL_SHADOWS.light;
               }}
               onMouseEnter={(e) => {
-                const target = e.target as HTMLButtonElement;
-                target.style.backgroundColor = MODAL_COLORS.backgroundTertiary;
-                target.style.transform = 'translateY(-1px)';
-                target.style.boxShadow = MODAL_SHADOWS.medium;
+                if (!isSaving) {
+                  const target = e.target as HTMLButtonElement;
+                  target.style.backgroundColor = MODAL_COLORS.backgroundTertiary;
+                  target.style.transform = 'translateY(-1px)';
+                  target.style.boxShadow = MODAL_SHADOWS.medium;
+                }
               }}
               onMouseLeave={(e) => {
                 const target = e.target as HTMLButtonElement;
@@ -773,6 +974,7 @@ export default function BookSettingsModal({
             {onPreview && (
               <button
                 onClick={handlePreview}
+                disabled={isSaving || validationErrors.length > 0}
                 style={{
                   padding: '12px 20px',
                   border: `1px solid ${MODAL_COLORS.primary}`,
@@ -781,26 +983,34 @@ export default function BookSettingsModal({
                   color: MODAL_COLORS.primary,
                   fontSize: '15px',
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: (isSaving || validationErrors.length > 0) ? 'not-allowed' : 'pointer',
                   minWidth: '44px',
                   minHeight: '44px',
                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                   outline: 'none',
                   boxShadow: MODAL_SHADOWS.light,
+                  opacity: (isSaving || validationErrors.length > 0) ? 0.5 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = MODAL_COLORS.primary;
-                  e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
+                  if (!isSaving && validationErrors.length === 0) {
+                    e.target.style.borderColor = MODAL_COLORS.primary;
+                    e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
+                  }
                 }}
                 onBlur={(e) => {
                   e.target.style.borderColor = MODAL_COLORS.primary;
                   e.target.style.boxShadow = MODAL_SHADOWS.light;
                 }}
                 onMouseEnter={(e) => {
-                  const target = e.target as HTMLButtonElement;
-                  target.style.backgroundColor = MODAL_COLORS.primaryLight;
-                  target.style.transform = 'translateY(-1px)';
-                  target.style.boxShadow = MODAL_SHADOWS.medium;
+                  if (!isSaving && validationErrors.length === 0) {
+                    const target = e.target as HTMLButtonElement;
+                    target.style.backgroundColor = MODAL_COLORS.primaryLight;
+                    target.style.transform = 'translateY(-1px)';
+                    target.style.boxShadow = MODAL_SHADOWS.medium;
+                  }
                 }}
                 onMouseLeave={(e) => {
                   const target = e.target as HTMLButtonElement;
@@ -808,47 +1018,75 @@ export default function BookSettingsModal({
                   target.style.transform = 'translateY(0)';
                   target.style.boxShadow = MODAL_SHADOWS.light;
                 }}
+                aria-label="Предварительный просмотр PDF"
               >
-                Превью
+                {isSaving ? '⏳' : '👁️'} Превью
               </button>
             )}
             <button
               onClick={handleSave}
+              disabled={isSaving || validationErrors.length > 0}
               style={{
                 padding: '12px 20px',
                 border: 'none',
                 borderRadius: '12px',
-                backgroundColor: MODAL_COLORS.primary,
+                backgroundColor: (isSaving || validationErrors.length > 0) ? MODAL_COLORS.borderStrong : MODAL_COLORS.primary,
                 color: MODAL_COLORS.textOnPrimary,
                 fontSize: '15px',
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: (isSaving || validationErrors.length > 0) ? 'not-allowed' : 'pointer',
                 minWidth: '44px',
                 minHeight: '44px',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 outline: 'none',
                 boxShadow: MODAL_SHADOWS.medium,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
               }}
               onFocus={(e) => {
-                e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}, ${MODAL_SHADOWS.medium}`;
+                if (!isSaving && validationErrors.length === 0) {
+                  e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}, ${MODAL_SHADOWS.medium}`;
+                }
               }}
               onBlur={(e) => {
                 e.target.style.boxShadow = MODAL_SHADOWS.medium;
               }}
               onMouseEnter={(e) => {
-                const target = e.target as HTMLButtonElement;
-                target.style.backgroundColor = MODAL_COLORS.primaryDark;
-                target.style.transform = 'translateY(-1px)';
-                target.style.boxShadow = MODAL_SHADOWS.heavy;
+                if (!isSaving && validationErrors.length === 0) {
+                  const target = e.target as HTMLButtonElement;
+                  target.style.backgroundColor = MODAL_COLORS.primaryDark;
+                  target.style.transform = 'translateY(-1px)';
+                  target.style.boxShadow = MODAL_SHADOWS.heavy;
+                }
               }}
               onMouseLeave={(e) => {
-                const target = e.target as HTMLButtonElement;
-                target.style.backgroundColor = MODAL_COLORS.primary;
-                target.style.transform = 'translateY(0)';
-                target.style.boxShadow = MODAL_SHADOWS.medium;
+                if (!isSaving && validationErrors.length === 0) {
+                  const target = e.target as HTMLButtonElement;
+                  target.style.backgroundColor = MODAL_COLORS.primary;
+                  target.style.transform = 'translateY(0)';
+                  target.style.boxShadow = MODAL_SHADOWS.medium;
+                }
               }}
+              aria-label="Сохранить и создать PDF"
             >
-              Сохранить PDF
+              {isSaving ? (
+                <>
+                  <span style={{
+                    display: 'inline-block',
+                    animation: 'spin 1s linear infinite',
+                  }}>⏳</span>
+                  <style>{`
+                    @keyframes spin {
+                      from { transform: rotate(0deg); }
+                      to { transform: rotate(360deg); }
+                    }
+                  `}</style>
+                  Создание...
+                </>
+              ) : (
+                <>📄 Сохранить PDF</>
+              )}
             </button>
           </div>
         </div>
