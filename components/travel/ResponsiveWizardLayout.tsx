@@ -25,7 +25,7 @@ export function ResponsiveWizardLayout({
   showSidebarOnMobile = false,
   contentMaxWidth = METRICS.containers.lg,
 }: ResponsiveWizardLayoutProps) {
-  const { isDesktop, isTablet, isMobile, width } = useResponsive();
+  const { isDesktop, isTablet, isMobile } = useResponsive();
 
   const showSidebar = sidebar && (isDesktop || (isTablet && showSidebarOnMobile));
 
@@ -152,7 +152,7 @@ interface StepProgressSidebarProps {
 
 export function StepProgressSidebar({
   currentStep,
-  totalSteps,
+  totalSteps: _totalSteps,
   stepConfig,
   onStepSelect,
   completedSteps = [],

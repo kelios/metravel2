@@ -169,7 +169,7 @@ jest.mock('@/components/MapPage/Map/MapLogicComponent', () => {
         } catch {
           // noop
         }
-      }, [])
+      }, [map, mapRef, onMapReady])
       return null
     },
   }
