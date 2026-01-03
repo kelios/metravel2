@@ -192,8 +192,16 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             ? routingState.coords
             : (hasTwoPoints ? routePoints : [])
 
-        if (coordsToDraw.length >= 2) {
-            const latlngs = coordsToDraw.map(([lng, lat]) => L.latLng(lat, lng))
+        // Фильтруем невалидные координаты
+        const validCoords = coordsToDraw.filter(([lng, lat]) =>
+            Number.isFinite(lng) &&
+            Number.isFinite(lat) &&
+            lng >= -180 && lng <= 180 &&
+            lat >= -90 && lat <= 90
+        )
+
+        if (validCoords.length >= 2) {
+            const latlngs = validCoords.map(([lng, lat]) => L.latLng(lat, lng))
 
             // Определяем цвет линии в зависимости от статуса
             const isOptimal = routingState.error === false || routingState.error === ''

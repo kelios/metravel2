@@ -381,7 +381,15 @@ export const useRouting = (
         const allCoords: [number, number][] = [];
         for (const leg of trip.legs) {
             if (leg.shape) {
-                allCoords.push(...decodePolyline6(leg.shape));
+                const decoded = decodePolyline6(leg.shape);
+                // Фильтруем невалидные координаты
+                const validCoords = decoded.filter(([lng, lat]) =>
+                    Number.isFinite(lng) &&
+                    Number.isFinite(lat) &&
+                    lng >= -180 && lng <= 180 &&
+                    lat >= -90 && lat <= 90
+                );
+                allCoords.push(...validCoords);
             }
         }
 
@@ -400,12 +408,22 @@ export const useRouting = (
     const calculateDirectDistance = useCallback((points: [number, number][]): number => {
         if (typeof window === 'undefined' || !(window as any).L) return 0
         
+        // Фильтруем невалидные координаты
+        const validPoints = points.filter(([lng, lat]) =>
+            Number.isFinite(lng) &&
+            Number.isFinite(lat) &&
+            lng >= -180 && lng <= 180 &&
+            lat >= -90 && lat <= 90
+        )
+
+        if (validPoints.length < 2) return 0
+
         const L = (window as any).L
         let totalDistance = 0
         
-        for (let i = 1; i < points.length; i++) {
-            const [lng1, lat1] = points[i - 1]
-            const [lng2, lat2] = points[i]
+        for (let i = 1; i < validPoints.length; i++) {
+            const [lng1, lat1] = validPoints[i - 1]
+            const [lng2, lat2] = validPoints[i]
             const point1 = L.latLng(lat1, lng1)
             const point2 = L.latLng(lat2, lng2)
             totalDistance += point1.distanceTo(point2)
@@ -684,7 +702,7 @@ export const useRouting = (
                 rateLimitTimerRef.current = null
             }
         }
-    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, fetchORS, fetchOSRM, forceOsrm, isTestEnv])
+    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, fetchORS, fetchOSRM, fetchValhalla, forceOsrm, isTestEnv, supportsPublicOsrmProfile])
 
     useEffect(() => {
         return () => {

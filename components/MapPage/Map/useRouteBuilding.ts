@@ -222,7 +222,15 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       const allCoords: LatLng[] = [];
       for (const leg of trip.legs) {
         if (leg.shape) {
-          allCoords.push(...decodePolyline6(leg.shape));
+          const decoded = decodePolyline6(leg.shape);
+          // Фильтруем невалидные координаты
+          const validCoords = decoded.filter(c =>
+            Number.isFinite(c.lat) &&
+            Number.isFinite(c.lng) &&
+            c.lng >= -180 && c.lng <= 180 &&
+            c.lat >= -90 && c.lat <= 90
+          );
+          allCoords.push(...validCoords);
         }
       }
 
