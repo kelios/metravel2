@@ -2,30 +2,41 @@
  * @jest-environment node
  */
 
-import appConfig from '../../app.json';
 import packageJson from '../../package.json';
+
+const fs = require('fs');
+const path = require('path');
+
+const readAppConfig = () => {
+  const raw = fs.readFileSync(path.join(__dirname, '../../app.json'), 'utf8');
+  return JSON.parse(raw);
+};
 
 describe('Platform Compatibility Tests', () => {
   describe('Multi-Platform Support', () => {
     it('should have configuration for all platforms', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.web).toBeDefined();
       expect(appConfig.expo.ios).toBeDefined();
       expect(appConfig.expo.android).toBeDefined();
     });
 
     it('should have consistent app name across platforms', () => {
+      const appConfig = readAppConfig();
       const appName = appConfig.expo.name;
       expect(appName).toBeDefined();
       expect(appName.length).toBeGreaterThan(0);
     });
 
     it('should have consistent version across platforms', () => {
+      const appConfig = readAppConfig();
       const version = appConfig.expo.version;
       expect(version).toBeDefined();
       expect(version).toMatch(/^\d+\.\d+\.\d+$/);
     });
 
     it('should have consistent slug', () => {
+      const appConfig = readAppConfig();
       const slug = appConfig.expo.slug;
       expect(slug).toBeDefined();
       expect(slug).toMatch(/^[a-z0-9-]+$/);
@@ -90,11 +101,13 @@ describe('Platform Compatibility Tests', () => {
 
   describe('Icon and Splash Configuration', () => {
     it('should have app icon', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.icon).toBeDefined();
       expect(appConfig.expo.icon).toContain('.png');
     });
 
     it('should have splash screen', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.splash).toBeDefined();
       expect(appConfig.expo.splash.image).toBeDefined();
       expect(appConfig.expo.splash.resizeMode).toBeDefined();
@@ -102,45 +115,54 @@ describe('Platform Compatibility Tests', () => {
 
     it('should have iOS specific icon', () => {
       // iOS использует общую иконку из expo.icon
+      const appConfig = readAppConfig();
       expect(appConfig.expo.icon).toBeDefined();
     });
 
     it('should have Android adaptive icon', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.android.adaptiveIcon).toBeDefined();
       expect(appConfig.expo.android.adaptiveIcon.foregroundImage).toBeDefined();
     });
 
     it('should have web favicon', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.web.favicon).toBeDefined();
     });
   });
 
   describe('Permissions Compatibility', () => {
     it('iOS should have location permissions', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.ios.infoPlist).toBeDefined();
       expect(appConfig.expo.ios.infoPlist.NSLocationWhenInUseUsageDescription).toBeDefined();
     });
 
     it('Android should have location permissions', () => {
+      const appConfig = readAppConfig();
       const permissions = appConfig.expo.android.permissions;
       expect(permissions).toContain('ACCESS_FINE_LOCATION');
       expect(permissions).toContain('ACCESS_COARSE_LOCATION');
     });
 
     it('iOS should have camera permissions', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.ios.infoPlist.NSCameraUsageDescription).toBeDefined();
     });
 
     it('Android should have camera permissions', () => {
+      const appConfig = readAppConfig();
       const permissions = appConfig.expo.android.permissions;
       expect(permissions).toContain('CAMERA');
     });
 
     it('iOS should have photo library permissions', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.ios.infoPlist.NSPhotoLibraryUsageDescription).toBeDefined();
     });
 
     it('Android should have storage permissions', () => {
+      const appConfig = readAppConfig();
       const permissions = appConfig.expo.android.permissions;
       const hasStoragePermission = 
         permissions.includes('READ_EXTERNAL_STORAGE') ||
@@ -151,11 +173,13 @@ describe('Platform Compatibility Tests', () => {
 
   describe('Maps Configuration', () => {
     it('iOS should have Google Maps API key config', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.ios.config).toBeDefined();
       expect(appConfig.expo.ios.config.googleMapsApiKey).toBeDefined();
     });
 
     it('Android should have Google Maps API key config', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.android.config).toBeDefined();
       expect(appConfig.expo.android.config.googleMaps).toBeDefined();
       expect(appConfig.expo.android.config.googleMaps.apiKey).toBeDefined();
@@ -164,15 +188,18 @@ describe('Platform Compatibility Tests', () => {
 
   describe('Deep Linking Configuration', () => {
     it('should have scheme defined', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.scheme).toBeDefined();
     });
 
     it('iOS should have associated domains', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.ios.associatedDomains).toBeDefined();
       expect(Array.isArray(appConfig.expo.ios.associatedDomains)).toBe(true);
     });
 
     it('Android should have intent filters', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.android.intentFilters).toBeDefined();
       expect(Array.isArray(appConfig.expo.android.intentFilters)).toBe(true);
     });
@@ -180,16 +207,19 @@ describe('Platform Compatibility Tests', () => {
 
   describe('Build Configuration Consistency', () => {
     it('should have consistent orientation', () => {
+      const appConfig = readAppConfig();
       const orientation = appConfig.expo.orientation;
       expect(orientation).toBeDefined();
       expect(['portrait', 'landscape', 'default']).toContain(orientation);
     });
 
     it('should have user interface style', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.userInterfaceStyle).toBeDefined();
     });
 
     it('should have asset bundle patterns', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.assetBundlePatterns).toBeDefined();
       expect(Array.isArray(appConfig.expo.assetBundlePatterns)).toBe(true);
     });
@@ -197,11 +227,13 @@ describe('Platform Compatibility Tests', () => {
 
   describe('Plugin Configuration', () => {
     it('should have expo-router plugin', () => {
+      const appConfig = readAppConfig();
       const plugins = appConfig.expo.plugins;
       expect(plugins).toContain('expo-router');
     });
 
     it('should have expo-location plugin with config', () => {
+      const appConfig = readAppConfig();
       const plugins = appConfig.expo.plugins;
       const locationPlugin = plugins.find((p: any) => 
         Array.isArray(p) && p[0] === 'expo-location'
@@ -212,11 +244,13 @@ describe('Platform Compatibility Tests', () => {
 
   describe('Runtime Configuration', () => {
     it('should have runtime version policy', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.runtimeVersion).toBeDefined();
       expect(appConfig.expo.runtimeVersion.policy).toBeDefined();
     });
 
     it('should have EAS project ID', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.extra).toBeDefined();
       expect(appConfig.expo.extra.eas).toBeDefined();
       expect(appConfig.expo.extra.eas.projectId).toBeDefined();
@@ -225,14 +259,17 @@ describe('Platform Compatibility Tests', () => {
 
   describe('Web Specific Configuration', () => {
     it('should have web bundler', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.web.bundler).toBeDefined();
     });
 
     it('should have web output type', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.web.output).toBeDefined();
     });
 
     it('should have web favicon', () => {
+      const appConfig = readAppConfig();
       expect(appConfig.expo.web.favicon).toBeDefined();
     });
   });

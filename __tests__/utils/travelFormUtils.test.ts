@@ -193,7 +193,7 @@ describe('travelFormUtils', () => {
         description: 'A'.repeat(60),
         countries: ['1'],
         categories: ['1'],
-        coordsMeTravel: [{}],
+        coordsMeTravel: [{ lat: 53.9, lng: 27.5667 }],
         travel_image_thumb_small_url: 'image.jpg',
       } as any;
 

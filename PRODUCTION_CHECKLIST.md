@@ -1,30 +1,47 @@
 # ✅ Production Release Checklist
 
+## ✅ ИСПРАВЛЕНО - Google Maps заменен на бесплатные альтернативы
+
+- ✅ **Карты без Google Maps API**
+  - iOS: Apple Maps (нативные)
+  - Android: Google Maps (встроенные в устройство, без API key)
+  - Web: OpenStreetMap (бесплатный)
+  - См. `docs/MAPS_CONFIGURATION.md`
+
+- ✅ **Bundle Identifiers обновлены**
+  - iOS: `by.metravel.app`
+  - Android: `by.metravel.app`
+
+- ✅ **Секреты удалены из .env.prod**
+  - Перенесены в EAS Secrets (см. ниже)
+
+- ✅ **Оптимизация зависимостей**
+  - Удалены дубликаты: jspdf, html2pdf.js, pdf-lib
+  - Удалены неиспользуемые: lint, format, deprecated-react-native-prop-types
+
+---
+
 ## 🔴 КРИТИЧНО - Сделать ДО релиза
 
-- [ ] **Google Maps API Key**
-  - [ ] Получить ключ на https://console.cloud.google.com
-  - [ ] Заменить в `app.json` (строки 36, 50)
-  - [ ] Включить Maps SDK для iOS и Android
-
-- [ ] **EAS Credentials**
-  - [ ] Заполнить `eas.json` → `submit.production.ios.appleId`
-  - [ ] Заполнить `eas.json` → `submit.production.ios.ascAppId`
-  - [ ] Заполнить `eas.json` → `submit.production.ios.appleTeamId`
-
-- [ ] **Bundle Identifiers**
-  - [ ] Проверить iOS: `com.yourcompany.metravel` → изменить на реальный
-  - [ ] Проверить Android: `com.yourcompany.metravel` → изменить на реальный
-
-- [ ] **Секреты → EAS Secrets**
+- [ ] **EAS Secrets Configuration**
   ```bash
-  eas secret:create --scope project --name GOOGLE_API_SECRET --value "YOUR_VALUE"
-  eas secret:create --scope project --name ROUTE_SERVICE --value "YOUR_VALUE"
+  # Запустите скрипт для настройки секретов:
+  ./scripts/setup-eas-secrets.sh
+  
+  # Или вручную:
+  eas secret:create --scope project --name ROUTE_SERVICE_KEY --value "YOUR_ORS_KEY"
   ```
-  - [ ] Удалить из `.env.prod` после переноса
+  - [ ] Получить OpenRouteService API key (бесплатно): https://openrouteservice.org/dev/#/signup
+  - [ ] Настроить через скрипт или вручную
 
-- [ ] **Android: google-services.json**
-  - [ ] Скачать из Firebase Console
+- [ ] **EAS Submit Credentials**
+  - [ ] Обновить `eas.json` → `submit.production.ios.appleId` (сейчас: savran.juli@example.com)
+  - [ ] Обновить `eas.json` → `submit.production.ios.ascAppId`
+  - [ ] Обновить `eas.json` → `submit.production.ios.appleTeamId`
+  - [ ] Получить значения из: https://appstoreconnect.apple.com
+
+- [ ] **Android: google-play-service-account.json**
+  - [ ] Скачать из Google Play Console
   - [ ] Поместить в корень проекта
   - [ ] Проверить что в .gitignore
 
@@ -42,16 +59,9 @@
 
 ## 🟡 ВАЖНО - Сделать в течение недели
 
-- [ ] **Оптимизация зависимостей**
-  ```bash
-  npm uninstall lint format deprecated-react-native-prop-types
-  # Выбрать ОДНУ PDF библиотеку (рекомендуется @react-pdf/renderer)
-  npm uninstall jspdf html2pdf.js pdf-lib
-  ```
-
 - [ ] **Error Monitoring**
   - [ ] Настроить Sentry
-  - [ ] Добавить Crashlytics (Firebase)
+  - [ ] Добавить Crashlytics (Firebase) - опционально
   - [ ] Проверить error boundaries
 
 - [ ] **Testing**
@@ -78,7 +88,7 @@
 
 - [ ] **Documentation**
   - [ ] Создать CHANGELOG.md
-  - [ ] Обновить README с production инструкциями
+  - [ ] Обновить API documentation
   - [ ] Добавить troubleshooting guide
 
 - [ ] **Monitoring**
@@ -133,6 +143,26 @@ npm run prod:web  # Production build
 
 ---
 
+## 🎯 Быстрые команды
+
+```bash
+# Проверка перед релизом
+npm run release:check
+
+# Настройка секретов
+./scripts/setup-eas-secrets.sh
+
+# Проверка EAS
+eas whoami
+eas secret:list
+
+# Сборка всех платформ
+npm run build:all:prod
+```
+
+---
+
 **Последнее обновление:** 3 января 2026  
+**Статус:** ✅ Google Maps проблемы исправлены, зависимости оптимизированы  
 **См. полный отчет:** `PRODUCTION_READINESS_REPORT.md`
 

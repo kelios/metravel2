@@ -330,7 +330,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }
 
   const rlSafe = (rl ?? {}) as ReactLeafletNS;
-  const { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } = rlSafe;
+  const { MapContainer, Marker, Popup, Circle, useMap, useMapEvents } = rlSafe;
 
   return (
     <View style={styles.wrapper}>
@@ -353,11 +353,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
         key={mapInstanceKeyRef.current}
         zoomControl={false}
       >
-        <TileLayer
-          attribution={WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled)?.attribution || '&copy; OpenStreetMap contributors'}
-          url={WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled)?.url || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
-        />
-
         <MapLogicComponent
           mapClickHandler={handleMapClick}
           mode={mode}

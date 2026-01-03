@@ -51,7 +51,7 @@ def main():
 
     # Heavy dependencies with estimated sizes
     heavy_deps = [
-        {'name': 'react-native-maps', 'weight': 250, 'category': 'Mapping'},
+        {'name': 'react-leaflet', 'weight': 200, 'category': 'Mapping (OSM)'},
         {'name': 'react-native-reanimated', 'weight': 200, 'category': 'Animation'},
         {'name': 'react-native-paper', 'weight': 200, 'category': 'UI Library'},
         {'name': '@react-pdf/renderer', 'weight': 200, 'category': 'PDF'},

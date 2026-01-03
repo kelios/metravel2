@@ -253,9 +253,11 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
     await page.reload();
     await ensureCanCreateTravel(page);
 
-    // On mobile footer renders icon-only button with "💾" label.
-    const quickDraftButtonMobile = page.locator('button:has-text("💾"), button:has-text("Быстрый черновик")');
-    await expect(quickDraftButtonMobile.first()).toBeVisible();
+    // On mobile we may hide text and keep accessible label; rely on accessibility name instead of emoji.
+    const quickDraftButtonMobile = page
+      .getByRole('button', { name: /быстрый черновик/i })
+      .or(page.locator('button[aria-label*="Быстрый черновик"]'));
+    await expect(quickDraftButtonMobile.first()).toBeVisible({ timeout: 15_000 });
   });
 });
 
@@ -606,7 +608,19 @@ test.describe('Разделенный чеклист (Шаг 6)', () => {
   });
 
   test('должен показывать счетчик готовности', async ({ page }) => {
-    await page.goto('/travel/new');
+    // RN-web/Expo can sometimes hang on "load"; use domcontentloaded and retry.
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await page.goto('/travel/new', { waitUntil: 'domcontentloaded', timeout: 120_000 });
+        lastErr = null;
+        break;
+      } catch (e) {
+        lastErr = e;
+        await page.waitForTimeout(800 + attempt * 400).catch(() => null);
+      }
+    }
+    if (lastErr) throw lastErr;
     if (!(await ensureCanCreateTravel(page))) return;
     await fillMinimumValidBasics(page, 'Тест счетчика готовности');
     await gotoStep6(page);

@@ -46,7 +46,7 @@ export function generateStaticMapUrl(
 
 /**
  * Генерирует URL для статичной карты через OpenStreetMap
- * Использует публичный сервис staticmap.openstreetmap.de (без API-ключа)
+ * Использует публичный бесплатный сервис staticmap.openstreetmap.fr (без API-ключа)
  */
 function generateOSMStaticMapUrl(
   points: MapPoint[],

@@ -223,12 +223,11 @@ export class MapPageGenerator {
     }
 
     const bounds = this.calculateBounds(locations);
-    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+    // Используем только бесплатный OpenStreetMap (без API ключа)
     const mapUrl = generateStaticMapUrl(points, {
       width: 1400,
       height: 900,
       zoom: bounds.zoom,
-      apiKey,
     });
 
     return mapUrl || this.generatePlaceholderMap(bounds);

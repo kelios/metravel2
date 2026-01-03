@@ -37,6 +37,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [isManualSaveInFlight, setIsManualSaveInFlight] = useState(false);
+  const [_dataVersion, setDataVersion] = useState<number>(0); // ✅ FIX: Версионирование для конфликтов (будет использоваться для обнаружения конфликтов редактирования)
 
   const initialFormData = getEmptyFormData(isNew ? null : String(travelId));
   const formDataRef = useRef<TravelFormData>(initialFormData);
@@ -148,46 +149,83 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   }, []);
 
   const cleanAndSave = useCallback(async (data: TravelFormData) => {
-    const baseFormData = getEmptyFormData(data?.id ? String(data.id) : null);
-    const mergedData = {
-      ...baseFormData,
-      ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)),
-    } as TravelFormData;
+    // ✅ FIX: Отменяем предыдущий запрос для предотвращения race condition
+    if (saveAbortControllerRef.current) {
+      saveAbortControllerRef.current.abort();
+    }
 
-    const normalizedMarkers = Array.isArray((mergedData as any).coordsMeTravel)
-      ? (mergedData as any).coordsMeTravel.map((m: any) => {
-          const { image, ...rest } = m ?? {};
-          // ✅ ИСПРАВЛЕНИЕ: Бэкенд требует ключ image, но не принимает пустую строку.
-          // Поэтому всегда отправляем `image: null`, если нет валидного значения.
-          const imageValue = typeof image === 'string' ? image.trim() : '';
-          const categories = Array.isArray(m?.categories)
-            ? m.categories
-                .map((c: any) => Number(c))
-                .filter((n: number) => Number.isFinite(n))
-            : [];
+    // Создаём новый контроллер для этого запроса
+    const abortController = new AbortController();
+    saveAbortControllerRef.current = abortController;
 
-          return {
-            ...rest,
-            categories,
-            image: imageValue && imageValue.length > 0 ? imageValue : null,
-          };
-        })
-      : [];
+    try {
+      const baseFormData = getEmptyFormData(data?.id ? String(data.id) : null);
+      const mergedData = {
+        ...baseFormData,
+        ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)),
+      } as TravelFormData;
 
-    const resolvedId = normalizeTravelId(mergedData.id) ?? stableTravelId ?? null;
-    const cleanedData = cleanEmptyFields({
-      ...mergedData,
-      id: resolvedId,
-      coordsMeTravel: normalizedMarkers,
-    });
+      const normalizedMarkers = Array.isArray((mergedData as any).coordsMeTravel)
+        ? (mergedData as any).coordsMeTravel.map((m: any) => {
+            const { image, ...rest } = m ?? {};
+            // ✅ ИСПРАВЛЕНИЕ: Бэкенд требует ключ image, но не принимает пустую строку.
+            // Поэтому всегда отправляем `image: null`, если нет валидного значения.
+            const imageValue = typeof image === 'string' ? image.trim() : '';
+            const categories = Array.isArray(m?.categories)
+              ? m.categories
+                  .map((c: any) => Number(c))
+                  .filter((n: number) => Number.isFinite(n))
+              : [];
 
-    const payload = ensureRequiredDraftFields(cleanedData as TravelFormData);
+            return {
+              ...rest,
+              categories,
+              image: imageValue && imageValue.length > 0 ? imageValue : null,
+            };
+          })
+        : [];
 
-    return await saveFormData(payload);
+      const resolvedId = normalizeTravelId(mergedData.id) ?? stableTravelId ?? null;
+      const cleanedData = cleanEmptyFields({
+        ...mergedData,
+        id: resolvedId,
+        coordsMeTravel: normalizedMarkers,
+      });
+
+      const payload = ensureRequiredDraftFields(cleanedData as TravelFormData);
+
+      // ✅ FIX: Проверяем, что компонент всё ещё смонтирован перед сохранением
+      if (!mountedRef.current) {
+        throw new Error('Component unmounted');
+      }
+
+      const result = await saveFormData(payload);
+
+      // ✅ FIX: Проверяем, что запрос не был отменён
+      if (abortController.signal.aborted) {
+        throw new Error('Request aborted');
+      }
+
+      return result;
+    } catch (error) {
+      // Если ошибка из-за отмены, не пробрасываем её дальше
+      if ((error as Error).message === 'Request aborted') {
+        throw error; // Тихо пробрасываем для обработки выше
+      }
+      throw error;
+    } finally {
+      // Очищаем ссылку только если это наш контроллер
+      if (saveAbortControllerRef.current === abortController) {
+        saveAbortControllerRef.current = null;
+      }
+    }
   }, [ensureRequiredDraftFields, stableTravelId]);
 
   const applySavedData = useCallback(
     (savedData: TravelFormData) => {
+      // ✅ FIX: Проверяем монтирование перед обновлением состояния
+      if (!mountedRef.current) return;
+
       const normalizedSavedData = normalizeDraftPlaceholders(savedData);
       const markersFromResponse = Array.isArray(normalizedSavedData.coordsMeTravel)
         ? (normalizedSavedData.coordsMeTravel as any)
@@ -203,12 +241,18 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         coordsMeTravel: effectiveMarkers,
       });
       setMarkers(effectiveMarkers);
+
+      // ✅ FIX: Обновляем версию данных при получении с сервера
+      setDataVersion(prev => prev + 1);
     },
     [formState, normalizeDraftPlaceholders]
   );
 
   const handleSaveSuccess = useCallback(
     (savedData: TravelFormData) => {
+      // ✅ FIX: Проверяем монтирование перед обновлением состояния
+      if (!mountedRef.current) return;
+
       // После первого автосейва создаётся id — остаёмся в мастере и просто подставляем новые данные.
       applySavedData(savedData);
     },
@@ -217,10 +261,35 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
   const handleSaveError = useCallback(
     (error: Error) => {
+      // ✅ FIX: Проверяем монтирование перед показом уведомления
+      if (!mountedRef.current) return;
+
+      // ✅ FIX: Подробное логирование для мониторинга
+      const errorDetails = {
+        message: error.message,
+        stack: error.stack,
+        travelId: stableTravelId,
+        timestamp: new Date().toISOString(),
+        formDataSnapshot: {
+          id: formState.data.id,
+          name: formState.data.name,
+          hasMarkers: Array.isArray(formState.data.coordsMeTravel) && formState.data.coordsMeTravel.length > 0,
+        }
+      };
+
+      console.error('Autosave error (detailed):', errorDetails);
+
+      // В продакшене можно отправить в систему мониторинга (Sentry, LogRocket и т.д.)
+      if (typeof window !== 'undefined' && (window as any).Sentry) {
+        (window as any).Sentry.captureException(error, {
+          tags: { component: 'useTravelFormData', action: 'autosave' },
+          extra: errorDetails,
+        });
+      }
+
       showToast('Ошибка автосохранения', 'error');
-      console.error('Autosave error:', error);
     },
-    [showToast]
+    [showToast, stableTravelId, formState.data]
   );
 
   const autosave = useImprovedAutoSave(formState.data, initialFormData, {

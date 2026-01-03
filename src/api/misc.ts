@@ -93,14 +93,20 @@ export const saveFormData = async (data: TravelFormData): Promise<TravelFormData
       }
     });
 
+    const sanitizeStringField = (value: unknown, maxLen: number) => {
+      if (typeof value !== 'string') return value;
+      const sanitized = sanitizeInput(value);
+      return typeof sanitized === 'string' ? sanitized.substring(0, maxLen) : value;
+    };
+
     // ✅ FIX: Санитизация данных перед отправкой
     const sanitizedData = {
       ...data,
-      name: data.name ? sanitizeInput(data.name).substring(0, 200) : data.name,
-      description: data.description ? sanitizeInput(data.description).substring(0, 10000) : data.description,
-      minus: data.minus ? sanitizeInput(data.minus).substring(0, 5000) : data.minus,
-      plus: data.plus ? sanitizeInput(data.plus).substring(0, 5000) : data.plus,
-      recommendation: data.recommendation ? sanitizeInput(data.recommendation).substring(0, 5000) : data.recommendation,
+      name: sanitizeStringField(data.name, 200),
+      description: sanitizeStringField(data.description, 10000),
+      minus: sanitizeStringField(data.minus, 5000),
+      plus: sanitizeStringField(data.plus, 5000),
+      recommendation: sanitizeStringField(data.recommendation, 5000),
     };
 
     // Генерируем уникальный slug для новых путешествий, чтобы избежать конфликтов unique constraint

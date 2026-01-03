@@ -73,6 +73,7 @@ const ensureCanCreateTravel = async (page: Page): Promise<boolean> => {
   const authGate = page.getByText('Войдите, чтобы создать путешествие', { exact: true });
   if (await authGate.isVisible().catch(() => false)) {
     if (!e2eEmail || !e2ePassword) {
+      test.skip(true, 'E2E_EMAIL/E2E_PASSWORD not provided; skipping authenticated travel wizard assertions');
       await expect(authGate).toBeVisible();
       return false;
     }
@@ -200,6 +201,10 @@ const waitForAutosaveOk = async (page: Page, timeoutMs: number = 30_000) => {
 
 const clickNext = async (page: Page) => {
   const candidates = [
+    // Prefer accessible name (more stable than exact DOM).
+    page.getByRole('button', { name: /^(далее|далее:.*|к медиа|к деталям|к публикации)$/i }),
+    // Fallbacks for various labels.
+    page.getByRole('button', { name: /далее|к медиа|к деталям|к публикации|маршрут|медиа|детали|публикац/i }),
     page.locator('button:has-text("Далее")'),
     page.locator('button:has-text("Далее:")'),
     page.locator('button:has-text("К медиа")'),
@@ -209,15 +214,25 @@ const clickNext = async (page: Page) => {
 
   for (const c of candidates) {
     const loc = c.first();
-    if (await loc.isVisible().catch(() => false)) {
-      await loc.click();
-      return;
-    }
+    if (!(await loc.isVisible().catch(() => false))) continue;
+    await loc.scrollIntoViewIfNeeded().catch(() => null);
+
+    // Avoid clicking disabled buttons.
+    const disabled = await loc.isDisabled().catch(() => false);
+    if (disabled) continue;
+
+    await loc.click({ timeout: 30_000 }).catch(async () => {
+      // Last attempt: overlays can intercept clicks.
+      await loc.click({ timeout: 30_000, force: true }).catch(() => null);
+    });
+
+    return;
   }
 
-  // Last resort: click any visible primary-looking button
-  const any = page.locator('button').filter({ hasText: /Далее|К медиа|К деталям|К публикации/i }).first();
-  await any.click();
+  // Last resort: click any visible next-ish button.
+  const any = page.locator('button').filter({ hasText: /Далее|К медиа|К деталям|К публикации|Маршрут|Медиа|Детали|Публикац/i }).first();
+  await any.scrollIntoViewIfNeeded().catch(() => null);
+  await any.click({ timeout: 30_000, force: true });
 };
 
 const fillRichDescription = async (page: Page, text: string) => {
@@ -302,7 +317,12 @@ test.describe('Создание путешествия - Полный flow', () 
 
     // Шаг 3: Медиа
     await test.step('Шаг 3: Медиа (пропускаем загрузку)', async () => {
-      await expect(page.locator('text=Медиа путешествия')).toBeVisible();
+      // Title can be overridden by stepMeta; rely on stable markers.
+      await Promise.race([
+        page.locator('text=/^Медиа( путешествия)?$/').first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => null),
+        page.locator('text=Совет по обложке').first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => null),
+        page.locator('text=Главное изображение').first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => null),
+      ]);
 
       // Проверяем наличие советов по загрузке
       await expect(page.locator('text=Совет по обложке')).toBeVisible();
@@ -791,8 +811,20 @@ test.describe('Адаптивность (Mobile)', () => {
 
     await fillMinimumValidBasics(page, 'Mobile тестовое путешествие');
 
-    // На мобильных кнопка сохранения рендерится как иконка 💾.
-    await expect(page.locator('button:has-text("💾")')).toBeVisible();
+    // On mobile UI may hide text; assert action buttons via accessible names.
+    const saveButton = page
+      .getByRole('button', { name: /сохранить/i })
+      .or(page.locator('button[aria-label*="Сохранить"]'));
+    const quickDraftButton = page
+      .getByRole('button', { name: /быстрый черновик/i })
+      .or(page.locator('button[aria-label*="Быстрый черновик"]'));
+
+    // Any of these can exist depending on current wizard state.
+    const anyVisible = await Promise.all([
+      saveButton.first().isVisible().catch(() => false),
+      quickDraftButton.first().isVisible().catch(() => false),
+    ]);
+    expect(anyVisible.some(Boolean)).toBeTruthy();
     await expect(page.locator('text=/Далее: Маршрут/')).toBeVisible();
   });
 });

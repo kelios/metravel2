@@ -8,14 +8,38 @@ Cross-platform travel application built with React Native and Expo.
 - ✅ **iOS** - Ready for App Store (Apple Maps)
 - ✅ **Android** - Ready for Google Play Store (no Google Maps API needed)
 
-## 🗺️ Maps
+## 🗺️ Maps (100% Free Solutions)
 
-**NO Google Maps API Key required!**
-- iOS: Uses Apple Maps (native)
-- Android: Uses device's Google Maps (no API key)
-- Web: Uses OpenStreetMap (free, open source)
+**✅ NO Google Maps API Key required!**
 
-📖 See [docs/MAPS_CONFIGURATION.md](./docs/MAPS_CONFIGURATION.md) for details.
+We use **only free, open-source mapping solutions**:
+
+| Platform | Solution | Cost | API Key? |
+|----------|----------|------|----------|
+| **iOS** | Apple Maps (native) | Free | ❌ Not needed |
+| **Android** | Google Maps (built-in) | Free | ❌ Not needed |
+| **Web** | OpenStreetMap + Leaflet | Free | ❌ Not needed |
+| **Routing** | OpenRouteService | Free* | ✅ Optional (2,500 req/day free) |
+
+*Get free OpenRouteService key at: https://openrouteservice.org/sign-up/*
+
+📖 **Full documentation:** [docs/MAPS_CONFIGURATION.md](./docs/MAPS_CONFIGURATION.md)  
+📊 **Migration report:** [docs/GOOGLE_MAPS_REMOVAL_SUMMARY.md](./docs/GOOGLE_MAPS_REMOVAL_SUMMARY.md)
+
+### Optional: Setup Routing (OpenRouteService)
+
+```bash
+# Get your free API key at https://openrouteservice.org/sign-up/
+./scripts/setup-ors-key.sh YOUR_API_KEY
+
+# Or manually add to .env:
+echo "EXPO_PUBLIC_ORS_API_KEY=your_key" >> .env
+```
+
+**Free tier limits:**
+- 2,500 requests/day
+- 40 requests/minute
+- All transport types (car, bike, foot)
 
 ## 🚀 Quick Start
 

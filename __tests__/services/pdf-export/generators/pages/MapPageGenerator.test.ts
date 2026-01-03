@@ -122,15 +122,16 @@ describe('MapPageGenerator', () => {
   });
 
   describe('map image generation', () => {
-    it('должен генерировать placeholder карту', async () => {
+    it('должен генерировать placeholder карту с OpenStreetMap', async () => {
       const html = await generator.generate(mockTravel, mockLocations, 10);
 
-      // Without a Google Maps API key in tests, MapPageGenerator falls back to an OSM static map URL.
-      // In some environments it may also use Google Static Maps (if EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is set)
-      // or a data URI placeholder as a last resort.
+      // Используем только бесплатные решения: OpenStreetMap или SVG placeholder
+      // Google Maps больше не используется
       expect(html).toMatch(
-        /(data:image\/svg\+xml|staticmap\.openstreetmap\.fr\/staticmap\.php|maps\.googleapis\.com\/maps\/api\/staticmap)/
+        /(data:image\/svg\+xml|staticmap\.openstreetmap\.fr\/staticmap\.php)/
       );
+      // Проверяем что Google Maps НЕ используется
+      expect(html).not.toContain('maps.googleapis.com');
     });
 
     it('должен обрабатывать локации без координат', async () => {

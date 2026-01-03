@@ -32,9 +32,11 @@
         ],
         "ITSAppUsesNonExemptEncryption": false
       },
+
       "config": {
         "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
       },
+
       "usesAppleSignIn": false,
       "associatedDomains": [
         "applinks:metravel.by"
@@ -44,6 +46,11 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+        }
       },
       "package": "by.metravel.app",
       "versionCode": 1,

@@ -43,19 +43,20 @@ describe('generateStaticMapUrl', () => {
     expect(generateStaticMapUrl([], {})).toBe('')
   })
 
-  it('falls back to OSM URL when apiKey is missing', () => {
+  it('generates OSM URL with correct parameters', () => {
     const url = generateStaticMapUrl(points, { width: 400, height: 300, zoom: 10 })
     expect(url).toContain('staticmap.openstreetmap.fr')
     expect(url).toContain('55.75')
     expect(url).toContain('400x300')
   })
 
-  it('builds Google Static Maps URL when apiKey is provided', () => {
-    const url = generateStaticMapUrl(points, { apiKey: 'demo-key', zoom: 8 })
-    expect(url).toContain('maps.googleapis.com/maps/api/staticmap')
-    expect(url).toContain('key=demo-key')
-    expect(url).toContain('markers=color:green|label:1')
-    expect(url).toContain('path=color:0xff9f5a')
+  it('generates OSM URL without apiKey (always free)', () => {
+    const url = generateStaticMapUrl(points, { zoom: 8 })
+    expect(url).toContain('staticmap.openstreetmap.fr')
+    expect(url).toContain('center=')
+    expect(url).toContain('zoom=8')
+    // OSM не использует Google API ключи
+    expect(url).not.toContain('maps.googleapis.com')
   })
 })
 

@@ -76,11 +76,17 @@ export function useImprovedAutoSave<T>(
   useEffect(() => {
     const handleOnline = () => {
       isOnlineRef.current = true;
-      setState(prev => ({ ...prev, isOnline: true }));
+      // ✅ FIX: Проверка монтирования перед setState
+      if (mountedRef.current) {
+        setState(prev => ({ ...prev, isOnline: true }));
+      }
     };
     const handleOffline = () => {
       isOnlineRef.current = false;
-      setState(prev => ({ ...prev, isOnline: false }));
+      // ✅ FIX: Проверка монтирования перед setState
+      if (mountedRef.current) {
+        setState(prev => ({ ...prev, isOnline: false }));
+      }
     };
 
     if (typeof window !== 'undefined') {
@@ -118,11 +124,14 @@ export function useImprovedAutoSave<T>(
     abortControllerRef.current = new AbortController();
     
     try {
-      setState(prev => ({
-        ...prev,
-        status: 'saving',
-        error: null,
-      }));
+      // ✅ FIX: Проверка монтирования перед setState
+      if (mountedRef.current) {
+        setState(prev => ({
+          ...prev,
+          status: 'saving',
+          error: null,
+        }));
+      }
 
       const result = await onSave(dataToSave);
       
@@ -137,13 +146,17 @@ export function useImprovedAutoSave<T>(
       // которые приходят только в ответе сервера.
       lastSavedDataRef.current = dataToSave;
       latestDataRef.current = dataToSave;
-      setState(prev => ({
-        ...prev,
-        status: 'saved',
-        lastSaved: new Date(),
-        error: null,
-        retryCount: 0,
-      }));
+
+      // ✅ FIX: Проверка монтирования перед setState
+      if (mountedRef.current) {
+        setState(prev => ({
+          ...prev,
+          status: 'saved',
+          lastSaved: new Date(),
+          error: null,
+          retryCount: 0,
+        }));
+      }
 
       onSuccess?.(result);
       return result;
@@ -160,11 +173,14 @@ export function useImprovedAutoSave<T>(
       // Retry logic (сохранён, но используется только при необходимости,
       // чтобы не усложнять основную логику автосейва)
       if (enableRetry && retryAttempt < maxRetries && isOnlineRef.current) {
-        setState(prev => ({
-          ...prev,
-          error: saveError,
-          retryCount: retryAttempt + 1,
-        }));
+        // ✅ FIX: Проверка монтирования перед setState
+        if (mountedRef.current) {
+          setState(prev => ({
+            ...prev,
+            error: saveError,
+            retryCount: retryAttempt + 1,
+          }));
+        }
 
         // Schedule retry
         retryTimeoutRef.current = setTimeout(() => {
@@ -179,12 +195,15 @@ export function useImprovedAutoSave<T>(
       }
 
       // Final error state
-      setState(prev => ({
-        ...prev,
-        status: 'error',
-        error: saveError,
-        retryCount: 0,
-      }));
+      // ✅ FIX: Проверка монтирования перед setState
+      if (mountedRef.current) {
+        setState(prev => ({
+          ...prev,
+          status: 'error',
+          error: saveError,
+          retryCount: 0,
+        }));
+      }
 
       onError?.(saveError);
       throw saveError;
@@ -281,18 +300,24 @@ export function useImprovedAutoSave<T>(
   const resetToOriginal = useCallback(() => {
     cleanup();
     lastSavedDataRef.current = originalData;
-    setState({
-      status: 'idle',
-      lastSaved: null,
-      error: null,
-      retryCount: 0,
-      isOnline: state.isOnline,
-    });
+    // ✅ FIX: Проверка монтирования перед setState
+    if (mountedRef.current) {
+      setState({
+        status: 'idle',
+        lastSaved: null,
+        error: null,
+        retryCount: 0,
+        isOnline: state.isOnline,
+      });
+    }
   }, [originalData, cleanup, state.isOnline]);
 
   // Clear error
   const clearError = useCallback(() => {
-    setState(prev => ({ ...prev, error: null, status: 'idle' }));
+    // ✅ FIX: Проверка монтирования перед setState
+    if (mountedRef.current) {
+      setState(prev => ({ ...prev, error: null, status: 'idle' }));
+    }
   }, []);
 
   // Retry failed save

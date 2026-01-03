@@ -112,9 +112,9 @@ def main():
 
     optional_packages = [
         {
-            'name': 'react-native-maps',
-            'size': '250KB',
-            'used_for': 'Map functionality',
+            'name': 'react-leaflet',
+            'size': '~200KB',
+            'used_for': 'Web map functionality (OpenStreetMap)',
             'lazy_load': True,
             'trigger': 'When user navigates to map view'
         },
