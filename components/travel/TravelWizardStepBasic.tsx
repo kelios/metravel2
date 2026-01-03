@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Dimensions, LayoutChangeEvent, Animated } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Dimensions, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Snackbar } from 'react-native-paper';
 import Toast from 'react-native-toast-message';

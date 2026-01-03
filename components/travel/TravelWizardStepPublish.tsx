@@ -198,44 +198,58 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     }, [currentStep]);
 
     const handleSaveDraft = async () => {
-        const nextForm = {
-            ...formData,
-            publish: false,
-            moderation: false,
-        };
-        setFormData(nextForm);
-        setMissingForModeration([]);
-        await onManualSave(nextForm);
+        // ✅ FIX: Предотвращаем одновременные операции
+        if (!startAction()) return;
 
-        const hasName = !!formData.name && formData.name.trim().length > 0;
-        const hasDescription = !!formData.description && formData.description.trim().length > 0;
-        const hasCountries = Array.isArray(formData.countries) && formData.countries.length > 0;
-        const hasRoute = Array.isArray((formData as any).coordsMeTravel)
-            ? ((formData as any).coordsMeTravel as any[]).length > 0
-            : Array.isArray((formData as any).markers)
+        try {
+            const nextForm = {
+                ...formData,
+                publish: false,
+                moderation: false,
+            };
+            setFormData(nextForm);
+            setMissingForModeration([]);
+            await onManualSave(nextForm);
+
+            const hasName = !!formData.name && formData.name.trim().length > 0;
+            const hasDescription = !!formData.description && formData.description.trim().length > 0;
+            const hasCountries = Array.isArray(formData.countries) && formData.countries.length > 0;
+            const hasRoute = Array.isArray((formData as any).coordsMeTravel)
+                ? ((formData as any).coordsMeTravel as any[]).length > 0
+                : Array.isArray((formData as any).markers)
                 ? ((formData as any).markers as any[]).length > 0
                 : false;
-        const galleryArr = Array.isArray((formData as any).gallery)
-            ? ((formData as any).gallery as any[])
-            : [];
-        const hasCover = !!(formData as any).travel_image_thumb_small_url;
-        const hasPhotos = hasCover || galleryArr.length > 0;
+            const galleryArr = Array.isArray((formData as any).gallery)
+                ? ((formData as any).gallery as any[])
+                : [];
+            const hasCover = !!(formData as any).travel_image_thumb_small_url;
+            const hasPhotos = hasCover || galleryArr.length > 0;
 
-        await trackWizardEvent('wizard_draft_saved', {
-            travel_id: formData.id ?? null,
-            step: currentStep,
-            fields_filled: {
-                name: hasName,
-                description: hasDescription,
-                countries: hasCountries,
-                markers: hasRoute,
-                photos: hasPhotos,
-            },
-        });
+            await trackWizardEvent('wizard_draft_saved', {
+                travel_id: formData.id ?? null,
+                step: currentStep,
+                fields_filled: {
+                    name: hasName,
+                    description: hasDescription,
+                    countries: hasCountries,
+                    markers: hasRoute,
+                    photos: hasPhotos,
+                },
+            });
 
-        // После сохранения на последнем шаге логично вывести пользователя из мастера
-        // в раздел "Мои путешествия", где он увидит черновик.
-        router.replace('/metravel');
+            // После сохранения на последнем шаге логично вывести пользователя из мастера
+            // в раздел "Мои путешествия", где он увидит черновик.
+            router.replace('/metravel');
+        } catch (error) {
+            // ✅ FIX: Обработка ошибок сохранения
+            Toast.show({
+                type: 'error',
+                text1: 'Ошибка сохранения',
+                text2: error instanceof Error ? error.message : 'Попробуйте ещё раз',
+            });
+        } finally {
+            finishAction();
+        }
     };
 
     const handleSendToModeration = async () => {

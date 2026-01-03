@@ -40,6 +40,9 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
   const initialFormData = getEmptyFormData(isNew ? null : String(travelId));
   const formDataRef = useRef<TravelFormData>(initialFormData);
+  const saveAbortControllerRef = useRef<AbortController | null>(null); // ✅ FIX: Race condition защита
+  const mountedRef = useRef(true); // ✅ FIX: Защита от memory leak
+  const initialLoadKeyRef = useRef<string | null>(null);
 
   const formState = useOptimizedFormState(initialFormData, {
     debounce: 5000,
@@ -62,7 +65,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
   const ensureRequiredDraftFields = useCallback((payload: TravelFormData) => {
     const normalized: TravelFormData = { ...payload };
-    const draftPlaceholder = `${DRAFT_PLACEHOLDER_PREFIX}${normalized.id ?? 'new'}`;
+    // ✅ FIX: Более безопасный placeholder без раскрытия ID
+    const draftPlaceholder = DRAFT_PLACEHOLDER_PREFIX;
     const arrayFields: Array<keyof TravelFormData> = [
       'categories',
       'transports',
@@ -162,13 +166,11 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
                 .filter((n: number) => Number.isFinite(n))
             : [];
 
-          const marker = {
+          return {
             ...rest,
             categories,
             image: imageValue && imageValue.length > 0 ? imageValue : null,
           };
-
-          return marker;
         })
       : [];
 
@@ -315,7 +317,21 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     [autosave, formState, isNew, normalizeDraftPlaceholders, router, userId, isSuperAdmin]
   );
 
-  const initialLoadKeyRef = useRef<string | null>(null);
+
+  // ✅ FIX: Cleanup на размонтирование
+  useEffect(() => {
+    mountedRef.current = true;
+    const abortController = saveAbortControllerRef.current;
+
+    return () => {
+      mountedRef.current = false;
+      // Отменяем все pending запросы
+      if (abortController) {
+        abortController.abort();
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (!authReady) return;
 

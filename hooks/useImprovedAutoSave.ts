@@ -217,16 +217,19 @@ export function useImprovedAutoSave<T>(
     }
 
     // Обновляем статус на debouncing только если он не уже debouncing
-    setState(prev => {
-      if (prev.status === 'debouncing') {
-        return prev; // Не вызываем setState если статус уже debouncing
-      }
-      return {
-        ...prev,
-        status: 'debouncing',
-        error: null,
-      };
-    });
+    // ✅ FIX: Проверка монтирования перед setState
+    if (mountedRef.current) {
+      setState(prev => {
+        if (prev.status === 'debouncing') {
+          return prev; // Не вызываем setState если статус уже debouncing
+        }
+        return {
+          ...prev,
+          status: 'debouncing',
+          error: null,
+        };
+      });
+    }
 
     timeoutRef.current = setTimeout(() => {
       if (!mountedRef.current) return;

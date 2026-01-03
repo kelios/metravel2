@@ -1,7 +1,7 @@
 // components/MapPage/RouteBuilder.tsx
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 import AddressSearch from '@/components/MapPage/AddressSearch';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { LatLng } from '@/types/coordinates';

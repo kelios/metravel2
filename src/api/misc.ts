@@ -64,8 +64,47 @@ export const saveFormData = async (data: TravelFormData): Promise<TravelFormData
       throw new Error('Пользователь не авторизован');
     }
 
+    // ✅ FIX: Валидация критичных полей перед отправкой
+    if (data.name) {
+      const trimmedName = data.name.trim();
+      if (trimmedName.length > 0 && trimmedName.length < 3) {
+        throw new Error('Название должно содержать минимум 3 символа');
+      }
+      if (trimmedName.length > 200) {
+        throw new Error('Название слишком длинное (максимум 200 символов)');
+      }
+    }
+
+    // ✅ FIX: Валидация описания
+    if (data.description) {
+      const trimmedDesc = data.description.trim();
+      if (trimmedDesc.length > 10000) {
+        throw new Error('Описание слишком длинное (максимум 10000 символов)');
+      }
+    }
+
+    // ✅ FIX: Валидация массивов (предотвращение отправки невалидных данных)
+    const arrayFields = ['countries', 'categories', 'transports', 'companions',
+                         'complexity', 'month', 'over_nights_stay'];
+    arrayFields.forEach(field => {
+      const value = (data as any)[field];
+      if (value && !Array.isArray(value)) {
+        throw new Error(`Поле ${field} должно быть массивом`);
+      }
+    });
+
+    // ✅ FIX: Санитизация данных перед отправкой
+    const sanitizedData = {
+      ...data,
+      name: data.name ? sanitizeInput(data.name).substring(0, 200) : data.name,
+      description: data.description ? sanitizeInput(data.description).substring(0, 10000) : data.description,
+      minus: data.minus ? sanitizeInput(data.minus).substring(0, 5000) : data.minus,
+      plus: data.plus ? sanitizeInput(data.plus).substring(0, 5000) : data.plus,
+      recommendation: data.recommendation ? sanitizeInput(data.recommendation).substring(0, 5000) : data.recommendation,
+    };
+
     // Генерируем уникальный slug для новых путешествий, чтобы избежать конфликтов unique constraint
-    const payload: TravelFormData = sanitizeForJson({ ...data }) as TravelFormData;
+    const payload: TravelFormData = sanitizeForJson({ ...sanitizedData }) as TravelFormData;
     if (!payload.id) {
       const existing = (payload.slug || '').trim();
       payload.slug = existing || makeUniqueSlug(payload.name || 'travel');

@@ -272,6 +272,7 @@ export function checkTravelEditAccess(
 
 /**
  * Валидирует обязательные поля для отправки на модерацию
+ * ✅ FIX: Улучшена валидация с дополнительными проверками
  */
 export function validateModerationRequirements(formData: TravelFormData): {
   isValid: boolean;
@@ -279,16 +280,35 @@ export function validateModerationRequirements(formData: TravelFormData): {
 } {
   const missingFields: string[] = [];
 
+  // ✅ FIX: Более строгая валидация названия
   if (!formData.name || formData.name.trim().length < 3) {
     missingFields.push('name');
+  } else if (formData.name.trim().length > 200) {
+    missingFields.push('name_too_long');
+  }
+
+  // ✅ FIX: Проверка на подозрительное содержимое
+  if (formData.name && /^[^a-zа-я0-9]+$/i.test(formData.name.trim())) {
+    missingFields.push('name_invalid_chars');
   }
 
   if (!formData.description || formData.description.trim().length < 50) {
     missingFields.push('description');
+  } else if (formData.description.trim().length > 10000) {
+    missingFields.push('description_too_long');
   }
 
+  // ✅ FIX: Валидация массивов с проверкой типов
   if (!Array.isArray(formData.countries) || formData.countries.length === 0) {
     missingFields.push('countries');
+  } else {
+    // Проверяем, что все элементы валидные
+    const hasInvalidCountries = formData.countries.some(c =>
+      c == null || c === ''
+    );
+    if (hasInvalidCountries) {
+      missingFields.push('countries_invalid');
+    }
   }
 
   const categories = (formData as any).categories || [];
@@ -301,6 +321,17 @@ export function validateModerationRequirements(formData: TravelFormData): {
   const hasRoute = coordsMeTravel.length > 0 || markers.length > 0;
   if (!hasRoute) {
     missingFields.push('route');
+  } else {
+    // ✅ FIX: Проверяем валидность координат в маркерах
+    const hasInvalidMarkers = coordsMeTravel.some((m: any) => {
+      const lat = Number(m?.lat);
+      const lng = Number(m?.lng);
+      return !Number.isFinite(lat) || !Number.isFinite(lng) ||
+             lat < -90 || lat > 90 || lng < -180 || lng > 180;
+    });
+    if (hasInvalidMarkers) {
+      missingFields.push('route_invalid_coords');
+    }
   }
 
   const gallery = (formData as any).gallery || [];
