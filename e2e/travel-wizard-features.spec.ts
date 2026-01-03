@@ -3,6 +3,71 @@ import { test, expect } from '@playwright/test';
 const e2eEmail = process.env.E2E_EMAIL;
 const e2ePassword = process.env.E2E_PASSWORD;
 
+function simpleEncrypt(text: string, key: string): string {
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  }
+  return Buffer.from(result, 'binary').toString('base64');
+}
+
+async function ensureAuthedStorageFallback(page: any) {
+  const encrypted = simpleEncrypt('e2e-fake-token', 'metravel_encryption_key_v1');
+  await page.addInitScript((payload: { encrypted: string }) => {
+    try {
+      window.localStorage.setItem('secure_userToken', payload.encrypted);
+      window.localStorage.setItem('userId', '1');
+      window.localStorage.setItem('userName', 'E2E User');
+      window.localStorage.setItem('isSuperuser', 'false');
+    } catch {
+      // ignore
+    }
+  }, { encrypted });
+}
+
+async function maybeMockNominatimSearch(page: any) {
+  await page.route('https://nominatim.openstreetmap.org/search**', async (route: any) => {
+    const url = new URL(route.request().url());
+    const q = (url.searchParams.get('q') || '').toLowerCase();
+
+    const results: any[] = [];
+    if (q.includes('тбилиси') || q.includes('tbilisi')) {
+      results.push({
+        place_id: 'e2e-tbilisi',
+        display_name: 'Тбилиси, Грузия',
+        lat: '41.7151377',
+        lon: '44.827096',
+        address: { city: 'Тбилиси', country: 'Грузия', country_code: 'ge' },
+      });
+    }
+    if (q.includes('париж') || q.includes('paris') || q.includes('эйф') || q.includes('eiffel')) {
+      results.push({
+        place_id: 'e2e-paris',
+        display_name: 'Париж, Франция',
+        lat: '48.8566',
+        lon: '2.3522',
+        address: { city: 'Париж', country: 'Франция', country_code: 'fr' },
+      });
+    }
+    if (q.includes('москва') || q.includes('moscow')) {
+      results.push({
+        place_id: 'e2e-moscow',
+        display_name: 'Москва, Россия',
+        lat: '55.7558',
+        lon: '37.6173',
+        address: { city: 'Москва', country: 'Россия', country_code: 'ru' },
+      });
+    }
+    if (q.includes('asdfghjkl')) {
+      // Force empty results for the explicit empty-state test
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+      return;
+    }
+
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(results) });
+  });
+}
+
 const maybeAcceptCookies = async (page: any) => {
   const acceptAll = page.getByText('Принять всё', { exact: true });
   const necessaryOnly = page.getByText('Только необходимые', { exact: true });
@@ -171,9 +236,15 @@ const ensureCanCreateTravel = async (page: any): Promise<boolean> => {
   const authGate = page.getByText('Войдите, чтобы создать путешествие', { exact: true });
   if (await authGate.isVisible().catch(() => false)) {
     if (!e2eEmail || !e2ePassword) {
-      test.skip(true, 'E2E_EMAIL/E2E_PASSWORD not provided; skipping authenticated travel wizard assertions');
-      await expect(authGate).toBeVisible();
-      return false;
+      await ensureAuthedStorageFallback(page);
+      await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
+      await maybeAcceptCookies(page);
+      await authGate.waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => null);
+      if (await authGate.isVisible().catch(() => false)) {
+        await expect(authGate).toBeVisible();
+        return false;
+      }
+      return true;
     }
     const didLogin = await maybeLogin(page);
     if (!didLogin) {
@@ -202,6 +273,7 @@ const ensureCanCreateTravel = async (page: any): Promise<boolean> => {
 
 test.describe('Quick Mode (Быстрый черновик)', () => {
   test('должен создать черновик с минимальным заполнением', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
 
@@ -223,6 +295,7 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
   });
 
   test('должен показать валидацию при коротком названии', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
 
@@ -240,6 +313,7 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
   });
 
   test('должен работать Quick Draft на desktop и mobile', async ({ page, viewport: _viewport }) => {
+    await maybeMockNominatimSearch(page);
     // Desktop
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/travel/new');
@@ -263,6 +337,7 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
 
 test.describe('Поиск мест на карте (Location Search)', () => {
   test('должен найти место и добавить точку на карту', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
 
@@ -297,6 +372,7 @@ test.describe('Поиск мест на карте (Location Search)', () => {
   });
 
   test('должен показать empty state если ничего не найдено', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     await ensureCanCreateTravel(page);
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
@@ -312,6 +388,7 @@ test.describe('Поиск мест на карте (Location Search)', () => {
   });
 
   test('должен показать loading indicator при поиске', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     await ensureCanCreateTravel(page);
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
@@ -325,6 +402,7 @@ test.describe('Поиск мест на карте (Location Search)', () => {
   });
 
   test('должен очистить поле поиска кнопкой X', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     await ensureCanCreateTravel(page);
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
@@ -348,6 +426,7 @@ test.describe('Поиск мест на карте (Location Search)', () => {
   });
 
   test('должен работать debounce (не запрашивать при каждом символе)', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     await ensureCanCreateTravel(page);
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
@@ -372,6 +451,7 @@ test.describe('Поиск мест на карте (Location Search)', () => {
 
 test.describe('Превью карточки (Travel Preview)', () => {
   test('должен открыть и закрыть превью модальное окно', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     await ensureCanCreateTravel(page);
 
@@ -396,6 +476,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
   });
 
   test('должен закрыть превью по клику вне модального окна', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     await ensureCanCreateTravel(page);
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест превью');
@@ -415,6 +496,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
   });
 
   test('должен показать placeholder если нет обложки', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     await ensureCanCreateTravel(page);
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Без обложки');
@@ -427,6 +509,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
   });
 
   test('должен обрезать длинное описание до 150 символов', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     await ensureCanCreateTravel(page);
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Длинное описание');
@@ -446,6 +529,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
   });
 
   test('должен показать статистику (дни, точки, страны)', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     await ensureCanCreateTravel(page);
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Со статистикой');
@@ -474,6 +558,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
 
 test.describe('Группировка параметров (Шаг 5)', () => {
   test('должен открывать и закрывать группу параметров', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест группировки');
@@ -512,6 +597,7 @@ test.describe('Группировка параметров (Шаг 5)', () => {
   });
 
   test('должен показывать счетчик заполненных полей', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест счетчика');
@@ -540,6 +626,7 @@ test.describe('Группировка параметров (Шаг 5)', () => {
 
 test.describe('Милестоны (Навигация по шагам)', () => {
   test('должен показывать милестоны на desktop', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
@@ -551,6 +638,7 @@ test.describe('Милестоны (Навигация по шагам)', () => {
   });
 
   test('должен скрывать милестоны на mobile', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
@@ -560,6 +648,7 @@ test.describe('Милестоны (Навигация по шагам)', () => {
   });
 
   test('должен подсвечивать текущий шаг', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
@@ -571,6 +660,7 @@ test.describe('Милестоны (Навигация по шагам)', () => {
   });
 
   test('должен показывать галочку для пройденных шагов', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
@@ -587,6 +677,7 @@ test.describe('Милестоны (Навигация по шагам)', () => {
 
 test.describe('Разделенный чеклист (Шаг 6)', () => {
   test('должен показывать две секции чеклиста', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
     await fillMinimumValidBasics(page, 'Тест чеклиста');
@@ -598,6 +689,7 @@ test.describe('Разделенный чеклист (Шаг 6)', () => {
   });
 
   test('должен показывать преимущества для рекомендуемых пунктов', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
     await fillMinimumValidBasics(page, 'Тест преимуществ');
@@ -608,6 +700,7 @@ test.describe('Разделенный чеклист (Шаг 6)', () => {
   });
 
   test('должен показывать счетчик готовности', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
     // RN-web/Expo can sometimes hang on "load"; use domcontentloaded and retry.
     let lastErr: unknown = null;
     for (let attempt = 0; attempt < 3; attempt++) {

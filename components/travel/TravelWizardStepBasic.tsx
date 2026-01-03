@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Dimensions, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Snackbar } from 'react-native-paper';
@@ -80,6 +80,8 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
 
+    const [hasUserEdited, setHasUserEdited] = useState(false);
+
     // ✅ ФАЗА 2: Hook для управления превью
     const previewState = useTravelPreview();
     const isPreviewVisible = previewState?.isPreviewVisible ?? false;
@@ -103,7 +105,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
         return validateStep(1, formData);
     }, [formData]);
 
-    const shouldShowValidationSummary = (_stepErrors?.length ?? 0) > 0;
+    const shouldShowValidationSummary = (_stepErrors?.length ?? 0) > 0 || (hasUserEdited && validation.errors.length > 0);
 
     // ✅ ФАЗА 2: Контекстные подсказки
     const contextualTips = useMemo(() => {
@@ -116,8 +118,11 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     }, [contextualTips]);
 
     const handleFieldChange = useCallback((field: keyof TravelFormData, value: any) => {
+        if (!hasUserEdited) {
+            setHasUserEdited(true);
+        }
         setFormData(prev => ({ ...prev, [field]: value }));
-    }, [setFormData]);
+    }, [hasUserEdited, setFormData]);
 
     // ✅ НОВОЕ: Handler для быстрого черновика
     const handleQuickDraft = useCallback(async () => {

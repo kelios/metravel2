@@ -7,6 +7,79 @@ const travelId = process.env.E2E_TRAVEL_ID;
 
 const USE_REAL_API = process.env.E2E_USE_REAL_API === '1';
 
+const simpleEncrypt = (text: string, key: string): string => {
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  }
+  return Buffer.from(result, 'binary').toString('base64');
+};
+
+const ensureAuthedStorageFallback = async (page: Page) => {
+  const encrypted = simpleEncrypt('e2e-fake-token', 'metravel_encryption_key_v1');
+  await page.evaluate((payload) => {
+    try {
+      window.localStorage.setItem('secure_userToken', payload.encrypted);
+      window.localStorage.setItem('userId', payload.userId);
+      window.localStorage.setItem('userName', payload.userName);
+      window.localStorage.setItem('isSuperuser', payload.isSuperuser);
+    } catch {
+      // ignore
+    }
+  }, { encrypted, userId: '1', userName: 'E2E User', isSuperuser: 'false' });
+};
+
+const maybeMockNominatimSearch = async (page: Page) => {
+  await page.route('https://nominatim.openstreetmap.org/search**', async (route) => {
+    const url = new URL(route.request().url());
+    const q = (url.searchParams.get('q') || '').toLowerCase();
+
+    const results: any[] = [];
+    if (q.includes('тбилиси') || q.includes('tbilisi')) {
+      results.push({
+        place_id: 'e2e-tbilisi',
+        display_name: 'Тбилиси, Грузия',
+        lat: '41.7151377',
+        lon: '44.827096',
+        address: { city: 'Тбилиси', country: 'Грузия', country_code: 'ge' },
+      });
+    }
+    if (q.includes('казбеги') || q.includes('kazbegi')) {
+      results.push({
+        place_id: 'e2e-kazbegi',
+        display_name: 'Казбеги, Грузия',
+        lat: '42.658',
+        lon: '44.643',
+        address: { town: 'Казбеги', country: 'Грузия', country_code: 'ge' },
+      });
+    }
+    if (q.includes('париж') || q.includes('paris') || q.includes('эйф') || q.includes('eiffel')) {
+      results.push({
+        place_id: 'e2e-paris',
+        display_name: 'Париж, Франция',
+        lat: '48.8566',
+        lon: '2.3522',
+        address: { city: 'Париж', country: 'Франция', country_code: 'fr' },
+      });
+    }
+    if (q.includes('москва') || q.includes('moscow')) {
+      results.push({
+        place_id: 'e2e-moscow',
+        display_name: 'Москва, Россия',
+        lat: '55.7558',
+        lon: '37.6173',
+        address: { city: 'Москва', country: 'Россия', country_code: 'ru' },
+      });
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(results),
+    });
+  });
+};
+
 const maybeMockTravelUpsert = async (page: Page) => {
   if (USE_REAL_API) return;
 
@@ -80,9 +153,15 @@ const ensureCanCreateTravel = async (page: Page): Promise<boolean> => {
   const authGate = page.getByText('Войдите, чтобы создать путешествие', { exact: true });
   if (await authGate.isVisible().catch(() => false)) {
     if (!e2eEmail || !e2ePassword) {
-      test.skip(true, 'E2E_EMAIL/E2E_PASSWORD not provided; skipping authenticated travel wizard assertions');
-      await expect(authGate).toBeVisible();
-      return false;
+      await ensureAuthedStorageFallback(page);
+      await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
+      await maybeAcceptCookies(page);
+      await authGate.waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => null);
+      if (await authGate.isVisible().catch(() => false)) {
+        await expect(authGate).toBeVisible();
+        return false;
+      }
+      return true;
     }
 
     // Best-effort login: do not skip purely based on a helper returning false.
@@ -259,6 +338,7 @@ const fillRichDescription = async (page: Page, text: string) => {
 test.describe('Создание путешествия - Полный flow', () => {
   test.beforeEach(async ({ page }) => {
     await maybeMockTravelUpsert(page);
+    await maybeMockNominatimSearch(page);
     await maybeLogin(page);
     await page.goto('/');
   });
@@ -341,8 +421,11 @@ test.describe('Создание путешествия - Полный flow', () 
 
       const isOnStep3 = await step3Markers.isVisible().catch(() => false);
       if (!isOnStep3) {
-        test.skip(true, 'Step 3 (Media) is not reachable in this environment (likely blocked by route step validation/overlays)');
-        return;
+        const milestone3 = page.locator('[aria-label="Перейти к шагу 3"]').first();
+        if (await milestone3.isVisible().catch(() => false)) {
+          await milestone3.click().catch(() => null);
+        }
+        await step3Markers.waitFor({ state: 'visible', timeout: 15_000 });
       }
 
       // Пропускаем загрузку и идем дальше
