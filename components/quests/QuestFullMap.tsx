@@ -344,7 +344,19 @@ export default function QuestFullMap({
         useEffect(() => {
             if (!map) return;
 
-            const nextBounds = L.latLngBounds(points.map(p => [p.lat, p.lng] as [number, number])).pad(0.15);
+            // Фильтруем точки с валидными координатами
+            const validPoints = points.filter(p =>
+                Number.isFinite(p.lat) &&
+                Number.isFinite(p.lng) &&
+                p.lat >= -90 && p.lat <= 90 &&
+                p.lng >= -180 && p.lng <= 180
+            );
+
+            if (validPoints.length === 0) return;
+
+            const nextBounds = L.latLngBounds(validPoints.map(p => [p.lat, p.lng] as [number, number])).pad(0.15);
+
+            if (!nextBounds.isValid()) return;
 
             map.whenReady(() => {
                 const container: HTMLElement | undefined = map.getContainer?.();

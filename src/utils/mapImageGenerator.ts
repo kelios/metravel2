@@ -252,9 +252,22 @@ export async function generateLeafletRouteSnapshot(
   container.id = 'metravel-map-snapshot';
   document.body.appendChild(container);
 
+  // Фильтруем точки с валидными координатами
+  const validPoints = points.filter(p =>
+    Number.isFinite(p.lat) &&
+    Number.isFinite(p.lng) &&
+    p.lat >= -90 && p.lat <= 90 &&
+    p.lng >= -180 && p.lng <= 180
+  );
+
+  if (validPoints.length === 0) {
+    document.body.removeChild(container);
+    return null;
+  }
+
   // Минимальная инициализация карты (без анимаций, чтобы избежать багов в off-screen режиме)
-  const centerLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
-  const centerLng = points.reduce((sum, p) => sum + p.lng, 0) / points.length;
+  const centerLat = validPoints.reduce((sum, p) => sum + p.lat, 0) / validPoints.length;
+  const centerLng = validPoints.reduce((sum, p) => sum + p.lng, 0) / validPoints.length;
 
   let map: any | null = null;
 
@@ -278,7 +291,7 @@ export async function generateLeafletRouteSnapshot(
     ).addTo(map);
 
     // Маркеры как в веб-карте + аккуратный номер точки поверх пина
-    const latLngs = points.map((p) => L.latLng(p.lat, p.lng));
+    const latLngs = validPoints.map((p) => L.latLng(p.lat, p.lng));
 
     latLngs.forEach((latLng, index) => {
       const number = index + 1;
@@ -328,7 +341,9 @@ export async function generateLeafletRouteSnapshot(
     // Подгоняем границы под маршрут (без плавной анимации)
     if (latLngs.length > 0) {
       const bounds = L.latLngBounds(latLngs);
-      map.fitBounds(bounds, { padding: [28, 28], animate: false });
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [28, 28], animate: false });
+      }
     }
 
     // Ждем загрузки тайлов (или таймаут как fallback)

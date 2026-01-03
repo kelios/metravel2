@@ -608,7 +608,19 @@ const WebMapComponent = ({
         useEffect(() => {
             if (!initialFitAllowed) return;
             if (!hasFit.current && markers.length > 0) {
-                const bounds = (L as any).latLngBounds(markers.map((m: any) => [m.lat, m.lng]));
+                // Фильтруем маркеры с валидными координатами
+                const validMarkers = markers.filter((m: any) =>
+                    Number.isFinite(m.lat) &&
+                    Number.isFinite(m.lng) &&
+                    m.lat >= -90 && m.lat <= 90 &&
+                    m.lng >= -180 && m.lng <= 180
+                );
+
+                if (validMarkers.length === 0) return;
+
+                const bounds = (L as any).latLngBounds(validMarkers.map((m: any) => [m.lat, m.lng]));
+                if (!bounds.isValid()) return;
+
                 map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6 });
                 hasFit.current = true;
             }
@@ -690,7 +702,14 @@ const WebMapComponent = ({
                                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                                 <MapClickHandler addMarker={addMarker} />
                                 <FitBounds markers={localMarkers} initialFitAllowed={hasInitialMarkersRef.current} />
-                                {localMarkers.map((marker: any, idx: number) => (
+                                {localMarkers
+                                    .filter((marker: any) =>
+                                        Number.isFinite(marker.lat) &&
+                                        Number.isFinite(marker.lng) &&
+                                        marker.lat >= -90 && marker.lat <= 90 &&
+                                        marker.lng >= -180 && marker.lng <= 180
+                                    )
+                                    .map((marker: any, idx: number) => (
                                     <Marker
                                         key={idx}
                                         position={[marker.lat, marker.lng]}

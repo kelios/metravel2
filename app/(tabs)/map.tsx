@@ -53,6 +53,8 @@ export default function MapScreen() {
         panelRef,
     } = useMapScreenController();
 
+    const FiltersPanelComponent = filtersPanelProps.Component;
+
     const mapPanelPlaceholder = useMemo(
         () => (
             <View style={styles.mapPlaceholder}>
@@ -206,7 +208,7 @@ export default function MapScreen() {
                                 {panelHeader}
                                 <View style={styles.panelContent}>
                                     {rightPanelTab === 'filters' ? (
-                                        <filtersPanelProps.Component {...filtersPanelProps.props} />
+                                        <FiltersPanelComponent {...filtersPanelProps.props} />
                                     ) : (
                                         <View style={styles.travelsListContainer} testID="map-travels-tab">
                                             {loading && !isPlaceholderData ? (

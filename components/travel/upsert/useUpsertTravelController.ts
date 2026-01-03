@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useCallback } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
@@ -6,6 +6,7 @@ import { useTravelFilters } from '@/hooks/useTravelFilters';
 import { useTravelFormData } from '@/hooks/useTravelFormData';
 import { useTravelWizard } from '@/hooks/useTravelWizard';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useDraftRecovery } from '@/hooks/useDraftRecovery';
 
 export interface UpsertTravelController {
   isNew: boolean;
@@ -35,6 +36,15 @@ export interface UpsertTravelController {
   handleManualSave: ReturnType<typeof useTravelFormData>['handleManualSave'];
   handleCountrySelect: ReturnType<typeof useTravelFormData>['handleCountrySelect'];
   handleCountryDeselect: ReturnType<typeof useTravelFormData>['handleCountryDeselect'];
+
+  // Draft recovery for unsaved changes
+  draftRecovery: {
+    hasPendingDraft: boolean;
+    draftTimestamp: number | null;
+    isRecovering: boolean;
+    recoverDraft: () => Promise<void>;
+    dismissDraft: () => Promise<void>;
+  };
 }
 
 export function useUpsertTravelController(): UpsertTravelController {
