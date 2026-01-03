@@ -103,6 +103,8 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
         return validateStep(1, formData);
     }, [formData]);
 
+    const shouldShowValidationSummary = (_stepErrors?.length ?? 0) > 0;
+
     // ✅ ФАЗА 2: Контекстные подсказки
     const contextualTips = useMemo(() => {
         return getContextualTips(1, formData);
@@ -178,7 +180,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                     onStepSelect={onStepSelect}
                     onPreview={showPreview}
                 />
-                {validation.errors.length > 0 && (
+                {shouldShowValidationSummary && (
                     <View style={styles.validationSummaryWrapper}>
                         <ValidationSummary
                             errorCount={validation.errors.length}
