@@ -281,6 +281,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
     const { useMap } = rl;
     return function RouteInner(routeProps: any) {
       const map = useMap();
+      // Don't render RoutingMachine until map is available
+      if (!map) return null;
       return <RoutingMachine {...routeProps} map={map} />;
     };
   }, [rl]);
@@ -309,8 +311,14 @@ const MapPageComponent: React.FC<Props> = (props) => {
     const Comp: React.FC<{ point: Point }> = ({ point }) => {
       const map = useMap();
       const handleClose = useCallback(() => {
-        map.closePopup();
+        if (map) {
+          map.closePopup();
+        }
       }, [map]);
+      // Early return if map is not yet available
+      if (!map) {
+        return <PopupContentComponent travel={point} onClose={() => {}} />;
+      }
       return <PopupContentComponent travel={point} onClose={handleClose} />;
     };
     return Comp;

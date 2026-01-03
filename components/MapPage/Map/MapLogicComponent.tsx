@@ -69,15 +69,19 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     click: mapClickHandler,
     zoomend: () => {
       try {
-        const z = map.getZoom();
-        setMapZoom(z);
+        if (map) {
+          const z = map.getZoom();
+          setMapZoom(z);
+        }
       } catch {
         // noop
       }
     },
     zoomstart: () => {
       try {
-        map.closePopup();
+        if (map) {
+          map.closePopup();
+        }
       } catch {
         // noop
       }

@@ -5,14 +5,25 @@ import MapScreen from '@/app/(tabs)/map'
 let mockResponsiveState = { isPhone: true, isLargePhone: false, width: 390 }
 
 jest.mock('@/hooks/usePanelController', () => {
+  const React = require('react')
   return {
     __esModule: true,
     usePanelController: () => ({
-      isPanelVisible: true,
-      openPanel: jest.fn(),
-      closePanel: jest.fn(),
-      panelStyle: {},
-      overlayStyle: {},
+      ...(function usePanelControllerMock() {
+        const [isPanelVisible, setIsPanelVisible] = React.useState(!mockResponsiveState.isPhone)
+
+        React.useEffect(() => {
+          setIsPanelVisible(!mockResponsiveState.isPhone)
+        }, [mockResponsiveState.isPhone, mockResponsiveState.width])
+
+        return {
+          isPanelVisible,
+          openPanel: jest.fn(() => setIsPanelVisible(true)),
+          closePanel: jest.fn(() => setIsPanelVisible(false)),
+          panelStyle: {},
+          overlayStyle: {},
+        }
+      })(),
     }),
   }
 })
@@ -202,8 +213,10 @@ describe('MapScreen (map tab)', () => {
     fireEvent.press(closeButton)
 
     // Текст вкладок больше не отображается
-    expect(queryByText('Фильтры')).toBeNull()
-    expect(queryByText('Список')).toBeNull()
+    await waitFor(() => {
+      expect(queryByText('Фильтры')).toBeNull()
+      expect(queryByText('Список')).toBeNull()
+    })
 
     // Открываем панель снова кнопкой-гамбургером
     const openButtonAgain = getByLabelText('Показать панель')
