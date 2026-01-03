@@ -148,9 +148,7 @@ export const QuickRecommendations: React.FC<Props> = ({
 
             {place.categoryName && (
               <View style={styles.categoryBadge}>
-                <Text style={styles.categoryText} numberOfLines={1}>
-                  {place.categoryName.split(',')[0].trim()}
-                </Text>
+                <Text style={styles.categoryText} numberOfLines={1}>{place.categoryName.split(',')[0].trim()}</Text>
               </View>
             )}
           </Pressable>
