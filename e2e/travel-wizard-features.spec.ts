@@ -166,22 +166,25 @@ const gotoStep6 = async (page: any) => {
   }
 };
 
-const ensureCanCreateTravel = async (page: any) => {
+const ensureCanCreateTravel = async (page: any): Promise<boolean> => {
   await maybeAcceptCookies(page);
   const authGate = page.getByText('Войдите, чтобы создать путешествие', { exact: true });
   if (await authGate.isVisible().catch(() => false)) {
     const didLogin = await maybeLogin(page);
     if (!didLogin) {
-      test.skip(true, 'E2E_EMAIL/E2E_PASSWORD are required for travel creation tests');
+      await expect(authGate).toBeVisible();
+      return false;
     }
     await page.goto('/travel/new');
     await maybeAcceptCookies(page);
 
     // If we're still gated after the login attempt, treat it as env/config issue.
     if (await authGate.isVisible().catch(() => false)) {
-      test.skip(true, 'Could not authenticate for travel creation (E2E creds missing/invalid or login flow changed)');
+      await expect(authGate).toBeVisible();
+      return false;
     }
   }
+  return true;
 };
 
 /**
@@ -195,7 +198,7 @@ const ensureCanCreateTravel = async (page: any) => {
 test.describe('Quick Mode (Быстрый черновик)', () => {
   test('должен создать черновик с минимальным заполнением', async ({ page }) => {
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
 
     // Заполняем только название
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Минимальный черновик');
@@ -216,7 +219,7 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
 
   test('должен показать валидацию при коротком названии', async ({ page }) => {
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
 
     // Заполняем название < 3 символов
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('AB');
@@ -254,7 +257,7 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
 test.describe('Поиск мест на карте (Location Search)', () => {
   test('должен найти место и добавить точку на карту', async ({ page }) => {
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
 
     await fillMinimumValidBasics(page, 'Тест поиска');
     await clickNext(page);
@@ -465,7 +468,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
 test.describe('Группировка параметров (Шаг 5)', () => {
   test('должен открывать и закрывать группу параметров', async ({ page }) => {
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест группировки');
 
     // Переходим к шагу 2 (так мы гарантируем, что милестоны уже отрисованы)
@@ -503,7 +506,7 @@ test.describe('Группировка параметров (Шаг 5)', () => {
 
   test('должен показывать счетчик заполненных полей', async ({ page }) => {
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест счетчика');
 
     // Переходим к шагу 2 (так мы гарантируем, что милестоны уже отрисованы)
@@ -532,7 +535,7 @@ test.describe('Милестоны (Навигация по шагам)', () => {
   test('должен показывать милестоны на desktop', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
 
     // Проверяем наличие милестонов
     await expect(page.locator('[aria-label="Перейти к шагу 1"]')).toBeVisible();
@@ -543,7 +546,7 @@ test.describe('Милестоны (Навигация по шагам)', () => {
   test('должен скрывать милестоны на mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
 
     // Проверяем что милестоны скрыты
     await expect(page.locator('[aria-label="Перейти к шагу 1"]')).not.toBeVisible();
@@ -552,7 +555,7 @@ test.describe('Милестоны (Навигация по шагам)', () => {
   test('должен подсвечивать текущий шаг', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
 
     // Реализация подсветки может не выражаться в CSS-классе на web.
     // Проверяем базовую доступность и видимость милестона текущего шага.
@@ -563,7 +566,7 @@ test.describe('Милестоны (Навигация по шагам)', () => {
   test('должен показывать галочку для пройденных шагов', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
 
     // Заполняем и переходим дальше
     await fillMinimumValidBasics(page, 'Тест милестонов');
@@ -578,7 +581,7 @@ test.describe('Милестоны (Навигация по шагам)', () => {
 test.describe('Разделенный чеклист (Шаг 6)', () => {
   test('должен показывать две секции чеклиста', async ({ page }) => {
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
     await fillMinimumValidBasics(page, 'Тест чеклиста');
     await gotoStep6(page);
 
@@ -589,7 +592,7 @@ test.describe('Разделенный чеклист (Шаг 6)', () => {
 
   test('должен показывать преимущества для рекомендуемых пунктов', async ({ page }) => {
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
     await fillMinimumValidBasics(page, 'Тест преимуществ');
     await gotoStep6(page);
 
@@ -599,7 +602,7 @@ test.describe('Разделенный чеклист (Шаг 6)', () => {
 
   test('должен показывать счетчик готовности', async ({ page }) => {
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
     await fillMinimumValidBasics(page, 'Тест счетчика готовности');
     await gotoStep6(page);
 

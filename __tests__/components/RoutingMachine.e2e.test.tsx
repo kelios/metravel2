@@ -21,7 +21,10 @@ const mockLeaflet = {
   })),
   polyline: jest.fn(() => ({
     addTo: jest.fn(),
-    getBounds: jest.fn(() => ({ pad: jest.fn(() => ({})) })),
+    getBounds: jest.fn(() => ({
+      isValid: jest.fn(() => true),
+      pad: jest.fn(() => ({ isValid: jest.fn(() => true) })),
+    })),
   })),
 };
 
@@ -35,6 +38,9 @@ global.fetch = jest.fn();
 describe('RoutingMachine E2E Tests', () => {
   const mockMap = {
     removeLayer: jest.fn(),
+    getPane: jest.fn(() => ({})),
+    whenReady: jest.fn((cb: any) => cb()),
+    fitBounds: jest.fn(),
   };
 
   const mockSetRoutingLoading = jest.fn();
@@ -98,7 +104,10 @@ describe('RoutingMachine E2E Tests', () => {
 
     const mockPolyline = {
       addTo: jest.fn(),
-      getBounds: jest.fn(() => ({ pad: jest.fn(() => ({})) })),
+      getBounds: jest.fn(() => ({
+        isValid: jest.fn(() => true),
+        pad: jest.fn(() => ({ isValid: jest.fn(() => true) })),
+      })),
     };
 
     mockLeaflet.polyline.mockReturnValueOnce(mockPolyline);
@@ -311,7 +320,10 @@ describe('RoutingMachine E2E Tests', () => {
 
     const mockPolyline = {
       addTo: jest.fn(),
-      getBounds: jest.fn(() => ({ pad: jest.fn(() => ({})) })),
+      getBounds: jest.fn(() => ({
+        isValid: jest.fn(() => true),
+        pad: jest.fn(() => ({ isValid: jest.fn(() => true) })),
+      })),
     };
 
     mockLeaflet.polyline.mockReturnValueOnce(mockPolyline);

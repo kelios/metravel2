@@ -43,20 +43,6 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
     startXRef.current = event.clientX;
   }, []);
 
-  const handleMouseMove = useCallback((e: any) => {
-    if (!isDragging) return;
-
-    const event = e.nativeEvent as MouseEvent;
-    const deltaX = event.clientX - startXRef.current;
-
-    // Разрешаем свайп только в указанном направлении
-    if (swipeDirection === 'right' && deltaX > 0) {
-      translateX.value = deltaX;
-    } else if (swipeDirection === 'left' && deltaX < 0) {
-      translateX.value = deltaX;
-    }
-  }, [isDragging, swipeDirection, translateX]);
-
   const handleMouseUp = useCallback(() => {
     if (!isDragging) return;
 

@@ -29,6 +29,9 @@ test.describe('Auth logout', () => {
 
     // Profile screen logs out and redirects to /login
     await page.waitForURL((url) => url.pathname.includes('/login'), { timeout: 30_000 });
-    await expect(page.getByText('Вход')).toBeVisible();
+
+    // Login screen UI currently uses "Войти" button and input labels, not a "Вход" heading.
+    await expect(page.getByRole('button', { name: 'Войти' })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('textbox', { name: 'Email' })).toBeVisible({ timeout: 15_000 });
   });
 });

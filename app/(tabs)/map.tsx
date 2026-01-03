@@ -139,6 +139,16 @@ export default function MapScreen() {
     const [rightPanelTab, setRightPanelTab] = useState<'filters' | 'travels'>('filters');
     // ✅ ИСПРАВЛЕНИЕ: На мобильных панель закрыта по умолчанию, на десктопе открыта
     const [rightPanelVisible, setRightPanelVisible] = useState(!isMobile);
+    const lastIsMobileRef = useRef(isMobile);
+    useEffect(() => {
+        // На web isMobile может поменяться после первого рендера (SSR/нулевая ширина).
+        // Держим поведение стабильным:
+        // - mobile: панель закрыта по умолчанию
+        // - desktop: панель открыта по умолчанию
+        if (lastIsMobileRef.current === isMobile) return;
+        lastIsMobileRef.current = isMobile;
+        setRightPanelVisible(!isMobile);
+    }, [isMobile]);
     const filtersTabRef = useRef<any>(null);
     const panelRef = useRef<any>(null);
     const [routeHintDismissed, setRouteHintDismissed] = useState(false);

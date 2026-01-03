@@ -224,15 +224,19 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         }
 
         // Форматируем адрес
-        const addressParts: string[] = [];
+        // Nominatim возвращает `display_name` уже с объектом (например, "Эйфелева башня, ..."),
+        // поэтому сохраняем его. Фолбэк — более короткое представление.
+        const fullDisplayName = typeof result.display_name === 'string' ? result.display_name.trim() : '';
+        const fallbackParts: string[] = [];
         if (result.address) {
             const { city, town, village, state, country } = result.address;
             const locality = city || town || village;
-            if (locality) addressParts.push(locality);
-            if (state && state !== locality) addressParts.push(state);
-            if (country) addressParts.push(country);
+            if (locality) fallbackParts.push(locality);
+            if (state && state !== locality) fallbackParts.push(state);
+            if (country) fallbackParts.push(country);
         }
-        const address = addressParts.length > 0 ? addressParts.join(', ') : result.display_name;
+        const fallbackAddress = fallbackParts.length > 0 ? fallbackParts.join(', ') : '';
+        const address = fullDisplayName || fallbackAddress;
 
         // Создаем новый маркер
         const newMarker: MarkerData = {
@@ -242,7 +246,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
             address,
             country: derivedCountryId,
             categories: [],
-            image: '',
+            image: null,
         };
 
         // Добавляем маркер

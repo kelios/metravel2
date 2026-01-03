@@ -93,9 +93,10 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     booleanFields.forEach(field => {
       const value = normalized[field];
       if (typeof value !== 'boolean') {
-        if (value === 'false' || value === '0' || value === 0) {
+        const valueAny: any = value;
+        if (valueAny === 'false' || valueAny === '0' || valueAny === 0) {
           (normalized as any)[field] = false;
-        } else if (value === 'true' || value === '1' || value === 1) {
+        } else if (valueAny === 'true' || valueAny === '1' || valueAny === 1) {
           (normalized as any)[field] = true;
         } else {
           (normalized as any)[field] = Boolean(value);
@@ -152,8 +153,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     const normalizedMarkers = Array.isArray((mergedData as any).coordsMeTravel)
       ? (mergedData as any).coordsMeTravel.map((m: any) => {
           const { image, ...rest } = m ?? {};
-          // ✅ ИСПРАВЛЕНИЕ: Отправляем image только если есть валидное значение
-          // Бэкенд не принимает пустую строку "" - выдает ошибку "This field may not be blank."
+          // ✅ ИСПРАВЛЕНИЕ: Бэкенд требует ключ image, но не принимает пустую строку.
+          // Поэтому всегда отправляем `image: null`, если нет валидного значения.
           const imageValue = typeof image === 'string' ? image.trim() : '';
           const categories = Array.isArray(m?.categories)
             ? m.categories
@@ -164,12 +165,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
           const marker = {
             ...rest,
             categories,
+            image: imageValue && imageValue.length > 0 ? imageValue : null,
           };
-
-          // Добавляем image только если есть непустое значение
-          if (imageValue && imageValue.length > 0) {
-            (marker as any).image = imageValue;
-          }
 
           return marker;
         })

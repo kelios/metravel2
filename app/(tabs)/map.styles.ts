@@ -7,6 +7,7 @@ const PANEL_WIDTH_DESKTOP = METRICS.baseUnit * 48; // 384px
 const PANEL_WIDTH_TABLET = METRICS.baseUnit * 42; // 336px
 const PANEL_GAP = METRICS.spacing.m; // 16px
 const TRANSITION_MS = 180;
+const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = 56;
 
 export const getStyles = (
   isMobile: boolean,
@@ -25,7 +26,9 @@ export const getStyles = (
       flex: 1,
       ...(Platform.OS === 'web'
         ? ({
-            minHeight: '100vh',
+            minHeight: 0,
+            overflow: 'hidden',
+            paddingBottom: isMobile ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT : 0,
           } as any)
         : null),
       backgroundColor: themedColors.background,
@@ -65,7 +68,7 @@ export const getStyles = (
         right: 16,
         ...(isMobile
           ? ({
-              bottom: 16,
+              bottom: Platform.OS === 'web' ? 16 + WEB_MOBILE_FOOTER_RESERVE_HEIGHT : 16,
             } as any)
           : ({
               top: 16,
@@ -98,7 +101,7 @@ export const getStyles = (
         right: isMobile ? 0 : undefined,
         // ✅ ИСПРАВЛЕНИЕ: Убран effectiveHeaderOffset, так как хедер уже в потоке
         top: 0,
-        bottom: isMobile ? 0 : undefined,
+        bottom: isMobile ? (Platform.OS === 'web' ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT : 0) : undefined,
         width: isMobile ? '100%' : PANEL_WIDTH_DESKTOP,
         maxWidth: isMobile ? '100%' : PANEL_WIDTH_DESKTOP + 40,
         backgroundColor: themedColors.surface,
@@ -146,7 +149,7 @@ export const getStyles = (
         top: 0,
         left: 0,
         right: 0,
-        bottom: 0,
+        bottom: isMobile && Platform.OS === 'web' ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT : 0,
         backgroundColor: themedColors.overlay,
         zIndex: 999,
         ...(Platform.OS === 'web'

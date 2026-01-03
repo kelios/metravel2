@@ -1,5 +1,19 @@
-import { render, act, fireEvent, waitFor } from '@testing-library/react-native'
-import MapPageComponent from '@/components/MapPage/Map.web'
+ jest.resetModules()
+
+ jest.mock('react-native', () => {
+   const RN = jest.requireActual('react-native')
+   return {
+     ...RN,
+     Platform: {
+       ...RN.Platform,
+       OS: 'web',
+     },
+   }
+ })
+
+ const { render, act, fireEvent, waitFor } = require('@testing-library/react-native')
+
+ let MapPageComponent: any
 
 // Mock leaflet modules
 const mockLeaflet = {
@@ -30,6 +44,16 @@ Object.defineProperty(window, 'window', {
   },
   writable: true,
 })
+
+// Mock leaflet web loader so MapPageComponent does not stay stuck in "Loading map..." during tests
+jest.mock('@/src/utils/leafletWebLoader', () => ({
+  ensureLeafletAndReactLeaflet: jest.fn(() => {
+    return Promise.resolve({
+      L: mockLeaflet,
+      rl: require('react-leaflet'),
+    })
+  }),
+}))
 
 if (!window.matchMedia) {
   ;(window as any).matchMedia = jest.fn(() => ({
@@ -123,6 +147,8 @@ jest.mock('@/components/MapPage/PopupContentComponent', () => {
     return <View testID="popup-content" />
   }
 })
+
+MapPageComponent = require('@/components/MapPage/Map.web').default
 
 describe('MapPageComponent (Map.web.tsx)', () => {
   const defaultProps = {
