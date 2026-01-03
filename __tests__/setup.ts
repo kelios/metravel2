@@ -26,6 +26,29 @@ console.info = (message, ...args) => {
 
 require('@testing-library/jest-native/extend-expect')
 
+jest.mock('@gorhom/bottom-sheet', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+
+  const BottomSheet = ({ children, ...props }: any) => React.createElement(View, props, children)
+  const BottomSheetScrollView = ({ children, ...props }: any) => React.createElement(View, props, children)
+  const BottomSheetBackdrop = (_props: any) => null
+  const BottomSheetView = ({ children, ...props }: any) => React.createElement(View, props, children)
+  const BottomSheetModal = ({ children, ...props }: any) => React.createElement(View, props, children)
+  const BottomSheetModalProvider = ({ children }: any) => React.createElement(React.Fragment, null, children)
+
+  return {
+    __esModule: true,
+    default: BottomSheet,
+    BottomSheet,
+    BottomSheetScrollView,
+    BottomSheetBackdrop,
+    BottomSheetView,
+    BottomSheetModal,
+    BottomSheetModalProvider,
+  }
+})
+
 jest.mock('@react-native-community/netinfo', () => {
   const api = {
     addEventListener: jest.fn(() => jest.fn()),

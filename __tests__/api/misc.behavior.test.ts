@@ -93,17 +93,17 @@ describe('api/misc', () => {
     await expect(saveFormData(baseForm)).rejects.toThrow('Пользователь не авторизован')
 
     mockGetSecureItem.mockResolvedValue('token')
-    mockApiClientPut.mockRejectedValue(new Error('Ошибка при создании записи на сервере'))
+    mockApiClientRequest.mockRejectedValue(new Error('Ошибка при создании записи на сервере'))
     await expect(saveFormData(baseForm)).rejects.toThrow('Ошибка при создании записи на сервере')
   })
 
   it('saveFormData returns parsed response on success', async () => {
     mockGetSecureItem.mockResolvedValue('token')
-    mockApiClientPut.mockResolvedValue({ ...baseForm, id: 2 })
+    mockApiClientRequest.mockResolvedValue({ ...baseForm, id: 2 })
 
     const result = await saveFormData(baseForm)
     expect(result.id).toBe(2)
-    expect(mockApiClientPut).toHaveBeenCalled()
+    expect(mockApiClientRequest).toHaveBeenCalled()
   })
 
   it('uploadImage validates file and requires token', async () => {

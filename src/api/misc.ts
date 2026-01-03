@@ -57,7 +57,7 @@ const makeUniqueSlug = (value?: string): string => {
   return base ? `${base}-${suffix}` : `travel-${suffix}`;
 };
 
-export const saveFormData = async (data: TravelFormData): Promise<TravelFormData> => {
+export const saveFormData = async (data: TravelFormData, signal?: AbortSignal): Promise<TravelFormData> => {
   try {
     const token = await getSecureItem('userToken');
     if (!token) {
@@ -116,7 +116,15 @@ export const saveFormData = async (data: TravelFormData): Promise<TravelFormData
       payload.slug = existing || makeUniqueSlug(payload.name || 'travel');
     }
 
-    return await apiClient.put<TravelFormData>('/travels/upsert/', payload, LONG_TIMEOUT);
+    return await apiClient.request<TravelFormData>(
+      '/travels/upsert/',
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+        signal,
+      },
+      LONG_TIMEOUT
+    );
   } catch (error) {
     if (__DEV__) {
       console.error('Ошибка при создании формы:', error);

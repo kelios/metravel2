@@ -22,7 +22,7 @@ const mockLeaflet = {
     return layer
   }),
   latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
-  latLngBounds: jest.fn((coords: any[]) => ({ coords })),
+  latLngBounds: jest.fn((coords: any[]) => ({ coords, isValid: jest.fn(() => true) })),
   divIcon: jest.fn((icon: any) => icon),
   marker: jest.fn(() => ({ addTo: jest.fn() })),
 }

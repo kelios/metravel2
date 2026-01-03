@@ -42,6 +42,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const initialFormData = getEmptyFormData(isNew ? null : String(travelId));
   const formDataRef = useRef<TravelFormData>(initialFormData);
   const saveAbortControllerRef = useRef<AbortController | null>(null); // ✅ FIX: Race condition защита
+  const manualSavePromiseRef = useRef<Promise<TravelFormData | void> | null>(null);
   const mountedRef = useRef(true); // ✅ FIX: Защита от memory leak
   const initialLoadKeyRef = useRef<string | null>(null);
 
@@ -192,14 +193,27 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         coordsMeTravel: normalizedMarkers,
       });
 
-      const payload = ensureRequiredDraftFields(cleanedData as TravelFormData);
+      // Не отправляем на сервер неформатные поля (например, вложенный `user` из ответа API),
+      // иначе DRF сериализатор может начать валидировать profile/user поля (first_name и т.п.).
+      const allowedKeys = new Set<string>([
+        ...Object.keys(baseFormData),
+        'slug',
+        'travel_image_thumb_url',
+        'travel_image_thumb_small_url',
+      ]);
+
+      const filteredCleanedData = Object.fromEntries(
+        Object.entries(cleanedData).filter(([key]) => allowedKeys.has(key))
+      ) as Partial<TravelFormData>;
+
+      const payload = ensureRequiredDraftFields(filteredCleanedData as unknown as TravelFormData);
 
       // ✅ FIX: Проверяем, что компонент всё ещё смонтирован перед сохранением
       if (!mountedRef.current) {
         throw new Error('Component unmounted');
       }
 
-      const result = await saveFormData(payload);
+      const result = await saveFormData(payload, abortController.signal);
 
       // ✅ FIX: Проверяем, что запрос не был отменён
       if (abortController.signal.aborted) {
@@ -208,9 +222,11 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
       return result;
     } catch (error) {
-      // Если ошибка из-за отмены, не пробрасываем её дальше
-      if ((error as Error).message === 'Request aborted') {
-        throw error; // Тихо пробрасываем для обработки выше
+      const errAny: any = error;
+      const isAbort = abortController.signal.aborted || errAny?.name === 'AbortError';
+      if (isAbort) {
+        // Нормализуем отмену, чтобы выше по цепочке можно было её корректно игнорировать.
+        throw new Error('Request aborted');
       }
       throw error;
     } finally {
@@ -264,6 +280,11 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       // ✅ FIX: Проверяем монтирование перед показом уведомления
       if (!mountedRef.current) return;
 
+      // Отмена запроса — ожидаемое поведение (например, при уходе со страницы).
+      if (error.message === 'Request aborted') {
+        return;
+      }
+
       // ✅ FIX: Подробное логирование для мониторинга
       const errorDetails = {
         message: error.message,
@@ -301,26 +322,39 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   });
 
   const handleManualSave = useCallback(async (dataOverride?: TravelFormData) => {
-    setIsManualSaveInFlight(true);
-    try {
-      // Отменяем отложенный автосейв, чтобы не отправить старые данные (publish=false) после ручного сохранения.
-      autosave?.cancelPending?.();
-      const toSave = (dataOverride ?? (formState.data as TravelFormData)) as TravelFormData;
-      // Если пришли извне готовые данные — сохраняем напрямую, минуя отложенный стейт.
-      const savedData = await cleanAndSave(toSave);
-      const normalizedSavedData = normalizeDraftPlaceholders(savedData);
-      applySavedData(normalizedSavedData);
-      autosave?.updateBaseline?.(normalizedSavedData);
-      autosave?.cancelPending?.();
-      showToast('Сохранено');
-      return savedData;
-    } catch (error) {
-      showToast('Ошибка сохранения', 'error');
-      console.error('Manual save error:', error);
-      return;
-    } finally {
-      setIsManualSaveInFlight(false);
+    if (manualSavePromiseRef.current) {
+      return manualSavePromiseRef.current;
     }
+
+    setIsManualSaveInFlight(true);
+    const promise = (async () => {
+      try {
+        // Отменяем отложенный автосейв, чтобы не отправить старые данные (publish=false) после ручного сохранения.
+        autosave?.cancelPending?.();
+        const toSave = (dataOverride ?? (formState.data as TravelFormData)) as TravelFormData;
+        // Если пришли извне готовые данные — сохраняем напрямую, минуя отложенный стейт.
+        const savedData = await cleanAndSave(toSave);
+        const normalizedSavedData = normalizeDraftPlaceholders(savedData);
+        applySavedData(normalizedSavedData);
+        autosave?.updateBaseline?.(normalizedSavedData);
+        autosave?.cancelPending?.();
+        showToast('Сохранено');
+        return savedData;
+      } catch (error) {
+        if ((error as Error)?.message === 'Request aborted') {
+          return;
+        }
+        showToast('Ошибка сохранения', 'error');
+        console.error('Manual save error:', error);
+        return;
+      } finally {
+        manualSavePromiseRef.current = null;
+        setIsManualSaveInFlight(false);
+      }
+    })();
+
+    manualSavePromiseRef.current = promise;
+    return promise;
   }, [applySavedData, autosave, cleanAndSave, formState.data, normalizeDraftPlaceholders, showToast]);
 
   const loadTravelData = useCallback(
@@ -390,13 +424,12 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   // ✅ FIX: Cleanup на размонтирование
   useEffect(() => {
     mountedRef.current = true;
-    const abortController = saveAbortControllerRef.current;
 
     return () => {
       mountedRef.current = false;
       // Отменяем все pending запросы
-      if (abortController) {
-        abortController.abort();
+      if (saveAbortControllerRef.current) {
+        saveAbortControllerRef.current.abort();
       }
     };
   }, []);

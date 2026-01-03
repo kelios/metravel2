@@ -31,21 +31,17 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
   const translateX = useSharedValue(0);
   const [isDragging, setIsDragging] = useState(false);
   const startXRef = useRef(0);
+  const activePointerIdRef = useRef<number | null>(null);
 
   const closePanel = useCallback(() => {
     onClose();
   }, [onClose]);
 
-  const handleMouseDown = useCallback((e: any) => {
-    const event = e.nativeEvent as MouseEvent;
-    setIsDragging(true);
-    startXRef.current = event.clientX;
-  }, []);
-
-  const handleMouseUp = useCallback(() => {
+  const finalizeDrag = useCallback(() => {
     if (!isDragging) return;
 
     setIsDragging(false);
+    activePointerIdRef.current = null;
 
     const distance = Math.abs(translateX.value);
 
@@ -69,34 +65,46 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
     }
   }, [isDragging, threshold, swipeDirection, translateX, closePanel]);
 
-  // Обработчик касаний для мобильных устройств
-  const handleTouchStart = useCallback((e: any) => {
-    const event = e.nativeEvent as TouchEvent;
-    if (event.touches.length === 1) {
-      setIsDragging(true);
-      startXRef.current = event.touches[0].clientX;
+  const handlePointerDown = useCallback((e: any) => {
+    const event = e.nativeEvent as PointerEvent;
+    if (!event) return;
+    if (activePointerIdRef.current != null) return;
+    if ((event as any).isPrimary === false) return;
+    activePointerIdRef.current = event.pointerId;
+    setIsDragging(true);
+    startXRef.current = event.clientX;
+    try {
+      (event.target as any)?.setPointerCapture?.(event.pointerId);
+    } catch {
+      // noop
     }
   }, []);
 
-  const handleTouchMove = useCallback((e: any) => {
+  const handlePointerMove = useCallback((e: any) => {
     if (!isDragging) return;
+    const event = e.nativeEvent as PointerEvent;
+    if (!event) return;
+    if (activePointerIdRef.current !== event.pointerId) return;
 
-    const event = e.nativeEvent as TouchEvent;
-    if (event.touches.length === 1) {
-      const deltaX = event.touches[0].clientX - startXRef.current;
+    const deltaX = event.clientX - startXRef.current;
 
-      // Разрешаем свайп только в указанном направлении
-      if (swipeDirection === 'right' && deltaX > 0) {
-        translateX.value = deltaX;
-      } else if (swipeDirection === 'left' && deltaX < 0) {
-        translateX.value = deltaX;
-      }
+    // Разрешаем свайп только в указанном направлении
+    if (swipeDirection === 'right' && deltaX > 0) {
+      translateX.value = deltaX;
+    } else if (swipeDirection === 'left' && deltaX < 0) {
+      translateX.value = deltaX;
     }
   }, [isDragging, swipeDirection, translateX]);
 
-  const handleTouchEnd = useCallback(() => {
-    handleMouseUp();
-  }, [handleMouseUp]);
+  const handlePointerUp = useCallback((e: any) => {
+    const event = e.nativeEvent as PointerEvent;
+    if (event && activePointerIdRef.current != null && activePointerIdRef.current !== event.pointerId) return;
+    finalizeDrag();
+  }, [finalizeDrag]);
+
+  const handlePointerCancel = useCallback(() => {
+    finalizeDrag();
+  }, [finalizeDrag]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -117,7 +125,9 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
   // Добавляем глобальные обработчики для отслеживания движения за пределами компонента
   React.useEffect(() => {
     if (isDragging) {
-      const handleGlobalMouseMove = (e: MouseEvent) => {
+      const handleGlobalPointerMove = (e: PointerEvent) => {
+        if (activePointerIdRef.current == null) return;
+        if (e.pointerId !== activePointerIdRef.current) return;
         const deltaX = e.clientX - startXRef.current;
 
         if (swipeDirection === 'right' && deltaX > 0) {
@@ -127,29 +137,32 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
         }
       };
 
-      const handleGlobalMouseUp = () => {
-        handleMouseUp();
+      const handleGlobalPointerUp = (e: PointerEvent) => {
+        if (activePointerIdRef.current == null) return;
+        if (e.pointerId !== activePointerIdRef.current) return;
+        finalizeDrag();
       };
 
-      window.addEventListener('mousemove', handleGlobalMouseMove);
-      window.addEventListener('mouseup', handleGlobalMouseUp);
+      window.addEventListener('pointermove', handleGlobalPointerMove);
+      window.addEventListener('pointerup', handleGlobalPointerUp);
+      window.addEventListener('pointercancel', handleGlobalPointerUp);
 
       return () => {
-        window.removeEventListener('mousemove', handleGlobalMouseMove);
-        window.removeEventListener('mouseup', handleGlobalMouseUp);
+        window.removeEventListener('pointermove', handleGlobalPointerMove);
+        window.removeEventListener('pointerup', handleGlobalPointerUp);
+        window.removeEventListener('pointercancel', handleGlobalPointerUp);
       };
     }
-  }, [isDragging, swipeDirection, translateX, handleMouseUp]);
+  }, [isDragging, swipeDirection, translateX, finalizeDrag]);
 
   return (
     <Animated.View style={[styles.container, style, animatedStyle]}>
       <Pressable
         style={styles.pressableContent}
-        onPressIn={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
       >
         {children}
       </Pressable>

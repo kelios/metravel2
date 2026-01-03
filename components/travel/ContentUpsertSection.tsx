@@ -398,7 +398,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                             val => handleChange('description', val),
                             getError('description'),
                             true,
-                            'Опишите, для кого этот маршрут, что в нём главное и чего ожидать. Минимум 50 символов.'
+                            undefined
                         )}
                     </View>}
 

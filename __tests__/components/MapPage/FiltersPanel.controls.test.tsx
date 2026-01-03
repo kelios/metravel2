@@ -169,7 +169,7 @@ describe('FiltersPanel Controls', () => {
   describe('Transport Mode Controls', () => {
     it('should call setTransportMode when transport button clicked and route is ready', () => {
       const setTransportMode = jest.fn();
-      const { getByLabelText } = render(
+      const { getByText } = render(
         <FiltersPanel
           {...defaultProps}
           mode="route"
@@ -183,20 +183,22 @@ describe('FiltersPanel Controls', () => {
         />
       );
 
-      const bikeButton = getByLabelText(/Выбрать транспорт: Велосипед/i);
-      fireEvent.press(bikeButton);
+      const bikeTabText: any = getByText('Велосипед');
+      const bikePressable = bikeTabText.parent;
+      fireEvent.press(bikePressable);
 
       expect(setTransportMode).toHaveBeenCalledWith('bike');
     });
 
     it('should NOT call setTransportMode when no route points', () => {
       const setTransportMode = jest.fn();
-      const { getByLabelText } = render(
+      const { getByText } = render(
         <FiltersPanel {...defaultProps} mode="route" setTransportMode={setTransportMode} />
       );
 
-      const carButton = getByLabelText(/Выбрать транспорт: Авто/i);
-      fireEvent.press(carButton);
+      const carTabText: any = getByText('Авто');
+      const carPressable = carTabText.parent;
+      fireEvent.press(carPressable);
 
       expect(setTransportMode).not.toHaveBeenCalled();
     });

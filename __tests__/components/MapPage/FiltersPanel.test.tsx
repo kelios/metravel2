@@ -207,8 +207,11 @@ describe('FiltersPanel', () => {
       mode: 'route' as const,
     };
     const { getByText, rerender } = renderWithTheme(<FiltersPanel {...propsRouteMode} />);
-    const carTab = getByText('Авто');
-    const carTabPressable = carTab.parent;
+    const carTab = getByText('Авто') as any;
+    let carTabPressable: any = carTab;
+    while (carTabPressable && carTabPressable.props?.accessibilityRole !== 'button') {
+      carTabPressable = carTabPressable.parent;
+    }
     expect(carTabPressable?.props.accessibilityState?.disabled).toBe(true);
 
     rerender(
@@ -223,7 +226,10 @@ describe('FiltersPanel', () => {
       </ThemeProvider>
     );
     const carTabEnabled = getByText('Авто');
-    const carTabEnabledPressable = carTabEnabled.parent;
+    let carTabEnabledPressable: any = carTabEnabled as any;
+    while (carTabEnabledPressable && carTabEnabledPressable.props?.accessibilityRole !== 'button') {
+      carTabEnabledPressable = carTabEnabledPressable.parent;
+    }
     expect(carTabEnabledPressable?.props.accessibilityState?.disabled).toBe(false);
   });
 

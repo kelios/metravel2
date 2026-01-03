@@ -8,7 +8,7 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
     const resolvedSrc = src || source?.uri || '';
     return React.createElement('img', {
       src: resolvedSrc,
-      alt: alt || '',
+      alt: alt || 'Фото',
       style,
     });
   };
@@ -39,6 +39,7 @@ beforeAll(() => {
     Icon: class Icon {},
     latLngBounds: jest.fn(() => ({
       extend: jest.fn(),
+      isValid: jest.fn(() => true),
     })),
   };
 });

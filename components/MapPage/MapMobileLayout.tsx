@@ -137,7 +137,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       <MapFAB
         mainAction={{
           icon: 'menu',
-          label: 'Меню',
+          label: 'Показать панель',
           onPress: () => bottomSheetRef.current?.snapToHalf(),
         }}
         actions={fabActions}

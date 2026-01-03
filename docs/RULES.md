@@ -1,5 +1,11 @@
 # Rules
 
+## Project scope
+
+- Current project is `metravel2`.
+- The app codebase root is `metravel2/` (the folder that contains `package.json`).
+- Treat `docs/` (this folder) as the source of truth for development rules.
+
 ## Development workflow
 
 - Before starting any change, review relevant files in `docs/`.
@@ -7,7 +13,7 @@
 
 ```bash
 npm run lint
-npm run test
+npm run test:run
 ```
 
 ## UI rules

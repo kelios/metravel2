@@ -225,5 +225,5 @@ export interface MarkerData {
     country: number | null;
     address: string;
     categories: number[];
-    image: string;
+    image: string | null;
 }

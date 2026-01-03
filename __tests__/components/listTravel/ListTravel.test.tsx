@@ -36,7 +36,7 @@ jest.mock('@/components/listTravel/RecommendationsTabs', () => ({
 jest.mock('@/components/KeyboardShortcutsHelp', () => ({
   __esModule: true,
   default: () => null,
-}), { virtual: true });
+}));
 
 jest.mock('@/hooks/useKeyboardShortcuts', () => ({
   __esModule: true,

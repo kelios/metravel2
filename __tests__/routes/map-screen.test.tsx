@@ -1,8 +1,11 @@
 import { render, waitFor, fireEvent } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Platform } from 'react-native'
 import MapScreen from '@/app/(tabs)/map'
 
 let mockResponsiveState = { isPhone: true, isLargePhone: false, width: 390 }
+
+const originalPlatformOS = Platform.OS
 
 jest.mock('@/hooks/usePanelController', () => {
   const React = require('react')
@@ -176,9 +179,14 @@ const renderWithClient = () => {
 
 describe('MapScreen (map tab)', () => {
   beforeEach(() => {
+    ;(Platform as any).OS = 'web'
     mockFetchTravelsForMap.mockReset();
     mockFetchTravelsForMap.mockResolvedValue(defaultTravelsForMapResponse);
   });
+
+  afterAll(() => {
+    ;(Platform as any).OS = originalPlatformOS
+  })
 
   it('renders map placeholder and filters panel', async () => {
     const { getByText, getByTestId, getByLabelText } = renderWithClient()
