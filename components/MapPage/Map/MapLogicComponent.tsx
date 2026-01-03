@@ -36,6 +36,7 @@ interface MapLogicProps {
 const strToLatLng = (s: string): [number, number] | null => {
   const parsed = CoordinateConverter.fromLooseString(s);
   if (!parsed) return null;
+  if (!CoordinateConverter.isValid(parsed)) return null;
   return [parsed.lng, parsed.lat];
 };
 
@@ -54,9 +55,9 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   hasInitializedRef,
   lastModeRef,
   lastAutoFitKeyRef,
-  _leafletBaseLayerRef,
-  _leafletOverlayLayersRef,
-  _leafletControlRef,
+  leafletBaseLayerRef: _leafletBaseLayerRef,
+  leafletOverlayLayersRef: _leafletOverlayLayersRef,
+  leafletControlRef: _leafletControlRef,
   useMap,
   useMapEvents,
 }) => {

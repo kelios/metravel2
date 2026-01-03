@@ -89,7 +89,7 @@ export function useMapApi({
         try {
           const coords = travelData
             .map((p) => CoordinateConverter.fromLooseString(p.coord))
-            .filter(Boolean) as LatLng[];
+            .filter((c): c is LatLng => c != null && CoordinateConverter.isValid(c));
           if (coords.length === 0) return;
 
           const bounds = (L as any).latLngBounds(

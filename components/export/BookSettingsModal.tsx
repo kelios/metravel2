@@ -168,6 +168,7 @@ export default function BookSettingsModal({
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
 
   // ✅ УЛУЧШЕНИЕ: Focus trap для доступности
   useFocusTrap(dialogRef, {
@@ -219,12 +220,18 @@ export default function BookSettingsModal({
 
   // ✅ УЛУЧШЕНИЕ: Обработчик закрытия с предупреждением о несохраненных изменениях
   const handleClose = useCallback(() => {
-    if (hasUnsavedChanges && Platform.OS === 'web') {
-      const confirmed = window.confirm('У вас есть несохраненные изменения. Вы уверены, что хотите закрыть настройки?');
-      if (!confirmed) return;
+    if (hasUnsavedChanges) {
+      setShowUnsavedWarning(true);
+      return;
     }
     onClose();
   }, [hasUnsavedChanges, onClose]);
+
+  const handleConfirmClose = useCallback(() => {
+    setShowUnsavedWarning(false);
+    setHasUnsavedChanges(false);
+    onClose();
+  }, [onClose]);
 
   // ✅ УЛУЧШЕНИЕ: Обработка клавиши Escape
   useEffect(() => {
@@ -311,9 +318,7 @@ export default function BookSettingsModal({
 
   const handleSave = useCallback(async () => {
     if (validationErrors.length > 0) {
-      if (Platform.OS === 'web') {
-        alert(`Пожалуйста, исправьте ошибки:\n\n${validationErrors.join('\n')}`);
-      }
+      // Ошибки уже показаны в UI, просто не даем сохранить
       return;
     }
 
@@ -333,9 +338,7 @@ export default function BookSettingsModal({
       onClose();
     } catch (error) {
       console.error('Failed to save PDF settings:', error);
-      if (Platform.OS === 'web') {
-        alert('Произошла ошибка при сохранении настроек. Пожалуйста, попробуйте снова.');
-      }
+      // TODO: Показать toast уведомление об ошибке
     } finally {
       setIsSaving(false);
     }
@@ -345,9 +348,7 @@ export default function BookSettingsModal({
     if (!onPreview) return;
 
     if (validationErrors.length > 0) {
-      if (Platform.OS === 'web') {
-        alert(`Пожалуйста, исправьте ошибки перед просмотром:\n\n${validationErrors.join('\n')}`);
-      }
+      // Ошибки уже показаны в UI, просто не даем создать превью
       return;
     }
 
@@ -357,9 +358,7 @@ export default function BookSettingsModal({
       onClose();
     } catch (error) {
       console.error('Failed to generate preview:', error);
-      if (Platform.OS === 'web') {
-        alert('Произошла ошибка при создании превью. Пожалуйста, попробуйте снова.');
-      }
+      // TODO: Показать toast уведомление об ошибке
     } finally {
       setIsSaving(false);
     }
