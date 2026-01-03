@@ -486,14 +486,18 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                           }}
                           disabled={disabledTransport}
                           accessibilityRole="button"
-                          accessibilityLabel={`Выбрать транспорт: ${label}`}
-                          accessibilityState={{ selected: active, disabled: disabledTransport }}
+                          accessibilityState={{ disabled: disabledTransport }}
                         >
                           <Icon
                             name={icon}
                             size={18}
-                            color={active ? colors.textOnPrimary : colors.textMuted}
-                            style={styles.transportIcon}
+                            color={
+                              disabledTransport
+                                ? colors.textMuted
+                                : active
+                                  ? colors.textOnPrimary
+                                  : colors.text
+                            }
                           />
                           <Text
                             style={[

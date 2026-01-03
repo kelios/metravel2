@@ -309,6 +309,13 @@ export const useRouting = (
         return totalDistance
     }, [])
 
+    const supportsPublicOsrmProfile = useMemo(() => {
+        // Public OSRM instance reliably supports driving only.
+        // We require ORS for bike/foot to avoid confusing no-op rebuilds.
+        if (transportMode === 'car') return true
+        return Boolean(ORS_API_KEY)
+    }, [ORS_API_KEY, transportMode])
+
     useEffect(() => {
         // Если точек меньше двух — не строим маршрут
         if (!hasTwoPoints) {
@@ -329,6 +336,17 @@ export const useRouting = (
 
     useEffect(() => {
         if (!hasTwoPoints || !routeKey) return
+
+        if (!supportsPublicOsrmProfile) {
+            const directDistance = calculateDirectDistance(routePointsRef.current)
+            setState({
+                loading: false,
+                error: 'Для пешего/веломаршрута нужен ключ OpenRouteService (EXPO_PUBLIC_ORS_API_KEY)',
+                distance: directDistance,
+                coords: routePointsRef.current,
+            })
+            return
+        }
 
         // Сбрасываем флаг только при новом routeKey
         if (lastRouteKeyRef.current !== routeKey) {

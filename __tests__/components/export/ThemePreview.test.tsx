@@ -6,6 +6,15 @@ import { render, fireEvent } from '@testing-library/react-native';
 import ThemePreview from '@/components/export/ThemePreview';
 import type { PdfThemeName } from '@/components/export/ThemePreview';
 
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  return {
+    __esModule: true,
+    MaterialIcons: ({ name }: any) => React.createElement(Text, null, name),
+  };
+});
+
 describe('ThemePreview', () => {
   const mockOnThemeSelect = jest.fn();
   const defaultProps = {
@@ -47,8 +56,8 @@ describe('ThemePreview', () => {
     it('should display selected theme indicator', () => {
       const { getAllByText } = render(<ThemePreview {...defaultProps} />);
 
-      const checkmarks = getAllByText('✓');
-      expect(checkmarks.length).toBeGreaterThan(0);
+      const checkIcons = getAllByText('check');
+      expect(checkIcons.length).toBeGreaterThan(0);
     });
   });
 

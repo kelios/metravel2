@@ -208,7 +208,8 @@ describe('FiltersPanel', () => {
     };
     const { getByText, rerender } = renderWithTheme(<FiltersPanel {...propsRouteMode} />);
     const carTab = getByText('Авто');
-    expect(carTab.props.accessibilityState?.disabled).toBe(true);
+    const carTabPressable = carTab.parent;
+    expect(carTabPressable?.props.accessibilityState?.disabled).toBe(true);
 
     rerender(
       <ThemeProvider>
@@ -222,7 +223,8 @@ describe('FiltersPanel', () => {
       </ThemeProvider>
     );
     const carTabEnabled = getByText('Авто');
-    expect(carTabEnabled.props.accessibilityState?.disabled).toBe(false);
+    const carTabEnabledPressable = carTabEnabled.parent;
+    expect(carTabEnabledPressable?.props.accessibilityState?.disabled).toBe(false);
   });
 
   it('calls mapUiApi.zoomIn when Zoom + pressed', () => {

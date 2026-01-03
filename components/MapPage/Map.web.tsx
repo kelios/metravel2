@@ -23,7 +23,7 @@ type ReactLeafletNS = typeof import('react-leaflet');
 
 const LEAFLET_MAP_CONTAINER_ID_PREFIX = 'metravel-leaflet-map';
 
-const ORS_API_KEY = process.env.EXPO_PUBLIC_ORS_API_KEY || '';
+const ORS_API_KEY = process.env.EXPO_PUBLIC_ORS_API_KEY || undefined;
 
 type Point = {
   id?: number;
