@@ -7,12 +7,13 @@ import LocationSearchInput from '@/components/travel/LocationSearchInput';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
-import { MarkerData } from '@/src/types/types';
+import { MarkerData, TravelFormData } from '@/src/types/types';
 import MultiSelectField from '@/components/MultiSelectField';
 import { matchCountryId, buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
+import type { TravelFilters } from '@/hooks/useTravelFilters';
 
 const WebMapComponent = Platform.OS === 'web'
     ? React.lazy(() => import('@/components/travel/WebMapComponent'))
@@ -23,15 +24,15 @@ interface TravelWizardStepRouteProps {
     totalSteps: number;
     markers: MarkerData[];
     setMarkers: (data: MarkerData[]) => void;
-    categoryTravelAddress: any[];
-    countries: any[];
+    categoryTravelAddress: TravelFilters['categoryTravelAddress'];
+    countries: TravelFilters['countries'];
     travelId?: string | null;
     selectedCountryIds: string[];
     onCountrySelect: (countryId: string) => void;
     onCountryDeselect: (countryId: string) => void;
     onBack: () => void;
     onNext: () => void;
-    onManualSave?: () => Promise<any>;
+    onManualSave?: () => Promise<TravelFormData | void>;
     isFiltersLoading?: boolean;
     stepMeta?: {
         title?: string;
@@ -46,8 +47,6 @@ interface TravelWizardStepRouteProps {
     onAnchorHandled?: () => void;
     onStepSelect?: (step: number) => void;
 }
-
-const MultiSelectFieldAny: any = MultiSelectField;
 
 const MAP_COACHMARK_STORAGE_KEY = 'travelWizardRouteMapCoachmarkDismissed';
 
@@ -187,9 +186,12 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         }
     }, [hasAtLeastOnePoint]);
 
-    const handleMarkersChange = (updated: MarkerData[]) => {
-        setMarkers(updated);
-    };
+    const handleMarkersChange = useCallback(
+        (updated: MarkerData[]) => {
+            setMarkers(updated);
+        },
+        [setMarkers],
+    );
 
     // ✅ ФАЗА 2: Handler для выбора места из поиска
     const handleLocationSelect = useCallback(async (result: any) => {
@@ -252,7 +254,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         }
     }, [markers, setMarkers, countries, selectedCountryIds, onCountrySelect]);
 
-    const dismissCoachmark = () => {
+    const dismissCoachmark = useCallback(() => {
         setIsCoachmarkVisible(false);
         if (typeof window === 'undefined') return;
         try {
@@ -260,9 +262,9 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         } catch {
             // ignore
         }
-    };
+    }, []);
 
-    const reverseGeocode = async (lat: number, lng: number) => {
+    const reverseGeocode = useCallback(async (lat: number, lng: number) => {
         // Use a CORS-friendly provider first, then fall back to Nominatim
         try {
             const primary = await fetch(
@@ -284,9 +286,9 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         } catch {
             return null;
         }
-    };
+    }, []);
 
-    const handleAddManualPoint = async () => {
+    const handleAddManualPoint = useCallback(async () => {
         const parsedFromPair = parseCoordsPair(manualCoords);
         const lat = parsedFromPair?.lat ?? Number(manualLat);
         const lng = parsedFromPair?.lng ?? Number(manualLng);
@@ -345,11 +347,11 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         setManualLat('');
         setManualLng('');
         setIsManualPointVisible(false);
-    };
+    }, [countries, handleMarkersChange, manualCoords, manualLat, manualLng, parseCoordsPair, reverseGeocode, selectedCountryIds, onCountrySelect, markers]);
 
-    const handleCountriesFilterChange = (values: string[]) => {
+    const handleCountriesFilterChange = useCallback((value: string | number | Array<string | number>) => {
         const prev = selectedCountryIds || [];
-        const next = values || [];
+        const next = (Array.isArray(value) ? value : [value]).map(String).filter(Boolean);
 
         const added = next.filter(id => !prev.includes(id));
         const removed = prev.filter(id => !next.includes(id));
@@ -370,7 +372,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         }
 
         removed.forEach(onCountryDeselect);
-    };
+    }, [markers, onCountryDeselect, onCountrySelect, selectedCountryIds, setMarkers]);
 
     return (
         <SafeAreaView style={styles.safeContainer}>
@@ -410,6 +412,8 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                     style={styles.content}
                     contentContainerStyle={[styles.contentContainer, { paddingBottom: contentPaddingBottom }]}
                     keyboardShouldPersistTaps="handled"
+                    testID="travel-wizard.step-route.scroll"
+                    accessibilityLabel="travel-wizard.step-route.scroll"
                 >
                     <View style={styles.contentInner}>
                         <View style={styles.card}>
@@ -424,14 +428,24 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                             </View>
 
                             {isCoachmarkVisible && !hasAtLeastOnePoint && (
-                                <View style={styles.coachmark}>
+                                <View
+                                    style={styles.coachmark}
+                                    testID="travel-wizard.step-route.coachmark"
+                                    accessibilityLabel="travel-wizard.step-route.coachmark"
+                                >
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.coachmarkTitle}>Как добавить первую точку</Text>
                                         <Text style={styles.coachmarkBody}>
                                             Кликните по карте — точка добавится автоматически.
                                         </Text>
                                     </View>
-                                    <Button mode="text" onPress={dismissCoachmark} compact>
+                                    <Button
+                                        mode="text"
+                                        onPress={dismissCoachmark}
+                                        compact
+                                        testID="travel-wizard.step-route.coachmark.dismiss"
+                                        accessibilityLabel="travel-wizard.step-route.coachmark.dismiss"
+                                    >
                                         Понятно
                                     </Button>
                                 </View>
@@ -448,13 +462,19 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                     mode={isManualPointVisible ? 'contained' : 'outlined'}
                                     onPress={() => setIsManualPointVisible(v => !v)}
                                     compact
+                                    testID="travel-wizard.step-route.manual.toggle"
+                                    accessibilityLabel="travel-wizard.step-route.manual.toggle"
                                 >
                                     Добавить точку вручную
                                 </Button>
                             </View>
 
                             {isManualPointVisible && (
-                                <View style={styles.manualPointCard}>
+                                <View
+                                    style={styles.manualPointCard}
+                                    testID="travel-wizard.step-route.manual.panel"
+                                    accessibilityLabel="travel-wizard.step-route.manual.panel"
+                                >
                                     <View style={styles.manualCoordsWrapper}>
                                         <Text style={styles.manualPointLabel}>Координаты (lat, lng)</Text>
                                         <TextInput
@@ -470,6 +490,8 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                             placeholder="49.609645, 18.845693"
                                             style={styles.manualPointInput}
                                             inputMode="text"
+                                            testID="travel-wizard.step-route.manual.coords"
+                                            accessibilityLabel="travel-wizard.step-route.manual.coords"
                                         />
                                     </View>
 
@@ -482,6 +504,8 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                                 placeholder="например 53.90"
                                                 style={styles.manualPointInput}
                                                 inputMode="decimal"
+                                                testID="travel-wizard.step-route.manual.lat"
+                                                accessibilityLabel="travel-wizard.step-route.manual.lat"
                                             />
                                         </View>
                                         <View style={styles.manualPointInputWrapper}>
@@ -492,14 +516,28 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                                 placeholder="например 27.56"
                                                 style={styles.manualPointInput}
                                                 inputMode="decimal"
+                                                testID="travel-wizard.step-route.manual.lng"
+                                                accessibilityLabel="travel-wizard.step-route.manual.lng"
                                             />
                                         </View>
                                     </View>
                                     <View style={styles.manualPointActionsRow}>
-                                        <Button mode="contained" onPress={handleAddManualPoint} compact>
+                                        <Button
+                                            mode="contained"
+                                            onPress={handleAddManualPoint}
+                                            compact
+                                            testID="travel-wizard.step-route.manual.add"
+                                            accessibilityLabel="travel-wizard.step-route.manual.add"
+                                        >
                                             Добавить
                                         </Button>
-                                        <Button mode="text" onPress={() => setIsManualPointVisible(false)} compact>
+                                        <Button
+                                            mode="text"
+                                            onPress={() => setIsManualPointVisible(false)}
+                                            compact
+                                            testID="travel-wizard.step-route.manual.cancel"
+                                            accessibilityLabel="travel-wizard.step-route.manual.cancel"
+                                        >
                                             Отмена
                                         </Button>
                                     </View>
@@ -515,13 +553,15 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                             <View style={styles.filtersSkeletonInput} />
                                         </View>
                                     ) : (
-                                        <MultiSelectFieldAny
+                                        <MultiSelectField
                                             label="Страны маршрута"
                                             items={countries}
                                             value={selectedCountryIds}
                                             onChange={handleCountriesFilterChange}
                                             labelField="title_ru"
                                             valueField="country_id"
+                                            testID="travel-wizard.step-route.countries"
+                                            accessibilityLabel="travel-wizard.step-route.countries"
                                         />
                                     )}
                                 </View>

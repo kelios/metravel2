@@ -1,13 +1,5 @@
 // app/map/index.tsx
-import React, {
-    Suspense,
-    lazy,
-    useEffect,
-    useRef,
-    useState,
-    useCallback,
-    useMemo,
-} from 'react';
+import React, { Suspense, lazy, useMemo } from 'react';
 import {
     SafeAreaView,
     View,
@@ -16,783 +8,139 @@ import {
     Platform,
     Pressable,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import IconMaterial from 'react-native-vector-icons/MaterialIcons';
-import * as Location from 'expo-location';
-import { usePathname } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import FiltersPanel from '@/components/MapPage/FiltersPanel';
 import TravelListPanel from '@/components/MapPage/TravelListPanel';
 import SwipeablePanel from '@/components/MapPage/SwipeablePanel';
-import { fetchFiltersMap, fetchTravelsForMap, fetchTravelsNearRoute } from '@/src/api/map';
 import InstantSEO from '@/components/seo/InstantSEO';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/src/utils/filterQuery';
-import { useResponsive } from '@/hooks/useResponsive';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
 import ErrorDisplay from '@/components/ErrorDisplay';
-import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
-import { getStyles } from './map.styles';
-import { useThemedColors } from '@/hooks/useTheme';
-import { CoordinateConverter } from '@/utils/coordinateConverter';
-import type { MapUiApi } from '@/src/types/mapUi';
+import { useMapScreenController } from '@/hooks/useMapScreenController';
 
 // Ensure RouteHint is bundled (used inside FiltersPanel)
 import '@/components/MapPage/RouteHint';
 
-interface Coordinates { latitude: number; longitude: number; }
-interface FilterValues { categories: string[]; radius: string; address: string; }
-interface Filters {
-    categories: { id: string; name: string }[];
-    radius: { id: string; name: string }[];
-    address: string;
-}
-
-const DEFAULT_COORDINATES = { latitude: 53.9006, longitude: 27.5590 };
-
 const LazyMapPanel = lazy(() => import('@/components/MapPage/MapPanel'));
 
 export default function MapScreen() {
-    const pathname = usePathname();
-    const isFocused = useIsFocused();
-    const { isPhone, isLargePhone, width } = useResponsive();
-    const themedColors = useThemedColors();
-    const insets = useSafeAreaInsets();
-    const isMobile = isPhone || isLargePhone;
-    const queryClient = useQueryClient();
-
-    const [mapUiApi, setMapUiApi] = useState<MapUiApi | null>(null);
-
-    // State
-    const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
-    const [filters, setFilters] = useState<Filters>({ categories: [], radius: [], address: '' });
-
-    // ✅ УЛУЧШЕНИЕ: Загружаем сохраненные фильтры из localStorage с полной валидацией
-    const [filterValues, setFilterValues] = useState<FilterValues>(() => {
-        if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
-            try {
-                const saved = localStorage.getItem('map-filters');
-                if (saved && saved.length > 0 && saved.length < 10000) {
-                    const parsed = JSON.parse(saved);
-                    // ✅ БЕЗОПАСНОСТЬ: Строгая валидация структуры данных
-                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                        // Валидируем categories - должен быть массив строк
-                        const categories = Array.isArray(parsed.categories)
-                            ? parsed.categories.filter((c: any) => typeof c === 'string' && c.length < 100)
-                            : [];
-
-                        // Валидируем radius - должна быть строка с числом
-                        const radius = typeof parsed.radius === 'string' && /^\d+$/.test(parsed.radius)
-                            ? parsed.radius
-                            : '60';
-
-                        // Валидируем address - должна быть строка
-                        const address = typeof parsed.address === 'string' && parsed.address.length < 500
-                            ? parsed.address
-                            : '';
-
-                        return { categories, radius, address };
-                    }
-                }
-            } catch (error) {
-                console.warn('[map] Failed to load saved filters:', error);
-                // ✅ БЕЗОПАСНОСТЬ: Очищаем поврежденные данные
-                try {
-                    localStorage.removeItem('map-filters');
-                } catch {
-                    // Игнорируем ошибки очистки
-                }
-            }
-        }
-        // Значения по умолчанию
-        return {
-            categories: [],
-            radius: '60',
-            address: '',
-        };
-    });
-    
-    // ✅ NEW: Use RouteStore via adapter for route state management
-    const routeStore = useRouteStoreAdapter();
     const {
-        mode,
-        setMode,
-        transportMode,
-        setTransportMode,
-        routePoints,
-        startAddress,
-        endAddress,
-        routeDistance,
-        fullRouteCoords,
-        setRoutePoints,
-        setRouteDistance,
-        setFullRouteCoords,
-        handleClearRoute,
-        handleAddressSelect,
-        points: routeStorePoints,
-        isBuilding: routingLoading,
-        error: routingError,
-    } = routeStore;
-    
-    const [rightPanelTab, setRightPanelTab] = useState<'filters' | 'travels'>('filters');
-    // ✅ ИСПРАВЛЕНИЕ: На мобильных панель закрыта по умолчанию, на десктопе открыта
-    const [rightPanelVisible, setRightPanelVisible] = useState(!isMobile);
-    const lastIsMobileRef = useRef(isMobile);
-    useEffect(() => {
-        // На web isMobile может поменяться после первого рендера (SSR/нулевая ширина).
-        // Держим поведение стабильным:
-        // - mobile: панель закрыта по умолчанию
-        // - desktop: панель открыта по умолчанию
-        if (lastIsMobileRef.current === isMobile) return;
-        lastIsMobileRef.current = isMobile;
-        setRightPanelVisible(!isMobile);
-    }, [isMobile]);
-    const filtersTabRef = useRef<any>(null);
-    const panelRef = useRef<any>(null);
-    const [routeHintDismissed, setRouteHintDismissed] = useState(false);
-    const [mapReady, setMapReady] = useState(false);
-    useEffect(() => {
-        if (mapReady) return;
-        const frame = requestAnimationFrame(() => setMapReady(true));
-        return () => cancelAnimationFrame(frame);
-    }, [mapReady]);
-
-    useEffect(() => {
-        if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-        // Leaflet relies on container size; when we show/hide the side panel we change
-        // available width via paddingRight, so force a resize event to trigger invalidate.
-        window.dispatchEvent(new Event('resize'));
-    }, [rightPanelVisible, isMobile]);
-
-    // A11y: when screen loses focus on web, drop focus to avoid staying inside aria-hidden tree
-    useEffect(() => {
-        if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-        if (isFocused) return;
-        const active = document.activeElement as HTMLElement | null;
-        if (active && typeof active.blur === 'function') {
-            active.blur();
-        }
-    }, [isFocused]);
-
-    // Scroll lock for mobile overlay on web
-    useEffect(() => {
-        if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-        if (!isMobile) return;
-        const body = document.body;
-        const prevOverflow = body.style.overflow;
-        if (rightPanelVisible) {
-            body.style.overflow = 'hidden';
-        } else {
-            body.style.overflow = prevOverflow || '';
-        }
-        return () => {
-            body.style.overflow = prevOverflow || '';
-        };
-    }, [isMobile, rightPanelVisible]);
-
-    // Focus first tabbable in panel when overlay открывается на мобильном
-    useEffect(() => {
-        if (!isMobile || !rightPanelVisible) return;
-        const id = requestAnimationFrame(() => {
-            const node: any = filtersTabRef.current;
-            if (node && typeof node.focus === 'function') {
-                node.focus();
-            }
-        });
-        return () => cancelAnimationFrame(id);
-    }, [isMobile, rightPanelVisible]);
-
-    // ✅ ОПТИМИЗАЦИЯ: Debounce для фильтров и координат (меньше на мобильных)
-    const debounceTime = isMobile ? 300 : 500;
-    const debouncedCoordinates = useDebouncedValue(coordinates, debounceTime);
-    const debouncedFilterValues = useDebouncedValue(filterValues, 300);
-    // ✅ ИСПРАВЛЕНИЕ: Создаем стабильный строковый ключ для routePoints вместо массива
-    const routePointsKey = useMemo(
-        () => routePoints.length > 0 ? routePoints.map(p => p.join(',')).join('|') : '',
-        [routePoints]
-    );
-    const debouncedRoutePointsKey = useDebouncedValue(routePointsKey, debounceTime);
-
-    const normalizedCategoryIds = useMemo(
-        () => mapCategoryNamesToIds(filterValues.categories, filters.categories),
-        [filterValues.categories, filters.categories]
-    );
-
-    const backendFilters = useMemo(
-        () =>
-            buildTravelQueryParams(
-                normalizedCategoryIds.length ? { categories: normalizedCategoryIds } : {},
-            ),
-        [normalizedCategoryIds]
-    );
-
-    const routeSignature = useMemo(
-        () =>
-            fullRouteCoords.length > 0
-                ? fullRouteCoords.map((p) => `${p[0]},${p[1]}`).join('|')
-                : '',
-        [fullRouteCoords]
-    );
-
-    // Keep the actual coordinate array out of react-query keys; store it in a ref.
-    // This avoids refetch/cancel loops caused by new array references with the same coordinates.
-    const fullRouteCoordsRef = useRef<[number, number][]>([]);
-    useEffect(() => {
-        if (!routeSignature) {
-            fullRouteCoordsRef.current = [];
-            return;
-        }
-        fullRouteCoordsRef.current = fullRouteCoords;
-    }, [routeSignature, fullRouteCoords]);
-
-    // ✅ ИСПРАВЛЕНИЕ: Используем только примитивные значения в queryKey для предотвращения cancelled запросов
-    const mapQueryDescriptor = useMemo(
-        () => ({
-            lat: debouncedCoordinates?.latitude,
-            lng: debouncedCoordinates?.longitude,
-            radius: debouncedFilterValues.radius || '60',
-            address: debouncedFilterValues.address || '',
-            mode,
-            routePointsKey: debouncedRoutePointsKey, // Строка вместо массива
-            routeKey: routeSignature,
-            transportMode,
-            filtersKey: JSON.stringify(backendFilters), // Строка вместо объекта
-        }),
-        [
-            debouncedCoordinates?.latitude,
-            debouncedCoordinates?.longitude,
-            debouncedFilterValues.radius,
-            debouncedFilterValues.address,
-            mode,
-            debouncedRoutePointsKey,
-            routeSignature,
-            transportMode,
-            backendFilters,
-        ]
-    );
-
-    // Load filters on mount
-    useEffect(() => {
-        let isMounted = true;
-        const loadFilters = async () => {
-            try {
-                const data = await fetchFiltersMap();
-                if (!isMounted) return;
-                // Transform Filters to match our interface
-                setFilters({
-                    categories: (data.categories || [])
-                        .filter((cat: any) => cat != null) // Filter out null/undefined
-                        .map((cat: any, idx: number) => {
-                            // Handle both string and object formats
-                            const name = typeof cat === 'string' ? cat : (cat?.name || String(cat) || '');
-                            // ✅ ИСПРАВЛЕНИЕ: Используем реальный ID категории с бэкенда, если он есть, иначе используем индекс
-                            const realId = (cat && typeof cat === 'object' && cat.id !== undefined) 
-                                ? cat.id 
-                                : idx;
-                            return {
-                                id: String(realId), // Сохраняем как строку для совместимости, но используем реальный ID
-                                name: String(name).trim(),
-                            };
-                        })
-                        .filter((cat: any) => cat.name), // Filter out empty names
-                    radius: [
-                        { id: '60', name: '60' },
-                        { id: '100', name: '100' },
-                        { id: '200', name: '200' },
-                        { id: '500', name: '500' },
-                        { id: '600', name: '600' },
-                    ],
-                    address: data.categoryTravelAddress?.[0] || '',
-                });
-            } catch (error) {
-                if (isMounted) {
-                    console.error('Error loading filters:', error);
-                }
-            }
-        };
-        loadFilters();
-        return () => {
-            isMounted = false;
-        };
-    }, []);
-
-    // ✅ РЕАЛИЗАЦИЯ: Всегда запрашиваем все данные с единым слоем нормализации фильтров
-    const {
-        data: allTravelsData = [],
-        isLoading: loading,
+        canonical,
+        isFocused,
+        isMobile,
+        themedColors,
+        styles,
+        mapReady,
+        mapPanelProps,
+        rightPanelTab,
+        rightPanelVisible,
+        selectFiltersTab,
+        selectTravelsTab,
+        openRightPanel,
+        closeRightPanel,
+        filtersPanelProps,
+        travelsData,
+        loading,
         isFetching,
         isPlaceholderData,
-        isError: mapError,
-        error: mapErrorDetails,
-        refetch: refetchMapData,
-    } = useQuery<any[]>({
-        queryKey: ['travelsForMap', mapQueryDescriptor],
-        enabled:
-            isFocused &&
-            (mode === 'radius' || (mode === 'route' && fullRouteCoords.length >= 2)) &&
-            typeof debouncedCoordinates?.latitude === 'number' &&
-            typeof debouncedCoordinates?.longitude === 'number' &&
-            !isNaN(debouncedCoordinates.latitude) &&
-            !isNaN(debouncedCoordinates.longitude),
-        queryFn: async ({ queryKey }): Promise<any[]> => {
-            const [, params] = queryKey as [
-                string,
-                {
-                    lat?: number;
-                    lng?: number;
-                    radius: string;
-                    address: string;
-                    mode: 'radius' | 'route';
-                    routePointsKey: string; // ✅ Строка вместо массива
-                    routeKey: string;
-                    transportMode: typeof transportMode;
-                    filtersKey: string; // ✅ Строка вместо объекта
-                },
-            ];
+        mapError,
+        mapErrorDetails,
+        refetchMapData,
+        invalidateTravelsQuery,
+        buildRouteTo,
+        filtersTabRef,
+        panelRef,
+    } = useMapScreenController();
 
-            if (typeof params.lat !== 'number' || typeof params.lng !== 'number') {
-                return [];
-            }
-
-            let data: any[] = [];
-            
-            // ✅ БЕЗОПАСНОСТЬ: Валидация и санитизация фильтров
-            let parsedFilters: any = {};
-            try {
-                parsedFilters = params.filtersKey ? JSON.parse(params.filtersKey) : {};
-
-                // ✅ БЕЗОПАСНОСТЬ: Проверяем что parsedFilters это объект
-                if (!parsedFilters || typeof parsedFilters !== 'object' || Array.isArray(parsedFilters)) {
-                    console.warn('[map] Invalid filters format, using empty filters');
-                    parsedFilters = {};
-                }
-
-                // ✅ БЕЗОПАСНОСТЬ: Валидируем categories - должен быть массив чисел
-                if (parsedFilters.categories) {
-                    if (!Array.isArray(parsedFilters.categories)) {
-                        parsedFilters.categories = undefined;
-                    } else {
-                        parsedFilters.categories = parsedFilters.categories
-                            .filter((c: any) => typeof c === 'number' || typeof c === 'string')
-                            .slice(0, 50); // Ограничение на количество категорий
-                    }
-                }
-            } catch (error) {
-                console.error('[map] Failed to parse filters:', error);
-                parsedFilters = {};
-            }
-
-            try {
-                if (params.mode === 'radius') {
-                    const result = await fetchTravelsForMap(0, 100, {
-                        lat: params.lat.toString(),
-                        lng: params.lng.toString(),
-                        radius: params.radius,
-                        categories: parsedFilters.categories,
-                    });
-                    data = Object.values(result || {});
-                } else if (params.mode === 'route' && params.routeKey) {
-                    const coords = fullRouteCoordsRef.current;
-                    if (coords.length < 2) return [];
-
-                    const result = await fetchTravelsNearRoute(coords, 2);
-                    if (result && typeof result === 'object') {
-                        data = Array.isArray(result) ? result : Object.values(result);
-                    }
-                }
-            } catch (error) {
-                // ✅ ИСПРАВЛЕНИЕ: Логируем ошибку и пробрасываем дальше
-                console.error('Error fetching travels for map:', error);
-                throw error;
-            }
-
-            return data;
-        },
-        staleTime: 2 * 60 * 1000,
-        gcTime: 10 * 60 * 1000,
-        placeholderData: (previousData) => previousData,
-        refetchOnWindowFocus: false,
-        refetchOnMount: false,
-    });
-
-    // Get user location
-    useEffect(() => {
-        let isMounted = true;
-        const getLocation = async () => {
-            try {
-                const { status } = await Location.requestForegroundPermissionsAsync();
-                if (!isMounted) return;
-                if (status !== 'granted') {
-                    // If user denied permissions, fall back to default coords explicitly.
-                    setCoordinates(DEFAULT_COORDINATES);
-                    return;
-                }
-
-                const location = await Location.getCurrentPositionAsync({
-                    accuracy: Location.Accuracy.Balanced,
-                });
-                if (!isMounted) return;
-
-                // ✅ БЕЗОПАСНОСТЬ: Валидация координат перед установкой
-                const lat = location.coords.latitude;
-                const lng = location.coords.longitude;
-
-                if (
-                    Number.isFinite(lat) &&
-                    Number.isFinite(lng) &&
-                    lat >= -90 &&
-                    lat <= 90 &&
-                    lng >= -180 &&
-                    lng <= 180
-                ) {
-                    setCoordinates({
-                        latitude: lat,
-                        longitude: lng,
-                    });
-                } else {
-                    console.warn('[map] Invalid coordinates from location service:', location.coords);
-                    setCoordinates(DEFAULT_COORDINATES);
-                }
-            } catch (error) {
-                if (!isMounted) return;
-                console.error('Error getting location:', error);
-                // If geolocation fails, fall back to default coords explicitly.
-                setCoordinates(DEFAULT_COORDINATES);
-            }
-        };
-
-        getLocation();
-        return () => {
-            isMounted = false;
-        };
-    }, []);
-
-    const handleFilterChange = useCallback((field: string, value: any) => {
-        setFilterValues(prev => ({ ...prev, [field]: value }));
-    }, []);
-
-    // ✅ УЛУЧШЕНИЕ: Сохраняем фильтры в localStorage при изменении с валидацией
-    useEffect(() => {
-        if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
-            try {
-                // ✅ БЕЗОПАСНОСТЬ: Валидируем данные перед сохранением
-                const dataToSave = {
-                    categories: Array.isArray(filterValues.categories)
-                        ? filterValues.categories
-                            .filter((c: any) => typeof c === 'string' && c.length < 100)
-                            .slice(0, 50) // Максимум 50 категорий
-                        : [],
-                    radius: /^\d+$/.test(filterValues.radius)
-                        ? filterValues.radius
-                        : '60',
-                    address: filterValues.address.length < 500
-                        ? filterValues.address
-                        : '',
-                };
-
-                const jsonString = JSON.stringify(dataToSave);
-
-                // ✅ БЕЗОПАСНОСТЬ: Проверяем размер перед сохранением (максимум 10KB)
-                if (jsonString.length < 10000) {
-                    localStorage.setItem('map-filters', jsonString);
-                } else {
-                    console.warn('[map] Filter data too large, not saving to localStorage');
-                }
-            } catch (error) {
-                console.warn('[map] Failed to save filters:', error);
-            }
-        }
-    }, [filterValues]);
-
-    const resetFilters = useCallback(() => {
-        setFilterValues({ categories: [], radius: '60', address: '' });
-        // Полный сброс: очищаем маршрут и возвращаемся к режиму радиуса
-        routeStore.clearRoute();
-        setMode('radius');
-    }, [routeStore, setMode]);
-
-    const handleMapClick = useCallback((lng: number, lat: number) => {
-        // ✅ БЕЗОПАСНОСТЬ: Валидация координат для предотвращения инъекций
-        if (
-            !Number.isFinite(lng) || !Number.isFinite(lat) ||
-            lng < -180 || lng > 180 || lat < -90 || lat > 90
-        ) {
-            console.warn('[map] Invalid coordinates received:', { lng, lat });
-            return;
-        }
-
-        if (mode === 'route' && routePoints.length < 2) {
-            const newPoint: [number, number] = [lng, lat];
-            setRoutePoints([...routePoints, newPoint]);
-        }
-    }, [mode, routePoints, setRoutePoints]);
-
-    // handleClearRoute now comes from routeStore adapter
-
-    const buildRouteTo = useCallback((item: any) => {
-        if (!item?.coord) return;
-        const parsed = CoordinateConverter.fromLooseString(String(item.coord));
-        if (!parsed) return;
-        setCoordinates({ latitude: parsed.lat, longitude: parsed.lng });
-    }, []);
-
-    // handleAddressSelect now comes from routeStore adapter
-    const handleSetFullRouteCoords = setFullRouteCoords;
-
-    // ✅ РЕАЛИЗАЦИЯ: Фильтрация данных на фронтенде по выбранным категориям
-    const travelsData = useMemo(() => {
-        // Если категории не выбраны, возвращаем все данные
-        if (!filterValues.categories || filterValues.categories.length === 0) {
-            return allTravelsData;
-        }
-
-        // Фильтруем данные по выбранным категориям
-        return allTravelsData.filter((travel) => {
-            if (!travel.categoryName) return false;
-            
-            // categoryName может быть строкой с одной или несколькими категориями через запятую
-            const travelCategories = travel.categoryName
-                .split(',')
-                .map((cat: string) => cat.trim())
-                .filter(Boolean);
-            
-            // Проверяем, есть ли хотя бы одна выбранная категория среди категорий путешествия
-            return filterValues.categories.some((selectedCategory) =>
-                travelCategories.some((travelCategory: string) =>
-                    travelCategory.trim() === selectedCategory.trim()
-                )
-            );
-        });
-    }, [allTravelsData, filterValues.categories]);
-
-    const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
-    const canonical = useMemo(() => `${SITE}${pathname || '/map'}`, [SITE, pathname]);
-    
-    const HEADER_HEIGHT_WEB = 88; // matches reserved header height in (tabs)/_layout
-    const headerOffset = Platform.OS === 'web' ? HEADER_HEIGHT_WEB : 0;
-
-    const styles = useMemo(
-        () => getStyles(isMobile, insets.top, headerOffset, width, themedColors),
-        [isMobile, insets.top, headerOffset, width, themedColors],
-    );
-    const mapPanelPlaceholder = (
-        <View style={styles.mapPlaceholder}>
-            <ActivityIndicator size="large" color={themedColors.primary} />
-            <Text style={styles.mapPlaceholderText}>Загружаем карту…</Text>
-        </View>
+    const mapPanelPlaceholder = useMemo(
+        () => (
+            <View style={styles.mapPlaceholder}>
+                <ActivityIndicator size="large" color={themedColors.primary} />
+                <Text style={styles.mapPlaceholderText}>Загружаем карту…</Text>
+            </View>
+        ),
+        [styles.mapPlaceholder, styles.mapPlaceholderText, themedColors.primary],
     );
 
     // Функция рендеринга содержимого панели
-    const renderPanelContent = useCallback(() => (
-        <>
-            {/* Табы для переключения */}
-            {rightPanelVisible && (
-                <View style={styles.tabsContainer}>
-                    <View style={styles.tabsSegment}>
-                        <Pressable
-                            ref={filtersTabRef as any}
-                            style={({ pressed }) => [
-                                styles.tab,
-                                rightPanelTab === 'filters' && styles.tabActive,
-                                pressed && styles.tabPressed,
-                            ]}
-                            onPress={() => setRightPanelTab('filters')}
-                            hitSlop={8}
-                            android_ripple={{ color: themedColors.overlayLight }}
-                            accessibilityRole="tab"
-                            accessibilityState={{ selected: rightPanelTab === 'filters' }}
-                        >
-                            <View style={[styles.tabIconBubble, rightPanelTab === 'filters' && styles.tabIconBubbleActive]}>
-                                <IconMaterial
-                                    name="filter-list"
-                                    size={18}
-                                    color={rightPanelTab === 'filters' ? themedColors.textOnPrimary : themedColors.primary}
-                                />
-                            </View>
-                            <View style={styles.tabLabelColumn}>
-                                <Text style={[styles.tabText, rightPanelTab === 'filters' && styles.tabTextActive]}>
-                                    Фильтры
-                                </Text>
-                                <Text style={[styles.tabHint, rightPanelTab === 'filters' && styles.tabHintActive]}>
-                                    Настрой параметров
-                                </Text>
-                            </View>
-                        </Pressable>
-
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.tab,
-                                rightPanelTab === 'travels' && styles.tabActive,
-                                pressed && styles.tabPressed,
-                            ]}
-                            onPress={() => setRightPanelTab('travels')}
-                            hitSlop={8}
-                            android_ripple={{ color: themedColors.overlayLight }}
-                            accessibilityRole="tab"
-                            accessibilityState={{ selected: rightPanelTab === 'travels' }}
-                        >
-                            <View style={[styles.tabIconBubble, rightPanelTab === 'travels' && styles.tabIconBubbleActive]}>
-                                <IconMaterial
-                                    name="list"
-                                    size={18}
-                                    color={rightPanelTab === 'travels' ? themedColors.textOnPrimary : themedColors.primary}
-                                />
-                            </View>
-                            <View style={styles.tabLabelColumn}>
-                                <Text style={[styles.tabText, rightPanelTab === 'travels' && styles.tabTextActive]}>
-                                    Список
-                                </Text>
-                                <Text style={[styles.tabHint, rightPanelTab === 'travels' && styles.tabHintActive]}>
-                                    {travelsData.length} мест
-                                </Text>
-                            </View>
-                        </Pressable>
+    const panelHeader = (
+        <View style={styles.tabsContainer}>
+            <View style={styles.tabsSegment}>
+                <Pressable
+                    ref={filtersTabRef as any}
+                    testID="map-panel-tab-filters"
+                    style={({ pressed }) => [
+                        styles.tab,
+                        rightPanelTab === 'filters' && styles.tabActive,
+                        pressed && styles.tabPressed,
+                    ]}
+                    onPress={selectFiltersTab}
+                    hitSlop={8}
+                    android_ripple={{ color: themedColors.overlayLight }}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: rightPanelTab === 'filters' }}
+                    accessibilityLabel="Фильтры"
+                >
+                    <View style={[styles.tabIconBubble, rightPanelTab === 'filters' && styles.tabIconBubbleActive]}>
+                        <IconMaterial
+                            name="filter-list"
+                            size={18}
+                            color={rightPanelTab === 'filters' ? themedColors.textOnPrimary : themedColors.primary}
+                        />
                     </View>
-
-                    <Pressable
-                        style={({ pressed }) => [
-                            styles.closePanelButton,
-                            pressed && { opacity: 0.7 },
-                        ]}
-                        onPress={() => setRightPanelVisible(false)}
-                        hitSlop={10}
-                        accessibilityRole="button"
-                        accessibilityLabel="Скрыть панель"
-                    >
-                        <IconMaterial name="chevron-right" size={22} color={themedColors.textMuted} />
-                    </Pressable>
-                </View>
-            )}
-
-            {/* Контент панели */}
-            <View style={styles.panelContent}>
-                {rightPanelTab === 'filters' ? (
-                    <FiltersPanel
-                        filters={{
-                            categories: filters.categories
-                                .filter(c => c && c.name)
-                                .map(c => ({
-                                    id: Number(c.id) || 0,
-                                    name: String(c.name || '').trim()
-                                }))
-                                .filter(c => c.name),
-                            radius: filters.radius.map(r => ({ id: r.id, name: r.name })),
-                            address: filters.address,
-                        }}
-                        filterValue={filterValues}
-                        onFilterChange={handleFilterChange}
-                        resetFilters={resetFilters}
-                        travelsData={allTravelsData}
-                        filteredTravelsData={travelsData}
-                        isMobile={isMobile}
-                        mode={mode}
-                        setMode={setMode}
-                        transportMode={transportMode}
-                        setTransportMode={setTransportMode}
-                        startAddress={startAddress}
-                        endAddress={endAddress}
-                        routeDistance={routeDistance}
-                        routePoints={routeStorePoints}
-                        onRemoveRoutePoint={(id: string) => routeStore.removePoint(id)}
-                        onClearRoute={handleClearRoute}
-                        swapStartEnd={routeStore.swapStartEnd}
-                        routeHintDismissed={routeHintDismissed}
-                        onRouteHintDismiss={() => setRouteHintDismissed(true)}
-                        onAddressSelect={handleAddressSelect}
-                        routingLoading={routingLoading}
-                        routingError={routingError}
-                        onBuildRoute={() => {
-                            // ✅ Конвертируем точки из routeStore в формат [lng, lat][]
-                            // Валидация теперь в setRoutePoints
-                            if (routeStorePoints.length >= 2) {
-                                const points: [number, number][] = routeStorePoints
-                                    .map(p => [p.coordinates.lng, p.coordinates.lat]);
-                                setRoutePoints(points);
-                            } else {
-                                console.warn('[map] Not enough route points to build route:', routeStorePoints.length);
-                            }
-                        }}
-                        mapUiApi={mapUiApi}
-                        closeMenu={() => setRightPanelVisible(false)}
-                    />
-                ) : (
-                    <View style={styles.travelsListContainer}>
-                        {loading && !isPlaceholderData ? (
-                            <View style={styles.loader}>
-                                <ActivityIndicator size="small" color={themedColors.primary} />
-                                <Text style={styles.loaderText}>Загрузка...</Text>
-                            </View>
-                        ) : mapError ? (
-                            <View style={styles.errorContainer}>
-                                <ErrorDisplay
-                                    message={getUserFriendlyNetworkError(mapErrorDetails)}
-                                    onRetry={() => refetchMapData()}
-                                    variant="error"
-                                />
-                            </View>
-                        ) : (
-                            <>
-                                {isFetching && isPlaceholderData && (
-                                    <View style={styles.updatingIndicator}>
-                                        <ActivityIndicator size="small" color={themedColors.primary} />
-                                        <Text style={styles.updatingText}>Обновление...</Text>
-                                    </View>
-                                )}
-                                <TravelListPanel
-                                    travelsData={travelsData}
-                                    buildRouteTo={buildRouteTo}
-                                    isMobile={isMobile}
-                                    isLoading={loading && !isPlaceholderData}
-                                    onRefresh={() => {
-                                        queryClient.invalidateQueries({ queryKey: ['travelsForMap'] });
-                                    }}
-                                    isRefreshing={isFetching && !isPlaceholderData}
-                                />
-                            </>
-                        )}
+                    <View style={styles.tabLabelColumn}>
+                        <Text style={[styles.tabText, rightPanelTab === 'filters' && styles.tabTextActive]}>
+                            Фильтры
+                        </Text>
+                        <Text style={[styles.tabHint, rightPanelTab === 'filters' && styles.tabHintActive]}>
+                            Настрой параметров
+                        </Text>
                     </View>
-                )}
+                </Pressable>
+
+                <Pressable
+                    testID="map-panel-tab-travels"
+                    style={({ pressed }) => [
+                        styles.tab,
+                        rightPanelTab === 'travels' && styles.tabActive,
+                        pressed && styles.tabPressed,
+                    ]}
+                    onPress={selectTravelsTab}
+                    hitSlop={8}
+                    android_ripple={{ color: themedColors.overlayLight }}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: rightPanelTab === 'travels' }}
+                    accessibilityLabel="Список"
+                >
+                    <View style={[styles.tabIconBubble, rightPanelTab === 'travels' && styles.tabIconBubbleActive]}>
+                        <IconMaterial
+                            name="list"
+                            size={18}
+                            color={rightPanelTab === 'travels' ? themedColors.textOnPrimary : themedColors.primary}
+                        />
+                    </View>
+                    <View style={styles.tabLabelColumn}>
+                        <Text style={[styles.tabText, rightPanelTab === 'travels' && styles.tabTextActive]}>
+                            Список
+                        </Text>
+                        <Text style={[styles.tabHint, rightPanelTab === 'travels' && styles.tabHintActive]}>
+                            {travelsData.length} мест
+                        </Text>
+                    </View>
+                </Pressable>
             </View>
-        </>
-    ), [
-        rightPanelVisible,
-        rightPanelTab,
-        travelsData,
-        filters,
-        filterValues,
-        allTravelsData,
-        isMobile,
-        mode,
-        transportMode,
-        startAddress,
-        endAddress,
-        routeDistance,
-        routeStorePoints,
-        routeHintDismissed,
-        loading,
-        isPlaceholderData,
-        mapError,
-        isFetching,
-        themedColors,
-        styles,
-        handleFilterChange,
-        resetFilters,
-        setMode,
-        setTransportMode,
-        routeStore,
-        handleClearRoute,
-        handleAddressSelect,
-        routingLoading,
-        routingError,
-        setRoutePoints,
-        buildRouteTo,
-        mapErrorDetails,
-        refetchMapData,
-        queryClient,
-        mapUiApi,
-    ]);
+
+            <Pressable
+                testID="map-close-panel-button"
+                style={({ pressed }) => [styles.closePanelButton, pressed && { opacity: 0.7 }]}
+                onPress={closeRightPanel}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Скрыть панель"
+            >
+                <IconMaterial name="chevron-right" size={22} color={themedColors.textMuted} />
+            </Pressable>
+        </View>
+    );
 
     return (
         <>
@@ -812,17 +160,7 @@ export default function MapScreen() {
                         {mapReady ? (
                             <Suspense fallback={mapPanelPlaceholder}>
                                 <LazyMapPanel
-                                    travelsData={travelsData}
-                                    coordinates={coordinates ?? DEFAULT_COORDINATES}
-                                    routePoints={routePoints}
-                                    mode={mode}
-                                    setRoutePoints={setRoutePoints}
-                                    onMapClick={handleMapClick}
-                                    transportMode={transportMode}
-                                    setRouteDistance={setRouteDistance}
-                                    setFullRouteCoords={handleSetFullRouteCoords}
-                                    radius={filterValues.radius}
-                                    onMapUiApiReady={setMapUiApi}
+                                    {...mapPanelProps}
                                 />
                             </Suspense>
                         ) : (
@@ -837,7 +175,7 @@ export default function MapScreen() {
                         <Pressable
                             testID="map-open-panel-button"
                             style={styles.togglePanelButton}
-                            onPress={() => setRightPanelVisible(true)}
+                            onPress={openRightPanel}
                             accessibilityRole="button"
                             accessibilityLabel="Показать панель"
                         >
@@ -848,11 +186,12 @@ export default function MapScreen() {
                     {/* Overlay для мобильных устройств */}
                     {isMobile && (
                         <Pressable
+                            testID="map-panel-overlay"
                             style={[
                                 styles.overlay,
                                 rightPanelVisible ? styles.overlayVisible : styles.overlayHidden,
                             ]}
-                            onPress={() => setRightPanelVisible(false)}
+                            onPress={closeRightPanel}
                             accessibilityRole="button"
                             accessibilityLabel="Закрыть панель"
                         />
@@ -862,7 +201,7 @@ export default function MapScreen() {
                     {isMobile ? (
                         <SwipeablePanel
                             isOpen={rightPanelVisible}
-                            onClose={() => setRightPanelVisible(false)}
+                            onClose={closeRightPanel}
                             swipeDirection="right"
                             threshold={80}
                             style={[
@@ -879,7 +218,46 @@ export default function MapScreen() {
                                 tabIndex={-1}
                                 style={{ flex: 1 }}
                             >
-                                {renderPanelContent()}
+                                {rightPanelVisible ? panelHeader : null}
+                                <View style={styles.panelContent}>
+                                    {rightPanelTab === 'filters' ? (
+                                        <filtersPanelProps.Component {...filtersPanelProps.props} />
+                                    ) : (
+                                        <View style={styles.travelsListContainer} testID="map-travels-tab">
+                                            {loading && !isPlaceholderData ? (
+                                                <View style={styles.loader}>
+                                                    <ActivityIndicator size="small" color={themedColors.primary} />
+                                                    <Text style={styles.loaderText}>Загрузка...</Text>
+                                                </View>
+                                            ) : mapError ? (
+                                                <View style={styles.errorContainer}>
+                                                    <ErrorDisplay
+                                                        message={getUserFriendlyNetworkError(mapErrorDetails)}
+                                                        onRetry={refetchMapData}
+                                                        variant="error"
+                                                    />
+                                                </View>
+                                            ) : (
+                                                <>
+                                                    {isFetching && isPlaceholderData && (
+                                                        <View style={styles.updatingIndicator}>
+                                                            <ActivityIndicator size="small" color={themedColors.primary} />
+                                                            <Text style={styles.updatingText}>Обновление...</Text>
+                                                        </View>
+                                                    )}
+                                                    <TravelListPanel
+                                                        travelsData={travelsData}
+                                                        buildRouteTo={buildRouteTo}
+                                                        isMobile={isMobile}
+                                                        isLoading={loading && !isPlaceholderData}
+                                                        onRefresh={invalidateTravelsQuery}
+                                                        isRefreshing={isFetching && !isPlaceholderData}
+                                                    />
+                                                </>
+                                            )}
+                                        </View>
+                                    )}
+                                </View>
                             </View>
                         </SwipeablePanel>
                     ) : (
@@ -893,7 +271,46 @@ export default function MapScreen() {
                             ref={panelRef}
                             tabIndex={-1}
                         >
-                            {renderPanelContent()}
+                            {rightPanelVisible ? panelHeader : null}
+                            <View style={styles.panelContent}>
+                                {rightPanelTab === 'filters' ? (
+                                    <filtersPanelProps.Component {...filtersPanelProps.props} />
+                                ) : (
+                                    <View style={styles.travelsListContainer} testID="map-travels-tab">
+                                        {loading && !isPlaceholderData ? (
+                                            <View style={styles.loader}>
+                                                <ActivityIndicator size="small" color={themedColors.primary} />
+                                                <Text style={styles.loaderText}>Загрузка...</Text>
+                                            </View>
+                                        ) : mapError ? (
+                                            <View style={styles.errorContainer}>
+                                                <ErrorDisplay
+                                                    message={getUserFriendlyNetworkError(mapErrorDetails)}
+                                                    onRetry={refetchMapData}
+                                                    variant="error"
+                                                />
+                                            </View>
+                                        ) : (
+                                            <>
+                                                {isFetching && isPlaceholderData && (
+                                                    <View style={styles.updatingIndicator}>
+                                                        <ActivityIndicator size="small" color={themedColors.primary} />
+                                                        <Text style={styles.updatingText}>Обновление...</Text>
+                                                    </View>
+                                                )}
+                                                <TravelListPanel
+                                                    travelsData={travelsData}
+                                                    buildRouteTo={buildRouteTo}
+                                                    isMobile={isMobile}
+                                                    isLoading={loading && !isPlaceholderData}
+                                                    onRefresh={invalidateTravelsQuery}
+                                                    isRefreshing={isFetching && !isPlaceholderData}
+                                                />
+                                            </>
+                                        )}
+                                    </View>
+                                )}
+                            </View>
                         </View>
                     )}
                 </View>

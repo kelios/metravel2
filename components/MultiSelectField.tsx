@@ -5,27 +5,57 @@ import SimpleMultiSelect from './SimpleMultiSelect';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
-type MultiSelectFieldProps = {
+type MultiSelectValue = string | number;
+
+type SimpleMultiSelectPassthroughProps = {
+    placeholder?: string;
+    searchPlaceholder?: string;
+    search?: boolean;
+    style?: unknown;
+    disabled?: boolean;
+};
+
+type MultiSelectFieldProps<Item extends Record<string, unknown>> = {
     label?: string;
-    items: any[];
-    value?: any[] | any;
-    onChange: (value: any) => void;
+    items: Item[];
+    value?: MultiSelectValue[] | MultiSelectValue;
+    onChange: (value: MultiSelectValue[] | MultiSelectValue) => void;
     labelField: string;
     valueField: string;
     single?: boolean;
     compact?: boolean;
-    [key: string]: any;
-};
+    testID?: string;
+    accessibilityLabel?: string;
+} & SimpleMultiSelectPassthroughProps;
 
-const MultiSelectField = forwardRef<any, MultiSelectFieldProps>(
-    ({ label, items, value = [], onChange, labelField, valueField, single = false, compact = false, ...rest }, _ref) => {
+const MultiSelectField = forwardRef<unknown, MultiSelectFieldProps<Record<string, unknown>>>(
+    (
+        {
+            label,
+            items,
+            value = [],
+            onChange,
+            labelField,
+            valueField,
+            single = false,
+            compact = false,
+            placeholder,
+            searchPlaceholder,
+            search,
+            style,
+            disabled,
+            testID,
+            accessibilityLabel,
+        },
+        _ref,
+    ) => {
         const colors = useThemedColors();
         const styles = useMemo(() => StyleSheet.create({
             container: { marginBottom: DESIGN_TOKENS.spacing.md },
             containerCompact: { marginBottom: DESIGN_TOKENS.spacing.sm },
             label: {
                 fontSize: DESIGN_TOKENS.typography.sizes.sm,
-                fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+                fontWeight: '600',
                 color: colors.text,
                 marginBottom: DESIGN_TOKENS.spacing.xs,
             },
@@ -37,10 +67,16 @@ const MultiSelectField = forwardRef<any, MultiSelectFieldProps>(
             },
         }), [colors]);
 
-        const extractValue = (item: any) =>
-            item && typeof item === 'object' && valueField in item ? item[valueField] : item;
+        const extractValue = (item: unknown): MultiSelectValue => {
+            if (item && typeof item === 'object' && valueField in (item as Record<string, unknown>)) {
+                const raw = (item as Record<string, unknown>)[valueField];
+                if (typeof raw === 'string' || typeof raw === 'number') return raw;
+            }
+            if (typeof item === 'string' || typeof item === 'number') return item;
+            return '';
+        };
 
-        const handleChange = (selectedItems: any[]) => {
+        const handleChange = (selectedItems: unknown[]) => {
             const normalized = Array.isArray(selectedItems) ? selectedItems.map(extractValue) : [];
 
             if (single) {
@@ -51,12 +87,16 @@ const MultiSelectField = forwardRef<any, MultiSelectFieldProps>(
         };
 
         // Normalize value to array for SimpleMultiSelect
-        const normalizedValue = single 
-            ? (value ? [value] : [])
-            : (Array.isArray(value) ? value : []);
+        const normalizedValue = single
+            ? (value ? [value as MultiSelectValue] : [])
+            : (Array.isArray(value) ? (value as MultiSelectValue[]) : []);
 
         return (
-            <View style={[styles.container, compact && styles.containerCompact]}>
+            <View
+                style={[styles.container, compact && styles.containerCompact]}
+                testID={testID}
+                accessibilityLabel={accessibilityLabel}
+            >
                 {label ? <Text style={styles.label}>{label}</Text> : null}
                 <SimpleMultiSelect
                     data={items}
@@ -64,8 +104,11 @@ const MultiSelectField = forwardRef<any, MultiSelectFieldProps>(
                     onChange={handleChange}
                     labelField={labelField}
                     valueField={valueField}
-                    style={[styles.dropdown, compact && styles.dropdownCompact]}
-                    {...rest}
+                    placeholder={placeholder}
+                    searchPlaceholder={searchPlaceholder}
+                    search={search}
+                    style={[styles.dropdown, compact && styles.dropdownCompact, style]}
+                    disabled={disabled}
                 />
             </View>
         );

@@ -3,72 +3,10 @@
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import type { BookPreset, PresetCategory } from '@/src/types/pdf-presets';
 import { BOOK_PRESETS, PRESET_CATEGORIES } from '@/src/types/pdf-presets';
 import { useThemedColors } from '@/hooks/useTheme';
-
-// Добавляем стили для web через style tag
-if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  const styleId = 'preset-selector-styles';
-  if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.type = 'text/css';
-    const css = `
-      .presets-scroll-container {
-        display: flex;
-        overflow-x: auto;
-        overflow-y: hidden;
-        scroll-behavior: smooth;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: thin;
-        scrollbar-color: var(--color-borderStrong) var(--color-backgroundSecondary);
-        padding: 8px 0;
-      }
-      .presets-scroll-container::-webkit-scrollbar { height: 8px; }
-      .presets-scroll-container::-webkit-scrollbar-track {
-        background: var(--color-backgroundSecondary);
-        border-radius: 4px;
-        margin: 0 16px;
-      }
-      .presets-scroll-container::-webkit-scrollbar-thumb {
-        background: var(--color-borderStrong);
-        border-radius: 4px;
-      }
-      .presets-scroll-container::-webkit-scrollbar-thumb:hover { background: var(--color-borderAccent); }
-      .presets-content {
-        display: flex;
-        flex-direction: row;
-        gap: 12px;
-        padding: 0 16px;
-        min-width: min-content;
-      }
-      .categories-scroll-container {
-        display: flex;
-        overflow-x: auto;
-        overflow-y: hidden;
-        scroll-behavior: smooth;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-      }
-      .categories-scroll-container::-webkit-scrollbar { display: none; }
-      .categories-content {
-        display: flex;
-        flex-direction: row;
-        gap: 8px;
-        padding: 0 16px;
-        min-width: min-content;
-      }
-    `;
-    if ((style as any).styleSheet) {
-      // IE support
-      (style as any).styleSheet.cssText = css;
-    } else {
-      style.appendChild(document.createTextNode(css));
-    }
-    document.head.appendChild(style);
-  }
-}
 
 interface PresetSelectorProps {
   onPresetSelect: (preset: BookPreset) => void;
@@ -85,42 +23,6 @@ export default function PresetSelector({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [selectedCategory, setSelectedCategory] = useState<PresetCategory | 'all'>('all');
 
-  const categoriesScrollRef = useRef<HTMLDivElement | null>(null);
-  const presetsScrollRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (typeof window === 'undefined') return;
-
-    const attach = (el: HTMLDivElement | null) => {
-      if (!el) return () => {};
-
-      const onWheel = (e: WheelEvent) => {
-        const deltaY = Number((e as any).deltaY ?? 0);
-        const deltaX = Number((e as any).deltaX ?? 0);
-        if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return;
-
-        const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
-        if (maxScrollLeft <= 0) return;
-
-        e.stopPropagation();
-        e.preventDefault();
-        el.scrollLeft += deltaY;
-      };
-
-      el.addEventListener('wheel', onWheel, { passive: false });
-      return () => el.removeEventListener('wheel', onWheel as any);
-    };
-
-    const detachCategories = attach(categoriesScrollRef.current);
-    const detachPresets = attach(presetsScrollRef.current);
-
-    return () => {
-      detachCategories();
-      detachPresets();
-    };
-  }, []);
-
   const filteredPresets =
     selectedCategory === 'all'
       ? BOOK_PRESETS
@@ -134,11 +36,7 @@ export default function PresetSelector({
       {/* Фильтр по категориям */}
       {showCategories && (
         Platform.OS === 'web' ? (
-          <div
-            style={styles.categoriesWebScroll as any}
-            className="categories-scroll-container"
-            ref={categoriesScrollRef}
-          >
+          <div style={styles.categoriesWebWrap as any}>
             <div style={styles.categoriesWebContent as any}>
               <CategoryChip
                 label="Все"
@@ -188,22 +86,16 @@ export default function PresetSelector({
       {/* Список пресетов */}
       <View style={styles.presetsWrapper}>
         {Platform.OS === 'web' ? (
-          <div
-            style={styles.presetsWebScroll as any}
-            className="presets-scroll-container"
-            ref={presetsScrollRef}
-          >
-            <div style={styles.presetsWebContent as any}>
-              {filteredPresets.map((preset) => (
-                <PresetCard
-                  key={preset.id}
-                  preset={preset}
-                  isSelected={selectedPresetId === preset.id}
-                  onSelect={() => onPresetSelect(preset)}
-                  styles={styles}
-                />
-              ))}
-            </div>
+          <div style={styles.presetsWebGrid as any}>
+            {filteredPresets.map((preset) => (
+              <PresetCard
+                key={preset.id}
+                preset={preset}
+                isSelected={selectedPresetId === preset.id}
+                onSelect={() => onPresetSelect(preset)}
+                styles={styles}
+              />
+            ))}
           </div>
         ) : (
           <ScrollView
@@ -263,13 +155,36 @@ function PresetCard({ preset, isSelected, onSelect, styles }: PresetCardProps) {
       style={[styles.presetCard, isSelected && styles.presetCardSelected]}
       onPress={onSelect}
     >
-      {/* Иконка */}
-      <View style={styles.presetIcon}>
-        <Text style={styles.presetIconText}>{preset.icon}</Text>
+      <View style={styles.presetHeader}>
+        <View style={styles.presetIcon}>
+          <MaterialIcons
+            name={getPresetIconName(preset) as any}
+            size={22}
+            color={styles.presetIconColor.color}
+          />
+        </View>
+
+        <View style={styles.presetMetaBadges}>
+          {preset.isDefault && (
+            <View style={styles.metaBadge}>
+              <Text style={styles.metaBadgeText}>По умолчанию</Text>
+            </View>
+          )}
+          {preset.isCustom && (
+            <View style={styles.metaBadge}>
+              <Text style={styles.metaBadgeText}>Мой</Text>
+            </View>
+          )}
+          {isSelected && (
+            <View style={styles.selectedPill}>
+              <MaterialIcons name="check" size={16} color={styles.selectedPillIcon.color} />
+              <Text style={styles.selectedPillText}>Выбрано</Text>
+            </View>
+          )}
+        </View>
       </View>
 
-      {/* Информация */}
-      <View style={styles.presetInfo}>
+      <View style={styles.presetBody}>
         <Text style={styles.presetName} numberOfLines={1}>
           {preset.name}
         </Text>
@@ -277,57 +192,49 @@ function PresetCard({ preset, isSelected, onSelect, styles }: PresetCardProps) {
           {preset.description}
         </Text>
 
-        {/* Особенности пресета */}
         <View style={styles.presetFeatures}>
           {preset.settings.includeGallery && (
-            <FeatureBadge icon="📸" label="Галерея" styles={styles} />
+            <FeatureBadge iconName="photo" label="Галерея" styles={styles} />
           )}
           {preset.settings.includeMap && (
-            <FeatureBadge icon="🗺️" label="Карты" styles={styles} />
+            <FeatureBadge iconName="map" label="Карты" styles={styles} />
           )}
           {preset.settings.includeChecklists && (
-            <FeatureBadge icon="✓" label="Чек-листы" styles={styles} />
+            <FeatureBadge iconName="checklist" label="Чек-листы" styles={styles} />
           )}
         </View>
       </View>
 
-      {/* Индикатор выбора */}
-      {isSelected && (
-        <View style={styles.selectedIndicator}>
-          <Text style={styles.selectedIndicatorText}>✓</Text>
-        </View>
-      )}
-
-      {/* Бейдж "По умолчанию" */}
-      {preset.isDefault && (
-        <View style={styles.defaultBadge}>
-          <Text style={styles.defaultBadgeText}>По умолчанию</Text>
-        </View>
-      )}
-
-      {/* Бейдж "Пользовательский" */}
-      {preset.isCustom && (
-        <View style={styles.customBadge}>
-          <Text style={styles.customBadgeText}>Мой</Text>
-        </View>
-      )}
+      <View style={styles.presetFooter}>
+        <Text style={styles.presetCtaText}>Выбрать</Text>
+        <MaterialIcons name="chevron-right" size={18} color={styles.presetCtaIcon.color} />
+      </View>
     </Pressable>
   );
 }
 
 interface FeatureBadgeProps {
-  icon: string;
+  iconName: string;
   label: string;
   styles: ReturnType<typeof createStyles>;
 }
 
-function FeatureBadge({ icon, label, styles }: FeatureBadgeProps) {
+function FeatureBadge({ iconName, label, styles }: FeatureBadgeProps) {
   return (
     <View style={styles.featureBadge}>
-      <Text style={styles.featureBadgeIcon}>{icon}</Text>
+      <MaterialIcons name={iconName as any} size={14} color={styles.featureBadgeIconColor.color} />
       <Text style={styles.featureBadgeText}>{label}</Text>
     </View>
   );
+}
+
+function getPresetIconName(preset: BookPreset): string {
+  if (preset.category === 'minimal') return 'notes';
+  if (preset.category === 'detailed') return 'menu-book';
+  if (preset.category === 'photo-focused') return 'photo-camera';
+  if (preset.category === 'map-focused') return 'map';
+  if (preset.category === 'print') return 'print';
+  return 'tune';
 }
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
@@ -351,27 +258,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   categoriesContainer: {
     marginBottom: 16,
   },
-  categoriesWebScroll: {
-    overflowX: 'scroll',
-    overflowY: 'hidden',
+  categoriesWebWrap: {
     width: '100%',
-    WebkitOverflowScrolling: 'touch',
-    scrollBehavior: 'smooth',
-    scrollbarWidth: 'thin',
-    scrollbarColor: 'var(--color-borderStrong) var(--color-backgroundSecondary)',
-    paddingBottom: 8,
+    paddingHorizontal: 16,
     marginBottom: 16,
+    overflowX: 'hidden',
   } as any,
-
   categoriesWebContent: {
     display: 'flex',
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
-    paddingTop: 0,
-    paddingRight: 16,
-    paddingBottom: 0,
-    paddingLeft: 16,
-    width: 'max-content',
   } as any,
 
   categoriesContent: {
@@ -408,27 +305,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   presetsContainer: {
     marginTop: 8,
   },
-  presetsWebScroll: {
-    overflowX: 'scroll',
-    overflowY: 'hidden',
-    width: '100%',
-    WebkitOverflowScrolling: 'touch',
-    scrollBehavior: 'smooth',
-    scrollbarWidth: 'thin',
-    scrollbarColor: 'var(--color-borderStrong) var(--color-backgroundSecondary)',
-    paddingVertical: 8,
-    paddingHorizontal: 0,
-  } as any,
-
-  presetsWebContent: {
-    display: 'flex',
-    flexDirection: 'row',
-    gap: 12,
-    paddingTop: 0,
-    paddingRight: 16,
-    paddingBottom: 0,
+  presetsWebGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: 16,
     paddingLeft: 16,
-    width: 'max-content',
+    paddingRight: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
+    width: '100%',
+    boxSizing: 'border-box',
   } as any,
   presetsContent: {
     paddingHorizontal: 16,
@@ -437,12 +323,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexWrap: 'nowrap',
   },
   presetCard: {
-    width: 260,
-    minHeight: 200,
+    width: Platform.OS === 'web' ? 'auto' : 260,
+    height: 220,
     flexShrink: 0,
     backgroundColor: colors.surface,
     borderRadius: 12,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
     ...Platform.select({
@@ -456,7 +342,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   presetCardSelected: {
     borderColor: colors.primary,
-    borderWidth: 3,
+    borderWidth: 2,
+    backgroundColor: colors.backgroundSecondary,
     ...Platform.select({
       web: {
         boxShadow: colors.boxShadows.heavy,
@@ -466,6 +353,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       },
     }),
   },
+  presetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    gap: 8,
+  },
   presetIcon: {
     width: 48,
     height: 48,
@@ -473,19 +367,57 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: colors.backgroundSecondary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  presetIconText: {
-    fontSize: 24,
+  presetIconColor: {
+    color: colors.text,
   },
-  presetInfo: {
+  presetMetaBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
+    flexShrink: 1,
+  },
+  metaBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  metaBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  selectedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  selectedPillIcon: {
+    color: colors.text,
+  },
+  selectedPillText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  presetBody: {
     flex: 1,
   },
   presetName: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   presetDescription: {
     fontSize: 12,
@@ -497,7 +429,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   presetFeatures: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 8,
   },
   featureBadge: {
     flexDirection: 'row',
@@ -508,64 +440,29 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: colors.backgroundSecondary,
     gap: 4,
   },
-  featureBadgeIcon: {
-    fontSize: 12,
+  featureBadgeIconColor: {
+    color: colors.textMuted,
   },
   featureBadgeText: {
     fontSize: 11,
     color: colors.textMuted,
     fontWeight: '500',
   },
-  selectedIndicator: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
+  presetFooter: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    flexDirection: 'row',
     alignItems: 'center',
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.medium,
-      },
-      default: {
-        ...colors.shadows.medium,
-      },
-    }),
+    justifyContent: 'space-between',
   },
-  selectedIndicatorText: {
-    color: colors.textOnPrimary,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  defaultBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: colors.success,
-  },
-  defaultBadgeText: {
-    fontSize: 10,
+  presetCtaText: {
+    fontSize: 12,
     fontWeight: '600',
-    color: colors.textOnPrimary,
+    color: colors.text,
   },
-  customBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: colors.warning,
-  },
-  customBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textOnPrimary,
+  presetCtaIcon: {
+    color: colors.textMuted,
   },
 });
