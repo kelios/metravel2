@@ -116,7 +116,15 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
       renderPoints(pts);
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
-      // Молча, чтобы не спамить UI
+
+      // Логируем ошибку для отладки, но не показываем пользователю
+      if (e?.message?.includes('timeout') || e?.message?.includes('too busy')) {
+        console.warn('[OSM Camping Overlay] Overpass API is busy, skipping load. This is expected and doesn\'t affect the main map.');
+      } else {
+        console.warn('[OSM Camping Overlay] Failed to load data:', e?.message || e);
+      }
+
+      // Очищаем слой при ошибке
       layerGroup.clearLayers();
     }
   };
