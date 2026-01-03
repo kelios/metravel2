@@ -317,7 +317,7 @@ function ThemeCard({ theme, isSelected, onSelect, compact, styles }: ThemeCardPr
         {/* Шрифты */}
         {!compact && (
           <Text style={styles.fontInfo}>
-            {theme.preview.headerFont} • {theme.preview.bodyFont}
+            {theme.preview.headerFont} / {theme.preview.bodyFont}
           </Text>
         )}
       </View>

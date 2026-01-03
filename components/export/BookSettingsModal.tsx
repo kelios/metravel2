@@ -11,6 +11,7 @@ import type { BookPreset } from '@/src/types/pdf-presets';
 import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
 import { METRICS } from '@/constants/layout';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { getThemedColors, useTheme } from '@/hooks/useTheme';
 // ✅ ИСПРАВЛЕНИЕ: Picker не используется в веб-версии модального окна
 // import { Picker } from '@react-native-picker/picker';
 
@@ -91,38 +92,6 @@ const defaultBookSettings: BookSettings = {
   gallerySpacing: 'normal',
 };
 
-const MODAL_COLORS = {
-  overlay: 'var(--color-overlay, rgba(31, 31, 31, 0.4))',
-  surface: 'var(--color-surface, #ffffff)',
-  surfaceMuted: 'var(--color-surfaceMuted, rgba(255, 255, 255, 0.75))',
-  backgroundSecondary: 'var(--color-backgroundSecondary, #f9f8f6)',
-  backgroundTertiary: 'var(--color-backgroundTertiary, #f5f4f2)',
-  text: 'var(--color-text, #3a3a3a)',
-  textMuted: 'var(--color-textMuted, #6a6a6a)',
-  textSubtle: 'var(--color-textSubtle, #8a8a8a)',
-  border: 'var(--color-border, rgba(58, 58, 58, 0.06))',
-  borderStrong: 'var(--color-borderStrong, rgba(58, 58, 58, 0.1))',
-  primary: 'var(--color-primary, #7a9d8f)',
-  primaryDark: 'var(--color-primaryDark, #6a8d7f)',
-  primaryLight: 'var(--color-primaryLight, #f0f5f3)',
-  primarySoft: 'var(--color-primarySoft, rgba(122, 157, 143, 0.06))',
-  focus: 'var(--color-focus, rgba(93, 140, 124, 0.35))',
-  textOnPrimary: 'var(--color-textOnPrimary, #111827)',
-  accent: 'var(--color-accent, #8a9aa8)',
-  accentLight: 'var(--color-accentLight, #f2f4f6)',
-  error: 'var(--color-error, #b89090)',
-  errorSoft: 'var(--color-errorSoft, rgba(184, 144, 144, 0.08))',
-  errorDark: 'var(--color-errorDark, #a88080)',
-};
-
-const MODAL_SHADOWS = {
-  light: 'var(--shadow-light)',
-  medium: 'var(--shadow-medium)',
-  heavy: 'var(--shadow-heavy)',
-  modal: 'var(--shadow-modal)',
-  soft: 'var(--shadow-soft)',
-};
-
 
 const buildInitialSettings = (
   overrides?: Partial<BookSettings>,
@@ -161,6 +130,40 @@ export default function BookSettingsModal({
   userName,
   mode: _mode = 'save',
 }: BookSettingsModalProps) {
+  const { isDark } = useTheme();
+  const themed = (() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const domTheme = document.documentElement.getAttribute('data-theme');
+      if (domTheme === 'dark') return getThemedColors(true);
+      if (domTheme === 'light') return getThemedColors(false);
+    }
+    return getThemedColors(isDark);
+  })();
+
+  const MODAL_COLORS = {
+    overlay: themed.overlay,
+    surface: themed.surface,
+    surfaceMuted: themed.surfaceMuted,
+    backgroundSecondary: themed.backgroundSecondary,
+    backgroundTertiary: themed.backgroundTertiary,
+    text: themed.text,
+    textMuted: themed.textMuted,
+    textSubtle: themed.textTertiary,
+    border: themed.border,
+    borderStrong: themed.borderStrong,
+    primary: themed.primary,
+    primaryDark: themed.primaryDark,
+    primaryLight: themed.primaryLight,
+    primarySoft: themed.primarySoft,
+    focus: themed.focus,
+    textOnPrimary: themed.textOnPrimary,
+    accent: themed.accent,
+    accentLight: themed.accentLight,
+    error: themed.danger,
+    errorSoft: themed.dangerSoft,
+    errorDark: themed.dangerDark,
+    borderAccent: themed.borderAccent,
+  };
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const firstFocusableRef = useRef<HTMLButtonElement | null>(null);
 
@@ -425,7 +428,7 @@ export default function BookSettingsModal({
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: MODAL_SHADOWS.modal,
+            boxShadow: themed.boxShadows.modal as any,
             border: `1px solid ${MODAL_COLORS.borderStrong}`,
             transition: 'all 0.3s ease',
             boxSizing: 'border-box',
@@ -468,10 +471,14 @@ export default function BookSettingsModal({
                   borderRadius: '6px',
                   backgroundColor: MODAL_COLORS.accentLight,
                   color: MODAL_COLORS.accent,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
                 }}
                 title="У вас есть несохраненные изменения"
               >
-                • Не сохранено
+                <MaterialIcons name="circle" size={8} color={MODAL_COLORS.accent as any} />
+                <span>Не сохранено</span>
               </span>
             )}
           </h2>
@@ -506,7 +513,7 @@ export default function BookSettingsModal({
             padding: '12px 16px',
             borderRadius: '12px',
             backgroundColor: MODAL_COLORS.primarySoft,
-            border: `1px solid ${MODAL_COLORS.primary}20`,
+            border: `1px solid ${MODAL_COLORS.borderAccent}`,
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
@@ -608,6 +615,10 @@ export default function BookSettingsModal({
                   color: MODAL_COLORS.textMuted,
                   cursor: 'pointer',
                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = MODAL_COLORS.primary;
@@ -620,7 +631,12 @@ export default function BookSettingsModal({
                   e.currentTarget.style.backgroundColor = 'transparent';
                 }}
               >
-                {showAdvanced ? '▲ Скрыть детальные настройки' : '▼ Показать детальные настройки'}
+                <MaterialIcons
+                  name={showAdvanced ? 'expand-less' : 'expand-more'}
+                  size={18}
+                  color={MODAL_COLORS.textMuted as any}
+                />
+                <span>{showAdvanced ? 'Скрыть детальные настройки' : 'Показать детальные настройки'}</span>
               </button>
             </div>
 
@@ -814,19 +830,19 @@ export default function BookSettingsModal({
                           backgroundColor: selected ? MODAL_COLORS.primarySoft : MODAL_COLORS.surface,
                           cursor: 'pointer',
                           display: 'block',
-                          boxShadow: selected ? MODAL_SHADOWS.medium : MODAL_SHADOWS.soft,
+                          boxShadow: selected ? (themed.boxShadows.medium as any) : (themed.boxShadows.light as any),
                           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                         }}
                         onMouseEnter={(e) => {
                           if (!selected) {
                             e.currentTarget.style.borderColor = MODAL_COLORS.borderStrong;
-                            e.currentTarget.style.boxShadow = MODAL_SHADOWS.light;
+                            e.currentTarget.style.boxShadow = themed.boxShadows.medium as any;
                           }
                         }}
                         onMouseLeave={(e) => {
                           if (!selected) {
                             e.currentTarget.style.borderColor = MODAL_COLORS.border;
-                            e.currentTarget.style.boxShadow = MODAL_SHADOWS.soft;
+                            e.currentTarget.style.boxShadow = themed.boxShadows.light as any;
                           }
                         }}
                       >
@@ -886,7 +902,7 @@ export default function BookSettingsModal({
                 minHeight: '44px',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 outline: 'none',
-                boxShadow: MODAL_SHADOWS.light,
+                boxShadow: themed.boxShadows.light as any,
                 opacity: isSaving ? 0.5 : 1,
               }}
               onFocus={(e) => {
@@ -897,21 +913,21 @@ export default function BookSettingsModal({
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = MODAL_COLORS.border;
-                e.target.style.boxShadow = MODAL_SHADOWS.light;
+                e.target.style.boxShadow = themed.boxShadows.light as any;
               }}
               onMouseEnter={(e) => {
                 if (!isSaving) {
                   const target = e.target as HTMLButtonElement;
                   target.style.backgroundColor = MODAL_COLORS.backgroundTertiary;
                   target.style.transform = 'translateY(-1px)';
-                  target.style.boxShadow = MODAL_SHADOWS.medium;
+                  target.style.boxShadow = themed.boxShadows.medium as any;
                 }
               }}
               onMouseLeave={(e) => {
                 const target = e.target as HTMLButtonElement;
                 target.style.backgroundColor = MODAL_COLORS.surface;
                 target.style.transform = 'translateY(0)';
-                target.style.boxShadow = MODAL_SHADOWS.light;
+                target.style.boxShadow = themed.boxShadows.light as any;
               }}
             >
               Отмена
@@ -933,7 +949,7 @@ export default function BookSettingsModal({
                   minHeight: '44px',
                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                   outline: 'none',
-                  boxShadow: MODAL_SHADOWS.light,
+                  boxShadow: themed.boxShadows.light as any,
                   opacity: (isSaving || validationErrors.length > 0) ? 0.5 : 1,
                   display: 'flex',
                   alignItems: 'center',
@@ -947,25 +963,30 @@ export default function BookSettingsModal({
                 }}
                 onBlur={(e) => {
                   e.target.style.borderColor = MODAL_COLORS.primary;
-                  e.target.style.boxShadow = MODAL_SHADOWS.light;
+                  e.target.style.boxShadow = themed.boxShadows.light as any;
                 }}
                 onMouseEnter={(e) => {
                   if (!isSaving && validationErrors.length === 0) {
                     const target = e.target as HTMLButtonElement;
                     target.style.backgroundColor = MODAL_COLORS.primaryLight;
                     target.style.transform = 'translateY(-1px)';
-                    target.style.boxShadow = MODAL_SHADOWS.medium;
+                    target.style.boxShadow = themed.boxShadows.medium as any;
                   }
                 }}
                 onMouseLeave={(e) => {
                   const target = e.target as HTMLButtonElement;
                   target.style.backgroundColor = MODAL_COLORS.surface;
                   target.style.transform = 'translateY(0)';
-                  target.style.boxShadow = MODAL_SHADOWS.light;
+                  target.style.boxShadow = themed.boxShadows.light as any;
                 }}
                 aria-label="Предварительный просмотр PDF"
               >
-                {isSaving ? '⏳' : '👁️'} Превью
+                <MaterialIcons
+                  name={isSaving ? 'hourglass-top' : 'visibility'}
+                  size={18}
+                  color={MODAL_COLORS.primary as any}
+                />
+                Превью
               </button>
             )}
             <button
@@ -984,25 +1005,25 @@ export default function BookSettingsModal({
                 minHeight: '44px',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 outline: 'none',
-                boxShadow: MODAL_SHADOWS.medium,
+                boxShadow: themed.boxShadows.medium as any,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
               }}
               onFocus={(e) => {
                 if (!isSaving && validationErrors.length === 0) {
-                  e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}, ${MODAL_SHADOWS.medium}`;
+                  e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}, ${themed.boxShadows.medium}`;
                 }
               }}
               onBlur={(e) => {
-                e.target.style.boxShadow = MODAL_SHADOWS.medium;
+                e.target.style.boxShadow = themed.boxShadows.medium as any;
               }}
               onMouseEnter={(e) => {
                 if (!isSaving && validationErrors.length === 0) {
                   const target = e.target as HTMLButtonElement;
                   target.style.backgroundColor = MODAL_COLORS.primaryDark;
                   target.style.transform = 'translateY(-1px)';
-                  target.style.boxShadow = MODAL_SHADOWS.heavy;
+                  target.style.boxShadow = themed.boxShadows.heavy as any;
                 }
               }}
               onMouseLeave={(e) => {
@@ -1010,7 +1031,7 @@ export default function BookSettingsModal({
                   const target = e.target as HTMLButtonElement;
                   target.style.backgroundColor = MODAL_COLORS.primary;
                   target.style.transform = 'translateY(0)';
-                  target.style.boxShadow = MODAL_SHADOWS.medium;
+                  target.style.boxShadow = themed.boxShadows.medium as any;
                 }
               }}
               aria-label="Сохранить и создать PDF"
@@ -1020,7 +1041,9 @@ export default function BookSettingsModal({
                   <span style={{
                     display: 'inline-block',
                     animation: 'spin 1s linear infinite',
-                  }}>⏳</span>
+                  }}>
+                    <MaterialIcons name="hourglass-top" size={18} color={MODAL_COLORS.textOnPrimary as any} />
+                  </span>
                   <style>{`
                     @keyframes spin {
                       from { transform: rotate(0deg); }
@@ -1030,7 +1053,10 @@ export default function BookSettingsModal({
                   Создание...
                 </>
               ) : (
-                <>📄 Сохранить PDF</>
+                <>
+                  <MaterialIcons name="picture-as-pdf" size={18} color={MODAL_COLORS.textOnPrimary as any} />
+                  Сохранить PDF
+                </>
               )}
             </button>
           </div>

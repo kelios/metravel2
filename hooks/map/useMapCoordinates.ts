@@ -25,7 +25,8 @@ function isValidCoordinate(lat: number, lng: number): boolean {
  * Запрашивает геолокацию при монтировании.
  */
 export function useMapCoordinates() {
-  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
+  // Initialize with default coordinates to prevent NaN errors
+  const [coordinates, setCoordinates] = useState<Coordinates>(DEFAULT_COORDINATES);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

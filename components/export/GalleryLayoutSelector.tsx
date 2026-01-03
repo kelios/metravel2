@@ -11,8 +11,7 @@ interface GalleryLayoutInfo {
   id: GalleryLayout;
   name: string;
   description: string;
-  icon: string;
-  preview: string; // ASCII art preview
+  iconName: string;
   bestFor: string;
 }
 
@@ -21,40 +20,35 @@ const GALLERY_LAYOUTS: GalleryLayoutInfo[] = [
     id: 'grid',
     name: 'Сетка',
     description: 'Классическая раскладка с одинаковыми размерами',
-    icon: '▦',
-    preview: '▢▢▢\n▢▢▢\n▢▢▢',
+    iconName: 'grid-view',
     bestFor: 'Универсальная раскладка для любых фото',
   },
   {
     id: 'masonry',
     name: 'Мозаика',
     description: 'Pinterest-style с разной высотой фото',
-    icon: '▦',
-    preview: '▢▢\n▢▢\n▢▢',
+    iconName: 'view-quilt',
     bestFor: 'Фото с разными пропорциями',
   },
   {
     id: 'collage',
     name: 'Коллаж',
     description: 'Одно большое фото + несколько маленьких',
-    icon: '▦',
-    preview: '▢▢\n▢▢',
+    iconName: 'dashboard',
     bestFor: 'Выделение ключевого фото',
   },
   {
     id: 'polaroid',
     name: 'Полароид',
     description: 'Ретро стиль с белыми рамками',
-    icon: '▢',
-    preview: '▢ ▢\n▢ ▢',
+    iconName: 'crop-square',
     bestFor: 'Винтажный стиль, воспоминания',
   },
   {
     id: 'slideshow',
     name: 'Слайдшоу',
     description: 'Одно фото на страницу',
-    icon: '▢',
-    preview: '▢',
+    iconName: 'photo-size-select-large',
     bestFor: 'Крупные фото с подробными подписями',
   },
 ];
@@ -279,7 +273,7 @@ function LayoutCard({ layout, isSelected, onSelect, styles }: LayoutCardProps) {
     >
       {/* Иконка */}
       <View style={styles.layoutIcon}>
-        <Text style={styles.layoutIconText}>{layout.icon}</Text>
+        <MaterialIcons name={layout.iconName as any} size={24} color={styles.layoutIconText.color} />
       </View>
 
       {/* Информация */}
@@ -375,6 +369,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   layoutIconText: {
     fontSize: 24,
+    color: colors.text,
   },
   layoutName: {
     fontSize: 15,

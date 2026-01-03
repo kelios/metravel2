@@ -96,12 +96,21 @@ const MapPanel: React.FC<MapPanelProps> = ({
 
     const travelProp = useMemo(() => ({ data: travelsData }), [travelsData]);
 
+    // Safe coordinates with defaults - MUST be before any early returns
+    const safeCoordinates = useMemo(() => {
+        if (!coordinates || !Number.isFinite(coordinates.latitude) || !Number.isFinite(coordinates.longitude)) {
+            return { latitude: 53.9006, longitude: 27.559 }; // Default: Minsk
+        }
+        return coordinates;
+    }, [coordinates]);
+
     // ✅ ИСПРАВЛЕНИЕ: Функция для обработки ошибок и регенерации ключа карты
     const handleMapError = useCallback(() => {
         console.warn('[MapPanel] Map error occurred, regenerating map key...');
         setMapKey(`map-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     }, []);
 
+    // Early returns - AFTER all hooks
     if (!isWeb) return <Placeholder />;
 
     if (!shouldLoad) {
@@ -118,14 +127,6 @@ const MapPanel: React.FC<MapPanelProps> = ({
     if (loading || !WebMap) {
         return <Placeholder text="Инициализация карты…" showSkeleton={true} />;
     }
-
-    // Safe coordinates with defaults
-    const safeCoordinates = useMemo(() => {
-        if (!coordinates || !Number.isFinite(coordinates.latitude) || !Number.isFinite(coordinates.longitude)) {
-            return { latitude: 53.9006, longitude: 27.559 }; // Default: Minsk
-        }
-        return coordinates;
-    }, [coordinates]);
 
     return (
         <View 

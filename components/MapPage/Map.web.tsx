@@ -383,9 +383,14 @@ const MapPageComponent: React.FC<Props> = (props) => {
         />
 
         {/* Radius circle */}
-        {mode === 'radius' && radiusInMeters && Number.isFinite(coordinates.latitude) && Number.isFinite(coordinates.longitude) && (
+        {mode === 'radius' &&
+         radiusInMeters &&
+         Number.isFinite(radiusInMeters) &&
+         radiusInMeters > 0 &&
+         Number.isFinite(safeCenter[0]) &&
+         Number.isFinite(safeCenter[1]) && (
           <Circle
-            center={[coordinates.latitude, coordinates.longitude]}
+            center={safeCenter}
             radius={radiusInMeters}
             pathOptions={{
               color: colors.primary,
@@ -398,7 +403,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
         )}
 
         {/* Route markers */}
-        {routePoints.length >= 1 && customIcons?.start && (
+        {routePoints.length >= 1 &&
+         customIcons?.start &&
+         Number.isFinite(routePoints[0][0]) &&
+         Number.isFinite(routePoints[0][1]) && (
           <Marker
             position={[routePoints[0][1], routePoints[0][0]]}
             icon={customIcons.start}
@@ -412,7 +420,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
           </Marker>
         )}
 
-        {routePoints.length === 2 && customIcons?.end && (
+        {routePoints.length === 2 &&
+         customIcons?.end &&
+         Number.isFinite(routePoints[1][0]) &&
+         Number.isFinite(routePoints[1][1]) && (
           <Marker
             position={[routePoints[1][1], routePoints[1][0]]}
             icon={customIcons.end}
@@ -427,7 +438,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
         )}
 
         {/* Routing */}
-        {mode === 'route' && routePoints.length >= 2 && rl && RoutingMachineWithMapInner && (
+        {mode === 'route' &&
+         routePoints.length >= 2 &&
+         rl &&
+         RoutingMachineWithMapInner &&
+         routePoints.every(p => Number.isFinite(p[0]) && Number.isFinite(p[1])) && (
           <RoutingMachineWithMapInner
             routePoints={routePoints}
             transportMode={transportMode}
