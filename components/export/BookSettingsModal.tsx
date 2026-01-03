@@ -293,8 +293,10 @@ export default function BookSettingsModal({
             maxWidth: '800px',
             width: '100%',
             margin: 'auto 0',
-            maxHeight: 'none',
-            overflow: 'visible',
+            maxHeight: '92vh',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
             boxShadow: MODAL_SHADOWS.modal,
             border: `1px solid ${MODAL_COLORS.borderStrong}`,
             transition: 'all 0.3s ease',
@@ -320,16 +322,283 @@ export default function BookSettingsModal({
             Настройки фотоальбома
           </h2>
 
-        <div style={{ marginBottom: '20px', color: MODAL_COLORS.textMuted, fontSize: '14px' }}>
-          Выбрано путешествий:&nbsp;
-          <span style={{ fontWeight: 600, color: MODAL_COLORS.text }}>{travelCount}</span>
-        </div>
+          <div style={{ marginBottom: '20px', color: MODAL_COLORS.textMuted, fontSize: '14px' }}>
+            Выбрано путешествий:&nbsp;
+            <span style={{ fontWeight: 600, color: MODAL_COLORS.text }}>{travelCount}</span>
+          </div>
 
-          {/* Пресеты настроек */}
-          <PresetSelector
-            onPresetSelect={handlePresetSelect}
-            selectedPresetId={selectedPresetId}
-            showCategories={true}
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              paddingBottom: '16px',
+            }}
+          >
+            {/* Пресеты настроек */}
+            <PresetSelector
+              onPresetSelect={handlePresetSelect}
+              selectedPresetId={selectedPresetId}
+              showCategories={true}
+            />
+
+            {/* Разделитель */}
+            <div style={{ 
+              margin: '24px 0', 
+              height: '1px', 
+              backgroundColor: MODAL_COLORS.border,
+            }} />
+
+            {/* Выбор темы */}
+            <ThemePreview
+              selectedTheme={settings.template}
+              onThemeSelect={handleThemeSelect}
+              compact={false}
+            />
+
+            {/* Разделитель */}
+            <div style={{ 
+              margin: '24px 0', 
+              height: '1px', 
+              backgroundColor: MODAL_COLORS.border,
+            }} />
+
+            {/* Настройки галереи */}
+            {settings.includeGallery && (
+              <>
+                <GalleryLayoutSelector
+                  selectedLayout={settings.galleryLayout || 'grid'}
+                  onLayoutSelect={(layout) => setSettings({ ...settings, galleryLayout: layout })}
+                  columns={settings.galleryColumns}
+                  onColumnsChange={(cols) => setSettings({ ...settings, galleryColumns: cols })}
+                  showCaptions={settings.showCaptions}
+                  onShowCaptionsChange={(show) => setSettings({ ...settings, showCaptions: show })}
+                  captionPosition={settings.captionPosition}
+                  onCaptionPositionChange={(pos) => setSettings({ ...settings, captionPosition: pos })}
+                  spacing={settings.gallerySpacing}
+                  onSpacingChange={(sp) => setSettings({ ...settings, gallerySpacing: sp })}
+                />
+
+                {/* Разделитель */}
+                <div style={{ 
+                  margin: '24px 0', 
+                  height: '1px', 
+                  backgroundColor: MODAL_COLORS.border,
+                }} />
+              </>
+            )}
+
+            {/* Кнопка для расширенных настроек */}
+            <div 
+              style={{ 
+                marginBottom: '20px',
+                textAlign: 'center',
+              }}
+            >
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: 'transparent',
+                  border: `1.5px solid ${MODAL_COLORS.border}`,
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: MODAL_COLORS.textMuted,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = MODAL_COLORS.primary;
+                  e.currentTarget.style.color = MODAL_COLORS.primary;
+                  e.currentTarget.style.backgroundColor = MODAL_COLORS.primarySoft;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = MODAL_COLORS.border;
+                  e.currentTarget.style.color = MODAL_COLORS.textMuted;
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                {showAdvanced ? '▲ Скрыть детальные настройки' : '▼ Показать детальные настройки'}
+              </button>
+            </div>
+
+            {showAdvanced && (
+              <>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
+                    Название книги
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.title}
+                    onChange={(e) => setSettings({ ...settings, title: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      border: `1.5px solid ${MODAL_COLORS.border}`,
+                      borderRadius: '12px',
+                      fontSize: '15px',
+                      minHeight: '44px',
+                      backgroundColor: MODAL_COLORS.surface,
+                      color: MODAL_COLORS.text,
+                      outline: 'none',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxSizing: 'border-box',
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = MODAL_COLORS.primary;
+                      e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
+                      e.target.style.backgroundColor = MODAL_COLORS.surface;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = MODAL_COLORS.border;
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    placeholder="Мои путешествия"
+                  />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
+                    Подзаголовок (опционально)
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.subtitle || ''}
+                    onChange={(e) => setSettings({ ...settings, subtitle: e.target.value || undefined })}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      border: `1.5px solid ${MODAL_COLORS.border}`,
+                      borderRadius: '12px',
+                      fontSize: '15px',
+                      minHeight: '44px',
+                      backgroundColor: MODAL_COLORS.surface,
+                      color: MODAL_COLORS.text,
+                      outline: 'none',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxSizing: 'border-box',
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = MODAL_COLORS.primary;
+                      e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
+                      e.target.style.backgroundColor = MODAL_COLORS.surface;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = MODAL_COLORS.border;
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    placeholder="Воспоминания 2024"
+                  />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
+                    Тип обложки
+                  </label>
+                  <select
+                    value={settings.coverType}
+                    onChange={(e) => setSettings({ ...settings, coverType: e.target.value as any })}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      border: `1.5px solid ${MODAL_COLORS.border}`,
+                      borderRadius: '12px',
+                      fontSize: '15px',
+                      minHeight: '44px',
+                      backgroundColor: MODAL_COLORS.surface,
+                      color: MODAL_COLORS.text,
+                      outline: 'none',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      cursor: 'pointer',
+                      boxSizing: 'border-box',
+                      appearance: 'none',
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 14px center',
+                      paddingRight: '40px',
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = MODAL_COLORS.primary;
+                      e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
+                      e.target.style.backgroundColor = MODAL_COLORS.surface;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = MODAL_COLORS.border;
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  >
+                    <option value="auto">Автоматическая (лучшее фото)</option>
+                    <option value="first-photo">Первое фото первого путешествия</option>
+                    <option value="gradient">Градиент</option>
+                    <option value="custom">Свое изображение</option>
+                  </select>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '16px',
+              borderTop: `1px solid ${MODAL_COLORS.border}`,
+              backgroundColor: MODAL_COLORS.surface,
+            }}
+          >
+            <button
+              onClick={handlePreview}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: MODAL_COLORS.primary,
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: MODAL_COLORS.surface,
+                cursor: 'pointer',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = MODAL_COLORS.primaryHover;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = MODAL_COLORS.primary;
+              }}
+            >
+              Предварительный просмотр
+            </button>
+            <button
+              onClick={handleSave}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: MODAL_COLORS.primary,
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: MODAL_COLORS.surface,
+                cursor: 'pointer',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = MODAL_COLORS.primaryHover;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = MODAL_COLORS.primary;
+              }}
+            >
+              Сохранить
+            </button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
           />
 
           {/* Разделитель */}
@@ -779,7 +1048,19 @@ export default function BookSettingsModal({
             </>
           )}
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '30px' }}>
+          </div>
+
+          <div
+            style={{
+              position: 'sticky',
+              bottom: 0,
+              backgroundColor: MODAL_COLORS.surface,
+              paddingTop: '16px',
+              marginTop: '12px',
+              borderTop: `1px solid ${MODAL_COLORS.border}`,
+            }}
+          >
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button
               onClick={onClose}
               style={{
@@ -901,6 +1182,7 @@ export default function BookSettingsModal({
             >
               Сохранить PDF
             </button>
+          </div>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View, Text, TouchableOpacity, StyleSheet, LayoutChangeEvent } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from 'react-native-paper';
 import { Feather } from '@expo/vector-icons';
@@ -7,7 +7,6 @@ import Toast from 'react-native-toast-message';
 import { useRouter } from 'expo-router';
 
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
-import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { QualityIndicator } from '@/components/travel/ValidationFeedback';
 import { TravelFormData } from '@/src/types/types';
 import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
@@ -57,7 +56,6 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const router = useRouter();
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
-    const [footerHeight, setFooterHeight] = useState(0);
     const actionPendingRef = useRef(false);
 
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
@@ -191,14 +189,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const [missingForModeration, setMissingForModeration] = useState<ModerationIssue[]>([]);
     const isNew = !formData.id;
 
-    const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
-        const next = Math.ceil(event.nativeEvent.layout.height);
-        setFooterHeight(prev => (prev === next ? prev : next));
-    }, []);
-
-    const contentPaddingBottom = useMemo(() => {
-        return footerHeight > 0 ? footerHeight + 16 : 220;
-    }, [footerHeight]);
+    const contentPaddingBottom = useMemo(() => DESIGN_TOKENS.spacing.xl, []);
 
     useEffect(() => {
         trackWizardEvent('wizard_step_view', {
@@ -383,6 +374,15 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
                     progressPercent={progressPercent}
                     autosaveBadge={autosaveBadge}
+                    onPrimary={handlePrimaryAction}
+                    primaryLabel={
+                        pendingModeration
+                            ? 'Отправлено на модерацию'
+                            : status === 'draft'
+                            ? 'Сохранить'
+                            : 'Отправить на модерацию'
+                    }
+                    primaryDisabled={pendingModeration}
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
                     currentStep={currentStep}
@@ -682,23 +682,6 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     )}
                     </View>
                 </ScrollView>
-                <TravelWizardFooter
-                    canGoBack={false}
-                    onPrimary={handlePrimaryAction}
-                    primaryLabel={
-                        pendingModeration
-                            ? 'Отправлено на модерацию'
-                            : status === 'draft'
-                            ? 'Сохранить'
-                            : 'Отправить на модерацию'
-                    }
-                    primaryDisabled={pendingModeration}
-                    onSave={undefined}
-                    onLayout={handleFooterLayout}
-                    currentStep={currentStep}
-                    totalSteps={totalSteps}
-                    onStepSelect={onStepSelect}
-                />
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
