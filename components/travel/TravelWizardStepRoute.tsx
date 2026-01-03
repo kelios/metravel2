@@ -142,7 +142,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         }, 50);
     }, [focusAnchorId, onAnchorHandled]);
 
-    const parseCoordsPair = (raw: string): { lat: number; lng: number } | null => {
+    const parseCoordsPair = useCallback((raw: string): { lat: number; lng: number } | null => {
         // Accept common copy/paste formats:
         // - "49.609645, 18.845693"
         // - "49.609645 18.845693"
@@ -165,7 +165,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         if (!latOk || !lngOk) return null;
 
         return { lat, lng };
-    };
+    }, []);
 
     useEffect(() => {
         if (hasAtLeastOnePoint) {

@@ -210,7 +210,7 @@ export function useMapScreenController() {
       setRouteDistance,
       setFullRouteCoords,
       onMapClick: handleMapClick,
-      onMapReady: setMapUiApi,
+      onMapUiApiReady: setMapUiApi,
     }),
     [
       travelsData,

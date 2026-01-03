@@ -148,7 +148,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 required: false,
             },
         ];
-    }, [formData]);
+    }, [formData, getGalleryItems]);
 
     const checklist = useMemo(() => {
         // Для обратной совместимости со старым кодом
@@ -169,7 +169,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             { key: 'route', label: 'Маршрут на карте (минимум одна точка на шаге "Маршрут")', ok: hasRoute },
             { key: 'photos', label: 'Фото или обложка маршрута (рекомендуем горизонтальное изображение, без коллажей)', ok: hasPhotos },
         ];
-    }, [formData]);
+    }, [formData, getGalleryItems, getRoutePoints]);
 
     const moderationIssues = useMemo(() => {
         return getModerationIssues({

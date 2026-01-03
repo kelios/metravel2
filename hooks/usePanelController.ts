@@ -8,7 +8,7 @@ const PANEL_ANIMATION_DURATION = 250;
  * @param isMobile - флаг мобильного устройства (для разных стилей анимации)
  */
 export function usePanelController(isMobile: boolean = false) {
-    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+    const { width: windowWidth, height: _windowHeight } = useWindowDimensions();
     const [isPanelVisible, setPanelVisible] = useState(!isMobile);
     const panelAnimation = useRef(new Animated.Value(isMobile ? 0 : 1)).current;
 

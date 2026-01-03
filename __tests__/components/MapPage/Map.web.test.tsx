@@ -155,15 +155,17 @@ jest.mock('@/components/MapPage/Map/MapLogicComponent', () => {
   const React = require('react')
   return {
     MapLogicComponent: (props: any) => {
+      const { mapRef, onMapReady } = props
+      const useMap = props.useMap ?? (() => null)
+      const map = useMap()
       React.useEffect(() => {
         try {
-          const map = props.useMap?.()
-          if (props.mapRef) props.mapRef.current = map
-          props.onMapReady?.(map)
+          if (mapRef) mapRef.current = map
+          onMapReady?.(map)
         } catch {
           // noop
         }
-      }, [])
+      }, [map, mapRef, onMapReady])
       return null
     },
   }

@@ -14,7 +14,7 @@ jest.mock('@/hooks/usePanelController', () => {
 
         React.useEffect(() => {
           setIsPanelVisible(!mockResponsiveState.isPhone)
-        }, [mockResponsiveState.isPhone, mockResponsiveState.width])
+        }, [])
 
         return {
           isPanelVisible,

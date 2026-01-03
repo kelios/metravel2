@@ -18,14 +18,15 @@ interface UpsertTravelViewProps {
 
 export default function UpsertTravelView({ controller }: UpsertTravelViewProps) {
   const { colors } = controller;
+  const { setFormData } = controller;
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const setFormDataDirect = useCallback(
     (next: TravelFormData) => {
-      controller.setFormData(next);
+      setFormData(next);
     },
-    [controller.setFormData]
+    [setFormData]
   );
 
   if (controller.isInitialLoading) {

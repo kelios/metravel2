@@ -175,7 +175,7 @@ export default function BookSettingsModal({
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
+  const [_showUnsavedWarning, setShowUnsavedWarning] = useState(false);
 
   // ✅ УЛУЧШЕНИЕ: Focus trap для доступности
   useFocusTrap(dialogRef, {
@@ -234,7 +234,7 @@ export default function BookSettingsModal({
     onClose();
   }, [hasUnsavedChanges, onClose]);
 
-  const handleConfirmClose = useCallback(() => {
+  const _handleConfirmClose = useCallback(() => {
     setShowUnsavedWarning(false);
     setHasUnsavedChanges(false);
     onClose();

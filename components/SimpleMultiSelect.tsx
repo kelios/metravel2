@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View, Text, StyleSheet, Pressable, FlatList, TextInput, Modal, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -38,21 +38,21 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const getItemValue = (item: MultiSelectItem): MultiSelectValue => {
+  const getItemValue = useCallback((item: MultiSelectItem): MultiSelectValue => {
     const raw = item[valueField];
     if (typeof raw === 'string' || typeof raw === 'number') return raw;
     return '';
-  };
+  }, [valueField]);
 
-  const getItemLabel = (item: MultiSelectItem): string => {
+  const getItemLabel = useCallback((item: MultiSelectItem): string => {
     const raw = item[labelField];
     if (typeof raw === 'string' || typeof raw === 'number') return String(raw);
     return '';
-  };
+  }, [labelField]);
 
   const selectedItems = useMemo(() => {
     return data.filter(item => value.includes(getItemValue(item)));
-  }, [data, value, valueField]);
+  }, [data, value, getItemValue]);
 
   const filteredData = useMemo(() => {
     if (!searchQuery.trim()) return data;
@@ -60,7 +60,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
     return data.filter(item => 
       getItemLabel(item).toLowerCase().includes(query)
     );
-  }, [data, searchQuery, labelField]);
+  }, [data, searchQuery, getItemLabel]);
 
   const handleToggleItem = (item: MultiSelectItem) => {
     const itemValue = getItemValue(item);
