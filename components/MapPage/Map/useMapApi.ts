@@ -1,5 +1,5 @@
 // useMapApi.ts - Hook for exposing map API to parent components
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import type { MapUiApi } from '@/src/types/mapUi';
 import type { LatLng } from '@/types/coordinates';
@@ -159,10 +159,26 @@ export function useMapApi({
     leafletControlRef,
   ]);
 
+  // Store api in ref to avoid triggering effects on every render
+  const apiRef = useRef<MapUiApi | null>(null);
+  apiRef.current = api;
+
+  // Track if api is ready (map and L are available)
+  const isApiReady = Boolean(map && L);
+  const wasApiReadyRef = useRef(false);
+
   useEffect(() => {
     if (!onMapUiApiReady) return;
-    onMapUiApiReady(api);
-  }, [api, onMapUiApiReady]);
+
+    // Only call onMapUiApiReady when readiness changes
+    if (isApiReady && !wasApiReadyRef.current) {
+      wasApiReadyRef.current = true;
+      onMapUiApiReady(apiRef.current);
+    } else if (!isApiReady && wasApiReadyRef.current) {
+      wasApiReadyRef.current = false;
+      onMapUiApiReady(null);
+    }
+  }, [isApiReady, onMapUiApiReady]);
 
   useEffect(() => {
     if (!onMapUiApiReady) return;
@@ -171,4 +187,3 @@ export function useMapApi({
     };
   }, [onMapUiApiReady]);
 }
-
