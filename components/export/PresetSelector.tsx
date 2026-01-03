@@ -185,7 +185,7 @@ function PresetCard({ preset, isSelected, onSelect, styles }: PresetCardProps) {
       </View>
 
       <View style={styles.presetBody}>
-        <Text style={styles.presetName} numberOfLines={1}>
+        <Text style={styles.presetName} numberOfLines={2}>
           {preset.name}
         </Text>
         <Text style={styles.presetDescription} numberOfLines={2}>
@@ -324,34 +324,24 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   presetCard: {
     width: Platform.OS === 'web' ? 'auto' : 260,
-    height: 220,
+    ...(Platform.OS === 'web' ? ({ minHeight: 220 } as any) : { height: 220 }),
     flexShrink: 0,
     backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.card,
-      },
-      default: {
-        ...colors.shadows.medium,
-      },
-    }),
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: colors.boxShadows.card } as any)
+      : { ...colors.shadows.medium }),
   },
   presetCardSelected: {
     borderColor: colors.primary,
     borderWidth: 2,
     backgroundColor: colors.backgroundSecondary,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.heavy,
-      },
-      default: {
-        ...colors.shadows.hover,
-      },
-    }),
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: colors.boxShadows.heavy } as any)
+      : { ...colors.shadows.hover }),
   },
   presetHeader: {
     flexDirection: 'row',
@@ -418,6 +408,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontWeight: '600',
     color: colors.text,
     marginBottom: 8,
+    lineHeight: 20,
+    minHeight: 40,
   },
   presetDescription: {
     fontSize: 12,

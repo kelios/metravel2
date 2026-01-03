@@ -304,8 +304,14 @@ function ThemeCard({ theme, isSelected, onSelect, compact, styles }: ThemeCardPr
 
       {/* Информация о теме */}
       <View style={styles.themeInfo}>
-        <Text style={styles.themeName}>{theme.name}</Text>
-        {!compact && <Text style={styles.themeDescription}>{theme.description}</Text>}
+        <Text style={styles.themeName} numberOfLines={2}>
+          {theme.name}
+        </Text>
+        {!compact && (
+          <Text style={styles.themeDescription} numberOfLines={2}>
+            {theme.description}
+          </Text>
+        )}
         
         {/* Цветовая палитра */}
         <View style={styles.colorPalette}>
@@ -417,11 +423,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontWeight: '600',
     color: colors.text,
     marginBottom: 4,
+    lineHeight: 20,
+    minHeight: 40,
   },
   themeDescription: {
     fontSize: 12,
     color: colors.textMuted,
     marginBottom: 8,
+    lineHeight: 16,
+    minHeight: 32,
   },
   colorPalette: {
     flexDirection: 'row',
