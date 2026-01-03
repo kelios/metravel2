@@ -134,17 +134,6 @@ jest.mock('@/components/CollapsibleBlock', () => {
   };
 });
 
-jest.mock('@/components/TravelList', () => {
-  const React = require('react');
-  const { View, Text } = require('react-native');
-  return function MockTravelList({ data = [] }: any) {
-    return (
-      <View testID="travel-list">
-        <Text>{data.length} items</Text>
-      </View>
-    );
-  };
-});
 
 jest.mock('@/components/MapPage/SegmentedControl', () => {
   const React = require('react');
@@ -178,7 +167,7 @@ describe('FiltersPanel Controls', () => {
   };
 
   const mockFilterValue = {
-    selectedCategories: [],
+    categories: [], // Array of selected category names
     radius: '60',
     sortBy: 'distance',
     sortOrder: 'asc',
@@ -428,7 +417,7 @@ describe('FiltersPanel Controls', () => {
           resetFilters={resetFilters}
           filterValue={{
             ...mockFilterValue,
-            selectedCategories: ['Природа'],
+            categories: ['Природа'],
           }}
         />
       );
