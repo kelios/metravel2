@@ -38,6 +38,16 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const normalizeValue = useCallback((v: MultiSelectValue): string => {
+    if (v === null || v === undefined) return '';
+    return String(v);
+  }, []);
+
+  const isSelectedValue = useCallback(
+    (a: MultiSelectValue, b: MultiSelectValue) => normalizeValue(a) === normalizeValue(b),
+    [normalizeValue]
+  );
+
   const getItemValue = useCallback((item: MultiSelectItem): MultiSelectValue => {
     const raw = item[valueField];
     if (typeof raw === 'string' || typeof raw === 'number') return raw;
@@ -51,8 +61,11 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   }, [labelField]);
 
   const selectedItems = useMemo(() => {
-    return data.filter(item => value.includes(getItemValue(item)));
-  }, [data, value, getItemValue]);
+    return data.filter(item => {
+      const itemValue = getItemValue(item);
+      return value.some(v => isSelectedValue(v, itemValue));
+    });
+  }, [data, value, getItemValue, isSelectedValue]);
 
   const filteredData = useMemo(() => {
     if (!searchQuery.trim()) return data;
@@ -64,17 +77,21 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
 
   const handleToggleItem = (item: MultiSelectItem) => {
     const itemValue = getItemValue(item);
-    const isSelected = value.includes(itemValue);
+    const isSelected = value.some(v => isSelectedValue(v, itemValue));
     
     if (isSelected) {
-      onChange(value.filter(v => v !== itemValue));
+      onChange(value.filter(v => !isSelectedValue(v, itemValue)));
     } else {
+      // Avoid duplicates even if types differ (e.g. '1' vs 1)
+      if (value.some(v => isSelectedValue(v, itemValue))) {
+        return;
+      }
       onChange([...value, itemValue]);
     }
   };
 
   const handleRemoveItem = (itemValue: MultiSelectValue) => {
-    onChange(value.filter(v => v !== itemValue));
+    onChange(value.filter(v => !isSelectedValue(v, itemValue)));
   };
 
   const handleOpen = () => {
@@ -106,7 +123,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   );
 
   const renderItem = ({ item }: { item: MultiSelectItem }) => {
-    const isSelected = value.includes(getItemValue(item));
+    const isSelected = value.some(v => isSelectedValue(v, getItemValue(item)));
     
     return (
       <Pressable
