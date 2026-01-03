@@ -24,11 +24,12 @@ const getORSProfile = (mode: TransportMode) => {
 };
 
 const getOSRMProfile = (mode: TransportMode) => {
+  // Публичный OSRM (router.project-osrm.org) поддерживает только 'driving'
   switch (mode) {
     case 'bike':
-      return 'bike';
+      return 'cycling'; // Не поддерживается публичным OSRM
     case 'foot':
-      return 'foot';
+      return 'walking'; // Не поддерживается публичным OSRM
     default:
       return 'driving';
   }
@@ -152,6 +153,95 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
     []
   );
 
+  // Бесплатный routing через Valhalla для bike/foot
+  const fetchValhalla = useCallback(
+    async (
+      points: LatLng[],
+      mode: TransportMode,
+      signal: AbortSignal
+    ): Promise<RouteResult> => {
+      const costingMode = mode === 'bike' ? 'bicycle' : mode === 'foot' ? 'pedestrian' : 'auto';
+
+      const locations = points.map(p => ({ lon: p.lng, lat: p.lat }));
+
+      const requestBody = {
+        locations,
+        costing: costingMode,
+        directions_options: { units: 'kilometers' }
+      };
+
+      const url = `https://valhalla1.openstreetmap.de/route?json=${encodeURIComponent(JSON.stringify(requestBody))}`;
+
+      const res = await fetch(url, { signal });
+
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => '');
+        if (res.status === 429)
+          throw new Error('Превышен лимит запросов. Подождите немного.');
+        if (res.status === 400)
+          throw new Error('Некорректные координаты маршрута.');
+        throw new Error(
+          `Ошибка Valhalla: ${res.status}${errorText ? ` - ${errorText}` : ''}`
+        );
+      }
+
+      const data = await res.json();
+      const trip = data.trip;
+
+      if (!trip?.legs?.length)
+        throw new Error('Пустой маршрут от Valhalla');
+
+      // Декодируем polyline6 (Valhalla использует precision 6)
+      const decodePolyline6 = (encoded: string): LatLng[] => {
+        const coords: LatLng[] = [];
+        let index = 0, lat = 0, lng = 0;
+
+        while (index < encoded.length) {
+          let shift = 0, result = 0, byte: number;
+          do {
+            byte = encoded.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+          } while (byte >= 0x20);
+          lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+
+          shift = 0;
+          result = 0;
+          do {
+            byte = encoded.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+          } while (byte >= 0x20);
+          lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+
+          coords.push({ lat: lat / 1e6, lng: lng / 1e6 });
+        }
+        return coords;
+      };
+
+      const allCoords: LatLng[] = [];
+      for (const leg of trip.legs) {
+        if (leg.shape) {
+          allCoords.push(...decodePolyline6(leg.shape));
+        }
+      }
+
+      if (allCoords.length === 0)
+        throw new Error('Пустой маршрут от Valhalla');
+
+      const distanceKm = trip.summary?.length || 0;
+      const durationSec = trip.summary?.time || 0;
+
+      return {
+        coords: allCoords,
+        distance: distanceKm * 1000,
+        duration: durationSec,
+        isOptimal: true,
+      };
+    },
+    []
+  );
+
   const buildRoute = useCallback(async () => {
     // Validate points
     const validation = RouteValidator.validate(points);
@@ -190,39 +280,45 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       let result: RouteResult;
 
       try {
-        // Try primary service
-        result = ORS_API_KEY
-          ? await fetchORS(pointCoords, transportMode, abortController.signal)
-          : await fetchOSRM(pointCoords, transportMode, abortController.signal);
+        // Try primary service based on transport mode
+        if (ORS_API_KEY) {
+          // ORS supports all modes
+          result = await fetchORS(pointCoords, transportMode, abortController.signal);
+        } else if (transportMode === 'car') {
+          // OSRM only supports driving
+          result = await fetchOSRM(pointCoords, transportMode, abortController.signal);
+        } else {
+          // For bike/foot use free Valhalla
+          result = await fetchValhalla(pointCoords, transportMode, abortController.signal);
+        }
       } catch (primaryError: any) {
         if (primaryError?.name === 'AbortError') throw primaryError;
 
-        // Try fallback
-        if (ORS_API_KEY) {
-          try {
-            result = await fetchOSRM(
-              pointCoords,
-              transportMode,
-              abortController.signal
-            );
-          } catch (fallbackError: any) {
-            if (fallbackError?.name === 'AbortError') throw fallbackError;
-
-            // Use direct line as last resort
-            const distance = CoordinateConverter.pathDistance(pointCoords);
-            result = {
-              coords: pointCoords,
-              distance,
-              duration: 0,
-              isOptimal: false,
-            };
-
-            setError(
-              'Используется прямая линия (сервисы маршрутизации недоступны)'
-            );
+        // Try fallback services
+        try {
+          if (transportMode === 'car') {
+            // For car, try Valhalla as fallback
+            result = await fetchValhalla(pointCoords, transportMode, abortController.signal);
+          } else {
+            // For bike/foot, try OSRM driving route (better than nothing)
+            result = await fetchOSRM(pointCoords, 'car', abortController.signal);
+            result.isOptimal = false;
           }
-        } else {
-          throw primaryError;
+        } catch (fallbackError: any) {
+          if (fallbackError?.name === 'AbortError') throw fallbackError;
+
+          // Use direct line as last resort
+          const distance = CoordinateConverter.pathDistance(pointCoords);
+          result = {
+            coords: pointCoords,
+            distance,
+            duration: 0,
+            isOptimal: false,
+          };
+
+          setError(
+            'Используется прямая линия (сервисы маршрутизации недоступны)'
+          );
         }
       }
 
@@ -252,7 +348,7 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
         error: errorMessage,
       });
     }
-  }, [points, transportMode, ORS_API_KEY, fetchORS, fetchOSRM, setRoute, setBuilding, setError]);
+  }, [points, transportMode, ORS_API_KEY, fetchORS, fetchOSRM, fetchValhalla, setRoute, setBuilding, setError]);
 
   // Auto-build route when points change
   useEffect(() => {
