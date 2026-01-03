@@ -25,6 +25,7 @@ import {
   type MapFilterValues,
   type StorageLike,
 } from '@/src/utils/mapFiltersStorage';
+import { usePanelController } from '@/hooks/usePanelController';
 
 interface Coordinates {
   latitude: number;
@@ -75,6 +76,8 @@ export function useMapScreenController() {
   const isMobile = isPhone || isLargePhone;
   const insets = useSafeAreaInsets();
   const themedColors = useThemedColors();
+  const { isPanelVisible, openPanel, closePanel, panelStyle, overlayStyle } = usePanelController(isMobile);
+
 
   const [mapUiApi, setMapUiApi] = useState<MapUiApi | null>(null);
 
@@ -110,14 +113,18 @@ export function useMapScreenController() {
   } = routeStore;
 
   const [rightPanelTab, setRightPanelTab] = useState<'filters' | 'travels'>('filters');
-  const [rightPanelVisible, setRightPanelVisible] = useState(!isMobile);
+
   const lastIsMobileRef = useRef(isMobile);
 
   useEffect(() => {
     if (lastIsMobileRef.current === isMobile) return;
     lastIsMobileRef.current = isMobile;
-    setRightPanelVisible(!isMobile);
-  }, [isMobile]);
+    if (isMobile) {
+      closePanel();
+    } else {
+      openPanel();
+    }
+  }, [isMobile, openPanel, closePanel]);
 
   const filtersTabRef = useRef<PressableRef>(null);
   const panelRef = useRef<ViewRef>(null);
@@ -133,7 +140,7 @@ export function useMapScreenController() {
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     window.dispatchEvent(new Event('resize'));
-  }, [rightPanelVisible, isMobile]);
+  }, [isPanelVisible, isMobile]);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
@@ -149,7 +156,7 @@ export function useMapScreenController() {
     if (!isMobile) return;
     const body = document.body;
     const prevOverflow = body.style.overflow;
-    if (rightPanelVisible) {
+    if (isPanelVisible) {
       body.style.overflow = 'hidden';
     } else {
       body.style.overflow = prevOverflow || '';
@@ -157,16 +164,16 @@ export function useMapScreenController() {
     return () => {
       body.style.overflow = prevOverflow || '';
     };
-  }, [isMobile, rightPanelVisible]);
+  }, [isMobile, isPanelVisible]);
 
   useEffect(() => {
-    if (!isMobile || !rightPanelVisible) return;
+    if (!isMobile || !isPanelVisible) return;
     const id = requestAnimationFrame(() => {
       const node = filtersTabRef.current;
       node?.focus?.();
     });
     return () => cancelAnimationFrame(id);
-  }, [isMobile, rightPanelVisible]);
+  }, [isMobile, isPanelVisible]);
 
   const debounceTime = isMobile ? 300 : 500;
   const debouncedCoordinates = useDebouncedValue(coordinates, debounceTime);
@@ -361,6 +368,10 @@ export function useMapScreenController() {
     refetchOnMount: false,
   });
 
+  const invalidateTravelsQuery = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['travelsForMap'] });
+  }, [queryClient]);
+
   const allTravelsData = useMemo(() => {
     if (!Array.isArray(allTravelsDataRaw)) return [];
     return allTravelsDataRaw;
@@ -498,16 +509,21 @@ export function useMapScreenController() {
 
   const selectFiltersTab = useCallback(() => setRightPanelTab('filters'), []);
   const selectTravelsTab = useCallback(() => setRightPanelTab('travels'), []);
-  const openRightPanel = useCallback(() => setRightPanelVisible(true), []);
-  const closeRightPanel = useCallback(() => setRightPanelVisible(false), []);
 
-  const invalidateTravelsQuery = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['travelsForMap'] });
-  }, [queryClient]);
 
-  const setRouteHintDismissedTrue = useCallback(() => setRouteHintDismissed(true), []);
+  const closeRightPanel = useCallback(() => {
+    if (Platform.OS === 'web' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    closePanel();
+  }, [closePanel]);
 
-  const mapPanelCoordinates = coordinates ?? DEFAULT_COORDINATES;
+  const mapPanelCoordinates = useMemo(() => {
+    if (coordinates) {
+      return { latitude: coordinates.latitude, longitude: coordinates.longitude };
+    }
+    return null;
+  }, [coordinates]);
 
   const mapPanelProps = useMemo(
     () => ({
@@ -516,12 +532,10 @@ export function useMapScreenController() {
       routePoints,
       mode,
       setRoutePoints,
-      onMapClick: handleMapClick,
-      transportMode,
       setRouteDistance,
       setFullRouteCoords,
-      radius: filterValues.radius,
-      onMapUiApiReady: setMapUiApi,
+      onMapClick: handleMapClick,
+      onMapReady: setMapUiApi,
     }),
     [
       travelsData,
@@ -529,13 +543,14 @@ export function useMapScreenController() {
       routePoints,
       mode,
       setRoutePoints,
-      handleMapClick,
-      transportMode,
       setRouteDistance,
       setFullRouteCoords,
-      filterValues.radius,
+      handleMapClick,
+      setMapUiApi,
     ]
   );
+
+  const setRouteHintDismissedTrue = useCallback(() => setRouteHintDismissed(true), []);
 
   const filtersPanelProps = useMemo(
     () => {
@@ -580,7 +595,6 @@ export function useMapScreenController() {
     [
       filters,
       filterValues,
-      handleFilterChange,
       handleFilterChangeForPanel,
       resetFilters,
       allTravelsData,
@@ -614,19 +628,17 @@ export function useMapScreenController() {
     isMobile,
     themedColors,
     styles,
-
     mapReady,
     mapPanelProps,
-
     rightPanelTab,
-    rightPanelVisible,
+    rightPanelVisible: isPanelVisible,
     selectFiltersTab,
     selectTravelsTab,
-    openRightPanel,
+    openRightPanel: openPanel,
     closeRightPanel,
-
+    panelStyle,
+    overlayStyle,
     filtersPanelProps,
-
     travelsData,
     allTravelsData,
 

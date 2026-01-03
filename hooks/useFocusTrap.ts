@@ -1,7 +1,7 @@
 // hooks/useFocusTrap.ts
-// ✅ УЛУЧШЕНИЕ: Хук для trap focus в модальных окнах
+// УЛУЧШЕНИЕ: Хук для trap focus в модальных окнах
 
-import { useEffect, useRef, RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, RefObject } from 'react';
 import { Platform } from 'react-native';
 
 interface UseFocusTrapOptions {
@@ -17,7 +17,9 @@ export function useFocusTrap(
   const { enabled = true, initialFocus, returnFocus } = options;
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
+  const effect = Platform.OS === 'web' ? useLayoutEffect : useEffect;
+
+  effect(() => {
     if (Platform.OS !== 'web' || !enabled || !containerRef.current) {
       return;
     }
@@ -80,10 +82,11 @@ export function useFocusTrap(
       document.removeEventListener('keydown', handleEscape);
 
       // Возвращаем фокус при размонтировании
-      if (returnFocusEl) {
-        returnFocusEl.focus();
-      } else if (prevActive) {
-        prevActive.focus();
+      const focusTarget = returnFocusEl || prevActive;
+      if (focusTarget) {
+        requestAnimationFrame(() => {
+          focusTarget.focus();
+        });
       }
     };
   }, [enabled, containerRef, initialFocus, returnFocus]);

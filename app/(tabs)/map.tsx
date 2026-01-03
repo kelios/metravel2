@@ -7,11 +7,11 @@ import {
     ActivityIndicator,
     Platform,
     Pressable,
+    Animated,
 } from 'react-native';
 import IconMaterial from 'react-native-vector-icons/MaterialIcons';
 
 import TravelListPanel from '@/components/MapPage/TravelListPanel';
-import SwipeablePanel from '@/components/MapPage/SwipeablePanel';
 import InstantSEO from '@/components/seo/InstantSEO';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -37,6 +37,8 @@ export default function MapScreen() {
         selectTravelsTab,
         openRightPanel,
         closeRightPanel,
+        panelStyle,
+        overlayStyle,
         filtersPanelProps,
         travelsData,
         loading,
@@ -153,15 +155,11 @@ export default function MapScreen() {
                 />
             )}
             <SafeAreaView style={styles.container}>
-                <View
-                    style={styles.content}
-                >
+                <View style={styles.content}>
                     <View style={styles.mapArea}>
                         {mapReady ? (
                             <Suspense fallback={mapPanelPlaceholder}>
-                                <LazyMapPanel
-                                    {...mapPanelProps}
-                                />
+                                <LazyMapPanel {...mapPanelProps} />
                             </Suspense>
                         ) : (
                             mapPanelPlaceholder
@@ -184,41 +182,28 @@ export default function MapScreen() {
                     )}
 
                     {/* Overlay для мобильных устройств */}
-                    {isMobile && (
-                        <Pressable
-                            testID="map-panel-overlay"
-                            style={[
-                                styles.overlay,
-                                rightPanelVisible ? styles.overlayVisible : styles.overlayHidden,
-                            ]}
-                            onPress={closeRightPanel}
-                            accessibilityRole="button"
-                            accessibilityLabel="Закрыть панель"
-                        />
+                    {isMobile && rightPanelVisible && (
+                        <Animated.View style={[styles.overlay, overlayStyle]}>
+                            <Pressable
+                                testID="map-panel-overlay"
+                                style={{ flex: 1 }}
+                                onPress={closeRightPanel}
+                                accessibilityRole="button"
+                                accessibilityLabel="Закрыть панель"
+                            />
+                        </Animated.View>
                     )}
 
-                    {/* Правая панель с табами */}
-                    {isMobile ? (
-                        <SwipeablePanel
-                            isOpen={rightPanelVisible}
-                            onClose={closeRightPanel}
-                            swipeDirection="right"
-                            threshold={80}
-                            style={[
-                                styles.rightPanel,
-                                rightPanelVisible
-                                    ? styles.rightPanelMobileOpen
-                                    : styles.rightPanelMobileClosed,
-                            ]}
-                        >
-                            <View
-                                accessibilityLabel="Панель карты"
-                                id="map-panel"
-                                ref={panelRef}
-                                tabIndex={-1}
-                                style={{ flex: 1 }}
-                            >
-                                {rightPanelVisible ? panelHeader : null}
+                    <Animated.View
+                        style={[styles.rightPanel, panelStyle]}
+                        accessibilityLabel="Панель карты"
+                        id="map-panel"
+                        ref={panelRef}
+                        tabIndex={-1}
+                    >
+                        {rightPanelVisible && (
+                            <>
+                                {panelHeader}
                                 <View style={styles.panelContent}>
                                     {rightPanelTab === 'filters' ? (
                                         <filtersPanelProps.Component {...filtersPanelProps.props} />
@@ -258,61 +243,9 @@ export default function MapScreen() {
                                         </View>
                                     )}
                                 </View>
-                            </View>
-                        </SwipeablePanel>
-                    ) : (
-                        <View
-                            style={[
-                                styles.rightPanel,
-                                !rightPanelVisible ? styles.rightPanelDesktopClosed : null,
-                            ]}
-                            accessibilityLabel="Панель карты"
-                            id="map-panel"
-                            ref={panelRef}
-                            tabIndex={-1}
-                        >
-                            {rightPanelVisible ? panelHeader : null}
-                            <View style={styles.panelContent}>
-                                {rightPanelTab === 'filters' ? (
-                                    <filtersPanelProps.Component {...filtersPanelProps.props} />
-                                ) : (
-                                    <View style={styles.travelsListContainer} testID="map-travels-tab">
-                                        {loading && !isPlaceholderData ? (
-                                            <View style={styles.loader}>
-                                                <ActivityIndicator size="small" color={themedColors.primary} />
-                                                <Text style={styles.loaderText}>Загрузка...</Text>
-                                            </View>
-                                        ) : mapError ? (
-                                            <View style={styles.errorContainer}>
-                                                <ErrorDisplay
-                                                    message={getUserFriendlyNetworkError(mapErrorDetails)}
-                                                    onRetry={refetchMapData}
-                                                    variant="error"
-                                                />
-                                            </View>
-                                        ) : (
-                                            <>
-                                                {isFetching && isPlaceholderData && (
-                                                    <View style={styles.updatingIndicator}>
-                                                        <ActivityIndicator size="small" color={themedColors.primary} />
-                                                        <Text style={styles.updatingText}>Обновление...</Text>
-                                                    </View>
-                                                )}
-                                                <TravelListPanel
-                                                    travelsData={travelsData}
-                                                    buildRouteTo={buildRouteTo}
-                                                    isMobile={isMobile}
-                                                    isLoading={loading && !isPlaceholderData}
-                                                    onRefresh={invalidateTravelsQuery}
-                                                    isRefreshing={isFetching && !isPlaceholderData}
-                                                />
-                                            </>
-                                        )}
-                                    </View>
-                                )}
-                            </View>
-                        </View>
-                    )}
+                            </>
+                        )}
+                    </Animated.View>
                 </View>
             </SafeAreaView>
         </>

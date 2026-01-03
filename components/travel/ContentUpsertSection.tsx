@@ -173,6 +173,40 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                         {hint && (
                             <Text style={styles.editorHint}>{hint}</Text>
                         )}
+                        {isDescription && (
+                            <>
+                                <View style={styles.descriptionProgressContainer}>
+                                    <View style={styles.descriptionProgressTrack}>
+                                        <View
+                                            style={[
+                                                styles.descriptionProgressFill,
+                                                {
+                                                    width: `${descriptionProgress}%`,
+                                                    backgroundColor: descriptionProgressColor,
+                                                },
+                                            ]}
+                                        />
+                                    </View>
+                                </View>
+                                <View style={styles.descriptionStatusRow}>
+                                    <Text
+                                        style={[
+                                            styles.descriptionStatusText,
+                                            descriptionPlainLength < 50 && styles.descriptionStatusTextWarning,
+                                            descriptionPlainLength >= 50 && styles.descriptionStatusTextSuccess,
+                                        ]}
+                                    >
+                                        {descriptionStatusText}
+                                    </Text>
+                                    <Text style={styles.descriptionCounterText}>{descriptionPlainLength} символов</Text>
+                                </View>
+                                {!!error && (
+                                    <View style={styles.errorContainer}>
+                                        <Text style={styles.errorText}>{error}</Text>
+                                    </View>
+                                )}
+                            </>
+                        )}
                     </View>
                     {isDescription && isMobile ? (
                         <>
@@ -239,33 +273,6 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                             variant={isDescription ? 'default' : 'compact'}
                         />
                     )}
-                    {isDescription && (
-                        <>
-                            <View style={styles.descriptionProgressContainer}>
-                                <View style={styles.descriptionProgressTrack}>
-                                    <View 
-                                        style={[
-                                            styles.descriptionProgressFill, 
-                                            { 
-                                                width: `${descriptionProgress}%`,
-                                                backgroundColor: descriptionProgressColor 
-                                            }
-                                        ]} 
-                                    />
-                                </View>
-                            </View>
-                            <View style={styles.descriptionStatusRow}>
-                                <Text style={[
-                                    styles.descriptionStatusText,
-                                    descriptionPlainLength < 50 && styles.descriptionStatusTextWarning,
-                                    descriptionPlainLength >= 50 && styles.descriptionStatusTextSuccess
-                                ]}>
-                                    {descriptionStatusText}
-                                </Text>
-                                <Text style={styles.descriptionCounterText}>{descriptionPlainLength} символов</Text>
-                            </View>
-                        </>
-                    )}
                     {isDescription && autosaveStatus && (
                         <View style={styles.autosaveRow}>
                             {autosaveStatus === 'saving' && (
@@ -281,7 +288,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                             )}
                         </View>
                     )}
-                    {error && (
+                    {!isDescription && !!error && (
                         <View style={styles.errorContainer}>
                             <Text style={styles.errorText}>{error}</Text>
                         </View>

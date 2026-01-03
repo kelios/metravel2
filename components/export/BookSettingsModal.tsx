@@ -384,7 +384,7 @@ export default function BookSettingsModal({
           bottom: 0,
           backgroundColor: 'transparent',
           display: 'flex',
-          alignItems: 'flex-start',
+          alignItems: 'center',
           justifyContent: 'center',
           padding: window.innerWidth <= METRICS.breakpoints.tablet ? '16px 12px' : '24px',
           overflowY: 'auto',
@@ -407,78 +407,17 @@ export default function BookSettingsModal({
         />
         <div
           style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '22vh',
-            backgroundColor: 'rgba(0,0,0,0.01)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            pointerEvents: 'none',
-            zIndex: 0,
-            maskImage: 'linear-gradient(to bottom, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: '22vh',
-            backgroundColor: 'rgba(0,0,0,0.01)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            pointerEvents: 'none',
-            zIndex: 0,
-            maskImage: 'linear-gradient(to top, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to top, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            left: 0,
-            width: '18vw',
-            backgroundColor: 'rgba(0,0,0,0.01)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            pointerEvents: 'none',
-            zIndex: 0,
-            maskImage: 'linear-gradient(to right, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to right, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            right: 0,
-            width: '18vw',
-            backgroundColor: 'rgba(0,0,0,0.01)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            pointerEvents: 'none',
-            zIndex: 0,
-            maskImage: 'linear-gradient(to left, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to left, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
-          }}
-        />
-        <div
-          style={{
             backgroundColor: MODAL_COLORS.surface,
             background: MODAL_COLORS.surface as any,
             borderRadius: '20px',
             padding: window.innerWidth <= METRICS.breakpoints.tablet ? '20px' : '28px',
             maxWidth: '800px',
             width: '100%',
-            margin: 'auto 0',
-            maxHeight: '92vh',
+            margin: '0 auto',
+            maxHeight:
+              window.innerWidth <= METRICS.breakpoints.tablet
+                ? 'calc(100vh - 32px)'
+                : 'calc(100vh - 48px)',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',

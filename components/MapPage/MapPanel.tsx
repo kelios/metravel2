@@ -10,7 +10,7 @@ type LatLng = { latitude: number; longitude: number };
 
 interface MapPanelProps {
     travelsData: any[];
-    coordinates: LatLng;
+    coordinates: LatLng | null;
     routePoints?: [number, number][];
     placesAlongRoute?: any[];
     mode?: 'radius' | 'route';
