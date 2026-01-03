@@ -111,12 +111,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   );
 
   // Clustering
-  const {
-    shouldRenderClusters,
-    clusters: _clusters,
-    visiblePoints: _visiblePoints,
-    buildClusterKey: _buildClusterKey,
-  } = useClustering(travelData, mapZoom, expandedCluster?.key || null);
+  const { shouldRenderClusters } = useClustering(travelData, mapZoom, expandedCluster?.key || null);
 
   const travelMarkerOpacity = mode === 'route' ? 0.45 : 1;
 
