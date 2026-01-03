@@ -47,24 +47,42 @@ export function useMapApi({
 
   const handleDownloadGpx = useCallback(() => {
     if (routePoints.length < 2) return;
-    const gpxContent = buildGpx(routePoints);
-    const fileName = `route_${new Date().toISOString().split('T')[0]}.gpx`;
-    downloadTextFileWeb(gpxContent, fileName);
+    const result = buildGpx({
+      track: routePoints,
+      name: `Route ${new Date().toISOString().split('T')[0]}`,
+    });
+    downloadTextFileWeb(result);
   }, [routePoints]);
 
   const handleDownloadKml = useCallback(() => {
     if (routePoints.length < 2) return;
-    const kmlContent = buildKml(routePoints);
-    const fileName = `route_${new Date().toISOString().split('T')[0]}.kml`;
-    downloadTextFileWeb(kmlContent, fileName);
+    const result = buildKml({
+      track: routePoints,
+      name: `Route ${new Date().toISOString().split('T')[0]}`,
+    });
+    downloadTextFileWeb(result);
   }, [routePoints]);
 
   useEffect(() => {
     if (!map || !L || !onMapUiApiReady) return;
 
     const api: MapUiApi = {
-      centerOnUserLocation,
-      fitAllTravelPoints: () => {
+      zoomIn: () => {
+        try {
+          map.zoomIn();
+        } catch {
+          // noop
+        }
+      },
+      zoomOut: () => {
+        try {
+          map.zoomOut();
+        } catch {
+          // noop
+        }
+      },
+      centerOnUser: centerOnUserLocation,
+      fitToResults: () => {
         if (!travelData?.length) return;
         try {
           const coords = travelData
@@ -74,17 +92,6 @@ export function useMapApi({
 
           const bounds = (L as any).latLngBounds(
             coords.map((c) => CoordinateConverter.toLeaflet(c))
-          );
-          map.fitBounds(bounds.pad(0.2), { animate: false });
-        } catch {
-          // noop
-        }
-      },
-      fitRoutePoints: (coords: [number, number][]) => {
-        if (!coords?.length) return;
-        try {
-          const bounds = (L as any).latLngBounds(
-            coords.map(([lng, lat]) => (L as any).latLng(lat, lng))
           );
           map.fitBounds(bounds.pad(0.2), { animate: false });
         } catch {

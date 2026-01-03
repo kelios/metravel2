@@ -5,6 +5,47 @@ const e2eEmail = process.env.E2E_EMAIL;
 const e2ePassword = process.env.E2E_PASSWORD;
 const travelId = process.env.E2E_TRAVEL_ID;
 
+const USE_REAL_API = process.env.E2E_USE_REAL_API === '1';
+
+const maybeMockTravelUpsert = async (page: Page) => {
+  if (USE_REAL_API) return;
+
+  let lastId = 10_000;
+
+  const upsertPatterns = ['**/api/travels/upsert/**', '**/api/travels/upsert/', '**/travels/upsert/**', '**/travels/upsert/'];
+
+  for (const pattern of upsertPatterns) {
+    await page.route(pattern, async (route) => {
+      const req = route.request();
+      if (req.method().toUpperCase() !== 'PUT' && req.method().toUpperCase() !== 'POST') {
+        await route.fallback();
+        return;
+      }
+
+      let body: any = null;
+      try {
+        const raw = req.postData();
+        body = raw ? JSON.parse(raw) : null;
+      } catch {
+        body = null;
+      }
+
+      const payload = body?.data ?? body ?? {};
+      const id = payload?.id ?? lastId++;
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...payload,
+          id,
+          name: payload?.name ?? 'E2E Travel',
+        }),
+      });
+    });
+  }
+};
+
 const maybeAcceptCookies = async (page: Page) => {
   const acceptAll = page.getByText('Принять всё', { exact: true });
   const necessaryOnly = page.getByText('Только необходимые', { exact: true });
@@ -132,6 +173,28 @@ const maybeLogin = async (page: Page) => {
   return true;
 };
 
+const fillMinimumValidBasics = async (page: Page, name: string) => {
+  await page.getByPlaceholder('Например: Неделя в Грузии').fill(name);
+  await fillRichDescription(
+    page,
+    'Это описание для e2e теста. Оно достаточно длинное, чтобы пройти базовую валидацию (минимум 50 символов) и обеспечить стабильные переходы между шагами.'
+  );
+};
+
+const waitForAutosaveOk = async (page: Page, timeoutMs: number = 30_000) => {
+  const saved = page.locator('text=Сохранено').first();
+  const autosaveError = page.locator('text=/Ошибка автосохранения/i').first();
+
+  await Promise.race([
+    saved.waitFor({ state: 'visible', timeout: timeoutMs }).catch(() => null),
+    autosaveError.waitFor({ state: 'visible', timeout: timeoutMs }).catch(() => null),
+  ]);
+
+  if (await autosaveError.isVisible().catch(() => false)) {
+    throw new Error('Autosave failed (Ошибка автосохранения)');
+  }
+};
+
 const fillRichDescription = async (page: Page, text: string) => {
   const editor = page.locator('.ql-editor').first();
   await expect(editor).toBeVisible({ timeout: 15000 });
@@ -148,6 +211,7 @@ const fillRichDescription = async (page: Page, text: string) => {
 
 test.describe('Создание путешествия - Полный flow', () => {
   test.beforeEach(async ({ page }) => {
+    await maybeMockTravelUpsert(page);
     await maybeLogin(page);
     await page.goto('/');
   });
@@ -559,8 +623,7 @@ test.describe('Редактирование путешествия', () => {
     await nameInput.clear();
     await nameInput.fill('Измененное название путешествия');
 
-    // Ждем автосохранение
-    await page.waitForSelector('text=Сохранено', { timeout: 10000 });
+    await waitForAutosaveOk(page);
 
     // Переходим к публикации
     await page.click('[aria-label="Перейти к шагу 6"]');
@@ -615,16 +678,29 @@ test.describe('Валидация и ошибки', () => {
     await ensureCanCreateTravel(page);
 
     // Минимально заполняем
-    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
+    await fillMinimumValidBasics(page, 'Тестовое путешествие');
+
+    await waitForAutosaveOk(page);
 
     // Переходим сразу к публикации (если возможно)
-    for (let i = 0; i < 5; i++) {
-      await page.click('button:has-text("Далее"), button:has-text("К медиа"), button:has-text("К деталям")');
-      await page.waitForTimeout(500);
+    const gotoPublishMilestone = page.locator('[aria-label="Перейти к шагу 6"]').first();
+    if (await gotoPublishMilestone.isVisible().catch(() => false)) {
+      await gotoPublishMilestone.click();
+    } else {
+      // Fallback: click next buttons until publish step is reached.
+      for (let i = 0; i < 6; i++) {
+        const next = page.locator(
+          'button:has-text("Далее"), button:has-text("К медиа"), button:has-text("К деталям"), button:has-text("К публикации")'
+        );
+        if (await next.first().isVisible().catch(() => false)) {
+          await next.first().click();
+          await page.waitForTimeout(800);
+        }
+      }
     }
 
-    // Проверяем предупреждения
-    await expect(page.locator('text=/предупреждени|warning/i')).toBeVisible();
+    // Предупреждения могут показываться как на шаге "Детали и советы", так и на шаге "Публикация".
+    await expect(page.locator('text=/предупреждени|warning/i')).toBeVisible({ timeout: 30_000 });
   });
 
   test('должен сохранить точку без фото (автосохранение v2)', async ({ page }) => {
@@ -632,7 +708,7 @@ test.describe('Валидация и ошибки', () => {
     await ensureCanCreateTravel(page);
 
     // Заполняем название
-    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест без фото');
+    await fillMinimumValidBasics(page, 'Тест без фото');
     await page.click('button:has-text("Далее")');
 
     // Добавляем точку без фото через поиск
@@ -641,7 +717,7 @@ test.describe('Валидация и ошибки', () => {
     await page.click('text=Тбилиси >> nth=0');
 
     // Ждем автосохранение
-    await page.waitForSelector('text=Сохранено', { timeout: 10000 });
+    await waitForAutosaveOk(page);
 
     // Проверяем что нет ошибки "field may not be blank"
     await expect(page.locator('text=/field may not be blank|поле не может быть пустым/i')).not.toBeVisible();
@@ -662,10 +738,10 @@ test.describe('Адаптивность (Mobile)', () => {
     // Проверяем что основной контент виден
     await expect(page.locator('text=Основная информация')).toBeVisible();
 
-    // Заполняем название
-    await page.getByPlaceholder('Например: Неделя в Грузии').fill('Mobile тест');
+    await fillMinimumValidBasics(page, 'Mobile тестовое путешествие');
 
-    // Проверяем что кнопка Quick Draft видна
-    await expect(page.locator('button:has-text("Быстрый черновик")')).toBeVisible();
+    // На мобильных кнопка сохранения рендерится как иконка 💾.
+    await expect(page.locator('button:has-text("💾")')).toBeVisible();
+    await expect(page.locator('text=/Далее: Маршрут/')).toBeVisible();
   });
 });

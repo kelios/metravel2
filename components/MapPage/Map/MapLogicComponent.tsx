@@ -1,6 +1,5 @@
 // MapLogicComponent.tsx - Internal component for map event handling and initialization
-import React, { useEffect, useRef, useCallback } from 'react';
-import { Platform } from 'react-native';
+import React, { useEffect, useRef } from 'react';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import type { LatLng } from '@/types/coordinates';
 
@@ -55,9 +54,9 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   hasInitializedRef,
   lastModeRef,
   lastAutoFitKeyRef,
-  leafletBaseLayerRef,
-  leafletOverlayLayersRef,
-  leafletControlRef,
+  _leafletBaseLayerRef,
+  _leafletOverlayLayersRef,
+  _leafletControlRef,
   useMap,
   useMapEvents,
 }) => {
