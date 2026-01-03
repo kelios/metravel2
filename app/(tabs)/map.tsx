@@ -9,9 +9,10 @@ import {
     Pressable,
     Animated,
 } from 'react-native';
-import IconMaterial from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons } from '@expo/vector-icons';
 
 import TravelListPanel from '@/components/MapPage/TravelListPanel';
+import { MapMobileLayout } from '@/components/MapPage/MapMobileLayout';
 import InstantSEO from '@/components/seo/InstantSEO';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -51,6 +52,8 @@ export default function MapScreen() {
         buildRouteTo,
         filtersTabRef,
         panelRef,
+        coordinates,
+        transportMode,
     } = useMapScreenController();
 
     const FiltersPanelComponent = filtersPanelProps.Component;
@@ -64,6 +67,53 @@ export default function MapScreen() {
         ),
         [styles.mapPlaceholder, styles.mapPlaceholderText, themedColors.primary],
     );
+
+    // Map component for mobile layout
+    const mapComponent = useMemo(
+        () => (
+            <View style={styles.mapArea}>
+                {mapReady ? (
+                    <Suspense fallback={mapPanelPlaceholder}>
+                        <LazyMapPanel {...mapPanelProps} />
+                    </Suspense>
+                ) : (
+                    mapPanelPlaceholder
+                )}
+            </View>
+        ),
+        [mapReady, mapPanelProps, mapPanelPlaceholder, styles.mapArea]
+    );
+
+    // Use mobile layout for native platforms (iOS/Android) when on mobile
+    const useMobileLayout = isMobile && Platform.OS !== 'web';
+
+    if (useMobileLayout) {
+        return (
+            <>
+                {isFocused && Platform.OS === 'web' && (
+                    <InstantSEO
+                        headKey="map"
+                        title="Карта путешествий | MeTravel"
+                        description="Интерактивная карта с маршрутами и местами для путешествий"
+                        canonical={canonical}
+                    />
+                )}
+                <MapMobileLayout
+                    mapComponent={mapComponent}
+                    travelsData={travelsData}
+                    coordinates={coordinates}
+                    transportMode={transportMode}
+                    buildRouteTo={buildRouteTo}
+                    onCenterOnUser={() => {
+                        // TODO: Implement center on user location
+                        console.info('Center on user location');
+                    }}
+                    onOpenFilters={selectFiltersTab}
+                    filtersPanelProps={filtersPanelProps}
+                />
+            </>
+        );
+    }
 
     // Функция рендеринга содержимого панели
     const panelHeader = (
@@ -85,7 +135,7 @@ export default function MapScreen() {
                     accessibilityLabel="Фильтры"
                 >
                     <View style={[styles.tabIconBubble, rightPanelTab === 'filters' && styles.tabIconBubbleActive]}>
-                        <IconMaterial
+                        <MaterialIcons
                             name="filter-list"
                             size={18}
                             color={rightPanelTab === 'filters' ? themedColors.textOnPrimary : themedColors.primary}
@@ -116,7 +166,7 @@ export default function MapScreen() {
                     accessibilityLabel="Список"
                 >
                     <View style={[styles.tabIconBubble, rightPanelTab === 'travels' && styles.tabIconBubbleActive]}>
-                        <IconMaterial
+                        <MaterialIcons
                             name="list"
                             size={18}
                             color={rightPanelTab === 'travels' ? themedColors.textOnPrimary : themedColors.primary}
@@ -141,7 +191,7 @@ export default function MapScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Скрыть панель"
             >
-                <IconMaterial name="chevron-right" size={22} color={themedColors.textMuted} />
+                <MaterialIcons name="chevron-right" size={22} color={themedColors.textMuted} />
             </Pressable>
         </View>
     );
@@ -179,7 +229,7 @@ export default function MapScreen() {
                             accessibilityRole="button"
                             accessibilityLabel="Показать панель"
                         >
-                            <IconMaterial name="menu" size={24} color={themedColors.textOnPrimary} />
+                            <MaterialIcons name="menu" size={24} color={themedColors.textOnPrimary} />
                         </Pressable>
                     )}
 
@@ -239,6 +289,8 @@ export default function MapScreen() {
                                                         isLoading={loading && !isPlaceholderData}
                                                         onRefresh={invalidateTravelsQuery}
                                                         isRefreshing={isFetching && !isPlaceholderData}
+                                                        userLocation={mapPanelProps.coordinates}
+                                                        transportMode={mapPanelProps.transportMode}
                                                     />
                                                 </>
                                             )}

@@ -19,6 +19,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { getDistanceInfo } from '@/utils/distanceCalculator';
 
 type Props = {
     travel: TravelCoords;
@@ -26,6 +27,10 @@ type Props = {
     onPress?: () => void;
     /** новое — скрыть объект из списка/карты */
     onHidePress?: () => void;
+    /** координаты пользователя для расчета расстояния */
+    userLocation?: { latitude: number; longitude: number } | null;
+    /** режим транспорта для расчета времени в пути */
+    transportMode?: 'car' | 'bike' | 'foot';
 };
 
 const addVersion = (url?: string, updated?: string) =>
@@ -62,6 +67,8 @@ const AddressListItem: React.FC<Props> = ({
                                               isMobile: isMobileProp,
                                               onPress,
                                               onHidePress,
+                                              userLocation,
+                                              transportMode = 'car',
                                           }) => {
     const {
         address,
@@ -132,7 +139,7 @@ const AddressListItem: React.FC<Props> = ({
                     return;
                 }
             } catch {
-                continue;
+                // Try next deeplink
             }
         }
 
@@ -174,6 +181,18 @@ const AddressListItem: React.FC<Props> = ({
       if (!travelImageThumbUrl) return null;
       return addVersion(travelImageThumbUrl, (travel as any).updated_at);
     }, [travelImageThumbUrl, travel]);
+
+    // Расчет расстояния и времени в пути
+    const distanceInfo = useMemo(() => {
+        const parsed = parseCoord(coord);
+        if (!parsed || !userLocation) return null;
+
+        return getDistanceInfo(
+            { lat: userLocation.latitude, lng: userLocation.longitude },
+            { lat: parsed.lat, lng: parsed.lon },
+            transportMode
+        );
+    }, [coord, userLocation, transportMode]);
 
     if (Platform.OS === 'web') {
         return (
@@ -290,6 +309,20 @@ const AddressListItem: React.FC<Props> = ({
                       <Text style={[styles.title, { fontSize: titleFontSize }]} numberOfLines={2}>
                           {address}
                       </Text>
+                    )}
+
+                    {/* Расстояние и время в пути */}
+                    {distanceInfo && (
+                      <View style={styles.distanceRow}>
+                          <View style={styles.distanceBadge}>
+                              <Text style={styles.distanceText}>📍 {distanceInfo.distanceText}</Text>
+                          </View>
+                          <View style={styles.timeBadge}>
+                              <Text style={styles.timeText}>
+                                  {transportMode === 'car' ? '🚗' : transportMode === 'bike' ? '🚴' : '🚶'} {distanceInfo.travelTimeText}
+                              </Text>
+                          </View>
+                      </View>
                     )}
 
                     {!!coord && !isMobile && (
@@ -410,6 +443,38 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         textShadowColor: colors.overlay,
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 8,
+    },
+    distanceRow: {
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 10,
+        flexWrap: 'wrap',
+    },
+    distanceBadge: {
+        backgroundColor: colors.primary,
+        borderRadius: 12,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        ...colors.shadows.light,
+    },
+    distanceText: {
+        color: colors.textOnPrimary,
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 0.2,
+    },
+    timeBadge: {
+        backgroundColor: colors.accent,
+        borderRadius: 12,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        ...colors.shadows.light,
+    },
+    timeText: {
+        color: colors.textOnPrimary,
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 0.2,
     },
     coordPressable: {
         alignSelf: 'flex-start',

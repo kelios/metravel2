@@ -265,7 +265,7 @@ test.describe('Создание путешествия - Полный flow', () 
 
   test('должен создать полное путешествие через все шаги', async ({ page }) => {
     // Шаг 0: Переход к созданию
-    await page.goto('/travel/new');
+    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
     await ensureCanCreateTravel(page);
     await expect(page).toHaveURL(/\/travel\/new/);
 
@@ -439,7 +439,7 @@ test.describe('Создание путешествия - Полный flow', () 
   });
 
   test('должен показать превью карточки', async ({ page }) => {
-    await page.goto('/travel/new');
+    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
     if (!(await ensureCanCreateTravel(page))) return;
 
     await fillMinimumValidBasics(page, 'Тестовое путешествие');
@@ -448,7 +448,9 @@ test.describe('Создание путешествия - Полный flow', () 
     // Кликаем по кнопке превью в header
     const previewButton = page.locator('button:has-text("Превью"), button[aria-label="Показать превью"]');
     await expect(previewButton).toBeVisible();
-    await previewButton.click();
+    await previewButton.click({ noWaitAfter: true }).catch(async () => {
+      await previewButton.click({ noWaitAfter: true, force: true }).catch(() => null);
+    });
 
     // Проверяем что модальное окно открылось
     const dialog = page.getByRole('dialog').first();
@@ -817,7 +819,7 @@ test.describe('Адаптивность (Mobile)', () => {
     // Устанавливаем mobile размер
     await page.setViewportSize({ width: 375, height: 667 });
 
-    await page.goto('/travel/new');
+    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
     if (!(await ensureCanCreateTravel(page))) return;
 
     // Проверяем что милестоны скрыты на mobile

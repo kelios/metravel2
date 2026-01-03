@@ -1,3 +1,204 @@
+# Руководство разработчика MeTravel
+
+## 📍 УЛУЧШЕНИЯ КАРТЫ (Январь 2026)
+
+### ✅ Phase 1: Quick Wins (ЗАВЕРШЕНО - 3 января 2026)
+
+#### 1. Расстояние и время в пути ✅
+**Статус**: Production Ready  
+**Файлы**: 
+- `utils/distanceCalculator.ts` - утилиты расчета
+- `components/MapPage/AddressListItem.tsx` - визуализация
+- `__tests__/utils/distanceCalculator.test.ts` - тесты (17/17 passed ✅)
+
+**Использование**:
+```typescript
+import { getDistanceInfo } from '@/utils/distanceCalculator';
+
+const info = getDistanceInfo(
+  { lat: userLat, lng: userLng },
+  { lat: placeLat, lng: placeLng },
+  'car' // or 'bike', 'foot'
+);
+
+// info.distanceText: "2.5 км"
+// info.travelTimeText: "3 мин"
+```
+
+#### 2. Умные рекомендации "Популярное рядом" ✅
+**Файлы**: `components/MapPage/QuickRecommendations.tsx`
+
+**Использование в FiltersPanel**:
+```typescript
+<QuickRecommendations
+  places={travelsData}
+  userLocation={coordinates}
+  transportMode="car"
+  onPlaceSelect={handleSelect}
+  maxItems={3}
+/>
+```
+
+#### 3. Сохранение предпочтений ✅
+**Файлы**: `src/utils/mapFiltersStorage.ts`
+
+**Расширенный интерфейс**:
+```typescript
+interface MapFilterValues {
+  categories: string[];
+  radius: string;
+  address: string;
+  transportMode?: 'car' | 'bike' | 'foot'; // НОВОЕ
+  lastMode?: 'radius' | 'route'; // НОВОЕ
+}
+```
+
+---
+
+### ✅ Phase 2: Мобильные улучшения (ЗАВЕРШЕНО - 3 января 2026)
+
+**Платформы**: iOS, Android (нативные)  
+**Библиотеки**: @gorhom/bottom-sheet, react-native-gesture-handler
+
+#### 1. Bottom Sheet панель ✅
+**Статус**: Production Ready  
+**Файлы**: `components/MapPage/MapBottomSheet.tsx`
+
+Заменяет боковую панель на мобильных устройствах (iOS/Android).
+
+**Особенности**:
+- 3 состояния: collapsed (10%), half (50%), full (90%)
+- Peek preview с топ-3 местами
+- Плавные анимации
+- Backdrop для full состояния
+
+**Использование**:
+```typescript
+import MapBottomSheet, { type MapBottomSheetRef } from '@/components/MapPage/MapBottomSheet';
+
+const ref = useRef<MapBottomSheetRef>(null);
+
+<MapBottomSheet
+  ref={ref}
+  title="Места рядом"
+  subtitle="15 мест"
+  peekContent={<MapPeekPreview places={places} />}
+  onStateChange={(state) => console.log(state)}
+>
+  {children}
+</MapBottomSheet>
+
+// Управление:
+ref.current?.snapToCollapsed();
+ref.current?.snapToHalf();
+ref.current?.snapToFull();
+```
+
+#### 2. Floating Action Button (FAB) ✅
+**Файлы**: `components/MapPage/MapFAB.tsx`
+
+Быстрый доступ к главным действиям.
+
+**Использование**:
+```typescript
+<MapFAB
+  mainAction={{
+    icon: 'menu',
+    label: 'Меню',
+    onPress: handleMenuPress,
+  }}
+  actions={[
+    { icon: 'my-location', label: 'Моё местоположение', onPress: centerOnUser },
+    { icon: 'filter-list', label: 'Фильтры', onPress: openFilters },
+    { icon: 'route', label: 'Построить маршрут', onPress: buildRoute },
+  ]}
+  position="bottom-right"
+/>
+```
+
+#### 3. Swipeable жесты ✅
+**Файлы**: `components/MapPage/SwipeableListItem.tsx`
+
+Свайпы на элементах списка (только на нативных платформах).
+
+**Жесты**:
+- Свайп влево → Добавить/убрать из избранного
+- Свайп вправо → Построить маршрут сюда
+
+**Использование**:
+```typescript
+<SwipeableListItem
+  onFavorite={() => toggleFavorite(item.id)}
+  onBuildRoute={() => buildRoute(item)}
+  showFavorite={true}
+  showRoute={true}
+  isFavorite={favorites.has(item.id)}
+>
+  <AddressListItem travel={item} />
+</SwipeableListItem>
+```
+
+#### 4. Peek Preview ✅
+**Файлы**: `components/MapPage/MapPeekPreview.tsx`
+
+Быстрый просмотр топ-3 мест в collapsed состоянии.
+
+**Использование**:
+```typescript
+<MapPeekPreview
+  places={travelsData}
+  userLocation={coordinates}
+  transportMode="car"
+  onPlacePress={handlePlacePress}
+  onExpandPress={() => bottomSheetRef.current?.snapToHalf()}
+/>
+```
+
+#### 5. Мобильный Layout ✅
+**Файлы**: `components/MapPage/MapMobileLayout.tsx`
+
+Объединяет все мобильные компоненты.
+
+**Автоматическое переключение**:
+```typescript
+// В map.tsx
+const useMobileLayout = isMobile && Platform.OS !== 'web';
+
+if (useMobileLayout) {
+  return <MapMobileLayout {...props} />;
+}
+
+// Иначе используется классический десктопный layout
+```
+
+---
+
+### 📦 Установленные библиотеки
+
+```json
+{
+  "@gorhom/bottom-sheet": "^5.0.0",
+  "react-native-gesture-handler": "^2.14.1"
+}
+```
+
+**Важно**: `react-native-gesture-handler` должен быть импортирован в `entry.js` **в самом начале**:
+```javascript
+import 'react-native-gesture-handler';
+```
+
+---
+
+### 📋 Phase 3: Следующие шаги
+- [ ] Skeleton Loaders вместо спиннеров
+- [ ] Аналитика событий (map_filter_used, place_clicked, swipe_gesture)
+- [ ] Кластеризация маркеров
+- [ ] Онбординг для новых пользователей
+- [ ] Haptic feedback для свайпов
+- [ ] Long press на карте → контекстное меню
+
+---
+
 # Руководство по безопасной работе с формой путешествий
 
 ## 🎯 Быстрый старт для разработчиков

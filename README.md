@@ -2,6 +2,27 @@
 
 Cross-platform travel application built with React Native and Expo.
 
+## 🎉 Latest Updates (January 3, 2026)
+
+### ✅ Map Page Improvements
+
+**Phase 1 - Core Features**:
+- ✅ Distance & travel time calculation (🚗🚴🚶)
+- ✅ Smart recommendations ("Popular Nearby")
+- ✅ Preferences persistence
+- ✅ 17 unit tests (100% pass rate)
+
+**Phase 2 - Mobile Enhancements**:
+- ✅ Bottom Sheet panel (3 states)
+- ✅ Floating Action Button
+- ✅ Swipeable gestures
+- ✅ Peek Preview
+- ✅ Auto layout switching
+
+📖 **Details**: [`DEVELOPER_GUIDE_TRAVEL_FORM.md`](./DEVELOPER_GUIDE_TRAVEL_FORM.md#-улучшения-карты-январь-2026)
+
+---
+
 ## 📱 Platforms
 
 - ✅ **Web** - Production ready (OpenStreetMap)

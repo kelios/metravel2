@@ -1,5 +1,8 @@
 'use strict';
 
+// Import gesture handler at the very top for proper initialization
+import 'react-native-gesture-handler';
+
 // Suppress noisy React Native Web AppRegistry startup banner.
 // This banner is printed by react-native-web when NODE_ENV is not production/test.
 // We filter only that specific message to keep other logs intact.

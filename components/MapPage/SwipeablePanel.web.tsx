@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { StyleSheet, ViewStyle, View } from 'react-native';
+import { StyleSheet, ViewStyle, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -31,7 +31,6 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
   const translateX = useSharedValue(0);
   const [isDragging, setIsDragging] = useState(false);
   const startXRef = useRef(0);
-  const containerRef = useRef<View>(null);
 
   const closePanel = useCallback(() => {
     onClose();
@@ -143,22 +142,26 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
   }, [isDragging, swipeDirection, translateX, handleMouseUp]);
 
   return (
-    <Animated.View
-      ref={containerRef}
-      style={[styles.container, style, animatedStyle]}
-      onMouseDown={handleMouseDown}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-    >
-      {children}
+    <Animated.View style={[styles.container, style, animatedStyle]}>
+      <Pressable
+        style={styles.pressableContent}
+        onPressIn={handleMouseDown}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+      >
+        {children}
+      </Pressable>
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  pressableContent: {
     flex: 1,
   },
 });

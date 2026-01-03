@@ -7,7 +7,7 @@ const PANEL_WIDTH_DESKTOP = METRICS.baseUnit * 48; // 384px
 const PANEL_WIDTH_TABLET = METRICS.baseUnit * 42; // 336px
 const PANEL_GAP = METRICS.spacing.m; // 16px
 const TRANSITION_MS = 180;
-const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = 56;
+const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = 0;
 
 export const getStyles = (
   isMobile: boolean,
@@ -28,7 +28,6 @@ export const getStyles = (
         ? ({
             minHeight: 0,
             overflow: 'hidden',
-            paddingBottom: isMobile ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT : 0,
           } as any)
         : null),
       backgroundColor: themedColors.background,
@@ -79,21 +78,14 @@ export const getStyles = (
         backgroundColor: themedColors.primary,
         justifyContent: 'center',
         alignItems: 'center',
-        ...Platform.select({
-          web: {
-            // @ts-ignore: web-only style
-            boxShadow: themedColors.boxShadows.medium,
-          },
-          ios: {
-            ...shadowMedium,
-          },
-          android: {
-            elevation: shadowMedium.elevation,
-          },
-          default: {
-            ...shadowMedium,
-          },
-        }),
+        ...(Platform.OS === 'web'
+          ? ({
+              // @ts-ignore: web-only style
+              boxShadow: themedColors.boxShadows.medium,
+            } as any)
+          : Platform.OS === 'ios'
+          ? shadowMedium
+          : ({ elevation: shadowMedium.elevation } as any)),
         zIndex: 1001,
       },
       rightPanel: {

@@ -145,13 +145,13 @@ describe('UpsertTravel create/edit flow', () => {
     mockAuthState = {
       isAuthenticated: false,
       isSuperuser: false,
-      userId: null,
+      userId: '',
       authReady: true,
     };
 
     const { getByText } = render(<UpsertTravel />);
 
-    expect(getByText('Войдите, чтобы создать путешествие')).toBeTruthy();
+    expect(getByText('Войдите в аккаунт')).toBeTruthy();
     expect(capturedFormArgs?.isNew).toBe(true);
   });
 
@@ -164,7 +164,7 @@ describe('UpsertTravel create/edit flow', () => {
 
     const { getByText } = render(<UpsertTravel />);
 
-    expect(getByText('Нет доступа к редактированию')).toBeTruthy();
+    expect(getByText('Нет доступа')).toBeTruthy();
     expect(capturedFormArgs?.isNew).toBe(false);
     expect(capturedFormArgs?.travelId).toBe('123');
   });

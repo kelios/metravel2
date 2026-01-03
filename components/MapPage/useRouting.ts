@@ -262,7 +262,8 @@ export const useRouting = (
             .join(';')
 
         // ✅ БЕЗОПАСНОСТЬ: Валидация профиля (только разрешенные значения)
-        const allowedProfiles = ['driving', 'bike', 'foot'];
+        // getOSRMProfile returns OSRM service profile names.
+        const allowedProfiles = ['driving', 'walking', 'cycling'];
         if (!allowedProfiles.includes(profile)) {
             throw new Error('Некорректный профиль транспорта');
         }

@@ -267,6 +267,8 @@ export function useMapScreenController() {
       onBuildRoute: handleBuildRoute,
       mapUiApi,
       closeMenu: closeRightPanel,
+      userLocation: coordinates,
+      onPlaceSelect: buildRouteTo,
     };
 
     return { Component: FiltersPanel, props };
@@ -297,6 +299,8 @@ export function useMapScreenController() {
     handleBuildRoute,
     mapUiApi,
     closeRightPanel,
+    coordinates,
+    buildRouteTo,
   ]);
 
   return {
@@ -343,5 +347,9 @@ export function useMapScreenController() {
     // Refs
     filtersTabRef,
     panelRef,
+
+    // Additional data for mobile layout
+    coordinates,
+    transportMode,
   };
 }

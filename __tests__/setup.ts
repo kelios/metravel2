@@ -24,6 +24,25 @@ console.info = (message, ...args) => {
 
 require('@testing-library/jest-native/extend-expect')
 
+jest.mock('@react-native-community/netinfo', () => {
+  const api = {
+    addEventListener: jest.fn(() => jest.fn()),
+    fetch: jest.fn(() =>
+      Promise.resolve({
+        isConnected: true,
+        isInternetReachable: true,
+        type: 'unknown',
+      })
+    ),
+  }
+
+  return {
+    __esModule: true,
+    default: api,
+    ...api,
+  }
+})
+
 jest.mock('@/hooks/useTheme', () => {
   const React = require('react')
   const {

@@ -130,14 +130,14 @@ jest.mock('react-native-vector-icons/MaterialIcons', () => 'Icon');
 describe('FiltersPanel Controls', () => {
   const mockFilters = {
     categories: [{ name: 'Природа', count: 10 }],
-    radius: ['60', '100', '200'],
+    radius: [{ id: '60', name: '60 км' }, { id: '100', name: '100 км' }, { id: '200', name: '200 км' }],
+    address: '',
   };
 
   const mockFilterValue = {
     categories: [],
     radius: '60',
-    sortBy: 'distance',
-    sortOrder: 'asc',
+    address: '',
   };
 
   const defaultProps = {

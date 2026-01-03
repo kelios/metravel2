@@ -66,8 +66,8 @@ export default function TabLayout() {
             <Tabs.Screen name="login" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="registration" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="set-password" options={HIDDEN_NOHREF} />
-            <Tabs.Screen name="travel/new" options={HIDDEN_NOHREF} />
-            <Tabs.Screen name="travel/[id]" options={HIDDEN_NOHREF} />
+            <Tabs.Screen name="travel/new" options={HIDDEN} />
+            <Tabs.Screen name="travel/[id]" options={HIDDEN} />
             <Tabs.Screen name="metravel" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="profile" options={HIDDEN_NOHREF} />
             <Tabs.Screen name="accountconfirmation" options={HIDDEN_NOHREF} />

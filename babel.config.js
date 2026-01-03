@@ -11,7 +11,7 @@ module.exports = function (api) {
             '@babel/plugin-transform-export-namespace-from',
             !isTest && 'react-native-web',
             isTest && 'babel-plugin-dynamic-import-node',
-            ['module-resolver', {
+            !isTest && ['module-resolver', {
                 root: ['./'],
                 alias: {
                     '@': './',

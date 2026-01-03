@@ -459,7 +459,6 @@ export default function TravelDetailsContainer() {
                     onFirstImageLoad={() => setLcpLoaded(true)}
                     sectionLinks={sectionLinks}
                     onQuickJump={scrollToWithMenuClose}
-                    lcpPreloadHref={lcpPreloadImage}
                   />
                   </View>
 

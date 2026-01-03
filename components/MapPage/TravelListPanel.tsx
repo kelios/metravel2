@@ -1,8 +1,9 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Text } from 'react-native-paper';
 import AddressListItem from './AddressListItem';
+import { SwipeableListItem } from './SwipeableListItem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 type Props = {
@@ -19,6 +20,15 @@ type Props = {
   isRefreshing?: boolean;
 
   onClosePanel?: () => void;
+
+  /** координаты пользователя для расчета расстояния */
+  userLocation?: { latitude: number; longitude: number } | null;
+  /** режим транспорта */
+  transportMode?: 'car' | 'bike' | 'foot';
+  /** обработчик добавления в избранное */
+  onToggleFavorite?: (id: string | number) => void;
+  /** список избранных мест (ids) */
+  favorites?: Set<string | number>;
 };
 
 const TravelListPanel: React.FC<Props> = ({
@@ -33,19 +43,46 @@ const TravelListPanel: React.FC<Props> = ({
                                           onLoadMore,
                                           onRefresh,
                                           isRefreshing = false,
+                                          userLocation,
+                                          transportMode = 'car',
+                                          onToggleFavorite,
+                                          favorites = new Set(),
                                           }) => {
   const themeColors = useThemedColors();
   const styles = useMemo(() => getStyles(themeColors), [themeColors]);
+
   const renderItem = useCallback(({ item }: any) => {
-    return (
+    const itemId = item.id ?? item._id ?? item.slug ?? item.uid;
+    const isFavorite = favorites.has(itemId);
+
+    const content = (
       <AddressListItem
         travel={item}
         isMobile={isMobile}
         onPress={() => buildRouteTo(item)}
-        onHidePress={onHideTravel ? () => onHideTravel(item.id ?? item._id ?? item.slug ?? item.uid) : undefined}
+        onHidePress={onHideTravel ? () => onHideTravel(itemId) : undefined}
+        userLocation={userLocation}
+        transportMode={transportMode}
       />
     );
-  }, [isMobile, buildRouteTo, onHideTravel]);
+
+    // На мобильных (не веб) оборачиваем в Swipeable
+    if (Platform.OS !== 'web' && isMobile) {
+      return (
+        <SwipeableListItem
+          onFavorite={onToggleFavorite ? () => onToggleFavorite(itemId) : undefined}
+          onBuildRoute={() => buildRouteTo(item)}
+          showFavorite={!!onToggleFavorite}
+          showRoute={true}
+          isFavorite={isFavorite}
+        >
+          {content}
+        </SwipeableListItem>
+      );
+    }
+
+    return content;
+  }, [isMobile, buildRouteTo, onHideTravel, userLocation, transportMode, onToggleFavorite, favorites]);
 
   const keyExtractor = useCallback(
     (item: any, index: number) => String(item.id ?? item._id ?? item.slug ?? index),

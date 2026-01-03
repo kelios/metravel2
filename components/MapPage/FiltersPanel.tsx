@@ -26,6 +26,7 @@ import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import QuickActions from '@/components/MapPage/QuickActions';
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
 import RouteBuilder from '@/components/MapPage/RouteBuilder';
+import { QuickRecommendations } from '@/components/MapPage/QuickRecommendations';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import type { RoutePoint } from '@/types/route';
@@ -84,6 +85,8 @@ interface FiltersPanelProps {
   routingError?: string | boolean | null;
   onBuildRoute?: () => void;
   mapUiApi?: MapUiApi | null;
+  userLocation?: { latitude: number; longitude: number } | null;
+  onPlaceSelect?: (place: any) => void;
 }
 
 const FiltersPanel: React.FC<FiltersPanelProps> = ({
@@ -113,6 +116,8 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                                      routingError,
                                                      onBuildRoute,
                                                      mapUiApi,
+                                                     userLocation,
+                                                     onPlaceSelect,
 }) => {
   const windowWidth = Dimensions.get('window').width;
   const colors = useThemedColors();
@@ -734,6 +739,17 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           totalPoints={totalPoints}
           hasFilters={_hasActiveFilters}
         />
+
+        {/* ✅ НОВИНКА: Популярное рядом */}
+        {mode === 'radius' && userLocation && onPlaceSelect && (
+          <QuickRecommendations
+            places={travelsData}
+            userLocation={userLocation}
+            transportMode={transportMode}
+            onPlaceSelect={onPlaceSelect}
+            maxItems={3}
+          />
+        )}
       </ScrollView>
 
       {/* Sticky footer CTA */}
