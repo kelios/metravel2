@@ -2,6 +2,12 @@ import { render, waitFor, fireEvent } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import MapScreen from '@/app/(tabs)/map'
 
+let mockResponsiveState = { isPhone: true, isLargePhone: false, width: 390 }
+
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => mockResponsiveState,
+}))
+
 jest.mock('@/hooks/useDebouncedValue', () => ({
   useDebouncedValue: (value: any) => value,
 }))
@@ -193,6 +199,32 @@ describe('MapScreen (map tab)', () => {
     await waitFor(() => {
       expect(getByText('Фильтры')).toBeTruthy()
       expect(getByText('Список')).toBeTruthy()
+    })
+  })
+
+  it('shows open panel button after isMobile changes from desktop to mobile (SSR-safe)', async () => {
+    mockResponsiveState = { isPhone: false, isLargePhone: false, width: 1024 }
+    const client = createTestClient()
+    const utils = render(
+      <QueryClientProvider client={client}>
+        <MapScreen />
+      </QueryClientProvider>
+    )
+
+    // Desktop: панель открыта по умолчанию, кнопки "Показать панель" нет
+    expect(utils.queryByLabelText('Показать панель')).toBeNull()
+
+    // Симулируем смену брейкпоинта на mobile после первого рендера
+    mockResponsiveState = { isPhone: true, isLargePhone: false, width: 390 }
+    utils.rerender(
+      <QueryClientProvider client={client}>
+        <MapScreen />
+      </QueryClientProvider>
+    )
+
+    // Mobile: панель должна закрыться по умолчанию, кнопка появляется
+    await waitFor(() => {
+      expect(utils.getByLabelText('Показать панель')).toBeTruthy()
     })
   })
 

@@ -58,8 +58,8 @@ export class TravelDataTransformer {
         year: travel.year || null,
         monthName: travel.monthName || null,
         number_days: travel.number_days || null,
-        travel_image_thumb_url: travel.travel_image_thumb_url || null,
-        travel_image_url: travel.travel_image_url || null,
+        travel_image_thumb_url: this.buildSafeImageUrl(travel.travel_image_thumb_url),
+        travel_image_url: travel.travel_image_url ? this.buildSafeImageUrl(travel.travel_image_url) : undefined,
         gallery: this.transformGallery(travel.gallery),
         travelAddress: this.transformAddresses(travel.travelAddress),
         youtube_link: travel.youtube_link || null,
@@ -223,7 +223,7 @@ export class TravelDataTransformer {
         return url && typeof url === 'string' && url.trim().length > 0;
       })
       .map((g: any) => ({
-        url: typeof g === 'string' ? g : (g.url || g),
+        url: this.buildSafeImageUrl(typeof g === 'string' ? g : (g.url || g)),
         id: typeof g === 'string' ? undefined : (g.id || g.url),
         updated_at: typeof g === 'string' ? undefined : g.updated_at,
       }));

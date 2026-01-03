@@ -123,6 +123,10 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   const [legendOpen, setLegendOpen] = useState(false);
   const [hideNoPointsToast, setHideNoPointsToast] = useState(false);
 
+  const canCenterOnUser = Boolean(mapUiApi?.capabilities?.canCenterOnUser);
+  const canFitToResults = Boolean(mapUiApi?.capabilities?.canFitToResults);
+  const canExportRoute = Boolean(mapUiApi?.capabilities?.canExportRoute);
+
   const [selectedBaseLayerId, setSelectedBaseLayerId] = useState<string>(
     WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled)?.id || WEB_MAP_BASE_LAYERS[0]?.id || 'osm'
   );
@@ -589,23 +593,31 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               <Text style={styles.mapControlText}>Zoom -</Text>
             </Pressable>
             <Pressable
-              style={[styles.mapControlButton, globalFocusStyles.focusable, !mapUiApi && styles.mapControlDisabled]}
+              style={[
+                styles.mapControlButton,
+                globalFocusStyles.focusable,
+                (!mapUiApi || !canCenterOnUser) && styles.mapControlDisabled,
+              ]}
               onPress={() => mapUiApi?.centerOnUser()}
-              disabled={!mapUiApi}
+              disabled={!mapUiApi || !canCenterOnUser}
               accessibilityRole="button"
               accessibilityLabel="Моё местоположение"
-              accessibilityState={{ disabled: !mapUiApi }}
+              accessibilityState={{ disabled: !mapUiApi || !canCenterOnUser }}
             >
               <Icon name="my-location" size={18} color={colors.text} />
               <Text style={styles.mapControlText}>Я</Text>
             </Pressable>
             <Pressable
-              style={[styles.mapControlButton, globalFocusStyles.focusable, !mapUiApi && styles.mapControlDisabled]}
+              style={[
+                styles.mapControlButton,
+                globalFocusStyles.focusable,
+                (!mapUiApi || !canFitToResults) && styles.mapControlDisabled,
+              ]}
               onPress={() => mapUiApi?.fitToResults()}
-              disabled={!mapUiApi}
+              disabled={!mapUiApi || !canFitToResults}
               accessibilityRole="button"
               accessibilityLabel="Показать все результаты на карте"
-              accessibilityState={{ disabled: !mapUiApi }}
+              accessibilityState={{ disabled: !mapUiApi || !canFitToResults }}
             >
               <Icon name="zoom-out-map" size={18} color={colors.text} />
               <Text style={styles.mapControlText}>Все</Text>
@@ -618,13 +630,13 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 style={[
                   styles.mapControlButton,
                   globalFocusStyles.focusable,
-                  (!mapUiApi || !canBuildRoute) && styles.mapControlDisabled,
+                  (!mapUiApi || !canBuildRoute || !canExportRoute) && styles.mapControlDisabled,
                 ]}
                 onPress={() => mapUiApi?.exportGpx()}
-                disabled={!mapUiApi || !canBuildRoute}
+                disabled={!mapUiApi || !canBuildRoute || !canExportRoute}
                 accessibilityRole="button"
                 accessibilityLabel="Скачать маршрут в формате GPX"
-                accessibilityState={{ disabled: !mapUiApi || !canBuildRoute }}
+                accessibilityState={{ disabled: !mapUiApi || !canBuildRoute || !canExportRoute }}
               >
                 <Icon name="download" size={18} color={colors.text} />
                 <Text style={styles.mapControlText}>GPX</Text>
@@ -633,13 +645,13 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 style={[
                   styles.mapControlButton,
                   globalFocusStyles.focusable,
-                  (!mapUiApi || !canBuildRoute) && styles.mapControlDisabled,
+                  (!mapUiApi || !canBuildRoute || !canExportRoute) && styles.mapControlDisabled,
                 ]}
                 onPress={() => mapUiApi?.exportKml()}
-                disabled={!mapUiApi || !canBuildRoute}
+                disabled={!mapUiApi || !canBuildRoute || !canExportRoute}
                 accessibilityRole="button"
                 accessibilityLabel="Скачать маршрут в формате KML"
-                accessibilityState={{ disabled: !mapUiApi || !canBuildRoute }}
+                accessibilityState={{ disabled: !mapUiApi || !canBuildRoute || !canExportRoute }}
               >
                 <Icon name="download" size={18} color={colors.text} />
                 <Text style={styles.mapControlText}>KML</Text>

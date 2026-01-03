@@ -1,17 +1,8 @@
- jest.resetModules()
-
- jest.mock('react-native', () => {
-   const RN = jest.requireActual('react-native')
-   return {
-     ...RN,
-     Platform: {
-       ...RN.Platform,
-       OS: 'web',
-     },
-   }
- })
-
  const { render, act, fireEvent, waitFor } = require('@testing-library/react-native')
+
+ const RN = require('react-native')
+ const originalPlatformOS = RN.Platform.OS
+ RN.Platform.OS = 'web'
 
  let MapPageComponent: any
 
@@ -149,6 +140,10 @@ jest.mock('@/components/MapPage/PopupContentComponent', () => {
 })
 
 MapPageComponent = require('@/components/MapPage/Map.web').default
+
+afterAll(() => {
+  RN.Platform.OS = originalPlatformOS
+})
 
 describe('MapPageComponent (Map.web.tsx)', () => {
   const defaultProps = {

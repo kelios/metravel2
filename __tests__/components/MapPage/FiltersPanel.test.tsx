@@ -224,4 +224,76 @@ describe('FiltersPanel', () => {
     const carTabEnabled = getByText('Авто');
     expect(carTabEnabled.props.accessibilityState?.disabled).toBe(false);
   });
+
+  it('calls mapUiApi.zoomIn when Zoom + pressed', () => {
+    const mapUiApi = {
+      zoomIn: jest.fn(),
+      zoomOut: jest.fn(),
+      centerOnUser: jest.fn(),
+      fitToResults: jest.fn(),
+      exportGpx: jest.fn(),
+      exportKml: jest.fn(),
+      setBaseLayer: jest.fn(),
+      setOverlayEnabled: jest.fn(),
+      capabilities: { canCenterOnUser: true, canFitToResults: true, canExportRoute: false },
+    };
+
+    const { getByTestId, getByLabelText } = renderWithTheme(
+      <FiltersPanel {...defaultProps} mapUiApi={mapUiApi as any} />
+    );
+
+    // Open "Карта" section
+    fireEvent.press(getByTestId('collapsible-Карта'));
+
+    fireEvent.press(getByLabelText('Увеличить масштаб'));
+    expect(mapUiApi.zoomIn).toHaveBeenCalled();
+  });
+
+  it('disables center on user button when user location is unavailable', () => {
+    const mapUiApi = {
+      zoomIn: jest.fn(),
+      zoomOut: jest.fn(),
+      centerOnUser: jest.fn(),
+      fitToResults: jest.fn(),
+      exportGpx: jest.fn(),
+      exportKml: jest.fn(),
+      setBaseLayer: jest.fn(),
+      setOverlayEnabled: jest.fn(),
+      capabilities: { canCenterOnUser: false, canFitToResults: true, canExportRoute: false },
+    };
+
+    const { getByTestId, getByLabelText } = renderWithTheme(
+      <FiltersPanel {...defaultProps} mapUiApi={mapUiApi as any} />
+    );
+
+    fireEvent.press(getByTestId('collapsible-Карта'));
+
+    const btn = getByLabelText('Моё местоположение');
+    expect(btn.props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('calls centerOnUser when user location is available', () => {
+    const mapUiApi = {
+      zoomIn: jest.fn(),
+      zoomOut: jest.fn(),
+      centerOnUser: jest.fn(),
+      fitToResults: jest.fn(),
+      exportGpx: jest.fn(),
+      exportKml: jest.fn(),
+      setBaseLayer: jest.fn(),
+      setOverlayEnabled: jest.fn(),
+      capabilities: { canCenterOnUser: true, canFitToResults: true, canExportRoute: false },
+    };
+
+    const { getByTestId, getByLabelText } = renderWithTheme(
+      <FiltersPanel {...defaultProps} mapUiApi={mapUiApi as any} />
+    );
+
+    fireEvent.press(getByTestId('collapsible-Карта'));
+
+    const btn = getByLabelText('Моё местоположение');
+    expect(btn.props.accessibilityState?.disabled).not.toBe(true);
+    fireEvent.press(btn);
+    expect(mapUiApi.centerOnUser).toHaveBeenCalled();
+  });
 });

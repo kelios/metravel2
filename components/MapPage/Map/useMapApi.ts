@@ -1,5 +1,5 @@
 // useMapApi.ts - Hook for exposing map API to parent components
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import type { MapUiApi } from '@/src/types/mapUi';
 import type { LatLng } from '@/types/coordinates';
@@ -36,6 +36,8 @@ export function useMapApi({
   leafletOverlayLayersRef,
   leafletControlRef,
 }: UseMapApiProps) {
+  const canExportRoute = useMemo(() => routePoints.length >= 2, [routePoints.length]);
+
   const centerOnUserLocation = useCallback(() => {
     if (!map || !userLocation) return;
     try {
@@ -137,6 +139,11 @@ export function useMapApi({
           // noop
         }
       },
+      capabilities: {
+        canCenterOnUser: Boolean(userLocation),
+        canFitToResults: Boolean(travelData?.length),
+        canExportRoute,
+      },
     };
 
     onMapUiApiReady(api);
@@ -152,6 +159,7 @@ export function useMapApi({
     handleDownloadKml,
     travelData,
     userLocation,
+    canExportRoute,
     leafletBaseLayerRef,
     leafletOverlayLayersRef,
     leafletControlRef,

@@ -7,4 +7,9 @@ export type MapUiApi = {
   exportKml: () => void;
   setBaseLayer: (id: string) => void;
   setOverlayEnabled: (id: string, enabled: boolean) => void;
+  capabilities?: {
+    canCenterOnUser: boolean;
+    canFitToResults: boolean;
+    canExportRoute: boolean;
+  };
 };

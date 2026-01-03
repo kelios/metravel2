@@ -185,6 +185,22 @@ export default function BookSettingsModal({
     return () => document.removeEventListener('keydown', handleKeydown);
   }, [onClose, visible]);
 
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof document === 'undefined') return;
+
+    const body = document.body;
+    const previousOverflow = body.style.overflow;
+
+    if (visible) {
+      body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      body.style.overflow = previousOverflow;
+    };
+  }, [visible]);
+
   const handlePresetSelect = (preset: BookPreset) => {
     setSettings({
       ...preset.settings,
@@ -243,7 +259,7 @@ export default function BookSettingsModal({
   return (
     <Modal
       visible={visible}
-      transparent={false}
+      transparent={true}
       animationType="fade"
       onRequestClose={onClose}
     >
@@ -258,8 +274,12 @@ export default function BookSettingsModal({
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           justifyContent: 'center',
+          padding: window.innerWidth <= METRICS.breakpoints.tablet ? '16px 12px' : '24px',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          overscrollBehavior: 'contain',
           zIndex: 1000,
           transition: 'background-color 0.3s ease',
         }}
@@ -271,12 +291,14 @@ export default function BookSettingsModal({
             borderRadius: '20px',
             padding: window.innerWidth <= METRICS.breakpoints.tablet ? '20px' : '28px',
             maxWidth: '800px',
-            width: '95%',
-            maxHeight: '92vh',
-            overflow: 'auto',
+            width: '100%',
+            margin: 'auto 0',
+            maxHeight: 'none',
+            overflow: 'visible',
             boxShadow: MODAL_SHADOWS.modal,
             border: `1px solid ${MODAL_COLORS.borderStrong}`,
             transition: 'all 0.3s ease',
+            boxSizing: 'border-box',
           }}
           role="dialog"
           aria-modal="true"
