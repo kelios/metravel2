@@ -575,15 +575,68 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                             <View style={styles.sectionHeaderRow}>
                                 <Feather name="info" size={16} color={colors.primary} />
                                 <Text style={styles.sectionHeaderText}>Рекомендуем заполнить</Text>
-                                        key={item.key}
-                                        style={rowStyle as unknown as ViewStyle}
-                                        onPress={() => onNavigateToIssue?.(issue)}
-                                        activeOpacity={0.7}
-                                    >
-                                        {rowContent}
-                                    </TouchableOpacity>
-                                ) : (
-                                    <View key={item.key} style={rowStyle as unknown as ViewStyle}>
+                            </View>
+                            {recommendedChecklist.map(item => {
+                                const issue = moderationIssuesByKey.get(item.key);
+                                const isClickable = !item.ok && !!issue && !!onNavigateToIssue;
+
+                                const rowContent = (
+                                    <>
+                                        <View
+                                            style={[
+                                                styles.checkBadge,
+                                                item.ok ? styles.checkBadgeOk : styles.checkBadgeRecommended,
+                                            ]}
+                                        >
+                                            <Icon
+                                                source={item.ok ? 'check' : 'star-outline'}
+                                                size={16}
+                                                color={item.ok ? colors.successDark : colors.primary}
+                                            />
+                                        </View>
+                                        <View style={styles.checklistTextColumn}>
+                                            <Text
+                                                style={[
+                                                    styles.checklistLabel,
+                                                    isClickable && styles.checklistLabelClickable,
+                                                    item.ok && styles.checklistLabelComplete,
+                                                ]}
+                                            >
+                                                {item.label}
+                                            </Text>
+                                            <Text style={styles.checklistDetail}>{item.detail}</Text>
+                                            {item.benefit && <Text style={styles.benefitText}>{item.benefit}</Text>}
+                                            {isClickable && !item.ok && (
+                                                <Text style={styles.checklistHint}>Нажмите, чтобы перейти</Text>
+                                            )}
+                                        </View>
+                                        {isClickable && !item.ok && (
+                                            <Icon source="chevron-right" size={16} color={colors.textMuted} />
+                                        )}
+                                    </>
+                                );
+
+                                const rowStyle = [
+                                    styles.checklistRow,
+                                    isClickable && styles.checklistRowClickable,
+                                    item.ok && styles.checklistRowComplete,
+                                ];
+
+                                if (isClickable) {
+                                    return (
+                                        <TouchableOpacity
+                                            key={item.key}
+                                            style={rowStyle}
+                                            onPress={() => onNavigateToIssue?.(issue)}
+                                            activeOpacity={0.7}
+                                        >
+                                            {rowContent}
+                                        </TouchableOpacity>
+                                    );
+                                }
+
+                                return (
+                                    <View key={item.key} style={rowStyle}>
                                         {rowContent}
                                     </View>
                                 );
@@ -591,8 +644,36 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         </View>
                     </View>
 
-// ... (rest of the code remains the same)
+                    {isSuperAdmin && (pendingModeration || formData.moderation || status === 'moderation') && (
+                        <View style={[styles.card, styles.adminCard]}>
+                            <Text style={styles.cardTitle}>Панель модератора</Text>
+                            <Text style={styles.adminHint}>
+                                Маршрут находится на модерации. Вы можете одобрить или отклонить его.
+                            </Text>
+                            <View style={styles.adminButtons}>
+                                <TouchableOpacity
+                                    style={[styles.adminButton, styles.adminButtonApprove]}
+                                    onPress={handleApproveModeration}
+                                    activeOpacity={0.85}
+                                >
+                                    <Icon source="check-circle" size={20} color={colors.textOnPrimary} />
+                                    <Text style={styles.adminButtonText}>Одобрить модерацию</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.adminButton, styles.adminButtonReject]}
+                                    onPress={handleRejectModeration}
+                                    activeOpacity={0.85}
+                                >
+                                    <Icon source="close-circle" size={20} color={colors.textOnPrimary} />
+                                    <Text style={styles.adminButtonText}>Отклонить</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
 
+                    {status === 'moderation' && missingForModeration.length > 0 && (
+                        <View style={[styles.card, styles.bannerError]}>
+                            <Text style={styles.bannerTitle}>Нужно дополнить перед модерацией</Text>
                             <Text style={styles.bannerDescription}>
                                 Проверьте отмеченные пункты чек-листа. Без них мы не сможем отправить маршрут на модерацию.
                             </Text>
@@ -601,36 +682,43 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
                                 const rowContent = (
                                     <>
-                                        <Feather name="alert-circle" size={16} color={colors.danger} />
-                                        <Text style={styles.missingText}>{issue.label}</Text>
-                                        {isClickable && (
-                                            <Icon source="chevron-right" size={16} color={colors.textMuted} />
-                                        )}
+                                        <View style={[styles.checkBadge, styles.checkBadgeMissing]}>
+                                            <Icon source="alert" size={14} color={colors.dangerDark} />
+                                        </View>
+                                        <Text
+                                            style={[
+                                                styles.checklistLabel,
+                                                isClickable && styles.checklistLabelClickable,
+                                            ]}
+                                        >
+                                            {issue.label}
+                                        </Text>
                                     </>
                                 );
 
-                                return isClickable ? (
-                                    <TouchableOpacity
-                                        key={issue.key}
-                                        style={[styles.missingRow, styles.checklistRowClickable] as unknown as ViewStyle}
-                                        onPress={() => onNavigateToIssue?.(issue)}
-                                        activeOpacity={0.7}
-                                    >
-                                        {rowContent}
-                                    </TouchableOpacity>
-                                ) : (
-                                    <View key={issue.key} style={styles.missingRow as unknown as ViewStyle}>
+                                const rowStyle = [
+                                    styles.checklistRow,
+                                    isClickable && styles.checklistRowClickable,
+                                ];
+
+                                if (isClickable) {
+                                    return (
+                                        <TouchableOpacity
+                                            key={issue.key}
+                                            style={rowStyle}
+                                            onPress={() => onNavigateToIssue?.(issue)}
+                                            activeOpacity={0.85}
+                                        >
+                                            {rowContent}
+                                        </TouchableOpacity>
+                                    );
+                                }
+
+                                return (
+                                    <View key={issue.key} style={rowStyle}>
                                         {rowContent}
                                     </View>
                                 );
-                            })}
-                        </View>
-                                        <Text style={[styles.checklistLabel, isClickable && styles.checklistLabelClickable]}>
-                                            {issue.label}
-                                        </Text>
-                                    </View>
-                                );
-// ... (rest of the code remains the same)
                             })}
                         </View>
                     )}

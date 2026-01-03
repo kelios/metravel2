@@ -270,7 +270,7 @@ export default function BookSettingsModal({
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: MODAL_COLORS.overlay,
+          backgroundColor: 'transparent',
           display: 'flex',
           alignItems: 'flex-start',
           justifyContent: 'center',
@@ -296,20 +296,71 @@ export default function BookSettingsModal({
         <div
           style={{
             position: 'absolute',
-            inset: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '22vh',
+            backgroundColor: 'rgba(0,0,0,0.01)',
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
             pointerEvents: 'none',
             zIndex: 0,
-            maskImage:
-              'radial-gradient(circle at center, transparent 0%, transparent 58%, black 72%, black 100%)',
-            WebkitMaskImage:
-              'radial-gradient(circle at center, transparent 0%, transparent 58%, black 72%, black 100%)',
+            maskImage: 'linear-gradient(to bottom, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '22vh',
+            backgroundColor: 'rgba(0,0,0,0.01)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            pointerEvents: 'none',
+            zIndex: 0,
+            maskImage: 'linear-gradient(to top, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to top, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: 0,
+            width: '18vw',
+            backgroundColor: 'rgba(0,0,0,0.01)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            pointerEvents: 'none',
+            zIndex: 0,
+            maskImage: 'linear-gradient(to right, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            right: 0,
+            width: '18vw',
+            backgroundColor: 'rgba(0,0,0,0.01)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            pointerEvents: 'none',
+            zIndex: 0,
+            maskImage: 'linear-gradient(to left, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to left, black 0%, rgba(0,0,0,0.85) 55%, transparent 100%)',
           }}
         />
         <div
           style={{
             backgroundColor: MODAL_COLORS.surface,
+            background: MODAL_COLORS.surface as any,
             borderRadius: '20px',
             padding: window.innerWidth <= METRICS.breakpoints.tablet ? '20px' : '28px',
             maxWidth: '800px',
@@ -325,6 +376,11 @@ export default function BookSettingsModal({
             boxSizing: 'border-box',
             position: 'relative',
             zIndex: 1,
+            opacity: 1,
+            backdropFilter: 'none',
+            WebkitBackdropFilter: 'none',
+            filter: 'none',
+            mixBlendMode: 'normal',
           }}
           role="dialog"
           aria-modal="true"

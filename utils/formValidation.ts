@@ -16,10 +16,11 @@ export interface TravelFormValidation {
   description?: string;
   countries?: string[];
   categories?: string[];
-  coordsMeTravel?: any[];
+  coordsMeTravel?: unknown[];
   year?: string;
   number_days?: string;
   number_peoples?: string;
+  youtube_link?: string;
 }
 
 // Упрощённый тип данных формы для использования в шаговой валидации
@@ -28,9 +29,9 @@ export interface TravelFormLike {
   description?: string | null;
   countries?: string[] | null;
   categories?: string[] | null;
-  coordsMeTravel?: any[] | null;
+  coordsMeTravel?: unknown[] | null;
   // Дополнительные поля, которые могут участвовать в чек-листе модерации
-  gallery?: any[] | null;
+  gallery?: unknown[] | null;
   travel_image_thumb_small_url?: string | null;
 }
 
@@ -85,7 +86,7 @@ export function validateName(name: string | undefined | null): ValidationError |
 export function validateStep(
   step: number,
   formData: TravelFormLike,
-  _markers?: any[] | null,
+  _markers?: unknown[] | null,
 ): ValidationResult {
   const errors: ValidationError[] = [];
 
@@ -119,14 +120,14 @@ export function validateStep(
  */
 export function getModerationErrors(
   formData: TravelFormLike,
-  markers?: any[] | null,
+  markers?: unknown[] | null,
 ): string[] {
   return getModerationIssues(formData, markers).map((i) => i.label);
 }
 
 export function getModerationIssues(
   formData: TravelFormLike,
-  markers?: any[] | null,
+  markers?: unknown[] | null,
 ): ModerationIssue[] {
   const missing: ModerationIssue[] = [];
 
@@ -173,7 +174,7 @@ export function getModerationIssues(
   // Если markers передан и не пустой — используем его.
   // Если это пустой массив или undefined/null — используем coordsMeTravel из формы.
   const markersSource = Array.isArray(markers) && markers.length > 0 ? markers : (formData.coordsMeTravel ?? []);
-  const markersError = validateMarkers(markersSource as any[]);
+  const markersError = validateMarkers(markersSource);
   if (markersError) {
     missing.push({
       key: 'route',
@@ -183,7 +184,7 @@ export function getModerationIssues(
     });
   }
 
-  const gallery = (formData.gallery ?? []) as any[];
+  const gallery = (formData.gallery ?? []) as unknown[];
   const hasCover = !!(formData.travel_image_thumb_small_url && formData.travel_image_thumb_small_url.trim().length > 0);
   const hasPhotos = hasCover || gallery.length > 0;
   if (!hasPhotos) {
@@ -246,7 +247,7 @@ export function validateCategories(categories: string[] | undefined | null): Val
 /**
  * Валидация точек маршрута
  */
-export function validateMarkers(markers: any[] | undefined | null): ValidationError | null {
+export function validateMarkers(markers: unknown[] | undefined | null): ValidationError | null {
   if (!markers || markers.length === 0) {
     return {
       field: 'coordsMeTravel',
@@ -373,7 +374,7 @@ export function validateTravelForm(data: TravelFormValidation): ValidationResult
   const peopleError = validatePeople(data.number_peoples);
   if (peopleError) errors.push(peopleError);
 
-  const youtubeError = validateYouTubeLink((data as any).youtube_link);
+  const youtubeError = validateYouTubeLink(data.youtube_link);
   if (youtubeError) errors.push(youtubeError);
 
   return {

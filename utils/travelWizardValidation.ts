@@ -5,6 +5,8 @@
 
 import { TravelFormData } from '@/src/types/types';
 
+type UnknownRecord = Record<string, unknown>;
+
 export interface ValidationResult {
   isValid: boolean;
   errors: ValidationError[];
@@ -176,8 +178,8 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
  */
 export function validateField(
   fieldName: string,
-  value: any,
-  rules: any
+  value: unknown,
+  rules: FieldRule | undefined
 ): FieldValidationResult {
   if (!rules) {
     return { isValid: true };
@@ -258,8 +260,8 @@ export function validateStep(
   // Проверка обязательных полей
   if (rules.required) {
     for (const fieldName of rules.required) {
-      const value = (formData as any)[fieldName];
-      const fieldRules = rules.fields?.[fieldName as keyof typeof rules.fields];
+      const value = (formData as unknown as UnknownRecord)[fieldName];
+      const fieldRules = rules.fields?.[fieldName];
       const isEmpty =
         value === null ||
         value === undefined ||
@@ -291,8 +293,8 @@ export function validateStep(
   // Проверка рекомендуемых полей (warnings)
   if (rules.recommended) {
     for (const fieldName of rules.recommended) {
-      const value = (formData as any)[fieldName];
-      const fieldRules = rules.fields?.[fieldName as keyof typeof rules.fields];
+      const value = (formData as unknown as UnknownRecord)[fieldName];
+      const fieldRules = rules.fields?.[fieldName];
       const isEmpty =
         value === null ||
         value === undefined ||
@@ -333,7 +335,7 @@ export function getStepProgress(step: number, formData: TravelFormData): number 
 
   let filledCount = 0;
   for (const fieldName of allFields) {
-    const value = (formData as any)[fieldName];
+    const value = (formData as unknown as UnknownRecord)[fieldName];
     const isEmpty =
       value === null ||
       value === undefined ||

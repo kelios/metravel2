@@ -104,7 +104,7 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
         });
 
         it('должен показать преимущества для рекомендуемых пунктов', () => {
-            const { getByText } = render(
+            const { getAllByText } = render(
                 <TravelWizardStepPublish
                     {...defaultProps}
                     formData={{
@@ -115,7 +115,7 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
             );
 
             // Проверяем что есть текст с преимуществами (экранируем + и %)
-            expect(getByText(/Помогает найти маршрут|\+40%|В 3 раза больше/)).toBeTruthy();
+            expect(getAllByText(/Помогает найти маршрут|\+40%|В 3 раза больше/).length).toBeGreaterThan(0);
         });
     });
 

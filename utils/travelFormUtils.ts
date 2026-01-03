@@ -1,7 +1,9 @@
 import { TravelFormData, Travel, MarkerData } from '@/src/types/types';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 
-const coerceBoolean = (value: any, fallback = false): boolean => {
+type UnknownRecord = Record<string, unknown>;
+
+const coerceBoolean = (value: unknown, fallback = false): boolean => {
   if (typeof value === 'boolean') return value;
   if (value === 'true' || value === '1' || value === 1) return true;
   if (value === 'false' || value === '0' || value === 0) return false;
@@ -9,15 +11,16 @@ const coerceBoolean = (value: any, fallback = false): boolean => {
   return Boolean(value);
 };
 
-const normalizeIdList = (raw: any, idKeys: string[] = ['id', 'pk', 'value']): string[] => {
+const normalizeIdList = (raw: unknown, idKeys: string[] = ['id', 'pk', 'value']): string[] => {
   if (!Array.isArray(raw)) return [];
   return raw
     .map(item => {
       if (item == null) return null;
       if (typeof item === 'string' || typeof item === 'number') return String(item);
       if (typeof item === 'object') {
+        const rec = item as UnknownRecord;
         for (const key of idKeys) {
-          if ((item as any)[key] != null) return String((item as any)[key]);
+          if (rec[key] != null) return String(rec[key]);
         }
       }
       return null;
@@ -25,7 +28,7 @@ const normalizeIdList = (raw: any, idKeys: string[] = ['id', 'pk', 'value']): st
     .filter((value): value is string => Boolean(value));
 };
 
-const normalizeNumberList = (raw: any, idKeys: string[] = ['id', 'pk', 'value']): number[] => {
+const normalizeNumberList = (raw: unknown, idKeys: string[] = ['id', 'pk', 'value']): number[] => {
   if (!Array.isArray(raw)) return [];
   return raw
     .map(item => {
@@ -36,9 +39,10 @@ const normalizeNumberList = (raw: any, idKeys: string[] = ['id', 'pk', 'value'])
         return Number.isFinite(parsed) ? parsed : null;
       }
       if (typeof item === 'object') {
+        const rec = item as UnknownRecord;
         for (const key of idKeys) {
-          if ((item as any)[key] != null) {
-            const parsed = Number((item as any)[key]);
+          if (rec[key] != null) {
+            const parsed = Number(rec[key]);
             return Number.isFinite(parsed) ? parsed : null;
           }
         }
@@ -48,73 +52,77 @@ const normalizeNumberList = (raw: any, idKeys: string[] = ['id', 'pk', 'value'])
     .filter((value): value is number => Number.isFinite(value));
 };
 
-const normalizeDefinedFields = <T extends Record<string, any>>(source: T): Partial<T> => {
+const normalizeDefinedFields = <T extends Record<string, unknown>>(source: T): Partial<T> => {
   return Object.fromEntries(
     Object.entries(source).filter(([, value]) => value !== undefined)
   ) as Partial<T>;
 };
 
-const normalizeMarkersFromCoords = (coords: any[]): MarkerData[] => {
+const normalizeMarkersFromCoords = (coords: unknown[]): MarkerData[] => {
   if (!Array.isArray(coords)) return [];
   return coords
     .map(item => {
       if (!item) return null;
-      const parsed = CoordinateConverter.fromLooseString(item.coord ?? item.coords ?? '');
-      const lat = Number(item.lat ?? item.latitude ?? parsed?.lat);
-      const lng = Number(item.lng ?? item.longitude ?? parsed?.lng);
+      if (typeof item !== 'object') return null;
+      const rec = item as UnknownRecord;
+      const parsed = CoordinateConverter.fromLooseString(String(rec.coord ?? rec.coords ?? ''));
+      const lat = Number(rec.lat ?? rec.latitude ?? parsed?.lat);
+      const lng = Number(rec.lng ?? rec.longitude ?? parsed?.lng);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-      const countryRaw = item.country_id ?? item.country ?? null;
+      const countryRaw = rec.country_id ?? rec.country ?? null;
       const countryValue = Number(countryRaw);
       const country = Number.isFinite(countryValue) ? countryValue : null;
       const imageRaw =
-        item.image ??
-        item.travelImageThumbUrl ??
-        item.travelImageThumbSmallUrl ??
-        item.travel_image_thumb_url ??
+        rec.image ??
+        rec.travelImageThumbUrl ??
+        rec.travelImageThumbSmallUrl ??
+        rec.travel_image_thumb_url ??
         null;
       const image = typeof imageRaw === 'string' ? imageRaw.trim() : imageRaw;
 
       return {
-        id: item.id ?? item.pk ?? null,
+        id: (rec.id as number | null | undefined) ?? (rec.pk as number | null | undefined) ?? null,
         lat,
         lng,
         country,
-        address: item.address ?? item.name ?? item.title ?? '',
-        categories: normalizeNumberList(item.categories ?? item.category_ids ?? item.category ?? [], ['id', 'pk', 'value']),
+        address: String(rec.address ?? rec.name ?? rec.title ?? ''),
+        categories: normalizeNumberList(rec.categories ?? rec.category_ids ?? rec.category ?? [], ['id', 'pk', 'value']),
         image: image || null,
       } as MarkerData;
     })
     .filter((item): item is MarkerData => Boolean(item));
 };
 
-const normalizeMarkersFromTravelAddress = (travelAddress: any[]): MarkerData[] => {
+const normalizeMarkersFromTravelAddress = (travelAddress: unknown[]): MarkerData[] => {
   if (!Array.isArray(travelAddress)) return [];
   return travelAddress
     .map(item => {
       if (!item) return null;
-      const coordStr = item.coord ?? item.coords ?? '';
+      if (typeof item !== 'object') return null;
+      const rec = item as UnknownRecord;
+      const coordStr = String(rec.coord ?? rec.coords ?? '');
       const parsed = CoordinateConverter.fromLooseString(coordStr);
-      const lat = Number(item.lat ?? item.latitude ?? parsed?.lat);
-      const lng = Number(item.lng ?? item.longitude ?? parsed?.lng);
+      const lat = Number(rec.lat ?? rec.latitude ?? parsed?.lat);
+      const lng = Number(rec.lng ?? rec.longitude ?? parsed?.lng);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-      const countryRaw = item.country_id ?? item.country ?? null;
+      const countryRaw = rec.country_id ?? rec.country ?? null;
       const countryValue = Number(countryRaw);
       const country = Number.isFinite(countryValue) ? countryValue : null;
       const imageRaw =
-        item.image ??
-        item.travelImageThumbUrl ??
-        item.travelImageThumbSmallUrl ??
-        item.travel_image_thumb_url ??
+        rec.image ??
+        rec.travelImageThumbUrl ??
+        rec.travelImageThumbSmallUrl ??
+        rec.travel_image_thumb_url ??
         null;
       const image = typeof imageRaw === 'string' ? imageRaw.trim() : imageRaw;
 
       return {
-        id: item.id ?? item.pk ?? null,
+        id: (rec.id as number | null | undefined) ?? (rec.pk as number | null | undefined) ?? null,
         lat,
         lng,
         country,
-        address: item.address ?? item.name ?? item.title ?? '',
-        categories: normalizeNumberList(item.categories ?? item.category_ids ?? item.category ?? [], ['id', 'pk', 'value']),
+        address: String(rec.address ?? rec.name ?? rec.title ?? ''),
+        categories: normalizeNumberList(rec.categories ?? rec.category_ids ?? rec.category ?? [], ['id', 'pk', 'value']),
         image: image || null,
       } as MarkerData;
     })
@@ -122,10 +130,10 @@ const normalizeMarkersFromTravelAddress = (travelAddress: any[]): MarkerData[] =
 };
 
 const resolveMarkers = (travel: Travel): MarkerData[] => {
-  const travelAny = travel as any;
-  const coordsMarkers = normalizeMarkersFromCoords(travelAny.coordsMeTravel ?? []);
+  const travelRecord = travel as unknown as UnknownRecord;
+  const coordsMarkers = normalizeMarkersFromCoords((travelRecord.coordsMeTravel as unknown[]) ?? []);
   if (coordsMarkers.length > 0) return coordsMarkers;
-  return normalizeMarkersFromTravelAddress(travelAny.travelAddress ?? []);
+  return normalizeMarkersFromTravelAddress((travelRecord.travelAddress as unknown[]) ?? []);
 };
 
 /**
@@ -175,12 +183,12 @@ export function getEmptyFormData(id: string | null): TravelFormData {
  */
 export function transformTravelToFormData(travel: Travel): TravelFormData {
   const yearStr = travel.year != null ? String(travel.year) : '';
-  const daysStr = (travel as any).number_days != null ? String((travel as any).number_days) : '';
-  const peoplesStr = (travel as any).number_peoples != null ? String((travel as any).number_peoples) : '';
-  const travelAny = travel as any;
+  const travelRecord = travel as unknown as UnknownRecord;
+  const daysStr = travelRecord.number_days != null ? String(travelRecord.number_days) : '';
+  const peoplesStr = travelRecord.number_peoples != null ? String(travelRecord.number_peoples) : '';
   const mergedTravel = {
     ...getEmptyFormData(String(travel.id)),
-    ...normalizeDefinedFields(travelAny),
+    ...normalizeDefinedFields(travelRecord),
   } as TravelFormData;
 
   const normalizedMarkers = resolveMarkers(travel);
@@ -191,17 +199,17 @@ export function transformTravelToFormData(travel: Travel): TravelFormData {
     year: yearStr,
     number_days: daysStr,
     number_peoples: peoplesStr,
-    moderation: coerceBoolean(travelAny.moderation, false),
-    publish: coerceBoolean(travelAny.publish, false),
-    visa: coerceBoolean(travelAny.visa, false),
-    categories: normalizeIdList(travelAny.categories, ['id', 'category_id', 'pk', 'value']),
-    transports: normalizeIdList(travelAny.transports, ['id', 'transport_id', 'pk', 'value']),
-    companions: normalizeIdList(travelAny.companions, ['id', 'pk', 'value']),
-    complexity: normalizeIdList(travelAny.complexity, ['id', 'pk', 'value']),
-    month: normalizeIdList(travelAny.month, ['id', 'pk', 'value']),
-    over_nights_stay: normalizeIdList(travelAny.over_nights_stay, ['id', 'pk', 'value']),
-    countries: normalizeIdList(travelAny.countries, ['country_id', 'id', 'pk', 'value']),
-    cities: normalizeIdList(travelAny.cities, ['id', 'pk', 'value']),
+    moderation: coerceBoolean(travelRecord.moderation, false),
+    publish: coerceBoolean(travelRecord.publish, false),
+    visa: coerceBoolean(travelRecord.visa, false),
+    categories: normalizeIdList(travelRecord.categories, ['id', 'category_id', 'pk', 'value']),
+    transports: normalizeIdList(travelRecord.transports, ['id', 'transport_id', 'pk', 'value']),
+    companions: normalizeIdList(travelRecord.companions, ['id', 'pk', 'value']),
+    complexity: normalizeIdList(travelRecord.complexity, ['id', 'pk', 'value']),
+    month: normalizeIdList(travelRecord.month, ['id', 'pk', 'value']),
+    over_nights_stay: normalizeIdList(travelRecord.over_nights_stay, ['id', 'pk', 'value']),
+    countries: normalizeIdList(travelRecord.countries, ['country_id', 'id', 'pk', 'value']),
+    cities: normalizeIdList(travelRecord.cities, ['id', 'pk', 'value']),
     coordsMeTravel: normalizedMarkers.length > 0 ? normalizedMarkers : mergedTravel.coordsMeTravel ?? [],
   };
 }
@@ -228,7 +236,7 @@ export function syncCountriesFromMarkers(
 /**
  * Очищает пустые поля в объекте (заменяет пустые строки на null)
  */
-export function cleanEmptyFields(obj: any): any {
+export function cleanEmptyFields<T extends Record<string, unknown>>(obj: T): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(obj).map(([key, value]) => {
       if (value === '') return [key, null];
@@ -279,6 +287,7 @@ export function validateModerationRequirements(formData: TravelFormData): {
   missingFields: string[];
 } {
   const missingFields: string[] = [];
+  const formRecord = formData as unknown as UnknownRecord;
 
   // ✅ FIX: Более строгая валидация названия
   if (!formData.name || formData.name.trim().length < 3) {
@@ -311,21 +320,23 @@ export function validateModerationRequirements(formData: TravelFormData): {
     }
   }
 
-  const categories = (formData as any).categories || [];
+  const categories = formData.categories ?? [];
   if (!Array.isArray(categories) || categories.length === 0) {
     missingFields.push('categories');
   }
 
-  const coordsMeTravel = (formData as any).coordsMeTravel || [];
-  const markers = (formData as any).markers || [];
+  const coordsMeTravel = Array.isArray(formData.coordsMeTravel) ? (formData.coordsMeTravel as unknown[]) : [];
+  const markers = Array.isArray(formRecord.markers) ? (formRecord.markers as unknown[]) : [];
   const hasRoute = coordsMeTravel.length > 0 || markers.length > 0;
   if (!hasRoute) {
     missingFields.push('route');
   } else {
     // ✅ FIX: Проверяем валидность координат в маркерах
-    const hasInvalidMarkers = coordsMeTravel.some((m: any) => {
-      const lat = Number(m?.lat);
-      const lng = Number(m?.lng);
+    const hasInvalidMarkers = coordsMeTravel.some((m: unknown) => {
+      if (!m || typeof m !== 'object') return true;
+      const rec = m as UnknownRecord;
+      const lat = Number(rec.lat);
+      const lng = Number(rec.lng);
       return !Number.isFinite(lat) || !Number.isFinite(lng) ||
              lat < -90 || lat > 90 || lng < -180 || lng > 180;
     });
@@ -334,8 +345,8 @@ export function validateModerationRequirements(formData: TravelFormData): {
     }
   }
 
-  const gallery = (formData as any).gallery || [];
-  const hasCover = !!(formData as any).travel_image_thumb_small_url;
+  const gallery = Array.isArray(formData.gallery) ? formData.gallery : [];
+  const hasCover = !!formData.travel_image_thumb_small_url;
   const hasPhotos = hasCover || gallery.length > 0;
   if (!hasPhotos) {
     missingFields.push('photos');

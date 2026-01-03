@@ -43,8 +43,29 @@ test.describe('Travel full flow (API seed + UI verify)', () => {
   test('create -> open details -> favorite -> edit -> cleanup', async ({ page }) => {
     const email = (process.env.E2E_EMAIL || '').trim();
     const password = (process.env.E2E_PASSWORD || '').trim();
-    expect(email, 'E2E_EMAIL must be set for full-flow tests').toBeTruthy();
-    expect(password, 'E2E_PASSWORD must be set for full-flow tests').toBeTruthy();
+    if (!email || !password) {
+      test.skip(true, 'E2E_EMAIL/E2E_PASSWORD not provided; skipping API-seeded full flow');
+      return;
+    }
+
+    const apiBase = (process.env.E2E_API_URL || '').trim().replace(/\/+$/, '');
+    const appApiBase = (process.env.EXPO_PUBLIC_API_URL || '').trim().replace(/\/+$/, '');
+
+    // This test seeds data via API and then verifies it via UI.
+    // If the app points to a different API base than the one used for seeding,
+    // the travel will not be visible in UI and the test becomes non-deterministic.
+    if (!apiBase) {
+      test.skip(true, 'E2E_API_URL not provided; skipping API-seeded full flow');
+      return;
+    }
+
+    if (appApiBase && appApiBase !== apiBase) {
+      test.skip(
+        true,
+        `API base mismatch: E2E_API_URL=${apiBase} but EXPO_PUBLIC_API_URL=${appApiBase}; skipping API-seeded UI verification`
+      );
+      return;
+    }
 
     const apiCtx = await apiLogin(email, password);
 
@@ -56,14 +77,18 @@ test.describe('Travel full flow (API seed + UI verify)', () => {
       ...basePayload,
       name: initialName,
       publish: true,
-      moderation: true,
+      moderation: false,
     });
 
     const travelId = created?.id;
     expect(travelId, 'Upsert did not return id').toBeTruthy();
 
     const createdSlug = typeof created?.slug === 'string' ? created.slug.trim() : '';
-    const detailsPath = `/travels/${createdSlug || travelId}`;
+    const createdUrl = typeof created?.url === 'string' ? created.url.trim() : '';
+
+    const detailsPath = createdUrl.startsWith('/travels/')
+      ? createdUrl
+      : `/travels/${createdSlug || travelId}`;
     expect(detailsPath.startsWith('/travels/')).toBeTruthy();
 
     const createdReadback = await readTravel(apiCtx, travelId);
@@ -83,7 +108,7 @@ test.describe('Travel full flow (API seed + UI verify)', () => {
         )
         .catch(() => null);
 
-      await page.goto(detailsPath, { waitUntil: 'networkidle', timeout: 120_000 });
+      await page.goto(detailsPath, { waitUntil: 'domcontentloaded', timeout: 120_000 });
 
       const travelApiResp = await travelApiRespPromise;
       if (travelApiResp) {
@@ -93,7 +118,11 @@ test.describe('Travel full flow (API seed + UI verify)', () => {
         ).toBeTruthy();
       }
 
-      await expect(page.locator('[testID="travel-details-page"]').first()).toBeVisible({ timeout: 60_000 });
+      await expect(
+        page
+          .locator('[data-testid="travel-details-page"], [testID="travel-details-page"]')
+          .first()
+      ).toBeVisible({ timeout: 60_000 });
       await expect(page.locator(`text=${initialName}`).first()).toBeVisible({ timeout: 30_000 });
 
       await markAsFavorite(apiCtx, travelId);
@@ -117,7 +146,11 @@ test.describe('Travel full flow (API seed + UI verify)', () => {
       expect(String(updated?.name || '')).toBe(editedName);
 
       await page.goto(detailsPath, { waitUntil: 'domcontentloaded' });
-      await expect(page.locator('[testID="travel-details-page"]').first()).toBeVisible({ timeout: 30_000 });
+      await expect(
+        page
+          .locator('[data-testid="travel-details-page"], [testID="travel-details-page"]')
+          .first()
+      ).toBeVisible({ timeout: 30_000 });
       await expect(page.locator(`text=${editedName}`).first()).toBeVisible({ timeout: 30_000 });
     } finally {
       await deleteTravel(apiCtx, travelId);
