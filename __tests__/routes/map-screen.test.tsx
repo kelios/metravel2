@@ -4,6 +4,19 @@ import MapScreen from '@/app/(tabs)/map'
 
 let mockResponsiveState = { isPhone: true, isLargePhone: false, width: 390 }
 
+jest.mock('@/hooks/usePanelController', () => {
+  return {
+    __esModule: true,
+    usePanelController: () => ({
+      isPanelVisible: true,
+      openPanel: jest.fn(),
+      closePanel: jest.fn(),
+      panelStyle: {},
+      overlayStyle: {},
+    }),
+  }
+})
+
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => mockResponsiveState,
 }))

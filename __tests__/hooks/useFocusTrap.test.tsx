@@ -55,7 +55,7 @@ describe('useFocusTrap', () => {
     expect(document.activeElement).toBe(lastButton)
 
     unmount()
-    expect(returnFocus.current.focus).toHaveBeenCalled()
+    await waitFor(() => expect(returnFocus.current.focus).toHaveBeenCalled())
   })
 
   it('does nothing when disabled', () => {

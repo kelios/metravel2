@@ -4,7 +4,7 @@ import { Platform, View } from 'react-native';
 import * as Location from 'expo-location';
 import { useIsFocused } from '@react-navigation/native';
 import { usePathname } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
 import { fetchFiltersMap, fetchTravelsForMap, fetchTravelsNearRoute } from '@/src/api/map';
@@ -71,7 +71,6 @@ function filterTravelsByCategories(all: TravelCoords[], selectedCategories: stri
 export function useMapScreenController() {
   const pathname = usePathname();
   const isFocused = useIsFocused();
-  const queryClient = useQueryClient();
   const { isPhone, isLargePhone, width } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const insets = useSafeAreaInsets();
@@ -369,8 +368,8 @@ export function useMapScreenController() {
   });
 
   const invalidateTravelsQuery = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['travelsForMap'] });
-  }, [queryClient]);
+    refetchMapData();
+  }, [refetchMapData]);
 
   const allTravelsData = useMemo(() => {
     if (!Array.isArray(allTravelsDataRaw)) return [];

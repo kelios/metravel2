@@ -1,12 +1,16 @@
-import { useState, useCallback, useRef } from 'react';
-import { Animated, Easing, Platform, useWindowDimensions } from 'react-native';
+import { useState, useCallback, useRef, useMemo } from 'react';
+import { Animated, Easing, useWindowDimensions } from 'react-native';
 
 const PANEL_ANIMATION_DURATION = 250;
 
-export const usePanelController = () => {
-    const { height: windowHeight } = useWindowDimensions();
-    const [isPanelVisible, setPanelVisible] = useState(false);
-    const panelAnimation = useRef(new Animated.Value(0)).current;
+/**
+ * Хук для управления боковой панелью с анимацией.
+ * @param isMobile - флаг мобильного устройства (для разных стилей анимации)
+ */
+export function usePanelController(isMobile: boolean = false) {
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+    const [isPanelVisible, setPanelVisible] = useState(!isMobile);
+    const panelAnimation = useRef(new Animated.Value(isMobile ? 0 : 1)).current;
 
     const openPanel = useCallback(() => {
         setPanelVisible(true);
@@ -27,20 +31,24 @@ export const usePanelController = () => {
         }).start(() => setPanelVisible(false));
     }, [panelAnimation]);
 
-    const panelStyle = {
+    const panelStyle = useMemo(() => ({
         transform: [
             {
-                translateY: panelAnimation.interpolate({
+                translateX: panelAnimation.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [windowHeight, 0],
+                    outputRange: [isMobile ? windowWidth : 16, 0],
                 }),
             },
         ],
-    };
+        opacity: panelAnimation.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 1],
+        }),
+    }), [panelAnimation, isMobile, windowWidth]);
 
-    const overlayStyle = {
+    const overlayStyle = useMemo(() => ({
         opacity: panelAnimation,
-    };
+    }), [panelAnimation]);
 
     return {
         isPanelVisible,
@@ -49,6 +57,4 @@ export const usePanelController = () => {
         panelStyle,
         overlayStyle,
     };
-};
-
-export {};
+}
