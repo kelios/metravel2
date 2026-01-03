@@ -65,6 +65,43 @@ export function useUpsertTravelController(): UpsertTravelController {
     currentStep: wizard.currentStep,
   });
 
+  // Draft recovery for unsaved changes
+  const draftRecoveryHook = useDraftRecovery({
+    travelId: id as string | null,
+    isNew,
+    enabled: isNew && isAuthenticated,
+  });
+
+  // Auto-save draft on form changes
+  useEffect(() => {
+    if (isNew && form.formData && draftRecoveryHook.saveDraft) {
+      draftRecoveryHook.saveDraft(form.formData);
+    }
+  }, [form.formData, isNew, draftRecoveryHook]);
+
+  // Clear draft after successful save
+  useEffect(() => {
+    if (form.autosave.status === 'saved' && draftRecoveryHook.clearDraft) {
+      draftRecoveryHook.clearDraft();
+    }
+  }, [form.autosave.status, draftRecoveryHook]);
+
+  // Handle draft recovery
+  const handleRecoverDraft = useCallback(async () => {
+    const recoveredData = await draftRecoveryHook.recoverDraft();
+    if (recoveredData) {
+      form.setFormData(recoveredData);
+    }
+  }, [draftRecoveryHook, form]);
+
+  const draftRecovery = useMemo(() => ({
+    hasPendingDraft: draftRecoveryHook.hasPendingDraft,
+    draftTimestamp: draftRecoveryHook.draftTimestamp,
+    isRecovering: draftRecoveryHook.isRecovering,
+    recoverDraft: handleRecoverDraft,
+    dismissDraft: draftRecoveryHook.dismissDraft,
+  }), [draftRecoveryHook, handleRecoverDraft]);
+
   const autosaveBadge = useMemo(() => {
     switch (form.autosave.status) {
       case 'saving':
@@ -116,5 +153,7 @@ export function useUpsertTravelController(): UpsertTravelController {
     handleManualSave: form.handleManualSave,
     handleCountrySelect: form.handleCountrySelect,
     handleCountryDeselect: form.handleCountryDeselect,
+
+    draftRecovery,
   };
 }

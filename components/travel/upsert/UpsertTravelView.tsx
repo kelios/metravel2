@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, Animated, Platform, Pressable } from 'react-native';
+import { StyleSheet, Text, View, Animated, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
@@ -11,6 +11,7 @@ import TravelWizardStepDetails from '@/components/travel/TravelWizardStepDetails
 import TravelWizardStepExtras from '@/components/travel/TravelWizardStepExtras';
 import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
 import TravelFormErrorBoundary from '@/components/travel/TravelFormErrorBoundary';
+import DraftRecoveryDialog from '@/components/travel/DraftRecoveryDialog';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import type { UpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
@@ -217,130 +218,181 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     <SafeAreaView
       style={styles.container}
       testID="travel-upsert.root"
-      accessibilityLabel="travel-upsert.root"
+      accessibilityLabel="Форма создания путешествия"
     >
-      {controller.wizard.currentStep === 1 ? (
-        <TravelWizardStepBasic
-          currentStep={controller.wizard.currentStep}
-          totalSteps={controller.wizard.totalSteps}
-          formData={controller.formData}
-          setFormData={controller.setFormData}
-          onManualSave={controller.handleManualSave}
-          onGoNext={controller.wizard.handleNext}
-          snackbarVisible={controller.autosave.status === 'error'}
-          snackbarMessage={controller.autosave.error?.message || ''}
-          onDismissSnackbar={controller.autosave.clearError}
-          stepMeta={controller.currentStepMeta}
-          progress={controller.progress}
-          autosaveBadge={controller.autosaveBadge}
-          stepErrors={controller.wizard.step1SubmitErrors.map(e => e.message)}
-          onStepSelect={controller.wizard.handleStepSelect}
-        />
-      ) : null}
+      {/* Draft recovery dialog */}
+      <DraftRecoveryDialog
+        visible={controller.draftRecovery.hasPendingDraft}
+        draftTimestamp={controller.draftRecovery.draftTimestamp}
+        onRecover={controller.draftRecovery.recoverDraft}
+        onDiscard={controller.draftRecovery.dismissDraft}
+        isRecovering={controller.draftRecovery.isRecovering}
+      />
 
-      {controller.wizard.currentStep === 2 ? (
-        <TravelWizardStepRoute
-          currentStep={controller.wizard.currentStep}
-          totalSteps={controller.wizard.totalSteps}
-          markers={controller.markers}
-          setMarkers={controller.setMarkers}
-          categoryTravelAddress={controller.filters.categoryTravelAddress}
-          countries={controller.filters.countries}
-          travelId={controller.formData.id}
-          selectedCountryIds={controller.formData.countries || []}
-          onCountrySelect={controller.handleCountrySelect}
-          onCountryDeselect={controller.handleCountryDeselect}
-          onBack={controller.wizard.handleBack}
-          onNext={controller.wizard.handleNext}
-          onManualSave={controller.handleManualSave}
-          isFiltersLoading={controller.isFiltersLoading}
-          stepMeta={controller.currentStepMeta}
-          progress={controller.progress}
-          autosaveBadge={controller.autosaveBadge}
-          focusAnchorId={controller.wizard.focusAnchorId}
-          onAnchorHandled={controller.wizard.handleAnchorHandled}
-          onStepSelect={controller.wizard.handleStepSelect}
-        />
-      ) : null}
+      {/* Offline indicator */}
+      <OfflineBanner colors={colors} isVisible={isOffline} />
 
-      {controller.wizard.currentStep === 3 ? (
-        <TravelWizardStepMedia
-          currentStep={controller.wizard.currentStep}
-          totalSteps={controller.wizard.totalSteps}
-          formData={controller.formData}
-          setFormData={controller.setFormData}
-          travelDataOld={controller.travelDataOld}
-          onManualSave={controller.handleManualSave}
-          onBack={controller.wizard.handleBack}
-          onNext={controller.wizard.handleNext}
-          stepMeta={controller.currentStepMeta}
-          progress={controller.progress}
-          autosaveBadge={controller.autosaveBadge}
-          focusAnchorId={controller.wizard.focusAnchorId}
-          onAnchorHandled={controller.wizard.handleAnchorHandled}
-          onStepSelect={controller.wizard.handleStepSelect}
-        />
-      ) : null}
+      {/* Step 1: Basic Info */}
+      {controller.wizard.currentStep === 1 && (
+        <TravelFormErrorBoundary
+          onError={handleStepError}
+          fallback={<StepErrorFallback stepNumber={1} colors={colors} />}
+        >
+          <TravelWizardStepBasic
+            currentStep={controller.wizard.currentStep}
+            totalSteps={controller.wizard.totalSteps}
+            formData={controller.formData}
+            setFormData={controller.setFormData}
+            onManualSave={controller.handleManualSave}
+            onGoNext={controller.wizard.handleNext}
+            snackbarVisible={controller.autosave.status === 'error'}
+            snackbarMessage={controller.autosave.error?.message || ''}
+            onDismissSnackbar={controller.autosave.clearError}
+            stepMeta={controller.currentStepMeta}
+            progress={controller.progress}
+            autosaveBadge={controller.autosaveBadge}
+            stepErrors={controller.wizard.step1SubmitErrors.map(e => e.message)}
+            onStepSelect={controller.wizard.handleStepSelect}
+          />
+        </TravelFormErrorBoundary>
+      )}
 
-      {controller.wizard.currentStep === 4 ? (
-        <TravelWizardStepDetails
-          currentStep={controller.wizard.currentStep}
-          totalSteps={controller.wizard.totalSteps}
-          formData={controller.formData}
-          setFormData={controller.setFormData}
-          onManualSave={controller.handleManualSave}
-          onBack={controller.wizard.handleBack}
-          onNext={controller.wizard.handleNext}
-          stepMeta={controller.currentStepMeta}
-          progress={controller.progress}
-          autosaveBadge={controller.autosaveBadge}
-          onStepSelect={controller.wizard.handleStepSelect}
-        />
-      ) : null}
+      {/* Step 2: Route */}
+      {controller.wizard.currentStep === 2 && (
+        <TravelFormErrorBoundary
+          onError={handleStepError}
+          fallback={<StepErrorFallback stepNumber={2} onGoBack={controller.wizard.handleBack} colors={colors} />}
+        >
+          <TravelWizardStepRoute
+            currentStep={controller.wizard.currentStep}
+            totalSteps={controller.wizard.totalSteps}
+            markers={controller.markers}
+            setMarkers={controller.setMarkers}
+            categoryTravelAddress={controller.filters.categoryTravelAddress}
+            countries={controller.filters.countries}
+            travelId={controller.formData.id}
+            selectedCountryIds={controller.formData.countries || []}
+            onCountrySelect={controller.handleCountrySelect}
+            onCountryDeselect={controller.handleCountryDeselect}
+            onBack={controller.wizard.handleBack}
+            onNext={controller.wizard.handleNext}
+            onManualSave={controller.handleManualSave}
+            isFiltersLoading={controller.isFiltersLoading}
+            stepMeta={controller.currentStepMeta}
+            progress={controller.progress}
+            autosaveBadge={controller.autosaveBadge}
+            focusAnchorId={controller.wizard.focusAnchorId}
+            onAnchorHandled={controller.wizard.handleAnchorHandled}
+            onStepSelect={controller.wizard.handleStepSelect}
+          />
+        </TravelFormErrorBoundary>
+      )}
 
-      {controller.wizard.currentStep === 5 ? (
-        <TravelWizardStepExtras
-          currentStep={controller.wizard.currentStep}
-          totalSteps={controller.wizard.totalSteps}
-          formData={controller.formData}
-          setFormData={setFormDataDirect}
-          filters={controller.filters}
-          travelDataOld={controller.travelDataOld}
-          isSuperAdmin={controller.isSuperAdmin}
-          onManualSave={controller.handleManualSave}
-          onBack={controller.wizard.handleBack}
-          onNext={controller.wizard.handleNext}
-          stepMeta={controller.currentStepMeta}
-          progress={controller.progress}
-          autosaveBadge={controller.autosaveBadge}
-          focusAnchorId={controller.wizard.focusAnchorId}
-          onAnchorHandled={controller.wizard.handleAnchorHandled}
-          onStepSelect={controller.wizard.handleStepSelect}
-        />
-      ) : null}
+      {/* Step 3: Media */}
+      {controller.wizard.currentStep === 3 && (
+        <TravelFormErrorBoundary
+          onError={handleStepError}
+          fallback={<StepErrorFallback stepNumber={3} onGoBack={controller.wizard.handleBack} colors={colors} />}
+        >
+          <TravelWizardStepMedia
+            currentStep={controller.wizard.currentStep}
+            totalSteps={controller.wizard.totalSteps}
+            formData={controller.formData}
+            setFormData={controller.setFormData}
+            travelDataOld={controller.travelDataOld}
+            onManualSave={controller.handleManualSave}
+            onBack={controller.wizard.handleBack}
+            onNext={controller.wizard.handleNext}
+            stepMeta={controller.currentStepMeta}
+            progress={controller.progress}
+            autosaveBadge={controller.autosaveBadge}
+            focusAnchorId={controller.wizard.focusAnchorId}
+            onAnchorHandled={controller.wizard.handleAnchorHandled}
+            onStepSelect={controller.wizard.handleStepSelect}
+          />
+        </TravelFormErrorBoundary>
+      )}
 
-      {controller.wizard.currentStep === 6 ? (
-        <TravelWizardStepPublish
-          currentStep={controller.wizard.currentStep}
-          totalSteps={controller.wizard.totalSteps}
-          formData={controller.formData}
-          setFormData={setFormDataDirect}
-          isSuperAdmin={controller.isSuperAdmin}
-          onManualSave={controller.handleManualSave}
-          onGoBack={controller.wizard.handleBack}
-          onFinish={controller.wizard.handleFinishWizard}
-          onNavigateToIssue={controller.wizard.handleNavigateToIssue}
-          onStepSelect={controller.wizard.handleStepSelect}
-          stepMeta={controller.currentStepMeta}
-          progress={controller.progress}
-          autosaveBadge={controller.autosaveBadge}
-        />
-      ) : null}
+      {/* Step 4: Details */}
+      {controller.wizard.currentStep === 4 && (
+        <TravelFormErrorBoundary
+          onError={handleStepError}
+          fallback={<StepErrorFallback stepNumber={4} onGoBack={controller.wizard.handleBack} colors={colors} />}
+        >
+          <TravelWizardStepDetails
+            currentStep={controller.wizard.currentStep}
+            totalSteps={controller.wizard.totalSteps}
+            formData={controller.formData}
+            setFormData={controller.setFormData}
+            onManualSave={controller.handleManualSave}
+            onBack={controller.wizard.handleBack}
+            onNext={controller.wizard.handleNext}
+            stepMeta={controller.currentStepMeta}
+            progress={controller.progress}
+            autosaveBadge={controller.autosaveBadge}
+            onStepSelect={controller.wizard.handleStepSelect}
+          />
+        </TravelFormErrorBoundary>
+      )}
+
+      {/* Step 5: Extras */}
+      {controller.wizard.currentStep === 5 && (
+        <TravelFormErrorBoundary
+          onError={handleStepError}
+          fallback={<StepErrorFallback stepNumber={5} onGoBack={controller.wizard.handleBack} colors={colors} />}
+        >
+          <TravelWizardStepExtras
+            currentStep={controller.wizard.currentStep}
+            totalSteps={controller.wizard.totalSteps}
+            formData={controller.formData}
+            setFormData={setFormDataDirect}
+            filters={controller.filters}
+            travelDataOld={controller.travelDataOld}
+            isSuperAdmin={controller.isSuperAdmin}
+            onManualSave={controller.handleManualSave}
+            onBack={controller.wizard.handleBack}
+            onNext={controller.wizard.handleNext}
+            stepMeta={controller.currentStepMeta}
+            progress={controller.progress}
+            autosaveBadge={controller.autosaveBadge}
+            focusAnchorId={controller.wizard.focusAnchorId}
+            onAnchorHandled={controller.wizard.handleAnchorHandled}
+            onStepSelect={controller.wizard.handleStepSelect}
+          />
+        </TravelFormErrorBoundary>
+      )}
+
+      {/* Step 6: Publish */}
+      {controller.wizard.currentStep === 6 && (
+        <TravelFormErrorBoundary
+          onError={handleStepError}
+          fallback={<StepErrorFallback stepNumber={6} onGoBack={controller.wizard.handleBack} colors={colors} />}
+        >
+          <TravelWizardStepPublish
+            currentStep={controller.wizard.currentStep}
+            totalSteps={controller.wizard.totalSteps}
+            formData={controller.formData}
+            setFormData={setFormDataDirect}
+            isSuperAdmin={controller.isSuperAdmin}
+            onManualSave={controller.handleManualSave}
+            onGoBack={controller.wizard.handleBack}
+            onFinish={controller.wizard.handleFinishWizard}
+            onNavigateToIssue={controller.wizard.handleNavigateToIssue}
+            onStepSelect={controller.wizard.handleStepSelect}
+            stepMeta={controller.currentStepMeta}
+            progress={controller.progress}
+            autosaveBadge={controller.autosaveBadge}
+          />
+        </TravelFormErrorBoundary>
+      )}
     </SafeAreaView>
   );
 }
 
-const createStyles = (colors: UpsertTravelController['colors']) =>
+const createStyles = (
+  colors: UpsertTravelController['colors'],
+  responsive?: { isDesktop: boolean; isTablet: boolean; isMobile: boolean }
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -362,10 +414,21 @@ const createStyles = (colors: UpsertTravelController['colors']) =>
       justifyContent: 'center',
       alignItems: 'center',
       padding: DESIGN_TOKENS.spacing.xl,
+      maxWidth: responsive?.isDesktop ? 480 : '100%',
+      alignSelf: 'center',
+      width: '100%',
+    },
+    errorTitle: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xl,
+      fontWeight: '600',
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: DESIGN_TOKENS.spacing.sm,
     },
     errorText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.lg,
-      color: colors.danger,
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      color: colors.textMuted,
       textAlign: 'center',
+      lineHeight: 24,
     },
   });

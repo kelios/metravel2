@@ -520,9 +520,8 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
 
               {noPointsAlongRoute && !hideNoPointsToast && (
                 <View style={styles.noPointsToast} accessible accessibilityRole="text" testID="no-points-message">
-                  <Text style={styles.noPointsTitle}>Маршрут построен</Text>
                   <Text style={styles.noPointsSubtitle}>
-                    Маршрут построен. Вдоль маршрута нет доступных точек в радиусе 2 км.
+                    Вдоль маршрута нет доступных точек в радиусе 2 км.
                   </Text>
                   <View style={styles.noPointsActions}>
                     <Pressable
@@ -730,7 +729,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
 
         {/* ✅ УЛУЧШЕНИЕ: QuickActions для быстрого доступа */}
         <QuickActions
-          onReset={_hasActiveFilters ? resetFilters : undefined}
+          onReset={mode === 'radius' && _hasActiveFilters ? resetFilters : undefined}
           onFitBounds={totalPoints > 0 && mapUiApi ? () => mapUiApi.fitToResults() : undefined}
           totalPoints={totalPoints}
           hasFilters={_hasActiveFilters}
