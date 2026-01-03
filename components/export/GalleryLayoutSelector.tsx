@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -297,7 +298,7 @@ function LayoutCard({ layout, isSelected, onSelect, styles }: LayoutCardProps) {
       {/* Индикатор выбора */}
       {isSelected && (
         <View style={styles.selectedBadge}>
-          <Text style={styles.selectedBadgeText}>✓</Text>
+          <MaterialIcons name="check" size={14} color={styles.selectedBadgeText.color} />
         </View>
       )}
     </Pressable>
@@ -351,27 +352,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderWidth: 2,
     borderColor: colors.border,
     padding: 16,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.card,
-      },
-      default: {
-        ...colors.shadows.medium,
-      },
-    }),
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: colors.boxShadows.card } as any)
+      : { ...colors.shadows.medium }),
     flexShrink: 0,
   },
   layoutCardSelected: {
     borderColor: colors.primary,
     borderWidth: 3,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.heavy,
-      },
-      default: {
-        ...colors.shadows.hover,
-      },
-    }),
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: colors.boxShadows.heavy } as any)
+      : { ...colors.shadows.hover }),
   },
   layoutIcon: {
     width: 48,
@@ -480,14 +471,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     height: 24,
     borderRadius: 12,
     backgroundColor: colors.surface,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.light,
-      },
-      default: {
-        ...colors.shadows.light,
-      },
-    }),
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: colors.boxShadows.light } as any)
+      : { ...colors.shadows.light }),
   },
   toggleThumbActive: {
     alignSelf: 'flex-end',

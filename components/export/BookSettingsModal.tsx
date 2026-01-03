@@ -3,6 +3,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Platform } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import ThemePreview, { type PdfThemeName } from './ThemePreview';
 import PresetSelector from './PresetSelector';
 import GalleryLayoutSelector from './GalleryLayoutSelector';
@@ -109,6 +110,9 @@ const MODAL_COLORS = {
   textOnPrimary: 'var(--color-textOnPrimary, #111827)',
   accent: 'var(--color-accent, #8a9aa8)',
   accentLight: 'var(--color-accentLight, #f2f4f6)',
+  error: 'var(--color-error, #b89090)',
+  errorSoft: 'var(--color-errorSoft, rgba(184, 144, 144, 0.08))',
+  errorDark: 'var(--color-errorDark, #a88080)',
 };
 
 const MODAL_SHADOWS = {
@@ -478,17 +482,18 @@ export default function BookSettingsModal({
               style={{
                 padding: '12px 16px',
                 borderRadius: '12px',
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
+                backgroundColor: MODAL_COLORS.errorSoft,
+                border: `1px solid ${MODAL_COLORS.error}`,
                 marginBottom: '20px',
               }}
               role="alert"
               aria-live="polite"
             >
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#dc2626', marginBottom: '6px' }}>
-                ⚠️ Исправьте ошибки:
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: MODAL_COLORS.errorDark, marginBottom: '6px' }}>
+                <MaterialIcons name="warning" size={16} color={MODAL_COLORS.errorDark as any} />
+                <span>Исправьте ошибки:</span>
               </div>
-              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#991b1b' }}>
+              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: MODAL_COLORS.errorDark }}>
                 {validationErrors.map((error, index) => (
                   <li key={index}>{error}</li>
                 ))}
@@ -506,7 +511,9 @@ export default function BookSettingsModal({
             alignItems: 'center',
             gap: '10px',
           }}>
-            <span style={{ fontSize: '18px' }}>📚</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24 }}>
+              <MaterialIcons name="photo-album" size={20} color={MODAL_COLORS.primary as any} />
+            </span>
             <div>
               <div style={{ color: MODAL_COLORS.text, fontSize: '14px', fontWeight: 500 }}>
                 Выбрано путешествий:&nbsp;
@@ -622,7 +629,7 @@ export default function BookSettingsModal({
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
                     Название книги
-                    <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
+                    <span style={{ color: MODAL_COLORS.error, marginLeft: '4px' }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -631,7 +638,7 @@ export default function BookSettingsModal({
                     style={{
                       width: '100%',
                       padding: '12px 14px',
-                      border: `1.5px solid ${validationErrors.some(e => e.includes('название')) ? '#dc2626' : MODAL_COLORS.border}`,
+                      border: `1.5px solid ${validationErrors.some(e => e.includes('название')) ? MODAL_COLORS.error : MODAL_COLORS.border}`,
                       borderRadius: '12px',
                       fontSize: '15px',
                       minHeight: '44px',
@@ -647,7 +654,7 @@ export default function BookSettingsModal({
                       e.target.style.backgroundColor = MODAL_COLORS.surface;
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = validationErrors.some(err => err.includes('название')) ? '#dc2626' : MODAL_COLORS.border;
+                      e.target.style.borderColor = validationErrors.some(err => err.includes('название')) ? (MODAL_COLORS.error as any) : (MODAL_COLORS.border as any);
                       e.target.style.boxShadow = 'none';
                     }}
                     placeholder="Мои путешествия"
@@ -671,7 +678,7 @@ export default function BookSettingsModal({
                     style={{
                       width: '100%',
                       padding: '12px 14px',
-                      border: `1.5px solid ${validationErrors.some(e => e.includes('Подзаголовок')) ? '#dc2626' : MODAL_COLORS.border}`,
+                      border: `1.5px solid ${validationErrors.some(e => e.includes('Подзаголовок')) ? MODAL_COLORS.error : MODAL_COLORS.border}`,
                       borderRadius: '12px',
                       fontSize: '15px',
                       minHeight: '44px',
@@ -687,7 +694,7 @@ export default function BookSettingsModal({
                       e.target.style.backgroundColor = MODAL_COLORS.surface;
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = validationErrors.some(e => e.includes('Подзаголовок')) ? '#dc2626' : MODAL_COLORS.border;
+                      e.target.style.borderColor = validationErrors.some(err => err.includes('Подзаголовок')) ? (MODAL_COLORS.error as any) : (MODAL_COLORS.border as any);
                       e.target.style.boxShadow = 'none';
                     }}
                     placeholder="Воспоминания 2024"

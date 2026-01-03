@@ -45,7 +45,7 @@ export function useTheme(): ThemeContextType {
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
-  const [savedTheme, setSavedTheme] = useState<Theme>('light');
+  const [savedTheme, setSavedTheme] = useState<Theme>('auto');
   const [isDark, setIsDark] = useState(false);
 
   // Инициализация темы при монтировании

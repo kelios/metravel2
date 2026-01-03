@@ -3,6 +3,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useThemedColors } from '@/hooks/useTheme';
 
 export type PdfThemeName = 
@@ -166,7 +167,7 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   'black-white': {
     id: 'black-white',
-    name: '🖤 Ч/Б Газета',
+    name: 'Ч/Б Газета',
     description: 'Классическая монохромная печать',
     colors: {
       primary: '#000000',
@@ -182,7 +183,7 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   sepia: {
     id: 'sepia',
-    name: '📜 Сепия',
+    name: 'Сепия',
     description: 'Винтажная газета 1920-х',
     colors: {
       primary: '#3e2723',
@@ -198,7 +199,7 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
   },
   newspaper: {
     id: 'newspaper',
-    name: '📰 Газета',
+    name: 'Газета',
     description: 'Яркая современная газетная верстка',
     colors: {
       primary: '#1a1a1a',
@@ -324,7 +325,7 @@ function ThemeCard({ theme, isSelected, onSelect, compact, styles }: ThemeCardPr
       {/* Индикатор выбора */}
       {isSelected && (
         <View style={styles.selectedBadge}>
-          <Text style={styles.selectedBadgeText}>✓</Text>
+          <MaterialIcons name="check" size={16} color={styles.selectedBadgeText.color} />
         </View>
       )}
     </Pressable>
@@ -361,14 +362,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderWidth: 2,
     borderColor: colors.border,
     overflow: 'hidden',
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.card,
-      },
-      default: {
-        ...colors.shadows.medium,
-      },
-    }),
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: colors.boxShadows.card } as any)
+      : { ...colors.shadows.medium }),
   },
   themeCardCompact: {
     width: 180,
@@ -377,14 +373,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   themeCardSelected: {
     borderColor: colors.primary,
     borderWidth: 3,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.heavy,
-      },
-      default: {
-        ...colors.shadows.hover,
-      },
-    }),
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: colors.boxShadows.heavy } as any)
+      : { ...colors.shadows.hover }),
   },
   thumbnail: {
     height: 140,
@@ -459,14 +450,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.medium,
-      },
-      default: {
-        ...colors.shadows.medium,
-      },
-    }),
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: colors.boxShadows.medium } as any)
+      : { ...colors.shadows.medium }),
   },
   selectedBadgeText: {
     color: colors.textOnPrimary,
