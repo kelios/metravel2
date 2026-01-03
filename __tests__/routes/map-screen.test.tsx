@@ -122,6 +122,11 @@ const mockFetchTravelsForMap = jest.fn().mockResolvedValue({
   b: { id: 2, categoryName: 'Категория 2' },
 });
 
+const defaultTravelsForMapResponse = {
+  a: { id: 1, categoryName: 'Категория 1' },
+  b: { id: 2, categoryName: 'Категория 2' },
+};
+
 jest.mock('@/src/api/map', () => ({
   fetchTravelsForMap: (...args: any[]) => mockFetchTravelsForMap(...args),
   fetchTravelsNearRoute: jest.fn().mockResolvedValue([]),
@@ -170,11 +175,20 @@ const renderWithClient = () => {
 }
 
 describe('MapScreen (map tab)', () => {
+  beforeEach(() => {
+    mockFetchTravelsForMap.mockReset();
+    mockFetchTravelsForMap.mockResolvedValue(defaultTravelsForMapResponse);
+  });
+
   it('renders map placeholder and filters panel', async () => {
-    const { getByText, getByTestId } = renderWithClient()
+    const { getByText, getByTestId, getByLabelText } = renderWithClient()
 
     // Сначала отображается плейсхолдер карты
     expect(getByText('Загружаем карту…')).toBeTruthy()
+
+    // На mobile панель закрыта по умолчанию — открываем, чтобы увидеть фильтры
+    const openButton = getByLabelText('Показать панель')
+    fireEvent.press(openButton)
 
     // Ждём, пока смонтируется правая панель с фильтрами
     await waitFor(() => {
@@ -261,7 +275,7 @@ describe('MapScreen (map tab)', () => {
       resolveRequest = resolve;
     });
 
-    mockFetchTravelsForMap.mockImplementationOnce(() => slowPromise);
+    mockFetchTravelsForMap.mockImplementation(() => slowPromise);
 
     const utils = renderWithClient();
     const { getByText } = utils;
@@ -304,7 +318,7 @@ describe('MapScreen (map tab)', () => {
   });
 
   it('shows error display when map data loading fails', async () => {
-    mockFetchTravelsForMap.mockRejectedValueOnce(new Error('Network error'));
+    mockFetchTravelsForMap.mockRejectedValue(new Error('Network error'));
 
     const utils = renderWithClient();
     const { getByText, getByTestId } = utils;

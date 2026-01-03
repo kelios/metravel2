@@ -333,19 +333,20 @@ export const useRouting = (
         // Сбрасываем флаг только при новом routeKey
         if (lastRouteKeyRef.current !== routeKey) {
             resetDoneRef.current = false
+            // При смене routeKey (включая смену транспорта) сбрасываем isProcessing
+            isProcessingRef.current = false
         }
 
-        // Если маршрут уже обработан (успешно или с ошибкой) — выходим
-        if (resolvedRouteKeys.has(routeKey)) {
-            const cached = routeCache.get(routePointsRef.current, transportMode)
-            if (cached) {
-                setState({
-                    loading: false,
-                    error: false,
-                    distance: cached.distance,
-                    coords: cached.coords,
-                })
-            }
+        // Проверяем кэш - но только routeCache, не resolvedRouteKeys (для возможности перестроения)
+        const cached = routeCache.get(routePointsRef.current, transportMode)
+        if (cached && lastRouteKeyRef.current === routeKey) {
+            // Используем кэш только если это тот же самый routeKey (не новый запрос)
+            setState({
+                loading: false,
+                error: false,
+                distance: cached.distance,
+                coords: cached.coords,
+            })
             return
         }
 

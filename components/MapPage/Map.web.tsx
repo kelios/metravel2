@@ -1,4 +1,3 @@
-// Map.web.refactored.tsx - Simplified, modular map component
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
@@ -310,10 +309,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
     const lat = coordinates.latitude;
     const lng = coordinates.longitude;
 
-    // Strict validation
+    // Strict validation - Number.isFinite returns false for NaN, Infinity, and non-numbers
     if (
-      typeof lat !== 'number' ||
-      typeof lng !== 'number' ||
       !Number.isFinite(lat) ||
       !Number.isFinite(lng) ||
       lat < -90 || lat > 90 ||
@@ -405,6 +402,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
         {/* Radius circle - with strict validation */}
         {(() => {
+          // Don't render Circle until map is ready
+          if (!mapInstance) return null;
+
           const canRenderCircle =
             mode === 'radius' &&
             radiusInMeters != null &&
@@ -422,6 +422,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
           return (
             <Circle
+              key={`circle-${safeCenter[0]}-${safeCenter[1]}-${radiusInMeters}`}
               center={safeCenter}
               radius={radiusInMeters}
               pathOptions={{
