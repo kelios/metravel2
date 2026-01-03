@@ -11,6 +11,8 @@ console.warn = (message, ...args) => {
   originalWarn(message, ...args);
 };
 
+require('react-native-gesture-handler/jestSetup')
+
 const originalInfo = console.info;
 console.info = (message, ...args) => {
   const joined = [message, ...args].map((v) => String(v)).join(' ')

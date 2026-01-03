@@ -3,13 +3,12 @@
  */
 
 import React, { useRef, useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet';
 import { MapPeekPreview } from './MapPeekPreview';
 import { MapFAB } from './MapFAB';
 import TravelListPanel from './TravelListPanel';
-import FiltersPanel from './FiltersPanel';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface MapMobileLayoutProps {
@@ -41,7 +40,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   transportMode,
   buildRouteTo,
   onCenterOnUser,
-  onOpenFilters,
+  onOpenFilters: _onOpenFilters,
   filtersPanelProps,
   onToggleFavorite,
   favorites,
@@ -51,7 +50,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const bottomSheetRef = useRef<MapBottomSheetRef>(null);
 
   const [activeTab, setActiveTab] = useState<'list' | 'filters'>('list');
-  const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('collapsed');
+  const [, setSheetState] = useState<'collapsed' | 'half' | 'full'>('collapsed');
 
   // FAB actions
   const fabActions = useMemo(() => [

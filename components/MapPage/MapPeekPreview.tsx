@@ -8,13 +8,6 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
 
-interface PeekPlace {
-  id: string | number;
-  address: string;
-  categoryName?: string;
-  coord?: string;
-}
-
 interface MapPeekPreviewProps {
   places: any[];
   userLocation: { latitude: number; longitude: number } | null;
