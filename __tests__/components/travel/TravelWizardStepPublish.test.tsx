@@ -56,14 +56,12 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     const onFinish = jest.fn();
     const setFormData = jest.fn();
 
-    const { getByText, getAllByText } = render(
+    const { getByText, getByLabelText } = render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
         formData={baseFormData}
         setFormData={setFormData}
-        filters={{}}
-        travelDataOld={null}
         isSuperAdmin={false}
         onManualSave={onManualSave}
         onGoBack={jest.fn()}
@@ -71,14 +69,18 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       />
     );
 
-    const statusToggle = getByText('Отправить на модерацию');
+    // Tap the actual option row (TouchableOpacity), not the nested Text node
+    const moderationLabel = getByText('Отправить на модерацию');
+    const moderationRow = moderationLabel.parent?.parent;
+    if (!moderationRow) {
+      throw new Error('Moderation option row not found');
+    }
     await act(async () => {
-      fireEvent.press(statusToggle);
+      fireEvent.press(moderationRow);
     });
 
-    const primaryButtons = getAllByText('Отправить на модерацию');
-    const primarySubmit = primaryButtons[primaryButtons.length - 1];
-
+    // Press the header primary button (it uses accessibilityLabel=primaryLabel)
+    const primarySubmit = getByLabelText('Отправить на модерацию');
     await act(async () => {
       fireEvent.press(primarySubmit);
     });
@@ -117,8 +119,6 @@ describe('TravelWizardStepPublish - moderation submit', () => {
         totalSteps={6}
         formData={adminData}
         setFormData={setFormData}
-        filters={{}}
-        travelDataOld={null}
         isSuperAdmin={true}
         onManualSave={onManualSave}
         onGoBack={jest.fn()}
@@ -166,8 +166,6 @@ describe('TravelWizardStepPublish - moderation submit', () => {
         totalSteps={6}
         formData={adminData}
         setFormData={setFormData}
-        filters={{}}
-        travelDataOld={null}
         isSuperAdmin={true}
         onManualSave={onManualSave}
         onGoBack={jest.fn()}
@@ -197,8 +195,6 @@ describe('TravelWizardStepPublish - moderation submit', () => {
         totalSteps={6}
         formData={adminData}
         setFormData={setFormData}
-        filters={{}}
-        travelDataOld={null}
         isSuperAdmin={true}
         onManualSave={onManualSave}
         onGoBack={jest.fn()}
@@ -226,8 +222,6 @@ describe('TravelWizardStepPublish - moderation submit', () => {
         totalSteps={6}
         formData={publishedData}
         setFormData={setFormData}
-        filters={{}}
-        travelDataOld={null}
         isSuperAdmin={false}
         onManualSave={onManualSave}
         onGoBack={jest.fn()}

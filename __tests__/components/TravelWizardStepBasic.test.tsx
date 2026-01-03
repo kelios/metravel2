@@ -34,6 +34,15 @@ jest.mock('@/components/travel/TravelWizardHeader', () => (props: any) => {
             <Text>{props.title}</Text>
             <Text>{props.subtitle} • {props.progressPercent}% готово</Text>
             {props.autosaveBadge ? <Text>{props.autosaveBadge}</Text> : null}
+            <Pressable onPress={props.onPrimary}>
+                <Text>{props.primaryLabel ?? 'Далее'}</Text>
+            </Pressable>
+            <Pressable onPress={props.onQuickDraft}>
+                <Text>{props.quickDraftLabel ?? 'Быстрый черновик'}</Text>
+            </Pressable>
+            <Pressable onPress={props.onSave}>
+                <Text>Сохранить</Text>
+            </Pressable>
             <Pressable onPress={props.onPreview} testID="preview-btn" />
         </View>
     );

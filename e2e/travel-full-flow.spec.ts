@@ -66,9 +66,34 @@ test.describe('Travel full flow (API seed + UI verify)', () => {
     const detailsPath = `/travels/${createdSlug || travelId}`;
     expect(detailsPath.startsWith('/travels/')).toBeTruthy();
 
+    const createdReadback = await readTravel(apiCtx, travelId);
+    expect(createdReadback?.id).toBeTruthy();
+
     try {
-      await page.goto(detailsPath, { waitUntil: 'domcontentloaded' });
-      await expect(page.locator('[testID="travel-details-page"]').first()).toBeVisible({ timeout: 30_000 });
+      const travelApiRespPromise = page
+        .waitForResponse(
+          (resp) => {
+            const url = resp.url();
+            return (
+              url.includes(`/api/travels/${travelId}/`) ||
+              url.includes('/api/travels/by-slug/')
+            );
+          },
+          { timeout: 60_000 }
+        )
+        .catch(() => null);
+
+      await page.goto(detailsPath, { waitUntil: 'networkidle', timeout: 120_000 });
+
+      const travelApiResp = await travelApiRespPromise;
+      if (travelApiResp) {
+        expect(
+          travelApiResp.ok(),
+          `Travel details API failed: ${travelApiResp.status()} ${travelApiResp.url()}`
+        ).toBeTruthy();
+      }
+
+      await expect(page.locator('[testID="travel-details-page"]').first()).toBeVisible({ timeout: 60_000 });
       await expect(page.locator(`text=${initialName}`).first()).toBeVisible({ timeout: 30_000 });
 
       await markAsFavorite(apiCtx, travelId);

@@ -104,6 +104,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                 globalFocusStyles.focusable,
                 pressed && { opacity: 0.8 }
             ]}
+            testID="travel-wizard-back"
             accessibilityRole="button"
             accessibilityLabel="Назад"
             disabled={!onBack}
