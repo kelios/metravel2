@@ -1,11 +1,10 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView, View, StyleSheet, Text, ScrollView, TextInput, Platform, findNodeHandle, UIManager, LayoutChangeEvent } from 'react-native';
+import { KeyboardAvoidingView, View, StyleSheet, Text, ScrollView, TextInput, Platform, findNodeHandle, UIManager } from 'react-native';
 import { Button } from 'react-native-paper';
 
 import LocationSearchInput from '@/components/travel/LocationSearchInput';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
-import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { MarkerData } from '@/src/types/types';
@@ -78,19 +77,10 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
 
-    const [footerHeight, setFooterHeight] = useState(0);
-
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
-        const next = Math.ceil(event.nativeEvent.layout.height);
-        setFooterHeight(prev => (prev === next ? prev : next));
-    }, []);
-
-    const contentPaddingBottom = useMemo(() => {
-        return footerHeight > 0 ? footerHeight + 16 : 180;
-    }, [footerHeight]);
+    const contentPaddingBottom = useMemo(() => DESIGN_TOKENS.spacing.xl, []);
 
     const scrollRef = useRef<ScrollView | null>(null);
     const markersListAnchorRef = useRef<View | null>(null);
@@ -246,7 +236,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
             address,
             country: derivedCountryId,
             categories: [],
-            image: null,
+            image: '',
         };
 
         // Добавляем маркер
@@ -396,6 +386,9 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                     subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
                     progressPercent={progressPercent}
                     autosaveBadge={autosaveBadge}
+                    onPrimary={onNext}
+                    primaryLabel={stepMeta?.nextLabel ?? 'К медиа'}
+                    onSave={onManualSave}
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
                     currentStep={currentStep}
@@ -569,18 +562,6 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                         </View>
                     </View>
                 </ScrollView>
-
-                <TravelWizardFooter
-                    canGoBack={true}
-                    onBack={onBack}
-                    onPrimary={onNext}
-                    primaryLabel="К медиа"
-                    onSave={onManualSave}
-                    currentStep={currentStep}
-                    totalSteps={totalSteps}
-                    onLayout={handleFooterLayout}
-                    onStepSelect={onStepSelect}
-                />
             </KeyboardAvoidingView>
         </SafeAreaView>
     );

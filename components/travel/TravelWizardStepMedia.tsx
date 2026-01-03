@@ -1,6 +1,6 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView, findNodeHandle, UIManager, LayoutChangeEvent } from 'react-native';
+import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView, findNodeHandle, UIManager } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import YoutubeLinkComponent from '@/components/YoutubeLinkComponent';
@@ -9,7 +9,6 @@ import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { TravelFormData, Travel } from '@/src/types/types';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
-import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { deleteTravelMainImage } from '@/src/api/misc';
@@ -65,20 +64,12 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     const colors = useThemedColors();
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
-    const [footerHeight, setFooterHeight] = useState(0);
     const [isDeleteCoverDialogVisible, setIsDeleteCoverDialogVisible] = useState(false);
 
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
-        const next = Math.ceil(event.nativeEvent.layout.height);
-        setFooterHeight(prev => (prev === next ? prev : next));
-    }, []);
-
-    const contentPaddingBottom = useMemo(() => {
-        return footerHeight > 0 ? footerHeight + 16 : 180;
-    }, [footerHeight]);
+    const contentPaddingBottom = useMemo(() => DESIGN_TOKENS.spacing.xl, []);
 
     const scrollRef = useRef<ScrollView | null>(null);
     const coverAnchorRef = useRef<View | null>(null);
@@ -187,6 +178,9 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                     subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
                     progressPercent={progressPercent}
                     autosaveBadge={autosaveBadge}
+                    onPrimary={onNext}
+                    primaryLabel={stepMeta?.nextLabel ?? 'К деталям'}
+                    onSave={onManualSave}
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
                     currentStep={currentStep}
@@ -295,18 +289,6 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                         </View>
                     </View>
                 </ScrollView>
-
-                <TravelWizardFooter
-                    canGoBack={true}
-                    onBack={onBack}
-                    onPrimary={onNext}
-                    onSave={onManualSave}
-                    primaryLabel="К деталям"
-                    onLayout={handleFooterLayout}
-                    currentStep={currentStep}
-                    totalSteps={totalSteps}
-                    onStepSelect={onStepSelect}
-                />
 
                 <ConfirmDialog
                     visible={isDeleteCoverDialogVisible}

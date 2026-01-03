@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView, Platform, View, StyleSheet, ScrollView, findNodeHandle, UIManager, LayoutChangeEvent } from 'react-native';
+import { KeyboardAvoidingView, Platform, View, StyleSheet, ScrollView, findNodeHandle, UIManager } from 'react-native';
 
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import GroupedFiltersSection from '@/components/travel/GroupedFiltersSection';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
-import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { TravelFormData, Travel } from '@/src/types/types';
@@ -58,19 +57,11 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
-    const [footerHeight, setFooterHeight] = useState(0);
 
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
-        const next = Math.ceil(event.nativeEvent.layout.height);
-        setFooterHeight(prev => (prev === next ? prev : next));
-    }, []);
-
-    const contentPaddingBottom = useMemo(() => {
-        return footerHeight > 0 ? footerHeight + 16 : 180;
-    }, [footerHeight]);
+    const contentPaddingBottom = useMemo(() => DESIGN_TOKENS.spacing.xl, []);
 
     const scrollRef = useRef<ScrollView | null>(null);
     const categoriesAnchorRef = useRef<View | null>(null);
@@ -164,6 +155,9 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                     subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
                     progressPercent={progressPercent}
                     autosaveBadge={autosaveBadge}
+                    onPrimary={onNext}
+                    primaryLabel={stepMeta?.nextLabel ?? 'К публикации'}
+                    onSave={onManualSave}
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
                     currentStep={currentStep}
@@ -219,19 +213,6 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                         </GroupedFiltersSection>
                     </View>
                 </ScrollView>
-
-                <TravelWizardFooter
-                    canGoBack={false}
-                    onPrimary={onNext}
-                    primaryLabel={stepMeta?.nextLabel ?? 'К публикации'}
-                    onSave={onManualSave}
-                    saveLabel="Сохранить"
-                    primaryDisabled={false}
-                    onLayout={handleFooterLayout}
-                    currentStep={currentStep}
-                    totalSteps={totalSteps}
-                    onStepSelect={onStepSelect}
-                />
             </KeyboardAvoidingView>
         </SafeAreaView>
     );

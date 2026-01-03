@@ -126,10 +126,10 @@ describe('TravelDataTransformer', () => {
 
       expect(result[0].gallery).toHaveLength(2);
       expect(result[0].gallery?.[0]).toMatchObject({
-        url: 'https://example.com/img1.jpg',
+        url: 'https://images.weserv.nl/?url=example.com%2Fimg1.jpg&w=1600&fit=inside',
       });
       expect(result[0].gallery?.[1]).toMatchObject({
-        url: 'https://example.com/img2.jpg',
+        url: 'https://images.weserv.nl/?url=example.com%2Fimg2.jpg&w=1600&fit=inside',
       });
     });
 
@@ -169,7 +169,7 @@ describe('TravelDataTransformer', () => {
 
       expect(result[0].gallery).toHaveLength(2);
       expect(result[0].gallery?.[0]).toMatchObject({
-        url: 'https://example.com/img1.jpg',
+        url: 'https://images.weserv.nl/?url=example.com%2Fimg1.jpg&w=1600&fit=inside',
         id: 1,
       });
     });

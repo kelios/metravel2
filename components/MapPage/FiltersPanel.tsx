@@ -598,7 +598,10 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 globalFocusStyles.focusable,
                 (!mapUiApi || !canCenterOnUser) && styles.mapControlDisabled,
               ]}
-              onPress={() => mapUiApi?.centerOnUser()}
+              onPress={() => {
+                if (!mapUiApi || !canCenterOnUser) return;
+                mapUiApi.centerOnUser();
+              }}
               disabled={!mapUiApi || !canCenterOnUser}
               accessibilityRole="button"
               accessibilityLabel="Моё местоположение"

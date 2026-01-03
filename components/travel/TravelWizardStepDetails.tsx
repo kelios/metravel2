@@ -1,10 +1,9 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView, LayoutChangeEvent } from 'react-native';
+import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView } from 'react-native';
 
 import ArticleEditor from '@/components/ArticleEditor';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
-import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { TravelFormData } from '@/src/types/types';
@@ -47,19 +46,11 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
     const colors = useThemedColors();
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
-    const [footerHeight, setFooterHeight] = useState(0);
 
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
-        const next = Math.ceil(event.nativeEvent.layout.height);
-        setFooterHeight(prev => (prev === next ? prev : next));
-    }, []);
-
-    const contentPaddingBottom = useMemo(() => {
-        return footerHeight > 0 ? footerHeight + 16 : 180;
-    }, [footerHeight]);
+    const contentPaddingBottom = useMemo(() => DESIGN_TOKENS.spacing.xl, []);
 
     const idTravelStr = useMemo(
         () => (formData?.id != null ? String(formData.id) : undefined),
@@ -103,6 +94,9 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                     subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
                     progressPercent={progressPercent}
                     autosaveBadge={autosaveBadge}
+                    onPrimary={onNext}
+                    primaryLabel={stepMeta?.nextLabel ?? 'К публикации'}
+                    onSave={onManualSave}
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
                     currentStep={currentStep}
@@ -177,19 +171,6 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
 
                     </View>
                 </ScrollView>
-
-                <TravelWizardFooter
-                    canGoBack={true}
-                    onBack={onBack}
-                    onPrimary={onNext}
-                    onSave={onManualSave}
-                    saveLabel="Сохранить"
-                    primaryLabel="К публикации"
-                    onLayout={handleFooterLayout}
-                    currentStep={currentStep}
-                    totalSteps={totalSteps}
-                    onStepSelect={onStepSelect}
-                />
             </KeyboardAvoidingView>
         </SafeAreaView>
     );

@@ -8,7 +8,6 @@ import { useRouter } from 'expo-router';
 import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
 import { TravelFormData } from '@/src/types/types';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
-import TravelWizardFooter from '@/components/travel/TravelWizardFooter';
 import TravelPreviewModal from '@/components/travel/TravelPreviewModal';
 import ContextualTipCard from '@/components/travel/ContextualTipCard';
 import { ValidatedTextInput } from '@/components/travel/ValidatedTextInput';
@@ -80,7 +79,6 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     const router = useRouter();
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
-    const [footerHeight, setFooterHeight] = useState(0);
 
     // ✅ ФАЗА 2: Hook для управления превью
     const previewState = useTravelPreview();
@@ -98,14 +96,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const handleFooterLayout = useCallback((event: LayoutChangeEvent) => {
-        const next = Math.ceil(event.nativeEvent.layout.height);
-        setFooterHeight(prev => (prev === next ? prev : next));
-    }, []);
-
-    const contentPaddingBottom = useMemo(() => {
-        return footerHeight > 0 ? footerHeight + 16 : 180;
-    }, [footerHeight]);
+    const contentPaddingBottom = useMemo(() => DESIGN_TOKENS.spacing.xl, []);
 
     // Валидация шага 1
     const validation = useMemo(() => {
@@ -175,6 +166,11 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                     subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
                     progressPercent={progressPercent}
                     autosaveBadge={autosaveBadge}
+                    onPrimary={onGoNext}
+                    primaryLabel={stepMeta?.nextLabel ?? 'Далее'}
+                    onSave={onManualSave}
+                    onQuickDraft={handleQuickDraft}
+                    quickDraftLabel="Быстрый черновик"
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
                     currentStep={currentStep}
@@ -240,18 +236,6 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                         </Animated.View>
                     </ScrollView>
                 </View>
-                <TravelWizardFooter
-                    canGoBack={false}
-                    onPrimary={onGoNext}
-                    primaryLabel={stepMeta?.nextLabel ?? 'Далее'}
-                    onSave={onManualSave}
-                    onQuickDraft={handleQuickDraft}
-                    quickDraftLabel="Быстрый черновик"
-                    onLayout={handleFooterLayout}
-                    currentStep={currentStep}
-                    totalSteps={totalSteps}
-                    onStepSelect={onStepSelect}
-                />
                 <Snackbar visible={snackbarVisible} onDismiss={onDismissSnackbar}>
                     {snackbarMessage}
                 </Snackbar>

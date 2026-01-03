@@ -13,6 +13,13 @@ type TravelWizardHeaderProps = {
     subtitle: string;
     progressPercent: number;
     autosaveBadge?: string;
+    onPrimary?: () => void;
+    primaryLabel?: string;
+    primaryDisabled?: boolean;
+    onSave?: () => void;
+    saveLabel?: string;
+    onQuickDraft?: () => void;
+    quickDraftLabel?: string;
     extraBelowProgress?: React.ReactNode;
     tipTitle?: string;
     tipBody?: string;
@@ -29,6 +36,13 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     subtitle,
     progressPercent,
     autosaveBadge,
+    onPrimary,
+    primaryLabel,
+    primaryDisabled = false,
+    onSave,
+    saveLabel = 'Сохранить',
+    onQuickDraft,
+    quickDraftLabel = 'Быстрый черновик',
     extraBelowProgress,
     tipTitle,
     tipBody,
@@ -100,6 +114,72 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         </Pressable>
     ) : null;
 
+    const PrimaryAction = onPrimary && primaryLabel ? (
+        <Pressable
+            onPress={onPrimary}
+            disabled={primaryDisabled}
+            style={({ pressed }) => [
+                styles.actionButton,
+                styles.actionButtonPrimary,
+                globalFocusStyles.focusable,
+                primaryDisabled && styles.actionButtonDisabled,
+                pressed && !primaryDisabled && { opacity: 0.9 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={primaryLabel}
+            {...Platform.select({ web: { cursor: primaryDisabled ? 'default' : 'pointer' } })}
+        >
+            <Text style={styles.actionButtonPrimaryText} numberOfLines={1}>
+                {primaryLabel}
+            </Text>
+            <Feather name="arrow-right" size={16} color={colors.textOnPrimary} />
+        </Pressable>
+    ) : null;
+
+    const SaveAction = onSave ? (
+        <Pressable
+            onPress={onSave}
+            style={({ pressed }) => [
+                styles.actionButton,
+                styles.actionButtonSecondary,
+                globalFocusStyles.focusable,
+                pressed && { opacity: 0.9 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={saveLabel}
+            {...Platform.select({ web: { cursor: 'pointer' } })}
+        >
+            <Feather name="save" size={16} color={colors.text} />
+            {!isMobile && (
+                <Text style={styles.actionButtonText} numberOfLines={1}>
+                    {saveLabel}
+                </Text>
+            )}
+        </Pressable>
+    ) : null;
+
+    const QuickDraftAction = onQuickDraft ? (
+        <Pressable
+            onPress={onQuickDraft}
+            style={({ pressed }) => [
+                styles.actionButton,
+                styles.actionButtonSecondary,
+                globalFocusStyles.focusable,
+                pressed && { opacity: 0.9 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={quickDraftLabel}
+            {...Platform.select({ web: { cursor: 'pointer' } })}
+        >
+            <Feather name="archive" size={16} color={colors.text} />
+            {!isMobile && (
+                <Text style={styles.actionButtonText} numberOfLines={1}>
+                    {quickDraftLabel}
+                </Text>
+            )}
+        </Pressable>
+    ) : null;
+
     return (
         <View style={[styles.headerWrapper, isMobile && styles.headerWrapperMobile]}>
             <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
@@ -147,6 +227,9 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                     )}
                     {TipTrigger}
                     {autosaveBadge ? <Text style={styles.autosaveBadge}>{autosaveBadge}</Text> : null}
+                    {QuickDraftAction}
+                    {SaveAction}
+                    {PrimaryAction}
                 </View>
             </View>
 
@@ -232,6 +315,37 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexDirection: 'row',
         alignItems: 'center',
         gap: DESIGN_TOKENS.spacing.xs,
+    },
+    actionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.xs,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        height: 32,
+        minHeight: 44, // ✅ ДОСТУПНОСТЬ: Минимальная высота touch target
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        borderWidth: 1,
+    },
+    actionButtonSecondary: {
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+    },
+    actionButtonPrimary: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    actionButtonDisabled: {
+        opacity: 0.6,
+    },
+    actionButtonText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.text,
+    },
+    actionButtonPrimaryText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.textOnPrimary,
     },
     backButton: {
         flexDirection: 'row',

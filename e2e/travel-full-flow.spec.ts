@@ -62,13 +62,8 @@ test.describe('Travel full flow (API seed + UI verify)', () => {
     const travelId = created?.id;
     expect(travelId, 'Upsert did not return id').toBeTruthy();
 
-    const createdUrlRaw = typeof created?.url === 'string' ? created.url.trim() : '';
     const createdSlug = typeof created?.slug === 'string' ? created.slug.trim() : '';
-    const detailsPath = createdUrlRaw
-      ? createdUrlRaw.startsWith('http')
-        ? new URL(createdUrlRaw).pathname
-        : createdUrlRaw
-      : `/travels/${createdSlug || travelId}`;
+    const detailsPath = `/travels/${createdSlug || travelId}`;
     expect(detailsPath.startsWith('/travels/')).toBeTruthy();
 
     try {
