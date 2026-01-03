@@ -96,7 +96,6 @@ export const QuickRecommendations: React.FC<Props> = ({
         <MaterialIcons name="star" size={20} color={colors.primary} />
         <Text style={styles.title}>Популярное рядом</Text>
       </View>
-
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -122,7 +121,6 @@ export const QuickRecommendations: React.FC<Props> = ({
                 </View>
               )}
             </View>
-
             <View style={styles.infoRow}>
               <View style={styles.infoBadge}>
                 <MaterialIcons name="place" size={14} color={colors.primary} />

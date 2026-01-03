@@ -92,8 +92,16 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   useEffect(() => {
     mapRef.current = map;
     if (map && !hasCalledOnMapReadyRef.current) {
-      hasCalledOnMapReadyRef.current = true;
-      onMapReady(map);
+      // Check if map has valid center before declaring it ready
+      try {
+        const center = map.getCenter?.();
+        if (center && Number.isFinite(center.lat) && Number.isFinite(center.lng)) {
+          hasCalledOnMapReadyRef.current = true;
+          onMapReady(map);
+        }
+      } catch {
+        // Map not fully initialized yet
+      }
     }
     try {
       if (map) {

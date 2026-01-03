@@ -20,6 +20,18 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
     if (!map || !L) return;
     if (typeof map.addLayer !== 'function') return;
 
+    // Check if map is properly initialized with valid center
+    try {
+      const center = map.getCenter?.();
+      if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lng)) {
+        // Map not yet initialized with valid center, skip layer setup
+        return;
+      }
+    } catch {
+      // Map not ready
+      return;
+    }
+
     const overpassControllerRef: any = leafletControlRef;
 
     // Clean existing overlay layers
