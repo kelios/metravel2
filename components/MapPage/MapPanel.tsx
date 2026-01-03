@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, Platform, Text, ActivityIndicator } from 'react-native';
 import { useLazyMap } from '@/hooks/useLazyMap';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -60,6 +60,9 @@ const MapPanel: React.FC<MapPanelProps> = ({
     const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
     const themeColors = useThemedColors();
 
+    // ✅ ИСПРАВЛЕНИЕ: Уникальный ключ для карты, изменяется при ремонтировании после ошибки
+    const [mapKey, setMapKey] = useState(() => `map-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
     // ✅ УЛУЧШЕНИЕ: Ленивая загрузка карты с Intersection Observer
     const { shouldLoad, setElementRef } = useLazyMap({
         rootMargin: '200px',
@@ -93,6 +96,12 @@ const MapPanel: React.FC<MapPanelProps> = ({
 
     const travelProp = useMemo(() => ({ data: travelsData }), [travelsData]);
 
+    // ✅ ИСПРАВЛЕНИЕ: Функция для обработки ошибок и регенерации ключа карты
+    const handleMapError = useCallback(() => {
+        console.warn('[MapPanel] Map error occurred, regenerating map key...');
+        setMapKey(`map-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    }, []);
+
     if (!isWeb) return <Placeholder />;
 
     if (!shouldLoad) {
@@ -115,8 +124,9 @@ const MapPanel: React.FC<MapPanelProps> = ({
             style={[styles.mapContainer, { backgroundColor: themeColors.surface }]}
             ref={setElementRef as any}
         >
-            <MapErrorBoundary>
+            <MapErrorBoundary onError={handleMapError}>
                 <WebMap
+                    key={mapKey}
                     travel={travelProp}
                     coordinates={coordinates}
                     routePoints={routePoints}

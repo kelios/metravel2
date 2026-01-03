@@ -69,26 +69,41 @@ export default function MapScreen() {
     const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
     const [filters, setFilters] = useState<Filters>({ categories: [], radius: [], address: '' });
 
-    // ✅ УЛУЧШЕНИЕ: Загружаем сохраненные фильтры из localStorage
+    // ✅ УЛУЧШЕНИЕ: Загружаем сохраненные фильтры из localStorage с полной валидацией
     const [filterValues, setFilterValues] = useState<FilterValues>(() => {
         if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
             try {
                 const saved = localStorage.getItem('map-filters');
-                if (saved) {
+                if (saved && saved.length > 0 && saved.length < 10000) {
                     const parsed = JSON.parse(saved);
-                    // Валидация: проверяем что это объект с нужными полями
-                    if (parsed && typeof parsed === 'object' &&
-                        Array.isArray(parsed.categories) &&
-                        typeof parsed.radius === 'string') {
-                        return {
-                            categories: parsed.categories,
-                            radius: parsed.radius || '60',
-                            address: parsed.address || '',
-                        };
+                    // ✅ БЕЗОПАСНОСТЬ: Строгая валидация структуры данных
+                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                        // Валидируем categories - должен быть массив строк
+                        const categories = Array.isArray(parsed.categories)
+                            ? parsed.categories.filter((c: any) => typeof c === 'string' && c.length < 100)
+                            : [];
+
+                        // Валидируем radius - должна быть строка с числом
+                        const radius = typeof parsed.radius === 'string' && /^\d+$/.test(parsed.radius)
+                            ? parsed.radius
+                            : '60';
+
+                        // Валидируем address - должна быть строка
+                        const address = typeof parsed.address === 'string' && parsed.address.length < 500
+                            ? parsed.address
+                            : '';
+
+                        return { categories, radius, address };
                     }
                 }
             } catch (error) {
                 console.warn('[map] Failed to load saved filters:', error);
+                // ✅ БЕЗОПАСНОСТЬ: Очищаем поврежденные данные
+                try {
+                    localStorage.removeItem('map-filters');
+                } catch {
+                    // Игнорируем ошибки очистки
+                }
             }
         }
         // Значения по умолчанию
@@ -333,8 +348,31 @@ export default function MapScreen() {
 
             let data: any[] = [];
             
-            // ✅ ИСПРАВЛЕНИЕ: Парсим фильтры из строки
-            const parsedFilters = params.filtersKey ? JSON.parse(params.filtersKey) : {};
+            // ✅ БЕЗОПАСНОСТЬ: Валидация и санитизация фильтров
+            let parsedFilters: any = {};
+            try {
+                parsedFilters = params.filtersKey ? JSON.parse(params.filtersKey) : {};
+
+                // ✅ БЕЗОПАСНОСТЬ: Проверяем что parsedFilters это объект
+                if (!parsedFilters || typeof parsedFilters !== 'object' || Array.isArray(parsedFilters)) {
+                    console.warn('[map] Invalid filters format, using empty filters');
+                    parsedFilters = {};
+                }
+
+                // ✅ БЕЗОПАСНОСТЬ: Валидируем categories - должен быть массив чисел
+                if (parsedFilters.categories) {
+                    if (!Array.isArray(parsedFilters.categories)) {
+                        parsedFilters.categories = undefined;
+                    } else {
+                        parsedFilters.categories = parsedFilters.categories
+                            .filter((c: any) => typeof c === 'number' || typeof c === 'string')
+                            .slice(0, 50); // Ограничение на количество категорий
+                    }
+                }
+            } catch (error) {
+                console.error('[map] Failed to parse filters:', error);
+                parsedFilters = {};
+            }
 
             try {
                 if (params.mode === 'radius') {
@@ -387,10 +425,26 @@ export default function MapScreen() {
                 });
                 if (!isMounted) return;
 
-                setCoordinates({
-                    latitude: location.coords.latitude,
-                    longitude: location.coords.longitude,
-                });
+                // ✅ БЕЗОПАСНОСТЬ: Валидация координат перед установкой
+                const lat = location.coords.latitude;
+                const lng = location.coords.longitude;
+
+                if (
+                    Number.isFinite(lat) &&
+                    Number.isFinite(lng) &&
+                    lat >= -90 &&
+                    lat <= 90 &&
+                    lng >= -180 &&
+                    lng <= 180
+                ) {
+                    setCoordinates({
+                        latitude: lat,
+                        longitude: lng,
+                    });
+                } else {
+                    console.warn('[map] Invalid coordinates from location service:', location.coords);
+                    setCoordinates(DEFAULT_COORDINATES);
+                }
             } catch (error) {
                 if (!isMounted) return;
                 console.error('Error getting location:', error);
@@ -409,11 +463,33 @@ export default function MapScreen() {
         setFilterValues(prev => ({ ...prev, [field]: value }));
     }, []);
 
-    // ✅ УЛУЧШЕНИЕ: Сохраняем фильтры в localStorage при изменении
+    // ✅ УЛУЧШЕНИЕ: Сохраняем фильтры в localStorage при изменении с валидацией
     useEffect(() => {
         if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
             try {
-                localStorage.setItem('map-filters', JSON.stringify(filterValues));
+                // ✅ БЕЗОПАСНОСТЬ: Валидируем данные перед сохранением
+                const dataToSave = {
+                    categories: Array.isArray(filterValues.categories)
+                        ? filterValues.categories
+                            .filter((c: any) => typeof c === 'string' && c.length < 100)
+                            .slice(0, 50) // Максимум 50 категорий
+                        : [],
+                    radius: /^\d+$/.test(filterValues.radius)
+                        ? filterValues.radius
+                        : '60',
+                    address: filterValues.address.length < 500
+                        ? filterValues.address
+                        : '',
+                };
+
+                const jsonString = JSON.stringify(dataToSave);
+
+                // ✅ БЕЗОПАСНОСТЬ: Проверяем размер перед сохранением (максимум 10KB)
+                if (jsonString.length < 10000) {
+                    localStorage.setItem('map-filters', jsonString);
+                } else {
+                    console.warn('[map] Filter data too large, not saving to localStorage');
+                }
             } catch (error) {
                 console.warn('[map] Failed to save filters:', error);
             }
@@ -428,6 +504,15 @@ export default function MapScreen() {
     }, [routeStore, setMode]);
 
     const handleMapClick = useCallback((lng: number, lat: number) => {
+        // ✅ БЕЗОПАСНОСТЬ: Валидация координат для предотвращения инъекций
+        if (
+            !Number.isFinite(lng) || !Number.isFinite(lat) ||
+            lng < -180 || lng > 180 || lat < -90 || lat > 90
+        ) {
+            console.warn('[map] Invalid coordinates received:', { lng, lat });
+            return;
+        }
+
         if (mode === 'route' && routePoints.length < 2) {
             const newPoint: [number, number] = [lng, lat];
             setRoutePoints([...routePoints, newPoint]);

@@ -5,8 +5,20 @@
       "origin": "http://localhost:8085",
       "localStorage": [
         {
-          "name": "metravel_consent_v1",
-          "value": "{\"necessary\":true,\"analytics\":true,\"date\":\"2026-01-02T16:51:43.388Z\"}"
+          "name": "isSuperuser",
+          "value": "true"
+        },
+        {
+          "name": "secure_userToken",
+          "value": "CFwXR1JCBltrUF5XEEkWTV9bXj5eVElvQAZcUE1LA0FTXWhcC1JFGg=="
+        },
+        {
+          "name": "userId",
+          "value": "1"
+        },
+        {
+          "name": "userName",
+          "value": "Julia"
         }
       ]
     }

@@ -198,9 +198,8 @@ metravel2/
 Start here (all documentation lives **only** in `docs/`):
 
 - [docs/INDEX.md](./docs/INDEX.md)
-- [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)
-- [docs/RELEASE.md](./docs/RELEASE.md)
-- [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)
+- [docs/README.md](./docs/README.md)
+- [docs/RULES.md](./docs/RULES.md)
 
 ## 🔌 Backend API
 
@@ -238,9 +237,9 @@ Create environment-specific files:
 ## 📞 Support
 
 - **Issues**: Create an issue in the repository
-- **Build/Release docs**: See [docs/RELEASE.md](./docs/RELEASE.md)
+- **Docs**: See [docs/INDEX.md](./docs/INDEX.md)
 - **Expo Forums**: https://forums.expo.dev/
-- **Troubleshooting**: See [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)
+- **Troubleshooting**: Start with [docs/README.md](./docs/README.md)
 
 ## 📄 License
 
@@ -250,3 +249,23 @@ Private - All rights reserved
 
 **Version**: 1.0.0  
 **Last Updated**: December 2024
+
+## 🧰 Reproducible environment (recommended)
+
+- Use Node from `.nvmrc` (recommended: `nvm use`).
+- Use npm version pinned in `package.json` via `packageManager`.
+- This repo expects `package-lock.json` as the single source of truth for dependencies.
+
+## ✅ Release checks (prod)
+
+```bash
+# One command (recommended)
+npm run release:check
+
+# Or step-by-step
+npm run lint
+npm run test:run
+npm run build:web
+npm run audit:high
+./verify-security-fixes.sh
+```

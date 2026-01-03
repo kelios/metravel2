@@ -46,7 +46,9 @@
     "build:all:dev": "eas build --platform all --profile development",
     "build:all:preview": "eas build --platform all --profile preview",
     "build:all:prod": "eas build --platform all --profile production",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "audit:high": "npm audit --audit-level=high",
+    "release:check": "npm run lint && ./verify-security-fixes.sh && npm run audit:high && npm run test:run && npm run build:web"
   },
   "dependencies": {
     "@babel/runtime": "^7.25.0",
@@ -153,7 +155,6 @@
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/react-native": "^13.3.3",
-    "@testing-library/react-hooks": "^8.0.1",
     "@types/jest": "^30.0.0",
     "@types/lodash": "^4.17.21",
     "@types/react": "^18.3.12",
@@ -220,5 +221,15 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "overrides": {
+    "glob": "^10.4.5",
+    "minimist": "^1.2.8",
+    "semver": "^7.6.3",
+    "tar": "^6.2.1",
+    "yaml": "^2.5.1",
+    "follow-redirects": "^1.15.6",
+    "cookie": "^0.6.0"
+  },
+  "packageManager": "npm@10.8.2"
 }

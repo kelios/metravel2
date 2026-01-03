@@ -16,7 +16,7 @@ import type { MapUiApi } from '@/src/types/mapUi';
 
 type ReactLeafletNS = typeof import('react-leaflet');
 
-const LEAFLET_MAP_CONTAINER_ID = 'metravel-leaflet-map';
+const LEAFLET_MAP_CONTAINER_ID_PREFIX = 'metravel-leaflet-map';
 
 type Point = {
   id?: number;
@@ -91,15 +91,22 @@ const TravelMarkers: React.FC<TravelMarkersProps> = ({ points, icon, Marker, Pop
   return (
     <>
       {points.map((point, index) => {
+        // ✅ БЕЗОПАСНОСТЬ: Валидация данных точки
+        if (!point || typeof point !== 'object') {
+          console.warn('[Map] Invalid point data at index', index);
+          return null;
+        }
+
         const coords = strToLatLng(point.coord);
         if (!coords || !point.coord) {
           return null;
         }
         
-        const markerKey = point.id 
-          ? `travel-${point.id}` 
-          : `travel-${point.coord.replace(/,/g, '-')}-${index}`;
-        
+        // ✅ БЕЗОПАСНОСТЬ: Генерация безопасного ключа
+        const markerKey = point.id !== undefined
+          ? `travel-${point.id}`
+          : `travel-${String(point.coord).replace(/[^0-9.,-]/g, '')}-${index}`;
+
         // ✅ УЛУЧШЕНИЕ: Передаем renderer только если есть много маркеров (>50)
         const markerOptions: any = {
           position: [coords[1], coords[0]],
@@ -249,6 +256,12 @@ const ClusterLayer: React.FC<{
     (count: number) => {
       if (!(window as any)?.L?.divIcon) return undefined;
 
+      // ✅ БЕЗОПАСНОСТЬ: Валидация count для предотвращения инъекций
+      if (!Number.isFinite(count) || count < 0 || count > 10000) {
+        console.warn('[Map] Invalid cluster count:', count);
+        return undefined;
+      }
+
       // ✅ УЛУЧШЕНИЕ: Используем кешированную иконку если есть
       if (clusterIconsCache.has(count)) {
         return clusterIconsCache.get(count);
@@ -256,14 +269,25 @@ const ClusterLayer: React.FC<{
 
       // Для нестандартных значений создаем на лету
       const root = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
-      const primary = root?.getPropertyValue('--color-primary')?.trim() || colors.primary;
-      const textOnDark = root?.getPropertyValue('--color-textOnDark')?.trim() || colors.textOnDark;
-      const shadow = root?.getPropertyValue('--shadow-medium')?.trim() || colors.boxShadows.medium;
-      const border = root?.getPropertyValue('--color-border')?.trim() || colors.border;
+
+      // ✅ БЕЗОПАСНОСТЬ: Санитизация CSS значений для предотвращения инъекций
+      const sanitizeCssValue = (val: string | undefined) => {
+        if (!val) return '';
+        // Разрешаем только безопасные символы для CSS
+        return val.replace(/[^\w\s#(),.-]/g, '').slice(0, 100);
+      };
+
+      const primary = sanitizeCssValue(root?.getPropertyValue('--color-primary')?.trim() || colors.primary);
+      const textOnDark = sanitizeCssValue(root?.getPropertyValue('--color-textOnDark')?.trim() || colors.textOnDark);
+      const shadow = sanitizeCssValue(root?.getPropertyValue('--shadow-medium')?.trim() || colors.boxShadows.medium);
+      const border = sanitizeCssValue(root?.getPropertyValue('--color-border')?.trim() || colors.border);
+
+      // ✅ БЕЗОПАСНОСТЬ: Экранируем count как целое число
+      const safeCount = Math.floor(count);
 
       return (window as any).L.divIcon({
         className: 'custom-cluster-icon',
-        html: `<div style="background:${primary};color:${textOnDark};width:42px;height:42px;border-radius:21px;display:flex;align-items:center;justify-content:center;font-weight:800;box-shadow:${shadow};border:2px solid ${border};">${count}</div>`,
+        html: `<div style="background:${primary};color:${textOnDark};width:42px;height:42px;border-radius:21px;display:flex;align-items:center;justify-content:center;font-weight:800;box-shadow:${shadow};border:2px solid ${border};">${safeCount}</div>`,
         iconSize: [42, 42],
         iconAnchor: [21, 21],
       });
@@ -276,7 +300,7 @@ const ClusterLayer: React.FC<{
       {clusters.map((cluster, idx) => {
         if (expandClusters) {
           return (
-            <React.Fragment key={`cluster-auto-expanded-${cluster.key}-${idx}`}>
+            <React.Fragment key={`cluster-auto-expanded-${cluster.key}-${idx}`}> 
               {cluster.items.map((item, itemIdx) => {
                 const ll = strToLatLng(item.coord);
                 if (!ll) return null;
@@ -286,7 +310,6 @@ const ClusterLayer: React.FC<{
 
                 // ✅ УЛУЧШЕНИЕ: Используем Canvas Renderer для производительности
                 const markerProps: any = {
-                  key: markerKey,
                   position: [ll[1], ll[0]],
                   icon: markerIcon,
                   opacity: markerOpacity,
@@ -294,7 +317,7 @@ const ClusterLayer: React.FC<{
                 if (renderer) markerProps.renderer = renderer;
 
                 return (
-                  <Marker {...markerProps}>
+                  <Marker key={markerKey} {...markerProps}>
                     <Popup>
                       <PopupContent point={item} />
                     </Popup>
@@ -309,7 +332,7 @@ const ClusterLayer: React.FC<{
         if (expandedClusterKey && cluster.key === expandedClusterKey) {
           const items = expandedClusterItems ?? cluster.items;
           return (
-            <React.Fragment key={`expanded-${cluster.key}-${idx}`}>
+            <React.Fragment key={`expanded-${cluster.key}-${idx}`}> 
               {items.map((item, itemIdx) => {
                 const ll = strToLatLng(item.coord);
                 if (!ll) return null;
@@ -319,7 +342,6 @@ const ClusterLayer: React.FC<{
 
                 // ✅ УЛУЧШЕНИЕ: Используем Canvas Renderer для производительности
                 const markerProps: any = {
-                  key: markerKey,
                   position: [ll[1], ll[0]],
                   icon: markerIcon,
                   opacity: markerOpacity,
@@ -327,7 +349,7 @@ const ClusterLayer: React.FC<{
                 if (renderer) markerProps.renderer = renderer;
 
                 return (
-                  <Marker {...markerProps}>
+                  <Marker key={markerKey} {...markerProps}>
                     <Popup>
                       <PopupContent point={item} />
                     </Popup>
@@ -346,7 +368,6 @@ const ClusterLayer: React.FC<{
 
           // ✅ УЛУЧШЕНИЕ: Используем Canvas Renderer для производительности
           const singleMarkerProps: any = {
-            key: `cluster-single-${idx}`,
             position: [ll[1], ll[0]],
             icon: markerIcon,
             opacity: markerOpacity,
@@ -354,7 +375,7 @@ const ClusterLayer: React.FC<{
           if (renderer) singleMarkerProps.renderer = renderer;
 
           return (
-            <Marker {...singleMarkerProps}>
+            <Marker key={`cluster-single-${idx}`} {...singleMarkerProps}>
               <Popup>
                 <PopupContent point={item} />
               </Popup>
@@ -452,7 +473,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const shouldCluster = travelData.length > CLUSTER_THRESHOLD;
   const travelMarkerOpacity = mode === 'route' ? 0.45 : 1;
   const clusterGrid = useMemo(() => getClusterGridForZoom(mapZoom), [mapZoom]);
+  // ✅ ИСПРАВЛЕНИЕ: При большом зуме отключаем кластеризацию полностью для стабильности
   const expandClusters = mapZoom >= CLUSTER_EXPAND_ZOOM;
+  const shouldRenderClusters = shouldCluster && !expandClusters;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -489,23 +512,94 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   // Полное удаление экземпляра карты при размонтировании, чтобы Leaflet не ругался на переиспользование контейнера
   useEffect(() => {
+    const containerId = mapContainerIdRef.current;
+
     return () => {
       try {
         const map = mapRef.current;
         const container =
           map?.getContainer?.() ||
-          (typeof document !== 'undefined' ? document.getElementById(LEAFLET_MAP_CONTAINER_ID) : null);
-        map?.off?.();
-        map?.remove?.();
-        if (container && (container as any)._leaflet_id) {
+          (typeof document !== 'undefined' ? document.getElementById(containerId) : null);
+
+        // ✅ КРИТИЧЕСКОЕ: Удаляем все слои перед удалением карты
+        if (map) {
           try {
-            delete (container as any)._leaflet_id;
+            map.eachLayer((layer: any) => {
+              try {
+                map.removeLayer(layer);
+              } catch {
+                // Игнорируем ошибки удаления отдельных слоев
+              }
+            });
           } catch {
-            // noop
+            // Игнорируем ошибки итерации слоев
           }
         }
-      } catch {
-        // noop
+
+        // ✅ БЕЗОПАСНОСТЬ: Удаляем все обработчики событий перед удалением карты
+        if (map && typeof map.off === 'function') {
+          try {
+            map.off();
+          } catch (e) {
+            console.warn('[Map] Failed to remove map event handlers:', e);
+          }
+        }
+
+        // ✅ КРИТИЧЕСКОЕ: Останавливаем анимации
+        if (map && typeof (map as any).stop === 'function') {
+          try {
+            (map as any).stop();
+          } catch {
+            // Игнорируем ошибки остановки анимаций
+          }
+        }
+
+        // ✅ БЕЗОПАСНОСТЬ: Удаляем карту (без проверки владения - агрессивная очистка)
+        if (map && typeof map.remove === 'function') {
+          try {
+            map.remove();
+          } catch (e) {
+            // Игнорируем ошибку "being reused" при cleanup - она не критична
+            if (!String(e).includes('being reused')) {
+              console.warn('[Map] Failed to remove map:', e);
+            }
+          }
+        }
+
+        // ✅ КРИТИЧЕСКОЕ: Очищаем контейнер от всех Leaflet свойств и из глобального реестра
+        if (container) {
+          try {
+            const leafletId = (container as any)._leaflet_id;
+
+            // Удаляем из глобального реестра Leaflet
+            if (typeof window !== 'undefined' && (window as any).L && leafletId) {
+              try {
+                // Leaflet хранит ID в внутреннем реестре
+                if ((window as any).L.Util && (window as any).L.Util._stamps) {
+                  delete (window as any).L.Util._stamps[leafletId];
+                }
+              } catch {
+                // Игнорируем ошибки очистки реестра
+              }
+            }
+
+            // Удаляем все Leaflet свойства
+            delete (container as any)._leaflet_id;
+            delete (container as any)._leaflet;
+            delete (container as any)._leaflet_pos;
+            delete (container as any)._leaflet_map;
+            delete (container as any)._leaflet_events;
+
+            // Очищаем содержимое
+            while (container.firstChild) {
+              container.removeChild(container.firstChild);
+            }
+          } catch (e) {
+            console.warn('[Map] Failed to clear leaflet ID:', e);
+          }
+        }
+      } catch (e) {
+        console.warn('[Map] Error during cleanup:', e);
       } finally {
         mapRef.current = null;
       }
@@ -522,10 +616,17 @@ const MapPageComponent: React.FC<Props> = (props) => {
       try {
         const { L, rl: rlMod } = await ensureLeafletAndReactLeaflet();
         if (!cancelled) {
-          setL(L);
-          setRl(rlMod);
+          // ✅ БЕЗОПАСНОСТЬ: Проверяем что модули загрузились корректно
+          if (L && rlMod && typeof L === 'object' && typeof rlMod === 'object') {
+            setL(L);
+            setRl(rlMod);
+          } else {
+            console.error('[Map] Invalid Leaflet modules loaded');
+            setErrors((prev) => ({ ...prev, loadingModules: true }));
+          }
         }
-      } catch {
+      } catch (e) {
+        console.error('[Map] Failed to load Leaflet modules:', e);
         if (!cancelled) {
           setErrors((prev) => ({ ...prev, loadingModules: true }));
         }
@@ -538,7 +639,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
       (window as any).requestIdleCallback(load, { timeout: 2000 });
     } else {
       const t = setTimeout(load, 1200);
-      return () => clearTimeout(t);
+      return () => {
+        cancelled = true;
+        clearTimeout(t);
+      };
     }
 
     return () => {
@@ -719,21 +823,126 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const resizeRafRef = useRef<number | null>(null);
   const lastAutoFitKeyRef = useRef<string | null>(null);
   const mapInstanceKeyRef = useRef<string>(`leaflet-map-${Math.random().toString(36).slice(2)}`);
+  const mapContainerIdRef = useRef<string>(`${LEAFLET_MAP_CONTAINER_ID_PREFIX}-${Math.random().toString(36).slice(2)}`);
 
   // На случай горячей перезагрузки/ошибок очищаем старые контейнеры Leaflet перед инициализацией
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-    const containers = document.querySelectorAll('.leaflet-container');
-    containers.forEach((el) => {
-      const anyEl = el as any;
-      if (anyEl._leaflet_id) {
+
+    // ✅ КРИТИЧЕСКОЕ: Глобальная очистка всех Leaflet контейнеров (для HMR)
+    try {
+      const allLeafletContainers = document.querySelectorAll(`[id^="${LEAFLET_MAP_CONTAINER_ID_PREFIX}"]`);
+      allLeafletContainers.forEach((el: any) => {
+        // Пропускаем текущий контейнер - его очистим отдельно
+        if (el.id === mapContainerIdRef.current) return;
+
         try {
-          delete anyEl._leaflet_id;
+          const leafletId = el._leaflet_id;
+
+          // Удаляем из глобального реестра
+          if ((window as any).L?.Util?._stamps && leafletId) {
+            delete (window as any).L.Util._stamps[leafletId];
+          }
+
+          // Удаляем карту если есть
+          if (el._leaflet_map) {
+            try {
+              el._leaflet_map.remove();
+            } catch {
+              // Игнорируем ошибки удаления карты
+            }
+            delete el._leaflet_map;
+          }
+
+          // Очищаем свойства
+          delete el._leaflet_id;
+          delete el._leaflet;
+          delete el._leaflet_pos;
+          delete el._leaflet_events;
+
+          console.info('[Map] Cleaned orphaned container:', el.id);
         } catch {
-          // noop
+          // Игнорируем ошибки очистки отдельных контейнеров
         }
+      });
+    } catch (e) {
+      console.warn('[Map] Failed to clean orphaned containers:', e);
+    }
+
+    // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Агрессивная очистка контейнера перед инициализацией
+    const container = document.getElementById(mapContainerIdRef.current) as any;
+    if (container) {
+      try {
+        const leafletId = container._leaflet_id;
+
+        // 1. Удаляем из глобального реестра Leaflet
+        if (typeof window !== 'undefined' && (window as any).L && leafletId) {
+          try {
+            if ((window as any).L.Util && (window as any).L.Util._stamps) {
+              delete (window as any).L.Util._stamps[leafletId];
+            }
+          } catch {
+            // Игнорируем ошибки очистки реестра
+          }
+        }
+
+        // 2. Удаляем существующую карту если она есть
+        if (container._leaflet_map) {
+          try {
+            // Удаляем слои
+            container._leaflet_map.eachLayer?.((layer: any) => {
+              try {
+                container._leaflet_map.removeLayer(layer);
+              } catch {
+                // Игнорируем ошибки удаления отдельных слоев
+              }
+            });
+            // Удаляем обработчики
+            container._leaflet_map.off?.();
+            // Удаляем карту (игнорируем ошибку "being reused")
+            try {
+              container._leaflet_map.remove();
+            } catch (e) {
+              if (!String(e).includes('being reused')) {
+                console.warn('[Map] Failed to remove existing map:', e);
+              }
+            }
+          } catch {
+            // Игнорируем общие ошибки очистки карты
+          }
+          delete container._leaflet_map;
+        }
+
+        // 3. Удаляем все Leaflet свойства
+        delete container._leaflet_id;
+        delete container._leaflet;
+        delete container._leaflet_pos;
+        delete container._leaflet_events;
+
+        // 4. Удаляем все Leaflet panes и controls
+        const leafletElements = container.querySelectorAll('[class*="leaflet-"]');
+        leafletElements.forEach((el: HTMLElement) => {
+          try {
+            el.remove();
+          } catch {
+            // Игнорируем ошибки удаления элементов
+          }
+        });
+
+        // 5. Очищаем оставшееся содержимое
+        while (container.firstChild) {
+          try {
+            container.removeChild(container.firstChild);
+          } catch {
+            // Игнорируем ошибки удаления дочерних элементов
+          }
+        }
+
+        console.info('[Map] Container cleaned on init:', mapContainerIdRef.current);
+      } catch (e) {
+        console.warn('[Map] Failed to clean container on mount:', e);
       }
-    });
+    }
   }, []);
 
   // Функция для центрирования на местоположении пользователя (должна быть до условных возвратов)
@@ -952,7 +1161,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     L: any;
     travelData: Point[];
     setMapZoom: (z: number) => void;
-    setExpandedCluster: (v: { key: string; items: Point[] } | null) => void;
     mapRef: React.MutableRefObject<any>;
     onMapReady: (map: any) => void;
     savedMapViewRef: React.MutableRefObject<any>;
@@ -971,7 +1179,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     L,
     travelData,
     setMapZoom,
-    setExpandedCluster,
     mapRef,
     onMapReady,
     savedMapViewRef,
@@ -983,6 +1190,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     leafletControlRef,
   }) => {
     const map = useMap();
+    const hasCalledOnMapReadyRef = useRef(false);
 
     useMapEvents({
       click: mapClickHandler,
@@ -995,7 +1203,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
         }
       },
       zoomstart: () => {
-        setExpandedCluster(null);
+        // ✅ ИСПРАВЛЕНИЕ: Не сбрасываем expandedCluster при зуме, чтобы маркеры не пропадали
+        // setExpandedCluster(null);
         try {
           map.closePopup();
         } catch {
@@ -1007,12 +1216,19 @@ const MapPageComponent: React.FC<Props> = (props) => {
     // Keep map ref for imperative calls (fitBounds, setView)
     useEffect(() => {
       mapRef.current = map;
-      onMapReady(map);
+      if (!hasCalledOnMapReadyRef.current) {
+        hasCalledOnMapReadyRef.current = true;
+        onMapReady(map);
+      }
       try {
         setMapZoom(map.getZoom());
       } catch {
         // noop
       }
+      return () => {
+        // Reset only when map instance changes/unmounts.
+        hasCalledOnMapReadyRef.current = false;
+      };
     }, [map, mapRef, onMapReady, setMapZoom]);
 
     // ✅ Popup behavior: close reliably on map click or zoom.
@@ -1235,6 +1451,71 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return travelData.length === 0;
   }, [mode, routePoints, travelData.length]);
 
+  // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Очистка контейнера при размонтировании
+  useEffect(() => {
+    // Копируем значение ref в переменную для корректной работы cleanup функции
+    const containerId = mapContainerIdRef.current;
+
+    // Cleanup function выполнится при размонтировании компонента
+    return () => {
+      if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+
+      try {
+        const container = document.getElementById(containerId) as any;
+        if (!container) return;
+
+        console.info('[Map] Cleaning up container on unmount:', containerId);
+
+        const leafletId = container._leaflet_id;
+
+        // 1. Удаляем из глобального реестра Leaflet
+        if (typeof window !== 'undefined' && (window as any).L && leafletId) {
+          try {
+            if ((window as any).L.Util && (window as any).L.Util._stamps) {
+              delete (window as any).L.Util._stamps[leafletId];
+            }
+          } catch {
+            // Игнорируем ошибки очистки реестра
+          }
+        }
+
+        // 2. Удаляем существующую карту если она есть
+        if (container._leaflet_map) {
+          try {
+            // Удаляем слои
+            container._leaflet_map.eachLayer?.((layer: any) => {
+              try {
+                container._leaflet_map.removeLayer(layer);
+              } catch {
+                // Игнорируем ошибки удаления отдельных слоев
+              }
+            });
+            // Удаляем обработчики
+            container._leaflet_map.off?.();
+            // Удаляем карту
+            container._leaflet_map.remove();
+          } catch (e) {
+            // Игнорируем ошибку "being reused" при размонтировании
+            if (!String(e).includes('being reused')) {
+              console.warn('[Map] Error removing map on unmount:', e);
+            }
+          }
+          delete container._leaflet_map;
+        }
+
+        // 3. Удаляем все Leaflet свойства
+        delete container._leaflet_id;
+        delete container._leaflet;
+        delete container._leaflet_pos;
+        delete container._leaflet_events;
+
+        console.info('[Map] Container cleaned successfully on unmount');
+      } catch (e) {
+        console.warn('[Map] Failed to clean container on unmount:', e);
+      }
+    };
+  }, []); // Пустой массив зависимостей - cleanup только при размонтировании
+
   if (loading) return renderLoader('Loading map...');
 
   if (!L || !rl) {
@@ -1256,7 +1537,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
       <MapContainer
         style={styles.map as any}
-        id={LEAFLET_MAP_CONTAINER_ID}
+        id={mapContainerIdRef.current}
         center={safeCenter}
         zoom={initialZoomRef.current}
         key={mapInstanceKeyRef.current}
@@ -1276,7 +1557,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
           L={L}
           travelData={travelData}
           setMapZoom={setMapZoom}
-          setExpandedCluster={setExpandedCluster}
           mapRef={mapRef}
           onMapReady={setMapInstance}
           savedMapViewRef={savedMapViewRef}
@@ -1348,7 +1628,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
           </Marker>
         )}
 
-        {customIcons?.meTravel && travelData.length > 0 && !shouldCluster && (
+        {customIcons?.meTravel && travelData.length > 0 && !shouldRenderClusters && (
           <TravelMarkersMemo
             points={travelData}
             icon={customIcons.meTravel}
@@ -1357,11 +1637,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
             PopupContent={PopupWithClose}
             renderer={canvasRenderer}
             // @ts-ignore
-            opacity={travelMarkerOpacity}
+            markerOpacity={travelMarkerOpacity}
           />
         )}
 
-        {customIcons?.meTravel && travelData.length > 0 && shouldCluster && (
+        {customIcons?.meTravel && travelData.length > 0 && shouldRenderClusters && (
           <ClusterLayer
             points={travelData}
             Marker={Marker}
@@ -1370,7 +1650,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
             markerIcon={customIcons.meTravel}
             markerOpacity={travelMarkerOpacity}
             grid={clusterGrid}
-            expandClusters={expandClusters}
+            expandClusters={false}
             expandedClusterKey={expandedCluster?.key}
             expandedClusterItems={expandedCluster?.items}
             renderer={canvasRenderer}

@@ -171,11 +171,11 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
 
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
-      
+      {label ? <Text style={styles.label}>{label}</Text> : null}
+
       <View style={styles.inputContainer}>
         <Icon name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
-        
+
         <TextInput
           style={styles.input}
           value={query}

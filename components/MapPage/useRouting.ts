@@ -134,6 +134,25 @@ export const useRouting = (
         mode: 'car' | 'bike' | 'foot',
         signal: AbortSignal
     ): Promise<RouteResult> => {
+        // ✅ БЕЗОПАСНОСТЬ: Валидация координат перед отправкой
+        if (!Array.isArray(points) || points.length < 2) {
+            throw new Error('Недостаточно точек для построения маршрута');
+        }
+
+        for (const [lng, lat] of points) {
+            if (
+                !Number.isFinite(lng) || !Number.isFinite(lat) ||
+                lng < -180 || lng > 180 || lat < -90 || lat > 90
+            ) {
+                throw new Error('Некорректные координаты маршрута');
+            }
+        }
+
+        // ✅ БЕЗОПАСНОСТЬ: Валидация API ключа
+        if (!ORS_API_KEY || ORS_API_KEY.length < 10) {
+            throw new Error('Неверный API ключ или доступ запрещен.');
+        }
+
         // ✅ УЛУЧШЕНИЕ: Используем retry для устойчивости к временным ошибкам
         return await fetchWithRetry(async () => {
             // ORS API expects coordinates in [lng, lat] format
@@ -180,6 +199,20 @@ export const useRouting = (
         mode: 'car' | 'bike' | 'foot',
         signal: AbortSignal
     ): Promise<RouteResult> => {
+        // ✅ БЕЗОПАСНОСТЬ: Валидация координат перед отправкой
+        if (!Array.isArray(points) || points.length < 2) {
+            throw new Error('Недостаточно точек для построения маршрута');
+        }
+
+        for (const [lng, lat] of points) {
+            if (
+                !Number.isFinite(lng) || !Number.isFinite(lat) ||
+                lng < -180 || lng > 180 || lat < -90 || lat > 90
+            ) {
+                throw new Error('Некорректные координаты маршрута');
+            }
+        }
+
         const profile = getOSRMProfile(mode)
         // В dev можно замокать OSRM, чтобы не зависеть от сети/CORS (только при явном флаге)
         const mockOsrm =
@@ -220,8 +253,17 @@ export const useRouting = (
             }
         }
 
-        // OSRM expects coordinates in lng,lat format
-        const coordsStr = points.map(([lng, lat]) => `${lng},${lat}`).join(';')
+        // ✅ БЕЗОПАСНОСТЬ: Санитизация координат для URL (защита от инъекций)
+        const coordsStr = points
+            .map(([lng, lat]) => `${Number(lng).toFixed(6)},${Number(lat).toFixed(6)}`)
+            .join(';')
+
+        // ✅ БЕЗОПАСНОСТЬ: Валидация профиля (только разрешенные значения)
+        const allowedProfiles = ['driving', 'bike', 'foot'];
+        if (!allowedProfiles.includes(profile)) {
+            throw new Error('Некорректный профиль транспорта');
+        }
+
         const url = `https://router.project-osrm.org/route/v1/${profile}/${coordsStr}?overview=full&geometries=geojson`
         
         let res: Response

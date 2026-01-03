@@ -34,6 +34,28 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
     };
   };
 
+  const shrinkBBoxToMaxArea = (bbox: BBox, maxAreaKm2: number): BBox => {
+    const area = bboxAreaKm2(bbox);
+    if (!(area > maxAreaKm2)) return bbox;
+
+    const factor = Math.sqrt(maxAreaKm2 / area);
+
+    const centerLat = (bbox.north + bbox.south) / 2;
+    const centerLng = (bbox.east + bbox.west) / 2;
+    const halfLat = Math.abs(bbox.north - bbox.south) / 2;
+    const halfLng = Math.abs(bbox.east - bbox.west) / 2;
+
+    const nextHalfLat = halfLat * factor;
+    const nextHalfLng = halfLng * factor;
+
+    return {
+      south: centerLat - nextHalfLat,
+      west: centerLng - nextHalfLng,
+      north: centerLat + nextHalfLat,
+      east: centerLng + nextHalfLng,
+    };
+  };
+
   const keyFromBBox = (bbox: BBox) => {
     // 2 decimals ~ 1-2км точности; снижает частоту запросов
     const r = (n: number) => Math.round(n * 100) / 100;
@@ -79,12 +101,7 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
   const load = async () => {
     if (!map || !L) return;
 
-    const bbox = makeBBox();
-    const area = bboxAreaKm2(bbox);
-    if (area > options.maxAreaKm2) {
-      layerGroup.clearLayers();
-      return;
-    }
+    const bbox = shrinkBBoxToMaxArea(makeBBox(), options.maxAreaKm2);
 
     const key = keyFromBBox(bbox);
     if (key === lastKey) return;

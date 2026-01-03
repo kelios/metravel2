@@ -95,11 +95,11 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
   );
 };
 
-export default React.memo(SwipeablePanel);
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
 });
+
+export default React.memo(SwipeablePanel);
 

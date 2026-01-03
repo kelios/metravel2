@@ -1,5 +1,5 @@
 // components/MapPage/RoutingMachine.tsx
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useRouting } from './useRouting'
 import { useThemedColors } from '@/hooks/useTheme'
 
@@ -173,6 +173,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         const L = (window as any).L
         if (!L) return
 
+        let cancelled = false
         // Remove old polyline
         if (polylineRef.current) {
             try {
@@ -193,7 +194,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
 
         if (coordsToDraw.length >= 2) {
             const latlngs = coordsToDraw.map(([lng, lat]) => L.latLng(lat, lng))
-            
+
             // Определяем цвет линии в зависимости от статуса
             const isOptimal = routingState.error === false || routingState.error === ''
             const color = isOptimal ? info : warning
@@ -201,38 +202,74 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             const opacity = isOptimal ? 0.85 : 0.65
             const dashArray = isOptimal ? null : '10, 10' // Пунктирная линия для неоптимального маршрута
 
-            const line = L.polyline(latlngs, { 
-                color, 
-                weight, 
-                opacity,
-                dashArray,
-                lineJoin: 'round',
-                lineCap: 'round'
-            })
-            line.addTo(map)
-            polylineRef.current = line
-            
-            // Центрируем карту на маршруте только при изменении старт/финиш.
-            // Иначе при каждом обновлении coords (или store sync) карта будет "дергаться",
-            // создавая ощущение бесконечной перестройки.
-            if (lastFitKeyRef.current !== fitKey) {
-                lastFitKeyRef.current = fitKey
+            const addLineWhenReady = () => {
+                if (cancelled) return
+                // Во время fast-refresh/unmount карта может быть в промежуточном состоянии:
+                // - map.getPane('overlayPane') ещё не создан
+                // - или map уже удалён, но ссылка ещё жива
+                const overlayPane = typeof map.getPane === 'function' ? map.getPane('overlayPane') : null
+                if (!overlayPane) return
+
+                const line = L.polyline(latlngs, {
+                    color,
+                    weight,
+                    opacity,
+                    dashArray,
+                    lineJoin: 'round',
+                    lineCap: 'round',
+                })
+
                 try {
-                    const bounds = line.getBounds()
-                    if (bounds.isValid()) {
-                        map.fitBounds(bounds.pad(0.1), { 
-                            animate: true,
-                            duration: 0.5,
-                            maxZoom: 14
-                        })
-                    }
+                    line.addTo(map)
+                    polylineRef.current = line
                 } catch (error) {
+                    // Если карта была уничтожена между whenReady и addTo
+                    try {
+                        line.remove?.()
+                    } catch {
+                        // noop
+                    }
                     if (__DEV__) {
                         const { devWarn } = require('@/src/utils/logger')
-                        devWarn('Ошибка центрирования на маршруте:', error)
+                        devWarn('Ошибка добавления полилинии на карту:', error)
+                    }
+                    return
+                }
+
+                // Центрируем карту на маршруте только при изменении старт/финиш.
+                // Иначе при каждом обновлении coords (или store sync) карта будет "дергаться",
+                // создавая ощущение бесконечной перестройки.
+                if (lastFitKeyRef.current !== fitKey) {
+                    lastFitKeyRef.current = fitKey
+                    try {
+                        const bounds = line.getBounds()
+                        if (bounds.isValid()) {
+                            map.fitBounds(bounds.pad(0.1), {
+                                animate: true,
+                                duration: 0.5,
+                                maxZoom: 14,
+                            })
+                        }
+                    } catch (error) {
+                        if (__DEV__) {
+                            const { devWarn } = require('@/src/utils/logger')
+                            devWarn('Ошибка центрирования на маршруте:', error)
+                        }
                     }
                 }
             }
+
+            // Leaflet гарантирует, что whenReady вызовется когда готовы panes/renderer.
+            // Но при гонках (error boundary, hot reload) дополнительно проверяем overlayPane.
+            if (typeof map.whenReady === 'function') {
+                map.whenReady(addLineWhenReady)
+            } else {
+                addLineWhenReady()
+            }
+        }
+
+        return () => {
+            cancelled = true
         }
     }, [map, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints, routePoints, routingState.coords, info, warning])
 

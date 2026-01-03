@@ -1,9 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { chromium, type FullConfig } from '@playwright/test';
+import { chromium, request, type FullConfig } from '@playwright/test';
 import { getTravelsListPath } from './helpers/routes';
 
 const STORAGE_STATE_PATH = 'e2e/.auth/storageState.json';
+
+function simpleEncrypt(text: string, key: string): string {
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  }
+  return Buffer.from(result, 'binary').toString('base64');
+}
 
 function ensureEnv(name: string): string | null {
   const v = process.env[name];
@@ -91,6 +99,9 @@ export default async function globalSetup(config: FullConfig) {
   const email = ensureEnv('E2E_EMAIL');
   const password = ensureEnv('E2E_PASSWORD');
 
+  const apiBaseRaw = ensureEnv('E2E_API_URL') || ensureEnv('EXPO_PUBLIC_API_URL');
+  const apiBase = apiBaseRaw ? apiBaseRaw.replace(/\/+$/, '') : null;
+
   fs.mkdirSync(path.dirname(STORAGE_STATE_PATH), { recursive: true });
 
   const browser = await chromium.launch();
@@ -119,6 +130,56 @@ export default async function globalSetup(config: FullConfig) {
     return;
   }
 
+  if (apiBase) {
+    try {
+      const api = await request.newContext({
+        baseURL: apiBase,
+        extraHTTPHeaders: { 'Content-Type': 'application/json' },
+      });
+      const resp = await api.post('/api/user/login/', { data: { email, password } });
+      if (resp.ok()) {
+        const json = (await resp.json().catch(() => null)) as any;
+        const token = String(json?.token ?? '').trim();
+        const userId = json?.id != null ? String(json.id) : '';
+        const userName = String(json?.name ?? json?.email ?? '').trim();
+        const isSuperuser = json?.is_superuser ? 'true' : 'false';
+        if (token) {
+          const encrypted = simpleEncrypt(token, 'metravel_encryption_key_v1');
+          await context.addInitScript((value: string) => {
+            try {
+              window.localStorage.setItem('secure_userToken', value);
+            } catch {
+              // ignore
+            }
+          }, encrypted);
+
+          // AuthContext hydrates auxiliary fields from AsyncStorage, which on web maps to localStorage.
+          // These keys are stored without the secure_ prefix.
+          await context.addInitScript(
+            (payload: { userId: string; userName: string; isSuperuser: string }) => {
+              try {
+                if (payload.userId) window.localStorage.setItem('userId', payload.userId);
+                if (payload.userName) window.localStorage.setItem('userName', payload.userName);
+                window.localStorage.setItem('isSuperuser', payload.isSuperuser);
+              } catch {
+                // ignore
+              }
+            },
+            { userId, userName, isSuperuser }
+          );
+          await api.dispose();
+          await page.goto(`${baseURL}${getTravelsListPath()}`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
+          await context.storageState({ path: STORAGE_STATE_PATH });
+          await browser.close();
+          return;
+        }
+      }
+      await api.dispose();
+    } catch {
+      // fall back to UI login
+    }
+  }
+
   await page.goto(`${baseURL}/login`, { waitUntil: 'networkidle', timeout: 120_000 });
   try {
     await page.waitForURL((url) => url.pathname.includes('/login'), { timeout: 30_000 });
@@ -139,7 +200,19 @@ export default async function globalSetup(config: FullConfig) {
   // IMPORTANT: логин/редирект может быть нестабильным (сеть/креды/сервер). Global setup
   // не должен валить e2e полностью — в худшем случае продолжим с анонимным storageState.
   try {
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 60_000 });
+    await Promise.race([
+      page.waitForURL((url: any) => !url.pathname.includes('/login'), { timeout: 60_000 }).catch(() => null),
+      page
+        .waitForFunction(() => {
+          try {
+            const v = window.localStorage?.getItem('secure_userToken');
+            return typeof v === 'string' && v.length > 0;
+          } catch {
+            return false;
+          }
+        }, { timeout: 60_000 })
+        .catch(() => null),
+    ]);
   } catch {
     // keep going; we'll just persist whatever state we have
   }
