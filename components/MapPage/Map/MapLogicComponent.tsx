@@ -91,12 +91,14 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   // Keep map ref and call onMapReady
   useEffect(() => {
     mapRef.current = map;
-    if (!hasCalledOnMapReadyRef.current) {
+    if (map && !hasCalledOnMapReadyRef.current) {
       hasCalledOnMapReadyRef.current = true;
       onMapReady(map);
     }
     try {
-      setMapZoom(map.getZoom());
+      if (map) {
+        setMapZoom(map.getZoom());
+      }
     } catch {
       // noop
     }

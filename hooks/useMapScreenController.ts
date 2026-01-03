@@ -190,9 +190,12 @@ export function useMapScreenController() {
     [isMobile, insets.top, headerOffset, width, themedColors]
   );
 
-  // Map panel coordinates (null-safe)
+  // Map panel coordinates (with safe defaults)
   const mapPanelCoordinates = useMemo(() => {
-    if (!coordinates) return null;
+    if (!coordinates || !Number.isFinite(coordinates.latitude) || !Number.isFinite(coordinates.longitude)) {
+      // Default to Minsk coordinates
+      return { latitude: 53.9006, longitude: 27.559 };
+    }
     return { latitude: coordinates.latitude, longitude: coordinates.longitude };
   }, [coordinates]);
 

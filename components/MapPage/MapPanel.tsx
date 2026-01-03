@@ -119,6 +119,14 @@ const MapPanel: React.FC<MapPanelProps> = ({
         return <Placeholder text="Инициализация карты…" showSkeleton={true} />;
     }
 
+    // Safe coordinates with defaults
+    const safeCoordinates = useMemo(() => {
+        if (!coordinates || !Number.isFinite(coordinates.latitude) || !Number.isFinite(coordinates.longitude)) {
+            return { latitude: 53.9006, longitude: 27.559 }; // Default: Minsk
+        }
+        return coordinates;
+    }, [coordinates]);
+
     return (
         <View 
             style={[styles.mapContainer, { backgroundColor: themeColors.surface }]}
@@ -128,7 +136,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                 <WebMap
                     key={mapKey}
                     travel={travelProp}
-                    coordinates={coordinates}
+                    coordinates={safeCoordinates}
                     routePoints={routePoints}
                     placesAlongRoute={placesAlongRoute}
                     mode={mode}

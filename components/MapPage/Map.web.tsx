@@ -123,10 +123,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return radiusKm * 1000;
   }, [mode, radius]);
 
-  // Convert coordinates to LatLng format for hooks
+  // Convert coordinates to LatLng format for hooks (with safety checks)
   const coordinatesLatLng = useMemo(() => ({
-    lat: coordinates.latitude,
-    lng: coordinates.longitude,
+    lat: Number.isFinite(coordinates.latitude) ? coordinates.latitude : 53.8828449,
+    lng: Number.isFinite(coordinates.longitude) ? coordinates.longitude : 27.7273595,
   }), [coordinates.latitude, coordinates.longitude]);
 
   const userLocationLatLng = useMemo(() =>
@@ -383,7 +383,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         />
 
         {/* Radius circle */}
-        {mode === 'radius' && radiusInMeters && (
+        {mode === 'radius' && radiusInMeters && Number.isFinite(coordinates.latitude) && Number.isFinite(coordinates.longitude) && (
           <Circle
             center={[coordinates.latitude, coordinates.longitude]}
             radius={radiusInMeters}
