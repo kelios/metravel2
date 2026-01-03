@@ -33,7 +33,8 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
     return `${step}/2`;
   }, [startAddress, endAddress]);
 
-  const hasRoute = startAddress && endAddress;
+  const hasRoute = Boolean(startAddress && endAddress);
+  const hasAnyAddress = Boolean(startAddress || endAddress);
 
   return (
     <View style={styles.routeBuilder} testID="route-builder">
@@ -43,7 +44,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
           <Icon name="alt-route" size={18} color={colors.text} />
           <Text style={styles.progressText}>Маршрут {progress}</Text>
         </View>
-        {onClear && (startAddress || endAddress) && (
+        {onClear && hasAnyAddress && (
           <Pressable
             testID="route-clear"
             onPress={onClear}

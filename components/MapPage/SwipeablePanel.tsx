@@ -30,16 +30,13 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
   threshold = 100,
 }) => {
   const translateX = useSharedValue(0);
-  const startX = useSharedValue(0);
 
   const closePanel = useCallback(() => {
     onClose();
   }, [onClose]);
 
   const panGesture = Gesture.Pan()
-    .onStart(() => {
-      startX.value = translateX.value;
-    })
+    .enabled(isOpen)
     .onUpdate((event) => {
       // Разрешаем свайп только в указанном направлении
       if (swipeDirection === 'right' && event.translationX > 0) {

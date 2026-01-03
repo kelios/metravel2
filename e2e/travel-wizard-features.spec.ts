@@ -170,6 +170,11 @@ const ensureCanCreateTravel = async (page: any): Promise<boolean> => {
   await maybeAcceptCookies(page);
   const authGate = page.getByText('Войдите, чтобы создать путешествие', { exact: true });
   if (await authGate.isVisible().catch(() => false)) {
+    if (!e2eEmail || !e2ePassword) {
+      test.skip(true, 'E2E_EMAIL/E2E_PASSWORD not provided; skipping authenticated travel wizard assertions');
+      await expect(authGate).toBeVisible();
+      return false;
+    }
     const didLogin = await maybeLogin(page);
     if (!didLogin) {
       await expect(authGate).toBeVisible();

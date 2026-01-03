@@ -61,7 +61,7 @@ const TravelListPanel: React.FC<Props> = ({
       );
     }
     if (!hasMore) {
-      return <Text style={styles.endText}>Это всё поблизости ✨</Text>;
+      return <Text style={styles.endText}>Это всё поблизости</Text>;
     }
     return null;
   }, [hasMore, isLoading, styles.endText, styles.loader, themeColors.primary]);

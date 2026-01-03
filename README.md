@@ -4,9 +4,18 @@ Cross-platform travel application built with React Native and Expo.
 
 ## 📱 Platforms
 
-- ✅ **Web** - Production ready
-- ✅ **iOS** - Ready for App Store
-- ✅ **Android** - Ready for Google Play Store
+- ✅ **Web** - Production ready (OpenStreetMap)
+- ✅ **iOS** - Ready for App Store (Apple Maps)
+- ✅ **Android** - Ready for Google Play Store (no Google Maps API needed)
+
+## 🗺️ Maps
+
+**NO Google Maps API Key required!**
+- iOS: Uses Apple Maps (native)
+- Android: Uses device's Google Maps (no API key)
+- Web: Uses OpenStreetMap (free, open source)
+
+📖 See [docs/MAPS_CONFIGURATION.md](./docs/MAPS_CONFIGURATION.md) for details.
 
 ## 🚀 Quick Start
 
@@ -15,7 +24,8 @@ Cross-platform travel application built with React Native and Expo.
 - Node.js 18.17.1 or higher
 - npm or yarn
 - For iOS: macOS, Xcode 14.0+, EAS CLI
-- For Android: EAS CLI, Firebase account, Google Play Developer account
+- For Android: EAS CLI, Google Play Developer account
+- **(Optional)** OpenRouteService API key for routing (free: https://openrouteservice.org)
 
 ### Installation
 
@@ -30,9 +40,11 @@ npm install
 cp .env.dev .env
 
 # Set environment variables
-PROD_API_URL=https://metravel.by
-LOCAL_API_URL=http://192.168.50.4:8000
-IS_LOCAL_API=false
+EXPO_PUBLIC_API_URL=https://metravel.by
+EXPO_PUBLIC_IS_LOCAL_API=false
+
+# Optional: Add OpenRouteService key for routing
+EXPO_PUBLIC_ROUTE_SERVICE_KEY=your_free_key_from_openrouteservice.org
 ```
 
 ### Development

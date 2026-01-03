@@ -44,9 +44,9 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "your-apple-id@example.com",
-        "ascAppId": "your-app-store-connect-app-id",
-        "appleTeamId": "your-team-id"
+        "appleId": "savran.juli@example.com",
+        "ascAppId": "METRAVEL_APP_ID",
+        "appleTeamId": "METRAVEL_TEAM_ID"
       },
       "android": {
         "serviceAccountKeyPath": "./google-play-service-account.json",

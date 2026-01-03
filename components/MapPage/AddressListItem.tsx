@@ -407,7 +407,9 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         marginBottom: 10,
         lineHeight: 24,
         letterSpacing: -0.4,
-        textShadow: `0 2px 8px ${colors.overlay}`,
+        textShadowColor: colors.overlay,
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 8,
     },
     coordPressable: {
         alignSelf: 'flex-start',
@@ -422,7 +424,9 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         fontWeight: '700',
         letterSpacing: 0.3,
         fontFamily: Platform.OS === 'web' ? 'Monaco, Menlo, "Ubuntu Mono", monospace' : 'monospace',
-        textShadow: `0 1px 4px ${colors.overlay}`,
+        textShadowColor: colors.overlay,
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
     },
     catWrap: {
         flexDirection: 'row',
@@ -444,7 +448,9 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         fontSize: 12,
         fontWeight: '700',
         letterSpacing: 0.3,
-        textShadow: `0 1px 3px ${colors.overlay}`,
+        textShadowColor: colors.overlay,
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
     },
 });
 
