@@ -114,9 +114,7 @@ export const QuickRecommendations: React.FC<Props> = ({
             accessibilityLabel={`Открыть ${place.address || 'место'}`}
           >
             <View style={styles.cardHeader}>
-              <Text style={styles.placeName} numberOfLines={2}>
-                {place.address}
-              </Text>
+              <Text style={styles.placeName} numberOfLines={2}>{place.address}</Text>
               {place.rating > 0 && (
                 <View style={styles.ratingBadge}>
                   <MaterialIcons name="star" size={14} color={colors.warning} />
