@@ -787,27 +787,28 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
 
 // ——— Styles
 const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number) => {
-  const panelWidth = isMobile ? Math.max(Math.min(windowWidth - 24, 480), 280) : '100%';
+  const panelWidth = isMobile ? '100%' : Math.max(Math.min(windowWidth - 24, 480), 280);
   const windowHeight = Dimensions.get('window').height;
 
   return (StyleSheet.create({
     card: {
       backgroundColor: colors.surface,
-      borderRadius: 14,
-      padding: 12,
+      borderRadius: isMobile ? 0 : 14,
+      padding: isMobile ? 0 : 12,
       width: panelWidth,
       maxWidth: '100%',
       height: '100%',
-      maxHeight: windowHeight, // RN: maxHeight должен быть числом/DimensionValue, не CSS-строкой
+      maxHeight: windowHeight,
       display: 'flex',
       flexDirection: 'column',
-      shadowColor: (colors.shadows as any)?.shadowColor ?? DESIGN_TOKENS.shadowsNative.light.shadowColor,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.07,
-      shadowRadius: 12,
-      elevation: 6,
-      alignSelf: isMobile ? 'center' : 'flex-start',
-      // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+      ...(isMobile ? {} : {
+        shadowColor: (colors.shadows as any)?.shadowColor ?? DESIGN_TOKENS.shadowsNative.light.shadowColor,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.07,
+        shadowRadius: 12,
+        elevation: 6,
+      }),
+      alignSelf: isMobile ? 'stretch' : 'flex-start',
     },
     headerContainer: {
       // Фиксированный контейнер для заголовка и табов
