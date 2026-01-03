@@ -45,12 +45,12 @@ describe('PresetSelector', () => {
     });
 
     it('should display preset icons', () => {
-      const { getAllByText } = render(<PresetSelector {...defaultProps} />);
+      const { getAllByTestId } = render(<PresetSelector {...defaultProps} />);
 
-      // Icons may appear multiple times
-      expect(getAllByText('📝').length).toBeGreaterThan(0);
-      expect(getAllByText('📸').length).toBeGreaterThan(0);
-      expect(getAllByText('🗺️').length).toBeGreaterThan(0);
+      // MaterialIcons are rendered as views with `testID="material-${iconName}"` in tests
+      expect(getAllByTestId('material-notes').length).toBeGreaterThan(0);
+      expect(getAllByTestId('material-photo-camera').length).toBeGreaterThan(0);
+      expect(getAllByTestId('material-map').length).toBeGreaterThan(0);
     });
   });
 
@@ -122,8 +122,9 @@ describe('PresetSelector', () => {
         <PresetSelector {...defaultProps} selectedPresetId="photo-album" />
       );
 
-      const checkmarks = getAllByText('✓');
-      expect(checkmarks.length).toBeGreaterThan(0);
+      // Selected badge is rendered as a pill with text "Выбрано"
+      const selectedBadges = getAllByText('Выбрано');
+      expect(selectedBadges.length).toBeGreaterThan(0);
     });
   });
 

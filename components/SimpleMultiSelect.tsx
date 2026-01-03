@@ -1,19 +1,23 @@
 import React, { useState, useMemo } from 'react';
+import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
 import { View, Text, StyleSheet, Pressable, FlatList, TextInput, Modal, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
+type MultiSelectValue = string | number;
+type MultiSelectItem = Record<string, unknown>;
+
 interface SimpleMultiSelectProps {
-  data: any[];
-  value: any[];
-  onChange: (selectedItems: any[]) => void;
+  data: MultiSelectItem[];
+  value: MultiSelectValue[];
+  onChange: (selectedItems: MultiSelectValue[]) => void;
   labelField: string;
   valueField: string;
   placeholder?: string;
   searchPlaceholder?: string;
   search?: boolean;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
   disabled?: boolean;
 }
 
@@ -34,20 +38,32 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const getItemValue = (item: MultiSelectItem): MultiSelectValue => {
+    const raw = item[valueField];
+    if (typeof raw === 'string' || typeof raw === 'number') return raw;
+    return '';
+  };
+
+  const getItemLabel = (item: MultiSelectItem): string => {
+    const raw = item[labelField];
+    if (typeof raw === 'string' || typeof raw === 'number') return String(raw);
+    return '';
+  };
+
   const selectedItems = useMemo(() => {
-    return data.filter(item => value.includes(item[valueField]));
+    return data.filter(item => value.includes(getItemValue(item)));
   }, [data, value, valueField]);
 
   const filteredData = useMemo(() => {
     if (!searchQuery.trim()) return data;
     const query = searchQuery.toLowerCase();
     return data.filter(item => 
-      item[labelField]?.toLowerCase().includes(query)
+      getItemLabel(item).toLowerCase().includes(query)
     );
   }, [data, searchQuery, labelField]);
 
-  const handleToggleItem = (item: any) => {
-    const itemValue = item[valueField];
+  const handleToggleItem = (item: MultiSelectItem) => {
+    const itemValue = getItemValue(item);
     const isSelected = value.includes(itemValue);
     
     if (isSelected) {
@@ -57,7 +73,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
     }
   };
 
-  const handleRemoveItem = (itemValue: any) => {
+  const handleRemoveItem = (itemValue: MultiSelectValue) => {
     onChange(value.filter(v => v !== itemValue));
   };
 
@@ -74,13 +90,13 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   };
 
   // ✅ Убираем useCallback для рендер-функций, которые используют colors
-  const renderSelectedChip = ({ item }: { item: any }) => (
+  const renderSelectedChip = ({ item }: { item: MultiSelectItem }) => (
     <View style={[styles.chip, { backgroundColor: colors.primary }]}>
       <Text style={[styles.chipText, { color: colors.textOnPrimary }]} numberOfLines={1}>
-        {item[labelField]}
+        {getItemLabel(item)}
       </Text>
       <Pressable
-        onPress={() => handleRemoveItem(item[valueField])}
+        onPress={() => handleRemoveItem(getItemValue(item))}
         hitSlop={8}
         style={styles.chipRemove}
       >
@@ -89,8 +105,8 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
     </View>
   );
 
-  const renderItem = ({ item }: { item: any }) => {
-    const isSelected = value.includes(item[valueField]);
+  const renderItem = ({ item }: { item: MultiSelectItem }) => {
+    const isSelected = value.includes(getItemValue(item));
     
     return (
       <Pressable
@@ -107,8 +123,14 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
             <Feather name="check" size={16} color={colors.primary} />
           )}
         </View>
-        <Text style={[styles.listItemText, { color: colors.text }, isSelected && { color: colors.primary, fontWeight: '600' as any }]}>
-          {item[labelField]}
+        <Text
+          style={[
+            styles.listItemText,
+            { color: colors.text },
+            isSelected && { color: colors.primary, fontWeight: '600' },
+          ]}
+        >
+          {getItemLabel(item)}
         </Text>
       </Pressable>
     );
@@ -239,7 +261,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
   placeholder: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: colors.textMuted,
-    fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+    fontWeight: '500',
   },
   chipsContainer: {
     gap: DESIGN_TOKENS.spacing.xs,
@@ -256,7 +278,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
   },
   chipText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    fontWeight: '600',
     color: colors.textOnPrimary,
     maxWidth: 150,
   },
@@ -296,7 +318,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
   },
   modalTitle: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    fontWeight: '600',
     color: colors.text,
   },
   searchContainer: {
@@ -352,11 +374,11 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     flex: 1,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     color: colors.text,
-    fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+    fontWeight: '500',
   },
   listItemTextSelected: {
     color: colors.primary,
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    fontWeight: '600',
   },
   emptyText: {
     textAlign: 'center',
@@ -378,7 +400,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
   },
   doneButtonText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    fontWeight: '600',
     color: colors.textOnPrimary,
   },
 });

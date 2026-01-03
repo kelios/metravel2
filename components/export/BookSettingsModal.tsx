@@ -271,8 +271,6 @@ export default function BookSettingsModal({
           right: 0,
           bottom: 0,
           backgroundColor: MODAL_COLORS.overlay,
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
           display: 'flex',
           alignItems: 'flex-start',
           justifyContent: 'center',
@@ -282,9 +280,33 @@ export default function BookSettingsModal({
           overscrollBehavior: 'contain',
           zIndex: 1000,
           transition: 'background-color 0.3s ease',
+          isolation: 'isolate',
         }}
         onClick={onClose}
       >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: MODAL_COLORS.overlay,
+            pointerEvents: 'none',
+            zIndex: 0,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            pointerEvents: 'none',
+            zIndex: 0,
+            maskImage:
+              'radial-gradient(circle at center, transparent 0%, transparent 58%, black 72%, black 100%)',
+            WebkitMaskImage:
+              'radial-gradient(circle at center, transparent 0%, transparent 58%, black 72%, black 100%)',
+          }}
+        />
         <div
           style={{
             backgroundColor: MODAL_COLORS.surface,
@@ -301,6 +323,8 @@ export default function BookSettingsModal({
             border: `1px solid ${MODAL_COLORS.borderStrong}`,
             transition: 'all 0.3s ease',
             boxSizing: 'border-box',
+            position: 'relative',
+            zIndex: 1,
           }}
           role="dialog"
           aria-modal="true"
@@ -332,7 +356,7 @@ export default function BookSettingsModal({
               flex: 1,
               overflowY: 'auto',
               overflowX: 'hidden',
-              paddingBottom: '16px',
+              paddingBottom: '24px',
             }}
           >
             {/* Пресеты настроек */}
@@ -537,124 +561,124 @@ export default function BookSettingsModal({
                 </div>
               </>
             )}
-          </div>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={settings.includeToc}
-                onChange={(e) => setSettings({ ...settings, includeToc: e.target.checked })}
-                style={{ 
-                  width: '20px', // ✅ ИСПРАВЛЕНИЕ: Увеличен размер
-                  height: '20px', // ✅ ИСПРАВЛЕНИЕ: Увеличен размер
-                  minWidth: '20px',
-                  minHeight: '20px',
-                  cursor: 'pointer',
-                }}
-              />
-              <span style={{ fontWeight: 500, color: MODAL_COLORS.text, fontSize: '15px' }}>Включить оглавление</span>
-            </label>
-          </div>
 
-          <div style={{ marginBottom: '20px', padding: '18px', borderRadius: '14px', border: `1px solid ${MODAL_COLORS.border}`, backgroundColor: MODAL_COLORS.backgroundSecondary, transition: 'all 0.3s ease' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <label style={{ fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
-                Чек-листы путешественника
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: MODAL_COLORS.textMuted }}>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
-                  checked={settings.includeChecklists}
-                  onChange={(e) => handleToggleChecklists(e.target.checked)}
+                  checked={settings.includeToc}
+                  onChange={(e) => setSettings({ ...settings, includeToc: e.target.checked })}
                   style={{
                     width: '20px',
                     height: '20px',
                     minWidth: '20px',
                     minHeight: '20px',
-                    accentColor: MODAL_COLORS.primary,
                     cursor: 'pointer',
-                    borderRadius: '4px',
                   }}
                 />
-                Добавить в PDF
+                <span style={{ fontWeight: 500, color: MODAL_COLORS.text, fontSize: '15px' }}>
+                  Включить оглавление
+                </span>
               </label>
             </div>
-            <div style={{ fontSize: '12px', color: MODAL_COLORS.textSubtle, marginBottom: settings.includeChecklists ? '12px' : 0 }}>
-              Стандартные списки для печати: экипировка, еда, документы, техника и аптечка.
-            </div>
-            {settings.includeChecklists && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-                {CHECKLIST_OPTIONS.map((option) => {
-                  const selected = checklistSections.includes(option.value);
-                  return (
-                    <label
-                      key={option.value}
-                      style={{
-                        borderRadius: '12px',
-                        border: selected
-                          ? `2px solid ${MODAL_COLORS.primary}`
-                          : `1px solid ${MODAL_COLORS.border}`,
-                        padding: '12px',
-                        backgroundColor: selected ? MODAL_COLORS.primarySoft : MODAL_COLORS.surface,
-                        cursor: 'pointer',
-                        display: 'block',
-                        boxShadow: selected ? MODAL_SHADOWS.medium : MODAL_SHADOWS.soft,
-                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!selected) {
-                          e.currentTarget.style.borderColor = MODAL_COLORS.borderStrong;
-                          e.currentTarget.style.boxShadow = MODAL_SHADOWS.light;
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!selected) {
-                          e.currentTarget.style.borderColor = MODAL_COLORS.border;
-                          e.currentTarget.style.boxShadow = MODAL_SHADOWS.soft;
-                        }
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <span style={{ fontWeight: 600, color: MODAL_COLORS.text }}>{option.label}</span>
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          onChange={() => toggleChecklistSection(option.value)}
-                          style={{
-                            width: '18px',
-                            height: '18px',
-                            minWidth: '18px',
-                            minHeight: '18px',
-                            accentColor: MODAL_COLORS.primary,
-                            cursor: 'pointer',
-                            borderRadius: '4px',
-                          }}
-                        />
-                      </div>
-                      <ul style={{ margin: 0, padding: '0 0 0 16px', fontSize: '12px', color: MODAL_COLORS.textMuted }}>
-                        {option.items.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          
 
+            <div style={{ marginBottom: '24px', padding: '16px', borderRadius: '14px', border: `1px solid ${MODAL_COLORS.border}`, backgroundColor: MODAL_COLORS.backgroundSecondary, transition: 'all 0.3s ease' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '16px', marginBottom: '8px' }}>
+                <label style={{ fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
+                  Чек-листы путешественника
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: MODAL_COLORS.textMuted, whiteSpace: 'nowrap' }}>
+                  <input
+                    type="checkbox"
+                    checked={settings.includeChecklists}
+                    onChange={(e) => handleToggleChecklists(e.target.checked)}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      minWidth: '20px',
+                      minHeight: '20px',
+                      accentColor: MODAL_COLORS.primary,
+                      cursor: 'pointer',
+                      borderRadius: '4px',
+                    }}
+                  />
+                  Добавить в PDF
+                </label>
+              </div>
+              <div style={{ fontSize: '12px', color: MODAL_COLORS.textSubtle, marginBottom: settings.includeChecklists ? '12px' : 0 }}>
+                Стандартные списки для печати: экипировка, еда, документы, техника и аптечка.
+              </div>
+              {settings.includeChecklists && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                  {CHECKLIST_OPTIONS.map((option) => {
+                    const selected = checklistSections.includes(option.value);
+                    return (
+                      <label
+                        key={option.value}
+                        style={{
+                          borderRadius: '12px',
+                          border: selected
+                            ? `2px solid ${MODAL_COLORS.primary}`
+                            : `1px solid ${MODAL_COLORS.border}`,
+                          padding: '12px',
+                          backgroundColor: selected ? MODAL_COLORS.primarySoft : MODAL_COLORS.surface,
+                          cursor: 'pointer',
+                          display: 'block',
+                          boxShadow: selected ? MODAL_SHADOWS.medium : MODAL_SHADOWS.soft,
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!selected) {
+                            e.currentTarget.style.borderColor = MODAL_COLORS.borderStrong;
+                            e.currentTarget.style.boxShadow = MODAL_SHADOWS.light;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!selected) {
+                            e.currentTarget.style.borderColor = MODAL_COLORS.border;
+                            e.currentTarget.style.boxShadow = MODAL_SHADOWS.soft;
+                          }
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
+                          <span style={{ fontWeight: 600, color: MODAL_COLORS.text }}>{option.label}</span>
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() => toggleChecklistSection(option.value)}
+                            style={{
+                              width: '18px',
+                              height: '18px',
+                              minWidth: '18px',
+                              minHeight: '18px',
+                              accentColor: MODAL_COLORS.primary,
+                              cursor: 'pointer',
+                              borderRadius: '4px',
+                            }}
+                          />
+                        </div>
+                        <ul style={{ margin: 0, padding: '0 0 0 16px', fontSize: '12px', color: MODAL_COLORS.textMuted }}>
+                          {option.items.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
           <div
             style={{
-              position: 'sticky',
-              bottom: 0,
-              backgroundColor: MODAL_COLORS.surface,
-              paddingTop: '16px',
-              marginTop: '12px',
               borderTop: `1px solid ${MODAL_COLORS.border}`,
+              paddingTop: '16px',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px',
+              flexWrap: 'wrap',
             }}
           >
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button
               onClick={onClose}
               style={{
@@ -771,12 +795,10 @@ export default function BookSettingsModal({
                 target.style.backgroundColor = MODAL_COLORS.primary;
                 target.style.transform = 'translateY(0)';
                 target.style.boxShadow = MODAL_SHADOWS.medium;
-                target.style.transform = 'translateY(0)';
               }}
             >
               Сохранить PDF
             </button>
-          </div>
           </div>
         </div>
       </div>

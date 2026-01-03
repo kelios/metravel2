@@ -1,7 +1,7 @@
 // components/export/PresetSelector.tsx
 // Компонент для выбора пресетов настроек PDF
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { BookPreset, PresetCategory } from '@/src/types/pdf-presets';
