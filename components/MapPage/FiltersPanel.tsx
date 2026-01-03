@@ -344,19 +344,20 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 <Text style={styles.sectionHint}>Выберите подходящие тематики, чтобы сузить выдачу.</Text>
                 <MultiSelectField
                   items={categoriesWithCount}
-                  value={Array.isArray(filterValue.categories) 
-                    ? filterValue.categories.map(cat => 
-                        typeof cat === 'string' 
-                          ? cat 
-                          : (cat && typeof cat === 'object' && 'value' in cat ? cat.value : String(cat || ''))
-                      )
-                    : []}
-                  onChange={(v: CategoryOption[]) => onFilterChange('categories', v)}
+                  value={(Array.isArray(filterValue.categories)
+                    ? filterValue.categories
+                        .map(cat => {
+                          if (typeof cat === 'string') return cat;
+                          if (cat && typeof cat === 'object' && 'value' in cat) return String((cat as any).value);
+                          return null;
+                        })
+                        .filter((v): v is string => v !== null && v !== undefined)
+                    : []) as string[]}
+                  onChange={(v) => onFilterChange('categories', v)}
                   labelField="label"
                   valueField="value"
                   placeholder="Выберите..."
                   compact
-                  hideSelected
                 />
                 {filterValue.categories.length > 0 && (
                   <ScrollView

@@ -297,12 +297,33 @@ const MapPageComponent: React.FC<Props> = (props) => {
     [colors.primary, styles.loader]
   );
 
-  // Safe center calculation
+  // Safe center calculation with strict validation
   const safeCenter = useMemo<[number, number]>(() => {
-    const lat = Number.isFinite(coordinates.latitude) ? coordinates.latitude : 53.8828449;
-    const lng = Number.isFinite(coordinates.longitude) ? coordinates.longitude : 27.7273595;
+    // Default coordinates (Minsk)
+    const DEFAULT_LAT = 53.8828449;
+    const DEFAULT_LNG = 27.7273595;
+
+    if (!coordinates) {
+      return [DEFAULT_LAT, DEFAULT_LNG];
+    }
+
+    const lat = coordinates.latitude;
+    const lng = coordinates.longitude;
+
+    // Strict validation
+    if (
+      typeof lat !== 'number' ||
+      typeof lng !== 'number' ||
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng) ||
+      lat < -90 || lat > 90 ||
+      lng < -180 || lng > 180
+    ) {
+      return [DEFAULT_LAT, DEFAULT_LNG];
+    }
+
     return [lat, lng];
-  }, [coordinates.latitude, coordinates.longitude]);
+  }, [coordinates]);
 
   // Popup component
   const PopupWithClose = useMemo(() => {
@@ -382,25 +403,37 @@ const MapPageComponent: React.FC<Props> = (props) => {
           useMapEvents={useMapEvents}
         />
 
-        {/* Radius circle */}
-        {mode === 'radius' &&
-         radiusInMeters &&
-         Number.isFinite(radiusInMeters) &&
-         radiusInMeters > 0 &&
-         Number.isFinite(safeCenter[0]) &&
-         Number.isFinite(safeCenter[1]) && (
-          <Circle
-            center={safeCenter}
-            radius={radiusInMeters}
-            pathOptions={{
-              color: colors.primary,
-              fillColor: colors.primary,
-              fillOpacity: 0.08,
-              weight: 2,
-              dashArray: '6 6',
-            }}
-          />
-        )}
+        {/* Radius circle - with strict validation */}
+        {(() => {
+          const canRenderCircle =
+            mode === 'radius' &&
+            radiusInMeters != null &&
+            Number.isFinite(radiusInMeters) &&
+            radiusInMeters > 0 &&
+            safeCenter != null &&
+            Array.isArray(safeCenter) &&
+            safeCenter.length === 2 &&
+            Number.isFinite(safeCenter[0]) &&
+            Number.isFinite(safeCenter[1]) &&
+            safeCenter[0] !== 0 &&
+            safeCenter[1] !== 0;
+
+          if (!canRenderCircle) return null;
+
+          return (
+            <Circle
+              center={safeCenter}
+              radius={radiusInMeters}
+              pathOptions={{
+                color: colors.primary,
+                fillColor: colors.primary,
+                fillOpacity: 0.08,
+                weight: 2,
+                dashArray: '6 6',
+              }}
+            />
+          );
+        })()}
 
         {/* Route markers */}
         {routePoints.length >= 1 &&

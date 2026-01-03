@@ -154,8 +154,13 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   // Route mode: keep map stable (no auto fitBounds)
   useEffect(() => {
     if (!map) return;
+
+    // Safe coordinate check
+    const hasValidCoords = Number.isFinite(coordinates.lat) && Number.isFinite(coordinates.lng);
+    const hasValidUserLocation = userLocation && Number.isFinite(userLocation.lat) && Number.isFinite(userLocation.lng);
+
     if (mode === 'route') {
-      if (!hasInitializedRef.current && coordinates.lat && coordinates.lng) {
+      if (!hasInitializedRef.current && hasValidCoords) {
         map.setView([coordinates.lat, coordinates.lng], 13, { animate: false });
         hasInitializedRef.current = true;
       }
@@ -168,10 +173,10 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     }
 
     if (!hasInitializedRef.current) {
-      if (userLocation) {
+      if (hasValidUserLocation) {
         map.setView([userLocation.lat, userLocation.lng], 11, { animate: false });
         hasInitializedRef.current = true;
-      } else if (coordinates.lat && coordinates.lng) {
+      } else if (hasValidCoords) {
         map.setView([coordinates.lat, coordinates.lng], 11, { animate: false });
         hasInitializedRef.current = true;
       }
