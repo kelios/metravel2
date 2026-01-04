@@ -96,12 +96,16 @@ export async function getSecureItem(key: string): Promise<string | null> {
       if (typeof window !== 'undefined' && window.localStorage) {
         const encrypted = window.localStorage.getItem(`${STORAGE_PREFIX}${key}`);
         if (!encrypted) return null;
-        return simpleDecrypt(encrypted, ENCRYPTION_KEY);
+        const decrypted = simpleDecrypt(encrypted, ENCRYPTION_KEY);
+        // Backward compatibility: older builds could store plaintext values.
+        // If decryption fails (returns empty string), fall back to the raw stored value.
+        return decrypted || encrypted;
       } else {
         // Fallback на AsyncStorage
         const encrypted = await AsyncStorage.getItem(`${STORAGE_PREFIX}${key}`);
         if (!encrypted) return null;
-        return simpleDecrypt(encrypted, ENCRYPTION_KEY);
+        const decrypted = simpleDecrypt(encrypted, ENCRYPTION_KEY);
+        return decrypted || encrypted;
       }
     } else {
       // Для native используем SecureStore

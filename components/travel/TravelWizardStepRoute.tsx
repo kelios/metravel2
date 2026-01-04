@@ -648,7 +648,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     safeContainer: {
         flex: 1,
         backgroundColor: colors.background,
-        ...(Platform.OS === 'web' ? ({ minHeight: '100vh' } as any) : null),
+        ...(Platform.OS === 'web'
+            ? ({ height: '100vh', overflow: 'hidden' } as any)
+            : null),
     },
     keyboardAvoid: { flex: 1 },
     validationSummaryWrapper: {

@@ -289,11 +289,30 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         }
       };
 
+      const keepCurrentIfServerEmptyArray = <K extends keyof TravelFormData>(key: K) => {
+        const serverValue = (normalizedSavedData as any)[key];
+        const currentValue = (currentDataSnapshot as any)[key];
+        if (Array.isArray(serverValue) && serverValue.length === 0) {
+          if (Array.isArray(currentValue) && currentValue.length > 0) {
+            (normalizedSavedData as any)[key] = currentValue;
+          }
+        }
+      };
+
       // If backend returns placeholders/empty strings for rich text fields, don't wipe user input.
       keepCurrentIfServerEmpty('description');
       keepCurrentIfServerEmpty('plus');
       keepCurrentIfServerEmpty('minus');
       keepCurrentIfServerEmpty('recommendation');
+      keepCurrentIfServerEmpty('youtube_link');
+
+      // If backend returns empty arrays for filter fields, don't wipe user selections.
+      keepCurrentIfServerEmptyArray('categories');
+      keepCurrentIfServerEmptyArray('transports');
+      keepCurrentIfServerEmptyArray('complexity');
+      keepCurrentIfServerEmptyArray('companions');
+      keepCurrentIfServerEmptyArray('over_nights_stay');
+      keepCurrentIfServerEmptyArray('month');
       const markersFromResponse = Array.isArray(normalizedSavedData.coordsMeTravel)
         ? (normalizedSavedData.coordsMeTravel as any)
         : [];

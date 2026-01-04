@@ -82,6 +82,16 @@ function OptimizedImage({
   const [isLoading, setIsLoading] = useState(() => validSource);
   const [hasError, setHasError] = useState(false);
 
+  const webBlobOrDataUri = useMemo(() => {
+    if (Platform.OS !== 'web') return null;
+    if (!validSource) return null;
+    if (typeof source === 'number') return null;
+    const uri = typeof (source as any)?.uri === 'string' ? String((source as any).uri).trim() : '';
+    if (!uri) return null;
+    if (/^(blob:|data:)/i.test(uri)) return uri;
+    return null;
+  }, [source, validSource]);
+
   const handleLoad = () => {
     setIsLoading(false);
     onLoad?.();
@@ -111,6 +121,24 @@ function OptimizedImage({
         style,
       ]}
     >
+      {!blurOnly && !!webBlobOrDataUri && !hasError && (
+        <img
+          src={webBlobOrDataUri}
+          alt={alt || ''}
+          onLoad={handleLoad}
+          onError={handleError}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: contentFit === 'cover' ? 'cover' : 'contain',
+            borderRadius,
+            display: 'block',
+          }}
+          loading={loading}
+          decoding="async"
+        />
+      )}
+
       {blurBackground && validSource && (
         <>
           <ExpoImage
@@ -135,7 +163,7 @@ function OptimizedImage({
         </>
       )}
 
-      {!blurOnly && validSource && (
+      {!blurOnly && validSource && !webBlobOrDataUri && (
         <ExpoImage
           {...(imageProps as any)}
           source={source}

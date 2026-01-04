@@ -137,6 +137,11 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
         }
     }, [formData, setFormData]);
 
+    const coverResetKey = useMemo(() => {
+        const url = (formData as any).travel_image_thumb_small_url;
+        return url && typeof url === 'string' && url.trim().length > 0 ? `cover:${url}` : 'cover:none';
+    }, [formData]);
+
     const handleCoverUpload = useCallback(
         (url: string | null) => {
             // При успешной загрузке или локальном превью обновляем форму,
@@ -233,6 +238,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
 
                             <View style={styles.coverWrapper}>
                                 <PhotoUploadWithPreview
+                                    key={coverResetKey}
                                     collection="travelMainImage"
                                     idTravel={formData.id ?? null}
                                     oldImage={

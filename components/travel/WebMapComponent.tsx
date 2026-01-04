@@ -256,6 +256,7 @@ const WebMapComponent = ({
     const [localMarkers, setLocalMarkers] = useState(markers);
     const lastMarkersRef = useRef(markers);
     const isInternalUpdateRef = useRef(false);
+    const prevExternalLengthRef = useRef<number>(markers.length);
     
     // Синхронизируем локальное состояние с пропсами только при внешних изменениях
     useEffect(() => {
@@ -282,8 +283,17 @@ const WebMapComponent = ({
             });
 
         if (markersChanged) {
+            const prevLen = prevExternalLengthRef.current;
             setLocalMarkers(markers);
             lastMarkersRef.current = markers;
+
+            // Если маркер добавлен извне (например, через поиск), делаем его активным и фокусируемся на нём
+            if (markers.length > prevLen) {
+                setActiveIndex(Math.max(0, markers.length - 1));
+                setIsExpanded(true);
+            }
+
+            prevExternalLengthRef.current = markers.length;
         }
     }, [markers]);
     
@@ -601,6 +611,26 @@ const WebMapComponent = ({
     const useMap: any = (rl as any).useMap;
     const useMapEvents: any = (rl as any).useMapEvents;
 
+    const CenterOnActive = ({ activeIndex, markers }: { activeIndex: number | null; markers: any[] }) => {
+        const map = useMap();
+
+        useEffect(() => {
+            if (activeIndex == null) return;
+            const marker = markers[activeIndex];
+            if (!marker) return;
+            const lat = Number(marker.lat);
+            const lng = Number(marker.lng);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+
+            const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : 13;
+            const nextZoom = Math.max(currentZoom, 14);
+            map.setView([lat, lng], nextZoom, { animate: true });
+        }, [activeIndex, markers, map]);
+
+        return null;
+    };
+
     const FitBounds = ({ markers, initialFitAllowed }: { markers: any[]; initialFitAllowed: boolean }) => {
         const map = useMap();
         const hasFit = useRef(false);
@@ -702,6 +732,7 @@ const WebMapComponent = ({
                                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                                 <MapClickHandler addMarker={addMarker} />
                                 <FitBounds markers={localMarkers} initialFitAllowed={hasInitialMarkersRef.current} />
+                                <CenterOnActive activeIndex={activeIndex} markers={localMarkers} />
                                 {localMarkers
                                     .filter((marker: any) =>
                                         Number.isFinite(marker.lat) &&
