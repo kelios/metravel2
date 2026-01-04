@@ -242,9 +242,15 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                                     collection="travelMainImage"
                                     idTravel={formData.id ?? null}
                                     oldImage={
-                                        (formData as any).travel_image_thumb_small_url?.length
+                                        // ✅ FIX: Приоритет: formData URL > travelDataOld URL
+                                        // Проверяем оба поля (thumb_small и thumb) для надежности
+                                        ((formData as any).travel_image_thumb_small_url && (formData as any).travel_image_thumb_small_url.trim().length > 0)
                                             ? (formData as any).travel_image_thumb_small_url
-                                            : (travelDataOld as any)?.travel_image_thumb_small_url ?? null
+                                            : ((formData as any).travel_image_thumb_url && (formData as any).travel_image_thumb_url.trim().length > 0)
+                                                ? (formData as any).travel_image_thumb_url
+                                                : ((travelDataOld as any)?.travel_image_thumb_small_url && (travelDataOld as any)?.travel_image_thumb_small_url.trim().length > 0)
+                                                    ? (travelDataOld as any)?.travel_image_thumb_small_url
+                                                    : (travelDataOld as any)?.travel_image_thumb_url ?? null
                                     }
                                     onUpload={handleCoverUpload}
                                     onPreviewChange={handleCoverUpload}

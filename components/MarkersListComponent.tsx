@@ -24,15 +24,28 @@ interface MarkersListComponentProps {
 const normalizeImageUrl = (url?: string | null) => {
     if (!url) return '';
     const trimmed = url.trim();
-    // Поддерживаем превью blob:/data:, а также абсолютные ссылки (включая IP-адреса)
-    if (/^(https?:\/\/|data:|blob:)/i.test(trimmed)) return trimmed;
-    const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
-    if (!base) return trimmed;
-    // Если URL начинается с /, добавляем базу напрямую (путь уже содержит /)
-    // Иначе добавляем / между базой и URL
-    const result = trimmed.startsWith('/') ? `${base}${trimmed}` : `${base}/${trimmed}`;
-    console.info('normalizeImageUrl:', { url, base, trimmed, result });
-    return result;
+    // Поддерживаем превью blob:/data:
+    if (/^(data:|blob:)/i.test(trimmed)) return trimmed;
+    
+    // ✅ Для абсолютных URL с приватным IP - извлекаем путь для проксирования через localhost
+    if (/^https?:\/\//i.test(trimmed)) {
+        try {
+            const parsed = new URL(trimmed);
+            const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+            const isPrivateIp = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/i.test(trimmed);
+            const isOnLocalhost = currentOrigin && /localhost|127\.0\.0\.1/i.test(currentOrigin);
+            
+            if (isPrivateIp && isOnLocalhost) {
+                return parsed.pathname + parsed.search;
+            }
+            return trimmed;
+        } catch {
+            return trimmed;
+        }
+    }
+    
+    // Относительные URL - оставляем как есть
+    return trimmed;
 };
 
 const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => ({
@@ -614,11 +627,20 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
 
     const [address, setAddress] = useState<string>(marker.address || '');
     const [categories, setCategories] = useState<any[]>(normalizeCategories(marker.categories));
+    // ✅ FIX: Локальное состояние для изображения, чтобы превью обновлялось сразу после загрузки
+    const [localImage, setLocalImage] = useState<string>(marker.image || '');
 
     useEffect(() => {
         setAddress(marker.address || '');
         setCategories(normalizeCategories(marker.categories));
+        setLocalImage(marker.image || '');
     }, [marker, index, normalizeCategories]);
+    
+    // ✅ FIX: Обертка для handleImageUpload, которая также обновляет локальное состояние
+    const handleLocalImageUpload = useCallback((imageUrl: string) => {
+        setLocalImage(imageUrl);
+        handleImageUpload(index, imageUrl);
+    }, [handleImageUpload, index]);
 
     if (typeof document === 'undefined') return null;
 
@@ -712,8 +734,8 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                         <PhotoUploadWithPreview
                             collection="travelImageAddress"
                             idTravel={marker.id ? String(marker.id) : null}
-                            oldImage={marker.image}
-                            onUpload={(imageUrl: string) => handleImageUpload(index, imageUrl)}
+                            oldImage={localImage}
+                            onUpload={handleLocalImageUpload}
                             placeholder="Перетащите фото точки маршрута"
                             maxSizeMB={10}
                         />

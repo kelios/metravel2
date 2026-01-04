@@ -30,7 +30,8 @@ interface TravelWizardStepPublishProps {
     currentStep: number;
     totalSteps: number;
     formData: TravelFormData;
-    setFormData: (data: TravelFormData) => void;
+    // ✅ FIX: Унифицированная сигнатура setFormData для совместимости с другими шагами
+    setFormData: React.Dispatch<React.SetStateAction<TravelFormData>> | ((data: TravelFormData) => void);
     isSuperAdmin: boolean;
     onManualSave: (data?: TravelFormData) => Promise<TravelFormData | void>;
     onGoBack: () => void;
@@ -102,6 +103,12 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const [status, setStatus] = useState<'draft' | 'moderation'>(
         formData.moderation || formData.publish ? 'moderation' : 'draft',
     );
+
+    // ✅ FIX: Синхронизация status с formData при изменении (например, при редактировании)
+    useEffect(() => {
+        const newStatus = formData.moderation || formData.publish ? 'moderation' : 'draft';
+        setStatus(newStatus);
+    }, [formData.moderation, formData.publish]);
 
     const currentBackendStatus = useMemo(() => {
         if (formData.moderation) return { label: 'Опубликовано', tone: 'success' } as const;

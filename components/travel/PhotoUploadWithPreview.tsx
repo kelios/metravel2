@@ -29,9 +29,21 @@ const normalizeImageUrl = (url?: string | null) => {
     // Data/blob stay as-is
     if (/^(data:|blob:)/i.test(safeUrl)) return safeUrl;
 
-    // Absolute URL → keep as-is
+    // ✅ Для абсолютных URL с приватным IP - извлекаем путь для проксирования через localhost
     if (/^https?:\/\//i.test(safeUrl)) {
-        return safeUrl;
+        try {
+            const parsed = new URL(safeUrl);
+            const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+            const isPrivateIp = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/i.test(safeUrl);
+            const isOnLocalhost = currentOrigin && /localhost|127\.0\.0\.1/i.test(currentOrigin);
+            
+            if (isPrivateIp && isOnLocalhost) {
+                return parsed.pathname + parsed.search;
+            }
+            return safeUrl;
+        } catch {
+            return safeUrl;
+        }
     }
 
     // Try API host first, then fall back to current origin (useful in admin where env may be empty)
@@ -146,31 +158,49 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     }, [disabled, handleRemoveImage, onRequestRemove]);
 
     // Синхронизация с oldImage
+    // ✅ FIX: Используем ref для отслеживания предыдущего значения oldImage
+    const prevOldImageRef = useRef<string | null | undefined>(undefined);
+    
     useEffect(() => {
-        console.info('PhotoUploadWithPreview: oldImage changed', { oldImage, isManuallySelected });
-        if (!isManuallySelected) {
-            if (oldImage && oldImage.trim()) {
-                const normalized = normalizeImageUrl(oldImage);
-                console.info('PhotoUploadWithPreview: normalized URL', normalized);
-                if (normalized && normalized.length > 0) {
-                    setImageUri(normalized);
-                    setFallbackImageUrl(oldImage);
-                    setHasTriedFallback(false);
-                    setPreviewUrl(null);
-                } else {
-                    console.info('PhotoUploadWithPreview: normalized URL is empty, clearing image');
-                    setImageUri(null);
-                    setPreviewUrl(null);
-                    setFallbackImageUrl(null);
-                    setHasTriedFallback(false);
-                }
-            } else {
-                console.info('PhotoUploadWithPreview: oldImage is empty, clearing image');
-                setImageUri(null);
-                setPreviewUrl(null);
-                setFallbackImageUrl(null);
-                setHasTriedFallback(false);
+        // ✅ FIX: Пропускаем первый рендер если oldImage пустой (избегаем сброса превью)
+        const isFirstRender = prevOldImageRef.current === undefined;
+        const prevOldImage = prevOldImageRef.current;
+        prevOldImageRef.current = oldImage;
+        
+        console.info('PhotoUploadWithPreview: oldImage changed', { oldImage, isManuallySelected, isFirstRender, prevOldImage });
+        
+        if (isManuallySelected) {
+            return;
+        }
+        
+        // ✅ FIX: Не сбрасываем превью если oldImage стал пустым после непустого значения
+        // (это может произойти при переходах состояния формы)
+        if (!oldImage || !oldImage.trim()) {
+            // Только если это не первый рендер и раньше было значение - не сбрасываем
+            if (!isFirstRender && prevOldImage && prevOldImage.trim()) {
+                console.info('PhotoUploadWithPreview: oldImage became empty, keeping current state');
+                return;
             }
+            // Первый рендер с пустым oldImage - ничего не делаем
+            if (isFirstRender) {
+                console.info('PhotoUploadWithPreview: first render with empty oldImage, skipping');
+                return;
+            }
+            console.info('PhotoUploadWithPreview: oldImage is empty, clearing image');
+            setImageUri(null);
+            setPreviewUrl(null);
+            setFallbackImageUrl(null);
+            setHasTriedFallback(false);
+            return;
+        }
+        
+        const normalized = normalizeImageUrl(oldImage);
+        console.info('PhotoUploadWithPreview: normalized URL', normalized);
+        if (normalized && normalized.length > 0) {
+            setImageUri(normalized);
+            setFallbackImageUrl(oldImage);
+            setHasTriedFallback(false);
+            setPreviewUrl(null);
         }
     }, [oldImage, isManuallySelected]);
 

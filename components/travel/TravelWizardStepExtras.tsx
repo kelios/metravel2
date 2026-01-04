@@ -15,7 +15,8 @@ interface TravelWizardStepExtrasProps {
     currentStep: number;
     totalSteps: number;
     formData: TravelFormData;
-    setFormData: (data: TravelFormData) => void;
+    // ✅ FIX: Унифицированная сигнатура setFormData для совместимости с другими шагами
+    setFormData: React.Dispatch<React.SetStateAction<TravelFormData>> | ((data: TravelFormData) => void);
     filters: TravelFilters;
     travelDataOld: Travel | null;
     isSuperAdmin: boolean;

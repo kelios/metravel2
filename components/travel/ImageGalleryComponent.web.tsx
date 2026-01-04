@@ -70,9 +70,19 @@ const normalizeDisplayUrl = (value: string): string => {
     const absolute = ensureAbsoluteUrl(value);
     if (typeof window === 'undefined') return absolute;
 
-    // Если страница открыта по HTTPS, а картинка с того же хоста по HTTP — переключаем на HTTPS, чтобы избежать mixed content.
     try {
-        const parsed = new URL(absolute, window.location.origin);
+        const parsed = new URL(absolute);
+        const currentOrigin = window.location.origin;
+        
+        // ✅ Для URL с приватным IP - извлекаем путь для проксирования через localhost
+        const isPrivateIp = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/i.test(absolute);
+        const isOnLocalhost = /localhost|127\.0\.0\.1/i.test(currentOrigin);
+        
+        if (isPrivateIp && isOnLocalhost) {
+            return parsed.pathname + parsed.search;
+        }
+        
+        // Если страница открыта по HTTPS, а картинка с того же хоста по HTTP — переключаем на HTTPS
         if (window.location.protocol === 'https:' && parsed.protocol === 'http:' && parsed.hostname === window.location.hostname) {
             parsed.protocol = 'https:';
             return parsed.toString();
@@ -311,21 +321,27 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     }, []);
 
     // Fallback: mark as error if image neither loads nor errors within timeout
+    // ✅ FIX: Увеличен таймаут до 15 секунд и добавлена проверка на blob URLs
     useEffect(() => {
         const timers = images
             .filter(img => !img.isUploading && !img.error && !img.hasLoaded)
-            .map(img =>
-                setTimeout(() => {
+            .map(img => {
+                // ✅ FIX: Для blob URLs используем больший таймаут, т.к. они загружаются локально
+                const isBlobUrl = /^(blob:|data:)/i.test(img.url);
+                const timeout = isBlobUrl ? 30000 : 15000;
+                
+                return setTimeout(() => {
                     const stableKey = img.stableKey ?? img.id;
                     setImages(prev =>
-                        prev.map(item =>
-                            (item.stableKey ?? item.id) === stableKey
-                                ? { ...item, error: 'Ошибка загрузки', isUploading: false }
-                                : item
-                        )
+                        prev.map(item => {
+                            if ((item.stableKey ?? item.id) !== stableKey) return item;
+                            // ✅ FIX: Не помечаем как ошибку если изображение уже загрузилось
+                            if (item.hasLoaded) return item;
+                            return { ...item, error: 'Ошибка загрузки', isUploading: false };
+                        })
                     );
-                }, 5000)
-            );
+                }, timeout);
+            });
         return () => {
             timers.forEach(clearTimeout);
         };

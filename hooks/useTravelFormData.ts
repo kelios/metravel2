@@ -375,9 +375,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         const currentValue = (currentDataSnapshot as any)[key];
         if (serverValue == null || (typeof serverValue === 'string' && serverValue.trim().length === 0)) {
           if (typeof currentValue === 'string' && currentValue.trim().length > 0) {
-            if (isLocalPreviewUrl(currentValue)) {
-              (normalizedSavedData as any)[key] = currentValue;
-            }
+            // ✅ FIX: Сохраняем локальное превью ИЛИ серверный URL если сервер вернул пустое значение
+            (normalizedSavedData as any)[key] = currentValue;
           }
         }
       };
@@ -581,6 +580,12 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     return promise;
   }, [applySavedData, autosave, cleanAndSave, normalizeDraftPlaceholders, showToast]);
 
+  // ✅ FIX: Выносим updateBaseline в ref чтобы избежать stale closure
+  const updateBaselineRef = useRef<((data: any) => void) | null>(null);
+  useEffect(() => {
+    updateBaselineRef.current = autosave.updateBaseline;
+  }, [autosave.updateBaseline]);
+
   const loadTravelData = useCallback(
     async (id: string) => {
       try {
@@ -592,8 +597,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
             text1: 'Путешествие не найдено',
             text2: 'Возможно, оно было удалено или недоступно',
           });
-          router.replace('/');
           setHasAccess(false);
+          router.replace('/');
           return;
         }
 
@@ -606,6 +611,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
               text1: 'Нет доступа',
               text2: 'Вы можете редактировать только свои путешествия',
             });
+            // ✅ FIX: Явно устанавливаем hasAccess в false при отсутствии доступа
+            setHasAccess(false);
             router.replace('/');
             return;
           }
@@ -628,7 +635,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         formState.updateFields(finalData);
         setMarkers(markersFromData);
 
-        autosave.updateBaseline(finalData);
+        // ✅ FIX: Используем ref для updateBaseline чтобы избежать stale closure и race condition
+        updateBaselineRef.current?.(finalData);
       } catch (error) {
         console.error('Ошибка загрузки путешествия:', error);
         Toast.show({
@@ -636,12 +644,14 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
           text1: 'Ошибка загрузки',
           text2: 'Не удалось загрузить путешествие',
         });
+        // ✅ FIX: Устанавливаем hasAccess в false при ошибке загрузки
+        setHasAccess(false);
         router.replace('/');
       } finally {
         setIsInitialLoading(false);
       }
     },
-    [autosave, formState, isNew, normalizeDraftPlaceholders, router, userId, isSuperAdmin]
+    [formState, isNew, normalizeDraftPlaceholders, router, userId, isSuperAdmin]
   );
 
 

@@ -8,9 +8,29 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 const normalizeImageUrl = (url?: string | null) => {
     if (!url) return '';
     const trimmed = url.trim();
-    if (/^(https?:\/\/|data:|blob:)/i.test(trimmed)) return trimmed;
-    const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
-    return `${base}/${trimmed.replace(/^\/+/, '')}`;
+    // Поддерживаем превью blob:/data:
+    if (/^(data:|blob:)/i.test(trimmed)) return trimmed;
+    
+    // ✅ Для абсолютных URL с приватным IP - извлекаем путь для проксирования через localhost
+    if (/^https?:\/\//i.test(trimmed)) {
+        try {
+            const parsed = new URL(trimmed);
+            const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+            const isPrivateIp = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/i.test(trimmed);
+            const isOnLocalhost = currentOrigin && /localhost|127\.0\.0\.1/i.test(currentOrigin);
+            
+            // Если приватный IP и мы на localhost - используем путь для проксирования
+            if (isPrivateIp && isOnLocalhost) {
+                return parsed.pathname + parsed.search;
+            }
+            return trimmed;
+        } catch {
+            return trimmed;
+        }
+    }
+    
+    // Относительные URL - оставляем как есть (будут проксироваться)
+    return trimmed;
 };
 
 type LeafletNS = any;
@@ -266,13 +286,13 @@ const WebMapComponent = ({
             return;
         }
 
-        // Обновляем локальные маркеры только при реальных изменениях извне
+        // Проверяем изменения маркеров относительно последнего известного состояния
         const markersChanged =
             markers.length !== lastMarkersRef.current.length ||
             markers.some((m, idx) => {
                 const prev = lastMarkersRef.current[idx];
+                if (!prev) return true;
                 return (
-                    !prev ||
                     m.lat !== prev.lat ||
                     m.lng !== prev.lng ||
                     m.address !== prev.address ||
@@ -284,10 +304,25 @@ const WebMapComponent = ({
 
         if (markersChanged) {
             const prevLen = prevExternalLengthRef.current;
-            setLocalMarkers(markers);
-            lastMarkersRef.current = markers;
+            
+            // ✅ FIX: Используем функциональное обновление чтобы получить актуальное локальное состояние
+            // без добавления localMarkers в зависимости (избегаем бесконечного цикла)
+            setLocalMarkers(currentLocalMarkers => {
+                const mergedMarkers = markers.map((m, idx) => {
+                    const localMarker = currentLocalMarkers[idx];
+                    // Сохраняем локальное blob/data превью только если внешний маркер не имеет изображения
+                    if (localMarker?.image && /^(blob:|data:)/i.test(localMarker.image)) {
+                        if (!m.image || m.image === '') {
+                            return { ...m, image: localMarker.image };
+                        }
+                    }
+                    return m;
+                });
+                lastMarkersRef.current = mergedMarkers;
+                return mergedMarkers;
+            });
 
-            // Если маркер добавлен извне (например, через поиск), делаем его активным и фокусируемся на нём
+            // Если маркер добавлен извне (например, через поиск), делаем его активным
             if (markers.length > prevLen) {
                 setActiveIndex(Math.max(0, markers.length - 1));
                 setIsExpanded(true);
@@ -295,7 +330,7 @@ const WebMapComponent = ({
 
             prevExternalLengthRef.current = markers.length;
         }
-    }, [markers]);
+    }, [markers]); // ✅ FIX: Убрали localMarkers из зависимостей
     
     // Немедленное обновление родительского компонента (без дебаунса)
     const debouncedMarkersChange = useCallback((updatedMarkers: any[]) => {
@@ -611,17 +646,31 @@ const WebMapComponent = ({
     const useMap: any = (rl as any).useMap;
     const useMapEvents: any = (rl as any).useMapEvents;
 
+    // ✅ FIX: Используем ref для отслеживания предыдущего activeIndex, чтобы не центрировать карту повторно
     const CenterOnActive = ({ activeIndex, markers }: { activeIndex: number | null; markers: any[] }) => {
         const map = useMap();
+        const prevActiveIndexRef = useRef<number | null>(null);
+        const hasCenteredRef = useRef<Set<number>>(new Set());
 
         useEffect(() => {
             if (activeIndex == null) return;
+            
+            // ✅ FIX: Центрируем только если activeIndex изменился И мы еще не центрировались на этом маркере
+            if (prevActiveIndexRef.current === activeIndex) return;
+            
             const marker = markers[activeIndex];
             if (!marker) return;
             const lat = Number(marker.lat);
             const lng = Number(marker.lng);
             if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
             if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+
+            prevActiveIndexRef.current = activeIndex;
+            
+            // ✅ FIX: Центрируем только один раз для каждого нового маркера
+            const markerKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+            if (hasCenteredRef.current.has(activeIndex)) return;
+            hasCenteredRef.current.add(activeIndex);
 
             const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : 13;
             const nextZoom = Math.max(currentZoom, 14);

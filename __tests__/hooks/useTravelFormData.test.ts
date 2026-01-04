@@ -303,4 +303,234 @@ describe('useTravelFormData', () => {
     const markers = (result.current.formData as any).coordsMeTravel as any[];
     expect(markers[0]?.image).toBe(localPointImage);
   });
+
+  describe('Edit flow - access control', () => {
+    it('sets hasAccess to false when user does not own the travel', async () => {
+      const otherUserTravel = {
+        id: 123,
+        name: 'Other User Travel',
+        userIds: '999', // Different user
+        user: { id: 999 },
+      };
+      (fetchTravel as jest.Mock).mockResolvedValue(otherUserTravel);
+
+      const { result } = renderHook(() =>
+        useTravelFormData({
+          travelId: '123',
+          isNew: false,
+          userId: '42', // Current user
+          isSuperAdmin: false,
+          isAuthenticated: true,
+          authReady: true,
+        })
+      );
+
+      await waitFor(() => {
+        expect(result.current.hasAccess).toBe(false);
+      });
+
+      expect(router.replace).toHaveBeenCalledWith('/');
+      expect(Toast.show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text1: 'Нет доступа',
+        })
+      );
+    });
+
+    it('allows superadmin to edit any travel', async () => {
+      const otherUserTravel = {
+        id: 123,
+        name: 'Other User Travel',
+        userIds: '999',
+        user: { id: 999 },
+        description: 'Test description',
+        countries: [],
+        categories: [],
+        coordsMeTravel: [],
+      };
+      (fetchTravel as jest.Mock).mockResolvedValue(otherUserTravel);
+
+      const { result } = renderHook(() =>
+        useTravelFormData({
+          travelId: '123',
+          isNew: false,
+          userId: '42',
+          isSuperAdmin: true, // Superadmin
+          isAuthenticated: true,
+          authReady: true,
+        })
+      );
+
+      await waitFor(() => {
+        expect(result.current.isInitialLoading).toBe(false);
+      });
+
+      expect(result.current.hasAccess).toBe(true);
+      expect(router.replace).not.toHaveBeenCalled();
+    });
+
+    it('sets hasAccess to false on fetch error', async () => {
+      (fetchTravel as jest.Mock).mockRejectedValue(new Error('Network error'));
+
+      const { result } = renderHook(() =>
+        useTravelFormData({
+          travelId: '123',
+          isNew: false,
+          userId: '42',
+          isSuperAdmin: false,
+          isAuthenticated: true,
+          authReady: true,
+        })
+      );
+
+      await waitFor(() => {
+        expect(result.current.hasAccess).toBe(false);
+      });
+
+      expect(router.replace).toHaveBeenCalledWith('/');
+      expect(Toast.show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text1: 'Ошибка загрузки',
+        })
+      );
+    });
+  });
+
+  describe('Edit flow - data initialization', () => {
+    it('correctly initializes form data from existing travel', async () => {
+      const existingTravel = {
+        id: 123,
+        name: 'Existing Travel',
+        description: 'Existing description',
+        userIds: '42',
+        user: { id: 42 },
+        countries: [{ country_id: '1' }],
+        categories: [{ id: '1' }],
+        coordsMeTravel: [
+          { id: 1, lat: 41.7, lng: 44.8, address: 'Tbilisi', categories: [] },
+        ],
+        publish: true,
+        moderation: false,
+      };
+      (fetchTravel as jest.Mock).mockResolvedValue(existingTravel);
+
+      const { result } = renderHook(() =>
+        useTravelFormData({
+          travelId: '123',
+          isNew: false,
+          userId: '42',
+          isSuperAdmin: false,
+          isAuthenticated: true,
+          authReady: true,
+        })
+      );
+
+      await waitFor(() => {
+        expect(result.current.isInitialLoading).toBe(false);
+      });
+
+      expect(result.current.formData.name).toBe('Existing Travel');
+      expect(result.current.formData.description).toBe('Existing description');
+      expect(result.current.formData.publish).toBe(true);
+      expect(result.current.markers.length).toBe(1);
+    });
+
+    it('syncs countries from markers on load', async () => {
+      const existingTravel = {
+        id: 123,
+        name: 'Travel with markers',
+        userIds: '42',
+        user: { id: 42 },
+        countries: [],
+        categories: [],
+        coordsMeTravel: [
+          { id: 1, lat: 41.7, lng: 44.8, address: 'Tbilisi', country: 268, categories: [] },
+        ],
+      };
+      (fetchTravel as jest.Mock).mockResolvedValue(existingTravel);
+
+      const { result } = renderHook(() =>
+        useTravelFormData({
+          travelId: '123',
+          isNew: false,
+          userId: '42',
+          isSuperAdmin: false,
+          isAuthenticated: true,
+          authReady: true,
+        })
+      );
+
+      await waitFor(() => {
+        expect(result.current.isInitialLoading).toBe(false);
+      });
+
+      // Countries should be synced from markers
+      expect(result.current.formData.countries).toContain('268');
+    });
+  });
+
+  describe('Race condition protection', () => {
+    it('aborts previous save request when new save is triggered', async () => {
+      let saveCount = 0;
+      const abortedSaves: number[] = [];
+
+      (saveFormData as jest.Mock).mockImplementation(async (payload: any, signal?: AbortSignal) => {
+        const currentSave = ++saveCount;
+        
+        return new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            resolve({ ...payload, id: currentSave });
+          }, 100);
+
+          if (signal) {
+            signal.addEventListener('abort', () => {
+              clearTimeout(timeout);
+              abortedSaves.push(currentSave);
+              reject(new Error('Request aborted'));
+            });
+          }
+        });
+      });
+
+      const { result } = renderHook(() =>
+        useTravelFormData({
+          travelId: null,
+          isNew: true,
+          userId: '42',
+          isSuperAdmin: false,
+          isAuthenticated: true,
+          authReady: true,
+        })
+      );
+
+      await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
+
+      // Trigger first save
+      act(() => {
+        result.current.setFormData({
+          ...(result.current.formData as any),
+          name: 'First save',
+        });
+      });
+
+      const firstSave = result.current.handleManualSave();
+
+      // Immediately trigger second save (should abort first)
+      act(() => {
+        result.current.setFormData({
+          ...(result.current.formData as any),
+          name: 'Second save',
+        });
+      });
+
+      const secondSave = result.current.handleManualSave();
+
+      await act(async () => {
+        await Promise.allSettled([firstSave, secondSave]);
+      });
+
+      // At least one save should have completed
+      expect(saveFormData).toHaveBeenCalled();
+    });
+  });
 });

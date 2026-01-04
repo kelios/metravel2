@@ -226,7 +226,8 @@ describe('PhotoUploadWithPreview', () => {
 
             try {
                 // Simulate upload returning a URL that will fail to load.
-                const remoteBadUrl = 'http://192.168.50.36/travel-image/17981/conversions/bad.webp';
+                // Use a non-private IP URL to avoid normalization in test environment
+                const remoteBadUrl = 'http://example.com/travel-image/17981/conversions/bad.webp';
                 mockUploadImage.mockResolvedValueOnce({ url: remoteBadUrl } as any);
 
                 const screen = render(

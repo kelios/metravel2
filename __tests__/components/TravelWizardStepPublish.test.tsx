@@ -337,4 +337,109 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
             expect(queryByText(/Панель модератора|Панель администратора/)).toBeNull();
         });
     });
+
+    describe('✅ Синхронизация статуса при редактировании (FIX)', () => {
+        it('должен синхронизировать status при изменении formData.publish', () => {
+            const { rerender, getByText, getAllByText } = render(
+                <TravelWizardStepPublish
+                    {...defaultProps}
+                    formData={{
+                        ...defaultProps.formData,
+                        publish: false,
+                        moderation: false,
+                    }}
+                />
+            );
+
+            // Изначально должен быть черновик
+            expect(getByText('Сохранить как черновик')).toBeTruthy();
+
+            // Перерендерим с publish: true (как при редактировании существующего)
+            rerender(
+                <TravelWizardStepPublish
+                    {...defaultProps}
+                    formData={{
+                        ...defaultProps.formData,
+                        publish: true,
+                        moderation: false,
+                    }}
+                />
+            );
+
+            // Статус должен обновиться на "Отправлено на модерацию"
+            // Используем getAllByText т.к. текст может появляться в нескольких местах
+            const elements = getAllByText(/Отправлено на модерацию/);
+            expect(elements.length).toBeGreaterThan(0);
+        });
+
+        it('должен синхронизировать status при изменении formData.moderation', () => {
+            const { rerender, getByText } = render(
+                <TravelWizardStepPublish
+                    {...defaultProps}
+                    formData={{
+                        ...defaultProps.formData,
+                        publish: false,
+                        moderation: false,
+                    }}
+                />
+            );
+
+            // Перерендерим с moderation: true (опубликовано)
+            rerender(
+                <TravelWizardStepPublish
+                    {...defaultProps}
+                    formData={{
+                        ...defaultProps.formData,
+                        publish: true,
+                        moderation: true,
+                    }}
+                />
+            );
+
+            // Должен показать статус "Опубликовано"
+            expect(getByText('Опубликовано')).toBeTruthy();
+        });
+
+        it('должен корректно инициализировать статус при редактировании опубликованного путешествия', () => {
+            const { getByText } = render(
+                <TravelWizardStepPublish
+                    {...defaultProps}
+                    formData={{
+                        ...defaultProps.formData,
+                        publish: true,
+                        moderation: true,
+                    }}
+                />
+            );
+
+            // При редактировании опубликованного - статус должен быть "moderation"
+            expect(getByText('Опубликовано')).toBeTruthy();
+        });
+    });
+
+    describe('✅ Защита от двойных действий', () => {
+        it('не должен вызывать onManualSave дважды при быстром двойном клике', async () => {
+            const mockOnManualSave = jest.fn().mockImplementation(() => 
+                new Promise(resolve => setTimeout(resolve, 100))
+            );
+
+            const { getByText } = render(
+                <TravelWizardStepPublish
+                    {...defaultProps}
+                    onManualSave={mockOnManualSave}
+                />
+            );
+
+            const publishButton = getByText('Сохранить');
+            
+            // Быстрый двойной клик
+            fireEvent.press(publishButton);
+            fireEvent.press(publishButton);
+
+            await waitFor(() => {
+                // Должен быть вызван только один раз благодаря actionPendingRef
+                expect(mockOnManualSave).toHaveBeenCalledTimes(1);
+            });
+        });
+    });
 });

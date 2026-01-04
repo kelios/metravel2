@@ -179,4 +179,57 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
+// ✅ Проксирование запросов к API для изображений в dev режиме
+// Это позволяет загружать изображения с бэкенда через localhost
+const http = require('http');
+const https = require('https');
+const url = require('url');
+
+config.server = {
+  ...config.server,
+  enhanceMiddleware: (middleware) => {
+    return (req, res, next) => {
+      // Проксируем запросы к изображениям на API сервер
+      const imagePaths = ['/travel-image/', '/address-image/', '/gallery/', '/uploads/', '/media/'];
+      const shouldProxy = imagePaths.some(p => req.url && req.url.startsWith(p));
+      
+      if (shouldProxy) {
+        const apiUrl = process.env.EXPO_PUBLIC_API_URL || '';
+        if (apiUrl) {
+          const apiBase = apiUrl.replace(/\/api\/?$/, '');
+          const targetUrl = apiBase + req.url;
+          
+          const parsedUrl = url.parse(targetUrl);
+          const httpModule = parsedUrl.protocol === 'https:' ? https : http;
+          
+          const proxyReq = httpModule.request({
+            hostname: parsedUrl.hostname,
+            port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+            path: parsedUrl.path,
+            method: req.method,
+            headers: {
+              ...req.headers,
+              host: parsedUrl.host,
+            },
+          }, (proxyRes) => {
+            res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+            proxyRes.pipe(res);
+          });
+          
+          proxyReq.on('error', (err) => {
+            console.error('[Metro Proxy] Error:', err.message);
+            res.writeHead(502);
+            res.end('Proxy Error');
+          });
+          
+          req.pipe(proxyReq);
+          return;
+        }
+      }
+      
+      return middleware(req, res, next);
+    };
+  },
+};
+
 module.exports = config
