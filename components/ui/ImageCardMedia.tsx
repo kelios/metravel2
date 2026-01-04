@@ -70,7 +70,7 @@ function ImageCardMedia({
   const contentFit: ImageContentFit = fit === 'cover' ? 'cover' : 'contain';
   const webImageProps = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
-    return { crossOrigin: 'anonymous' as const };
+    return {};
   }, []);
 
   useEffect(() => {
@@ -88,7 +88,6 @@ function ImageCardMedia({
     link.rel = 'prefetch';
     link.as = 'image';
     link.href = src;
-    link.crossOrigin = 'anonymous';
     document.head.appendChild(link);
 
     return () => {

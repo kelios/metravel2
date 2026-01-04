@@ -68,6 +68,23 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
         jest.clearAllMocks();
     });
 
+    const getChecklistCounterText = (getAllByText: (text: any) => any[]) => {
+        const candidates = getAllByText(/\d+\/\d+/);
+        const exact = candidates
+            .map(node => {
+                const children = node.props?.children;
+                const raw = Array.isArray(children) ? children.join('') : String(children);
+                return raw.replace(/\s+/g, '').trim();
+            })
+            .filter(text => /^\d+\/\d+$/.test(text));
+
+        if (exact.length === 0) {
+            throw new Error('Checklist counter (N/M) not found');
+        }
+
+        return exact[exact.length - 1];
+    };
+
     describe('✅ Отображение компонентов', () => {
         it('должен отображать заголовок шага', () => {
             const { getByText } = render(<TravelWizardStepPublish {...defaultProps} />);
@@ -207,14 +224,15 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
 
     describe('✅ Счетчик готовности', () => {
         it('должен показать прогресс чеклиста (N/M)', () => {
-            const { getByText } = render(<TravelWizardStepPublish {...defaultProps} />);
+            const { getAllByText } = render(<TravelWizardStepPublish {...defaultProps} />);
 
-            // Ищем счетчик в формате "3/6" или подобном
-            expect(getByText(/\d+\/\d+/)).toBeTruthy();
+            // Ищем именно счетчик вида "N/M" (без "Шаг 6/6")
+            const counterText = getChecklistCounterText(getAllByText);
+            expect(counterText).toMatch(/^\d+\/\d+$/);
         });
 
         it('должен обновлять счетчик при изменении данных', () => {
-            const { getByText, rerender } = render(
+            const { getAllByText, rerender } = render(
                 <TravelWizardStepPublish
                     {...defaultProps}
                     formData={{
@@ -223,6 +241,8 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
                     }}
                 />
             );
+
+            const beforeCount = getChecklistCounterText(getAllByText);
 
             rerender(
                 <TravelWizardStepPublish
@@ -234,9 +254,8 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
                 />
             );
 
-            const afterCount = getByText(/\d+\/\d+/).children[0];
-            // Счетчик должен измениться
-            expect(afterCount).toBeDefined();
+            const afterCount = getChecklistCounterText(getAllByText);
+            expect(afterCount).not.toEqual(beforeCount);
         });
     });
 

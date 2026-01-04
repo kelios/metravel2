@@ -1,5 +1,6 @@
 import { test, expect, request } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 
 const e2eEmail = process.env.E2E_EMAIL;
 const e2ePassword = process.env.E2E_PASSWORD;
@@ -15,6 +16,46 @@ const simpleEncrypt = (text: string, key: string): string => {
   return Buffer.from(result, 'binary').toString('base64');
 };
 
+const maybeMockTravelFilters = async (page: Page) => {
+  if (USE_REAL_API) return;
+
+  const payload = {
+    countries: [
+      { country_id: '250', title_ru: 'Франция' },
+      { country_id: '268', title_ru: 'Грузия' },
+      { country_id: '643', title_ru: 'Россия' },
+    ],
+    categories: [{ id: '1', name: 'Город' }],
+    transports: [{ id: '1', name: 'Авто' }],
+    companions: [{ id: '1', name: 'Соло' }],
+    complexity: [{ id: '1', name: 'Легко' }],
+    month: [{ id: '1', name: 'Январь' }],
+    over_nights_stay: [{ id: '1', name: 'Отель' }],
+    year: [{ id: '2026', name: '2026' }],
+    categoryTravelAddress: [
+      { id: '1', name: 'Башня' },
+      { id: '2', name: 'Ресторан' },
+    ],
+  };
+
+  const patterns = [
+    '**/api/getFiltersTravel/**',
+    '**/api/getFiltersTravel/',
+    '**/getFiltersTravel/**',
+    '**/getFiltersTravel/',
+  ];
+
+  for (const pattern of patterns) {
+    await page.route(pattern, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(payload),
+      });
+    });
+  }
+};
+
 const ensureAuthedStorageFallback = async (page: Page) => {
   const encrypted = simpleEncrypt('e2e-fake-token', 'metravel_encryption_key_v1');
   await page.evaluate((payload) => {
@@ -27,6 +68,8 @@ const ensureAuthedStorageFallback = async (page: Page) => {
       // ignore
     }
   }, { encrypted, userId: '1', userName: 'E2E User', isSuperuser: 'false' });
+
+  return true;
 };
 
 const maybeMockNominatimSearch = async (page: Page) => {
@@ -392,6 +435,7 @@ test.describe('Создание путешествия - Полный flow', () 
       }
     });
     await maybeMockTravelUpsert(page);
+    await maybeMockTravelFilters(page);
     await maybeMockNominatimSearch(page);
     await maybeLogin(page);
     await page.goto('/');
@@ -990,5 +1034,97 @@ test.describe('Адаптивность (Mobile)', () => {
     ]);
     expect(anyVisible.some(Boolean)).toBeTruthy();
     await expect(page.locator('text=/Далее: Маршрут/')).toBeVisible();
+  });
+});
+
+test.describe('Регрессии: web стабильность wizard', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.removeItem('metravel_travel_draft_new');
+        Object.keys(window.localStorage)
+          .filter((k) => k.startsWith('metravel_travel_draft_'))
+          .forEach((k) => window.localStorage.removeItem(k));
+      } catch {
+        // ignore
+      }
+    });
+    await maybeMockTravelUpsert(page);
+    await maybeMockTravelFilters(page);
+    await maybeMockNominatimSearch(page);
+    await maybeLogin(page);
+  });
+
+  test('не должен логировать Maximum update depth при выборе места через поиск', async ({ page }) => {
+    const guard = installNoConsoleErrorsGuard(page);
+
+    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
+    if (!(await ensureCanCreateTravel(page))) return;
+
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('E2E: depth regression');
+    await fillRichDescription(page, 'Описание для e2e: достаточно длинное, чтобы пройти шаг 1. '.repeat(3));
+    await clickNext(page);
+    await ensureOnStep2(page);
+    await maybeDismissRouteCoachmark(page);
+
+    await page.fill('[placeholder*="Поиск места"]', 'Париж');
+    const paris = page.locator('text=/Париж/i').first();
+    await paris.waitFor({ state: 'visible', timeout: 10_000 });
+    await paris.click();
+
+    await expect(page.getByText(/Точек:\s*1/)).toBeVisible({ timeout: 10_000 });
+    guard.assertNoErrorsContaining('Maximum update depth exceeded');
+  });
+
+  test('превью должно открываться на шаге 2 (иконка глаз)', async ({ page }) => {
+    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
+    if (!(await ensureCanCreateTravel(page))) return;
+
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('E2E: preview from step 2');
+    await fillRichDescription(page, 'Описание для e2e: достаточно длинное, чтобы пройти шаг 1. '.repeat(3));
+    await clickNext(page);
+    await ensureOnStep2(page);
+
+    await page.locator('[aria-label="Показать превью"]').first().click({ timeout: 10_000 });
+    const dialog = page.getByText('Превью карточки', { exact: true });
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+
+    await page.locator('[aria-label="Закрыть превью"]').first().click({ timeout: 10_000 });
+    await expect(dialog).toBeHidden({ timeout: 10_000 });
+  });
+
+  test('выбор категории точки должен отображаться после закрытия модалки', async ({ page }) => {
+    const guard = installNoConsoleErrorsGuard(page);
+
+    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
+    if (!(await ensureCanCreateTravel(page))) return;
+
+    await page.getByPlaceholder('Например: Неделя в Грузии').fill('E2E: point category select');
+    await fillRichDescription(page, 'Описание для e2e: достаточно длинное, чтобы пройти шаг 1. '.repeat(3));
+    await clickNext(page);
+    await ensureOnStep2(page);
+    await maybeDismissRouteCoachmark(page);
+
+    await page.fill('[placeholder*="Поиск места"]', 'Эйф');
+    const firstResult = page.locator('text=/Париж|Эйф|Франция/i').first();
+    await firstResult.waitFor({ state: 'visible', timeout: 10_000 });
+    await firstResult.click();
+    await expect(page.getByText(/Точек:\s*1/)).toBeVisible({ timeout: 10_000 });
+
+    const editButton = page.getByText('Редактировать', { exact: true }).first();
+    await editButton.waitFor({ state: 'visible', timeout: 10_000 });
+    await editButton.click();
+
+    await page.getByText('Категории точки', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+    const categoriesTrigger = page.getByText('Выберите...', { exact: true }).first();
+    await categoriesTrigger.click({ timeout: 10_000 });
+
+    const tower = page.getByText('Башня', { exact: true }).first();
+    await tower.waitFor({ state: 'visible', timeout: 10_000 });
+    await tower.click();
+    await page.getByText('Готово', { exact: true }).click({ timeout: 10_000 });
+
+    await expect(page.getByText('Башня', { exact: true }).first()).toBeVisible({ timeout: 10_000 });
+    guard.assertNoErrorsContaining('Maximum update depth exceeded');
   });
 });

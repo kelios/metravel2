@@ -478,7 +478,15 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
 
                         const hasCategories = marker.categories && marker.categories.length > 0;
                         const categoriesLabel = hasCategories
-                            ? `${marker.categories.length} ${marker.categories.length === 1 ? 'категория' : 'категории'}`
+                            ? (marker.categories
+                                  .map((catId: any) => {
+                                      const targetId = String(catId);
+                                      const found = categoryTravelAddress.find((c: any) => String(c.id) === targetId);
+                                      return found?.name ?? null;
+                                  })
+                                  .filter(Boolean)
+                                  .slice(0, 2)
+                                  .join(', ') || 'Категории выбраны')
                             : 'Категории не выбраны';
                         // Проверяем, что image не пустая строка
                         const hasImage = marker.image && marker.image.trim().length > 0;
@@ -614,9 +622,18 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
 
     if (typeof document === 'undefined') return null;
 
-    const handleSave = () => {
+    const persistEdits = () => {
         handleMarkerChange(index, 'address', address);
         handleMarkerChange(index, 'categories', categories);
+    };
+
+    const handleClose = () => {
+        persistEdits();
+        onClose();
+    };
+
+    const handleSave = () => {
+        persistEdits();
         onClose();
     };
 
@@ -630,7 +647,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
 
     return ReactDOM.createPortal(
         <div style={styles.modalOverlay}>
-            <div style={styles.modalBackdrop} onClick={onClose} />
+            <div style={styles.modalBackdrop} onClick={handleClose} />
             <div style={styles.modalContent}>
                 <div style={styles.editForm}>
                     <div style={styles.editHeader}>
@@ -640,7 +657,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                         </div>
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={handleClose}
                             style={styles.closeIconButton}
                         >
                             ×
@@ -671,7 +688,11 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                             label=""
                             items={normalizedCategoryItems}
                             value={categories}
-                            onChange={(selected: any) => setCategories(normalizeCategories(selected as any[]))}
+                            onChange={(selected: any) => {
+                                const next = normalizeCategories(selected as any[]);
+                                setCategories(next);
+                                handleMarkerChange(index, 'categories', next);
+                            }}
                             labelField="name"
                             valueField="id"
                             placeholder="Выберите..."
@@ -715,7 +736,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                             </button>
                             <button
                                 type="button"
-                                onClick={onClose}
+                                onClick={handleClose}
                                 style={styles.secondaryButton}
                             >
                                 Отмена

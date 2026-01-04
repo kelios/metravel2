@@ -8,7 +8,6 @@ import { useRouter } from 'expo-router';
 import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
 import { TravelFormData } from '@/src/types/types';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
-import TravelPreviewModal from '@/components/travel/TravelPreviewModal';
 import { ValidatedTextInput } from '@/components/travel/ValidatedTextInput';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
@@ -17,7 +16,6 @@ import { useStepTransition } from '@/hooks/useStepTransition';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useTravelPreview } from '@/hooks/useTravelPreview';
 
 const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
 const isMobileDefault = windowWidth <= METRICS.breakpoints.tablet;
@@ -50,6 +48,7 @@ interface TravelWizardStepBasicProps {
     progress?: number;
     onStepSelect?: (step: number) => void;
     redirectDelayMs?: number;
+    onPreview?: () => void;
 }
 
 const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
@@ -73,6 +72,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     progress = currentStep / totalSteps,
     onStepSelect,
     redirectDelayMs = 500,
+    onPreview,
 }) => {
     const colors = useThemedColors();
     const router = useRouter();
@@ -80,12 +80,6 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     const progressPercent = Math.round(progressValue * 100);
 
     const [hasUserEdited, setHasUserEdited] = useState(false);
-
-    // ✅ ФАЗА 2: Hook для управления превью
-    const previewState = useTravelPreview();
-    const isPreviewVisible = previewState?.isPreviewVisible ?? false;
-    const showPreview = previewState?.showPreview ?? (() => {});
-    const hidePreview = previewState?.hidePreview ?? (() => {});
 
     // ✅ ФАЗА 2: Анимация переходов
     const { animatedStyle: stepAnimatedStyle } = useStepTransition({
@@ -184,7 +178,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                     currentStep={currentStep}
                     totalSteps={totalSteps}
                     onStepSelect={onStepSelect}
-                    onPreview={showPreview}
+                    onPreview={onPreview}
                 />
                 {shouldShowValidationSummary && (
                     <View style={styles.validationSummaryWrapper}>
@@ -230,12 +224,6 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                     {snackbarMessage}
                 </Snackbar>
 
-                {/* ✅ ФАЗА 2: Превью карточки */}
-                <TravelPreviewModal
-                    visible={isPreviewVisible}
-                    onClose={hidePreview}
-                    formData={formData}
-                />
             </KeyboardAvoidingView>
         </SafeAreaView>
     );

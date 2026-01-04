@@ -37,6 +37,7 @@ interface TravelWizardStepPublishProps {
     };
     progress?: number;
     autosaveBadge?: string;
+    onPreview?: () => void;
 }
 
 const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
@@ -53,6 +54,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     stepMeta,
     progress = currentStep / totalSteps,
     autosaveBadge,
+    onPreview,
 }) => {
     const colors = useThemedColors();
     const router = useRouter();
@@ -404,6 +406,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     currentStep={currentStep}
                     totalSteps={totalSteps}
                     onStepSelect={onStepSelect}
+                    onPreview={onPreview}
                 />
                 <ScrollView
                     style={styles.content}

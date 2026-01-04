@@ -85,6 +85,7 @@ const normalizeDisplayUrl = (value: string): string => {
 
 interface GalleryItem {
     id: string;
+    stableKey?: string;
     url: string;
     isUploading?: boolean;
     uploadProgress?: number;
@@ -126,6 +127,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
         if (initialImagesProp?.length) {
             setImages(initialImagesProp.map((img) => ({ 
                 ...img, 
+                stableKey: (img as any).stableKey ?? String(img.id),
                 url: normalizeDisplayUrl(img.url),
                 isUploading: false,
                 uploadProgress: 0,
@@ -179,6 +181,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                 
                 return {
                     id: tempId,
+                    stableKey: tempId,
                     url: tempUrl,
                     isUploading: true,
                     uploadProgress: 0,
@@ -220,8 +223,8 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                         
                         setImages(prev =>
                             prev.map(img => 
-                                img.id === placeholder.id 
-                                    ? { id: String(uploadedId), url: finalUrl, isUploading: false, uploadProgress: 100, error: null }
+                                img.stableKey === placeholder.stableKey
+                                    ? { ...img, id: String(uploadedId), url: finalUrl, isUploading: false, uploadProgress: 100, error: null }
                                     : img
                             )
                         );
@@ -232,7 +235,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                     console.error('Upload error:', error);
                     setImages(prev =>
                         prev.map(img => 
-                            img.id === placeholder.id 
+                            img.stableKey === placeholder.stableKey
                                 ? { ...img, isUploading: false, error: 'Ошибка загрузки' }
                                 : img
                         )
@@ -264,16 +267,16 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
         };
     }, [getRootProps]);
 
-    const handleDeleteImage = (imageId: string) => {
-        setSelectedImageId(imageId);
+    const handleDeleteImage = (stableKey: string) => {
+        setSelectedImageId(stableKey);
         setDialogVisible(true);
     };
 
-    const handleImageError = useCallback((imageId: string, currentUrl: string) => {
-        if (retryRef.current.has(imageId)) {
+    const handleImageError = useCallback((stableKey: string, currentUrl: string) => {
+        if (retryRef.current.has(stableKey)) {
             setImages(prev =>
                 prev.map(img =>
-                    img.id === imageId ? { ...img, isUploading: false, error: 'Ошибка загрузки' } : img
+                    (img.stableKey ?? img.id) === stableKey ? { ...img, isUploading: false, error: 'Ошибка загрузки' } : img
                 )
             );
             return;
@@ -281,28 +284,28 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
 
         const fallback = buildApiPrefixedUrl(currentUrl);
         if (fallback) {
-            retryRef.current.add(imageId);
+            retryRef.current.add(stableKey);
             setImages(prev =>
                 prev.map(img =>
-                    img.id === imageId ? { ...img, url: fallback, isUploading: false, error: null } : img
+                    (img.stableKey ?? img.id) === stableKey ? { ...img, url: fallback, isUploading: false, error: null } : img
                 )
             );
             return;
         }
 
-        retryRef.current.add(imageId);
+        retryRef.current.add(stableKey);
         setImages(prev =>
             prev.map(img =>
-                img.id === imageId ? { ...img, isUploading: false, error: 'Ошибка загрузки' } : img
+                (img.stableKey ?? img.id) === stableKey ? { ...img, isUploading: false, error: 'Ошибка загрузки' } : img
             )
         );
     }, []);
 
-    const handleImageLoad = useCallback((imageId: string) => {
-        retryRef.current.delete(imageId);
+    const handleImageLoad = useCallback((stableKey: string) => {
+        retryRef.current.delete(stableKey);
         setImages(prev =>
             prev.map(img =>
-                img.id === imageId ? { ...img, error: null, isUploading: false, hasLoaded: true } : img
+                (img.stableKey ?? img.id) === stableKey ? { ...img, error: null, isUploading: false, hasLoaded: true } : img
             )
         );
     }, []);
@@ -313,9 +316,10 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
             .filter(img => !img.isUploading && !img.error && !img.hasLoaded)
             .map(img =>
                 setTimeout(() => {
+                    const stableKey = img.stableKey ?? img.id;
                     setImages(prev =>
                         prev.map(item =>
-                            item.id === img.id
+                            (item.stableKey ?? item.id) === stableKey
                                 ? { ...item, error: 'Ошибка загрузки', isUploading: false }
                                 : item
                         )
@@ -330,12 +334,12 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     const confirmDeleteImage = async () => {
         if (!selectedImageId) return;
         
-        const imageToDelete = images.find(img => img.id === selectedImageId);
+        const imageToDelete = images.find(img => (img.stableKey ?? img.id) === selectedImageId);
         
         try {
             // Only call API if it's not a temp/failed upload
-            if (imageToDelete && !imageToDelete.error && !selectedImageId.startsWith('temp-')) {
-                await deleteImage(selectedImageId);
+            if (imageToDelete && !imageToDelete.error && !imageToDelete.id.startsWith('temp-')) {
+                await deleteImage(imageToDelete.id);
             }
             
             // Cleanup blob URL if exists
@@ -344,7 +348,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                 blobUrlsRef.current.delete(imageToDelete.url);
             }
             
-            setImages(prev => prev.filter(img => img.id !== selectedImageId));
+            setImages(prev => prev.filter(img => (img.stableKey ?? img.id) !== selectedImageId));
         } catch (error) {
             console.error('Delete error:', error);
             alert('Не удалось удалить изображение');
@@ -428,7 +432,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
             ) : images.length > 0 ? (
                 <View style={styles.galleryGrid}>
                     {images.map((image, index) => (
-                        <View key={image.id} style={styles.imageWrapper} testID="gallery-image">
+                        <View key={image.stableKey ?? image.id} style={styles.imageWrapper} testID="gallery-image">
                             {image.isUploading ? (
                                 <View style={styles.uploadingImageContainer}>
                                     <ImageCardMedia
@@ -438,15 +442,15 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         loading="eager"
                                         alt={`Uploading ${index + 1}`}
                                         style={styles.image}
-                                        onError={() => handleImageError(image.id, image.url)}
-                                        onLoad={() => handleImageLoad(image.id)}
+                                        onError={() => handleImageError(image.stableKey ?? image.id, image.url)}
+                                        onLoad={() => handleImageLoad(image.stableKey ?? image.id)}
                                     />
                                     <View style={styles.uploadingOverlayImage}>
                                         <ActivityIndicator size="large" color={colors.textInverse} />
                                         <Text style={[styles.uploadingImageText, { color: colors.textInverse }]}>Загрузка...</Text>
                                     </View>
                                     <TouchableOpacity
-                                        onPress={() => handleDeleteImage(image.id)}
+                                        onPress={() => handleDeleteImage(image.stableKey ?? image.id)}
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
@@ -462,14 +466,14 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         loading="lazy"
                                         alt={`Error ${index + 1}`}
                                         style={[styles.image, styles.errorImage]}
-                                        onError={() => handleImageError(image.id, image.url)}
-                                        onLoad={() => handleImageLoad(image.id)}
+                                        onError={() => handleImageError(image.stableKey ?? image.id, image.url)}
+                                        onLoad={() => handleImageLoad(image.stableKey ?? image.id)}
                                     />
                                     <View style={styles.errorOverlay}>
                                         <MaterialIcons name="warning-amber" size={24} color={colors.warningDark} />
                                         <Text style={[styles.errorOverlaySubtext, { color: colors.warningDark }]}>{image.error}</Text>
                                         <TouchableOpacity
-                                            onPress={() => handleDeleteImage(image.id)}
+                                            onPress={() => handleDeleteImage(image.stableKey ?? image.id)}
                                             style={[styles.errorActionButton, { backgroundColor: colors.primary }]}
                                             testID="delete-image-button"
                                         >
@@ -477,7 +481,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         </TouchableOpacity>
                                     </View>
                                     <TouchableOpacity
-                                        onPress={() => handleDeleteImage(image.id)}
+                                        onPress={() => handleDeleteImage(image.stableKey ?? image.id)}
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
@@ -493,11 +497,11 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         loading="lazy"
                                         alt={`Gallery image ${index + 1}`}
                                         style={styles.image}
-                                        onError={() => handleImageError(image.id, image.url)}
-                                        onLoad={() => handleImageLoad(image.id)}
+                                        onError={() => handleImageError(image.stableKey ?? image.id, image.url)}
+                                        onLoad={() => handleImageLoad(image.stableKey ?? image.id)}
                                     />
                                     <TouchableOpacity
-                                        onPress={() => handleDeleteImage(image.id)}
+                                        onPress={() => handleDeleteImage(image.stableKey ?? image.id)}
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >

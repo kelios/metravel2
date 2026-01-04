@@ -34,6 +34,7 @@ interface TravelWizardStepExtrasProps {
     focusAnchorId?: string | null;
     onAnchorHandled?: () => void;
     onStepSelect?: (step: number) => void;
+    onPreview?: () => void;
 }
 
 const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
@@ -53,6 +54,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
     focusAnchorId,
     onAnchorHandled,
     onStepSelect,
+    onPreview,
 }) => {
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const progressValue = Math.min(Math.max(progress, 0), 1);
@@ -169,6 +171,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                     currentStep={currentStep}
                     totalSteps={totalSteps}
                     onStepSelect={onStepSelect}
+                    onPreview={onPreview}
                 />
                 {validation.warnings.length > 0 && (
                     <View style={styles.validationSummaryWrapper}>

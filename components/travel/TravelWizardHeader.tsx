@@ -290,7 +290,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                 </View>
 
                 <View style={styles.belowProgressRight}>
-                    {Platform.OS === 'web' ? PrimaryAction : null}
+                    {PrimaryAction}
                 </View>
             </View>
 
@@ -567,14 +567,30 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: DESIGN_TOKENS.spacing.sm,
+        gap: DESIGN_TOKENS.spacing.md,
     },
     belowProgressLeft: {
         flex: 1,
         minWidth: 0,
     },
     belowProgressRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
         flexShrink: 0,
+    },
+    webActionsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: DESIGN_TOKENS.spacing.xs,
+        flexWrap: 'wrap',
+    },
+    milestonesInlineWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.xs,
+        flexWrap: 'wrap',
     },
     tipPanel: {
         marginTop: DESIGN_TOKENS.spacing.sm,
@@ -603,12 +619,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginTop: DESIGN_TOKENS.spacing.sm,
         marginBottom: DESIGN_TOKENS.spacing.xs,
         paddingHorizontal: 4,
-    },
-    milestonesInlineWrapper: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        flexWrap: 'wrap',
     },
     milestoneInline: {
         alignItems: 'center',

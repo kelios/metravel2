@@ -277,6 +277,23 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       if (!mountedRef.current) return;
 
       const normalizedSavedData = normalizeDraftPlaceholders(savedData);
+      const currentDataSnapshot = formState.data as TravelFormData;
+
+      const keepCurrentIfServerEmpty = <K extends keyof TravelFormData>(key: K) => {
+        const serverValue = normalizedSavedData[key];
+        const currentValue = currentDataSnapshot[key];
+        if (typeof serverValue === 'string' && serverValue.trim().length === 0) {
+          if (typeof currentValue === 'string' && currentValue.trim().length > 0) {
+            (normalizedSavedData as any)[key] = currentValue;
+          }
+        }
+      };
+
+      // If backend returns placeholders/empty strings for rich text fields, don't wipe user input.
+      keepCurrentIfServerEmpty('description');
+      keepCurrentIfServerEmpty('plus');
+      keepCurrentIfServerEmpty('minus');
+      keepCurrentIfServerEmpty('recommendation');
       const markersFromResponse = Array.isArray(normalizedSavedData.coordsMeTravel)
         ? (normalizedSavedData.coordsMeTravel as any)
         : [];

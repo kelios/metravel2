@@ -29,6 +29,17 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
+  const safeChildren = useMemo(
+    () =>
+      React.Children.map(children, (child, index) => {
+        if (typeof child === 'string' || typeof child === 'number') {
+          return <Text key={index}>{child}</Text>;
+        }
+        return child;
+      }),
+    [children]
+  );
+
   const toggleOpen = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setOpen(!open);
@@ -64,7 +75,11 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           color={colors.textMuted}
         />
       </Pressable>
-      {open && <View style={styles.collapsibleContent} testID={`collapsible-content-${title}`}>{children}</View>}
+      {open && (
+        <View style={styles.collapsibleContent} testID={`collapsible-content-${title}`}>
+          {safeChildren}
+        </View>
+      )}
     </View>
   );
 };

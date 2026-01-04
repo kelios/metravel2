@@ -28,6 +28,7 @@ interface TravelWizardStepDetailsProps {
     progress?: number;
     autosaveBadge?: string;
     onStepSelect?: (step: number) => void;
+    onPreview?: () => void;
 }
 
 const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
@@ -42,6 +43,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
     progress = currentStep / totalSteps,
     autosaveBadge,
     onStepSelect,
+    onPreview,
 }) => {
     const colors = useThemedColors();
     const progressValue = Math.min(Math.max(progress, 0), 1);
@@ -102,6 +104,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                     currentStep={currentStep}
                     totalSteps={totalSteps}
                     onStepSelect={onStepSelect}
+                    onPreview={onPreview}
                 />
                 {validation.warnings.length > 0 && (
                     <View style={styles.validationSummaryWrapper}>

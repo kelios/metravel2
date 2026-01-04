@@ -391,6 +391,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                             <img
                                 src={currentDisplayUrl}
                                 alt="Предпросмотр"
+                                referrerPolicy="no-referrer"
                                 style={styles.previewImage as any}
                                 onLoad={(e) => {
                                     const imgEl = e.currentTarget as HTMLImageElement;

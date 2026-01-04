@@ -2,6 +2,8 @@ import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, View, StyleSheet, Text, ScrollView, TextInput, Platform, findNodeHandle, UIManager } from 'react-native';
 import { Button } from 'react-native-paper';
+import Toast from 'react-native-toast-message';
+import { useRouter } from 'expo-router';
 
 import LocationSearchInput from '@/components/travel/LocationSearchInput';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
@@ -46,6 +48,7 @@ interface TravelWizardStepRouteProps {
     focusAnchorId?: string | null;
     onAnchorHandled?: () => void;
     onStepSelect?: (step: number) => void;
+    onPreview?: () => void;
 }
 
 const MAP_COACHMARK_STORAGE_KEY = 'travelWizardRouteMapCoachmarkDismissed';
@@ -71,8 +74,10 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     focusAnchorId,
     onAnchorHandled,
     onStepSelect,
+    onPreview,
 }) => {
     const colors = useThemedColors();
+    const router = useRouter();
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
 
@@ -108,6 +113,29 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     const [manualCoords, setManualCoords] = useState('');
     const [manualLat, setManualLat] = useState('');
     const [manualLng, setManualLng] = useState('');
+
+    const handleQuickDraft = useCallback(async () => {
+        if (!onManualSave) return;
+
+        try {
+            await onManualSave();
+            Toast.show({
+                type: 'success',
+                text1: 'Черновик сохранен',
+                text2: 'Вы можете вернуться к нему позже',
+            });
+
+            setTimeout(() => {
+                router.push('/metravel');
+            }, 400);
+        } catch {
+            Toast.show({
+                type: 'error',
+                text1: 'Ошибка сохранения',
+                text2: 'Попробуйте еще раз',
+            });
+        }
+    }, [onManualSave, router]);
 
     useEffect(() => {
         if (!focusAnchorId) return;
@@ -396,11 +424,14 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                     onPrimary={onNext}
                     primaryLabel={stepMeta?.nextLabel ?? 'К медиа'}
                     onSave={onManualSave}
+                    onQuickDraft={onManualSave ? handleQuickDraft : undefined}
+                    quickDraftLabel="Быстрый черновик"
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
                     currentStep={currentStep}
                     totalSteps={totalSteps}
                     onStepSelect={onStepSelect}
+                    onPreview={onPreview}
                 />
 
                 {validation.errors.length > 0 && (

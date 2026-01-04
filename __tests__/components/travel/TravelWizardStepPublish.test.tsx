@@ -216,7 +216,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       moderation: true,
     };
 
-    const { getByText, getAllByText } = render(
+    const { getByText, getByLabelText } = render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -238,9 +238,8 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       fireEvent.press(draftRow);
     });
 
-    const primaryButtons = getAllByText('Сохранить');
-    const primarySubmit = primaryButtons[primaryButtons.length - 1];
-
+    // Press the header primary button (it uses accessibilityLabel=primaryLabel)
+    const primarySubmit = getByLabelText('Сохранить');
     await act(async () => {
       fireEvent.press(primarySubmit);
     });

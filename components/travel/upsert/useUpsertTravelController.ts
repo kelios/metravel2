@@ -82,20 +82,23 @@ export function useUpsertTravelController(): UpsertTravelController {
     enabled: isNew && isAuthenticated,
   });
 
+  const saveDraft = draftRecoveryHook.saveDraft;
+  const clearDraft = draftRecoveryHook.clearDraft;
+
   // Auto-save draft on form changes
   useEffect(() => {
     if (!isNew) return;
     if (!form.formData) return;
-    if (!draftRecoveryHook.saveDraft) return;
-    draftRecoveryHook.saveDraft(form.formData);
-  }, [form.formData, isNew, draftRecoveryHook.saveDraft]);
+    if (!saveDraft) return;
+    saveDraft(form.formData);
+  }, [form.formData, isNew, saveDraft]);
 
   // Clear draft after successful save
   useEffect(() => {
     if (form.autosave.status !== 'saved') return;
-    if (!draftRecoveryHook.clearDraft) return;
-    draftRecoveryHook.clearDraft();
-  }, [form.autosave.status, draftRecoveryHook.clearDraft]);
+    if (!clearDraft) return;
+    clearDraft();
+  }, [form.autosave.status, clearDraft]);
 
   // Handle draft recovery
   const handleRecoverDraft = useCallback(async () => {

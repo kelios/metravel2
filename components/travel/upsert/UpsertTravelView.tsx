@@ -12,8 +12,10 @@ import TravelWizardStepExtras from '@/components/travel/TravelWizardStepExtras';
 import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
 import TravelFormErrorBoundary from '@/components/travel/TravelFormErrorBoundary';
 import DraftRecoveryDialog from '@/components/travel/DraftRecoveryDialog';
+import TravelPreviewModal from '@/components/travel/TravelPreviewModal';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useTravelPreview } from '@/hooks/useTravelPreview';
 import type { UpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
 import type { TravelFormData } from '@/src/types/types';
 
@@ -144,6 +146,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   const { colors } = controller;
   const { setFormData } = controller;
   const { isDesktop, isTablet, isMobile } = useResponsive();
+  const previewState = useTravelPreview();
 
   // Offline detection
   const [isOffline, setIsOffline] = useState(false);
@@ -220,6 +223,12 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
       testID="travel-upsert.root"
       accessibilityLabel="Форма создания путешествия"
     >
+      <TravelPreviewModal
+        visible={previewState.isPreviewVisible}
+        onClose={previewState.hidePreview}
+        formData={controller.formData}
+      />
+
       {/* Draft recovery dialog */}
       <DraftRecoveryDialog
         visible={controller.draftRecovery.hasPendingDraft}
@@ -245,6 +254,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             setFormData={controller.setFormData}
             onManualSave={controller.handleManualSave}
             onGoNext={controller.wizard.handleNext}
+            onPreview={previewState.showPreview}
             snackbarVisible={controller.autosave.status === 'error'}
             snackbarMessage={controller.autosave.error?.message || ''}
             onDismissSnackbar={controller.autosave.clearError}
@@ -277,6 +287,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             onBack={controller.wizard.handleBack}
             onNext={controller.wizard.handleNext}
             onManualSave={controller.handleManualSave}
+            onPreview={previewState.showPreview}
             isFiltersLoading={controller.isFiltersLoading}
             stepMeta={controller.currentStepMeta}
             progress={controller.progress}
@@ -303,6 +314,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             onManualSave={controller.handleManualSave}
             onBack={controller.wizard.handleBack}
             onNext={controller.wizard.handleNext}
+            onPreview={previewState.showPreview}
             stepMeta={controller.currentStepMeta}
             progress={controller.progress}
             autosaveBadge={controller.autosaveBadge}
@@ -327,6 +339,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             onManualSave={controller.handleManualSave}
             onBack={controller.wizard.handleBack}
             onNext={controller.wizard.handleNext}
+            onPreview={previewState.showPreview}
             stepMeta={controller.currentStepMeta}
             progress={controller.progress}
             autosaveBadge={controller.autosaveBadge}
@@ -352,6 +365,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             onManualSave={controller.handleManualSave}
             onBack={controller.wizard.handleBack}
             onNext={controller.wizard.handleNext}
+            onPreview={previewState.showPreview}
             stepMeta={controller.currentStepMeta}
             progress={controller.progress}
             autosaveBadge={controller.autosaveBadge}
@@ -379,6 +393,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             onFinish={controller.wizard.handleFinishWizard}
             onNavigateToIssue={controller.wizard.handleNavigateToIssue}
             onStepSelect={controller.wizard.handleStepSelect}
+            onPreview={previewState.showPreview}
             stepMeta={controller.currentStepMeta}
             progress={controller.progress}
             autosaveBadge={controller.autosaveBadge}
