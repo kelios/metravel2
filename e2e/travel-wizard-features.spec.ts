@@ -359,7 +359,7 @@ test.describe('Поиск мест на карте (Location Search)', () => {
     await page.waitForTimeout(1000);
 
     // Проверяем dropdown с результатами
-    await expect(page.locator('text=Париж')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Париж').first()).toBeVisible({ timeout: 5000 });
 
     // Кликаем по результату
     await page.click('text=Париж >> nth=0');

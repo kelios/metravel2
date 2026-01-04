@@ -9,12 +9,11 @@ import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
 import { TravelFormData } from '@/src/types/types';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import TravelPreviewModal from '@/components/travel/TravelPreviewModal';
-import ContextualTipCard from '@/components/travel/ContextualTipCard';
 import { ValidatedTextInput } from '@/components/travel/ValidatedTextInput';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { getContextualTips } from '@/utils/contextualTips';
-import { useStepTransition, createStaggeredAnimation } from '@/hooks/useStepTransition';
+import { useStepTransition } from '@/hooks/useStepTransition';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -112,9 +111,11 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
         return getContextualTips(1, formData);
     }, [formData]);
 
-    // ✅ ФАЗА 2: Задержки для каскадной анимации подсказок
-    const tipDelays = useMemo(() => {
-        return createStaggeredAnimation(contextualTips, 100, 150);
+    const contextualTipsBody = useMemo(() => {
+        if (contextualTips.length === 0) return null;
+        return contextualTips
+            .map((tip) => `${tip.title}: ${tip.message}`)
+            .join('\n\n');
     }, [contextualTips]);
 
     const handleFieldChange = useCallback((field: keyof TravelFormData, value: any) => {
@@ -169,8 +170,8 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                 keyboardVerticalOffset={0}
             >
                 <TravelWizardHeader
-                    title={stepMeta?.title ?? 'Добавление путешествия'}
-                    subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
+                    title={stepMeta?.title ?? 'О маршруте'}
+                    subtitle={stepMeta?.subtitle ?? 'Укажите название и кратко опишите маршрут — это увидят в карточке и при публикации.'}
                     progressPercent={progressPercent}
                     autosaveBadge={autosaveBadge}
                     onPrimary={onGoNext}
@@ -178,8 +179,8 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                     onSave={onManualSave}
                     onQuickDraft={handleQuickDraft}
                     quickDraftLabel="Быстрый черновик"
-                    tipTitle={stepMeta?.tipTitle}
-                    tipBody={stepMeta?.tipBody}
+                    tipTitle={contextualTipsBody ? 'Советы' : stepMeta?.tipTitle}
+                    tipBody={contextualTipsBody ?? stepMeta?.tipBody}
                     currentStep={currentStep}
                     totalSteps={totalSteps}
                     onStepSelect={onStepSelect}
@@ -222,24 +223,6 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                                 visibleFields={['description']}
                                 showProgress={false}
                             />
-
-                            {/* ✅ ФАЗА 2: Контекстные подсказки с каскадной анимацией */}
-                            {contextualTips.length > 0 && (
-                                <View style={styles.tipsContainer}>
-                                    {contextualTips.map((tip, index) => (
-                                        <ContextualTipCard
-                                            key={tip.id}
-                                            tip={tip}
-                                            delay={tipDelays[index]}
-                                            onActionPress={tip.action ? () => {
-                                                if (onStepSelect && tip.action) {
-                                                    onStepSelect(tip.action.step);
-                                                }
-                                            } : undefined}
-                                        />
-                                    ))}
-                                </View>
-                            )}
                         </Animated.View>
                     </ScrollView>
                 </View>

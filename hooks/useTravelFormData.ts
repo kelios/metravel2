@@ -32,6 +32,13 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     return travelId ? normalizeTravelId(travelId) : null;
   }, [isNew, travelId]);
 
+  const isLocalPreviewUrl = useCallback((value: unknown) => {
+    if (typeof value !== 'string') return false;
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    return /^(blob:|data:)/i.test(trimmed);
+  }, []);
+
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [travelDataOld, setTravelDataOld] = useState<Travel | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -181,16 +188,43 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
             return {
               ...rest,
               categories,
-              image: imageValue && imageValue.length > 0 ? imageValue : null,
+              image:
+                imageValue && imageValue.length > 0 && !isLocalPreviewUrl(imageValue)
+                  ? imageValue
+                  : null,
             };
           })
         : [];
+
+      const normalizedGallery = Array.isArray(mergedData.gallery)
+        ? mergedData.gallery.filter((item: any) => {
+            if (typeof item === 'string') {
+              const value = item.trim();
+              return value.length > 0 && !isLocalPreviewUrl(value);
+            }
+            if (item && typeof item === 'object') {
+              const url = typeof item.url === 'string' ? item.url.trim() : '';
+              return url.length > 0 && !isLocalPreviewUrl(url);
+            }
+            return false;
+          })
+        : undefined;
+
+      const sanitizedCoverUrl = isLocalPreviewUrl(mergedData.travel_image_thumb_url)
+        ? null
+        : (mergedData.travel_image_thumb_url ?? null);
+      const sanitizedCoverSmallUrl = isLocalPreviewUrl(mergedData.travel_image_thumb_small_url)
+        ? null
+        : (mergedData.travel_image_thumb_small_url ?? null);
 
       const resolvedId = normalizeTravelId(mergedData.id) ?? stableTravelId ?? null;
       const cleanedData = cleanEmptyFields({
         ...mergedData,
         id: resolvedId,
         coordsMeTravel: normalizedMarkers,
+        ...(normalizedGallery ? { gallery: normalizedGallery } : {}),
+        travel_image_thumb_url: sanitizedCoverUrl,
+        travel_image_thumb_small_url: sanitizedCoverSmallUrl,
       });
 
       // Не отправляем на сервер неформатные поля (например, вложенный `user` из ответа API),
@@ -235,7 +269,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         saveAbortControllerRef.current = null;
       }
     }
-  }, [ensureRequiredDraftFields, stableTravelId]);
+  }, [ensureRequiredDraftFields, isLocalPreviewUrl, stableTravelId]);
 
   const applySavedData = useCallback(
     (savedData: TravelFormData) => {

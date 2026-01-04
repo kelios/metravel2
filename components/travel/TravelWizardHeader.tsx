@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet, Text, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -67,6 +67,16 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     const hasTip = !!tipBody && tipBody.trim().length > 0;
     const resolvedTipTitle = useMemo(() => tipTitle ?? 'Совет', [tipTitle]);
 
+    const [hoveredAction, setHoveredAction] = useState<string | null>(null);
+    const showHover = useCallback((id: string) => {
+        if (Platform.OS !== 'web') return;
+        setHoveredAction(id);
+    }, []);
+    const hideHover = useCallback(() => {
+        if (Platform.OS !== 'web') return;
+        setHoveredAction(null);
+    }, []);
+
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с использованием динамических цветов
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -74,25 +84,27 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         <Pressable
             onPress={() => setIsTipOpen(v => !v)}
             style={({ pressed }) => [
-                styles.tipToggleButton,
-                isTipOpen && styles.tipToggleButtonActive,
+                styles.iconButton,
+                isTipOpen && styles.iconButtonActive,
                 globalFocusStyles.focusable,
+                Platform.OS === 'web' && { cursor: 'pointer' },
                 pressed && { opacity: 0.8 }
             ]}
             accessibilityRole="button"
-            accessibilityLabel={isTipOpen ? 'Скрыть совет' : 'Показать совет'}
-            {...Platform.select({ web: { cursor: 'pointer' } })}
+            accessibilityLabel={isTipOpen ? 'Скрыть советы' : 'Показать советы'}
+            onHoverIn={() => showHover('tips')}
+            onHoverOut={hideHover}
         >
             <Feather
                 name="help-circle"
-                size={isMobile ? 14 : 16}
+                size={16}
                 color={isTipOpen ? colors.primary : colors.textMuted}
             />
-            {!isMobile && (
-                <Text style={[styles.tipToggleText, isTipOpen && styles.tipToggleTextActive]} numberOfLines={1}>
-                    {resolvedTipTitle}
-                </Text>
-            )}
+            {Platform.OS === 'web' && hoveredAction === 'tips' ? (
+                <View style={styles.tooltipBubble}>
+                    <Text style={styles.tooltipText}>{isTipOpen ? 'Скрыть советы' : 'Показать советы'}</Text>
+                </View>
+            ) : null}
         </Pressable>
     ) : null;
 
@@ -102,13 +114,13 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
             style={({ pressed }) => [
                 styles.backButton,
                 globalFocusStyles.focusable,
+                Platform.OS === 'web' && { cursor: 'pointer' },
                 pressed && { opacity: 0.8 }
             ]}
             testID="travel-wizard-back"
             accessibilityRole="button"
             accessibilityLabel="Назад"
             disabled={!onBack}
-            {...Platform.select({ web: { cursor: 'pointer' } })}
         >
             <Feather name="arrow-left" size={16} color={colors.text} />
             <Text style={styles.backButtonText}>Назад</Text>
@@ -123,12 +135,12 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                 styles.actionButton,
                 styles.actionButtonPrimary,
                 globalFocusStyles.focusable,
+                Platform.OS === 'web' && { cursor: primaryDisabled ? 'default' : 'pointer' },
                 primaryDisabled && styles.actionButtonDisabled,
                 pressed && !primaryDisabled && { opacity: 0.9 },
             ]}
             accessibilityRole="button"
             accessibilityLabel={primaryLabel}
-            {...Platform.select({ web: { cursor: primaryDisabled ? 'default' : 'pointer' } })}
         >
             <Text style={styles.actionButtonPrimaryText} numberOfLines={1}>
                 {primaryLabel}
@@ -141,21 +153,22 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         <Pressable
             onPress={onSave}
             style={({ pressed }) => [
-                styles.actionButton,
-                styles.actionButtonSecondary,
+                styles.iconButton,
                 globalFocusStyles.focusable,
+                Platform.OS === 'web' && { cursor: 'pointer' },
                 pressed && { opacity: 0.9 },
             ]}
             accessibilityRole="button"
             accessibilityLabel={saveLabel}
-            {...Platform.select({ web: { cursor: 'pointer' } })}
+            onHoverIn={() => showHover('save')}
+            onHoverOut={hideHover}
         >
-            <Feather name="save" size={16} color={colors.text} />
-            {!isMobile && (
-                <Text style={styles.actionButtonText} numberOfLines={1}>
-                    {saveLabel}
-                </Text>
-            )}
+            <Feather name="save" size={16} color={colors.textMuted} />
+            {Platform.OS === 'web' && hoveredAction === 'save' ? (
+                <View style={styles.tooltipBubble}>
+                    <Text style={styles.tooltipText}>{saveLabel}</Text>
+                </View>
+            ) : null}
         </Pressable>
     ) : null;
 
@@ -163,116 +176,122 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         <Pressable
             onPress={onQuickDraft}
             style={({ pressed }) => [
-                styles.actionButton,
-                styles.actionButtonSecondary,
+                styles.iconButton,
                 globalFocusStyles.focusable,
+                Platform.OS === 'web' && { cursor: 'pointer' },
                 pressed && { opacity: 0.9 },
             ]}
             accessibilityRole="button"
             accessibilityLabel={quickDraftLabel}
-            {...Platform.select({ web: { cursor: 'pointer' } })}
+            onHoverIn={() => showHover('draft')}
+            onHoverOut={hideHover}
         >
-            <Feather name="archive" size={16} color={colors.text} />
-            {!isMobile && (
-                <Text style={styles.actionButtonText} numberOfLines={1}>
-                    {quickDraftLabel}
-                </Text>
-            )}
+            <Feather name="archive" size={16} color={colors.textMuted} />
+            {Platform.OS === 'web' && hoveredAction === 'draft' ? (
+                <View style={styles.tooltipBubble}>
+                    <Text style={styles.tooltipText}>{quickDraftLabel}</Text>
+                </View>
+            ) : null}
         </Pressable>
     ) : null;
 
     return (
         <View style={[styles.headerWrapper, isMobile && styles.headerWrapperMobile]}>
-            <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
-                {BackButton}
-                <View style={styles.titleColumn}>
-                    {isMobile ? (
-                        <>
-                            <Text style={styles.headerTitleMobile} numberOfLines={1}>
-                                {title}
-                            </Text>
-                            <Text style={styles.headerSubtitleMobile} numberOfLines={1}>
-                                {subtitle} • {clamped}% готово
-                            </Text>
-                        </>
-                    ) : (
-                        <>
-                            <Text style={styles.headerTitle} numberOfLines={1}>
-                                {title}
-                            </Text>
-                            <Text style={styles.headerSubtitle} numberOfLines={1}>
-                                {subtitle} • {clamped}% готово
-                            </Text>
-                        </>
-                    )}
+            <View style={styles.topNavRow}>
+                <View style={styles.leftNav}>
+                    {BackButton}
                 </View>
-                <View style={styles.headerRightRow}>
-                    {/* ✅ ФАЗА 2: Кнопка превью */}
+            </View>
+
+            <View style={styles.titleRow}>
+                <View style={styles.titleColumn}>
+                    <Text style={isMobile ? styles.headerTitleMobile : styles.headerTitle} numberOfLines={1}>
+                        {title}
+                    </Text>
+                </View>
+
+                <View style={styles.titleActionsRow}>
                     {onPreview && (
                         <Pressable
                             onPress={onPreview}
                             style={({ pressed }) => [
-                                styles.previewButton,
+                                styles.iconButton,
                                 globalFocusStyles.focusable,
+                                Platform.OS === 'web' && { cursor: 'pointer' },
                                 pressed && { opacity: 0.8 }
                             ]}
                             accessibilityRole="button"
                             accessibilityLabel="Показать превью"
-                            {...Platform.select({ web: { cursor: 'pointer' } })}
+                            onHoverIn={() => showHover('preview')}
+                            onHoverOut={hideHover}
                         >
-                            <Feather name="eye" size={16} color={colors.primary} />
-                            {!isMobile && (
-                                <Text style={styles.previewButtonText}>Превью</Text>
-                            )}
+                            <Feather name="eye" size={16} color={colors.textMuted} />
+                            {Platform.OS === 'web' && hoveredAction === 'preview' ? (
+                                <View style={styles.tooltipBubble}>
+                                    <Text style={styles.tooltipText}>Превью</Text>
+                                </View>
+                            ) : null}
                         </Pressable>
                     )}
                     {TipTrigger}
-                    {autosaveBadge ? <Text style={styles.autosaveBadge}>{autosaveBadge}</Text> : null}
                     {QuickDraftAction}
                     {SaveAction}
-                    {PrimaryAction}
                 </View>
             </View>
 
-            {/* ✅ УЛУЧШЕНИЕ: Милестоны над прогресс-баром */}
-            {!isMobile && totalSteps && currentStep && totalSteps > 1 && (
-                <View style={styles.milestonesWrapper}>
-                    {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
-                        <Pressable
-                            key={step}
-                            onPress={() => onStepSelect?.(step)}
-                            style={({ pressed }) => [
-                                styles.milestone,
-                                step <= currentStep && styles.milestoneActive,
-                                pressed && { opacity: 0.7 }
-                            ]}
-                            disabled={!onStepSelect}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Перейти к шагу ${step}`}
-                            {...Platform.select({ web: { cursor: onStepSelect ? 'pointer' : 'default' } })}
-                        >
-                            <View style={[
-                                styles.milestoneCircle,
-                                step <= currentStep && styles.milestoneCircleActive
-                            ]}>
-                                {step < currentStep ? (
-                                    <Feather name="check" size={10} color={colors.primary} />
-                                ) : (
-                                    <Text style={[
-                                        styles.milestoneNumber,
-                                        step === currentStep && styles.milestoneNumberActive
-                                    ]}>
-                                        {step}
-                                    </Text>
-                                )}
-                            </View>
-                        </Pressable>
-                    ))}
-                </View>
-            )}
+            <Text style={isMobile ? styles.headerSubtitleMobile : styles.headerSubtitle} numberOfLines={2}>
+                {subtitle}
+            </Text>
 
             <View style={styles.progressBarTrack}>
                 <View style={[styles.progressBarFill, { width: `${clamped}%`, backgroundColor: progressColor }]} />
+            </View>
+
+            <View style={styles.progressMetaRow}>
+                {autosaveBadge ? (
+                    <Text style={styles.autosaveBadgeText} numberOfLines={1}>
+                        {autosaveBadge}
+                    </Text>
+                ) : (
+                    <Text style={styles.progressMetaText} numberOfLines={1}>
+                        Шаг {currentStep ?? 1}/{totalSteps ?? 1} • {clamped}%
+                    </Text>
+                )}
+            </View>
+
+            <View style={styles.belowProgressRow}>
+                <View style={styles.belowProgressLeft}>
+                    {totalSteps && currentStep && totalSteps > 1 ? (
+                        <View style={styles.milestonesInlineWrapper}>
+                            {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
+                                <Pressable
+                                    key={step}
+                                    onPress={() => onStepSelect?.(step)}
+                                    style={({ pressed }) => [
+                                        styles.milestoneInline,
+                                        step === currentStep && styles.milestoneInlineActive,
+                                        pressed && { opacity: 0.7 }
+                                    ]}
+                                    disabled={!onStepSelect}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Перейти к шагу ${step}`}
+                                >
+                                    {step < currentStep ? (
+                                        <Feather name="check" size={12} color={colors.primary} />
+                                    ) : (
+                                        <Text style={[styles.milestoneInlineNumber, step === currentStep && styles.milestoneInlineNumberActive]}>
+                                            {step}
+                                        </Text>
+                                    )}
+                                </Pressable>
+                            ))}
+                        </View>
+                    ) : null}
+                </View>
+
+                <View style={styles.belowProgressRight}>
+                    {Platform.OS === 'web' ? PrimaryAction : null}
+                </View>
             </View>
 
             {hasTip && isTipOpen ? (
@@ -302,6 +321,38 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         paddingTop: DESIGN_TOKENS.spacing.xs,
         paddingBottom: DESIGN_TOKENS.spacing.xs,
     },
+    topNavRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: DESIGN_TOKENS.spacing.sm,
+    },
+    leftNav: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.sm,
+        flex: 1,
+        minWidth: 0,
+    },
+    rightActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.xs,
+        flexShrink: 0,
+    },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: DESIGN_TOKENS.spacing.sm,
+        marginTop: DESIGN_TOKENS.spacing.xs,
+    },
+    titleActionsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.xs,
+        flexShrink: 0,
+    },
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -316,6 +367,43 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexDirection: 'row',
         alignItems: 'center',
         gap: DESIGN_TOKENS.spacing.xs,
+    },
+    iconButton: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 44,
+        height: 44,
+        minHeight: 44, // ✅ ДОСТУПНОСТЬ: Минимальная высота touch target
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        position: 'relative',
+        backgroundColor: colors.surfaceMuted,
+        borderWidth: 0,
+    },
+    iconButtonActive: {
+        backgroundColor: colors.primarySoft,
+        borderWidth: 0,
+    },
+    tooltipBubble: {
+        position: 'absolute',
+        top: '100%',
+        marginTop: 6,
+        left: '50%',
+        transform: [{ translateX: -80 }],
+        width: 160,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        backgroundColor: colors.text,
+        zIndex: 1000,
+        ...(Platform.OS === 'web'
+            ? ({ pointerEvents: 'none' } as any)
+            : ({} as any)),
+    },
+    tooltipText: {
+        fontSize: 12,
+        color: colors.background,
+        fontWeight: '600',
+        textAlign: 'center',
     },
     actionButton: {
         flexDirection: 'row',
@@ -390,6 +478,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: 12,
         color: colors.textMuted,
     },
+    titleBlock: {
+        marginTop: DESIGN_TOKENS.spacing.xs,
+    },
     autosaveBadge: {
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
         paddingVertical: DESIGN_TOKENS.spacing.xxs,
@@ -462,6 +553,29 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         height: '100%',
         borderRadius: DESIGN_TOKENS.radii.pill,
     },
+    progressMetaRow: {
+        marginTop: DESIGN_TOKENS.spacing.xs,
+        minHeight: 18,
+    },
+    progressMetaText: {
+        fontSize: 12,
+        color: colors.textMuted,
+        fontWeight: '500',
+    },
+    belowProgressRow: {
+        marginTop: DESIGN_TOKENS.spacing.sm,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: DESIGN_TOKENS.spacing.sm,
+    },
+    belowProgressLeft: {
+        flex: 1,
+        minWidth: 0,
+    },
+    belowProgressRight: {
+        flexShrink: 0,
+    },
     tipPanel: {
         marginTop: DESIGN_TOKENS.spacing.sm,
         padding: DESIGN_TOKENS.spacing.sm,
@@ -489,6 +603,34 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginTop: DESIGN_TOKENS.spacing.sm,
         marginBottom: DESIGN_TOKENS.spacing.xs,
         paddingHorizontal: 4,
+    },
+    milestonesInlineWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        flexWrap: 'wrap',
+    },
+    milestoneInline: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+    },
+    milestoneInlineActive: {
+        borderColor: colors.primary,
+        backgroundColor: colors.primarySoft,
+    },
+    milestoneInlineNumber: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.textMuted,
+    },
+    milestoneInlineNumberActive: {
+        color: colors.primary,
     },
     milestone: {
         alignItems: 'center',

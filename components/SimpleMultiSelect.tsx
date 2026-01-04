@@ -123,10 +123,13 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
   );
 
   const renderItem = ({ item }: { item: MultiSelectItem }) => {
-    const isSelected = value.some(v => isSelectedValue(v, getItemValue(item)));
+    const itemValue = getItemValue(item);
+    const isSelected = value.some(v => isSelectedValue(v, itemValue));
+    const itemTestId = `simple-multiselect.item.${normalizeValue(itemValue)}`;
     
     return (
       <Pressable
+        testID={itemTestId}
         style={({ pressed }) => [
           styles.listItem,
           { backgroundColor: colors.surface },
@@ -159,6 +162,8 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
         style={[styles.trigger, style, disabled && styles.triggerDisabled]}
         onPress={handleOpen}
         disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel="Открыть выбор"
       >
         <View style={styles.triggerContent}>
           {selectedItems.length > 0 ? (
@@ -187,9 +192,17 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
         animationType="fade"
         onRequestClose={handleClose}
       >
-        <Pressable style={styles.modalOverlay} onPress={handleClose}>
-          <Pressable style={[styles.modalContent, { backgroundColor: colors.surface }]} onPress={(e) => e.stopPropagation()}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={handleClose}
+            accessibilityRole="button"
+            accessibilityLabel="Закрыть"
+          />
+
+          <View style={styles.modalContentWrap}>
+            <View style={[styles.modalContent, { backgroundColor: colors.surface, flex: 1 }]} > 
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}> 
               <Text style={[styles.modalTitle, { color: colors.text }]}>
                 Выбрано: {selectedItems.length}
               </Text>
@@ -221,7 +234,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
               data={filteredData}
               renderItem={renderItem}
               keyExtractor={(item) => String(item[valueField])}
-              style={styles.list}
+              style={[styles.list, { flex: 1 }]}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={true}
               ListEmptyComponent={
@@ -237,8 +250,9 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
                 <Text style={[styles.doneButtonText, { color: colors.textOnPrimary }]}>Готово</Text>
               </Pressable>
             </View>
-          </Pressable>
-        </Pressable>
+            </View>
+          </View>
+        </View>
       </Modal>
     </>
   );
@@ -256,20 +270,12 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     paddingVertical: DESIGN_TOKENS.spacing.sm,
     backgroundColor: colors.surface,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
   },
   triggerDisabled: {
     opacity: 0.6,
     backgroundColor: colors.mutedBackground,
-    ...Platform.select({
-      web: {
-        cursor: 'not-allowed',
-      },
-    }),
+    ...(Platform.OS === 'web' ? ({ cursor: 'not-allowed' } as any) : null),
   },
   triggerContent: {
     flex: 1,
@@ -304,26 +310,37 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: colors.overlay,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     padding: DESIGN_TOKENS.spacing.lg,
+    position: 'relative',
   },
-  modalContent: {
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.overlay,
+    zIndex: 0,
+  },
+  modalContentWrap: {
+    position: 'relative',
+    zIndex: 1,
     width: '100%',
     maxWidth: 500,
     maxHeight: '80%',
+    flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
+  },
+  modalContent: {
     backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
     overflow: 'hidden',
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows?.modal ?? '0 8px 24px rgba(0,0,0,0.12)',
-      },
-      default: {
-        ...(colors.shadows?.heavy ?? {}),
-      },
-    }),
+    width: '100%',
+    flex: 1,
+    ...(Platform.OS === 'web' ? ({ height: '80vh' } as any) : ({} as any)),
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: colors.boxShadows?.modal ?? '0 8px 24px rgba(0,0,0,0.12)' } as any)
+      : ((colors.shadows?.heavy ?? {}) as any)),
   },
   modalHeader: {
     flexDirection: 'row',

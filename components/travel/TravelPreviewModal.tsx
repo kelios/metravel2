@@ -72,11 +72,22 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
             animationType="fade"
             onRequestClose={onClose}
         >
-            <Pressable style={styles.overlay} onPress={onClose}>
-                <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.overlay}>
+                <Pressable
+                    style={styles.backdrop}
+                    onPress={onClose}
+                    accessibilityRole="button"
+                    accessibilityLabel="Закрыть превью"
+                />
+                <View style={styles.modalContent}>
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>Превью карточки</Text>
-                        <Pressable onPress={onClose} style={styles.closeButton}>
+                        <Pressable
+                            onPress={onClose}
+                            style={styles.closeButton}
+                            accessibilityRole="button"
+                            accessibilityLabel="Закрыть превью"
+                        >
                             <Feather name="x" size={24} color={colors.text} />
                         </Pressable>
                     </View>
@@ -140,8 +151,8 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
                             </Text>
                         </View>
                     </ScrollView>
-                </Pressable>
-            </Pressable>
+                </View>
+            </View>
         </Modal>
     );
 };
@@ -153,6 +164,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         justifyContent: 'center',
         alignItems: 'center',
         padding: DESIGN_TOKENS.spacing.md,
+        position: 'relative',
+    },
+    backdrop: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'transparent',
     },
     modalContent: {
         width: '100%',

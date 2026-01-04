@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ActivityIndicator, Pressable, View, Text } from 'react-native';
 import * as ImagePicker from 'react-native-image-picker';
 import { useDropzone } from 'react-dropzone';
@@ -101,6 +101,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     const [fallbackImageUrl, setFallbackImageUrl] = useState<string | null>(null);
     const [hasTriedFallback, setHasTriedFallback] = useState(false);
     const [lastPreviewUrl, setLastPreviewUrl] = useState<string | null>(null);
+    const lastNotifiedPreviewRef = useRef<string | null>(null);
     const hasValidImage = Boolean(previewUrl || imageUri);
     const currentDisplayUrl = previewUrl ?? imageUri ?? '';
 
@@ -163,7 +164,14 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
 
     // Уведомление родителя об изменении превью
     useEffect(() => {
-        onPreviewChange?.(previewUrl || imageUri);
+        const nextValue = previewUrl || imageUri || null;
+
+        if (lastNotifiedPreviewRef.current === nextValue) {
+            return;
+        }
+
+        lastNotifiedPreviewRef.current = nextValue;
+        onPreviewChange?.(nextValue);
     }, [previewUrl, imageUri, onPreviewChange]);
 
     const validateFile = useCallback((file: File | { uri: string; name: string; type: string; size?: number }): string | null => {
@@ -358,7 +366,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         const { onBeforeInput, ...rootProps } = getRootProps();
         void onBeforeInput;
         return (
-            <View style={styles.container}>
+            <View style={styles.container as any}>
                 <div
                     {...rootProps}
                     style={{
@@ -369,17 +377,17 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                 >
                     <input {...getInputProps()} />
                     {loading ? (
-                        <View style={styles.loadingContainer}>
+                        <View style={styles.loadingContainer as any}>
                             <ActivityIndicator size="large" color={colors.primary} />
                             {uploadProgress > 0 && (
-                                <View style={styles.progressContainer}>
-                                    <View style={[styles.progressBar, { width: `${uploadProgress}%` }]} />
-                                    <Text style={styles.progressText}>{uploadProgress}%</Text>
+                                <View style={styles.progressContainer as any}>
+                                    <View style={[styles.progressBar as any, { width: `${uploadProgress}%` } as any] as any} />
+                                    <Text style={styles.progressText as any}>{uploadProgress}%</Text>
                                 </View>
                             )}
                         </View>
                     ) : hasValidImage ? (
-                        <View style={styles.previewContainer}>
+                        <View style={styles.previewContainer as any}>
                             <img
                                 src={currentDisplayUrl}
                                 alt="Предпросмотр"
@@ -455,7 +463,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                             />
                             {!disabled && (
                                 <Pressable
-                                    style={styles.removeButton}
+                                    style={styles.removeButton as any}
                                     onPress={handleRemovePress}
                                     accessibilityLabel="Удалить изображение"
                                 >
@@ -464,11 +472,11 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                             )}
                         </View>
                     ) : (
-                        <View style={styles.placeholderContainer}>
+                        <View style={styles.placeholderContainer as any}>
                             <FontAwesome name="cloud-upload" size={40} color={colors.primary} />
-                            <Text style={styles.placeholderText}>{placeholder}</Text>
-                            <Text style={styles.placeholderSubtext}>или нажмите для выбора файла</Text>
-                            <Text style={styles.placeholderHint}>
+                            <Text style={styles.placeholderText as any}>{placeholder}</Text>
+                            <Text style={styles.placeholderSubtext as any}>или нажмите для выбора файла</Text>
+                            <Text style={styles.placeholderHint as any}>
                                 Макс. размер: {maxSizeMB}MB
                             </Text>
                         </View>
@@ -476,16 +484,16 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                 </div>
 
                 {error && !currentDisplayUrl && (
-                    <View style={styles.errorContainer}>
+                    <View style={styles.errorContainer as any}>
                         <Feather name="alert-circle" size={14} color={colors.danger} />
-                        <Text style={styles.errorText}>{error}</Text>
+                        <Text style={styles.errorText as any}>{error}</Text>
                     </View>
                 )}
 
                 {uploadMessage && !error && (
-                    <View style={styles.successContainer}>
+                    <View style={styles.successContainer as any}>
                         <Feather name="check-circle" size={14} color={colors.success} />
-                        <Text style={styles.successText}>{uploadMessage}</Text>
+                        <Text style={styles.successText as any}>{uploadMessage}</Text>
                     </View>
                 )}
             </View>
@@ -548,7 +556,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     );
 };
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => ({
+const createStyles = (colors: ReturnType<typeof useThemedColors>): any => ({
     container: {
         width: '100%',
     },

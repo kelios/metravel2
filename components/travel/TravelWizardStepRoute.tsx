@@ -84,11 +84,16 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     const scrollRef = useRef<ScrollView | null>(null);
     const markersListAnchorRef = useRef<View | null>(null);
     const countriesAnchorRef = useRef<View | null>(null);
+    const markersRef = useRef<MarkerData[]>(markers || []);
 
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
 
     const hasAtLeastOnePoint = useMemo(() => markers && markers.length > 0, [markers]);
+
+    useEffect(() => {
+        markersRef.current = markers || [];
+    }, [markers]);
 
     // Валидация шага 2
     const validation = useMemo(() => {
@@ -242,7 +247,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         };
 
         // Добавляем маркер
-        const updated = [...(markers || []), newMarker];
+        const updated = [...(markersRef.current || []), newMarker];
         setMarkers(updated);
 
         // Автоматически добавляем страну в выбранные
@@ -252,7 +257,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                 onCountrySelect(countryIdStr);
             }
         }
-    }, [markers, setMarkers, countries, selectedCountryIds, onCountrySelect]);
+    }, [setMarkers, countries, selectedCountryIds, onCountrySelect]);
 
     const dismissCoachmark = useCallback(() => {
         setIsCoachmarkVisible(false);
