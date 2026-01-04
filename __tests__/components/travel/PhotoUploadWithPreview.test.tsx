@@ -38,6 +38,7 @@ describe('PhotoUploadWithPreview', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockUploadImage.mockReset();
         lastOnDrop = null;
     });
 
@@ -69,6 +70,46 @@ describe('PhotoUploadWithPreview', () => {
                 // Image should be displayed
                 expect(true).toBeTruthy();
             });
+        });
+
+        it('web: clears invalid blob preview on error (prevents ERR_FILE_NOT_FOUND spam after navigation)', async () => {
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+            const onPreviewChange = jest.fn();
+            const onUpload = jest.fn();
+            const deadBlobUrl = 'blob:http://localhost:8081/dead-blob';
+
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        oldImage={deadBlobUrl}
+                        onPreviewChange={onPreviewChange}
+                        onUpload={onUpload}
+                    />
+                );
+
+                // Ensure <img> is rendered with blob src.
+                await waitFor(() => {
+                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    expect(String(imgNode.props.src)).toBe(deadBlobUrl);
+                });
+
+                // Trigger error; component should clear preview and notify parent.
+                await act(async () => {
+                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    imgNode.props.onError?.();
+                });
+
+                await waitFor(() => {
+                    // After clear, no img should be present (placeholder shown).
+                    expect(() => screen.UNSAFE_getByType('img' as any)).toThrow();
+                    expect(onPreviewChange).toHaveBeenCalledWith(null);
+                });
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+            }
         });
     });
 
@@ -186,7 +227,7 @@ describe('PhotoUploadWithPreview', () => {
             try {
                 // Simulate upload returning a URL that will fail to load.
                 const remoteBadUrl = 'http://192.168.50.36/travel-image/17981/conversions/bad.webp';
-                (uploadImage as any).mockResolvedValueOnce({ url: remoteBadUrl });
+                mockUploadImage.mockResolvedValueOnce({ url: remoteBadUrl } as any);
 
                 const screen = render(
                     <PhotoUploadWithPreview

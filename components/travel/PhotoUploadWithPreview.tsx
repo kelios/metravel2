@@ -441,6 +441,13 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                         return;
                                     }
 
+                                    if (/^(blob:|data:)/i.test(currentDisplayUrl)) {
+                                        // Blob/data previews can become invalid after unmount/navigation.
+                                        // Clear them to avoid repeated ERR_FILE_NOT_FOUND spam.
+                                        handleRemoveImage();
+                                        return;
+                                    }
+
                                     setImageUri(null);
                                     setPreviewUrl(null);
                                     setError('Изображение не найдено');
@@ -461,6 +468,13 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                     const apiCandidate = buildApiPrefixedUrl(currentDisplayUrl);
                                     if (apiCandidate) {
                                         applyFallback(apiCandidate);
+                                        return;
+                                    }
+
+                                    if (/^(blob:|data:)/i.test(currentDisplayUrl)) {
+                                        // Blob/data previews can become invalid after unmount/navigation.
+                                        // Clear them to avoid repeated ERR_FILE_NOT_FOUND spam.
+                                        handleRemoveImage();
                                         return;
                                     }
                                     // При повторной ошибке показываем placeholder
