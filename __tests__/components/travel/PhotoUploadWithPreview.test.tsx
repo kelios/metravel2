@@ -111,6 +111,55 @@ describe('PhotoUploadWithPreview', () => {
                 Object.defineProperty(Platform, 'OS', { value: originalOs });
             }
         });
+
+        it('web: keeps absolute private-IP image URL intact (regression: must not strip host to a relative path)', async () => {
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+            const absolutePrivateIpUrl =
+                'http://192.168.50.36/travel-image/17992/conversions/9b69f6475c7143d08e3ac7b508612221.webp';
+
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        oldImage={absolutePrivateIpUrl}
+                    />
+                );
+
+                await waitFor(() => {
+                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    // On the buggy implementation this became "/travel-image/..." and loaded from localhost.
+                    expect(String(imgNode.props.src)).toBe(absolutePrivateIpUrl);
+                    expect(String(imgNode.props.src).startsWith('http')).toBe(true);
+                });
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+            }
+        });
+
+        it('web: renders absolute URL as img src (normalization sanity)', async () => {
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+            const absoluteUrl = 'https://example.com/image.jpg';
+
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        oldImage={absoluteUrl}
+                    />
+                );
+
+                await waitFor(() => {
+                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    expect(String(imgNode.props.src)).toBe(absoluteUrl);
+                });
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+            }
+        });
     });
 
     describe('File Upload', () => {
@@ -128,6 +177,98 @@ describe('PhotoUploadWithPreview', () => {
             // Simulate upload would happen here in real scenario
             // For now, verify the component renders
             expect(getByText('Загрузить фото')).toBeTruthy();
+        });
+
+        it('web: calls uploadImage on first drop when idTravel is provided (regression for "preview only, no /upload")', async () => {
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+            const blobUrl = 'blob:http://localhost:8081/test-blob-first-drop';
+            const originalCreateObjectURL = (global as any).URL?.createObjectURL;
+            (global as any).URL = (global as any).URL || {};
+            (global as any).URL.createObjectURL = jest.fn(() => blobUrl);
+
+            const serverUrl = 'http://192.168.50.36/travel-image/17992/conversions/test.webp';
+            mockUploadImage.mockResolvedValueOnce({ url: serverUrl } as any);
+
+            const onUpload = jest.fn();
+
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        idTravel={'819'}
+                        collection="travelImageAddress"
+                        onUpload={onUpload}
+                    />
+                );
+
+                expect(typeof lastOnDrop).toBe('function');
+
+                const file = new File([new Uint8Array([1, 2, 3])], 'test.webp', { type: 'image/webp' });
+                await act(async () => {
+                    await lastOnDrop([file], []);
+                });
+
+                await waitFor(() => {
+                    expect(mockUploadImage).toHaveBeenCalledTimes(1);
+                    expect(onUpload).toHaveBeenCalledWith(serverUrl);
+                });
+
+                await waitFor(() => {
+                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    expect(String(imgNode.props.src)).toBe(serverUrl);
+                });
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+                (global as any).URL.createObjectURL = originalCreateObjectURL;
+            }
+        });
+
+        it('web: does not call uploadImage when idTravel is missing (preview-only mode), but still emits blob preview', async () => {
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+            const blobUrl = 'blob:http://localhost:8081/test-blob-preview-only';
+            const originalCreateObjectURL = (global as any).URL?.createObjectURL;
+            (global as any).URL = (global as any).URL || {};
+            (global as any).URL.createObjectURL = jest.fn(() => blobUrl);
+
+            const onUpload = jest.fn();
+
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        idTravel={null}
+                        collection="travelImageAddress"
+                        onUpload={onUpload}
+                    />
+                );
+
+                expect(typeof lastOnDrop).toBe('function');
+
+                const file = new File([new Uint8Array([1, 2, 3])], 'test.webp', { type: 'image/webp' });
+                await act(async () => {
+                    await lastOnDrop([file], []);
+                });
+
+                // No upload request should be sent.
+                expect(mockUploadImage).not.toHaveBeenCalled();
+
+                // But preview should still be emitted.
+                await waitFor(() => {
+                    expect(onUpload).toHaveBeenCalledWith(blobUrl);
+                });
+
+                await waitFor(() => {
+                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    expect(String(imgNode.props.src)).toBe(blobUrl);
+                });
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+                (global as any).URL.createObjectURL = originalCreateObjectURL;
+            }
         });
 
         it('should show loading indicator during upload', async () => {
@@ -219,6 +360,8 @@ describe('PhotoUploadWithPreview', () => {
             const originalOs = Platform.OS;
             Object.defineProperty(Platform, 'OS', { value: 'web' });
 
+            jest.useFakeTimers();
+
             const blobUrl = 'blob:http://localhost:8081/test-blob';
             const originalCreateObjectURL = (global as any).URL?.createObjectURL;
             (global as any).URL = (global as any).URL || {};
@@ -251,19 +394,40 @@ describe('PhotoUploadWithPreview', () => {
                     expect(String(imgNode.props.src)).toBe(remoteBadUrl);
                 });
 
-                // Trigger load error; component should apply blob fallback.
+                // Trigger load errors; component should retry with cache-busting param first,
+                // and only after retries are exhausted fall back to blob preview.
+                const delays = [300, 600, 1200, 2000, 2500, 3000];
+                for (let attempt = 1; attempt <= delays.length; attempt++) {
+                    await act(async () => {
+                        const imgNode = screen.UNSAFE_getByType('img' as any);
+                        imgNode.props.onError?.();
+                    });
+
+                    act(() => {
+                        jest.advanceTimersByTime(delays[attempt - 1] + 1);
+                    });
+
+                    // With fake timers, assert synchronously after advancing timers.
+                    const nextImg = screen.UNSAFE_getByType('img' as any);
+                    expect(String(nextImg.props.src)).toContain(`__retry=${attempt}`);
+                }
+
+                // One more error after retries exhausted should apply blob fallback.
                 await act(async () => {
                     const imgNode = screen.UNSAFE_getByType('img' as any);
                     imgNode.props.onError?.();
                 });
 
-                await waitFor(() => {
-                    const nextImg = screen.UNSAFE_getByType('img' as any);
-                    expect(nextImg.props.src).toBe(blobUrl);
-                });
+                const finalImg = screen.UNSAFE_getByType('img' as any);
+                expect(finalImg.props.src).toBe(blobUrl);
             } finally {
+                act(() => {
+                    jest.runOnlyPendingTimers();
+                    jest.clearAllTimers();
+                });
                 Object.defineProperty(Platform, 'OS', { value: originalOs });
                 (global as any).URL.createObjectURL = originalCreateObjectURL;
+                jest.useRealTimers();
             }
         });
     });

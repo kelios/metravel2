@@ -596,6 +596,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                             onChange={handleCountriesFilterChange}
                                             labelField="title_ru"
                                             valueField="country_id"
+                                            disabled
                                             testID="travel-wizard.step-route.countries"
                                             accessibilityLabel="travel-wizard.step-route.countries"
                                         />

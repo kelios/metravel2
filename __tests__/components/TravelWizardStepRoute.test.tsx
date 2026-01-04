@@ -27,6 +27,17 @@ jest.mock('react-native-safe-area-context', () => ({
     useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
+const mockMultiSelectField: jest.Mock<any, any> = jest.fn();
+jest.mock('@/components/MultiSelectField', () => {
+    return {
+        __esModule: true,
+        default: (props: any) => {
+            mockMultiSelectField(props);
+            return null;
+        },
+    };
+});
+
 // Mock WebMapComponent
 jest.mock('@/components/travel/WebMapComponent', () => ({
     __esModule: true,
@@ -49,8 +60,8 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
         setMarkers: jest.fn(),
         categoryTravelAddress: [],
         countries: [
-            { country_id: 1, title_ru: 'Франция', code: 'FR' },
-            { country_id: 2, title_ru: 'Италия', code: 'IT' },
+            { country_id: '1', title_ru: 'Франция', code: 'FR' },
+            { country_id: '2', title_ru: 'Италия', code: 'IT' },
         ],
         travelId: null,
         selectedCountryIds: [],
@@ -70,6 +81,7 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockMultiSelectField.mockClear();
     });
 
     describe('✅ Отображение компонентов', () => {
@@ -91,6 +103,15 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
         it('должен отображать счетчик точек', () => {
             const { getByText } = render(<TravelWizardStepRoute {...defaultProps} />);
             expect(getByText('Точек: 0')).toBeTruthy();
+        });
+
+        it('countries multiselect is read-only (disabled): countries are derived from markers only', () => {
+            render(<TravelWizardStepRoute {...defaultProps} />);
+
+            const calls: any[] = mockMultiSelectField.mock.calls.map((c: any[]) => c[0]);
+            const countriesCall = calls.find((props: any) => props?.label === 'Страны маршрута') as any;
+            expect(countriesCall).toBeTruthy();
+            expect(Boolean(countriesCall.disabled)).toBe(true);
         });
     });
 
@@ -277,27 +298,6 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
             );
 
             expect(getByText('Точек: 2')).toBeTruthy();
-        });
-    });
-
-    describe('✅ Выбор стран', () => {
-        it('должен отображать поле выбора стран', () => {
-            const { getByText } = render(<TravelWizardStepRoute {...defaultProps} />);
-            expect(getByText('Страны маршрута')).toBeTruthy();
-        });
-
-        it('должен вызвать onCountrySelect при выборе страны', () => {
-            const mockOnCountrySelect = jest.fn();
-
-            render(
-                <TravelWizardStepRoute
-                    {...defaultProps}
-                    onCountrySelect={mockOnCountrySelect}
-                />
-            );
-
-            // Логика выбора страны через MultiSelectField
-            // (требует более сложного mock)
         });
     });
 

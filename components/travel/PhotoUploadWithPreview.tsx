@@ -29,17 +29,9 @@ const normalizeImageUrl = (url?: string | null) => {
     // Data/blob stay as-is
     if (/^(data:|blob:)/i.test(safeUrl)) return safeUrl;
 
-    // ✅ Для абсолютных URL с приватным IP - извлекаем путь для проксирования через localhost
+    // Absolute URLs stay as-is.
     if (/^https?:\/\//i.test(safeUrl)) {
         try {
-            const parsed = new URL(safeUrl);
-            const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-            const isPrivateIp = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/i.test(safeUrl);
-            const isOnLocalhost = currentOrigin && /localhost|127\.0\.0\.1/i.test(currentOrigin);
-            
-            if (isPrivateIp && isOnLocalhost) {
-                return parsed.pathname + parsed.search;
-            }
             return safeUrl;
         } catch {
             return safeUrl;
@@ -113,12 +105,19 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     const [fallbackImageUrl, setFallbackImageUrl] = useState<string | null>(null);
     const [hasTriedFallback, setHasTriedFallback] = useState(false);
     const [lastPreviewUrl, setLastPreviewUrl] = useState<string | null>(null);
+    const [remoteRetryAttempt, setRemoteRetryAttempt] = useState(0);
+    const remoteRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastNotifiedPreviewRef = useRef<string | null>(null);
     const hasValidImage = Boolean(previewUrl || imageUri);
     const currentDisplayUrl = previewUrl ?? imageUri ?? '';
 
     const applyFallback = useCallback((candidateFallback: string) => {
         setHasTriedFallback(true);
+        setRemoteRetryAttempt(0);
+        if (remoteRetryTimerRef.current) {
+            clearTimeout(remoteRetryTimerRef.current);
+            remoteRetryTimerRef.current = null;
+        }
 
         // If fallback is a local preview (blob/data), treat it as a manual preview so that
         // oldImage sync effect does not overwrite it.
@@ -144,9 +143,46 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         setUploadMessage(null);
         setError(null);
         setIsManuallySelected(false);
+        setRemoteRetryAttempt(0);
+        if (remoteRetryTimerRef.current) {
+            clearTimeout(remoteRetryTimerRef.current);
+            remoteRetryTimerRef.current = null;
+        }
         onPreviewChange?.(null);
         onUpload?.('');
     }, [onPreviewChange, onUpload]);
+
+    useEffect(() => {
+        return () => {
+            if (remoteRetryTimerRef.current) {
+                clearTimeout(remoteRetryTimerRef.current);
+                remoteRetryTimerRef.current = null;
+            }
+        };
+    }, []);
+
+    const scheduleRemoteRetry = useCallback((url: string) => {
+        if (!url || /^(blob:|data:)/i.test(url)) return false;
+        if (!/^https?:\/\//i.test(url)) return false;
+        if (remoteRetryAttempt >= 6) return false;
+        if (remoteRetryTimerRef.current) return true;
+
+        const delays = [300, 600, 1200, 2000, 2500, 3000];
+        const delayMs = delays[Math.min(remoteRetryAttempt, delays.length - 1)];
+
+        remoteRetryTimerRef.current = setTimeout(() => {
+            remoteRetryTimerRef.current = null;
+            setRemoteRetryAttempt((prev) => prev + 1);
+
+            const base = url.replace(/([?&])__retry=\d+(&)?/g, '$1').replace(/[?&]$/, '');
+            const glue = base.includes('?') ? '&' : '?';
+            // Keep remote URL but bust cache; backend conversions can appear with delay.
+            setImageUri(`${base}${glue}__retry=${remoteRetryAttempt + 1}`);
+            setPreviewUrl(null);
+        }, delayMs);
+
+        return true;
+    }, [remoteRetryAttempt]);
 
     const handleRemovePress = useCallback(() => {
         if (disabled) return;
@@ -483,6 +519,11 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                     setError('Изображение не найдено');
                                 }}
                                 onError={() => {
+                                    // If this is a remote URL, retry for a short window (backend conversion may not be ready yet).
+                                    if (scheduleRemoteRetry(currentDisplayUrl)) {
+                                        return;
+                                    }
+
                                     const candidateFallback = chooseFallbackUrl(
                                         currentDisplayUrl,
                                         fallbackImageUrl,

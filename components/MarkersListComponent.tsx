@@ -30,21 +30,24 @@ const normalizeImageUrl = (url?: string | null) => {
     // ✅ Для абсолютных URL с приватным IP - извлекаем путь для проксирования через localhost
     if (/^https?:\/\//i.test(trimmed)) {
         try {
-            const parsed = new URL(trimmed);
-            const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-            const isPrivateIp = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/i.test(trimmed);
-            const isOnLocalhost = currentOrigin && /localhost|127\.0\.0\.1/i.test(currentOrigin);
-            
-            if (isPrivateIp && isOnLocalhost) {
-                return parsed.pathname + parsed.search;
-            }
+            void new URL(trimmed);
             return trimmed;
         } catch {
             return trimmed;
         }
     }
     
-    // Относительные URL - оставляем как есть
+    // Относительные URL - достраиваем до backend host (без /api)
+    const baseRaw =
+        process.env.EXPO_PUBLIC_API_URL ||
+        (typeof window !== 'undefined' ? window.location.origin : '');
+    const hostWithoutApi = baseRaw.replace(/\/+$/, '').replace(/\/api$/i, '');
+    const prefix = hostWithoutApi || baseRaw.replace(/\/+$/, '');
+
+    if (prefix) {
+        return `${prefix}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+    }
+
     return trimmed;
 };
 
@@ -420,6 +423,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                                                setEditingIndex,
                                                                activeIndex,
                                                                setActiveIndex,
+                                                               travelId,
                                                            }) => {
     const colors = useThemedColors();
     const styles = useStyles(colors);
@@ -581,6 +585,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                     categoryTravelAddress={categoryTravelAddress}
                     handleMarkerChange={handleMarkerChange}
                     handleImageUpload={handleImageUpload}
+                    travelId={travelId}
                     onClose={() => setEditingIndex(null)}
                     onRemove={onRemove}
                     styles={styles}
@@ -597,6 +602,7 @@ interface EditMarkerModalProps {
     categoryTravelAddress: { id: number | string; name: string }[];
     handleMarkerChange: (index: number, field: string, value: string | string[]) => void;
     handleImageUpload: (index: number, imageUrl: string) => void;
+    travelId?: string | null;
     onClose: () => void;
     onRemove: (index: number) => void;
     styles: any;
@@ -610,6 +616,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                                                              categoryTravelAddress,
                                                              handleMarkerChange,
                                                              handleImageUpload,
+                                                             travelId,
                                                              onClose,
                                                              onRemove,
                                                              styles,
@@ -647,6 +654,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
     const persistEdits = () => {
         handleMarkerChange(index, 'address', address);
         handleMarkerChange(index, 'categories', categories);
+        handleMarkerChange(index, 'image', localImage);
     };
 
     const handleClose = () => {
@@ -731,20 +739,25 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
 
                     <div style={styles.field}>
                         <label style={styles.fieldLabel}>Изображение точки</label>
-                        <PhotoUploadWithPreview
-                            collection="travelImageAddress"
-                            idTravel={marker.id ? String(marker.id) : null}
-                            oldImage={localImage}
-                            onUpload={handleLocalImageUpload}
-                            placeholder="Перетащите фото точки маршрута"
-                            maxSizeMB={10}
-                        />
-                        <div style={styles.fieldHint}>
-                            {marker.id == null 
-                                ? 'Превью будет сохранено. После сохранения маршрута фото загрузится на сервер автоматически.'
-                                : 'Фото поможет путешественникам узнать место. Можно загрузить одно главное изображение.'
-                            }
-                        </div>
+                        {marker.id != null ? (
+                            <>
+                                <PhotoUploadWithPreview
+                                    collection="travelImageAddress"
+                                    idTravel={String(marker.id)}
+                                    oldImage={localImage}
+                                    onUpload={handleLocalImageUpload}
+                                    placeholder="Перетащите фото точки маршрута"
+                                    maxSizeMB={10}
+                                />
+                                <div style={styles.fieldHint}>
+                                    Фото поможет путешественникам узнать место. Можно загрузить одно главное изображение.
+                                </div>
+                            </>
+                        ) : (
+                            <div style={styles.fieldHint}>
+                                Сначала сохраните маршрут, затем откройте точку снова — после этого можно загрузить фото.
+                            </div>
+                        )}
                     </div>
 
                     <div style={styles.actionsRow}>

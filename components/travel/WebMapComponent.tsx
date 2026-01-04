@@ -430,8 +430,12 @@ const WebMapComponent = ({
 
         newMarker.address = address;
 
-        debouncedMarkersChange([...localMarkers, newMarker]);
-        setActiveIndex(localMarkers.length);
+        // ✅ FIX: addMarker is async (reverse geocode). Use the latest known markers list
+        // instead of the potentially stale `localMarkers` from closure.
+        const baseMarkers = Array.isArray(lastMarkersRef.current) ? lastMarkersRef.current : localMarkers;
+        const nextMarkers = [...baseMarkers, newMarker];
+        debouncedMarkersChange(nextMarkers);
+        setActiveIndex(Math.max(0, nextMarkers.length - 1));
     };
 
     const handleEditMarker = (index: number) => {

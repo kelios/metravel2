@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Platform, Text } from 'react-native';
 import { Image as ExpoImage, ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
@@ -81,6 +81,50 @@ function OptimizedImage({
   const validSource = hasValidUriSource(source);
   const [isLoading, setIsLoading] = useState(() => validSource);
   const [hasError, setHasError] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const [lastUriKey, setLastUriKey] = useState('');
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const uriKey = useMemo(() => {
+    if (typeof source === 'number') return '__asset__';
+    const uri = typeof (source as any)?.uri === 'string' ? String((source as any).uri).trim() : '';
+    return uri;
+  }, [source]);
+
+  useEffect(() => {
+    if (uriKey === lastUriKey) return;
+    setLastUriKey(uriKey);
+    setHasError(false);
+    setRetryAttempt(0);
+    setIsLoading(Boolean(validSource));
+
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+  }, [uriKey, lastUriKey, validSource]);
+
+  useEffect(() => {
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  const resolvedSource = useMemo(() => {
+    if (typeof source === 'number') return source;
+    const uri = typeof (source as any)?.uri === 'string' ? String((source as any).uri).trim() : '';
+    if (!uri) return source;
+    if (/^(blob:|data:)/i.test(uri)) return source;
+    if (!/^https?:\/\//i.test(uri)) return source;
+
+    if (retryAttempt <= 0) return source;
+
+    const glue = uri.includes('?') ? '&' : '?';
+    return { ...(source as any), uri: `${uri}${glue}__retry=${retryAttempt}` };
+  }, [source, retryAttempt]);
 
   const webBlobOrDataUri = useMemo(() => {
     if (Platform.OS !== 'web') return null;
@@ -94,10 +138,37 @@ function OptimizedImage({
 
   const handleLoad = () => {
     setIsLoading(false);
+    setHasError(false);
     onLoad?.();
   };
 
   const handleError = () => {
+    const uri = typeof (source as any)?.uri === 'string' ? String((source as any).uri).trim() : '';
+    const canRetry =
+      Platform.OS === 'web' &&
+      typeof source !== 'number' &&
+      uri.length > 0 &&
+      /^https?:\/\//i.test(uri) &&
+      !/^(blob:|data:)/i.test(uri);
+
+    // Retry a few times with cache-busting query param.
+    if (canRetry && retryAttempt < 6) {
+      setIsLoading(true);
+      setHasError(false);
+
+      if (!retryTimeoutRef.current) {
+        const delays = [300, 600, 1200, 2000, 2500, 3000];
+        const delayMs = delays[Math.min(retryAttempt, delays.length - 1)];
+        retryTimeoutRef.current = setTimeout(() => {
+          retryTimeoutRef.current = null;
+          setRetryAttempt((prev) => prev + 1);
+        }, delayMs);
+      }
+
+      onError?.();
+      return;
+    }
+
     setIsLoading(false);
     setHasError(true);
     onError?.();
@@ -142,7 +213,7 @@ function OptimizedImage({
       {blurBackground && validSource && (
         <>
           <ExpoImage
-            source={source}
+            source={resolvedSource}
             contentFit="cover"
             transition={0}
             style={StyleSheet.absoluteFill}
@@ -166,7 +237,7 @@ function OptimizedImage({
       {!blurOnly && validSource && !webBlobOrDataUri && (
         <ExpoImage
           {...(imageProps as any)}
-          source={source}
+          source={resolvedSource}
           contentFit={contentFit}
           placeholder={placeholder}
           transition={transition}
