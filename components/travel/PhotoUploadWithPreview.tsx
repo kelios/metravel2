@@ -105,6 +105,25 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     const hasValidImage = Boolean(previewUrl || imageUri);
     const currentDisplayUrl = previewUrl ?? imageUri ?? '';
 
+    const applyFallback = useCallback((candidateFallback: string) => {
+        setHasTriedFallback(true);
+
+        // If fallback is a local preview (blob/data), treat it as a manual preview so that
+        // oldImage sync effect does not overwrite it.
+        if (/^(blob:|data:)/i.test(candidateFallback)) {
+            setIsManuallySelected(true);
+            setLastPreviewUrl(candidateFallback);
+            setPreviewUrl(candidateFallback);
+            setImageUri(null);
+            setFallbackImageUrl(null);
+        } else {
+            setImageUri(candidateFallback);
+            setPreviewUrl(null);
+        }
+
+        setError(null);
+    }, []);
+
     const handleRemoveImage = useCallback(() => {
         setImageUri(null);
         setPreviewUrl(null);
@@ -412,19 +431,13 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                     );
                                     console.error('Image decode failed:', currentDisplayUrl, 'fallback:', candidateFallback);
                                     if (candidateFallback) {
-                                        setHasTriedFallback(true);
-                                        setImageUri(candidateFallback);
-                                        setPreviewUrl(null);
-                                        setError(null);
+                                        applyFallback(candidateFallback);
                                         return;
                                     }
 
                                     const apiCandidate = buildApiPrefixedUrl(currentDisplayUrl);
                                     if (apiCandidate) {
-                                        setHasTriedFallback(true);
-                                        setImageUri(apiCandidate);
-                                        setPreviewUrl(null);
-                                        setError(null);
+                                        applyFallback(apiCandidate);
                                         return;
                                     }
 
@@ -441,19 +454,13 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                     );
                                     console.error('Image load error:', currentDisplayUrl, 'fallback:', candidateFallback);
                                     if (candidateFallback) {
-                                        setHasTriedFallback(true);
-                                        setImageUri(candidateFallback);
-                                        setPreviewUrl(null);
-                                        setError(null);
+                                        applyFallback(candidateFallback);
                                         return;
                                     }
 
                                     const apiCandidate = buildApiPrefixedUrl(currentDisplayUrl);
                                     if (apiCandidate) {
-                                        setHasTriedFallback(true);
-                                        setImageUri(apiCandidate);
-                                        setPreviewUrl(null);
-                                        setError(null);
+                                        applyFallback(apiCandidate);
                                         return;
                                     }
                                     // При повторной ошибке показываем placeholder

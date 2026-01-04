@@ -261,7 +261,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
 
             <View style={styles.belowProgressRow}>
                 <View style={styles.belowProgressLeft}>
-                    {totalSteps && currentStep && totalSteps > 1 ? (
+                    {!isMobile && totalSteps && currentStep && totalSteps > 1 ? (
                         <View style={styles.milestonesInlineWrapper}>
                             {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
                                 <Pressable

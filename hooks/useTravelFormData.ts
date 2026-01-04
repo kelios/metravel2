@@ -44,6 +44,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [isManualSaveInFlight, setIsManualSaveInFlight] = useState(false);
+  const manualSaveInFlightRef = useRef(false);
   const [_dataVersion, setDataVersion] = useState<number>(0); // ✅ FIX: Версионирование для конфликтов (будет использоваться для обнаружения конфликтов редактирования)
 
   const initialFormData = getEmptyFormData(isNew ? null : String(travelId));
@@ -173,6 +174,25 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)),
       } as TravelFormData;
 
+      // Normalize nullable string fields (backend expects strings; null breaks drafts and can wipe UI after save)
+      ([
+        'name',
+        'budget',
+        'year',
+        'number_peoples',
+        'number_days',
+        'minus',
+        'plus',
+        'recommendation',
+        'description',
+        'youtube_link',
+      ] as Array<keyof TravelFormData>).forEach((key) => {
+        const value = mergedData[key];
+        if (value == null) {
+          (mergedData as any)[key] = '';
+        }
+      });
+
       const normalizedMarkers = Array.isArray((mergedData as any).coordsMeTravel)
         ? (mergedData as any).coordsMeTravel.map((m: any) => {
             const { image, ...rest } = m ?? {};
@@ -289,6 +309,16 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         }
       };
 
+      const keepCurrentIfServerNil = <K extends keyof TravelFormData>(key: K) => {
+        const serverValue = (normalizedSavedData as any)[key];
+        const currentValue = (currentDataSnapshot as any)[key];
+        if (serverValue == null) {
+          if (typeof currentValue === 'string' && currentValue.trim().length > 0) {
+            (normalizedSavedData as any)[key] = currentValue;
+          }
+        }
+      };
+
       const keepCurrentIfServerEmptyArray = <K extends keyof TravelFormData>(key: K) => {
         const serverValue = (normalizedSavedData as any)[key];
         const currentValue = (currentDataSnapshot as any)[key];
@@ -305,6 +335,12 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       keepCurrentIfServerEmpty('minus');
       keepCurrentIfServerEmpty('recommendation');
       keepCurrentIfServerEmpty('youtube_link');
+      keepCurrentIfServerNil('description');
+      keepCurrentIfServerNil('plus');
+      keepCurrentIfServerNil('minus');
+      keepCurrentIfServerNil('recommendation');
+      keepCurrentIfServerNil('youtube_link');
+      keepCurrentIfServerNil('name');
 
       // If backend returns empty arrays for filter fields, don't wipe user selections.
       keepCurrentIfServerEmptyArray('categories');
@@ -385,7 +421,13 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
   const autosave = useImprovedAutoSave(formState.data, initialFormData, {
     debounce: 5000,
-    onSave: cleanAndSave,
+    onSave: async (dataToSave) => {
+      // Avoid racing autosave requests while a manual save is in progress.
+      if (manualSaveInFlightRef.current) {
+        throw new Error('Request aborted');
+      }
+      return await cleanAndSave(dataToSave as TravelFormData);
+    },
     onSuccess: handleSaveSuccess,
     onError: handleSaveError,
     enabled: isAuthenticated && hasAccess && !isManualSaveInFlight,
@@ -396,12 +438,62 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       return manualSavePromiseRef.current;
     }
 
+    manualSaveInFlightRef.current = true;
     setIsManualSaveInFlight(true);
     const promise = (async () => {
       try {
         // Отменяем отложенный автосейв, чтобы не отправить старые данные (publish=false) после ручного сохранения.
         autosave?.cancelPending?.();
-        const toSave = (dataOverride ?? (formState.data as TravelFormData)) as TravelFormData;
+        // Abort any in-flight autosave request (it will still appear in Network, but won't win the race).
+        if (saveAbortControllerRef.current) {
+          saveAbortControllerRef.current.abort();
+        }
+
+        const isDraftPlaceholder = (value: unknown) => {
+          if (typeof value !== 'string') return false;
+          return value.trim() === '__draft_placeholder__';
+        };
+
+        const mergeWithCurrentSnapshot = (override?: TravelFormData) => {
+          if (!override) return formDataRef.current as TravelFormData;
+          const current = (formDataRef.current as TravelFormData) ?? ({} as TravelFormData);
+          const merged: any = { ...current, ...override };
+
+          // Preserve current values if override contains empty/null/placeholder for user-entered fields.
+          (['name', 'description', 'plus', 'minus', 'recommendation', 'youtube_link'] as Array<keyof TravelFormData>).forEach((key) => {
+            const o = (override as any)[key];
+            const c = (current as any)[key];
+            if (o == null) {
+              if (c != null) merged[key] = c;
+              return;
+            }
+            if (isDraftPlaceholder(o)) {
+              if (typeof c === 'string' && c.trim().length > 0 && !isDraftPlaceholder(c)) {
+                merged[key] = c;
+              }
+              return;
+            }
+            if (typeof o === 'string' && o.trim().length === 0) {
+              if (typeof c === 'string' && c.trim().length > 0) {
+                merged[key] = c;
+              }
+            }
+          });
+
+          (['categories', 'transports', 'complexity', 'companions', 'over_nights_stay', 'month', 'countries'] as Array<keyof TravelFormData>).forEach((key) => {
+            const o = (override as any)[key];
+            const c = (current as any)[key];
+            if (Array.isArray(o) && o.length === 0) {
+              if (Array.isArray(c) && c.length > 0) {
+                merged[key] = c;
+              }
+            }
+          });
+
+          return merged as TravelFormData;
+        };
+
+        const toSave = mergeWithCurrentSnapshot(dataOverride);
         // Если пришли извне готовые данные — сохраняем напрямую, минуя отложенный стейт.
         const savedData = await cleanAndSave(toSave);
         const normalizedSavedData = normalizeDraftPlaceholders(savedData);
@@ -419,13 +511,14 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         return;
       } finally {
         manualSavePromiseRef.current = null;
+        manualSaveInFlightRef.current = false;
         setIsManualSaveInFlight(false);
       }
     })();
 
     manualSavePromiseRef.current = promise;
     return promise;
-  }, [applySavedData, autosave, cleanAndSave, formState.data, normalizeDraftPlaceholders, showToast]);
+  }, [applySavedData, autosave, cleanAndSave, normalizeDraftPlaceholders, showToast]);
 
   const loadTravelData = useCallback(
     async (id: string) => {
@@ -543,8 +636,10 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     updater => {
       if (typeof updater === 'function') {
         const next = updater(formDataRef.current);
+        formDataRef.current = next as TravelFormData;
         formState.updateFields(next);
       } else {
+        formDataRef.current = updater as TravelFormData;
         formState.updateFields(updater as Partial<TravelFormData>);
       }
     },

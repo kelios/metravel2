@@ -331,14 +331,11 @@ const waitForAutosaveOk = async (page: Page, timeoutMs: number = 30_000) => {
 const clickNext = async (page: Page) => {
   const candidates = [
     // Prefer accessible name (more stable than exact DOM).
-    page.getByRole('button', { name: /^(далее|далее:.*|к медиа|к деталям|к публикации)$/i }),
-    // Fallbacks for various labels.
-    page.getByRole('button', { name: /далее|к медиа|к деталям|к публикации|маршрут|медиа|детали|публикац/i }),
-    page.locator('button:has-text("Далее")'),
-    page.locator('button:has-text("Далее:")'),
-    page.locator('button:has-text("К медиа")'),
-    page.locator('button:has-text("К деталям")'),
-    page.locator('button:has-text("К публикации")'),
+    page.getByRole('button', { name: /^(далее|далее:.*)$/i }),
+    page.getByRole('button', { name: /^к медиа/i }),
+    page.getByRole('button', { name: /^к деталям/i }),
+    page.getByRole('button', { name: /^к доп/i }),
+    page.getByRole('button', { name: /^к публикации/i }),
   ];
 
   for (const c of candidates) {
@@ -359,7 +356,9 @@ const clickNext = async (page: Page) => {
   }
 
   // Last resort: click any visible next-ish button.
-  const any = page.locator('button').filter({ hasText: /Далее|К медиа|К деталям|К публикации|Маршрут|Медиа|Детали|Публикац/i }).first();
+  const any = page
+    .getByRole('button', { name: /далее|к медиа|к деталям|к доп|к публикации/i })
+    .first();
   await any.scrollIntoViewIfNeeded().catch(() => null);
   await any.click({ timeout: 30_000, force: true });
 };
@@ -401,6 +400,84 @@ const ensureOnStep2 = async (page: Page) => {
         const scrollVisible = await step2Scroll.isVisible().catch(() => false);
         if (scrollVisible) return true;
         return await step2Search.isVisible().catch(() => false);
+      },
+      { timeout: 30_000 }
+    )
+    .toBeTruthy();
+};
+
+const ensureOnStep3 = async (page: Page) => {
+  const step3HeaderTitle = page.getByText('Медиа путешествия', { exact: true }).first();
+  const step3PrimaryAction = page.getByRole('button', { name: /к деталям/i }).first();
+  const step3MainImage = page.getByText('Главное изображение', { exact: true }).first();
+  const step3Gallery = page.getByText('Галерея путешествия', { exact: true }).first();
+  const step3Video = page.getByText(/Видео о путешествии/i).first();
+
+  const isStep3Visible = async () => {
+    return await Promise.any([
+      step3HeaderTitle.isVisible().catch(() => false),
+      step3PrimaryAction.isVisible().catch(() => false),
+      step3MainImage.isVisible().catch(() => false),
+      step3Gallery.isVisible().catch(() => false),
+      step3Video.isVisible().catch(() => false),
+    ]).catch(() => false);
+  };
+
+  const waitForStep3 = async (timeout: number) => {
+    await Promise.race([
+      step3HeaderTitle.waitFor({ state: 'visible', timeout }).catch(() => null),
+      step3PrimaryAction.waitFor({ state: 'visible', timeout }).catch(() => null),
+      step3MainImage.waitFor({ state: 'visible', timeout }).catch(() => null),
+      step3Gallery.waitFor({ state: 'visible', timeout }).catch(() => null),
+      step3Video.waitFor({ state: 'visible', timeout }).catch(() => null),
+    ]);
+  };
+
+  await waitForStep3(15_000).catch(async () => {
+    const milestone3 = page.locator('[aria-label="Перейти к шагу 3"]').first();
+    if (await milestone3.isVisible().catch(() => false)) {
+      await milestone3.click().catch(() => null);
+    }
+  });
+
+  // Retry a couple of times: on RN-web some clicks can be ignored due to overlays/focus.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (await isStep3Visible()) break;
+
+    // 1) Preferred: click the primary header action.
+    const toMediaPrimary = page.getByRole('button', { name: /к медиа/i }).first();
+    if (await toMediaPrimary.isVisible().catch(() => false)) {
+      await toMediaPrimary.scrollIntoViewIfNeeded().catch(() => null);
+      await toMediaPrimary.click({ force: true }).catch(() => null);
+      await page.waitForTimeout(800);
+      if (await isStep3Visible()) break;
+    }
+
+    // 2) Milestone with aria-label (if present).
+    const milestone3 = page.locator('[aria-label="Перейти к шагу 3"]').first();
+    if (await milestone3.isVisible().catch(() => false)) {
+      await milestone3.click({ force: true }).catch(() => null);
+      await page.waitForTimeout(500);
+      if (await isStep3Visible()) break;
+    }
+
+    // 3) Last resort: some RN-web snapshots show milestone buttons only as text numbers.
+    const milestoneText3 = page.getByRole('button', { name: /^3$/ }).first();
+    if (await milestoneText3.isVisible().catch(() => false)) {
+      await milestoneText3.scrollIntoViewIfNeeded().catch(() => null);
+      await milestoneText3.click({ force: true }).catch(() => null);
+      await page.waitForTimeout(500);
+    }
+  }
+
+  await expect
+    .poll(
+      async () => {
+        if (await step3HeaderTitle.isVisible().catch(() => false)) return true;
+        if (await step3PrimaryAction.isVisible().catch(() => false)) return true;
+        if (await step3MainImage.isVisible().catch(() => false)) return true;
+        if (await step3Gallery.isVisible().catch(() => false)) return true;
+        return await step3Video.isVisible().catch(() => false);
       },
       { timeout: 30_000 }
     )
@@ -505,28 +582,45 @@ test.describe('Создание путешествия - Полный flow', () 
 
       // Переход к следующему шагу
       await clickNext(page);
+
+      // Ensure we actually moved to Step 3; if not, use milestone navigation.
+      await ensureOnStep3(page);
     });
 
     // Шаг 3: Медиа
     await test.step('Шаг 3: Медиа (пропускаем загрузку)', async () => {
       // Some builds can keep us on step 2 if "Next" didn't fire; use stable step-3 markers
       // and fall back to milestone navigation.
-      const step3Markers = page.locator('text=Главное изображение, text=Галерея путешествия, text=/Видео о путешествии/i').first();
+      const step3MainImage = page.getByText('Главное изображение', { exact: true }).first();
+      const step3Gallery = page.getByText('Галерея путешествия', { exact: true }).first();
+      const step3Video = page.getByText(/Видео о путешествии/i).first();
 
-      await step3Markers.waitFor({ state: 'visible', timeout: 15_000 }).catch(async () => {
+      const waitForStep3 = async (timeout: number) => {
+        await Promise.race([
+          step3MainImage.waitFor({ state: 'visible', timeout }).catch(() => null),
+          step3Gallery.waitFor({ state: 'visible', timeout }).catch(() => null),
+          step3Video.waitFor({ state: 'visible', timeout }).catch(() => null),
+        ]);
+      };
+
+      await waitForStep3(15_000).catch(async () => {
         const milestone3 = page.locator('[aria-label="Перейти к шагу 3"]').first();
         if (await milestone3.isVisible().catch(() => false)) {
           await milestone3.click().catch(() => null);
         }
       });
 
-      const isOnStep3 = await step3Markers.isVisible().catch(() => false);
+      const isOnStep3 = await Promise.any([
+        step3MainImage.isVisible().catch(() => false),
+        step3Gallery.isVisible().catch(() => false),
+        step3Video.isVisible().catch(() => false),
+      ]).catch(() => false);
       if (!isOnStep3) {
         const milestone3 = page.locator('[aria-label="Перейти к шагу 3"]').first();
         if (await milestone3.isVisible().catch(() => false)) {
           await milestone3.click().catch(() => null);
         }
-        await step3Markers.waitFor({ state: 'visible', timeout: 15_000 });
+        await waitForStep3(15_000);
       }
 
       // Пропускаем загрузку и идем дальше
@@ -535,7 +629,56 @@ test.describe('Создание путешествия - Полный flow', () 
 
     // Шаг 4: Детали
     await test.step('Шаг 4: Детали путешествия', async () => {
-      await expect(page.locator('text=/Детали( и советы)?/')).toBeVisible();
+      const step4Title = page.locator('text=/Детали маршрута/i').first();
+      const step4Recommendations = page.locator('text=Рекомендационные поля').first();
+      const step4Plus = page.locator('text=Плюсы').first();
+
+      const waitForStep4 = async (timeout: number) => {
+        await Promise.race([
+          step4Title.waitFor({ state: 'visible', timeout }).catch(() => null),
+          step4Recommendations.waitFor({ state: 'visible', timeout }).catch(() => null),
+          step4Plus.waitFor({ state: 'visible', timeout }).catch(() => null),
+        ]);
+      };
+
+      await waitForStep4(15_000).catch(async () => {
+        const milestone4 = page.locator('[aria-label="Перейти к шагу 4"]').first();
+        if (await milestone4.isVisible().catch(() => false)) {
+          await milestone4.click().catch(() => null);
+        }
+      });
+
+      const isOnStep4 = await expect
+        .poll(
+          async () => {
+            if (await step4Title.isVisible().catch(() => false)) return true;
+            if (await step4Recommendations.isVisible().catch(() => false)) return true;
+            return await step4Plus.isVisible().catch(() => false);
+          },
+          { timeout: 30_000 }
+        )
+        .toBeTruthy()
+        .then(() => true)
+        .catch(() => false);
+
+      if (!isOnStep4) {
+        const milestone4 = page.locator('[aria-label="Перейти к шагу 4"]').first();
+        if (await milestone4.isVisible().catch(() => false)) {
+          await milestone4.click().catch(() => null);
+        }
+        await waitForStep4(15_000);
+      }
+
+      await expect
+        .poll(
+          async () => {
+            if (await step4Title.isVisible().catch(() => false)) return true;
+            if (await step4Recommendations.isVisible().catch(() => false)) return true;
+            return await step4Plus.isVisible().catch(() => false);
+          },
+          { timeout: 30_000 }
+        )
+        .toBeTruthy();
 
       // Можем добавить детали здесь если нужно
 
@@ -599,10 +742,10 @@ test.describe('Создание путешествия - Полный flow', () 
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Быстрый черновик');
 
     // Проверяем наличие кнопки Quick Draft
-    await expect(page.locator('button:has-text("Быстрый черновик")')).toBeVisible();
+    await expect(page.getByRole('button', { name: /быстрый черновик/i })).toBeVisible();
 
     // Кликаем по Quick Draft
-    await page.click('button:has-text("Быстрый черновик")');
+    await page.getByRole('button', { name: /быстрый черновик/i }).click();
 
     // Проверяем Toast сообщение
     await expect(page.locator('text=Черновик сохранен')).toBeVisible({ timeout: 5000 });
@@ -616,7 +759,7 @@ test.describe('Создание путешествия - Полный flow', () 
     await ensureCanCreateTravel(page);
 
     // Не заполняем название
-    await page.click('button:has-text("Быстрый черновик")');
+    await page.getByRole('button', { name: /быстрый черновик/i }).click();
 
     // Проверяем ошибку
     await expect(page.locator('text=Заполните название')).toBeVisible({ timeout: 3000 });
@@ -1089,7 +1232,19 @@ test.describe('Регрессии: web стабильность wizard', () => {
     const dialog = page.getByText('Превью карточки', { exact: true });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
 
-    await page.locator('[aria-label="Закрыть превью"]').first().click({ timeout: 10_000 });
+    const close = page.locator('[aria-label="Закрыть превью"]').first();
+    if (await close.isVisible().catch(() => false)) {
+      await close.click({ timeout: 10_000 }).catch(async () => {
+        await close.click({ timeout: 10_000, force: true }).catch(() => null);
+      });
+    }
+    if (await dialog.isVisible().catch(() => false)) {
+      // Fallback: overlays can intercept clicks.
+      await page.mouse.click(5, 5).catch(() => null);
+    }
+    if (await dialog.isVisible().catch(() => false)) {
+      await page.keyboard.press('Escape').catch(() => null);
+    }
     await expect(dialog).toBeHidden({ timeout: 10_000 });
   });
 

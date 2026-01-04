@@ -183,7 +183,10 @@ const closePreviewModal = async (page: any) => {
 };
 
 const openPreviewModal = async (page: any) => {
-  const previewButton = page.locator('button:has([aria-label*="eye"]), button:has-text("Превью"), button:has-text("Показать превью")');
+  const previewButton = page
+    .getByRole('button', { name: /показать превью|превью/i })
+    .or(page.locator('[aria-label="Показать превью"], [aria-label*="Превью"]'));
+
   await expect(previewButton.first()).toBeVisible({ timeout: 15000 });
   await previewButton.first().click();
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 });
@@ -281,7 +284,7 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Минимальный черновик');
 
     // Клик по Quick Draft
-    await page.click('button:has-text("Быстрый черновик")');
+    await page.getByRole('button', { name: /быстрый черновик/i }).click();
 
     // Проверяем успешное сообщение
     await expect(page.locator('text=Черновик сохранен')).toBeVisible({ timeout: 5000 });
@@ -303,7 +306,7 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('AB');
 
     // Клик по Quick Draft
-    await page.click('button:has-text("Быстрый черновик")');
+    await page.getByRole('button', { name: /быстрый черновик/i }).click();
 
     // Проверяем ошибку
     await expect(page.locator('text=/Минимум 3 символа/i')).toBeVisible({ timeout: 3000 });
@@ -319,7 +322,7 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
     await page.goto('/travel/new');
     await ensureCanCreateTravel(page);
 
-    const quickDraftButton = page.locator('button:has-text("Быстрый черновик")');
+    const quickDraftButton = page.getByRole('button', { name: /быстрый черновик/i });
     await expect(quickDraftButton).toBeVisible();
 
     // Mobile

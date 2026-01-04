@@ -1,19 +1,24 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { render, waitFor, act } from '@testing-library/react-native';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { uploadImage } from '@/src/api/misc';
+import { Platform } from 'react-native';
 
 // Mock dependencies
 jest.mock('@/src/api/misc');
 jest.mock('react-native-image-picker', () => ({
     launchImageLibrary: jest.fn(),
 }));
+let lastOnDrop: any = null;
 jest.mock('react-dropzone', () => ({
-    useDropzone: jest.fn(() => ({
-        getRootProps: jest.fn(() => ({})),
-        getInputProps: jest.fn(() => ({})),
-        isDragActive: false,
-    })),
+    useDropzone: jest.fn((opts: any) => {
+        lastOnDrop = opts?.onDrop;
+        return {
+            getRootProps: jest.fn(() => ({})),
+            getInputProps: jest.fn(() => ({})),
+            isDragActive: false,
+        };
+    }),
 }));
 
 // Mock Expo icons
@@ -33,6 +38,7 @@ describe('PhotoUploadWithPreview', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        lastOnDrop = null;
     });
 
     describe('Rendering', () => {
@@ -166,6 +172,57 @@ describe('PhotoUploadWithPreview', () => {
 
             // Component renders with replace button when image exists
             expect(getByText('Заменить фото')).toBeTruthy();
+        });
+
+        it('web: falls back to blob preview when remote image fails to load', async () => {
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+            const blobUrl = 'blob:http://localhost:8081/test-blob';
+            const originalCreateObjectURL = (global as any).URL?.createObjectURL;
+            (global as any).URL = (global as any).URL || {};
+            (global as any).URL.createObjectURL = jest.fn(() => blobUrl);
+
+            try {
+                // Simulate upload returning a URL that will fail to load.
+                const remoteBadUrl = 'http://192.168.50.36/travel-image/17981/conversions/bad.webp';
+                (uploadImage as any).mockResolvedValueOnce({ url: remoteBadUrl });
+
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        oldImage={remoteBadUrl}
+                    />
+                );
+
+                expect(typeof lastOnDrop).toBe('function');
+
+                // Trigger drop -> preview becomes blob, then upload sets imageUri to remote URL with blob fallback stored.
+                const file = new File([new Uint8Array([1, 2, 3])], 'test.webp', { type: 'image/webp' });
+                await act(async () => {
+                    await lastOnDrop([file], []);
+                });
+
+                // Wait until the uploaded (remote) URL is rendered.
+                await waitFor(() => {
+                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    expect(String(imgNode.props.src)).toBe(remoteBadUrl);
+                });
+
+                // Trigger load error; component should apply blob fallback.
+                await act(async () => {
+                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    imgNode.props.onError?.();
+                });
+
+                await waitFor(() => {
+                    const nextImg = screen.UNSAFE_getByType('img' as any);
+                    expect(nextImg.props.src).toBe(blobUrl);
+                });
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+                (global as any).URL.createObjectURL = originalCreateObjectURL;
+            }
         });
     });
 

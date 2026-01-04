@@ -26,7 +26,7 @@ interface TravelWizardStepMediaProps {
     currentStep: number;
     totalSteps: number;
     formData: TravelFormData;
-    setFormData: (data: TravelFormData) => void;
+    setFormData: React.Dispatch<React.SetStateAction<TravelFormData>>;
     travelDataOld: Travel | null;
     onManualSave: () => Promise<TravelFormData | void>;
     onBack: () => void;
@@ -112,9 +112,9 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
         }, 50);
     }, [focusAnchorId, onAnchorHandled]);
 
-    const handleYoutubeChange = (value: string) => {
-        setFormData({ ...formData, youtube_link: value });
-    };
+    const handleYoutubeChange = useCallback((value: string) => {
+        setFormData(prev => ({ ...(prev as any), youtube_link: value }));
+    }, [setFormData]);
 
     const handleRequestDeleteCover = useCallback(() => {
         if (!formData.id) return;
@@ -127,15 +127,15 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
             await deleteTravelMainImage(formData.id);
 
             // Clear cover urls to update preview immediately.
-            setFormData({
-                ...(formData as any),
+            setFormData(prev => ({
+                ...(prev as any),
                 travel_image_thumb_small_url: null,
                 travel_image_thumb_url: null,
-            });
+            }));
         } finally {
             setIsDeleteCoverDialogVisible(false);
         }
-    }, [formData, setFormData]);
+    }, [formData.id, setFormData]);
 
     const coverResetKey = useMemo(() => {
         const url = (formData as any).travel_image_thumb_small_url;
@@ -146,24 +146,24 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
         (url: string | null) => {
             // При успешной загрузке или локальном превью обновляем форму,
             // чтобы шаг 6 сразу видел обложку без перезагрузки.
-            setFormData({
-                ...formData,
+            setFormData(prev => ({
+                ...(prev as any),
                 travel_image_thumb_small_url: url || null,
                 travel_image_thumb_url: url || null,
-            });
+            }));
         },
-        [formData, setFormData],
+        [setFormData],
     );
 
     const handleGalleryChange = useCallback(
         (urls: string[]) => {
             // Синхронизируем галерею с формой, чтобы шаг 6 сразу видел фото.
-            setFormData({
-                ...formData,
+            setFormData(prev => ({
+                ...(prev as any),
                 gallery: urls,
-            });
+            }));
         },
-        [formData, setFormData],
+        [setFormData],
     );
 
     // Валидация шага 3
