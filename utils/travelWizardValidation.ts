@@ -149,7 +149,7 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
   },
   6: {
     // Шаг 6: Публикация (все обязательные поля для модерации)
-    required: ['name', 'description', 'coordsMeTravel', 'countries'],
+    required: ['name', 'description', 'coordsMeTravel', 'countries', 'categories'],
     fields: {
       name: {
         minLength: 3,
@@ -168,6 +168,10 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
       countries: {
         minItems: 1,
         label: 'Страны маршрута',
+      },
+      categories: {
+        minItems: 1,
+        label: 'Категории',
       },
     },
   },

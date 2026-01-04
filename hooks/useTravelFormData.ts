@@ -39,6 +39,47 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     return /^(blob:|data:)/i.test(trimmed);
   }, []);
 
+  const isEmptyImageValue = useCallback((value: unknown) => {
+    if (value == null) return true;
+    if (typeof value !== 'string') return false;
+    return value.trim().length === 0;
+  }, []);
+
+  const mergeMarkersPreserveImages = useCallback(
+    (serverMarkers: any[], currentMarkers: any[]) => {
+      if (!Array.isArray(serverMarkers) || serverMarkers.length === 0) return currentMarkers;
+      if (!Array.isArray(currentMarkers) || currentMarkers.length === 0) return serverMarkers;
+
+      const makeKey = (m: any) => {
+        const id = m?.id != null ? String(m.id) : '';
+        const lat = typeof m?.lat === 'number' ? m.lat.toFixed(6) : String(m?.lat ?? '');
+        const lng = typeof m?.lng === 'number' ? m.lng.toFixed(6) : String(m?.lng ?? '');
+        // Prefer stable id if present, fallback to coordinates.
+        return id ? `id:${id}` : `ll:${lat},${lng}`;
+      };
+
+      const currentByKey = new Map<string, any>();
+      currentMarkers.forEach(m => currentByKey.set(makeKey(m), m));
+
+      return serverMarkers.map(m => {
+        const current = currentByKey.get(makeKey(m));
+        if (!current) return m;
+
+        // If server did not return image (or returned empty), keep current image.
+        const serverImage = m?.image;
+        const currentImage = current?.image;
+        if (isEmptyImageValue(serverImage)) {
+          if (typeof currentImage === 'string' && currentImage.trim().length > 0) {
+            return { ...m, image: currentImage };
+          }
+        }
+
+        return m;
+      });
+    },
+    [isEmptyImageValue]
+  );
+
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [travelDataOld, setTravelDataOld] = useState<Travel | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -329,6 +370,18 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         }
       };
 
+      const keepCurrentIfServerMissingImageUrl = <K extends keyof TravelFormData>(key: K) => {
+        const serverValue = (normalizedSavedData as any)[key];
+        const currentValue = (currentDataSnapshot as any)[key];
+        if (serverValue == null || (typeof serverValue === 'string' && serverValue.trim().length === 0)) {
+          if (typeof currentValue === 'string' && currentValue.trim().length > 0) {
+            if (isLocalPreviewUrl(currentValue)) {
+              (normalizedSavedData as any)[key] = currentValue;
+            }
+          }
+        }
+      };
+
       // If backend returns placeholders/empty strings for rich text fields, don't wipe user input.
       keepCurrentIfServerEmpty('description');
       keepCurrentIfServerEmpty('plus');
@@ -349,12 +402,20 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       keepCurrentIfServerEmptyArray('companions');
       keepCurrentIfServerEmptyArray('over_nights_stay');
       keepCurrentIfServerEmptyArray('month');
+
+      // Preserve local preview images for cover/gallery while server hasn't produced permanent URLs yet.
+      keepCurrentIfServerMissingImageUrl('travel_image_thumb_url');
+      keepCurrentIfServerMissingImageUrl('travel_image_thumb_small_url');
+      keepCurrentIfServerEmptyArray('gallery');
+
       const markersFromResponse = Array.isArray(normalizedSavedData.coordsMeTravel)
         ? (normalizedSavedData.coordsMeTravel as any)
         : [];
       const currentMarkers = Array.isArray(formState.data.coordsMeTravel) ? (formState.data.coordsMeTravel as any) : [];
       // Если бэкенд не вернул точки (например, черновик без coords в ответе), сохраняем локальные маркеры.
-      const effectiveMarkers = markersFromResponse.length > 0 ? markersFromResponse : currentMarkers;
+      const effectiveMarkers = markersFromResponse.length > 0
+        ? mergeMarkersPreserveImages(markersFromResponse, currentMarkers)
+        : currentMarkers;
       const syncedCountries = syncCountriesFromMarkers(effectiveMarkers, normalizedSavedData.countries || []);
 
       formState.updateFields({
@@ -367,7 +428,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       // ✅ FIX: Обновляем версию данных при получении с сервера
       setDataVersion(prev => prev + 1);
     },
-    [formState, normalizeDraftPlaceholders]
+    [formState, isLocalPreviewUrl, mergeMarkersPreserveImages, normalizeDraftPlaceholders]
   );
 
   const handleSaveSuccess = useCallback(

@@ -128,6 +128,7 @@ describe('travelWizardValidation', () => {
         description: 'Short',
         coordsMeTravel: [],
         countries: [],
+        categories: [],
       };
       
       const resultInvalid = validateStep(6, formDataInvalid as TravelFormData);
@@ -138,10 +139,25 @@ describe('travelWizardValidation', () => {
         description: 'A'.repeat(60),
         coordsMeTravel: [{ lat: 50, lng: 30, country: 1, address: 'Test', categories: [], image: '', id: 1 }],
         countries: ['1'],
+        categories: ['1'],
       };
       
       const resultValid = validateStep(6, formDataValid as TravelFormData);
       expect(resultValid.isValid).toBe(true);
+    });
+
+    it('should require categories on step 6', () => {
+      const formDataMissingCategories: Partial<TravelFormData> = {
+        name: 'Valid Travel Name',
+        description: 'A'.repeat(60),
+        coordsMeTravel: [{ lat: 50, lng: 30, country: 1, address: 'Test', categories: [], image: '', id: 1 }],
+        countries: ['1'],
+        categories: [],
+      };
+
+      const result = validateStep(6, formDataMissingCategories as TravelFormData);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.some(e => e.field === 'categories')).toBe(true);
     });
   });
 
@@ -196,6 +212,7 @@ describe('travelWizardValidation', () => {
         description: 'A'.repeat(60),
         coordsMeTravel: [{ lat: 50, lng: 30, country: 1, address: 'Test', categories: [], image: '', id: 1 }],
         countries: ['1'],
+        categories: ['1'],
       };
       
       const result = isReadyForModeration(formData as TravelFormData);

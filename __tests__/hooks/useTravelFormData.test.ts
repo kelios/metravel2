@@ -229,4 +229,78 @@ describe('useTravelFormData', () => {
     expect(sentPayload.name).toBe('Длинное описание');
     expect(sentPayload.categories).toEqual([1]);
   });
+
+  it('preserves local preview images when backend responds with empty/null media fields', async () => {
+    const localCover = 'blob:https://example.com/cover-preview';
+    const localPointImage = 'blob:https://example.com/point-preview';
+    const serverResponse = {
+      id: 999,
+      travel_image_thumb_url: null,
+      travel_image_thumb_small_url: '',
+      gallery: [],
+      coordsMeTravel: [
+        {
+          id: 1,
+          lat: 41.7,
+          lng: 44.8,
+          address: 'Tbilisi',
+          categories: [1],
+          image: null,
+        },
+      ],
+    };
+
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, ...serverResponse }));
+
+    const { result } = renderHook(() =>
+      useTravelFormData({
+        travelId: null,
+        isNew: true,
+        userId: '42',
+        isSuperAdmin: false,
+        isAuthenticated: true,
+        authReady: true,
+      })
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        id: 999,
+        name: 'Test',
+        description: 'A'.repeat(60),
+        travel_image_thumb_url: localCover,
+        travel_image_thumb_small_url: localCover,
+        gallery: ['blob:https://example.com/gallery-preview'],
+        coordsMeTravel: [
+          {
+            id: 1,
+            lat: 41.7,
+            lng: 44.8,
+            address: 'Tbilisi',
+            categories: [1],
+            image: localPointImage,
+          },
+        ],
+      });
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave();
+    });
+
+    // Cover should remain local preview until server provides real URLs.
+    expect((result.current.formData as any).travel_image_thumb_url).toBe(localCover);
+    expect((result.current.formData as any).travel_image_thumb_small_url).toBe(localCover);
+
+    // Gallery should not be wiped if server returned empty array.
+    expect(Array.isArray((result.current.formData as any).gallery)).toBe(true);
+    expect(((result.current.formData as any).gallery as any[]).length).toBeGreaterThan(0);
+
+    // Marker image should remain local preview if server returned null.
+    const markers = (result.current.formData as any).coordsMeTravel as any[];
+    expect(markers[0]?.image).toBe(localPointImage);
+  });
 });

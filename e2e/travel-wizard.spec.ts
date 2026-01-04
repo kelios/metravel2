@@ -716,6 +716,9 @@ test.describe('Создание путешествия - Полный flow', () 
       await expect(page.locator('text=Название маршрута')).toBeVisible();
       await expect(page.locator('text=Описание маршрута')).toBeVisible();
       await expect(page.locator('text=Маршрут на карте')).toBeVisible();
+      await expect(page.locator('text=Страны маршрута')).toBeVisible();
+      await expect(page.locator('text=Категории маршрута')).toBeVisible();
+      await expect(page.locator('text=Фото или обложка')).toBeVisible();
 
       // Выбираем "Сохранить как черновик"
       await page.click('text=Сохранить как черновик');

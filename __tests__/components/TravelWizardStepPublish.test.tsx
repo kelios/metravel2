@@ -119,21 +119,6 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
             const icons = UNSAFE_getAllByType(Feather);
             expect(icons.length).toBeGreaterThan(0);
         });
-
-        it('должен показать преимущества для рекомендуемых пунктов', () => {
-            const { getAllByText } = render(
-                <TravelWizardStepPublish
-                    {...defaultProps}
-                    formData={{
-                        ...defaultProps.formData,
-                        countries: [], // Нет стран - должно показать benefit
-                    }}
-                />
-            );
-
-            // Проверяем что есть текст с преимуществами (экранируем + и %)
-            expect(getAllByText(/Помогает найти маршрут|\+40%|В 3 раза больше/).length).toBeGreaterThan(0);
-        });
     });
 
     describe('✅ Обязательные пункты чеклиста', () => {
@@ -151,22 +136,20 @@ describe('TravelWizardStepPublish (Шаг 6)', () => {
             const { getByText } = render(<TravelWizardStepPublish {...defaultProps} />);
             expect(getByText(/Маршрут на карте/)).toBeTruthy();
         });
-    });
 
-    describe('✅ Рекомендуемые пункты чеклиста', () => {
-        it('должен показать "Страны" как рекомендуемое', () => {
+        it('должен показывать "Страны" как обязательное', () => {
             const { getByText } = render(<TravelWizardStepPublish {...defaultProps} />);
-            expect(getByText(/Страны/)).toBeTruthy();
+            expect(getByText(/Страны маршрута/)).toBeTruthy();
         });
 
-        it('должен показать "Категории" как рекомендуемое', () => {
+        it('должен показывать "Категории" как обязательное', () => {
             const { getByText } = render(<TravelWizardStepPublish {...defaultProps} />);
-            expect(getByText(/Категории/)).toBeTruthy();
+            expect(getByText(/Категории маршрута/)).toBeTruthy();
         });
 
-        it('должен показать "Фото" как рекомендуемое', () => {
+        it('должен показывать "Фото" как обязательное', () => {
             const { getByText } = render(<TravelWizardStepPublish {...defaultProps} />);
-            expect(getByText(/Фото/)).toBeTruthy();
+            expect(getByText(/Фото или обложка/)).toBeTruthy();
         });
     });
 
