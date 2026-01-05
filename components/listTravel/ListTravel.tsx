@@ -1124,7 +1124,7 @@ function ListTravel({
       />
 
       <RightColumn
-        search={debSearch}
+        search={search}
         setSearch={setSearch}
         onClearAll={() => {
           setSearch('');

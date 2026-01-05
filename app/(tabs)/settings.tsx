@@ -13,11 +13,12 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/src/utils/confirmAction';
 import { fetchUserProfile, updateUserProfile, uploadUserProfileAvatarFile, type UpdateUserProfilePayload, type UploadUserProfileAvatarFile, type UserProfileDto } from '@/src/api/user';
 import { ApiError } from '@/src/api/client';
+import { removeStorageBatch, setStorageBatch } from '@/src/utils/storageBatch';
 import { Theme, useTheme, useThemedColors } from '@/hooks/useTheme';
 
 export default function SettingsScreen() {
     const router = useRouter();
-    const { isAuthenticated, logout, username, userId, triggerProfileRefresh } = useAuth();
+    const { isAuthenticated, logout, username, userId, triggerProfileRefresh, setUserAvatar } = useAuth();
     const isWeb = Platform.OS === 'web';
     const favoritesContext = useFavorites();
     const { theme, setTheme } = useTheme();
@@ -207,6 +208,21 @@ export default function SettingsScreen() {
             setProfile(saved);
             setAvatarPreviewUrl(saved.avatar || avatarPreviewUrl);
             setAvatarFile(null);
+
+            const rawAvatar = String((saved as any)?.avatar ?? '').trim();
+            const lowerAvatar = rawAvatar.toLowerCase();
+            const normalizedAvatar =
+                rawAvatar && lowerAvatar !== 'null' && lowerAvatar !== 'undefined'
+                    ? rawAvatar
+                    : null;
+
+            setUserAvatar(normalizedAvatar);
+            if (normalizedAvatar) {
+                await setStorageBatch([['userAvatar', normalizedAvatar]]);
+            } else {
+                await removeStorageBatch(['userAvatar']);
+            }
+
             triggerProfileRefresh();
             Alert.alert('Готово', 'Аватар обновлён');
         } catch (error) {
@@ -215,7 +231,7 @@ export default function SettingsScreen() {
         } finally {
             setAvatarSaving(false);
         }
-    }, [avatarFile, avatarPreviewUrl, triggerProfileRefresh, userId]);
+    }, [avatarFile, avatarPreviewUrl, setUserAvatar, triggerProfileRefresh, userId]);
 
     const handleLogout = useCallback(async () => {
         try {
