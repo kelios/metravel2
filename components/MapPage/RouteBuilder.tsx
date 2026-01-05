@@ -120,22 +120,22 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
   );
 };
 
-const getStyles = (colors: ThemedColors, _compact: boolean) => StyleSheet.create({
+const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create({
   routeBuilder: {
-    gap: 12,
+    gap: compact ? 8 : 12,
   },
   progressHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 8,
+    paddingBottom: compact ? 6 : 8,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   progressInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: compact ? 6 : 8,
   },
   progressText: {
     fontSize: 14,
@@ -143,29 +143,29 @@ const getStyles = (colors: ThemedColors, _compact: boolean) => StyleSheet.create
     color: colors.text,
   },
   iconButton: {
-    width: 32,
-    height: 32,
+    width: compact ? 28 : 32,
+    height: compact ? 28 : 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: compact ? 14 : 16,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
   addressContainer: {
-    gap: 12,
+    gap: compact ? 8 : 12,
   },
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: compact ? 10 : 12,
   },
   addressIcon: {
-    width: 32,
-    height: 32,
+    width: compact ? 28 : 32,
+    height: compact ? 28 : 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: compact ? 14 : 16,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -175,14 +175,14 @@ const getStyles = (colors: ThemedColors, _compact: boolean) => StyleSheet.create
   },
   swapContainer: {
     alignItems: 'center',
-    marginVertical: -8,
+    marginVertical: compact ? -6 : -8,
   },
   swapButton: {
-    width: 36,
-    height: 36,
+    width: compact ? 32 : 36,
+    height: compact ? 32 : 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 18,
+    borderRadius: compact ? 16 : 18,
     backgroundColor: colors.surface,
     borderWidth: 2,
     borderColor: colors.primary,
@@ -191,7 +191,7 @@ const getStyles = (colors: ThemedColors, _compact: boolean) => StyleSheet.create
     fontSize: 13,
     color: colors.textMuted,
     fontStyle: 'italic',
-    paddingHorizontal: 8,
+    paddingHorizontal: compact ? 4 : 8,
   },
 });
 

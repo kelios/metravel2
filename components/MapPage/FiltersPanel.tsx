@@ -18,7 +18,6 @@ import {
 } from 'react-native';
 import MultiSelectField from '../MultiSelectField';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import RoutePointControls from '@/components/MapPage/RoutePointControls';
 import MapLegend from '@/components/MapPage/MapLegend';
 import ValidationMessage from '@/components/MapPage/ValidationMessage';
 import RoutingStatus from '@/components/MapPage/RoutingStatus';
@@ -87,6 +86,7 @@ interface FiltersPanelProps {
   mapUiApi?: MapUiApi | null;
   userLocation?: { latitude: number; longitude: number } | null;
   onPlaceSelect?: (place: any) => void;
+  onOpenList?: () => void;
 }
 
 const FiltersPanel: React.FC<FiltersPanelProps> = ({
@@ -106,9 +106,8 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                                      endAddress,
                                                      routeDistance,
                                                      routePoints = [],
-                                                     onRemoveRoutePoint,
                                                      onClearRoute,
-                                                     swapStartEnd,
+                                                     swapStartEnd: _swapStartEnd,
                                                      routeHintDismissed = false,
                                                      onRouteHintDismiss,
                                                      onAddressSelect,
@@ -118,6 +117,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                                      mapUiApi,
                                                      userLocation,
                                                      onPlaceSelect,
+                                                     onOpenList,
 }) => {
   const windowWidth = Dimensions.get('window').width;
   const colors = useThemedColors();
@@ -126,7 +126,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     [colors, isMobile, windowWidth],
   );
   const [legendOpen, setLegendOpen] = useState(false);
-  const [hideNoPointsToast, setHideNoPointsToast] = useState(false);
 
   const canCenterOnUser = Boolean(mapUiApi?.capabilities?.canCenterOnUser);
   const canFitToResults = Boolean(mapUiApi?.capabilities?.canFitToResults);
@@ -154,12 +153,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       // noop
     }
   }, [mapUiApi, selectedBaseLayerId, enabledOverlays]);
-  const increaseRadius = useCallback(() => {
-    const options = filters.radius || [];
-    const currentIdx = options.findIndex((opt) => String(opt.id) === String(filterValue.radius));
-    const next = currentIdx >= 0 && currentIdx < options.length - 1 ? options[currentIdx + 1] : options[currentIdx] || options[options.length - 1];
-    if (next?.id) onFilterChange('radius', next.id);
-  }, [filters.radius, filterValue.radius, onFilterChange]);
   
   // ✅ NEW: Validate route points
   const validation = useMemo(() => {
@@ -270,8 +263,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     endSelected: !!routePoints[1],
   };
 
-  const noPointsAlongRoute = mode === 'route' && routeDistance != null && (filteredTravelsData ?? travelsData).length === 0;
-
   // Автоскрытие подсказок после первого построенного маршрута
   useEffect(() => {
     if (routeDistance != null && !routeHintDismissed && onRouteHintDismiss) {
@@ -315,7 +306,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         />
 
         {/* ✅ УЛУЧШЕНИЕ: RoutingStatus только в режиме маршрута и более компактный */}
-        {mode === 'route' && (
+        {mode === 'route' && (!!routingLoading || !!routingError || (routeDistance != null && routeDistance > 0)) && (
           <View style={styles.statusCard} testID="routing-status">
             <RoutingStatus
               isLoading={!!routingLoading}
@@ -447,18 +438,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               <Text style={styles.sectionLabel}>Маршрут</Text>
               <Text style={styles.sectionHint}>Выберите старт и финиш на карте или через поиск, затем укажите транспорт.</Text>
 
-              {/* ✅ УЛУЧШЕНИЕ Фаза 2: RouteBuilder вместо двух отдельных блоков */}
-              {onAddressSelect && (
-                <RouteBuilder
-                  startAddress={startAddress}
-                  endAddress={endAddress}
-                  onAddressSelect={onAddressSelect}
-                  onSwap={swapStartEnd}
-                  onClear={onClearRoute}
-                  compact={isMobile}
-                />
-              )}
-
               {/* Транспорт */}
               <View
                 style={[
@@ -519,44 +498,20 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   </View>
                 </View>
 
+              {/* ✅ УЛУЧШЕНИЕ Фаза 2: RouteBuilder вместо двух отдельных блоков */}
+              {onAddressSelect && (
+                <RouteBuilder
+                  startAddress={startAddress}
+                  endAddress={endAddress}
+                  onAddressSelect={onAddressSelect}
+                  onClear={onClearRoute}
+                  compact
+                />
+              )}
+
               {/* ✅ Validation и warnings */}
               {!validation.valid && <ValidationMessage type="error" messages={validation.errors} />}
               {validation.warnings.length > 0 && <ValidationMessage type="warning" messages={validation.warnings} />}
-
-              {noPointsAlongRoute && !hideNoPointsToast && (
-                <View style={styles.noPointsToast} accessible accessibilityRole="text" testID="no-points-message">
-                  <Text style={styles.noPointsSubtitle}>
-                    Вдоль маршрута нет доступных точек в радиусе 2 км.
-                  </Text>
-                  <View style={styles.noPointsActions}>
-                    <Pressable
-                      style={[styles.ctaButton, styles.ctaPrimary]}
-                      onPress={increaseRadius}
-                      accessibilityRole="button"
-                      accessibilityLabel="Увеличить радиус"
-                    >
-                      <Text style={styles.ctaPrimaryText}>Увеличить радиус</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.ctaButton, styles.ctaOutline]}
-                      onPress={() => setHideNoPointsToast(true)}
-                      accessibilityRole="button"
-                      accessibilityLabel="Показать маршрут без точек"
-                    >
-                      <Text style={styles.ctaOutlineText}>Показать маршрут без точек</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              )}
-
-              {/* ✅ RoutePointControls опционально, если нужен дополнительный контроль */}
-              {routePoints.length > 0 && onRemoveRoutePoint && onClearRoute && (
-                <RoutePointControls
-                  routePoints={routePoints}
-                  onRemovePoint={onRemoveRoutePoint}
-                  onClearRoute={onClearRoute}
-                />
-              )}
             </View>
           </>
         )}
@@ -735,7 +690,14 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         {/* ✅ УЛУЧШЕНИЕ: QuickActions для быстрого доступа */}
         <QuickActions
           onReset={mode === 'radius' && _hasActiveFilters ? resetFilters : undefined}
-          onFitBounds={totalPoints > 0 && mapUiApi ? () => mapUiApi.fitToResults() : undefined}
+          onFitBounds={
+            totalPoints > 0 && mapUiApi
+              ? () => {
+                  mapUiApi.fitToResults();
+                  onOpenList?.();
+                }
+              : undefined
+          }
           totalPoints={totalPoints}
           hasFilters={_hasActiveFilters}
         />

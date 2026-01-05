@@ -136,6 +136,8 @@ function OptimizedImage({
     return null;
   }, [source, validSource]);
 
+  const shouldRenderBlurBackground = blurBackground && validSource && !webBlobOrDataUri;
+
   const handleLoad = () => {
     setIsLoading(false);
     setHasError(false);
@@ -210,7 +212,7 @@ function OptimizedImage({
         />
       )}
 
-      {blurBackground && validSource && (
+      {shouldRenderBlurBackground && (
         <>
           <ExpoImage
             source={resolvedSource}

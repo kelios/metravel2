@@ -27,6 +27,86 @@ const safeEncodeUrl = (value: string): string => {
     }
 };
 
+const isBackendImageId = (value: string | null | undefined): boolean => {
+    if (!value) return false;
+    return /^\d+$/.test(String(value));
+};
+
+const canonicalizeUrlForDedupe = (value: string): string => {
+    const raw = String(value ?? '').trim();
+    if (!raw) return raw;
+
+    // Blob/data URLs are unique per upload and should not be normalized.
+    if (/^(blob:|data:)/i.test(raw)) return raw;
+
+    // Remove transient cache-busting params that can change across renders/retries.
+    try {
+        const parsed = new URL(raw, typeof window !== 'undefined' ? window.location.origin : 'https://example.test');
+        parsed.searchParams.delete('__retry');
+        parsed.hash = '';
+
+        // For http(s) URLs, drop the origin to prevent duplicates between
+        // absolute vs relative and localhost vs 127.0.0.1 representations.
+        if (/^https?:$/i.test(parsed.protocol)) {
+            const search = parsed.searchParams.toString();
+            return `${parsed.pathname}${search ? `?${search}` : ''}`;
+        }
+
+        return parsed.toString();
+    } catch {
+        return raw.replace(/([?&])__retry=\d+(&)?/g, '$1').replace(/[?&]$/, '').split('#')[0];
+    }
+};
+
+const dedupeGalleryItems = (items: GalleryItem[]): GalleryItem[] => {
+    const map = new Map<string, GalleryItem>();
+    const order: string[] = [];
+
+    for (const item of items) {
+        // Primary key: canonical URL.
+        // This collapses:
+        // - placeholder blob preview + final backend URL
+        // - legacy items + backend items
+        // - backend responses that return different ids but the same URL
+        // If URL is missing, fall back to id.
+        const canonicalUrl = canonicalizeUrlForDedupe(String(item.url || ''));
+        const key = canonicalUrl ? `url:${canonicalUrl}` : `id:${String(item.id ?? '')}`;
+
+        const existing = map.get(key);
+        if (!existing) {
+            map.set(key, item);
+            order.push(key);
+            continue;
+        }
+
+        // Prefer the more "final" item over placeholders, and prefer backend-id items over legacy.
+        const existingBackend = isBackendImageId(existing.id);
+        const nextBackend = isBackendImageId(item.id);
+        if (!existingBackend && nextBackend) {
+            map.set(key, item);
+            continue;
+        }
+
+        const existingUploading = Boolean(existing.isUploading);
+        const nextUploading = Boolean(item.isUploading);
+        if (existingUploading && !nextUploading) {
+            map.set(key, item);
+        }
+    }
+
+    const snapshot = order.map((k) => map.get(k)!).filter(Boolean);
+
+    // Safety net: if the same backend id appears multiple times (e.g. URL variations), keep the first.
+    const seenBackendIds = new Set<string>();
+    return snapshot.filter((item) => {
+        if (!isBackendImageId(item.id)) return true;
+        const id = String(item.id);
+        if (seenBackendIds.has(id)) return false;
+        seenBackendIds.add(id);
+        return true;
+    });
+};
+
 const ensureAbsoluteUrl = (value: string): string => {
     if (!value) return value;
 
@@ -79,7 +159,13 @@ const normalizeDisplayUrl = (value: string): string => {
         const isOnLocalhost = /localhost|127\.0\.0\.1/i.test(currentOrigin);
         
         if (isPrivateIp && isOnLocalhost) {
-            return parsed.pathname + parsed.search;
+            // In dev we often run the app on localhost while the backend is on a private IP.
+            // Some backends expose media only via http; keep the absolute URL and force http
+            // to avoid ERR_CONNECTION_REFUSED on https.
+            if (parsed.protocol === 'https:') {
+                parsed.protocol = 'http:';
+            }
+            return parsed.toString();
         }
         
         // Если страница открыта по HTTPS, а картинка с того же хоста по HTTP — переключаем на HTTPS
@@ -130,21 +216,55 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     
     const blobUrlsRef = useRef<Set<string>>(new Set());
     const retryRef = useRef<Set<string>>(new Set());
+    const lastReportedUrlsRef = useRef<string>('');
 
     const hasErrors = useMemo(() => images.some(img => img.error), [images]);
 
     useEffect(() => {
-        if (initialImagesProp?.length) {
-            setImages(initialImagesProp.map((img) => ({ 
-                ...img, 
+        setImages((prev) => {
+            const prevBackendByUrl = new Map<string, GalleryItem>();
+            const prevLoadedByUrl = new Map<string, boolean>();
+            for (const item of prev) {
+                if (!item?.url) continue;
+                const canonical = canonicalizeUrlForDedupe(item.url);
+                if (item.hasLoaded) {
+                    prevLoadedByUrl.set(canonical, true);
+                }
+                if (isBackendImageId(item.id)) {
+                    prevBackendByUrl.set(canonical, item);
+                }
+            }
+
+            const uploading = prev.filter((img) => img.isUploading);
+            const nextFromProps = (initialImagesProp ?? []).map((img) => ({
+                ...img,
                 stableKey: (img as any).stableKey ?? String(img.id),
                 url: normalizeDisplayUrl(img.url),
                 isUploading: false,
                 uploadProgress: 0,
                 error: null,
-                hasLoaded: false,
-            })));
-        }
+                hasLoaded: prevLoadedByUrl.get(canonicalizeUrlForDedupe(normalizeDisplayUrl(img.url))) ?? false,
+            }));
+
+            // If parent passes only URLs (or legacy ids), preserve the backend id we already know.
+            // This is important for delete API calls: we must delete by backend image id.
+            const upgradedFromProps = nextFromProps.map((img) => {
+                if (isBackendImageId(img.id)) return img;
+                const known = prevBackendByUrl.get(canonicalizeUrlForDedupe(img.url));
+                if (!known) return img;
+                return {
+                    ...img,
+                    id: known.id,
+                    stableKey: known.stableKey ?? known.id,
+                };
+            });
+
+            // Preserve any in-flight uploads, but de-dupe if backend already returned the same URL.
+            const propUrls = new Set(upgradedFromProps.map((img) => img.url));
+            const preservedUploading = uploading.filter((img) => !propUrls.has(img.url));
+
+            return dedupeGalleryItems([...upgradedFromProps, ...preservedUploading]);
+        });
         setIsInitialLoading(false);
     }, [initialImagesProp]);
     
@@ -171,6 +291,11 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
             .filter(img => !img.isUploading)
             .map(img => img.url)
             .filter(Boolean);
+
+        // Guard: avoid endless update loops when URLs haven't changed.
+        const signature = urls.join('|');
+        if (signature === lastReportedUrlsRef.current) return;
+        lastReportedUrlsRef.current = signature;
         onChange(urls);
     }, [images, onChange]);
 
@@ -184,22 +309,20 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
             setBatchUploadProgress({ current: 0, total: files.length });
             
             // Create placeholders immediately
-            const placeholders: GalleryItem[] = files.map((file, index) => {
+            const placeholders = files.map((file, index) => {
                 const tempId = `temp-${Date.now()}-${index}`;
-                const tempUrl = URL.createObjectURL(file);
-                blobUrlsRef.current.add(tempUrl);
                 
                 return {
                     id: tempId,
                     stableKey: tempId,
-                    url: tempUrl,
+                    url: '',
                     isUploading: true,
                     uploadProgress: 0,
                     error: null
                 };
             });
             
-            setImages(prev => [...prev, ...placeholders]);
+            setImages(prev => dedupeGalleryItems([...prev, ...placeholders]));
 
             // Upload sequentially for better UX and error handling
             for (let i = 0; i < files.length; i++) {
@@ -225,19 +348,40 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                     if (uploadedUrlRaw) {
                         const finalUrl = normalizeDisplayUrl(String(uploadedUrlRaw));
                         
-                        // Cleanup blob URL
-                        if (blobUrlsRef.current.has(placeholder.url)) {
-                            URL.revokeObjectURL(placeholder.url);
-                            blobUrlsRef.current.delete(placeholder.url);
-                        }
-                        
-                        setImages(prev =>
-                            prev.map(img => 
-                                img.stableKey === placeholder.stableKey
-                                    ? { ...img, id: String(uploadedId), url: finalUrl, isUploading: false, uploadProgress: 100, error: null }
-                                    : img
-                            )
-                        );
+                        setImages(prev => {
+                            const idx = prev.findIndex((img) => img.stableKey === placeholder.stableKey);
+                            if (idx >= 0) {
+                                return dedupeGalleryItems(
+                                    prev.map((img) =>
+                                        img.stableKey === placeholder.stableKey
+                                            ? {
+                                                  ...img,
+                                                  id: String(uploadedId),
+                                                  url: finalUrl,
+                                                  isUploading: false,
+                                                  uploadProgress: 100,
+                                                  error: null,
+                                                  hasLoaded: false,
+                                              }
+                                            : img,
+                                    ),
+                                );
+                            }
+
+                            // If placeholders were dropped due to prop sync/rerender, still add the uploaded item.
+                            return dedupeGalleryItems([
+                                ...prev,
+                                {
+                                    ...placeholder,
+                                    id: String(uploadedId),
+                                    url: finalUrl,
+                                    isUploading: false,
+                                    uploadProgress: 100,
+                                    error: null,
+                                    hasLoaded: false,
+                                },
+                            ]);
+                        });
                     } else {
                         throw new Error('No URL in response');
                     }
@@ -353,8 +497,8 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
         const imageToDelete = images.find(img => (img.stableKey ?? img.id) === selectedImageId);
         
         try {
-            // Only call API if it's not a temp/failed upload
-            if (imageToDelete && !imageToDelete.error && !imageToDelete.id.startsWith('temp-')) {
+            // Only call API if it's a real backend id (digits). Legacy/client ids (e.g. legacy-*) must be removed locally.
+            if (imageToDelete && !imageToDelete.error && isBackendImageId(imageToDelete.id)) {
                 await deleteImage(imageToDelete.id);
             }
             
@@ -451,16 +595,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                         <View key={image.stableKey ?? image.id} style={styles.imageWrapper} testID="gallery-image">
                             {image.isUploading ? (
                                 <View style={styles.uploadingImageContainer}>
-                                    <ImageCardMedia
-                                        src={image.url}
-                                        fit="contain"
-                                        blurBackground
-                                        loading="eager"
-                                        alt={`Uploading ${index + 1}`}
-                                        style={styles.image}
-                                        onError={() => handleImageError(image.stableKey ?? image.id, image.url)}
-                                        onLoad={() => handleImageLoad(image.stableKey ?? image.id)}
-                                    />
+                                    <View style={[styles.skeleton, { backgroundColor: colors.surfaceMuted }]} />
                                     <View style={styles.uploadingOverlayImage}>
                                         <ActivityIndicator size="large" color={colors.textInverse} />
                                         <Text style={[styles.uploadingImageText, { color: colors.textInverse }]}>Загрузка...</Text>
@@ -506,13 +641,18 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                 </View>
                             ) : (
                                 <>
+                                    {!image.hasLoaded && (
+                                        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.surfaceMuted, justifyContent: 'center', alignItems: 'center' }]}>
+                                            <ActivityIndicator size="small" color={colors.primary} />
+                                        </View>
+                                    )}
                                     <ImageCardMedia
                                         src={image.url}
                                         fit="contain"
                                         blurBackground
                                         loading="lazy"
                                         alt={`Gallery image ${index + 1}`}
-                                        style={styles.image}
+                                        style={[styles.image, !image.hasLoaded && { opacity: 0 } as any]}
                                         onError={() => handleImageError(image.stableKey ?? image.id, image.url)}
                                         onLoad={() => handleImageLoad(image.stableKey ?? image.id)}
                                     />
@@ -593,13 +733,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: DESIGN_TOKENS.spacing.md,
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
     },
     imageWrapper: {
         flexBasis: '32%',
         maxWidth: '32%',
         minWidth: 220,
-        flexGrow: 1,
+        flexGrow: 0,
         aspectRatio: 1,
         borderRadius: DESIGN_TOKENS.radii.md,
         overflow: 'hidden',

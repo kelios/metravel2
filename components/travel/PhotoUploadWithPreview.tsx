@@ -7,6 +7,7 @@ import { Feather, FontAwesome } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
+import { normalizeMediaUrl } from '@/utils/mediaUrl';
 
 interface PhotoUploadWithPreviewProps {
     collection: string;
@@ -22,36 +23,7 @@ interface PhotoUploadWithPreviewProps {
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
 
-const normalizeImageUrl = (url?: string | null) => {
-    if (!url || !url.trim()) return '';
-    const safeUrl = url.trim();
-
-    // Data/blob stay as-is
-    if (/^(data:|blob:)/i.test(safeUrl)) return safeUrl;
-
-    // Absolute URLs stay as-is.
-    if (/^https?:\/\//i.test(safeUrl)) {
-        try {
-            return safeUrl;
-        } catch {
-            return safeUrl;
-        }
-    }
-
-    // Try API host first, then fall back to current origin (useful in admin where env may be empty)
-    const baseRaw =
-        process.env.EXPO_PUBLIC_API_URL ||
-        (typeof window !== 'undefined' ? window.location.origin : '');
-    const hostWithoutApi = baseRaw.replace(/\/+$/, '').replace(/\/api$/i, '');
-    const prefix = hostWithoutApi || baseRaw.replace(/\/+$/, '');
-
-    if (prefix) {
-        return `${prefix}${safeUrl.startsWith('/') ? '' : '/'}${safeUrl}`;
-    }
-
-    // As a last resort, return original (will error gracefully if invalid)
-    return safeUrl;
-};
+const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
 
 const buildApiPrefixedUrl = (url: string): string | null => {
     try {
@@ -108,6 +80,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     const [remoteRetryAttempt, setRemoteRetryAttempt] = useState(0);
     const remoteRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastNotifiedPreviewRef = useRef<string | null>(null);
+    const pendingUploadRef = useRef<File | { uri: string; name: string; type: string } | null>(null);
     const hasValidImage = Boolean(previewUrl || imageUri);
     const currentDisplayUrl = previewUrl ?? imageUri ?? '';
 
@@ -144,6 +117,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         setError(null);
         setIsManuallySelected(false);
         setRemoteRetryAttempt(0);
+        pendingUploadRef.current = null;
         if (remoteRetryTimerRef.current) {
             clearTimeout(remoteRetryTimerRef.current);
             remoteRetryTimerRef.current = null;
@@ -151,6 +125,59 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         onPreviewChange?.(null);
         onUpload?.('');
     }, [onPreviewChange, onUpload]);
+
+    const uploadPendingIfPossible = useCallback(async () => {
+        const normalizedId = (idTravel ?? '').toString();
+        if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') return;
+        if (!pendingUploadRef.current) return;
+        if (loading) return;
+
+        const file = pendingUploadRef.current;
+        pendingUploadRef.current = null;
+
+        try {
+            setLoading(true);
+            setError(null);
+            setUploadMessage(null);
+
+            const formData = new FormData();
+
+            if (Platform.OS === 'web' && typeof File !== 'undefined' && file instanceof File) {
+                formData.append('file', file);
+            } else {
+                const rnFile = file as { uri: string; name: string; type: string };
+                formData.append('file', {
+                    uri: rnFile.uri,
+                    name: rnFile.name,
+                    type: rnFile.type,
+                } as any);
+            }
+
+            formData.append('collection', collection);
+            formData.append('id', normalizedId);
+
+            const response = await uploadImage(formData);
+            const uploadedUrlRaw = response?.url || response?.data?.url || response?.path || response?.file_url;
+            const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : null;
+
+            if (uploadedUrl) {
+                setImageUri(uploadedUrl);
+                setPreviewUrl(null);
+                setFallbackImageUrl(lastPreviewUrl || uploadedUrlRaw || uploadedUrl);
+                setHasTriedFallback(false);
+                setUploadMessage('Фотография успешно загружена');
+                onUpload?.(uploadedUrl);
+            }
+        } catch (_e) {
+            pendingUploadRef.current = file;
+        } finally {
+            setLoading(false);
+        }
+    }, [collection, idTravel, lastPreviewUrl, loading, onUpload]);
+
+    useEffect(() => {
+        void uploadPendingIfPossible();
+    }, [uploadPendingIfPossible]);
 
     useEffect(() => {
         return () => {
@@ -307,6 +334,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
             const normalizedId = (idTravel ?? '').toString();
             if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') {
                 setUploadMessage('Превью готово. Сохраните точку для загрузки фото.');
+                pendingUploadRef.current = file;
                 
                 // Отдаем локальный URL для временного хранения
                 onUpload?.(previewCandidate);

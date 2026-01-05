@@ -53,6 +53,10 @@ export function useUpsertTravelController(): UpsertTravelController {
   const colors = useThemedColors();
 
   const isNew = !id;
+  const stepStorageKey = useMemo(
+    () => `metravel_travel_wizard_step_${isNew ? 'new' : String(id)}`,
+    [id, isNew]
+  );
 
   const form = useTravelFormData({
     travelId: id as string | null,
@@ -68,6 +72,7 @@ export function useUpsertTravelController(): UpsertTravelController {
     hasUnsavedChanges: form.autosave.hasUnsavedChanges,
     canSave: form.autosave.canSave,
     onSave: form.handleManualSave,
+    stepStorageKey,
   });
 
   const { filters, isLoading: isFiltersLoading } = useTravelFilters({
@@ -79,7 +84,7 @@ export function useUpsertTravelController(): UpsertTravelController {
   const draftRecoveryHook = useDraftRecovery({
     travelId: id as string | null,
     isNew,
-    enabled: isNew && isAuthenticated,
+    enabled: isAuthenticated,
   });
 
   const saveDraft = draftRecoveryHook.saveDraft;
@@ -87,11 +92,10 @@ export function useUpsertTravelController(): UpsertTravelController {
 
   // Auto-save draft on form changes
   useEffect(() => {
-    if (!isNew) return;
     if (!form.formData) return;
     if (!saveDraft) return;
     saveDraft(form.formData);
-  }, [form.formData, isNew, saveDraft]);
+  }, [form.formData, saveDraft]);
 
   // Clear draft after successful save
   useEffect(() => {

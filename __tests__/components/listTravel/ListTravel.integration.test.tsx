@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import ListTravel from '@/components/listTravel/ListTravel';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform } from 'react-native';
+import { RECOMMENDATIONS_VISIBLE_KEY } from '@/components/listTravel/utils/listTravelConstants';
 
 // Mock all necessary dependencies
 jest.mock('@/hooks/useDebouncedValue', () => ({
@@ -238,6 +239,23 @@ describe('ListTravel Integration Tests', () => {
 
     Platform.OS = 'web';
 
+    const store = new Map<string, string>();
+    Object.defineProperty(window, 'sessionStorage', {
+      value: {
+        getItem: (key: string) => (store.has(key) ? store.get(key)! : null),
+        setItem: (key: string, value: string) => {
+          store.set(key, String(value));
+        },
+        removeItem: (key: string) => {
+          store.delete(key);
+        },
+        clear: () => {
+          store.clear();
+        },
+      },
+      configurable: true,
+    });
+
     (global as any).__mockResponsive = {
       width: 1200,
       height: 800,
@@ -301,6 +319,29 @@ describe('ListTravel Integration Tests', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it('does not show recommendations by default on web when no stored preference', async () => {
+    renderWithProviders(<ListTravel />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('toggle-recommendations-button')).toBeTruthy();
+    });
+
+    // Default is hidden, so the toggle should say "Показать рекомендации".
+    expect(screen.getByLabelText(/Показать рекомендации/i)).toBeTruthy();
+  });
+
+  it('keeps recommendations hidden on web when stored preference is false', async () => {
+    (window as any).sessionStorage.setItem(RECOMMENDATIONS_VISIBLE_KEY, 'false');
+
+    renderWithProviders(<ListTravel />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('toggle-recommendations-button')).toBeTruthy();
+    });
+
+    expect(screen.getByLabelText(/Показать рекомендации/i)).toBeTruthy();
   });
 
   it('renders export mode UI and allows selecting all items', async () => {

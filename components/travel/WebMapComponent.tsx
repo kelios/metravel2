@@ -4,34 +4,9 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { normalizeMediaUrl } from '@/utils/mediaUrl';
 
-const normalizeImageUrl = (url?: string | null) => {
-    if (!url) return '';
-    const trimmed = url.trim();
-    // Поддерживаем превью blob:/data:
-    if (/^(data:|blob:)/i.test(trimmed)) return trimmed;
-    
-    // ✅ Для абсолютных URL с приватным IP - извлекаем путь для проксирования через localhost
-    if (/^https?:\/\//i.test(trimmed)) {
-        try {
-            const parsed = new URL(trimmed);
-            const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-            const isPrivateIp = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/i.test(trimmed);
-            const isOnLocalhost = currentOrigin && /localhost|127\.0\.0\.1/i.test(currentOrigin);
-            
-            // Если приватный IP и мы на localhost - используем путь для проксирования
-            if (isPrivateIp && isOnLocalhost) {
-                return parsed.pathname + parsed.search;
-            }
-            return trimmed;
-        } catch {
-            return trimmed;
-        }
-    }
-    
-    // Относительные URL - оставляем как есть (будут проксироваться)
-    return trimmed;
-};
+const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
 
 type LeafletNS = any;
 type ReactLeafletNS = typeof import('react-leaflet');
@@ -216,7 +191,6 @@ type WebMapComponentProps = {
     countrylist: any[];
     onCountrySelect: (countryId: any) => void;
     onCountryDeselect: (countryId: any) => void;
-    travelId?: any;
 };
 
 const WebMapComponent = ({
@@ -226,7 +200,6 @@ const WebMapComponent = ({
     countrylist,
     onCountrySelect,
     onCountryDeselect,
-    travelId,
 }: WebMapComponentProps) => {
     // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
     const colors = useThemedColors();
@@ -277,6 +250,7 @@ const WebMapComponent = ({
     const lastMarkersRef = useRef(markers);
     const isInternalUpdateRef = useRef(false);
     const prevExternalLengthRef = useRef<number>(markers.length);
+    const activeSetByMarkerClickRef = useRef(false);
     
     // Синхронизируем локальное состояние с пропсами только при внешних изменениях
     useEffect(() => {
@@ -285,6 +259,14 @@ const WebMapComponent = ({
             isInternalUpdateRef.current = false;
             return;
         }
+
+        const makeMarkerKey = (m: any) => {
+            const id = m?.id != null ? String(m.id) : '';
+            if (id && id !== 'null' && id !== 'undefined') return `id:${id}`;
+            const lat = typeof m?.lat === 'number' ? m.lat.toFixed(6) : String(m?.lat ?? '');
+            const lng = typeof m?.lng === 'number' ? m.lng.toFixed(6) : String(m?.lng ?? '');
+            return `ll:${lat},${lng}`;
+        };
 
         // Проверяем изменения маркеров относительно последнего известного состояния
         const markersChanged =
@@ -308,11 +290,15 @@ const WebMapComponent = ({
             // ✅ FIX: Используем функциональное обновление чтобы получить актуальное локальное состояние
             // без добавления localMarkers в зависимости (избегаем бесконечного цикла)
             setLocalMarkers(currentLocalMarkers => {
-                const mergedMarkers = markers.map((m, idx) => {
-                    const localMarker = currentLocalMarkers[idx];
-                    // Сохраняем локальное blob/data превью только если внешний маркер не имеет изображения
-                    if (localMarker?.image && /^(blob:|data:)/i.test(localMarker.image)) {
-                        if (!m.image || m.image === '') {
+                const localByKey = new Map<string, any>();
+                (currentLocalMarkers || []).forEach((m: any) => localByKey.set(makeMarkerKey(m), m));
+
+                const mergedMarkers = markers.map((m) => {
+                    const localMarker = localByKey.get(makeMarkerKey(m));
+                    // Сохраняем локальное blob/data превью только если внешний маркер не имеет изображения.
+                    if (localMarker?.image && /^(blob:|data:)/i.test(String(localMarker.image))) {
+                        const serverImage = m?.image;
+                        if (!serverImage || String(serverImage).trim().length === 0) {
                             return { ...m, image: localMarker.image };
                         }
                     }
@@ -654,10 +640,19 @@ const WebMapComponent = ({
     const CenterOnActive = ({ activeIndex, markers }: { activeIndex: number | null; markers: any[] }) => {
         const map = useMap();
         const prevActiveIndexRef = useRef<number | null>(null);
-        const hasCenteredRef = useRef<Set<number>>(new Set());
+        const hasCenteredRef = useRef<Set<string>>(new Set());
 
         useEffect(() => {
             if (activeIndex == null) return;
+
+            // If the active marker was chosen by clicking the marker on the map,
+            // Leaflet will already open the popup at the correct location. Extra setView
+            // here causes a visible "jerk" (autoPan + setView animate).
+            if (activeSetByMarkerClickRef.current) {
+                activeSetByMarkerClickRef.current = false;
+                prevActiveIndexRef.current = activeIndex;
+                return;
+            }
             
             // ✅ FIX: Центрируем только если activeIndex изменился И мы еще не центрировались на этом маркере
             if (prevActiveIndexRef.current === activeIndex) return;
@@ -673,8 +668,8 @@ const WebMapComponent = ({
             
             // ✅ FIX: Центрируем только один раз для каждого нового маркера
             const markerKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
-            if (hasCenteredRef.current.has(activeIndex)) return;
-            hasCenteredRef.current.add(activeIndex);
+            if (hasCenteredRef.current.has(markerKey)) return;
+            hasCenteredRef.current.add(markerKey);
 
             const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : 13;
             const nextZoom = Math.max(currentZoom, 14);
@@ -752,6 +747,7 @@ const WebMapComponent = ({
                   margin: 6px 0 !important;
                 }
                 .metravel-webmap .leaflet-popup-close-button {
+                  display: block !important;
                   color: ${colors.textMuted} !important;
                 }
                 .metravel-webmap .leaflet-popup-close-button:hover {
@@ -800,6 +796,7 @@ const WebMapComponent = ({
                                         icon={markerIcon}
                                         eventHandlers={{
                                             click: () => {
+                                                activeSetByMarkerClickRef.current = true;
                                                 setActiveIndex(idx);
                                                 setIsExpanded(true);
                                             },
@@ -885,7 +882,6 @@ const WebMapComponent = ({
                                             setEditingIndex={setEditingIndex}
                                             activeIndex={activeIndex}
                                             setActiveIndex={setActiveIndex}
-                                            travelId={travelId}
                                         />
                                     </div>
                                 </div>
@@ -910,7 +906,6 @@ const WebMapComponent = ({
                                 setEditingIndex={setEditingIndex}
                                 activeIndex={activeIndex}
                                 setActiveIndex={setActiveIndex}
-                                travelId={travelId}
                             />
                         </div>
                     ) : null}

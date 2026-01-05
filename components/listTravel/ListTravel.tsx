@@ -509,7 +509,7 @@ function ListTravel({
         if (Platform.OS !== 'web') return false;
         try {
             const stored = sessionStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
-            return stored !== 'false';
+            return stored === 'true';
         } catch {
             return false;
         }
@@ -535,7 +535,7 @@ function ListTravel({
             try {
                 const stored = await AsyncStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
                 if (!isMounted) return;
-                const visible = stored !== 'false';
+                const visible = stored === 'true';
                 setIsRecommendationsVisible(visible);
                 if (visible) {
                     setRecommendationsReady(true);
@@ -576,11 +576,7 @@ function ListTravel({
                     // На web явно сохраняем "true" / "false", чтобы различать включенный и выключенный блок.
                     sessionStorage.setItem(RECOMMENDATIONS_VISIBLE_KEY, visible ? 'true' : 'false');
                 } else {
-                    if (visible) {
-                        await AsyncStorage.removeItem(RECOMMENDATIONS_VISIBLE_KEY);
-                    } else {
-                        await AsyncStorage.setItem(RECOMMENDATIONS_VISIBLE_KEY, 'false');
-                    }
+                    await AsyncStorage.setItem(RECOMMENDATIONS_VISIBLE_KEY, visible ? 'true' : 'false');
                 }
             } catch (error) {
                 console.error('Error saving recommendations visibility:', error);

@@ -4,6 +4,8 @@ import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { uploadImage } from '@/src/api/misc';
 import { Platform } from 'react-native';
 
+const ORIGINAL_PLATFORM_OS = Platform.OS;
+
 // Mock dependencies
 jest.mock('@/src/api/misc');
 jest.mock('react-native-image-picker', () => ({
@@ -40,6 +42,18 @@ describe('PhotoUploadWithPreview', () => {
         jest.clearAllMocks();
         mockUploadImage.mockReset();
         lastOnDrop = null;
+
+        // Some tests temporarily override Platform.OS; ensure it is reset to avoid cross-test leaks.
+        Object.defineProperty(Platform, 'OS', { value: ORIGINAL_PLATFORM_OS });
+        jest.useRealTimers();
+        jest.clearAllTimers();
+    });
+
+    afterEach(() => {
+        // Ensure no pending timers leak into @testing-library/react-native cleanup.
+        jest.useRealTimers();
+        jest.clearAllTimers();
+        Object.defineProperty(Platform, 'OS', { value: ORIGINAL_PLATFORM_OS });
     });
 
     describe('Rendering', () => {
@@ -360,8 +374,6 @@ describe('PhotoUploadWithPreview', () => {
             const originalOs = Platform.OS;
             Object.defineProperty(Platform, 'OS', { value: 'web' });
 
-            jest.useFakeTimers();
-
             const blobUrl = 'blob:http://localhost:8081/test-blob';
             const originalCreateObjectURL = (global as any).URL?.createObjectURL;
             (global as any).URL = (global as any).URL || {};
@@ -393,6 +405,9 @@ describe('PhotoUploadWithPreview', () => {
                     const imgNode = screen.UNSAFE_getByType('img' as any);
                     expect(String(imgNode.props.src)).toBe(remoteBadUrl);
                 });
+
+                // Switch to fake timers only for retry/backoff logic.
+                jest.useFakeTimers();
 
                 // Trigger load errors; component should retry with cache-busting param first,
                 // and only after retries are exhausted fall back to blob preview.
@@ -528,85 +543,128 @@ describe('PhotoUploadWithPreview', () => {
 
     describe('Integration with oldImage prop', () => {
         it('should sync with oldImage changes', async () => {
-            const { rerender, getByText } = render(
-                <PhotoUploadWithPreview {...defaultProps} oldImage={null} />
-            );
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
 
-            expect(getByText('Загрузить фото')).toBeTruthy();
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview {...defaultProps} oldImage={null} />
+                );
 
-            rerender(
-                <PhotoUploadWithPreview
-                    {...defaultProps}
-                    oldImage="https://example.com/new-image.jpg"
-                />
-            );
+                // When oldImage is null, no <img> should be rendered.
+                expect(() => screen.UNSAFE_getByType('img' as any)).toThrow();
 
-            await waitFor(() => {
-                // When oldImage is provided, button text changes to "Заменить фото"
-                expect(getByText('Заменить фото')).toBeTruthy();
-            });
+                screen.rerender(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        oldImage="https://example.com/new-image.jpg"
+                    />
+                );
+
+                const imgNode = screen.UNSAFE_getByType('img' as any);
+                expect(String(imgNode.props.src)).toBe('https://example.com/new-image.jpg');
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+            }
         });
 
         it('should not override manually selected image with oldImage', async () => {
-            const { getByText } = render(
-                <PhotoUploadWithPreview
-                    {...defaultProps}
-                    oldImage="https://example.com/old-image.jpg"
-                />
-            );
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
 
-            // When oldImage exists, button shows "Заменить фото"
-            expect(getByText('Заменить фото')).toBeTruthy();
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        oldImage="https://example.com/old-image.jpg"
+                    />
+                );
+
+                const imgNode = screen.UNSAFE_getByType('img' as any);
+                expect(String(imgNode.props.src)).toBe('https://example.com/old-image.jpg');
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+            }
         });
     });
 
     describe('URL Normalization', () => {
         it('should handle relative URLs', () => {
-            const { getByText } = render(
-                <PhotoUploadWithPreview
-                    {...defaultProps}
-                    oldImage="/uploads/image.jpg"
-                />
-            );
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
 
-            // Component renders with image, showing replace button
-            expect(getByText('Заменить фото')).toBeTruthy();
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        oldImage="/uploads/image.jpg"
+                    />
+                );
+
+                const expected = `${window.location.origin}/uploads/image.jpg`;
+                const imgNode = screen.UNSAFE_getByType('img' as any);
+                expect(String(imgNode.props.src)).toBe(expected);
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+            }
         });
 
         it('should handle absolute URLs', () => {
-            const { getByText } = render(
-                <PhotoUploadWithPreview
-                    {...defaultProps}
-                    oldImage="https://example.com/image.jpg"
-                />
-            );
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
 
-            // Component renders with image, showing replace button
-            expect(getByText('Заменить фото')).toBeTruthy();
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        oldImage="https://example.com/image.jpg"
+                    />
+                );
+
+                const imgNode = screen.UNSAFE_getByType('img' as any);
+                expect(String(imgNode.props.src)).toBe('https://example.com/image.jpg');
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+            }
         });
 
         it('should handle blob URLs', () => {
-            const { getByText } = render(
-                <PhotoUploadWithPreview
-                    {...defaultProps}
-                    oldImage="blob:http://localhost:8081/abc-123"
-                />
-            );
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
 
-            // Component renders with blob URL, showing replace button
-            expect(getByText('Заменить фото')).toBeTruthy();
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        oldImage="blob:http://localhost:8081/abc-123"
+                    />
+                );
+
+                const imgNode = screen.UNSAFE_getByType('img' as any);
+                expect(String(imgNode.props.src)).toBe('blob:http://localhost:8081/abc-123');
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+            }
         });
 
         it('should handle data URLs', () => {
-            const { getByText } = render(
-                <PhotoUploadWithPreview
-                    {...defaultProps}
-                    oldImage="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-                />
-            );
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
 
-            // Component renders with data URL, showing replace button
-            expect(getByText('Заменить фото')).toBeTruthy();
+            try {
+                const dataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        oldImage={dataUrl}
+                    />
+                );
+
+                const imgNode = screen.UNSAFE_getByType('img' as any);
+                expect(String(imgNode.props.src)).toBe(dataUrl);
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+            }
         });
     });
 });

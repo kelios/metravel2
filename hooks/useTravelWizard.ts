@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Platform, Alert, BackHandler } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useNavigation } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import { trackWizardEvent } from '@/src/utils/analytics';
@@ -70,12 +71,25 @@ interface UseTravelWizardOptions {
   hasUnsavedChanges: boolean;
   canSave: boolean;
   onSave: () => Promise<any>;
+  stepStorageKey?: string;
+  stepStorageTtlMs?: number;
 }
 
 export function useTravelWizard(options: UseTravelWizardOptions) {
-  const { totalSteps = 6, hasUnsavedChanges, canSave, onSave } = options;
+  const {
+    totalSteps = 6,
+    hasUnsavedChanges,
+    canSave,
+    onSave,
+    stepStorageKey,
+    stepStorageTtlMs = 7 * 24 * 60 * 60 * 1000,
+  } = options;
   const router = useRouter();
   const navigation = useNavigation();
+
+  const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+  const enableStepPersistenceInTests =
+    !isTestEnv || process.env?.JEST_ENABLE_WIZARD_PERSISTENCE === '1';
 
   const [currentStep, setCurrentStep] = useState(1);
   const [step1SubmitErrors, setStep1SubmitErrors] = useState<ValidationError[]>([]);
@@ -83,6 +97,122 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
 
   const pendingIssueNavRef = useRef<{ step: number; anchorId?: string } | null>(null);
   const exitGuardPromptVisibleRef = useRef(false);
+
+  const normalizeStep = useCallback(
+    (value: unknown) => {
+      const num = typeof value === 'number' ? value : Number(value);
+      if (!Number.isFinite(num)) return 1;
+      const clamped = Math.min(Math.max(1, num), totalSteps);
+      return clamped;
+    },
+    [totalSteps]
+  );
+
+  const getStoredStep = useCallback(async (): Promise<number | null> => {
+    if (!stepStorageKey) return null;
+    try {
+      if (Platform.OS === 'web') {
+        const raw = localStorage.getItem(stepStorageKey);
+        if (!raw) return null;
+        try {
+          const parsed: unknown = JSON.parse(raw);
+          if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            // Backward compatible: raw numeric string.
+            return normalizeStep(raw);
+          }
+          const parsedObj = parsed as { step?: unknown; timestamp?: unknown };
+          const ts = typeof parsedObj?.timestamp === 'number' ? parsedObj.timestamp : Number(parsedObj?.timestamp);
+          if (!Number.isFinite(ts) || Date.now() - ts > stepStorageTtlMs) {
+            localStorage.removeItem(stepStorageKey);
+            return null;
+          }
+          return parsedObj?.step != null ? normalizeStep(parsedObj.step) : null;
+        } catch {
+          // Backward compatible: raw numeric string.
+          return normalizeStep(raw);
+        }
+      }
+      const raw = await AsyncStorage.getItem(stepStorageKey);
+      if (!raw) return null;
+      try {
+        const parsed: unknown = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          // Backward compatible: raw numeric string.
+          return normalizeStep(raw);
+        }
+        const parsedObj = parsed as { step?: unknown; timestamp?: unknown };
+        const ts = typeof parsedObj?.timestamp === 'number' ? parsedObj.timestamp : Number(parsedObj?.timestamp);
+        if (!Number.isFinite(ts) || Date.now() - ts > stepStorageTtlMs) {
+          await AsyncStorage.removeItem(stepStorageKey);
+          return null;
+        }
+        return parsedObj?.step != null ? normalizeStep(parsedObj.step) : null;
+      } catch {
+        // Backward compatible: raw numeric string.
+        return normalizeStep(raw);
+      }
+    } catch {
+      return null;
+    }
+  }, [normalizeStep, stepStorageKey, stepStorageTtlMs]);
+
+  const setStoredStep = useCallback(async (step: number) => {
+    if (!stepStorageKey) return;
+    const payload = JSON.stringify({
+      step: normalizeStep(step),
+      timestamp: Date.now(),
+    });
+    try {
+      if (Platform.OS === 'web') {
+        localStorage.setItem(stepStorageKey, payload);
+        return;
+      }
+      await AsyncStorage.setItem(stepStorageKey, payload);
+    } catch {
+      // storage might be unavailable
+    }
+  }, [normalizeStep, stepStorageKey]);
+
+  const clearPersistedStep = useCallback(async () => {
+    if (!stepStorageKey) return;
+    try {
+      if (Platform.OS === 'web') {
+        localStorage.removeItem(stepStorageKey);
+        return;
+      }
+      await AsyncStorage.removeItem(stepStorageKey);
+    } catch {
+      // ignore
+    }
+  }, [stepStorageKey]);
+
+  // Restore step on mount (create/edit).
+  useEffect(() => {
+    if (!stepStorageKey) return;
+    if (!enableStepPersistenceInTests) return;
+    let cancelled = false;
+
+    const restore = async () => {
+      const stored = await getStoredStep();
+      if (cancelled) return;
+      if (stored != null) {
+        setCurrentStep(stored);
+      }
+    };
+
+    void restore();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getStoredStep, stepStorageKey]);
+
+  // Persist current step.
+  useEffect(() => {
+    if (!stepStorageKey) return;
+    if (!enableStepPersistenceInTests) return;
+    void setStoredStep(currentStep);
+  }, [currentStep, setStoredStep, stepStorageKey]);
 
   const handleStepSelect = useCallback(
     (step: number) => {
@@ -158,6 +288,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
 
       if (!hasUnsavedChanges) {
         reset();
+        void clearPersistedStep();
         onDiscard();
         return;
       }
@@ -199,13 +330,14 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
             style: 'destructive',
             onPress: () => {
               reset();
+              void clearPersistedStep();
               onDiscard();
             },
           },
         ]
       );
     },
-    [hasUnsavedChanges, canSave, onSave]
+    [hasUnsavedChanges, canSave, onSave, clearPersistedStep]
   );
 
   useEffect(() => {
@@ -263,8 +395,12 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   }, [hasUnsavedChanges, confirmLeaveWizard, router]);
 
   const handleFinishWizard = useCallback(async () => {
-    await onSave();
-  }, [onSave]);
+    const saved: any = await onSave();
+    const shouldClear = Boolean(saved?.publish || saved?.moderation);
+    if (shouldClear) {
+      await clearPersistedStep();
+    }
+  }, [onSave, clearPersistedStep]);
 
   return {
     currentStep,
@@ -280,5 +416,6 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     handleAnchorHandled,
     handleFinishWizard,
     confirmLeaveWizard,
+    clearPersistedStep,
   };
 }

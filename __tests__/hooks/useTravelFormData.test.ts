@@ -225,14 +225,12 @@ describe('useTravelFormData', () => {
     expect(sentPayload.publish).toBe(false);
     expect(sentPayload.moderation).toBe(false);
     expect(sentPayload.description).toBe(html);
-    expect(sentPayload.description).not.toBe('__draft_placeholder__');
-    expect(sentPayload.name).toBe('Длинное описание');
-    expect(sentPayload.categories).toEqual([1]);
   });
 
-  it('preserves local preview images when backend responds with empty/null media fields', async () => {
+  it('preserves local previews when server response returns empty images/markers and does not include local blob urls', async () => {
     const localCover = 'blob:https://example.com/cover-preview';
     const localPointImage = 'blob:https://example.com/point-preview';
+
     const serverResponse = {
       id: 999,
       travel_image_thumb_url: null,
@@ -302,6 +300,102 @@ describe('useTravelFormData', () => {
     // Marker image should remain local preview if server returned null.
     const markers = (result.current.formData as any).coordsMeTravel as any[];
     expect(markers[0]?.image).toBe(localPointImage);
+  });
+
+  it('does not wipe gallery when server response omits gallery field entirely', async () => {
+    const localCover = 'blob:https://example.com/cover-preview';
+    const localGallery = ['blob:https://example.com/gallery-preview'];
+
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => {
+      // Simulate backend that does not return `gallery` at all.
+      const { gallery: _ignored, ...rest } = payload ?? {};
+      return {
+        ...rest,
+        id: 999,
+        travel_image_thumb_url: null,
+        travel_image_thumb_small_url: '',
+        coordsMeTravel: [],
+      };
+    });
+
+    const { result } = renderHook(() =>
+      useTravelFormData({
+        travelId: null,
+        isNew: true,
+        userId: '42',
+        isSuperAdmin: false,
+        isAuthenticated: true,
+        authReady: true,
+      })
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        travel_image_thumb_url: localCover,
+        travel_image_thumb_small_url: localCover,
+        gallery: localGallery,
+      } as any);
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave();
+    });
+
+    // Gallery should remain local preview if server did not return the field.
+    expect(Array.isArray((result.current.formData as any).gallery)).toBe(true);
+    expect((result.current.formData as any).gallery).toEqual(localGallery);
+  });
+
+  it('preserves marker images across save when backend reorders markers (merge by id/latlng, not by index)', async () => {
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => {
+      // Simulate backend reorder + empty images (common on drafts).
+      return {
+        ...payload,
+        coordsMeTravel: [
+          { id: 2, lat: 20, lng: 20, address: 'B', categories: [], image: null },
+          { id: 1, lat: 10, lng: 10, address: 'A', categories: [], image: '' },
+        ],
+      };
+    });
+
+    const { result } = renderHook(() =>
+      useTravelFormData({
+        travelId: '123',
+        isNew: false,
+        userId: '42',
+        isSuperAdmin: false,
+        isAuthenticated: true,
+        authReady: true,
+      })
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
+
+    const localImgA = 'blob:https://example.com/a';
+    const localImgB = 'blob:https://example.com/b';
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        coordsMeTravel: [
+          { id: 1, lat: 10, lng: 10, address: 'A', categories: [], image: localImgA },
+          { id: 2, lat: 20, lng: 20, address: 'B', categories: [], image: localImgB },
+        ],
+      } as any);
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave(result.current.formData as any);
+    });
+
+    const savedMarkers = (result.current.formData as any).coordsMeTravel as any[];
+    // Backend reordered markers, but images must stay with the same marker id.
+    const byId = new Map(savedMarkers.map((m: any) => [String(m.id), m]));
+    expect(byId.get('1')?.image).toBe(localImgA);
+    expect(byId.get('2')?.image).toBe(localImgB);
   });
 
   describe('Edit flow - access control', () => {

@@ -1,5 +1,15 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    View,
+    Text,
+    TouchableOpacity,
+    StyleSheet,
+    findNodeHandle,
+    UIManager,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from 'react-native-paper';
 import { Feather } from '@expo/vector-icons';
@@ -192,6 +202,11 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const [missingForModeration, setMissingForModeration] = useState<ModerationIssue[]>([]);
     const isNew = !formData.id;
 
+    const scrollRef = useRef<ScrollView | null>(null);
+    const missingBannerAnchorRef = useRef<View | null>(null);
+    const buttonErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [primaryOverrideLabel, setPrimaryOverrideLabel] = useState<string | null>(null);
+
     const contentPaddingBottom = useMemo(() => DESIGN_TOKENS.spacing.xl, []);
 
     useEffect(() => {
@@ -199,6 +214,53 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             step: currentStep,
         });
     }, [currentStep]);
+
+    useEffect(() => {
+        return () => {
+            if (buttonErrorTimeoutRef.current) {
+                clearTimeout(buttonErrorTimeoutRef.current);
+                buttonErrorTimeoutRef.current = null;
+            }
+        };
+    }, []);
+
+    const pulsePrimaryError = useCallback((label: string) => {
+        setPrimaryOverrideLabel(label);
+        if (buttonErrorTimeoutRef.current) clearTimeout(buttonErrorTimeoutRef.current);
+        buttonErrorTimeoutRef.current = setTimeout(() => {
+            setPrimaryOverrideLabel(null);
+            buttonErrorTimeoutRef.current = null;
+        }, 2500);
+    }, []);
+
+    const scrollToMissingBanner = useCallback(() => {
+        if (Platform.OS === 'web' && typeof document !== 'undefined') {
+            const el = document.getElementById('travelwizard-publish-missing-banner');
+            if (el && typeof (el as any).scrollIntoView === 'function') {
+                (el as any).scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            return;
+        }
+
+        const scrollNode = scrollRef.current;
+        const anchorNode = missingBannerAnchorRef.current;
+        if (!scrollNode || !anchorNode) return;
+
+        const scrollHandle = findNodeHandle(scrollNode);
+        const anchorHandle = findNodeHandle(anchorNode);
+        if (!scrollHandle || !anchorHandle) return;
+
+        setTimeout(() => {
+            UIManager.measureLayout(
+                anchorHandle,
+                scrollHandle,
+                () => undefined,
+                (_x, y) => {
+                    scrollRef.current?.scrollTo({ y: Math.max(y - 12, 0), animated: true });
+                },
+            );
+        }, 50);
+    }, []);
 
     const handleSaveDraft = async () => {
         // ✅ FIX: Предотвращаем одновременные операции
@@ -236,7 +298,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
             // После сохранения на последнем шаге логично вывести пользователя из мастера
             // в раздел "Мои путешествия", где он увидит черновик.
-            router.replace('/metravel');
+            router.replace('/(tabs)/metravel');
         } catch (error) {
             // ✅ FIX: Обработка ошибок сохранения
             Toast.show({
@@ -271,6 +333,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
         if (criticalMissing.length > 0) {
             setMissingForModeration(criticalMissing);
+            pulsePrimaryError('Нельзя отправить: исправьте ошибки');
+            scrollToMissingBanner();
             finishAction();
             return;
         }
@@ -300,7 +364,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             });
 
             // Навигация без повторного сохранения (чтобы не перезаписать publish=false старым стейтом)
-            router.push('/metravel');
+            // Используем replace, чтобы мастер точно размонтировался и не продолжал автосохранение.
+            router.replace('/(tabs)/metravel');
         } finally {
             finishAction();
         }
@@ -328,7 +393,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 text2: 'Маршрут опубликован и доступен всем пользователям.',
             });
 
-            router.push('/metravel');
+            router.replace('/(tabs)/metravel');
         } finally {
             finishAction();
         }
@@ -356,7 +421,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 text2: 'Маршрут возвращен в черновики.',
             });
 
-            router.push('/metravel');
+            router.replace('/(tabs)/metravel');
         } finally {
             finishAction();
         }
@@ -387,12 +452,14 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     autosaveBadge={autosaveBadge}
                     onPrimary={handlePrimaryAction}
                     primaryLabel={
-                        pendingModeration
+                        primaryOverrideLabel ??
+                        (pendingModeration
                             ? 'Отправлено на модерацию'
                             : status === 'draft'
                             ? 'Сохранить'
-                            : 'Отправить на модерацию'
+                            : 'Отправить на модерацию')
                     }
+                    primaryTestID="primary-button"
                     primaryDisabled={pendingModeration}
                     tipTitle={stepMeta?.tipTitle}
                     tipBody={stepMeta?.tipBody}
@@ -402,6 +469,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     onPreview={onPreview}
                 />
                 <ScrollView
+                    ref={scrollRef}
                     style={styles.content}
                     contentContainerStyle={[styles.contentContainer, { paddingBottom: contentPaddingBottom }]}
                     keyboardShouldPersistTaps="handled"
@@ -469,6 +537,10 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                 </TouchableOpacity>
                             </View>
                         </View>
+                    )}
+
+                    {status === 'moderation' && missingForModeration.length > 0 && (
+                        <View ref={missingBannerAnchorRef} nativeID="travelwizard-publish-missing-banner" />
                     )}
 
                     {status === 'moderation' && missingForModeration.length > 0 && (

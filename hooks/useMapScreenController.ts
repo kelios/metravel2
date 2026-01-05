@@ -269,6 +269,7 @@ export function useMapScreenController() {
       closeMenu: closeRightPanel,
       userLocation: coordinates,
       onPlaceSelect: buildRouteTo,
+      onOpenList: selectTravelsTab,
     };
 
     return { Component: FiltersPanel, props };
@@ -301,6 +302,7 @@ export function useMapScreenController() {
     closeRightPanel,
     coordinates,
     buildRouteTo,
+    selectTravelsTab,
   ]);
 
   return {

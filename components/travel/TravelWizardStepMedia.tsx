@@ -67,6 +67,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
     const [isDeleteCoverDialogVisible, setIsDeleteCoverDialogVisible] = useState(false);
+    const [coverDeleted, setCoverDeleted] = useState(false);
 
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -127,6 +128,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
             await deleteTravelMainImage(formData.id);
 
             // Clear cover urls to update preview immediately.
+            setCoverDeleted(true);
             setFormData(prev => ({
                 ...(prev as any),
                 travel_image_thumb_small_url: null,
@@ -142,10 +144,16 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
         return url && typeof url === 'string' && url.trim().length > 0 ? `cover:${url}` : 'cover:none';
     }, [formData]);
 
+    const coverSmallUrl = (formData as any).travel_image_thumb_small_url;
+    const coverFullUrl = (formData as any).travel_image_thumb_url;
+
     const handleCoverUpload = useCallback(
         (url: string | null) => {
             // При успешной загрузке или локальном превью обновляем форму,
             // чтобы шаг 6 сразу видел обложку без перезагрузки.
+            if (url && typeof url === 'string' && url.trim().length > 0) {
+                setCoverDeleted(false);
+            }
             setFormData(prev => ({
                 ...(prev as any),
                 travel_image_thumb_small_url: url || null,
@@ -155,13 +163,31 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
         [setFormData],
     );
 
+    useEffect(() => {
+        const hasCover =
+            (typeof coverSmallUrl === 'string' && coverSmallUrl.trim().length > 0) ||
+            (typeof coverFullUrl === 'string' && coverFullUrl.trim().length > 0);
+        if (hasCover) {
+            setCoverDeleted(false);
+        }
+    }, [coverSmallUrl, coverFullUrl]);
+
     const handleGalleryChange = useCallback(
         (urls: string[]) => {
             // Синхронизируем галерею с формой, чтобы шаг 6 сразу видел фото.
-            setFormData(prev => ({
-                ...(prev as any),
-                gallery: urls,
-            }));
+            // Guard: avoid endless update loops when the gallery URLs haven't changed.
+            setFormData(prev => {
+                const prevGalleryRaw = (prev as any)?.gallery;
+                const prevGallery = Array.isArray(prevGalleryRaw) ? prevGalleryRaw : [];
+                const nextGallery = Array.isArray(urls) ? urls : [];
+                if (prevGallery.length === nextGallery.length && prevGallery.every((v: any, i: number) => v === nextGallery[i])) {
+                    return prev;
+                }
+                return {
+                    ...(prev as any),
+                    gallery: nextGallery,
+                };
+            });
         },
         [setFormData],
     );
@@ -242,6 +268,9 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                                     collection="travelMainImage"
                                     idTravel={formData.id ?? null}
                                     oldImage={
+                                        coverDeleted
+                                            ? null
+                                            :
                                         // ✅ FIX: Приоритет: formData URL > travelDataOld URL
                                         // Проверяем оба поля (thumb_small и thumb) для надежности
                                         ((formData as any).travel_image_thumb_small_url && (formData as any).travel_image_thumb_small_url.trim().length > 0)

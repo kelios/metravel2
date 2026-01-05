@@ -1,5 +1,5 @@
 import React from 'react'
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
+import { act, fireEvent, render } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 import OptimizedImage, { generateSizes, generateSrcSet } from '@/components/ui/OptimizedImage'
 

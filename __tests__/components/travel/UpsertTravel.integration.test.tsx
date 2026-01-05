@@ -35,6 +35,7 @@ const TravelWizardStepPublish: React.FC<any> = ({
     formData.moderation ? 'moderation' : 'draft',
   );
   const [missingForModeration, setMissingForModeration] = useState<string[]>([]);
+  const [primaryOverrideLabel, setPrimaryOverrideLabel] = useState<string | null>(null);
 
   const isNew = !formData.id;
 
@@ -105,6 +106,8 @@ const TravelWizardStepPublish: React.FC<any> = ({
 
     if (criticalMissing.length > 0) {
       setMissingForModeration(criticalMissing);
+      setPrimaryOverrideLabel('Нельзя отправить: исправьте ошибки');
+      setTimeout(() => setPrimaryOverrideLabel(null), 2500);
       return;
     }
 
@@ -121,7 +124,7 @@ const TravelWizardStepPublish: React.FC<any> = ({
     });
 
     await onFinish();
-    mockPush('/metravel');
+    mockPush('/(tabs)/metravel');
   };
 
   const handlePrimaryAction = () => {
@@ -152,7 +155,9 @@ const TravelWizardStepPublish: React.FC<any> = ({
 
         {/* Основная кнопка CTA */}
         <TouchableOpacity onPress={handlePrimaryAction} testID="primary-button">
-          <Text>{status === 'draft' ? 'Сохранить черновик' : 'Отправить на модерацию'}</Text>
+          <Text>
+            {primaryOverrideLabel ?? (status === 'draft' ? 'Сохранить черновик' : 'Отправить на модерацию')}
+          </Text>
         </TouchableOpacity>
 
         {/* Чек-лист (кликабельные строки вызывают onNavigateToIssue) */}
@@ -269,6 +274,10 @@ describe('Travel wizard publish step (integration)', () => {
     fireEvent.press(primaryButton);
 
     await waitFor(() => {
+      expect(getByText('Нельзя отправить: исправьте ошибки')).toBeTruthy();
+    });
+
+    await waitFor(() => {
       expect(getByText('Нужно дополнить перед модерацией')).toBeTruthy();
     });
 
@@ -297,7 +306,7 @@ describe('Travel wizard publish step (integration)', () => {
     });
 
     expect(mockTrackWizardEvent).toHaveBeenCalledWith('wizard_moderation_success', expect.any(Object));
-    expect(mockPush).toHaveBeenCalledWith('/metravel');
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/metravel');
   });
 
   it('calls onNavigateToIssue when user taps a missing checklist row (new UX)', async () => {

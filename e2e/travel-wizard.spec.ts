@@ -836,8 +836,18 @@ test.describe('Создание путешествия - Полный flow', () 
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
 
+    // Default e2e mode uses mocked API so the suite can run without a backend.
+    // Proxying to a real backend is allowed only when explicitly enabled.
+    if (!USE_REAL_API) {
+      await maybeMockTravelUpsert(page);
+    }
+
     const apiBaseUrl = (process.env.E2E_API_URL || process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
     await page.route('**/travels/upsert/**', async (route) => {
+      if (!USE_REAL_API) {
+        await route.fallback();
+        return;
+      }
       if (!apiBaseUrl) {
         await route.fallback();
         return;
@@ -960,6 +970,9 @@ test.describe('Создание путешествия - Полный flow', () 
 
     const savedId = saved && typeof saved.id !== 'undefined' ? saved.id : null;
     expect(savedId, `Expected autosave upsert response to include id. Body: ${bodyText}`).toBeTruthy();
+
+    // When running without a real backend, the upsert is mocked and there is no /api/travels/:id/ to read from.
+    if (!USE_REAL_API) return;
 
     // Проверяем сохранение напрямую через API (стабильнее, чем UI роут /travel/:id,
     // который может упереться в CORS/фоновую загрузку/права).

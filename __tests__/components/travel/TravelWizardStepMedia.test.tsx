@@ -154,12 +154,31 @@ describe('TravelWizardStepMedia', () => {
   it('allows deleting cover when cover exists', async () => {
     mockDeleteTravelMainImage.mockResolvedValueOnce({ status: 204 } as any);
 
-    const { getByText, queryByText } = renderStep({
-      id: '42',
-      // not in TravelFormData typings, but used by screen
-      travel_image_thumb_small_url: '/some/cover.webp',
-      travel_image_thumb_url: '/some/cover.webp',
-    });
+    const { getByText, queryByText } = render(
+      <Suspense fallback={<Text testID="fallback">loading…</Text>}>
+        <TravelWizardStepMedia
+          currentStep={3}
+          totalSteps={6}
+          formData={{
+            ...baseFormData,
+            id: '42',
+            // not in TravelFormData typings, but used by screen
+            travel_image_thumb_small_url: '/some/cover.webp',
+            travel_image_thumb_url: '/some/cover.webp',
+          } as TravelFormData}
+          setFormData={jest.fn()}
+          travelDataOld={{
+            id: 42 as any,
+            // backend still has previous cover url
+            travel_image_thumb_small_url: '/old/cover.webp',
+            travel_image_thumb_url: '/old/cover.webp',
+          } as any}
+          onManualSave={jest.fn()}
+          onBack={jest.fn()}
+          onNext={jest.fn()}
+        />
+      </Suspense>,
+    );
 
     await waitFor(() => expect(getByText('Удалить обложку')).toBeTruthy());
 
@@ -170,6 +189,12 @@ describe('TravelWizardStepMedia', () => {
     fireEvent.press(getByText('УДАЛИТЬ'));
 
     await waitFor(() => expect(mockDeleteTravelMainImage).toHaveBeenCalledWith('42'));
+
+    // Cover must not reappear from travelDataOld fallback after deletion.
+    await waitFor(() => {
+      expect(queryByText('old:/some/cover.webp')).toBeNull();
+      expect(queryByText('old:/old/cover.webp')).toBeNull();
+    });
 
     // In the test environment, the ConfirmDialog unmount timing can be implementation-specific.
     // We assert the core behavior (confirm was available and api called) and avoid flaky UI teardown checks.

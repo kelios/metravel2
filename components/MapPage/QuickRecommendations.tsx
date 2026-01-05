@@ -2,8 +2,8 @@
  * QuickRecommendations - быстрые рекомендации популярных мест рядом
  */
 
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import React, { useMemo, useRef, useCallback, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
@@ -38,6 +38,26 @@ export const QuickRecommendations: React.FC<Props> = ({
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
+
+  const scrollRef = useRef<ScrollView | null>(null);
+  const [scrollX, setScrollX] = useState(0);
+
+  const onWheel = useCallback(
+    (e: any) => {
+      if (Platform.OS !== 'web') return;
+      const dx = e?.nativeEvent?.deltaX;
+      const dy = e?.nativeEvent?.deltaY;
+      const deltaX = typeof dx === 'number' ? dx : 0;
+      const deltaY = typeof dy === 'number' ? dy : 0;
+      const delta = deltaX !== 0 ? deltaX : deltaY;
+      if (delta === 0) return;
+
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      scrollRef.current?.scrollTo({ x: Math.max(0, scrollX + delta), animated: false });
+    },
+    [scrollX]
+  );
 
   // Фильтруем и сортируем места
   const topPlaces = useMemo(() => {
@@ -91,15 +111,21 @@ export const QuickRecommendations: React.FC<Props> = ({
   }
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      {...(Platform.OS === 'web' ? ({ onWheelCapture: onWheel } as any) : ({} as any))}
+    >
       <View style={styles.header}>
         <MaterialIcons name="star" size={20} color={colors.primary} />
         <Text style={styles.title}>Популярное рядом</Text>
       </View>
       <ScrollView
+        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        onScroll={(e) => setScrollX(e.nativeEvent.contentOffset.x)}
+        scrollEventThrottle={16}
       >
         {topPlaces.map((place, index) => (
           <Pressable

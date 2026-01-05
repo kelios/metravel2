@@ -32,6 +32,13 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     return travelId ? normalizeTravelId(travelId) : null;
   }, [isNew, travelId]);
 
+  const initialFormData = useMemo(() => {
+    return getEmptyFormData(stableTravelId != null ? String(stableTravelId) : null);
+  }, [stableTravelId]);
+
+  const formDataRef = useRef<TravelFormData>(initialFormData);
+  const saveAbortControllerRef = useRef<AbortController | null>(null);
+
   const isLocalPreviewUrl = useCallback((value: unknown) => {
     if (typeof value !== 'string') return false;
     const trimmed = value.trim();
@@ -51,7 +58,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       if (!Array.isArray(currentMarkers) || currentMarkers.length === 0) return serverMarkers;
 
       const makeKey = (m: any) => {
-        const id = m?.id != null ? String(m.id) : '';
+        const idRaw = m?.id != null ? String(m.id) : '';
+        const id = idRaw && idRaw !== 'null' && idRaw !== 'undefined' ? idRaw : '';
         const lat = typeof m?.lat === 'number' ? m.lat.toFixed(6) : String(m?.lat ?? '');
         const lng = typeof m?.lng === 'number' ? m.lng.toFixed(6) : String(m?.lng ?? '');
         // Prefer stable id if present, fallback to coordinates.
@@ -84,14 +92,11 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const [travelDataOld, setTravelDataOld] = useState<Travel | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const [_dataVersion, setDataVersion] = useState(0);
   const [isManualSaveInFlight, setIsManualSaveInFlight] = useState(false);
   const manualSaveInFlightRef = useRef(false);
-  const [_dataVersion, setDataVersion] = useState<number>(0); // ✅ FIX: Версионирование для конфликтов (будет использоваться для обнаружения конфликтов редактирования)
-
-  const initialFormData = getEmptyFormData(isNew ? null : String(travelId));
-  const formDataRef = useRef<TravelFormData>(initialFormData);
-  const saveAbortControllerRef = useRef<AbortController | null>(null); // ✅ FIX: Race condition защита
   const manualSavePromiseRef = useRef<Promise<TravelFormData | void> | null>(null);
+  const suppressAutosaveErrorToastRef = useRef(false);
   const mountedRef = useRef(true); // ✅ FIX: Защита от memory leak
   const initialLoadKeyRef = useRef<string | null>(null);
 
@@ -167,7 +172,10 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         value == null ||
         (typeof value === 'string' && value.trim().length === 0);
       if (isBlank) {
-        (normalized as any)[field] = isDraft ? draftPlaceholder : '';
+        // Для черновиков нужно отправлять непустые значения (плейсхолдер), иначе бэкенд может затирать поля.
+        // Для moderation/publish пустая строка часто валидируется как "blank" (DRF: "may not be blank"),
+        // поэтому отправляем null и даём бэкенду трактовать поле как отсутствующее.
+        (normalized as any)[field] = isDraft ? draftPlaceholder : null;
       }
     });
 
@@ -427,7 +435,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       // ✅ FIX: Обновляем версию данных при получении с сервера
       setDataVersion(prev => prev + 1);
     },
-    [formState, isLocalPreviewUrl, mergeMarkersPreserveImages, normalizeDraftPlaceholders]
+    [formState, mergeMarkersPreserveImages, normalizeDraftPlaceholders]
   );
 
   const handleSaveSuccess = useCallback(
@@ -445,6 +453,12 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     (error: Error) => {
       // ✅ FIX: Проверяем монтирование перед показом уведомления
       if (!mountedRef.current) return;
+
+      // Если пользователь только что завершил "терминальное" действие (например, отправка на модерацию)
+      // и сразу ушёл со страницы, то возможные ошибки автосейва не должны всплывать на экранах списка.
+      if (suppressAutosaveErrorToastRef.current) {
+        return;
+      }
 
       // Отмена запроса — ожидаемое поведение (например, при уходе со страницы).
       if (error.message === 'Request aborted') {
@@ -490,7 +504,14 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     },
     onSuccess: handleSaveSuccess,
     onError: handleSaveError,
-    enabled: isAuthenticated && hasAccess && !isManualSaveInFlight,
+    // Не автосейвим, когда travel уже в "терминальном" состоянии (moderation/publish),
+    // иначе получаем повторные upsert и 400 на обязательные поля.
+    enabled:
+      isAuthenticated &&
+      hasAccess &&
+      !isManualSaveInFlight &&
+      !(formState.data as any)?.moderation &&
+      !(formState.data as any)?.publish,
   });
 
   const handleManualSave = useCallback(async (dataOverride?: TravelFormData) => {
@@ -502,6 +523,13 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     setIsManualSaveInFlight(true);
     const promise = (async () => {
       try {
+        // Если пользователь меняет статус на "отправить на модерацию" / "опубликовать",
+        // то после успешного сохранения он уходит со страницы, и тосты автосейва больше не нужны.
+        const wantsToLeaveSoon = !!(dataOverride as any)?.publish || !!(dataOverride as any)?.moderation;
+        if (wantsToLeaveSoon) {
+          suppressAutosaveErrorToastRef.current = true;
+        }
+
         // Отменяем отложенный автосейв, чтобы не отправить старые данные (publish=false) после ручного сохранения.
         autosave?.cancelPending?.();
         // Abort any in-flight autosave request (it will still appear in Network, but won't win the race).

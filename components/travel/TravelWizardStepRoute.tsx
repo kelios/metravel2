@@ -60,7 +60,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     setMarkers,
     categoryTravelAddress,
     countries,
-    travelId,
+    travelId: _travelId,
     selectedCountryIds,
     onCountrySelect,
     onCountryDeselect,
@@ -596,7 +596,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                             onChange={handleCountriesFilterChange}
                                             labelField="title_ru"
                                             valueField="country_id"
-                                            disabled
+                                            disabled={true}
                                             testID="travel-wizard.step-route.countries"
                                             accessibilityLabel="travel-wizard.step-route.countries"
                                         />
@@ -624,7 +624,6 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                             countrylist={countries}
                                             onCountrySelect={onCountrySelect}
                                             onCountryDeselect={onCountryDeselect}
-                                            travelId={travelId ?? undefined}
                                         />
                                     </Suspense>
                                 ) : (

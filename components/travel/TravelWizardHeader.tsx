@@ -15,6 +15,7 @@ type TravelWizardHeaderProps = {
     autosaveBadge?: string;
     onPrimary?: () => void;
     primaryLabel?: string;
+    primaryTestID?: string;
     primaryDisabled?: boolean;
     onSave?: () => void;
     saveLabel?: string;
@@ -38,6 +39,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     autosaveBadge,
     onPrimary,
     primaryLabel,
+    primaryTestID,
     primaryDisabled = false,
     onSave,
     saveLabel = 'Сохранить',
@@ -139,6 +141,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                 primaryDisabled && styles.actionButtonDisabled,
                 pressed && !primaryDisabled && { opacity: 0.9 },
             ]}
+            testID={primaryTestID}
             accessibilityRole="button"
             accessibilityLabel={primaryLabel}
         >

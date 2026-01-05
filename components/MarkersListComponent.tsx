@@ -6,6 +6,7 @@ import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import MultiSelectField from '@/components/MultiSelectField';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
+import { normalizeMediaUrl } from '@/utils/mediaUrl';
 
 const MultiSelectFieldAny: any = MultiSelectField;
  
@@ -19,37 +20,8 @@ interface MarkersListComponentProps {
     setEditingIndex: (index: number | null) => void;
     activeIndex?: number | null;
     setActiveIndex?: (index: number | null) => void;
-    travelId?: string | null;
 }
-const normalizeImageUrl = (url?: string | null) => {
-    if (!url) return '';
-    const trimmed = url.trim();
-    // Поддерживаем превью blob:/data:
-    if (/^(data:|blob:)/i.test(trimmed)) return trimmed;
-    
-    // ✅ Для абсолютных URL с приватным IP - извлекаем путь для проксирования через localhost
-    if (/^https?:\/\//i.test(trimmed)) {
-        try {
-            void new URL(trimmed);
-            return trimmed;
-        } catch {
-            return trimmed;
-        }
-    }
-    
-    // Относительные URL - достраиваем до backend host (без /api)
-    const baseRaw =
-        process.env.EXPO_PUBLIC_API_URL ||
-        (typeof window !== 'undefined' ? window.location.origin : '');
-    const hostWithoutApi = baseRaw.replace(/\/+$/, '').replace(/\/api$/i, '');
-    const prefix = hostWithoutApi || baseRaw.replace(/\/+$/, '');
-
-    if (prefix) {
-        return `${prefix}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
-    }
-
-    return trimmed;
-};
+const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
 
 const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => ({
     container: {
@@ -423,7 +395,6 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                                                setEditingIndex,
                                                                activeIndex,
                                                                setActiveIndex,
-                                                               travelId,
                                                            }) => {
     const colors = useThemedColors();
     const styles = useStyles(colors);
@@ -585,7 +556,6 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                     categoryTravelAddress={categoryTravelAddress}
                     handleMarkerChange={handleMarkerChange}
                     handleImageUpload={handleImageUpload}
-                    travelId={travelId}
                     onClose={() => setEditingIndex(null)}
                     onRemove={onRemove}
                     styles={styles}
@@ -602,7 +572,6 @@ interface EditMarkerModalProps {
     categoryTravelAddress: { id: number | string; name: string }[];
     handleMarkerChange: (index: number, field: string, value: string | string[]) => void;
     handleImageUpload: (index: number, imageUrl: string) => void;
-    travelId?: string | null;
     onClose: () => void;
     onRemove: (index: number) => void;
     styles: any;
@@ -616,7 +585,6 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                                                              categoryTravelAddress,
                                                              handleMarkerChange,
                                                              handleImageUpload,
-                                                             travelId,
                                                              onClose,
                                                              onRemove,
                                                              styles,

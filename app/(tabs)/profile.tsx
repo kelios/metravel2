@@ -103,13 +103,12 @@ export default function ProfileScreen() {
           const rawAvatar = String((profileData as any)?.avatar ?? '').trim();
           const lowerAvatar = rawAvatar.toLowerCase();
           const normalizedAvatar = rawAvatar && lowerAvatar !== 'null' && lowerAvatar !== 'undefined' ? rawAvatar : null;
-          setUserAvatar(normalizedAvatar);
 
-          const { setStorageBatch, removeStorageBatch } = await import('@/src/utils/storageBatch');
           if (normalizedAvatar) {
+            setUserAvatar(normalizedAvatar);
+
+            const { setStorageBatch } = await import('@/src/utils/storageBatch');
             await setStorageBatch([['userAvatar', normalizedAvatar]]);
-          } else {
-            await removeStorageBatch(['userAvatar']);
           }
 
           // Загружаем путешествия пользователя для подсчёта

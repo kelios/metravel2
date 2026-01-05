@@ -18,7 +18,7 @@ const DEFAULT_STATE: BlocksState = {
   welcomeBanner: { expanded: true, hidden: false },
   search: { expanded: true, hidden: false },
   tabs: { expanded: true, hidden: false },
-  recommendations: { expanded: true, hidden: false },
+  recommendations: { expanded: false, hidden: false },
   recentViews: { expanded: false, hidden: false },
   travelCards: { expanded: true, hidden: false },
   filters: { expanded: true, hidden: false }, // ✅ ИСПРАВЛЕНИЕ: Фильтры открыты по умолчанию

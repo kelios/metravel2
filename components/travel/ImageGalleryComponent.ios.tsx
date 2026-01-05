@@ -1,5 +1,5 @@
 // components/travel/ImageGalleryComponent.ios.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { uploadImage, deleteImage } from '@/src/api/misc';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -52,6 +53,7 @@ interface ImageGalleryComponentProps {
   idTravel: string;
   initialImages: GalleryItem[];
   maxImages?: number;
+  onChange?: (urls: string[]) => void;
 }
 
 const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
@@ -59,8 +61,8 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   idTravel,
   initialImages,
   maxImages = 10,
+  onChange,
 }) => {
-  // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
   const colors = useThemedColors();
 
   const [images, setImages] = useState<GalleryItem[]>([]);
@@ -70,6 +72,12 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   const [dialogVisible, setDialogVisible] = useState(false);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
 
+  const lastReportedUrlsRef = useRef<string>('');
+
+  const isBackendImageId = useCallback((value: string | null | undefined): boolean => {
+    if (!value) return false;
+    return /^\d+$/.test(String(value));
+  }, []);
 
   useEffect(() => {
     if (initialImages?.length) {
@@ -79,10 +87,19 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
     setIsInitialLoading(false);
   }, [initialImages]);
 
+  useEffect(() => {
+    if (!onChange) return;
+    const urls = images.map((img) => img.url).filter(Boolean);
+    const signature = urls.join('|');
+    if (signature === lastReportedUrlsRef.current) return;
+    lastReportedUrlsRef.current = signature;
+    onChange(urls);
+  }, [images, onChange]);
+
   const handleUploadImages = useCallback(
     async (assets: ImagePicker.ImagePickerAsset[]) => {
       if (images.length + assets.length > maxImages) {
-        Alert.alert('Лимит', `Максимум ${maxImages} изображений`);
+        Alert.alert('Limit', `Maximum ${maxImages} images`);
         return;
       }
 
@@ -130,7 +147,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
           }
         } catch (error) {
           console.error('Upload error:', error);
-          Alert.alert('Ошибка', 'Не удалось загрузить изображение');
+          Alert.alert('Error', 'Failed to upload image');
         } finally {
           newLoading[currentIndex] = false;
           setLoading([...newLoading]);
@@ -145,19 +162,17 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
 
   const handlePickImages = useCallback(async () => {
     if (images.length >= maxImages) {
-      Alert.alert('Лимит', `Максимум ${maxImages} изображений`);
+      Alert.alert('Limit', `Maximum ${maxImages} images`);
       return;
     }
 
     try {
-      // Запрос разрешения
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Разрешение', 'Необходим доступ к галерее');
+        Alert.alert('Permission', 'Access to gallery is required');
         return;
       }
 
-      // Выбор изображений
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
@@ -170,25 +185,23 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       }
     } catch (error) {
       console.error('Error picking images:', error);
-      Alert.alert('Ошибка', 'Не удалось выбрать изображения');
+      Alert.alert('Error', 'Failed to select images');
     }
   }, [handleUploadImages, images.length, maxImages]);
 
   const handleTakePhoto = useCallback(async () => {
     if (images.length >= maxImages) {
-      Alert.alert('Лимит', `Максимум ${maxImages} изображений`);
+      Alert.alert('Limit', `Maximum ${maxImages} images`);
       return;
     }
 
     try {
-      // Запрос разрешения на камеру
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Разрешение', 'Необходим доступ к камере');
+        Alert.alert('Permission', 'Access to camera is required');
         return;
       }
 
-      // Сделать фото
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         quality: 0.8,
@@ -199,7 +212,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Ошибка', 'Не удалось сделать фото');
+      Alert.alert('Error', 'Failed to take photo');
     }
   }, [handleUploadImages, images.length, maxImages]);
 
@@ -210,11 +223,14 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
 
   const confirmDeleteImage = async () => {
     if (!selectedImageId) return;
+    const imageToDelete = images.find((img) => img.id === selectedImageId);
     try {
-      await deleteImage(selectedImageId);
+      if (imageToDelete && isBackendImageId(imageToDelete.id)) {
+        await deleteImage(imageToDelete.id);
+      }
       setImages((prev) => prev.filter((img) => img.id !== selectedImageId));
     } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось удалить изображение');
+      Alert.alert('Error', 'Failed to delete image');
       console.error('Error deleting image:', error);
     } finally {
       setDialogVisible(false);
@@ -225,35 +241,35 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.headerContainer}>
-        <Text style={[styles.galleryTitle, { color: colors.text }]}>📷 Галерея</Text>
+        <View style={styles.titleRow}>
+          <MaterialIcons name="photo-camera" size={20} color={colors.text} />
+          <Text style={[styles.galleryTitle, { color: colors.text }]}>Галерея</Text>
+        </View>
         <Text style={[styles.imageCount, { color: colors.textMuted }]}>
           Загружено <Text style={[styles.highlight, { color: colors.primary }]}>{images.length}</Text> из {maxImages}
         </Text>
       </View>
 
-      {/* Кнопки добавления изображений */}
       {images.length < maxImages && (
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             onPress={handlePickImages}
             style={[styles.addButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
             disabled={isUploading}
+            testID="gallery-ios.pick"
           >
-            <Text style={styles.addButtonIcon}>🖼️</Text>
-            <Text style={[styles.addButtonText, { color: colors.textInverse }]}>
-              Выбрать из галереи
-            </Text>
+            <MaterialIcons name="photo-library" size={18} color={colors.textInverse} />
+            <Text style={[styles.addButtonText, { color: colors.textInverse }]}>Выбрать из галереи</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleTakePhoto}
             style={[styles.addButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
             disabled={isUploading}
+            testID="gallery-ios.camera"
           >
-            <Text style={styles.addButtonIcon}>📷</Text>
-            <Text style={[styles.addButtonText, { color: colors.textInverse }]}>
-              Сделать фото
-            </Text>
+            <MaterialIcons name="photo-camera" size={18} color={colors.textInverse} />
+            <Text style={[styles.addButtonText, { color: colors.textInverse }]}>Сделать фото</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -279,8 +295,9 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
                   <TouchableOpacity
                     onPress={() => handleDeleteImage(image.id)}
                     style={[styles.deleteButton, { backgroundColor: colors.danger }]}
+                    testID={`gallery-ios.delete:${image.id}`}
                   >
-                    <Text style={[styles.deleteButtonText, { color: colors.textOnPrimary }]}>✖</Text>
+                    <MaterialIcons name="close" size={18} color={colors.textOnPrimary} />
                   </TouchableOpacity>
                 </>
               )}
@@ -288,15 +305,13 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
           ))}
         </View>
       ) : (
-        <Text style={[styles.noImagesText, { color: colors.textMuted }]}>
-          Нет загруженных изображений
-        </Text>
+        <Text style={[styles.noImagesText, { color: colors.textMuted }]}>Нет загруженных изображений</Text>
       )}
 
       {isUploading && (
         <View style={[styles.uploadingOverlay, { backgroundColor: colors.overlay }]}>
           <ActivityIndicator size="large" color={colors.textInverse} />
-          <Text style={[styles.uploadingText, { color: colors.textInverse }]}>Загружаются изображения...</Text>
+          <Text style={[styles.uploadingText, { color: colors.textInverse }]}>Uploading images...</Text>
         </View>
       )}
 
@@ -328,9 +343,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 1,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   galleryTitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xl,
+    fontSize: 18,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   imageCount: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -353,12 +374,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderStyle: 'dashed',
   },
-  addButtonIcon: {
-    fontSize: 24,
-    marginRight: 8,
-  },
   addButtonText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontSize: 14,
     fontWeight: '600',
   },
   galleryGrid: {
@@ -390,10 +407,6 @@ const styles = StyleSheet.create({
     height: 30,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  deleteButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   noImagesText: {
     textAlign: 'center',
